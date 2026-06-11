@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("USER") // SUPERADMIN, AGENT, SELLER, USER, DELIVERY
+  name         String
+  phone        String
+  city         String
+  pincode      String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sellerProfile   SellerProfile?
+  agentProfile    AgentProfile?
+  deliveryProfile DeliveryPerson?
+  orders          Order[]
+  bookings        Booking[]
+  addresses       Address[]
+}
+
+model SellerProfile {
+  id                 String  @id @default(uuid())
+  userId             String  @unique
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type               String // Homely Food, Mess, Bakery
+  businessName       String  @default("")
+  addressFlat        String  @default("")
+  addressLocality    String  @default("")
+  addressLandmark    String?
+  kitchenImages      String  @default("[]") // JSON stringified array of URLs (Max 3)
+  cuisineImages      String  @default("[]") // JSON stringified array of URLs (Max 3)
+  bannerImageUrl     String?
+  adhaarUrl          String
+  fssaiUrl           String?
+  verificationStatus String  @default("PENDING") // PENDING, APPROVED, REJECTED, REVISION
+  verificationNote   String?
+  trackingId         String  @unique
+  upiId              String?
+  isOnline           Boolean @default(true)
+
+  agentId String?
+  agent   AgentProfile? @relation(fields: [agentId], references: [id])
+
+  foodItems       FoodItem[]
+  rooms           Room[]
+  orders          Order[]
+  deliveryPersons DeliveryPerson[]
+  subscriptions   Subscription[]
+}
+
+model AgentProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  canManageOffers   Boolean @default(false)
+  canManageBanners  Boolean @default(false)
+
+  assignedSellers SellerProfile[]
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  type      String // FOOD or ROOM
+  foodItems FoodItem[]
+}
+
+model FoodItem {
+  id            String        @id @default(uuid())
+  sellerId      String
+  seller        SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  name          String
+  description   String
+  price         Float
+  imageUrl      String?
+  availableDays String        @default("Mon,Tue,Wed,Thu,Fri,Sat,Sun")
+  isAvailable   Boolean       @default(true)
+  stockQuantity Int           @default(-1)
+  categoryId    String?
+  category      Category?     @relation(fields: [categoryId], references: [id])
+}
+
+model Order {
+  id               String          @id @default(uuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sellerId         String
+  seller           SellerProfile   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  status           String          @default("PENDING") // PENDING, PREPARING, OUT_FOR_DELIVERY, DELIVERED
+  items            String          @default("[]") // JSON stringified array of items
+  deliveryAddress  String          @default("Pickup")
+  customerPhone    String          @default("")
+  paymentMethod    String // QR or COD
+  totalAmount      Float
+  isPaid           Boolean         @default(false)
+  deliveryPersonId String?
+  deliveryPerson   DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
+  razorpayOrderId  String?         @unique
+  razorpayPaymentId String?        @unique
+  appliedCouponId   String?        // To track usage count per user
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Room {
+  id          String        @id @default(uuid())
+  sellerId    String
+  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  title       String        @default("Cozy Room")
+  price       Float
+  description String
+  capacity    Int           @default(1)
+  images      String        @default("[]") // JSON stringified array of URLs
+  isAvailable Boolean       @default(true)
+  bookings    Booking[]
+}
+
+model Booking {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  status    String // PENDING, CONFIRMED, CANCELLED
+  createdAt DateTime @default(now())
+}
+
+model SubscriptionPlan {
+  id             String   @id @default(uuid())
+  name           String // e.g., "Monthly Premium", "Yearly Standard"
+  price          Float
+  durationMonths Int // 1, 3, 6, 12, etc.
+  features       String   @default("[]") // JSON stringified array of features
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscriptions        Subscription[]
+  subscriptionCoupons  SubscriptionCoupon[]
+}
+
+model Subscription {
+  id                String            @id @default(uuid())
+  sellerId          String
+  seller            SellerProfile     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  planId            String?
+  plan              SubscriptionPlan? @relation(fields: [planId], references: [id])
+  status            String // ACTIVE, EXPIRED, INACTIVE
+  validUntil        DateTime
+  amount            Float
+  razorpayOrderId   String?           @unique
+  razorpayPaymentId String?           @unique
+  appliedCoupon     String?
+  createdAt         DateTime          @default(now())
+}
+
+model SubscriptionCoupon {
+  id                 String            @id @default(uuid())
+  code               String            @unique
+  description        String            @default("")
+  
+  discountPercentage Float?
+  discountAmount     Float?
+  
+  planId             String?
+  plan               SubscriptionPlan? @relation(fields: [planId], references: [id])
+  
+  maxUsage           Int               @default(0) // 0 means unlimited
+  currentUsage       Int               @default(0)
+  
+  isActive           Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+
+model SystemSettings {
+  id        String   @id @default("GLOBAL")
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Coupon {
+  id          String @id @default(uuid())
+  code        String @unique
+  description String @default("")
+
+  // Discount Amount/Percent
+  discountPercentage Float?
+  discountAmount     Float?
+
+  // Scope
+  creatorId          String  @default("SYSTEM") // User ID who created it
+  appliesToSellerId  String? // Null = global, Set = specific seller
+  appliesToProductId String? // Null = all products, Set = specific item
+
+  // Timing
+  validFrom  DateTime  @default(now())
+  validUntil DateTime? // Null = indefinite
+
+  // Advanced Rules
+  maxUsagesPerUser     Int?      // Null = unlimited uses per user
+  maxUsers             Int?      // Null = unlimited users
+  currentUsersCount    Int       @default(0) // Tracks total successful redemptions
+  minimumCartValue     Float?    // Null = no minimum value
+
+  isActive       Boolean  @default(true)
+  approvalStatus String   @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED, REVISION
+  adminNote      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  performedBy String // User ID of the admin/agent
+  details     String
+  timestamp   DateTime @default(now())
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String // Home, Work, Other
+  houseNumber String
+  street      String
+  landmark    String?
+  pincode     String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model PopupBanner {
+  id                String   @id @default(uuid())
+  title             String
+  imageUrl          String
+  redirectUrl       String?
+  appliesToSellerId String? // Null = global, Set = specific seller store
+  isActive          Boolean  @default(true)
+  approvalStatus    String   @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED, REVISION
+  adminNote         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model DeliveryPerson {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String
+  phone     String
+  sellerId  String
+  seller    SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  orders    Order[]
+}

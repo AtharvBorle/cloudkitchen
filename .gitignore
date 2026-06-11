@@ -1,0 +1,56 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+.pnp
+.pnp.js
+
+# Next.js build and cache
+.next/
+out/
+dist/
+build/
+
+# Next.js 16 Turbopack files
+.turbo/
+*.tsbuildinfo
+
+# Environmental variables (must never be committed!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+
+# SQLite databases (if any local DB is created)
+*.db
+*.db-journal
+*.sqlite
+dev.db
+
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Cloud/Deployment folders
+.vercel
+.serverless

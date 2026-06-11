@@ -1,0 +1,88 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getAuthSession } from "@/lib/auth";
+
+export async function PUT(req: Request, { params }: { params: Promise<{ sellerId: string }> }) {
+    try {
+        const session = await getAuthSession();
+        if (!session?.user || session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { name, phone, isActive, businessName, type, verificationStatus, isOnline } = body;
+        const { sellerId } = await params;
+
+        const existingUser = await db.user.findUnique({
+            where: { id: sellerId },
+            include: { sellerProfile: true }
+        });
+
+        if (!existingUser || existingUser.role !== "SELLER") {
+            return NextResponse.json({ message: "Seller not found" }, { status: 404 });
+        }
+
+        // Update the user
+        await db.user.update({
+            where: { id: sellerId },
+            data: {
+                name: name || existingUser.name,
+                phone: phone !== undefined ? phone : existingUser.phone,
+                isActive: isActive !== undefined ? isActive : existingUser.isActive,
+            }
+        });
+
+        // Update the seller profile if it exists
+        if (existingUser.sellerProfile) {
+            await db.sellerProfile.update({
+                where: { userId: sellerId },
+                data: {
+                    businessName: businessName || existingUser.sellerProfile.businessName,
+                    type: type || existingUser.sellerProfile.type,
+                    verificationStatus: verificationStatus || existingUser.sellerProfile.verificationStatus,
+                    isOnline: isOnline !== undefined ? isOnline : existingUser.sellerProfile.isOnline
+                }
+            });
+        }
+
+        return NextResponse.json({ message: "Seller updated successfully" }, { status: 200 });
+
+    } catch (error) {
+        console.error("Error updating seller:", error);
+        return NextResponse.json({ message: "An error occurred" }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ sellerId: string }> }) {
+    try {
+        const session = await getAuthSession();
+        if (!session?.user || session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        }
+
+        const { sellerId } = await params;
+
+        // Ensure we are only deleting SELLERs
+        const existingUser = await db.user.findUnique({ where: { id: sellerId } });
+        if (!existingUser || existingUser.role !== "SELLER") {
+            return NextResponse.json({ message: "Seller not found or invalid type" }, { status: 404 });
+        }
+
+        // Manually clean up immediate Seller relation to help SQLite bypass tight 
+        // cascade locking errors in the development environment
+        await db.sellerProfile.deleteMany({
+            where: { userId: sellerId }
+        });
+
+        // Prisma Cascade delete will handle remaining Orders, etc. cleanup based on userId Foreign Key
+        await db.user.delete({
+            where: { id: sellerId }
+        });
+
+        return NextResponse.json({ message: "Seller deleted successfully" }, { status: 200 });
+
+    } catch (error) {
+        console.error("Error deleting seller:", error);
+        return NextResponse.json({ message: "An error occurred" }, { status: 500 });
+    }
+}

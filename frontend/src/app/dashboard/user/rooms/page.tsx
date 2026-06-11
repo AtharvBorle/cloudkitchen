@@ -1,0 +1,111 @@
+"use client";
+import { fetchApi } from "@/lib/fetch-api";
+
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { BookRoomButton } from "@/components/cart-buttons";
+
+export default function UserRoomsPage() {
+    const { initiateRoomBooking } = useCart();
+    const [rooms, setRooms] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const res = await fetchApi("/api/user/dashboard");
+                const data = await res.json();
+                if (res.ok) setRooms(data.availableRooms);
+            } catch (error) {
+                console.error("Failed to fetch rooms", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+    const roomPlaceholder = "https://via.placeholder.com/400x250?text=Cozy+Room";
+
+    const getFirstImage = (jsonStr: string) => {
+        try {
+            const arr = JSON.parse(jsonStr);
+            return arr.length > 0 ? arr[0] : roomPlaceholder;
+        } catch {
+            return roomPlaceholder;
+        }
+    };
+
+    const filteredRooms = rooms.filter(room =>
+        room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+        <div style={{ paddingBottom: '50px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <div>
+                    <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--text-main)", marginBottom: "5px" }}>Book a Room</h1>
+                    <p style={{ color: "var(--text-muted)" }}>Find comfortable stays directly from verified PG owners.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', border: '1px solid #EAEAEA', borderRadius: '8px', padding: '5px 15px', width: '300px' }}>
+                    <Search size={18} color="var(--text-muted)" />
+                    <input
+                        type="text"
+                        placeholder="Search location, seller, or room type..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{ border: 'none', outline: 'none', padding: '10px', width: '100%', fontSize: '0.95rem' }}
+                    />
+                </div>
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading rooms...</div>
+            ) : filteredRooms.length === 0 ? (
+                <div style={{ backgroundColor: '#F8F9F9', padding: '40px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
+                    {searchQuery ? "No rooms found matching your search." : "No rooms available at the moment."}
+                </div>
+            ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '30px' }}>
+                    {filteredRooms.map(room => (
+                        <div key={room.id} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
+                            <Link href={`/shop/${room.sellerTrackingId}`} style={{ display: 'block', height: '200px', position: 'relative' }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={getFirstImage(room.images)} alt={room.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <div style={{ position: 'absolute', bottom: '10px', left: '10px', backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '5px 12px', borderRadius: '20px', fontSize: '0.85rem' }}>
+                                    Up to {room.capacity} Guests
+                                </div>
+                            </Link>
+                            <div style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                <Link href={`/shop/${room.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                        <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)', paddingRight: '10px' }}>{room.title}</h3>
+                                        <span style={{ color: 'var(--teal)', fontWeight: 'bold', fontSize: '1.1rem', whiteSpace: 'nowrap' }}>₹{room.price}/night</span>
+                                    </div>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>Location: {room.sellerCity} • Hosted by {room.sellerName}</p>
+                                    <p style={{ color: '#555', fontSize: '0.95rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{room.description}</p>
+                                </Link>
+
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <BookRoomButton room={{ ...room, sellerCity: room.sellerCity, sellerName: room.sellerName }} disabled={!room.sellerIsOnline} />
+                                    <Link href={`/shop/${room.sellerTrackingId}`} className="btn btn-secondary" style={{ flex: 1, textAlign: 'center', padding: '10px' }}>
+                                        Visit Shop
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}

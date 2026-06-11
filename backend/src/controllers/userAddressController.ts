@@ -1,0 +1,157 @@
+import { db } from "@/lib/db";
+import { getAuthSession } from "@/lib/auth";
+import { ApiError } from "@/lib/api-error";
+
+export const createAddress = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session || !session.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const { type, houseNumber, street, landmark, pincode, isDefault } = await req.json();
+
+    if (!type || !houseNumber || !street || !pincode) {
+        throw new ApiError("Type, House Number, Street, and Pincode are required", 400);
+    }
+
+    const addressCount = await db.address.count({
+        where: { userId: session.user.id }
+    });
+
+    const makeDefault = isDefault || addressCount === 0;
+
+    if (makeDefault) {
+        const [updatedOthers, newAddress] = await db.$transaction([
+            db.address.updateMany({
+                where: { userId: session.user.id, isDefault: true },
+                data: { isDefault: false }
+            }),
+            db.address.create({
+                data: {
+                    userId: session.user.id,
+                    type,
+                    houseNumber,
+                    street,
+                    landmark,
+                    pincode,
+                    isDefault: true
+                }
+            }),
+            db.user.update({
+                where: { id: session.user.id },
+                data: { pincode }
+            })
+        ]);
+        return { address: newAddress };
+    } else {
+        const newAddress = await db.address.create({
+            data: {
+                userId: session.user.id,
+                type,
+                houseNumber,
+                street,
+                landmark,
+                pincode,
+                isDefault: false
+            }
+        });
+        return { address: newAddress };
+    }
+};
+
+export const updateAddress = async (req: Request, id: string) => {
+    const session = await getAuthSession();
+    if (!session || !session.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const { type, houseNumber, street, landmark, pincode } = await req.json();
+
+    const existingAddress = await db.address.findUnique({
+        where: { id }
+    });
+
+    if (!existingAddress || existingAddress.userId !== session.user.id) {
+        throw new ApiError("Address not found or forbidden", 403);
+    }
+
+    const updatedAddress = await db.address.update({
+        where: { id },
+        data: { type, houseNumber, street, landmark, pincode }
+    });
+
+    return { address: updatedAddress };
+};
+
+export const deleteAddress = async (id: string) => {
+    const session = await getAuthSession();
+    if (!session || !session.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const existingAddress = await db.address.findUnique({
+        where: { id }
+    });
+
+    if (!existingAddress || existingAddress.userId !== session.user.id) {
+        throw new ApiError("Address not found or forbidden", 403);
+    }
+
+    await db.address.delete({
+        where: { id }
+    });
+
+    if (existingAddress.isDefault) {
+        const remainingAddress = await db.address.findFirst({
+            where: { userId: session.user.id },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        if (remainingAddress) {
+            await db.$transaction([
+                db.address.update({
+                    where: { id: remainingAddress.id },
+                    data: { isDefault: true }
+                }),
+                db.user.update({
+                    where: { id: session.user.id },
+                    data: { pincode: remainingAddress.pincode }
+                })
+            ]);
+        }
+    }
+
+    return null;
+};
+
+export const setDefaultAddress = async (id: string) => {
+    const session = await getAuthSession();
+    if (!session || !session.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const addressToMakeDefault = await db.address.findUnique({
+        where: { id }
+    });
+
+    if (!addressToMakeDefault || addressToMakeDefault.userId !== session.user.id) {
+        throw new ApiError("Address not found or forbidden", 403);
+    }
+
+    await db.$transaction([
+        db.address.updateMany({
+            where: { userId: session.user.id },
+            data: { isDefault: false }
+        }),
+        db.address.update({
+            where: { id },
+            data: { isDefault: true }
+        }),
+        db.user.update({
+            where: { id: session.user.id },
+            data: { pincode: addressToMakeDefault.pincode }
+        })
+    ]);
+
+    return null;
+};
