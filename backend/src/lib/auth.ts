@@ -10,7 +10,40 @@ class CustomAuthError extends CredentialsSignin {
     }
 }
 
+const useSecureCookies = process.env.NODE_ENV === "production";
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+const cookieSameSite = useSecureCookies ? "none" as const : "lax" as const;
+
 export const authConfig: NextAuthConfig = {
+    cookies: {
+        sessionToken: {
+            name: `${cookiePrefix}next-auth.session-token`,
+            options: {
+                httpOnly: true,
+                sameSite: cookieSameSite,
+                path: "/",
+                secure: useSecureCookies,
+            },
+        },
+        callbackUrl: {
+            name: `${cookiePrefix}next-auth.callback-url`,
+            options: {
+                httpOnly: true,
+                sameSite: cookieSameSite,
+                path: "/",
+                secure: useSecureCookies,
+            },
+        },
+        csrfToken: {
+            name: `${cookiePrefix}next-auth.csrf-token`,
+            options: {
+                httpOnly: true,
+                sameSite: cookieSameSite,
+                path: "/",
+                secure: useSecureCookies,
+            },
+        },
+    },
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -85,9 +118,6 @@ import jwt from "jsonwebtoken";
 
 export const getAuthSession = async () => {
     try {
-        // Ensure headers() is awaited contextually correctly since Next.js 15+
-        // Wrapping in a generic Promise.resolve in case it's sync in previous versions, 
-        // but Next 15+ headers() is async.
         const headersList = await Promise.resolve(headers());
         const authHeader = headersList.get("authorization");
 
