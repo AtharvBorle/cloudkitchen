@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -33,12 +33,27 @@ export default function LoginPage() {
                     setError("Invalid email or password.");
                 }
             } else {
+                const session = await getSession();
+                const role = session?.user?.role;
+
                 const params = new URLSearchParams(window.location.search);
                 const callbackUrl = params.get("callbackUrl");
                 if (callbackUrl && callbackUrl.startsWith("/")) {
-                    router.push(callbackUrl);
+                    window.location.href = callbackUrl;
                 } else {
-                    router.refresh();
+                    let redirectPath = "/";
+                    if (role === "SUPERADMIN") {
+                        redirectPath = "/dashboard/superadmin";
+                    } else if (role === "AGENT") {
+                        redirectPath = "/dashboard/admin";
+                    } else if (role === "SELLER") {
+                        redirectPath = "/dashboard/seller";
+                    } else if (role === "DELIVERY") {
+                        redirectPath = "/dashboard/delivery";
+                    } else if (role === "USER") {
+                        redirectPath = "/dashboard/user";
+                    }
+                    window.location.href = redirectPath;
                 }
             }
         } catch (err: any) {
