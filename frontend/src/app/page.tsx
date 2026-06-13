@@ -47,7 +47,7 @@ export default function Home() {
           {/* Desktop Nav */}
           <nav className="navbar-links desktop-only">
             <Link href="/">Home</Link>
-            <Link href="/auth/login">Login</Link>
+            <Link href="/user">Login</Link>
             <Link href="/auth/register/user">Sign Up</Link>
             <Link href="/auth/register" className="btn-nav-seller">Become a Seller</Link>
           </nav>
@@ -65,7 +65,7 @@ export default function Home() {
         ></div>
         <div className={`mobile-nav-menu ${isMenuOpen ? 'open' : ''}`}>
           <Link href="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
-          <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>Login</Link>
+          <Link href="/user" onClick={() => setIsMenuOpen(false)}>Login</Link>
           <Link href="/auth/register/user" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
           <Link href="/auth/register" className="btn-nav-seller" style={{ textAlign: 'center', marginTop: '10px' }} onClick={() => setIsMenuOpen(false)}>Become a Seller</Link>
         </div>

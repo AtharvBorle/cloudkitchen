@@ -17,7 +17,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
 
     const handleAction = () => {
         if (!session) {
-            router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+            router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`);
             return;
         }
         addToCart({ id: item.id, name: item.name, price: item.price, quantity: 1, sellerId: item.sellerId, sellerName: item.sellerName });
@@ -97,7 +97,7 @@ export function BookRoomButton({ room, fullWidth = true, disabled = false }: { r
 
     const handleAction = () => {
         if (!session) {
-            router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+            router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`);
             return;
         }
         initiateRoomBooking(room);

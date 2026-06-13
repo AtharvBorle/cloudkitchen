@@ -61,7 +61,7 @@ function ExploreHeader() {
             </div>
 
             <div className="desktop-only" style={{ alignItems: "center", gap: "10px" }}>
-                <Link href="/auth/login" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                <Link href="/user" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                     <LogIn size={18} /> Sign In
                 </Link>
             </div>
@@ -103,7 +103,7 @@ function ExploreHeader() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "auto", paddingTop: "20px", borderTop: "1px solid var(--surface-border)" }}>
-                    <Link href="/auth/login" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    <Link href="/user" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                         <LogIn size={18} /> Sign In
                     </Link>
                 </div>
