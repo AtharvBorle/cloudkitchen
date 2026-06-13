@@ -111,7 +111,7 @@ export default function SellerLoginPage() {
                 </form>
 
                 <div className="auth-footer-text">
-                    Want to sell with us? <Link href="#" onClick={(e) => { e.preventDefault(); router.push("/#join-us"); }}>Register Store</Link>
+                    Want to sell with us? <Link href="#" onClick={(e) => { e.preventDefault(); router.push("/auth/register"); }}>Register Store</Link>
                 </div>
 
                 <div className="auth-footer-text" style={{ marginTop: '15px' }}>
