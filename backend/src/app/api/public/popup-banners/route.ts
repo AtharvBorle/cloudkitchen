@@ -7,7 +7,9 @@ export async function GET(req: Request) {
         const sellerId = searchParams.get('sellerId');
 
         const data = await getPublicPopupBanners(sellerId);
-        return successResponse(data);
+        const response = successResponse(data);
+        response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=30");
+        return response;
     } catch (error) {
         console.error("Error fetching public popup banners:", error);
         return errorResponse("An error occurred", 500);

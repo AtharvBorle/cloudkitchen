@@ -1,135 +1,156 @@
 import { db } from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 
 const prisma = new PrismaClient();
 
-export const getPublicCategories = async () => {
-    const categories = await db.category.findMany({
-        orderBy: { name: 'asc' }
-    });
+export const getPublicCategories = unstable_cache(
+    async () => {
+        const categories = await db.category.findMany({
+            orderBy: { name: 'asc' }
+        });
 
-    return { categories };
-};
+        return { categories };
+    },
+    ["public-categories"],
+    { revalidate: 60, tags: ["categories"] }
+);
 
-export const getPublicExploreData = async () => {
-    const sellers = await db.sellerProfile.findMany({
-        where: {
-            verificationStatus: "APPROVED",
-            user: { isActive: true }
-        },
-        include: {
-            user: {
-                select: { name: true, city: true, pincode: true, phone: true }
+export const getPublicExploreData = unstable_cache(
+    async () => {
+        const sellers = await db.sellerProfile.findMany({
+            where: {
+                verificationStatus: "APPROVED",
+                user: { isActive: true }
             },
-            foodItems: {
-                where: { isAvailable: true }
-            },
-            rooms: {
-                where: { isAvailable: true }
-            }
-        }
-    });
-
-    const foodItems = sellers.flatMap(seller =>
-        seller.foodItems.map(item => ({
-            ...item,
-            sellerName: seller.businessName || seller.user.name,
-            sellerCity: seller.user.city,
-            sellerTrackingId: seller.trackingId,
-            sellerIsOnline: seller.isOnline
-        }))
-    );
-
-    const availableRooms = sellers.flatMap(seller =>
-        seller.rooms.map(room => ({
-            ...room,
-            sellerName: seller.businessName || seller.user.name,
-            sellerCity: seller.user.city,
-            sellerTrackingId: seller.trackingId,
-            sellerIsOnline: seller.isOnline
-        }))
-    );
-
-    return { foodItems, availableRooms };
-};
-
-export const getPublicRoomAvailability = async (id: string) => {
-    if (!id) {
-        throw new Error("Room ID is required");
-    }
-
-    const bookings = await db.booking.findMany({
-        where: {
-            roomId: id,
-            status: { in: ["CONFIRMED", "PENDING"] },
-            endDate: { gte: new Date() }
-        },
-        select: {
-            startDate: true,
-            endDate: true
-        },
-        orderBy: {
-            startDate: 'asc'
-        }
-    });
-
-    return bookings;
-};
-
-export const getPublicCoupons = async (sellerId: string | null) => {
-    if (!sellerId) {
-        throw new Error("sellerId is required");
-    }
-
-    const now = new Date();
-
-    const activeCoupons = await prisma.coupon.findMany({
-        where: {
-            isActive: true,
-            OR: [
-                { appliesToSellerId: null },
-                { appliesToSellerId: sellerId }
-            ],
-            AND: [
-                {
-                    validFrom: { lte: now }
+            include: {
+                user: {
+                    select: { name: true, city: true, pincode: true, phone: true }
                 },
-                {
-                    OR: [
-                        { validUntil: null },
-                        { validUntil: { gt: now } }
-                    ]
+                foodItems: {
+                    where: { isAvailable: true }
+                },
+                rooms: {
+                    where: { isAvailable: true }
                 }
-            ]
+            }
+        });
+
+        const foodItems = sellers.flatMap(seller =>
+            seller.foodItems.map(item => ({
+                ...item,
+                sellerName: seller.businessName || seller.user.name,
+                sellerCity: seller.user.city,
+                sellerTrackingId: seller.trackingId,
+                sellerIsOnline: seller.isOnline
+            }))
+        );
+
+        const availableRooms = sellers.flatMap(seller =>
+            seller.rooms.map(room => ({
+                ...room,
+                sellerName: seller.businessName || seller.user.name,
+                sellerCity: seller.user.city,
+                sellerTrackingId: seller.trackingId,
+                sellerIsOnline: seller.isOnline
+            }))
+        );
+
+        return { foodItems, availableRooms };
+    },
+    ["public-explore-data"],
+    { revalidate: 30, tags: ["explore"] }
+);
+
+export const getPublicRoomAvailability = (id: string) => unstable_cache(
+    async () => {
+        if (!id) {
+            throw new Error("Room ID is required");
         }
-    });
 
-    const safeCoupons = activeCoupons.map((c: any) => ({
-        id: c.id,
-        code: c.code,
-        description: c.description,
-        discountPercentage: c.discountPercentage,
-        discountAmount: c.discountAmount,
-        minimumCartValue: c.minimumCartValue,
-        maxUsagesPerUser: c.maxUsagesPerUser,
-        maxUsers: c.maxUsers,
-        currentUsersCount: c.currentUsersCount
-    }));
+        const bookings = await db.booking.findMany({
+            where: {
+                roomId: id,
+                status: { in: ["CONFIRMED", "PENDING"] },
+                endDate: { gte: new Date() }
+            },
+            select: {
+                startDate: true,
+                endDate: true
+            },
+            orderBy: {
+                startDate: 'asc'
+            }
+        });
 
-    return safeCoupons;
-};
+        return bookings;
+    },
+    [`room-availability-${id}`],
+    { revalidate: 10, tags: ["bookings", `room-${id}`] }
+)();
 
-export const getPublicPopupBanners = async (sellerId: string | null) => {
-    const banners = await db.popupBanner.findMany({
-        where: {
-            isActive: true,
-            OR: [
-                { appliesToSellerId: null },
-                ...(sellerId ? [{ appliesToSellerId: sellerId }] : [])
-            ]
-        },
-        orderBy: { createdAt: 'desc' },
-    });
+export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
+    async () => {
+        if (!sellerId) {
+            throw new Error("sellerId is required");
+        }
 
-    return { banners };
-};
+        const now = new Date();
+
+        const activeCoupons = await prisma.coupon.findMany({
+            where: {
+                isActive: true,
+                OR: [
+                    { appliesToSellerId: null },
+                    { appliesToSellerId: sellerId }
+                ],
+                AND: [
+                    {
+                        validFrom: { lte: now }
+                    },
+                    {
+                        OR: [
+                            { validUntil: null },
+                            { validUntil: { gt: now } }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        const safeCoupons = activeCoupons.map((c: any) => ({
+            id: c.id,
+            code: c.code,
+            description: c.description,
+            discountPercentage: c.discountPercentage,
+            discountAmount: c.discountAmount,
+            minimumCartValue: c.minimumCartValue,
+            maxUsagesPerUser: c.maxUsagesPerUser,
+            maxUsers: c.maxUsers,
+            currentUsersCount: c.currentUsersCount
+        }));
+
+        return safeCoupons;
+    },
+    [`public-coupons-${sellerId || 'global'}`],
+    { revalidate: 60, tags: ["coupons"] }
+)();
+
+export const getPublicPopupBanners = (sellerId: string | null) => unstable_cache(
+    async () => {
+        const banners = await db.popupBanner.findMany({
+            where: {
+                isActive: true,
+                OR: [
+                    { appliesToSellerId: null },
+                    ...(sellerId ? [{ appliesToSellerId: sellerId }] : [])
+                ]
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        return { banners };
+    },
+    [`public-popup-banners-${sellerId || 'global'}`],
+    { revalidate: 60, tags: ["popup-banners"] }
+)();
