@@ -55,7 +55,7 @@ export default function SellerDashboardOverview() {
                     </p>
                     <button
                         onClick={async () => {
-                            await signOut({ redirectTo: "/auth/login" });
+                            await signOut({ callbackUrl: "/seller" });
                         }}
                         className="btn btn-coral"
                         style={{ width: '100%', padding: '14px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}

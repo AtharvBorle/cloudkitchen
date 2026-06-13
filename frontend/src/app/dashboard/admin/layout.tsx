@@ -81,7 +81,7 @@ export default function adminLayout({ children }: { children: React.ReactNode })
 
                 <div style={{ padding: "1.5rem 1rem", borderTop: "1px solid var(--surface-border)" }}>
                     <button
-                        onClick={() => signOut()}
+                        onClick={() => signOut({ callbackUrl: "/admin" })}
                         style={{
                             width: "100%",
                             display: "flex",

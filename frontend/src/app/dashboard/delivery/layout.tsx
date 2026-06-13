@@ -30,7 +30,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
 
                 <div style={{ padding: '20px', borderTop: '1px solid #2D3748' }}>
                     <button
-                        onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                        onClick={() => signOut({ callbackUrl: "/delivery" })}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 15px', width: '100%', borderRadius: '8px', color: '#FC8181', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontWeight: '600' }}
                     >
                         <LogOut size={20} /> Logout

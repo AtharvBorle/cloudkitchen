@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 import { useState, useEffect } from "react";
 
@@ -79,9 +80,27 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     Profile & QR
                 </Link>
 
-                <Link href="/api/auth/signout" style={{ display: 'block', padding: '12px 20px', color: '#A0AEC0', marginTop: '10px' }}>
+                <button
+                    onClick={async (e) => {
+                        e.preventDefault();
+                        await signOut({ callbackUrl: "/seller" });
+                    }}
+                    style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '12px 20px',
+                        color: '#A0AEC0',
+                        marginTop: '10px',
+                        cursor: 'pointer',
+                        background: 'none',
+                        border: 'none',
+                        fontFamily: 'inherit',
+                        fontSize: 'inherit'
+                    }}
+                >
                     Logout
-                </Link>
+                </button>
             </nav>
         </>
     );

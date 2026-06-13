@@ -74,7 +74,7 @@ export default function SuperadminLayout({
                 </nav>
 
                 <div style={{ padding: "var(--spacing-4)", borderTop: "1px solid var(--border)" }}>
-                    <button onClick={() => signOut()} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
+                    <button onClick={() => signOut({ callbackUrl: "/admin" })} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
                         Sign Out
                     </button>
                 </div>
