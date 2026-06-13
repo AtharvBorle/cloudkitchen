@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { revalidateTag } from "next/cache";
 
 export const getCoupons = async () => {
     const session = await getAuthSession();
@@ -39,6 +40,8 @@ export const createCoupon = async (req: Request) => {
             appliesToSellerId: appliesToSellerId || null
         }
     });
+
+    revalidateTag("coupons");
 
     return { coupon };
 };

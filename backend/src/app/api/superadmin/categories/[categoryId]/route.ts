@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ categoryId: string }> }) {
     try {
@@ -14,6 +15,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ categ
         await db.category.delete({
             where: { id: categoryId }
         });
+
+        revalidateTag("categories");
 
         return NextResponse.json({ message: "Category deleted" }, { status: 200 });
     } catch (error) {

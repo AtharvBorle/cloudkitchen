@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { revalidateTag } from "next/cache";
 
 export const getCategories = async () => {
     const session = await getAuthSession();
@@ -35,6 +36,8 @@ export const createCategory = async (req: Request) => {
     const category = await db.category.create({
         data: { name, type }
     });
+
+    revalidateTag("categories");
 
     return { category };
 };

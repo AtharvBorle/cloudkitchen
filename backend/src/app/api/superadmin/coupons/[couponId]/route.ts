@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ couponId: string }> }) {
     try {
@@ -14,6 +15,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ coupo
         await db.coupon.delete({
             where: { id: couponId }
         });
+
+        revalidateTag("coupons");
 
         return NextResponse.json({ message: "Coupon deleted" }, { status: 200 });
     } catch (error) {
