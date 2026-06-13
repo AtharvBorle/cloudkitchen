@@ -121,6 +121,23 @@ export const authConfig: NextAuthConfig = {
                 session.user.id = token.id as string;
             }
             return session;
+        },
+        async redirect({ url, baseUrl }) {
+            if (url.startsWith("/")) return `${baseUrl}${url}`;
+            const allowedOrigins = [
+                "https://cloudkitchen-rose.vercel.app",
+                "http://localhost:3000",
+                "http://localhost:3001"
+            ];
+            try {
+                const targetOrigin = new URL(url).origin;
+                if (allowedOrigins.includes(targetOrigin) || targetOrigin === baseUrl) {
+                    return url;
+                }
+            } catch (e) {
+                // Invalid URL
+            }
+            return baseUrl;
         }
     },
     pages: {

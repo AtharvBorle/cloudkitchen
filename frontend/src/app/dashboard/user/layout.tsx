@@ -114,7 +114,7 @@ export function UserHeader() {
                 <button onClick={() => router.push("/dashboard/user/checkout")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
                     <ShoppingCart size={18} /> Cart ({totalCount})
                 </button>
-                <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: '/' })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                     <LogOut size={18} /> Sign Out
                 </button>
             </div>
@@ -159,7 +159,7 @@ export function UserHeader() {
                     <button onClick={() => { setIsMenuOpen(false); router.push("/dashboard/user/checkout"); }} className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontWeight: "bold" }}>
                         <ShoppingCart size={18} /> Cart ({totalCount})
                     </button>
-                    <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: '/' })} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                         <LogOut size={18} /> Sign Out
                     </button>
                 </div>

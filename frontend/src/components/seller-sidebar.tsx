@@ -83,7 +83,7 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                 <button
                     onClick={async (e) => {
                         e.preventDefault();
-                        await signOut({ callbackUrl: "/seller" });
+                        await signOut({ callbackUrl: window.location.origin + "/seller" });
                     }}
                     style={{
                         display: 'block',

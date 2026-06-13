@@ -31,7 +31,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         Your seller profile is currently under review. Our admins will verify your FSSAI and Adhaar documents shortly.
                         Once approved, you will be able to access your dashboard and start receiving orders.
                     </p>
-                    <button onClick={async () => { await signOut({ callbackUrl: "/seller" }); }} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
+                    <button onClick={async () => { await signOut({ callbackUrl: window.location.origin + "/seller" }); }} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
                         Sign Out
                     </button>
                 </div>
@@ -52,7 +52,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         Our admins have reviewed your application and requested some changes to your documents. Please review their notes and re-upload the requested items.
                     </p>
                     <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-                        <button onClick={async () => { await signOut({ callbackUrl: "/seller" }); }} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
+                        <button onClick={async () => { await signOut({ callbackUrl: window.location.origin + "/seller" }); }} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
                             Sign Out
                         </button>
                         <Link href="/dashboard/seller/revision" style={{ padding: "12px 24px", backgroundColor: "#d97706", color: "white", borderRadius: "8px", textDecoration: "none", fontWeight: "600", display: "inline-block" }}>
@@ -76,7 +76,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                     <p style={{ color: "#64748b", marginBottom: "2rem", lineHeight: "1.6" }}>
                         Unfortunately, your seller application has been rejected by our admins based on the provided documents. Please reach out to support for more information or to re-apply.
                     </p>
-                    <button onClick={async () => { await signOut({ callbackUrl: "/seller" }); }} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
+                    <button onClick={async () => { await signOut({ callbackUrl: window.location.origin + "/seller" }); }} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
                         Sign Out
                     </button>
                 </div>
@@ -101,7 +101,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         <Link href="/dashboard/seller/payment" className="btn btn-coral" style={{ padding: "14px", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                             Pay Subscription & Finish
                         </Link>
-                        <button onClick={async () => { await signOut({ callbackUrl: "/seller" }); }} style={{ padding: "12px", color: "#94a3b8", backgroundColor: "transparent", border: "none", fontFamily: "inherit", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600" }}>
+                        <button onClick={async () => { await signOut({ callbackUrl: window.location.origin + "/seller" }); }} style={{ padding: "12px", color: "#94a3b8", backgroundColor: "transparent", border: "none", fontFamily: "inherit", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600" }}>
                             Sign Out
                         </button>
                     </div>
