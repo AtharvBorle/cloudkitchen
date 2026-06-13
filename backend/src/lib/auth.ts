@@ -49,13 +49,15 @@ export const authConfig: NextAuthConfig = {
             name: "Credentials",
             credentials: {
                 email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" }
+                password: { label: "Password", type: "password" },
+                loginType: { label: "LoginType", type: "text" }
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
                 const email = (credentials.email as string).toLowerCase();
-                console.log("Login attempt for:", email);
+                const loginType = (credentials.loginType as string) || "USER";
+                console.log("Login attempt for:", email, "with loginType:", loginType);
 
                 const user = await db.user.findUnique({
                     where: { email }
@@ -75,6 +77,24 @@ export const authConfig: NextAuthConfig = {
                 if (!isPasswordValid) {
                     console.log("Invalid password for user:", email);
                     throw new CustomAuthError("INVALID_PASSWORD");
+                }
+
+                // Verify role mismatch
+                if (loginType === "USER" && user.role !== "USER") {
+                    console.log(`Role mismatch: User role is ${user.role}, but tried to login as USER`);
+                    throw new CustomAuthError("ROLE_MISMATCH_USER");
+                }
+                if (loginType === "SELLER" && user.role !== "SELLER") {
+                    console.log(`Role mismatch: User role is ${user.role}, but tried to login as SELLER`);
+                    throw new CustomAuthError("ROLE_MISMATCH_SELLER");
+                }
+                if (loginType === "ADMIN" && user.role !== "AGENT" && user.role !== "SUPERADMIN") {
+                    console.log(`Role mismatch: User role is ${user.role}, but tried to login as ADMIN/AGENT`);
+                    throw new CustomAuthError("ROLE_MISMATCH_ADMIN");
+                }
+                if (loginType === "DELIVERY" && user.role !== "DELIVERY") {
+                    console.log(`Role mismatch: User role is ${user.role}, but tried to login as DELIVERY`);
+                    throw new CustomAuthError("ROLE_MISMATCH_DELIVERY");
                 }
 
                 console.log("Login successful for:", email);
