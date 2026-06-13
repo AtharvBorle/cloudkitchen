@@ -77,18 +77,19 @@ model Category {
 }
 
 model FoodItem {
-  id            String        @id @default(uuid())
-  sellerId      String
-  seller        SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  name          String
-  description   String
-  price         Float
-  imageUrl      String?
-  availableDays String        @default("Mon,Tue,Wed,Thu,Fri,Sat,Sun")
-  isAvailable   Boolean       @default(true)
-  stockQuantity Int           @default(-1)
-  categoryId    String?
-  category      Category?     @relation(fields: [categoryId], references: [id])
+  id               String        @id @default(uuid())
+  sellerId         String
+  seller           SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  name             String
+  description      String
+  price            Float
+  imageUrl         String?
+  availableDays    String        @default("Mon,Tue,Wed,Thu,Fri,Sat,Sun")
+  isAvailable      Boolean       @default(true)
+  stockQuantity    Int           @default(-1)
+  deliveryPincodes String?
+  categoryId       String?
+  category         Category?     @relation(fields: [categoryId], references: [id])
 }
 
 model Order {

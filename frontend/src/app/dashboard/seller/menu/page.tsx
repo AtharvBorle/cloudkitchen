@@ -18,6 +18,8 @@ export default function ManageMenuPage() {
     const [description, setDescription] = useState("");
     const [stockQuantity, setStockQuantity] = useState("-1");
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [pincodeList, setPincodeList] = useState<string[]>([]);
+    const [pincodeInput, setPincodeInput] = useState("");
 
     const fetchMenu = async () => {
         try {
@@ -45,7 +47,13 @@ export default function ManageMenuPage() {
 
         if (editingItemId) {
             // For PUT, we typically send JSON (assuming you don't need image update for MVP)
-            bodyData = JSON.stringify({ name, price, description, stockQuantity: parseInt(stockQuantity) });
+            bodyData = JSON.stringify({
+                name,
+                price: parseFloat(price),
+                description,
+                stockQuantity: parseInt(stockQuantity),
+                deliveryPincodes: pincodeList.join(", ") || null
+            });
             headers["Content-Type"] = "application/json";
         } else {
             // For POST, use FormData for image
@@ -54,6 +62,10 @@ export default function ManageMenuPage() {
             formData.append("price", price);
             formData.append("description", description);
             formData.append("stockQuantity", stockQuantity);
+            const deliveryPincodesStr = pincodeList.join(", ");
+            if (deliveryPincodesStr) {
+                formData.append("deliveryPincodes", deliveryPincodesStr);
+            }
             if (imageFile) formData.append("image", imageFile);
             bodyData = formData;
             // browser sets content type automatically for FormData
@@ -110,6 +122,7 @@ export default function ManageMenuPage() {
         setPrice(item.price.toString());
         setDescription(item.description);
         setStockQuantity(item.stockQuantity?.toString() || "-1");
+        setPincodeList(item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: string) => p.trim()) : []);
         setImageFile(null); // Assuming no image update for now
         setIsModalOpen(true);
     };
@@ -118,6 +131,8 @@ export default function ManageMenuPage() {
         setIsModalOpen(false);
         setEditingItemId(null);
         setName(""); setPrice(""); setDescription(""); setStockQuantity("-1"); setImageFile(null);
+        setPincodeList([]);
+        setPincodeInput("");
     };
 
     // Generic placeholder if no image
@@ -151,7 +166,13 @@ export default function ManageMenuPage() {
                                     <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{item.name}</h3>
                                     <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
                                 </div>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '20px', flex: 1 }}>{item.description}</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '10px', flex: 1 }}>{item.description}</p>
+                                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #EEE', paddingTop: '10px' }}>
+                                    <div><strong>Stock:</strong> {item.stockQuantity === -1 ? 'Unlimited' : item.stockQuantity === 0 ? 'Out of Stock (0)' : item.stockQuantity}</div>
+                                    <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                        <strong>Delivery Pincodes:</strong> {item.deliveryPincodes ? item.deliveryPincodes : "Default (Local Pincode only)"}
+                                    </div>
+                                </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <button
@@ -197,6 +218,75 @@ export default function ManageMenuPage() {
                             </div>
 
                             <div className="input-group">
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>
+                                    Delivery Pincodes (Optional)
+                                </label>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                                    <input
+                                        type="text"
+                                        value={pincodeInput}
+                                        onChange={e => setPincodeInput(e.target.value.replace(/\D/g, ''))}
+                                        className="input-field"
+                                        placeholder="Add a Pincode (e.g. 411028)"
+                                        style={{ marginBottom: 0 }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const pin = pincodeInput.trim();
+                                            if (pin && !pincodeList.includes(pin)) {
+                                                setPincodeList([...pincodeList, pin]);
+                                                setPincodeInput("");
+                                            }
+                                        }}
+                                        className="btn btn-secondary"
+                                        style={{ width: 'auto', padding: '0 15px', whiteSpace: 'nowrap' }}
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+                                    {pincodeList.map(pin => (
+                                        <span
+                                            key={pin}
+                                            style={{
+                                                backgroundColor: '#E0F2FE',
+                                                color: '#0369A1',
+                                                padding: '4px 10px',
+                                                borderRadius: '16px',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}
+                                        >
+                                            {pin}
+                                            <button
+                                                type="button"
+                                                onClick={() => setPincodeList(pincodeList.filter(p => p !== pin))}
+                                                style={{
+                                                    border: 'none',
+                                                    background: 'none',
+                                                    color: '#0369A1',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold',
+                                                    padding: 0,
+                                                    fontSize: '0.85rem',
+                                                    lineHeight: 1
+                                                }}
+                                            >
+                                                &times;
+                                            </button>
+                                        </span>
+                                    ))}
+                                    {pincodeList.length === 0 && (
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                            Delivers only to your physical shop pincode by default.
+                                        </span>
+                                    )}
+                                </div>
+
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Available Days:</label>
                                 <div style={{ display: 'flex', gap: '10px', fontSize: '0.85rem' }}>
                                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (

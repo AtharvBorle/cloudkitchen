@@ -46,6 +46,7 @@ export const createMenuItem = async (req: Request) => {
     const availableDays = formData.get("availableDays") as string;
     const stockQuantityStr = formData.get("stockQuantity") as string;
     const stockQuantity = stockQuantityStr && !isNaN(parseInt(stockQuantityStr)) ? parseInt(stockQuantityStr) : -1;
+    const deliveryPincodes = formData.get("deliveryPincodes") as string | null;
     const imageFile = formData.get("image") as File | null;
 
     if (!name || isNaN(price)) {
@@ -67,6 +68,7 @@ export const createMenuItem = async (req: Request) => {
             description: description || "",
             availableDays: availableDays || "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
             stockQuantity,
+            deliveryPincodes: deliveryPincodes || null,
             imageUrl,
         }
     });
@@ -97,6 +99,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
     if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
     if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
     if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = parseInt(body.stockQuantity);
+    if (body.deliveryPincodes !== undefined) dataToUpdate.deliveryPincodes = body.deliveryPincodes;
 
     const updatedItem = await db.foodItem.update({
         where: { id },

@@ -128,10 +128,19 @@ export default function UserDashboard() {
                                 <Link href={`/shop/${item.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                                     <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px' }}>{item.name}</h3>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>By {item.sellerName} • {item.sellerCity}</p>
-                                    <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                                    <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                        {item.stockQuantity === 0 ? (
+                                            <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
+                                        ) : item.stockQuantity > 0 ? (
+                                            <span>Only {item.stockQuantity} left!</span>
+                                        ) : (
+                                            <span style={{ color: '#10B981' }}>In Stock</span>
+                                        )}
+                                    </div>
                                 </Link>
 
-                                <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline} />
+                                <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
                             </div>
                         </div>
                     ))}

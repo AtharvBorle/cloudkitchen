@@ -61,15 +61,8 @@ export const getUserDashboard = async () => {
         where: { id: session.user.id }
     });
 
-    const sellerWhereClause: any = {
-        verificationStatus: "APPROVED",
-        user: { isActive: true }
-    };
-
-    if (currentUser?.pincode) {
-        sellerWhereClause.user.pincode = currentUser.pincode;
-    } else {
-        // Strict filtering: If no pincode is set, return empty dashboard
+    const userPincode = currentUser?.pincode ? currentUser.pincode.trim() : null;
+    if (!userPincode) {
         return {
             foodItems: [],
             availableRooms: [],
@@ -78,7 +71,14 @@ export const getUserDashboard = async () => {
     }
 
     const sellers = await db.sellerProfile.findMany({
-        where: sellerWhereClause,
+        where: {
+            verificationStatus: "APPROVED",
+            user: { isActive: true },
+            OR: [
+                { user: { pincode: userPincode } },
+                { foodItems: { some: { deliveryPincodes: { contains: userPincode } } } }
+            ]
+        },
         include: {
             user: { select: { name: true, city: true, pincode: true, phone: true } },
             foodItems: { where: { isAvailable: true } },
@@ -87,31 +87,41 @@ export const getUserDashboard = async () => {
     });
 
     const foodItems = sellers.flatMap(seller =>
-        seller.foodItems.map(item => ({
-            ...item,
-            sellerName: seller.businessName || seller.user.name,
-            sellerCity: seller.user.city,
-            sellerPincode: seller.user.pincode,
-            sellerTrackingId: seller.trackingId,
-            sellerIsOnline: seller.isOnline
-        }))
+        seller.foodItems
+            .filter(item => {
+                if (item.deliveryPincodes) {
+                    const pins = item.deliveryPincodes.split(",").map(p => p.trim());
+                    return pins.includes(userPincode);
+                }
+                return seller.user.pincode === userPincode;
+            })
+            .map(item => ({
+                ...item,
+                sellerName: seller.businessName || seller.user.name,
+                sellerCity: seller.user.city,
+                sellerPincode: seller.user.pincode,
+                sellerTrackingId: seller.trackingId,
+                sellerIsOnline: seller.isOnline
+            }))
     );
 
     const availableRooms = sellers.flatMap(seller =>
-        seller.rooms.map(room => ({
-            ...room,
-            sellerName: seller.businessName || seller.user.name,
-            sellerCity: seller.user.city,
-            sellerPincode: seller.user.pincode,
-            sellerTrackingId: seller.trackingId,
-            sellerIsOnline: seller.isOnline
-        }))
+        seller.rooms
+            .filter(room => seller.user.pincode === userPincode)
+            .map(room => ({
+                ...room,
+                sellerName: seller.businessName || seller.user.name,
+                sellerCity: seller.user.city,
+                sellerPincode: seller.user.pincode,
+                sellerTrackingId: seller.trackingId,
+                sellerIsOnline: seller.isOnline
+            }))
     );
 
     return {
         foodItems,
         availableRooms,
-        userPincode: currentUser?.pincode
+        userPincode
     };
 };
 

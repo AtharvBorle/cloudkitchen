@@ -20,6 +20,16 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
             router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`);
             return;
         }
+
+        // Validate stock quantity limits
+        if (item.stockQuantity !== undefined && item.stockQuantity !== -1) {
+            const currentQty = cartItem ? cartItem.quantity : 0;
+            if (currentQty >= item.stockQuantity) {
+                alert(`Cannot add more. Only ${item.stockQuantity} items in stock.`);
+                return;
+            }
+        }
+
         addToCart({ id: item.id, name: item.name, price: item.price, quantity: 1, sellerId: item.sellerId, sellerName: item.sellerName });
 
         if (!cartItem) {

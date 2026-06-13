@@ -105,9 +105,18 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                         <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{item.name}</h3>
                                         <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
                                     </div>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '20px' }}>{item.description}</p>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
+                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                        {item.stockQuantity === 0 ? (
+                                            <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
+                                        ) : item.stockQuantity > 0 ? (
+                                            <span>Only {item.stockQuantity} left!</span>
+                                        ) : (
+                                            <span style={{ color: '#10B981' }}>In Stock</span>
+                                        )}
+                                    </div>
 
-                                    <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline} />
+                                    <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0} />
                                 </div>
                             </div>
                         ))}
