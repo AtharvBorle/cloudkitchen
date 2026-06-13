@@ -16,7 +16,7 @@ export default function SellerOffersPage() {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "SELLER") {
-            router.push("/auth/login");
+            router.push("/seller");
             return;
         }
 

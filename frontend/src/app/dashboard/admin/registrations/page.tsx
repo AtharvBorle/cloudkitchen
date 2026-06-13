@@ -16,7 +16,7 @@ export default function RegistrationsPage() {
         if (status === "loading") return;
 
         if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-            router.push("/auth/login");
+            router.push("/admin");
             return;
         }
 

@@ -16,7 +16,7 @@ export default function UserOrdersPage() {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "USER") {
-            router.push("/auth/login");
+            router.push("/user");
             return;
         }
 

@@ -16,7 +16,7 @@ export default function AdminCouponsPage() {
         if (status === "loading") return;
 
         if (!session || !session.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
-            router.push("/auth/login");
+            router.push("/admin");
             return;
         }
 

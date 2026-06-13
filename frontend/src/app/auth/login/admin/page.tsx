@@ -1,12 +1,18 @@
 "use client";
 
 import { signIn, getSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
     const router = useRouter();
+    
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.location.pathname === "/auth/login/admin") {
+            router.replace("/admin");
+        }
+    }, [router]);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);

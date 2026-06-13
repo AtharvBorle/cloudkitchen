@@ -17,7 +17,7 @@ export default function SellerDashboardLayout({ children }: { children: ReactNod
         if (status === "loading") return;
 
         if (!session || session.user.role !== "SELLER") {
-            router.push("/auth/login");
+            router.push("/seller");
             return;
         }
 

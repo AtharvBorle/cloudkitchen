@@ -3,6 +3,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 export default function SuperadminSubscriptionsPage() {
     const router = useRouter();
@@ -157,8 +158,8 @@ export default function SuperadminSubscriptionsPage() {
         }
     };
 
-    const handleLogout = () => {
-        router.push("/api/auth/signout");
+    const handleLogout = async () => {
+        await signOut({ callbackUrl: window.location.origin + "/admin" });
     };
 
     const handleSort = (key: string) => {

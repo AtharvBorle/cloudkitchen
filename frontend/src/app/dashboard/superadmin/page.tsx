@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 
@@ -15,7 +15,7 @@ export default function SuperadminOverview() {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "SUPERADMIN") {
-            router.push("/auth/login");
+            router.push("/admin");
             return;
         }
 
@@ -48,9 +48,9 @@ export default function SuperadminOverview() {
         <div style={{ minHeight: '100vh', backgroundColor: '#F0F2F5', padding: '40px', fontFamily: "var(--font-sans)" }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>Super Admin Panel Overview</h1>
-                <a href="/api/auth/signout" style={{ fontWeight: 'bold', color: 'var(--text-main)', textDecoration: 'none', padding: '8px 16px', border: '1px solid #CCC', borderRadius: '8px', backgroundColor: 'white' }}>
+                <button onClick={() => signOut({ callbackUrl: window.location.origin + "/admin" })} style={{ fontWeight: 'bold', color: 'var(--text-main)', border: '1px solid #CCC', borderRadius: '8px', backgroundColor: 'white', padding: '8px 16px', cursor: 'pointer' }}>
                     Logout
-                </a>
+                </button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '40px' }}>

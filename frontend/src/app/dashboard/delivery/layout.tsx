@@ -3,9 +3,28 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { LogOut, Bike, ClipboardList, Settings, User } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function DeliveryLayout({ children }: { children: React.ReactNode }) {
+    const { data: session, status } = useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (status === "loading") return;
+        if (!session || session.user.role !== "DELIVERY") {
+            router.push("/delivery");
+        }
+    }, [session, status, router]);
+
+    if (status === "loading" || !session || session.user.role !== "DELIVERY") {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#F7FAFC' }}>
+                <span style={{ fontSize: '1.2rem', color: '#4A5568' }}>Checking authorization...</span>
+            </div>
+        );
+    }
+
     return (
         <div style={{ minHeight: '100vh', display: 'flex', backgroundColor: '#F7FAFC' }}>
             {/* Sidebar */}
