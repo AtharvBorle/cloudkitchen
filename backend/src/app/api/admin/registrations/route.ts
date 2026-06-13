@@ -2,6 +2,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
+import { updateSellerRegistrationStatus } from "@/controllers/adminController";
 
 export async function GET() {
     try {
@@ -39,5 +40,16 @@ export async function GET() {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Fetch pending registrations error:", error);
         return errorResponse("Internal server error", 500);
+    }
+}
+
+export async function POST(req: Request) {
+    try {
+        const data = await updateSellerRegistrationStatus(req);
+        return successResponse(data, "Status updated successfully");
+    } catch (error: any) {
+        if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
+        console.error("Update seller registration status error:", error);
+        return errorResponse("An error occurred", 500);
     }
 }
