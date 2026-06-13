@@ -177,7 +177,7 @@ export default function ManageMenuPage() {
             {/* Add Dish Modal */}
             {isModalOpen && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', width: '100%', maxWidth: '500px', boxShadow: 'var(--shadow-card)' }}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', width: '100%', maxWidth: '500px', boxShadow: 'var(--shadow-card)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>{editingItemId ? 'Edit Dish' : 'Add New Dish'}</h2>
 
                         <form onSubmit={handleSubmit}>
