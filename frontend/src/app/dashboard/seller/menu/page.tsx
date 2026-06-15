@@ -439,23 +439,51 @@ export default function ManageMenuPage() {
                                     </button>
                                 </div>
 
-                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Available Days:</label>
-                                <div style={{ display: 'flex', gap: '10px', fontSize: '0.85rem', marginBottom: '15px' }}>
-                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                                        <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                            <input type="checkbox" defaultChecked /> {day}
-                                        </label>
-                                    ))}
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)' }}>Open Time (Optional):</label>
-                                        <input type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} className="input-field" style={{ padding: '8px' }} />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)' }}>Close Time (Optional):</label>
-                                        <input type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} className="input-field" style={{ padding: '8px' }} />
+                                <div style={{ marginTop: '20px', borderTop: '1px solid #E2E8F0', paddingTop: '15px' }}>
+                                    <label style={{ fontSize: '0.95rem', fontWeight: 'bold', marginBottom: '10px', display: 'block', color: 'var(--text-main)' }}>
+                                        Day-wise Operational Hours:
+                                    </label>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                                            const dayData = dailyHours[day] || { isOpen: false, openTime: '08:00', closeTime: '22:00' };
+                                            return (
+                                                <div key={day} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', flexWrap: 'wrap', gap: '10px' }}>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '0.9rem', width: '100px', cursor: 'pointer', userSelect: 'none' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={dayData.isOpen}
+                                                            onChange={(e) => handleDailyHoursChange(day, 'isOpen', e.target.checked)}
+                                                        />
+                                                        {day === 'Mon' ? 'Monday' :
+                                                         day === 'Tue' ? 'Tuesday' :
+                                                         day === 'Wed' ? 'Wednesday' :
+                                                         day === 'Thu' ? 'Thursday' :
+                                                         day === 'Fri' ? 'Friday' :
+                                                         day === 'Sat' ? 'Saturday' : 'Sunday'}
+                                                    </label>
+                                                    
+                                                    {dayData.isOpen ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <input
+                                                                type="time"
+                                                                value={dayData.openTime}
+                                                                onChange={(e) => handleDailyHoursChange(day, 'openTime', e.target.value)}
+                                                                style={{ padding: '4px 8px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.85rem' }}
+                                                            />
+                                                            <span style={{ fontSize: '0.85rem', color: '#64748B' }}>to</span>
+                                                            <input
+                                                                type="time"
+                                                                value={dayData.closeTime}
+                                                                onChange={(e) => handleDailyHoursChange(day, 'closeTime', e.target.value)}
+                                                                style={{ padding: '4px 8px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.85rem' }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ fontSize: '0.85rem', color: '#94A3B8', fontStyle: 'italic' }}>Closed all day</span>
+                                                     )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
