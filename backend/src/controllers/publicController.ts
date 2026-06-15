@@ -41,6 +41,9 @@ export const getPublicExploreData = unstable_cache(
                 ...item,
                 sellerName: seller.businessName || seller.user.name,
                 sellerCity: seller.user.city,
+                sellerPincode: seller.user.pincode,
+                sellerLocality: seller.addressLocality,
+                sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
             }))
@@ -51,6 +54,9 @@ export const getPublicExploreData = unstable_cache(
                 ...room,
                 sellerName: seller.businessName || seller.user.name,
                 sellerCity: seller.user.city,
+                sellerPincode: seller.user.pincode,
+                sellerLocality: seller.addressLocality,
+                sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
             }))

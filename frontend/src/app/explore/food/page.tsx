@@ -40,6 +40,9 @@ export default function ExploreFoodPage() {
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -54,7 +57,7 @@ export default function ExploreFoodPage() {
                     <Search size={18} color="var(--text-muted)" />
                     <input
                         type="text"
-                        placeholder="Search for dish, kitchen, or city..."
+                        placeholder="Search area, locality, or food..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{ border: 'none', outline: 'none', padding: '10px', width: '100%', fontSize: '0.95rem' }}

@@ -100,7 +100,7 @@ export default function UserDashboard() {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search area, locality, or pincode..."
+                            placeholder="Search area, locality, or food..."
                             style={{ flex: 1, border: "none", outline: "none", padding: "12px 15px", fontSize: "1rem", color: "#333" }}
                         />
                     </div>

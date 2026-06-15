@@ -62,7 +62,7 @@ export default function UserRoomsPage() {
                     <Search size={18} color="var(--text-muted)" />
                     <input
                         type="text"
-                        placeholder="Search location, seller, or room type..."
+                        placeholder="Search area, locality, or room..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{ border: 'none', outline: 'none', padding: '10px', width: '100%', fontSize: '0.95rem' }}

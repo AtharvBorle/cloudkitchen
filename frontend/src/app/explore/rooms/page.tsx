@@ -43,6 +43,9 @@ export default function ExploreRoomsPage() {
         room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -57,7 +60,7 @@ export default function ExploreRoomsPage() {
                     <Search size={18} color="var(--text-muted)" />
                     <input
                         type="text"
-                        placeholder="Search location, seller, or room type..."
+                        placeholder="Search area, locality, or room..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{ border: 'none', outline: 'none', padding: '10px', width: '100%', fontSize: '0.95rem' }}
