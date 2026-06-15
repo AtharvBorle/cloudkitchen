@@ -43,6 +43,8 @@ export default function UserFoodPage() {
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );

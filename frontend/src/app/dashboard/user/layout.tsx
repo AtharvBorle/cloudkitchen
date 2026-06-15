@@ -16,13 +16,95 @@ export function UserHeader() {
     const router = useRouter();
     const { cartItems } = useCart();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { defaultAddress, isLoading: isLocationLoading } = useLocation();
+    const { defaultAddress, isLoading: isLocationLoading, refreshAddress } = useLocation();
     const [isClient, setIsClient] = useState(false);
+
+    // Inline Address Selector Modal State
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+    const [addresses, setAddresses] = useState<any[]>([]);
+    const [isFetchingAddresses, setIsFetchingAddresses] = useState(false);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [addressForm, setAddressForm] = useState({
+        type: "Home",
+        houseNumber: "",
+        street: "",
+        landmark: "",
+        pincode: ""
+    });
+    const [isSavingAddress, setIsSavingAddress] = useState(false);
 
     // Hydration Fix
     useEffect(() => {
         setIsClient(true);
     }, []);
+
+    // Fetch user addresses when modal opens
+    useEffect(() => {
+        if (isAddressModalOpen) {
+            fetchUserAddresses();
+        }
+    }, [isAddressModalOpen]);
+
+    const fetchUserAddresses = async () => {
+        setIsFetchingAddresses(true);
+        try {
+            const res = await fetchApi("/api/user/profile");
+            if (res.ok) {
+                const data = await res.json();
+                setAddresses(data.addresses || []);
+            }
+        } catch (error) {
+            console.error("Failed to load addresses", error);
+        } finally {
+            setIsFetchingAddresses(false);
+        }
+    };
+
+    const handleSelectAddress = async (id: string) => {
+        try {
+            const res = await fetchApi(`/api/user/addresses/${id}/default`, { method: "PATCH" });
+            if (res.ok) {
+                await refreshAddress();
+                setIsAddressModalOpen(false);
+            } else {
+                alert("Failed to set default address");
+            }
+        } catch (err) {
+            console.error("Error setting default address", err);
+        }
+    };
+
+    const handleCreateAddress = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!addressForm.houseNumber || !addressForm.street || !addressForm.pincode) {
+            alert("Please fill in all required fields");
+            return;
+        }
+        setIsSavingAddress(true);
+        try {
+            const res = await fetchApi("/api/user/addresses", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ...addressForm,
+                    isDefault: true
+                })
+            });
+            if (res.ok) {
+                await refreshAddress();
+                setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "" });
+                setShowAddForm(false);
+                setIsAddressModalOpen(false);
+            } else {
+                const data = await res.json();
+                alert(data.message || "Failed to save address");
+            }
+        } catch (err) {
+            console.error("Error saving address", err);
+        } finally {
+            setIsSavingAddress(false);
+        }
+    };
 
     // Total items tally across quantities
     const totalCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
@@ -57,23 +139,26 @@ export function UserHeader() {
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
                     <Link href="/dashboard/user" style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--primary)", lineHeight: 1 }}>
                         Cloud Kitchen
-                    </Link>
+                     </Link>
 
                     {isClient && (
-                        <Link
-                            href="/dashboard/user/profile"
+                        <div
+                            onClick={() => setIsAddressModalOpen(true)}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px',
-                                padding: '2px 8px',
+                                padding: '3px 8px',
                                 backgroundColor: '#F3F4F6',
                                 borderRadius: '12px',
                                 fontSize: '0.75rem',
                                 color: 'var(--text-main)',
-                                textDecoration: 'none',
+                                cursor: 'pointer',
                                 transition: 'background-color 0.2s',
-                                marginTop: '2px'
+                                marginTop: '2px',
+                                border: 'none',
+                                outline: 'none',
+                                userSelect: 'none'
                             }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5E7EB'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
@@ -82,15 +167,24 @@ export function UserHeader() {
                                 <span style={{ color: 'var(--text-muted)' }}>Updating location...</span>
                             ) : defaultAddress ? (
                                 <>
-                                    <span style={{ fontWeight: 'bold' }}>{defaultAddress.type}</span>
-                                    <span style={{ color: 'var(--text-muted)' }}>{defaultAddress.pincode}</span>
+                                    <MapPin size={12} color="var(--primary)" />
+                                    <span style={{ fontWeight: 'bold' }}>{defaultAddress.type} ({defaultAddress.pincode})</span>
+                                    <span style={{
+                                        fontSize: '0.65rem',
+                                        backgroundColor: 'var(--primary)',
+                                        color: 'white',
+                                        padding: '1px 5px',
+                                        borderRadius: '4px',
+                                        marginLeft: '4px',
+                                        fontWeight: 'bold'
+                                    }}>Change</span>
                                 </>
                             ) : (
                                 <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                    <MapPin size={10} /> Set Location
+                                    <MapPin size={12} /> Set Location
                                 </span>
                             )}
-                        </Link>
+                        </div>
                     )}
                 </div>
 
@@ -164,10 +258,204 @@ export function UserHeader() {
                     </button>
                 </div>
             </div>
+
+            {/* Address Selector Inline Modal */}
+            {isAddressModalOpen && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 9999,
+                    backdropFilter: 'blur(4px)'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '30px',
+                        borderRadius: '12px',
+                        width: '90%',
+                        maxWidth: '500px',
+                        boxShadow: 'var(--shadow-card)',
+                        maxHeight: '85vh',
+                        overflowY: 'auto',
+                        position: 'relative'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #EEE', paddingBottom: '12px' }}>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <MapPin size={20} color="var(--primary)" /> Select Delivery Location
+                            </h2>
+                            <button
+                                onClick={() => { setIsAddressModalOpen(false); setShowAddForm(false); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: '#666', lineHeight: 1 }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        {!showAddForm ? (
+                            <div>
+                                {isFetchingAddresses ? (
+                                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>Loading addresses...</div>
+                                ) : addresses.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '20px 10px', color: 'var(--text-muted)' }}>
+                                        <p style={{ marginBottom: '15px' }}>No saved addresses found.</p>
+                                        <button
+                                            onClick={() => setShowAddForm(true)}
+                                            className="btn btn-primary"
+                                            style={{ fontSize: '0.9rem', padding: '8px 16px' }}
+                                        >
+                                            Add First Address
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                                        {addresses.map(addr => (
+                                            <div
+                                                key={addr.id}
+                                                onClick={() => handleSelectAddress(addr.id)}
+                                                style={{
+                                                    padding: '12px 15px',
+                                                    border: addr.isDefault ? '2px solid var(--primary)' : '1px solid #E2E8F0',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: addr.isDefault ? '#FFF' : '#F8FAFC',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    position: 'relative'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.borderColor = addr.isDefault ? 'var(--primary)' : '#E2E8F0'}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                    <span style={{
+                                                        padding: '2px 6px',
+                                                        backgroundColor: '#E0F2FE',
+                                                        color: '#0369A1',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 'bold'
+                                                    }}>{addr.type}</span>
+                                                    {addr.isDefault && (
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 'bold' }}>Active</span>
+                                                    )}
+                                                </div>
+                                                <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0, lineHeight: '1.4' }}>
+                                                    {addr.houseNumber}, {addr.street} {addr.landmark ? `, ${addr.landmark}` : ''}
+                                                </p>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                                    Pincode: {addr.pincode}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <button
+                                            onClick={() => setShowAddForm(true)}
+                                            className="btn btn-secondary"
+                                            style={{ width: '100%', marginTop: '10px', fontSize: '0.9rem', padding: '10px' }}
+                                        >
+                                            + Add New Address
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <form onSubmit={handleCreateAddress} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '5px' }}>Add New Address</h3>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', fontWeight: 'bold' }}>Address Type</label>
+                                    <div style={{ display: 'flex', gap: '15px' }}>
+                                        {['Home', 'Work', 'Other'].map(type => (
+                                            <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="radio"
+                                                    value={type}
+                                                    checked={addressForm.type === type}
+                                                    onChange={(e) => setAddressForm({ ...addressForm, type: e.target.value })}
+                                                />
+                                                {type}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', fontWeight: 'bold' }}>House / Flat / Floor *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={addressForm.houseNumber}
+                                        onChange={(e) => setAddressForm({ ...addressForm, houseNumber: e.target.value })}
+                                        style={{ width: '100%', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.9rem' }}
+                                        placeholder="e.g. Flat 402, 4th Floor"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', fontWeight: 'bold' }}>Street *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={addressForm.street}
+                                        onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                                        style={{ width: '100%', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.9rem' }}
+                                        placeholder="e.g. Park Avenue Road"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', fontWeight: 'bold' }}>Landmark (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={addressForm.landmark}
+                                        onChange={(e) => setAddressForm({ ...addressForm, landmark: e.target.value })}
+                                        style={{ width: '100%', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.9rem' }}
+                                        placeholder="e.g. Near HDFC Bank"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', fontWeight: 'bold' }}>Pincode *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={addressForm.pincode}
+                                        onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '') })}
+                                        style={{ width: '100%', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.9rem' }}
+                                        placeholder="6-digit Pincode"
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingAddress}
+                                        className="btn btn-primary"
+                                        style={{ flex: 1, padding: '10px' }}
+                                    >
+                                        {isSavingAddress ? 'Saving...' : 'Save & Select'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddForm(false)}
+                                        className="btn btn-secondary"
+                                        style={{ flex: 1, padding: '10px', backgroundColor: 'white', border: '1px solid #CBD5E1', color: '#333' }}
+                                    >
+                                        Back
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
         </header>
     );
 }
-
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     return (
         <LocationProvider>

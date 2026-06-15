@@ -45,6 +45,8 @@ export default function UserRoomsPage() {
         room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );

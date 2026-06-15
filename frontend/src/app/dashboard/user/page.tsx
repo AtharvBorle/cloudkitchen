@@ -66,6 +66,8 @@ export default function UserDashboard() {
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -74,6 +76,8 @@ export default function UserDashboard() {
         room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );

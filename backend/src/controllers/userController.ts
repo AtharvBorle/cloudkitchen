@@ -100,6 +100,8 @@ export const getUserDashboard = async () => {
                 sellerName: seller.businessName || seller.user.name,
                 sellerCity: seller.user.city,
                 sellerPincode: seller.user.pincode,
+                sellerLocality: seller.addressLocality,
+                sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
             }))
@@ -113,6 +115,8 @@ export const getUserDashboard = async () => {
                 sellerName: seller.businessName || seller.user.name,
                 sellerCity: seller.user.city,
                 sellerPincode: seller.user.pincode,
+                sellerLocality: seller.addressLocality,
+                sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
             }))
