@@ -3,8 +3,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { CreditCard, Banknote, ShieldCheck, Tag, Zap } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react";
+import { Banknote, ShieldCheck, Tag, Zap } from "lucide-react";
 import Script from "next/script";
 
 function CheckoutContent() {
@@ -490,55 +489,18 @@ function CheckoutContent() {
                                 </div>
                             </label>
 
-                            <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
-                                <label style={{ flex: '1 1 45%', border: paymentMethod === 'COD' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <input type="radio" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ display: 'none' }} />
-                                    <Banknote size={24} color={paymentMethod === 'COD' ? 'var(--primary)' : 'var(--text-muted)'} />
-                                    <div>
-                                        <div style={{ fontWeight: 'bold' }}>Pay on Delivery</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cash or UPI</div>
-                                    </div>
-                                </label>
-
-                                <label style={{ flex: '1 1 45%', border: paymentMethod === 'QR' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <input type="radio" value="QR" checked={paymentMethod === 'QR'} onChange={() => setPaymentMethod('QR')} style={{ display: 'none' }} />
-                                    <CreditCard size={24} color={paymentMethod === 'QR' ? 'var(--primary)' : 'var(--text-muted)'} />
-                                    <div>
-                                        <div style={{ fontWeight: 'bold' }}>Pay Now via QR</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Scan kitchen's QR</div>
-                                    </div>
-                                </label>
-                            </div>
+                            <label style={{ flex: '1 1 auto', border: paymentMethod === 'COD' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <input type="radio" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ display: 'none' }} />
+                                <Banknote size={24} color={paymentMethod === 'COD' ? 'var(--primary)' : 'var(--text-muted)'} />
+                                <div>
+                                    <div style={{ fontWeight: 'bold' }}>Pay on Delivery</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cash or UPI</div>
+                                </div>
+                            </label>
                         </div>
-
-                        {/* QR Code Container */}
-                        {paymentMethod === 'QR' && (
-                            <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid #EAEAEA', textAlign: 'center' }}>
-                                {isFetchingSeller ? (
-                                    <p style={{ color: 'var(--text-muted)' }}>Loading seller payment details...</p>
-                                ) : sellerUpiId ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-                                        <div style={{ padding: '15px', backgroundColor: 'white', borderRadius: '8px', boxShadow: 'var(--shadow-btn)', display: 'inline-block' }}>
-                                            <QRCodeCanvas value={upiString} size={200} level={"H"} />
-                                        </div>
-                                        <div>
-                                            <p style={{ fontWeight: '500', marginBottom: '5px' }}>Scan with any UPI app to pay</p>
-                                            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Amount: ₹{totalPayable}</p>
-                                            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>UPI ID: {sellerUpiId}</p>
-                                        </div>
-                                        <p style={{ fontSize: '0.85rem', color: 'var(--primary)', marginTop: '5px', fontWeight: '500' }}>Please keep the transaction ID handy after paying.</p>
-                                    </div>
-                                ) : (
-                                    <div style={{ padding: '15px', backgroundColor: '#FFF4F2', color: '#D9534F', borderRadius: '8px' }}>
-                                        <p style={{ fontWeight: '500' }}>Seller UPI details not available.</p>
-                                        <p style={{ fontSize: '0.9rem', marginTop: '5px' }}>Please choose "Pay on Delivery" instead.</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
 
-                    <button type="submit" disabled={isSubmitting || (paymentMethod === 'QR' && !sellerUpiId)} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: (isSubmitting || (paymentMethod === 'QR' && !sellerUpiId)) ? 0.7 : 1 }}>
+                    <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: isSubmitting ? 0.7 : 1 }}>
                         {isSubmitting ? "Processing..." : (
                             <>
                                 <ShieldCheck size={20} />
