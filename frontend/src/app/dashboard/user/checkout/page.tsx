@@ -143,26 +143,56 @@ function CheckoutContent() {
 
         const closed: string[] = [];
         const now = new Date();
+        const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const currentDayStr = daysOfWeek[now.getDay()];
         const currentHours = now.getHours().toString().padStart(2, '0');
         const currentMinutes = now.getMinutes().toString().padStart(2, '0');
         const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
         for (const cartItem of cartItems) {
             const itemDetail = sellerDetails.foodItems?.find((f: any) => f.id === cartItem.id);
-            if (!itemDetail || !itemDetail.openTime || !itemDetail.closeTime) continue;
+            if (!itemDetail) continue;
 
-            const openTime = itemDetail.openTime;
-            const closeTime = itemDetail.closeTime;
-            let isOpen = false;
+            let isOpen = true;
+            let operationalHoursInfo = "";
 
-            if (openTime <= closeTime) {
-                isOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
-            } else {
-                isOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
+            if (itemDetail.operationalHours) {
+                try {
+                    const hours = typeof itemDetail.operationalHours === 'string'
+                        ? JSON.parse(itemDetail.operationalHours)
+                        : itemDetail.operationalHours;
+                    const dayHours = hours[currentDayStr];
+                    if (dayHours) {
+                        if (!dayHours.isOpen) {
+                            isOpen = false;
+                            operationalHoursInfo = "Closed today";
+                        } else if (dayHours.openTime && dayHours.closeTime) {
+                            const openTime = dayHours.openTime;
+                            const closeTime = dayHours.closeTime;
+                            operationalHoursInfo = `Operational hours today: ${openTime} - ${closeTime}`;
+                            if (openTime <= closeTime) {
+                                isOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
+                            } else {
+                                isOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to parse operationalHours in checkout check", e);
+                }
+            } else if (itemDetail.openTime && itemDetail.closeTime) {
+                const openTime = itemDetail.openTime;
+                const closeTime = itemDetail.closeTime;
+                operationalHoursInfo = `Operational hours: ${openTime} - ${closeTime}`;
+                if (openTime <= closeTime) {
+                    isOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
+                } else {
+                    isOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
+                }
             }
 
             if (!isOpen) {
-                closed.push(`${cartItem.name} (Operational hours: ${openTime} - ${closeTime})`);
+                closed.push(`${cartItem.name} (${operationalHoursInfo || 'Closed'})`);
             }
         }
 

@@ -54,6 +54,7 @@ export const createMenuItem = async (req: Request) => {
     const deliveryPincodes = formData.get("deliveryPincodes") as string | null;
     const openTime = formData.get("openTime") as string | null;
     const closeTime = formData.get("closeTime") as string | null;
+    const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
 
     if (!name || isNaN(price)) {
@@ -78,6 +79,7 @@ export const createMenuItem = async (req: Request) => {
             deliveryPincodes: deliveryPincodes || null,
             openTime: openTime || null,
             closeTime: closeTime || null,
+            operationalHours: operationalHours || null,
             imageUrl,
         }
     });
@@ -111,6 +113,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
     if (body.deliveryPincodes !== undefined) dataToUpdate.deliveryPincodes = body.deliveryPincodes;
     if (body.openTime !== undefined) dataToUpdate.openTime = body.openTime;
     if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
+    if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
 
     const updatedItem = await db.foodItem.update({
         where: { id },

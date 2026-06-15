@@ -114,7 +114,8 @@ export const getSellerById = async (id: string) => {
                     name: true,
                     deliveryPincodes: true,
                     openTime: true,
-                    closeTime: true
+                    closeTime: true,
+                    operationalHours: true
                 }
             }
         }

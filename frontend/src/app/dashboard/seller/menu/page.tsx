@@ -25,6 +25,25 @@ export default function ManageMenuPage() {
     const [addingPincode, setAddingPincode] = useState(false);
     const [openTime, setOpenTime] = useState("");
     const [closeTime, setCloseTime] = useState("");
+    const [dailyHours, setDailyHours] = useState<Record<string, { isOpen: boolean, openTime: string, closeTime: string }>>({
+        Mon: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+        Tue: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+        Wed: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+        Thu: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+        Fri: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+        Sat: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+        Sun: { isOpen: true, openTime: "08:00", closeTime: "22:00" }
+    });
+
+    const handleDailyHoursChange = (day: string, field: 'isOpen' | 'openTime' | 'closeTime', value: any) => {
+        setDailyHours(prev => ({
+            ...prev,
+            [day]: {
+                ...prev[day],
+                [field]: value
+            }
+        }));
+    };
 
     const fetchMenu = async () => {
         try {
@@ -62,7 +81,8 @@ export default function ManageMenuPage() {
                 stockQuantity: parseInt(stockQuantity),
                 deliveryPincodes: pincodeList.join(", ") || null,
                 openTime: openTime || null,
-                closeTime: closeTime || null
+                closeTime: closeTime || null,
+                operationalHours: JSON.stringify(dailyHours)
             });
             headers["Content-Type"] = "application/json";
         } else {
@@ -78,6 +98,7 @@ export default function ManageMenuPage() {
             }
             if (openTime) formData.append("openTime", openTime);
             if (closeTime) formData.append("closeTime", closeTime);
+            formData.append("operationalHours", JSON.stringify(dailyHours));
             if (imageFile) formData.append("image", imageFile);
             bodyData = formData;
             // browser sets content type automatically for FormData
@@ -137,6 +158,26 @@ export default function ManageMenuPage() {
         setPincodeList(item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: string) => p.trim()) : []);
         setOpenTime(item.openTime || "");
         setCloseTime(item.closeTime || "");
+        if (item.operationalHours) {
+            try {
+                const hours = typeof item.operationalHours === 'string'
+                    ? JSON.parse(item.operationalHours)
+                    : item.operationalHours;
+                setDailyHours(hours);
+            } catch (e) {
+                console.error("Failed to parse operationalHours on edit", e);
+            }
+        } else {
+            setDailyHours({
+                Mon: { isOpen: true, openTime: item.openTime || "08:00", closeTime: item.closeTime || "22:00" },
+                Tue: { isOpen: true, openTime: item.openTime || "08:00", closeTime: item.closeTime || "22:00" },
+                Wed: { isOpen: true, openTime: item.openTime || "08:00", closeTime: item.closeTime || "22:00" },
+                Thu: { isOpen: true, openTime: item.openTime || "08:00", closeTime: item.closeTime || "22:00" },
+                Fri: { isOpen: true, openTime: item.openTime || "08:00", closeTime: item.closeTime || "22:00" },
+                Sat: { isOpen: true, openTime: item.openTime || "08:00", closeTime: item.closeTime || "22:00" },
+                Sun: { isOpen: true, openTime: item.openTime || "08:00", closeTime: item.closeTime || "22:00" }
+            });
+        }
         setImageFile(null); // Assuming no image update for now
         setIsModalOpen(true);
     };
@@ -148,6 +189,15 @@ export default function ManageMenuPage() {
         setPincodeList([]);
         setOpenTime("");
         setCloseTime("");
+        setDailyHours({
+            Mon: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+            Tue: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+            Wed: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+            Thu: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+            Fri: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+            Sat: { isOpen: true, openTime: "08:00", closeTime: "22:00" },
+            Sun: { isOpen: true, openTime: "08:00", closeTime: "22:00" }
+        });
         setPincodeInput("");
         setPlaceNameInput("");
     };
@@ -186,9 +236,39 @@ export default function ManageMenuPage() {
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '10px', flex: 1 }}>{item.description}</p>
                                 <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #EEE', paddingTop: '10px' }}>
                                     <div><strong>Stock:</strong> {item.stockQuantity === -1 ? 'Unlimited' : item.stockQuantity === 0 ? 'Out of Stock (0)' : item.stockQuantity}</div>
-                                    {(item.openTime || item.closeTime) && (
-                                        <div><strong>Hours:</strong> {item.openTime || "00:00"} - {item.closeTime || "23:59"}</div>
-                                    )}
+                                    <div style={{ marginTop: '5px', marginBottom: '5px' }}>
+                                        <strong>Operational Hours:</strong>
+                                        <div style={{ marginTop: '3px', display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#F8FAFC', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0', maxHeight: '100px', overflowY: 'auto' }}>
+                                            {item.operationalHours ? (
+                                                (() => {
+                                                    try {
+                                                        const hours = typeof item.operationalHours === 'string' ? JSON.parse(item.operationalHours) : item.operationalHours;
+                                                        return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                                                            const d = hours[day];
+                                                            const dayName = day === 'Mon' ? 'Monday' : day === 'Tue' ? 'Tuesday' : day === 'Wed' ? 'Wednesday' : day === 'Thu' ? 'Thursday' : day === 'Fri' ? 'Friday' : day === 'Sat' ? 'Saturday' : 'Sunday';
+                                                            return (
+                                                                <div key={day} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                                                                    <span>{dayName}:</span>
+                                                                    <span style={{ fontWeight: 'bold', color: d?.isOpen ? '#10B981' : '#EF4444' }}>
+                                                                        {d?.isOpen ? `${d.openTime} - ${d.closeTime}` : 'Closed'}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        });
+                                                    } catch {
+                                                        return <span style={{ fontSize: '0.75rem', color: '#EF4444' }}>Error parsing hours</span>;
+                                                    }
+                                                })()
+                                            ) : (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                                                    <span>Daily:</span>
+                                                    <span style={{ fontWeight: 'bold', color: (item.openTime && item.closeTime) ? '#10B981' : '#10B981' }}>
+                                                        {item.openTime && item.closeTime ? `${item.openTime} - ${item.closeTime}` : 'Always Open'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                     <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={
                                         item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: string) => {
                                             const pin = p.trim();

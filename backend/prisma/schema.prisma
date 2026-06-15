@@ -101,6 +101,7 @@ model FoodItem {
   deliveryPincodes String?
   openTime         String?       // Format: HH:MM, e.g. "08:00"
   closeTime        String?       // Format: HH:MM, e.g. "22:00"
+  operationalHours String?       // JSON string of daily hours: { Mon: { isOpen: boolean, openTime: string, closeTime: string }, ... }
   categoryId       String?
   category         Category?     @relation(fields: [categoryId], references: [id])
 }

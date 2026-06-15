@@ -85,22 +85,49 @@ export const createOrder = async (req: Request) => {
             throw new ApiError(`Item ${cartItem.name} is currently unavailable.`, 400);
         }
 
-        if (foodItem.openTime && foodItem.closeTime) {
-            const nowInIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+        let itemOpen = true;
+        const nowInIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+        const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const currentDayStr = daysOfWeek[nowInIST.getDay()];
+
+        if (foodItem.operationalHours) {
+            try {
+                const hours = JSON.parse(foodItem.operationalHours);
+                const dayHours = hours[currentDayStr];
+                if (dayHours) {
+                    if (!dayHours.isOpen) {
+                        itemOpen = false;
+                    } else if (dayHours.openTime && dayHours.closeTime) {
+                        const currentHours = nowInIST.getHours().toString().padStart(2, '0');
+                        const currentMinutes = nowInIST.getMinutes().toString().padStart(2, '0');
+                        const currentTimeStr = `${currentHours}:${currentMinutes}`;
+                        const openTime = dayHours.openTime;
+                        const closeTime = dayHours.closeTime;
+                        if (openTime <= closeTime) {
+                            itemOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
+                        } else {
+                            itemOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse operationalHours on backend order validation", e);
+            }
+        } else if (foodItem.openTime && foodItem.closeTime) {
             const currentHours = nowInIST.getHours().toString().padStart(2, '0');
             const currentMinutes = nowInIST.getMinutes().toString().padStart(2, '0');
             const currentTimeStr = `${currentHours}:${currentMinutes}`;
             const openTime = foodItem.openTime;
             const closeTime = foodItem.closeTime;
-            let isOpen = false;
             if (openTime <= closeTime) {
-                isOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
+                itemOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
             } else {
-                isOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
+                itemOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
             }
-            if (!isOpen) {
-                throw new ApiError(`Item ${cartItem.name} is currently closed. Operational hours: ${openTime} - ${closeTime}.`, 400);
-            }
+        }
+
+        if (!itemOpen) {
+            throw new ApiError(`Item ${cartItem.name} is currently closed for orders today.`, 400);
         }
 
         if (foodItem.deliveryPincodes) {
