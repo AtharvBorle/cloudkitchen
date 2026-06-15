@@ -10,6 +10,21 @@ import { useCart } from "@/context/CartContext";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
 
+const isCurrentlyOpen = (item: any) => {
+    if (!item.openTime || !item.closeTime) return true;
+    const now = new Date();
+    const currentHours = now.getHours().toString().padStart(2, '0');
+    const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTimeStr = `${currentHours}:${currentMinutes}`;
+    const openTime = item.openTime;
+    const closeTime = item.closeTime;
+    if (openTime <= closeTime) {
+        return currentTimeStr >= openTime && currentTimeStr <= closeTime;
+    } else {
+        return currentTimeStr >= openTime || currentTimeStr <= closeTime;
+    }
+};
+
 export default function UserDashboard() {
     const { addToCart, initiateRoomBooking } = useCart();
     const router = useRouter();
@@ -63,6 +78,7 @@ export default function UserDashboard() {
     }
 
     const filteredFoodItems = foodItems.filter(item =>
+        isCurrentlyOpen(item) && (
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,6 +86,7 @@ export default function UserDashboard() {
         item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
     );
 
     const filteredRooms = rooms.filter(room =>

@@ -112,7 +112,9 @@ export const getSellerById = async (id: string) => {
                 select: {
                     id: true,
                     name: true,
-                    deliveryPincodes: true
+                    deliveryPincodes: true,
+                    openTime: true,
+                    closeTime: true
                 }
             }
         }

@@ -23,6 +23,8 @@ export default function ManageMenuPage() {
     const [placeNameInput, setPlaceNameInput] = useState("");
     const [servedPincodes, setServedPincodes] = useState<any[]>([]);
     const [addingPincode, setAddingPincode] = useState(false);
+    const [openTime, setOpenTime] = useState("");
+    const [closeTime, setCloseTime] = useState("");
 
     const fetchMenu = async () => {
         try {
@@ -58,7 +60,9 @@ export default function ManageMenuPage() {
                 price: parseFloat(price),
                 description,
                 stockQuantity: parseInt(stockQuantity),
-                deliveryPincodes: pincodeList.join(", ") || null
+                deliveryPincodes: pincodeList.join(", ") || null,
+                openTime: openTime || null,
+                closeTime: closeTime || null
             });
             headers["Content-Type"] = "application/json";
         } else {
@@ -72,6 +76,8 @@ export default function ManageMenuPage() {
             if (deliveryPincodesStr) {
                 formData.append("deliveryPincodes", deliveryPincodesStr);
             }
+            if (openTime) formData.append("openTime", openTime);
+            if (closeTime) formData.append("closeTime", closeTime);
             if (imageFile) formData.append("image", imageFile);
             bodyData = formData;
             // browser sets content type automatically for FormData
@@ -129,6 +135,8 @@ export default function ManageMenuPage() {
         setDescription(item.description);
         setStockQuantity(item.stockQuantity?.toString() || "-1");
         setPincodeList(item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: string) => p.trim()) : []);
+        setOpenTime(item.openTime || "");
+        setCloseTime(item.closeTime || "");
         setImageFile(null); // Assuming no image update for now
         setIsModalOpen(true);
     };
@@ -138,6 +146,8 @@ export default function ManageMenuPage() {
         setEditingItemId(null);
         setName(""); setPrice(""); setDescription(""); setStockQuantity("-1"); setImageFile(null);
         setPincodeList([]);
+        setOpenTime("");
+        setCloseTime("");
         setPincodeInput("");
         setPlaceNameInput("");
     };
@@ -176,6 +186,9 @@ export default function ManageMenuPage() {
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '10px', flex: 1 }}>{item.description}</p>
                                 <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #EEE', paddingTop: '10px' }}>
                                     <div><strong>Stock:</strong> {item.stockQuantity === -1 ? 'Unlimited' : item.stockQuantity === 0 ? 'Out of Stock (0)' : item.stockQuantity}</div>
+                                    {(item.openTime || item.closeTime) && (
+                                        <div><strong>Hours:</strong> {item.openTime || "00:00"} - {item.closeTime || "23:59"}</div>
+                                    )}
                                     <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={
                                         item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: string) => {
                                             const pin = p.trim();
@@ -347,12 +360,23 @@ export default function ManageMenuPage() {
                                 </div>
 
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Available Days:</label>
-                                <div style={{ display: 'flex', gap: '10px', fontSize: '0.85rem' }}>
+                                <div style={{ display: 'flex', gap: '10px', fontSize: '0.85rem', marginBottom: '15px' }}>
                                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                         <label key={day} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                                             <input type="checkbox" defaultChecked /> {day}
                                         </label>
                                     ))}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)' }}>Open Time (Optional):</label>
+                                        <input type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} className="input-field" style={{ padding: '8px' }} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)' }}>Close Time (Optional):</label>
+                                        <input type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} className="input-field" style={{ padding: '8px' }} />
+                                    </div>
                                 </div>
                             </div>
 

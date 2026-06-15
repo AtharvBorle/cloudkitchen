@@ -85,6 +85,24 @@ export const createOrder = async (req: Request) => {
             throw new ApiError(`Item ${cartItem.name} is currently unavailable.`, 400);
         }
 
+        if (foodItem.openTime && foodItem.closeTime) {
+            const nowInIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+            const currentHours = nowInIST.getHours().toString().padStart(2, '0');
+            const currentMinutes = nowInIST.getMinutes().toString().padStart(2, '0');
+            const currentTimeStr = `${currentHours}:${currentMinutes}`;
+            const openTime = foodItem.openTime;
+            const closeTime = foodItem.closeTime;
+            let isOpen = false;
+            if (openTime <= closeTime) {
+                isOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
+            } else {
+                isOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
+            }
+            if (!isOpen) {
+                throw new ApiError(`Item ${cartItem.name} is currently closed. Operational hours: ${openTime} - ${closeTime}.`, 400);
+            }
+        }
+
         if (foodItem.deliveryPincodes) {
             const pins = foodItem.deliveryPincodes.split(",").map(p => p.trim());
             if (!pins.includes(userPincode)) {

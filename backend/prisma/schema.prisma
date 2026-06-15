@@ -99,6 +99,8 @@ model FoodItem {
   isAvailable      Boolean       @default(true)
   stockQuantity    Int           @default(-1)
   deliveryPincodes String?
+  openTime         String?       // Format: HH:MM, e.g. "08:00"
+  closeTime        String?       // Format: HH:MM, e.g. "22:00"
   categoryId       String?
   category         Category?     @relation(fields: [categoryId], references: [id])
 }

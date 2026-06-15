@@ -137,6 +137,41 @@ function CheckoutContent() {
     const outOfRangeItems = getOutOfRangeItems();
     const hasOutOfRangeItems = outOfRangeItems.length > 0;
 
+    const getClosedItems = () => {
+        if (isRoomBooking) return [];
+        if (!sellerDetails || cartItems.length === 0) return [];
+
+        const closed: string[] = [];
+        const now = new Date();
+        const currentHours = now.getHours().toString().padStart(2, '0');
+        const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+        const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+        for (const cartItem of cartItems) {
+            const itemDetail = sellerDetails.foodItems?.find((f: any) => f.id === cartItem.id);
+            if (!itemDetail || !itemDetail.openTime || !itemDetail.closeTime) continue;
+
+            const openTime = itemDetail.openTime;
+            const closeTime = itemDetail.closeTime;
+            let isOpen = false;
+
+            if (openTime <= closeTime) {
+                isOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
+            } else {
+                isOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
+            }
+
+            if (!isOpen) {
+                closed.push(`${cartItem.name} (Operational hours: ${openTime} - ${closeTime})`);
+            }
+        }
+
+        return closed;
+    };
+
+    const closedItems = getClosedItems();
+    const hasClosedItems = closedItems.length > 0;
+
     // Fetch existing room bookings
     useEffect(() => {
         if (!isRoomBooking || !roomDetails?.id) return;
@@ -296,6 +331,12 @@ function CheckoutContent() {
 
                 if (hasOutOfRangeItems) {
                     setError(`Some items in your cart are out of delivery range for the selected address: ${outOfRangeItems.join(', ')}.`);
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                if (hasClosedItems) {
+                    setError(`Some items in your cart are currently closed and cannot be ordered: ${closedItems.join(', ')}.`);
                     setIsSubmitting(false);
                     return;
                 }
@@ -481,6 +522,23 @@ function CheckoutContent() {
                                         </p>
                                     </div>
                                 )}
+
+                                {hasClosedItems && (
+                                    <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                        <span style={{ fontWeight: 'bold' }}>⚠️ Operational Hours Issue:</span>
+                                        <p style={{ marginTop: '5px' }}>
+                                            The following items in your cart are currently outside of their operational hours:
+                                        </p>
+                                        <ul style={{ marginTop: '5px', paddingLeft: '20px', listStyleType: 'disc' }}>
+                                            {closedItems.map((name: string, idx: number) => (
+                                                <li key={idx} style={{ fontWeight: '500' }}>{name}</li>
+                                            ))}
+                                        </ul>
+                                        <p style={{ marginTop: '5px', fontSize: '0.85rem' }}>
+                                            Please remove these items from your cart to proceed.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -557,7 +615,7 @@ function CheckoutContent() {
                         </div>
                     </div>
 
-                    <button type="submit" disabled={isSubmitting || hasOutOfRangeItems} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: (isSubmitting || hasOutOfRangeItems) ? 0.7 : 1 }}>
+                    <button type="submit" disabled={isSubmitting || hasOutOfRangeItems || hasClosedItems} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: (isSubmitting || hasOutOfRangeItems || hasClosedItems) ? 0.7 : 1 }}>
                         {isSubmitting ? "Processing..." : (
                             <>
                                 <ShieldCheck size={20} />

@@ -37,6 +37,7 @@ export default function ExploreFoodPage() {
     const placeholderImage = "https://via.placeholder.com/400x250?text=Delicious+Food";
 
     const filteredFood = foodItems.filter(item =>
+        isCurrentlyOpen(item) && (
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -44,6 +45,7 @@ export default function ExploreFoodPage() {
         item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
     );
 
     return (

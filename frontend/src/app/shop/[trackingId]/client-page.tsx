@@ -119,11 +119,11 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                 {/* Menu Section */}
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '25px', borderBottom: '2px solid #EAEAEA', paddingBottom: '10px' }}>Menu</h2>
 
-                {seller.foodItems.length === 0 ? (
+                {seller.foodItems.filter((item: any) => isCurrentlyOpen(item)).length === 0 ? (
                     <p style={{ color: 'var(--text-muted)', marginBottom: '40px' }}>No items available at the moment.</p>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px', marginBottom: '50px' }}>
-                        {seller.foodItems.map((item: any) => (
+                        {seller.foodItems.filter((item: any) => isCurrentlyOpen(item)).map((item: any) => (
                             <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ height: '200px', backgroundColor: '#EEE' }}>
                                     <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

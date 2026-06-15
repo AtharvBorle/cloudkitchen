@@ -8,6 +8,21 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { AddToCartButton } from "@/components/cart-buttons";
 
+const isCurrentlyOpen = (item: any) => {
+    if (!item.openTime || !item.closeTime) return true;
+    const now = new Date();
+    const currentHours = now.getHours().toString().padStart(2, '0');
+    const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTimeStr = `${currentHours}:${currentMinutes}`;
+    const openTime = item.openTime;
+    const closeTime = item.closeTime;
+    if (openTime <= closeTime) {
+        return currentTimeStr >= openTime && currentTimeStr <= closeTime;
+    } else {
+        return currentTimeStr >= openTime || currentTimeStr <= closeTime;
+    }
+};
+
 export default function UserFoodPage() {
     const { addToCart } = useCart();
     const [foodItems, setFoodItems] = useState<any[]>([]);
@@ -40,6 +55,7 @@ export default function UserFoodPage() {
     const placeholderImage = "https://via.placeholder.com/400x250?text=Delicious+Food";
 
     const filteredFood = foodItems.filter(item =>
+        isCurrentlyOpen(item) && (
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -47,6 +63,7 @@ export default function UserFoodPage() {
         item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
     );
 
     return (
