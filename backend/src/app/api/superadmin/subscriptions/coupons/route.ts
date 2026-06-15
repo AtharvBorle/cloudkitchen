@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { code, description, discountPercentage, discountAmount, planId, maxUsage, isActive } = body;
+        const { code, description, discountPercentage, discountAmount, planId, maxUsage, isActive, category } = body;
 
         // Basic validation
         if (!code || (!discountPercentage && !discountAmount)) {
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
                 planId: planId || null,
                 maxUsage: maxUsage ? parseInt(maxUsage) : 0,
                 isActive: isActive !== undefined ? isActive : true,
+                category: category || "BOTH",
             }
         });
 

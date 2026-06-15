@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import SellerPaymentClient from "./client-page";
 
 export default function SellerPaymentPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const queryCategory = searchParams.get("category");
     const [loading, setLoading] = useState(true);
     const [plans, setPlans] = useState<any[]>([]);
 
@@ -35,13 +37,17 @@ export default function SellerPaymentPage() {
                     return;
                 }
 
-                if (statusData.hasActiveSub) {
+                // If they already have both active, they don't need another plan
+                if (statusData.isFoodActive && statusData.isPropertyActive) {
                     router.push("/dashboard/seller");
                     return;
                 }
 
                 // Fetch subscription plans
-                const plansRes = await fetchApi("/api/seller/subscription/plans");
+                const url = queryCategory 
+                    ? `/api/seller/subscription/plans?category=${queryCategory}` 
+                    : "/api/seller/subscription/plans";
+                const plansRes = await fetchApi(url);
                 if (plansRes.ok) {
                     const plansData = await plansRes.json();
                     setPlans(plansData);

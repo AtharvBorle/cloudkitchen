@@ -101,6 +101,16 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             throw new Error("sellerId is required");
         }
 
+        let sellerCategory = "BOTH";
+        if (sellerId) {
+            const seller = await prisma.sellerProfile.findUnique({
+                where: { id: sellerId }
+            });
+            if (seller) {
+                sellerCategory = seller.businessCategory;
+            }
+        }
+
         const now = new Date();
 
         const activeCoupons = await prisma.coupon.findMany({
@@ -124,7 +134,13 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             }
         });
 
-        const safeCoupons = activeCoupons.map((c: any) => ({
+        const filteredCoupons = activeCoupons.filter((c: any) => {
+            if (!c.category || c.category === "BOTH") return true;
+            if (sellerCategory === "BOTH") return true;
+            return c.category === sellerCategory;
+        });
+
+        const safeCoupons = filteredCoupons.map((c: any) => ({
             id: c.id,
             code: c.code,
             description: c.description,

@@ -9,6 +9,10 @@ import { useState, useEffect } from "react";
 export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?: boolean; onClose?: () => void }) {
     const pathname = usePathname();
     const [isMobile, setIsMobile] = useState(false);
+    const [statusData, setStatusData] = useState<any>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalCategory, setModalCategory] = useState<"FOOD" | "PROPERTY" | null>(null);
+    const [categoryPlans, setCategoryPlans] = useState<any[]>([]);
 
     useEffect(() => {
         const checkScreen = () => setIsMobile(window.innerWidth <= 768);
@@ -16,6 +20,45 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
         window.addEventListener("resize", checkScreen);
         return () => window.removeEventListener("resize", checkScreen);
     }, []);
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch("/api/seller/dashboard/status");
+                if (res.ok) {
+                    const data = await res.json();
+                    setStatusData(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch dashboard status in sidebar:", err);
+            }
+        };
+        fetchStatus();
+    }, []);
+
+    const isFoodActive = statusData ? statusData.isFoodActive : true;
+    const isPropertyActive = statusData ? statusData.isPropertyActive : true;
+
+    const handleCategoryClick = async (e: React.MouseEvent, category: "FOOD" | "PROPERTY", isActive: boolean) => {
+        if (isActive) {
+            if (onClose) onClose();
+            return;
+        }
+        e.preventDefault();
+        setModalCategory(category);
+        setModalOpen(true);
+        setCategoryPlans([]);
+
+        try {
+            const res = await fetch(`/api/seller/subscription/plans?category=${category}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCategoryPlans(data);
+            }
+        } catch (error) {
+            console.error("Failed to load category plans:", error);
+        }
+    };
 
     const getLinkStyle = (path: string, exact = false) => {
         const isActive = exact ? pathname === path : pathname.startsWith(path);
@@ -52,7 +95,11 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     Overview
                 </Link>
 
-                <Link href="/dashboard/seller/menu" style={getLinkStyle('/dashboard/seller/menu')} onClick={onClose}>
+                <Link 
+                    href="/dashboard/seller/menu" 
+                    style={getLinkStyle('/dashboard/seller/menu')} 
+                    onClick={(e) => handleCategoryClick(e, "FOOD", isFoodActive)}
+                >
                     Manage Menu
                 </Link>
 
@@ -72,7 +119,11 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     Offers & Coupons
                 </Link>
 
-                <Link href="/dashboard/seller/rooms" style={getLinkStyle('/dashboard/seller/rooms')} onClick={onClose}>
+                <Link 
+                    href="/dashboard/seller/rooms" 
+                    style={getLinkStyle('/dashboard/seller/rooms')} 
+                    onClick={(e) => handleCategoryClick(e, "PROPERTY", isPropertyActive)}
+                >
                     Rooms
                 </Link>
 
@@ -105,24 +156,143 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
         </>
     );
 
-    if (isMobile) {
-        return (
-            <div style={{
-                position: 'fixed', top: 0, left: 0, height: '100vh', width: '250px',
-                backgroundColor: '#1A1C23', color: 'white', zIndex: 100,
-                transform: isMobileOpen ? 'translateX(0)' : 'translateX(-100%)',
-                transition: 'transform 0.3s ease-in-out',
-                display: 'flex', flexDirection: 'column',
-                boxShadow: isMobileOpen ? '5px 0 15px rgba(0,0,0,0.5)' : 'none'
-            }}>
-                {sidebarContent}
-            </div>
-        );
-    }
-
     return (
-        <aside style={{ width: '250px', backgroundColor: '#1A1C23', color: 'white', display: 'flex', flexDirection: 'column', minHeight: '100vh', flexShrink: 0 }}>
-            {sidebarContent}
-        </aside>
+        <>
+            {isMobile ? (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, height: '100vh', width: '250px',
+                    backgroundColor: '#1A1C23', color: 'white', zIndex: 100,
+                    transform: isMobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+                    transition: 'transform 0.3s ease-in-out',
+                    display: 'flex', flexDirection: 'column',
+                    boxShadow: isMobileOpen ? '5px 0 15px rgba(0,0,0,0.5)' : 'none'
+                }}>
+                    {sidebarContent}
+                </div>
+            ) : (
+                <aside style={{ width: '250px', backgroundColor: '#1A1C23', color: 'white', display: 'flex', flexDirection: 'column', minHeight: '100vh', flexShrink: 0 }}>
+                    {sidebarContent}
+                </aside>
+            )}
+
+            {modalOpen && modalCategory && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "100vh",
+                    backgroundColor: "rgba(0, 0, 0, 0.6)",
+                    backdropFilter: "blur(4px)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 99999,
+                    color: "#1e293b",
+                    padding: "1rem"
+                }}>
+                    <div style={{
+                        backgroundColor: "white",
+                        borderRadius: "20px",
+                        padding: "2rem",
+                        maxWidth: "480px",
+                        width: "100%",
+                        boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                        textAlign: "center",
+                        border: "1px solid #e2e8f0"
+                    }}>
+                        <div style={{
+                            width: "60px",
+                            height: "60px",
+                            borderRadius: "50%",
+                            backgroundColor: "#fee2e2",
+                            color: "#ef4444",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "1.5rem",
+                            fontWeight: "bold",
+                            margin: "0 auto 1rem"
+                        }}>
+                            🔒
+                        </div>
+                        <h3 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "0.5rem" }}>
+                            {modalCategory === "FOOD" ? "Activate Food Services" : "Activate Room Bookings"}
+                        </h3>
+                        <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: "1.5", marginBottom: "1.5rem" }}>
+                            You currently do not have an active subscription plan for this category. Upgrade now to enable these dashboard features and expand your business!
+                        </p>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "1.5rem" }}>
+                            {categoryPlans.length === 0 ? (
+                                <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Loading available plans...</div>
+                            ) : (
+                                categoryPlans.map(plan => (
+                                    <Link
+                                        key={plan.id}
+                                        href={`/dashboard/seller/payment?planId=${plan.id}&category=${modalCategory}`}
+                                        onClick={() => setModalOpen(false)}
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            backgroundColor: "#f8fafc",
+                                            padding: "12px 16px",
+                                            borderRadius: "12px",
+                                            border: "1px solid #e2e8f0",
+                                            textDecoration: "none",
+                                            color: "inherit",
+                                            transition: "all 0.2s"
+                                        }}
+                                    >
+                                        <div style={{ textAlign: "left" }}>
+                                            <div style={{ fontWeight: "700", fontSize: "0.95rem" }}>{plan.name}</div>
+                                            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{plan.durationMonths} Months</div>
+                                        </div>
+                                        <div style={{ fontWeight: "800", color: "var(--coral, #F16F68)" }}>
+                                            ₹{plan.price} →
+                                        </div>
+                                    </Link>
+                                ))
+                            )}
+                        </div>
+
+                        <div style={{ display: "flex", gap: "10px" }}>
+                            <button
+                                onClick={() => setModalOpen(false)}
+                                style={{
+                                    flex: 1,
+                                    padding: "10px",
+                                    border: "1px solid #cbd5e1",
+                                    borderRadius: "10px",
+                                    backgroundColor: "white",
+                                    cursor: "pointer",
+                                    fontWeight: "600"
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <Link
+                                href={`/dashboard/seller/payment?category=${modalCategory}`}
+                                onClick={() => setModalOpen(false)}
+                                style={{
+                                    flex: 1,
+                                    padding: "10px",
+                                    borderRadius: "10px",
+                                    backgroundColor: "var(--coral, #F16F68)",
+                                    color: "white",
+                                    textAlign: "center",
+                                    textDecoration: "none",
+                                    fontWeight: "600",
+                                    fontSize: "0.95rem"
+                                }}
+                            >
+                                View All Plans
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 }

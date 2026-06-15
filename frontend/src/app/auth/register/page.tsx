@@ -42,7 +42,8 @@ export default function SellerRegisterPage() {
         addressArea: "",
         addressLandmark: "",
         city: "",
-        pincode: ""
+        pincode: "",
+        businessCategory: "FOOD"
     });
 
     const [adhaarFile, setAdhaarFile] = useState<File | null>(null);
@@ -198,6 +199,14 @@ export default function SellerRegisterPage() {
                                     {categories.length === 0 && (
                                         <option value="HOMELY_FOOD" disabled>Loading categories...</option>
                                     )}
+                                </select>
+                            </div>
+
+                            <div className="input-group">
+                                <select name="businessCategory" value={formData.businessCategory} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
+                                    <option value="FOOD">Food Focus (Homely Food / Mess)</option>
+                                    <option value="PROPERTY">Property Focus (Rooms / Homestays)</option>
+                                    <option value="BOTH">Both Food and Property</option>
                                 </select>
                             </div>
 

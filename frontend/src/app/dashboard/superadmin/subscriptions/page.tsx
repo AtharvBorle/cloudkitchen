@@ -23,6 +23,8 @@ export default function SuperadminSubscriptionsPage() {
     const [newPlanDuration, setNewPlanDuration] = useState("");
     const [planFeatures, setPlanFeatures] = useState<string[]>([]);
     const [newFeature, setNewFeature] = useState("");
+    const [newPlanCategory, setNewPlanCategory] = useState("BOTH");
+    const [newCouponCategory, setNewCouponCategory] = useState("BOTH");
     const [searchQuery, setSearchQuery] = useState("");
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
@@ -79,7 +81,8 @@ export default function SuperadminSubscriptionsPage() {
                     name: newPlanName,
                     price: newPlanPrice,
                     durationMonths: newPlanDuration,
-                    features: planFeatures
+                    features: planFeatures,
+                    category: newPlanCategory
                 })
             });
             if (res.ok) {
@@ -88,6 +91,7 @@ export default function SuperadminSubscriptionsPage() {
                 setNewPlanPrice("");
                 setNewPlanDuration("");
                 setPlanFeatures([]);
+                setNewPlanCategory("BOTH");
                 fetchData();
             } else {
                 alert("Failed to create plan.");
@@ -126,12 +130,13 @@ export default function SuperadminSubscriptionsPage() {
                     discountPercentage: newDiscountPercent ? parseFloat(newDiscountPercent) : null,
                     discountAmount: newDiscountAmount ? parseFloat(newDiscountAmount) : null,
                     maxUsage: newMaxUsage ? parseInt(newMaxUsage) : 0,
-                    planId: newPlanId || null
+                    planId: newPlanId || null,
+                    category: newCouponCategory
                 })
             });
 
             if (res.ok) {
-                setNewCode(""); setNewDiscountPercent(""); setNewDiscountAmount(""); setNewMaxUsage(""); setNewPlanId("");
+                setNewCode(""); setNewDiscountPercent(""); setNewDiscountAmount(""); setNewMaxUsage(""); setNewPlanId(""); setNewCouponCategory("BOTH");
                 fetchData();
             } else {
                 const data = await res.json();
@@ -243,7 +248,12 @@ export default function SuperadminSubscriptionsPage() {
                             <button onClick={() => handleDeletePlan(plan.id)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontWeight: 'bold' }}>Delete</button>
                             <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '10px' }}>{plan.name}</h3>
                             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '5px' }}>₹{plan.price}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '15px' }}>Duration: {plan.durationMonths} Month(s)</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>Duration: {plan.durationMonths} Month(s)</span>
+                                <span style={{ backgroundColor: '#E2E8F0', color: '#475569', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                    {plan.category || "BOTH"}
+                                </span>
+                            </div>
                             <ul style={{ paddingLeft: '20px', color: '#555', fontSize: '0.9rem' }}>
                                 {(() => {
                                     try {
@@ -268,6 +278,14 @@ export default function SuperadminSubscriptionsPage() {
                             <input type="number" value={newPlanPrice} onChange={e => setNewPlanPrice(e.target.value)} className="input-field" placeholder="Price" style={{ paddingLeft: "35px", marginBottom: 0, width: '100%' }} min="0" required />
                         </div>
                         <input type="number" value={newPlanDuration} onChange={e => setNewPlanDuration(e.target.value)} className="input-field" placeholder="Months" style={{ flex: 1, marginBottom: 0 }} min="1" required />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <select value={newPlanCategory} onChange={e => setNewPlanCategory(e.target.value)} className="input-field" style={{ flex: 1, marginBottom: 0 }}>
+                            <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
+                            <option value="FOOD">Food Focus Only (FOOD)</option>
+                            <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                        </select>
                     </div>
 
                     <div style={{ backgroundColor: '#F8F9F9', border: '1px solid #EAEAEA', borderRadius: '8px', padding: '15px' }}>
@@ -313,6 +331,11 @@ export default function SuperadminSubscriptionsPage() {
                                 <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
                             ))}
                         </select>
+                        <select value={newCouponCategory} onChange={e => setNewCouponCategory(e.target.value)} className="input-field" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
+                            <option value="BOTH">Both Categories (FOOD & PROPERTY)</option>
+                            <option value="FOOD">Food Focus Only (FOOD)</option>
+                            <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                        </select>
                         <input type="number" value={newMaxUsage} onChange={e => setNewMaxUsage(e.target.value)} className="input-field" placeholder="Max Usage (0 for unlimited)" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} min="0" />
                     </div>
 
@@ -340,6 +363,7 @@ export default function SuperadminSubscriptionsPage() {
 
                                         <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                             <div>Valid for: <span style={{ fontWeight: 'bold' }}>{coupon.plan ? coupon.plan.name : 'All Plans'}</span></div>
+                                            <div>Category: <span style={{ fontWeight: 'bold', color: '#16a085', backgroundColor: '#e8f8f5', padding: '2px 6px', borderRadius: '4px' }}>{coupon.category || 'BOTH'}</span></div>
                                             <div>
                                                 Usage: <span style={{ fontWeight: 'bold', color: coupon.maxUsage > 0 && coupon.currentUsage >= coupon.maxUsage ? '#E74C3C' : '#27AE60' }}>
                                                     {coupon.currentUsage} / {coupon.maxUsage > 0 ? coupon.maxUsage : 'Unlimited'}

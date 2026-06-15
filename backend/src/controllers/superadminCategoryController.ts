@@ -37,7 +37,7 @@ export const createCategory = async (req: Request) => {
         data: { name, type }
     });
 
-    revalidateTag("categories");
+    revalidateTag("categories", {});
 
     return { category };
 };

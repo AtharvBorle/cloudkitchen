@@ -79,7 +79,8 @@ export const createCoupon = async (req: Request) => {
         validUntil,
         maxUsagesPerUser,
         maxUsers,
-        minimumCartValue
+        minimumCartValue,
+        category
     } = body;
 
     if (!code) {
@@ -128,7 +129,8 @@ export const createCoupon = async (req: Request) => {
             maxUsers: maxUsers ? parseInt(maxUsers) : null,
             minimumCartValue: minimumCartValue ? parseFloat(minimumCartValue) : null,
             isActive: true,
-            approvalStatus
+            approvalStatus,
+            category: category || "BOTH"
         };
 
         const newCoupon = await prisma.coupon.create({

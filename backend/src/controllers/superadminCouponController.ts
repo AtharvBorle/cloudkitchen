@@ -27,7 +27,7 @@ export const createCoupon = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { code, discountPercentage, appliesToSellerId } = await req.json();
+    const { code, discountPercentage, appliesToSellerId, category } = await req.json();
 
     if (!code || discountPercentage === undefined) {
         throw new ApiError("Code and discount percentage are required", 400);
@@ -37,11 +37,12 @@ export const createCoupon = async (req: Request) => {
         data: {
             code: code.toUpperCase(),
             discountPercentage: parseFloat(discountPercentage),
-            appliesToSellerId: appliesToSellerId || null
+            appliesToSellerId: appliesToSellerId || null,
+            category: category || "BOTH"
         }
     });
 
-    revalidateTag("coupons");
+    revalidateTag("coupons", {});
 
     return { coupon };
 };

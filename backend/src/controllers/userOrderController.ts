@@ -62,6 +62,11 @@ export const createOrder = async (req: Request) => {
                 throw new ApiError(`This coupon has reached its maximum users limit across the platform.`, 400);
             }
         }
+
+        // 4. Category check
+        if (coupon.category && coupon.category !== "BOTH" && sellerProfile.businessCategory !== "BOTH" && coupon.category !== sellerProfile.businessCategory) {
+            throw new ApiError(`This coupon is only valid for stores in the ${coupon.category} category.`, 400);
+        }
     }
     // --- End Coupon Validation Logic ---
 

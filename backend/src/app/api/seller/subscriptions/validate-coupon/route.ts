@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { getAuthSession } from "@/lib/auth";
 
 const db = new PrismaClient();
 
@@ -37,6 +38,18 @@ export async function POST(req: NextRequest) {
 
         if (coupon.planId && coupon.planId !== planId) {
             return NextResponse.json({ message: "This coupon is not valid for the selected plan" }, { status: 400 });
+        }
+
+        const session = await getAuthSession();
+        if (session?.user?.id) {
+            const seller = await db.sellerProfile.findUnique({
+                where: { userId: session.user.id }
+            });
+            if (seller) {
+                if (coupon.category && coupon.category !== "BOTH" && seller.businessCategory !== "BOTH" && coupon.category !== seller.businessCategory) {
+                    return NextResponse.json({ message: `This coupon is only valid for ${coupon.category} sellers` }, { status: 400 });
+                }
+            }
         }
 
         if (coupon.maxUsage > 0 && coupon.currentUsage >= coupon.maxUsage) {

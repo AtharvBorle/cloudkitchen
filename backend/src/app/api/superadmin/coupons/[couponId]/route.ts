@@ -16,7 +16,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ coupo
             where: { id: couponId }
         });
 
-        revalidateTag("coupons");
+        revalidateTag("coupons", {});
 
         return NextResponse.json({ message: "Coupon deleted" }, { status: 200 });
     } catch (error) {

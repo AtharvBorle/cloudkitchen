@@ -4,10 +4,13 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState } from "react";
 import Script from "next/script";
 import { CheckCircle2, ShieldCheck, Zap } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 export default function SellerPaymentClient({ plans }: { plans: any[] }) {
+    const searchParams = useSearchParams();
+    const queryPlanId = searchParams.get("planId");
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedPlanId, setSelectedPlanId] = useState<string>(plans.length > 0 ? plans[0].id : "");
+    const [selectedPlanId, setSelectedPlanId] = useState<string>(queryPlanId || (plans.length > 0 ? plans[0].id : ""));
     const [couponCode, setCouponCode] = useState("");
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
     const [couponError, setCouponError] = useState("");

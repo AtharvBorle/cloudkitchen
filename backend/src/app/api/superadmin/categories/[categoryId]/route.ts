@@ -16,7 +16,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ categ
             where: { id: categoryId }
         });
 
-        revalidateTag("categories");
+        revalidateTag("categories", {});
 
         return NextResponse.json({ message: "Category deleted" }, { status: 200 });
     } catch (error) {

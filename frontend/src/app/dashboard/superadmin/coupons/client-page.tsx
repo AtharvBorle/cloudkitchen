@@ -46,6 +46,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const [maxUsagesPerUser, setMaxUsagesPerUser] = useState("");
     const [maxUsers, setMaxUsers] = useState("");
     const [minimumCartValue, setMinimumCartValue] = useState("");
+    const [couponCategory, setCouponCategory] = useState("BOTH");
 
     const fetchCoupons = async () => {
         try {
@@ -78,7 +79,8 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 validUntil: hasEndDate && validUntil ? new Date(validUntil).toISOString() : null,
                 maxUsagesPerUser: maxUsagesPerUser ? parseInt(maxUsagesPerUser) : null,
                 maxUsers: maxUsers ? parseInt(maxUsers) : null,
-                minimumCartValue: minimumCartValue ? parseFloat(minimumCartValue) : null
+                minimumCartValue: minimumCartValue ? parseFloat(minimumCartValue) : null,
+                category: couponCategory
             };
 
             const res = await fetchApi("/api/coupons", {
@@ -99,6 +101,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 setDiscountValue("");
                 setHasEndDate(false);
                 setValidUntil("");
+                setCouponCategory("BOTH");
             } else {
                 const data = await res.json();
                 alert(data.message || "Failed to create coupon");
@@ -248,7 +251,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
 
                         <hr style={{ border: "none", borderTop: "1px solid #f1f5f9" }} />
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
                             {/* Target Scope */}
                             <div>
                                 <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Application Scope</label>
@@ -305,6 +308,21 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
                                 )}
+                            </div>
+
+                            {/* Category Constraint */}
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Seller Business Category</label>
+                                <select
+                                    value={couponCategory}
+                                    onChange={(e) => setCouponCategory(e.target.value)}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white" }}
+                                >
+                                    <option value="BOTH">Both (FOOD & PROPERTY)</option>
+                                    <option value="FOOD">Food Only (FOOD)</option>
+                                    <option value="PROPERTY">Property Only (PROPERTY)</option>
+                                </select>
+                                <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>Which category of sellers can use this coupon.</p>
                             </div>
                         </div>
 
@@ -406,6 +424,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                     <div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
                                             <h3 style={{ fontSize: "1.5rem", fontWeight: "800", color: "#0f172a", letterSpacing: "1px", margin: 0 }}>{coupon.code}</h3>
+                                            <span style={{ fontSize: "0.7rem", backgroundColor: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>{(coupon as any).category || "BOTH"}</span>
                                             {!isExpired && (
                                                 <button onClick={() => handleDelete(coupon.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }} title="Delete Coupon">
                                                     <Trash2 size={16} />

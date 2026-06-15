@@ -22,7 +22,7 @@ export const createSubscriptionPlan = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { name, price, durationMonths, features } = await req.json();
+    const { name, price, durationMonths, features, category } = await req.json();
 
     if (!name || isNaN(price) || isNaN(durationMonths)) {
         throw new ApiError("Name, price, and duration are required", 400);
@@ -34,7 +34,8 @@ export const createSubscriptionPlan = async (req: Request) => {
             price: parseFloat(price),
             durationMonths: parseInt(durationMonths, 10),
             features: features ? JSON.stringify(features) : "[]",
-            isActive: true
+            isActive: true,
+            category: category || "BOTH"
         }
     });
 

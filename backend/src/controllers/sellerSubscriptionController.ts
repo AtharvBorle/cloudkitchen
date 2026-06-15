@@ -63,6 +63,10 @@ export const createSubscriptionOrder = async (req: Request) => {
             throw new ApiError("This coupon is not valid for the selected plan", 400);
         }
 
+        if (coupon.category && coupon.category !== "BOTH" && sellerProfile.businessCategory !== "BOTH" && coupon.category !== sellerProfile.businessCategory) {
+            throw new ApiError(`This coupon is only valid for ${coupon.category} sellers`, 400);
+        }
+
         if (coupon.maxUsage > 0 && coupon.currentUsage >= coupon.maxUsage) {
             throw new ApiError("This coupon has reached its maximum usage limit", 400);
         }
@@ -172,6 +176,25 @@ export const verifySubscriptionPayment = async (req: Request) => {
             appliedCoupon: couponCode || null
         }
     });
+
+    // Update seller businessCategory if plan category is BOTH or counterpart
+    let targetCategory = sellerProfile.businessCategory;
+    const planCategory = plan.category || "BOTH";
+
+    if (planCategory === "BOTH") {
+        targetCategory = "BOTH";
+    } else if (planCategory === "FOOD" && sellerProfile.businessCategory === "PROPERTY") {
+        targetCategory = "BOTH";
+    } else if (planCategory === "PROPERTY" && sellerProfile.businessCategory === "FOOD") {
+        targetCategory = "BOTH";
+    }
+
+    if (targetCategory !== sellerProfile.businessCategory) {
+        await db.sellerProfile.update({
+            where: { id: sellerProfile.id },
+            data: { businessCategory: targetCategory }
+        });
+    }
 
     // If a coupon was used, safely increment its usage count
     if (couponCode) {

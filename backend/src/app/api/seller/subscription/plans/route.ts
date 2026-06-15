@@ -1,18 +1,44 @@
 import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { getAuthSession } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const url = new URL(req.url);
+        let category = url.searchParams.get("category");
+
+        if (!category) {
+            const session = await getAuthSession();
+            if (session?.user?.id) {
+                const seller = await db.sellerProfile.findUnique({
+                    where: { userId: session.user.id }
+                });
+                if (seller) {
+                    category = seller.businessCategory;
+                }
+            }
+        }
+
+        let whereClause: any = { isActive: true };
+        if (category && category !== "BOTH") {
+            whereClause.category = {
+                in: [category, "BOTH"]
+            };
+        }
+
         const dbPlans = await db.subscriptionPlan.findMany({
-            where: { isActive: true },
+            where: whereClause,
             orderBy: { price: 'asc' }
         });
+
         const plans = dbPlans.map(plan => ({
             id: plan.id,
             name: plan.name,
             price: Number(plan.price),
             durationMonths: Number(plan.durationMonths),
-            features: JSON.parse(plan.features || "[]")
+            features: JSON.parse(plan.features || "[]"),
+            category: plan.category || "BOTH"
         }));
         return successResponse(plans);
     } catch (e: any) {

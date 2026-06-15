@@ -18,20 +18,28 @@ export async function GET() {
             throw new ApiError("Seller profile not found", 404);
         }
 
-        const activeSub = await db.subscription.findFirst({
+        const activeSubs = await db.subscription.findMany({
             where: {
                 sellerId: sellerProfile.id,
                 status: "ACTIVE",
                 validUntil: {
                     gt: new Date()
                 }
+            },
+            include: {
+                plan: true
             }
         });
 
+        const isFoodActive = activeSubs.some(sub => sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH");
+        const isPropertyActive = activeSubs.some(sub => sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH");
+
         return successResponse({
             sellerProfile,
-            hasActiveSub: !!activeSub,
-            validUntil: activeSub?.validUntil || null
+            hasActiveSub: activeSubs.length > 0,
+            activeSubs,
+            isFoodActive,
+            isPropertyActive
         });
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

@@ -47,6 +47,7 @@ model SellerProfile {
   trackingId         String  @unique
   upiId              String?
   isOnline           Boolean @default(true)
+  businessCategory   String  @default("FOOD")
 
   agentId String?
   agent   AgentProfile? @relation(fields: [agentId], references: [id])
@@ -160,6 +161,7 @@ model SubscriptionPlan {
   durationMonths Int // 1, 3, 6, 12, etc.
   features       String   @default("[]") // JSON stringified array of features
   isActive       Boolean  @default(true)
+  category       String   @default("BOTH")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -197,6 +199,7 @@ model SubscriptionCoupon {
   currentUsage       Int               @default(0)
   
   isActive           Boolean           @default(true)
+  category           String            @default("BOTH")
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 }
@@ -234,6 +237,7 @@ model Coupon {
   minimumCartValue     Float?    // Null = no minimum value
 
   isActive       Boolean  @default(true)
+  category       String   @default("BOTH")
   approvalStatus String   @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED, REVISION
   adminNote      String?
   createdAt      DateTime @default(now())
