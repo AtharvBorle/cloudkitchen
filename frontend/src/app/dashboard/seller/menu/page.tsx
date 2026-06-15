@@ -20,12 +20,18 @@ export default function ManageMenuPage() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [pincodeList, setPincodeList] = useState<string[]>([]);
     const [pincodeInput, setPincodeInput] = useState("");
+    const [placeNameInput, setPlaceNameInput] = useState("");
+    const [servedPincodes, setServedPincodes] = useState<any[]>([]);
+    const [addingPincode, setAddingPincode] = useState(false);
 
     const fetchMenu = async () => {
         try {
             const res = await fetchApi("/api/seller/menu");
             const data = await res.json();
-            if (res.ok) setItems(data.items);
+            if (res.ok) {
+                setItems(data.items || []);
+                setServedPincodes(data.servedPincodes || []);
+            }
         } catch (error) {
             console.error("Failed to fetch menu");
         }
@@ -133,6 +139,7 @@ export default function ManageMenuPage() {
         setName(""); setPrice(""); setDescription(""); setStockQuantity("-1"); setImageFile(null);
         setPincodeList([]);
         setPincodeInput("");
+        setPlaceNameInput("");
     };
 
     // Generic placeholder if no image
@@ -169,8 +176,20 @@ export default function ManageMenuPage() {
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '10px', flex: 1 }}>{item.description}</p>
                                 <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #EEE', paddingTop: '10px' }}>
                                     <div><strong>Stock:</strong> {item.stockQuantity === -1 ? 'Unlimited' : item.stockQuantity === 0 ? 'Out of Stock (0)' : item.stockQuantity}</div>
-                                    <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                        <strong>Delivery Pincodes:</strong> {item.deliveryPincodes ? item.deliveryPincodes : "Default (Local Pincode only)"}
+                                    <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={
+                                        item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: string) => {
+                                            const pin = p.trim();
+                                            const found = servedPincodes.find(sp => sp.pincode === pin);
+                                            return found ? `${pin} (${found.name})` : pin;
+                                        }).join(", ") : "Default (Local Pincode only)"
+                                    }>
+                                        <strong>Delivery Pincodes:</strong> {
+                                            item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: string) => {
+                                                const pin = p.trim();
+                                                const found = servedPincodes.find(sp => sp.pincode === pin);
+                                                return found ? `${pin} (${found.name})` : pin;
+                                            }).join(", ") : "Default (Local Pincode only)"
+                                        }
                                     </div>
                                 </div>
 
@@ -219,72 +238,112 @@ export default function ManageMenuPage() {
 
                             <div className="input-group">
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>
-                                    Delivery Pincodes (Optional)
+                                    Select Centralized Delivery Pincodes:
                                 </label>
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '10px', backgroundColor: '#F8FAFC', marginBottom: '15px' }}>
+                                    {servedPincodes.length === 0 ? (
+                                        <p style={{ fontSize: '0.85rem', color: '#94A3B8', fontStyle: 'italic', margin: 0 }}>No centralized pincodes added yet. Add one below!</p>
+                                    ) : (
+                                        servedPincodes.map(sp => (
+                                            <div key={sp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: 'var(--text-main)', cursor: 'pointer', flex: 1, userSelect: 'none' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={pincodeList.includes(sp.pincode)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setPincodeList([...pincodeList, sp.pincode]);
+                                                            } else {
+                                                                setPincodeList(pincodeList.filter(p => p !== sp.pincode));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <strong>{sp.pincode}</strong> - {sp.name}
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        if (confirm(`Remove ${sp.pincode} (${sp.name}) from centralized list?`)) {
+                                                            try {
+                                                                const deleteRes = await fetchApi(`/api/seller/menu/pincodes/${sp.id}`, { method: 'DELETE' });
+                                                                if (deleteRes.ok) {
+                                                                    setServedPincodes(servedPincodes.filter(p => p.id !== sp.id));
+                                                                    setPincodeList(pincodeList.filter(p => p !== sp.pincode));
+                                                                } else {
+                                                                    alert("Failed to delete pincode");
+                                                                }
+                                                            } catch (err) {
+                                                                console.error(err);
+                                                            }
+                                                        }
+                                                    }}
+                                                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '0.8rem', padding: '2px 6px' }}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>
+                                    Add New Centralized Pincode:
+                                </label>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', alignItems: 'center' }}>
                                     <input
                                         type="text"
                                         value={pincodeInput}
                                         onChange={e => setPincodeInput(e.target.value.replace(/\D/g, ''))}
-                                        className="input-field"
-                                        placeholder="Add a Pincode (e.g. 411028)"
-                                        style={{ marginBottom: 0 }}
+                                        placeholder="Pincode (e.g. 411028)"
+                                        style={{ flex: 1, padding: '8px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                                    />
+                                    <input
+                                        type="text"
+                                        value={placeNameInput}
+                                        onChange={e => setPlaceNameInput(e.target.value)}
+                                        placeholder="Place Name (e.g. Hadapsar)"
+                                        style={{ flex: 1.5, padding: '8px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={async () => {
                                             const pin = pincodeInput.trim();
-                                            if (pin && !pincodeList.includes(pin)) {
-                                                setPincodeList([...pincodeList, pin]);
-                                                setPincodeInput("");
+                                            const name = placeNameInput.trim();
+                                            if (!pin || !name) {
+                                                alert("Please enter both Pincode and Place Name");
+                                                return;
+                                            }
+                                            setAddingPincode(true);
+                                            try {
+                                                const addRes = await fetchApi('/api/seller/menu/pincodes', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ pincode: pin, name })
+                                                });
+                                                const resData = await addRes.json();
+                                                if (addRes.ok) {
+                                                    const newPin = resData.pincode || resData;
+                                                    setServedPincodes([...servedPincodes, newPin]);
+                                                    if (!pincodeList.includes(pin)) {
+                                                        setPincodeList([...pincodeList, pin]);
+                                                    }
+                                                    setPincodeInput("");
+                                                    setPlaceNameInput("");
+                                                } else {
+                                                    alert(resData.message || "Failed to add pincode");
+                                                }
+                                            } catch (err) {
+                                                console.error("Error adding pincode", err);
+                                            } finally {
+                                                setAddingPincode(false);
                                             }
                                         }}
+                                        disabled={addingPincode}
                                         className="btn btn-secondary"
-                                        style={{ width: 'auto', padding: '0 15px', whiteSpace: 'nowrap' }}
+                                        style={{ width: 'auto', padding: '8px 15px', whiteSpace: 'nowrap', fontSize: '0.9rem', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
-                                        Add
+                                        {addingPincode ? '...' : 'Add'}
                                     </button>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-                                    {pincodeList.map(pin => (
-                                        <span
-                                            key={pin}
-                                            style={{
-                                                backgroundColor: '#E0F2FE',
-                                                color: '#0369A1',
-                                                padding: '4px 10px',
-                                                borderRadius: '16px',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 'bold',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px'
-                                            }}
-                                        >
-                                            {pin}
-                                            <button
-                                                type="button"
-                                                onClick={() => setPincodeList(pincodeList.filter(p => p !== pin))}
-                                                style={{
-                                                    border: 'none',
-                                                    background: 'none',
-                                                    color: '#0369A1',
-                                                    cursor: 'pointer',
-                                                    fontWeight: 'bold',
-                                                    padding: 0,
-                                                    fontSize: '0.85rem',
-                                                    lineHeight: 1
-                                                }}
-                                            >
-                                                &times;
-                                            </button>
-                                        </span>
-                                    ))}
-                                    {pincodeList.length === 0 && (
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                            Delivers only to your physical shop pincode by default.
-                                        </span>
-                                    )}
                                 </div>
 
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Available Days:</label>

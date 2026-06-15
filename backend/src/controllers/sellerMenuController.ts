@@ -22,7 +22,12 @@ export const getMenuItems = async () => {
         orderBy: { name: 'asc' }
     });
 
-    return { items };
+    const servedPincodes = await db.servedPincode.findMany({
+        where: { sellerId: sellerProfile.id },
+        orderBy: { pincode: 'asc' }
+    });
+
+    return { items, servedPincodes };
 };
 
 export const createMenuItem = async (req: Request) => {
@@ -125,6 +130,87 @@ export const deleteMenuItem = async (id: string) => {
     }
 
     await db.foodItem.delete({
+        where: { id }
+    });
+
+    return null;
+};
+
+export const addServedPincode = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id }
+    });
+
+    if (!sellerProfile) {
+        throw new ApiError("Seller profile not found", 404);
+    }
+
+    const body = await req.json();
+    const { pincode, name } = body;
+
+    if (!pincode || !name) {
+        throw new ApiError("Pincode and Place Name are required", 400);
+    }
+
+    const cleanedPincode = pincode.toString().trim();
+    const cleanedName = name.toString().trim();
+
+    const existing = await db.servedPincode.findUnique({
+        where: {
+            sellerId_pincode: {
+                sellerId: sellerProfile.id,
+                pincode: cleanedPincode
+            }
+        }
+    });
+
+    if (existing) {
+        const updated = await db.servedPincode.update({
+            where: { id: existing.id },
+            data: { name: cleanedName }
+        });
+        return { pincode: updated };
+    }
+
+    const created = await db.servedPincode.create({
+        data: {
+            sellerId: sellerProfile.id,
+            pincode: cleanedPincode,
+            name: cleanedName
+        }
+    });
+
+    return { pincode: created };
+};
+
+export const deleteServedPincode = async (id: string) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id }
+    });
+
+    if (!sellerProfile) {
+        throw new ApiError("Seller profile not found", 404);
+    }
+
+    const existing = await db.servedPincode.findUnique({
+        where: { id }
+    });
+
+    if (!existing || existing.sellerId !== sellerProfile.id) {
+        throw new ApiError("Forbidden", 403);
+    }
+
+    await db.servedPincode.delete({
         where: { id }
     });
 

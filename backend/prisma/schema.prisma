@@ -56,6 +56,17 @@ model SellerProfile {
   orders          Order[]
   deliveryPersons DeliveryPerson[]
   subscriptions   Subscription[]
+  servedPincodes  ServedPincode[]
+}
+
+model ServedPincode {
+  id        String        @id @default(uuid())
+  sellerId  String
+  seller    SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  pincode   String
+  name      String
+
+  @@unique([sellerId, pincode])
 }
 
 model AgentProfile {
