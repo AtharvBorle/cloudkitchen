@@ -65,6 +65,16 @@ export const createOrder = async (req: Request) => {
     }
     // --- End Coupon Validation Logic ---
 
+    // --- Pincode Validation ---
+    const defaultAddress = await db.address.findFirst({
+        where: { userId: session.user.id, isDefault: true }
+    });
+    const userPincode = defaultAddress?.pincode ? defaultAddress.pincode.trim() : (dbUser.pincode ? dbUser.pincode.trim() : null);
+
+    if (!userPincode) {
+        throw new ApiError("Please set a delivery address with a valid pincode.", 400);
+    }
+
     const itemUpdates = [];
     for (const cartItem of items) {
         const foodItem = await db.foodItem.findUnique({ where: { id: cartItem.id } });
@@ -73,6 +83,20 @@ export const createOrder = async (req: Request) => {
         }
         if (!foodItem.isAvailable) {
             throw new ApiError(`Item ${cartItem.name} is currently unavailable.`, 400);
+        }
+
+        if (foodItem.deliveryPincodes) {
+            const pins = foodItem.deliveryPincodes.split(",").map(p => p.trim());
+            if (!pins.includes(userPincode)) {
+                throw new ApiError(`Item ${cartItem.name} is not deliverable to your address (Pincode: ${userPincode}).`, 400);
+            }
+        } else {
+            if (sellerProfile.userId) {
+                const sellerUser = await db.user.findUnique({ where: { id: sellerProfile.userId } });
+                if (sellerUser?.pincode && sellerUser.pincode.trim() !== userPincode) {
+                    throw new ApiError(`Item ${cartItem.name} is not deliverable to your address (Pincode: ${userPincode}).`, 400);
+                }
+            }
         }
 
         if (foodItem.stockQuantity !== -1) {

@@ -101,10 +101,20 @@ export const getSellerById = async (id: string) => {
 
     const seller = await db.sellerProfile.findUnique({
         where: { id: id },
-        select: {
-            id: true,
-            businessName: true,
-            upiId: true,
+        include: {
+            user: {
+                select: {
+                    pincode: true
+                }
+            },
+            foodItems: {
+                where: { isAvailable: true },
+                select: {
+                    id: true,
+                    name: true,
+                    deliveryPincodes: true
+                }
+            }
         }
     });
 

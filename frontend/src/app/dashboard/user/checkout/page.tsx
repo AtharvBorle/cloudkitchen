@@ -36,6 +36,7 @@ function CheckoutContent() {
     // Seller processing
     const [sellerUpiId, setSellerUpiId] = useState<string | null>(null);
     const [isFetchingSeller, setIsFetchingSeller] = useState(false);
+    const [sellerDetails, setSellerDetails] = useState<any>(null);
 
     // Hydration fix for localStorage contexts
     useEffect(() => {
@@ -87,6 +88,7 @@ function CheckoutContent() {
                 const res = await fetchApi(`/api/seller/profile/${sellerId}`);
                 if (res.ok) {
                     const data = await res.json();
+                    setSellerDetails(data);
                     if (data?.upiId) {
                         setSellerUpiId(data.upiId);
                     }
@@ -102,6 +104,38 @@ function CheckoutContent() {
             fetchSeller();
         }
     }, [isClient, isRoomBooking, roomDetails, cartItems]);
+
+    const selectedAddress = addresses.find((a: any) => a.id === addressId);
+
+    const getOutOfRangeItems = () => {
+        if (isRoomBooking) return [];
+        if (!selectedAddress || !sellerDetails || cartItems.length === 0) return [];
+
+        const userPincode = selectedAddress.pincode.trim();
+        const outOfRange: string[] = [];
+
+        for (const cartItem of cartItems) {
+            const itemDetail = sellerDetails.foodItems?.find((f: any) => f.id === cartItem.id);
+            if (!itemDetail) continue;
+
+            let deliverable = false;
+            if (itemDetail.deliveryPincodes) {
+                const pins = itemDetail.deliveryPincodes.split(",").map((p: string) => p.trim());
+                deliverable = pins.includes(userPincode);
+            } else {
+                deliverable = sellerDetails.user?.pincode === userPincode;
+            }
+
+            if (!deliverable) {
+                outOfRange.push(cartItem.name);
+            }
+        }
+
+        return outOfRange;
+    };
+
+    const outOfRangeItems = getOutOfRangeItems();
+    const hasOutOfRangeItems = outOfRangeItems.length > 0;
 
     // Fetch existing room bookings
     useEffect(() => {
@@ -256,6 +290,12 @@ function CheckoutContent() {
                 // Food Cart Checkout
                 if (cartItems.length === 0) {
                     setError("Your cart is empty.");
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                if (hasOutOfRangeItems) {
+                    setError(`Some items in your cart are out of delivery range for the selected address: ${outOfRangeItems.join(', ')}.`);
                     setIsSubmitting(false);
                     return;
                 }
@@ -424,6 +464,23 @@ function CheckoutContent() {
                                         No saved addresses found. <a href="/dashboard/user/profile" style={{ fontWeight: 'bold', textDecoration: 'underline' }}>Add an address in your Profile</a> to checkout.
                                     </div>
                                 )}
+
+                                {selectedAddress && hasOutOfRangeItems && (
+                                    <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                        <span style={{ fontWeight: 'bold' }}>⚠️ Delivery Pincode Issue:</span>
+                                        <p style={{ marginTop: '5px' }}>
+                                            The following items in your cart are not deliverable to pincode <span style={{ fontWeight: 'bold' }}>{selectedAddress.pincode}</span>:
+                                        </p>
+                                        <ul style={{ marginTop: '5px', paddingLeft: '20px', listStyleType: 'disc' }}>
+                                            {outOfRangeItems.map((name: string, idx: number) => (
+                                                <li key={idx} style={{ fontWeight: '500' }}>{name}</li>
+                                            ))}
+                                        </ul>
+                                        <p style={{ marginTop: '5px', fontSize: '0.85rem' }}>
+                                            Please select a different delivery address or remove these items from your cart to proceed.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -500,7 +557,7 @@ function CheckoutContent() {
                         </div>
                     </div>
 
-                    <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: isSubmitting ? 0.7 : 1 }}>
+                    <button type="submit" disabled={isSubmitting || hasOutOfRangeItems} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: (isSubmitting || hasOutOfRangeItems) ? 0.7 : 1 }}>
                         {isSubmitting ? "Processing..." : (
                             <>
                                 <ShieldCheck size={20} />

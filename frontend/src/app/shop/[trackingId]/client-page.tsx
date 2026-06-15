@@ -10,6 +10,34 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
     const [loading, setLoading] = useState(true);
     const [seller, setSeller] = useState<any | null>(null);
     const [error, setError] = useState<boolean>(false);
+    const [userAddress, setUserAddress] = useState<any | null>(null);
+
+    useEffect(() => {
+        const fetchUserAddress = async () => {
+            try {
+                const res = await fetchApi("/api/user/location/default");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.pincode) {
+                        setUserAddress(data);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching user address:", err);
+            }
+        };
+        fetchUserAddress();
+    }, []);
+
+    const isDeliverable = (item: any) => {
+        if (!userAddress || !userAddress.pincode) return true;
+        const userPincode = userAddress.pincode.trim();
+        if (item.deliveryPincodes) {
+            const pins = item.deliveryPincodes.split(",").map((p: string) => p.trim());
+            return pins.includes(userPincode);
+        }
+        return seller?.user?.pincode === userPincode;
+    };
 
     useEffect(() => {
         if (!trackingId) return;
@@ -116,7 +144,23 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                         )}
                                     </div>
 
-                                    <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0} />
+                                    {userAddress && !isDeliverable(item) && (
+                                        <div style={{
+                                            backgroundColor: '#FEF2F2',
+                                            color: '#EF4444',
+                                            padding: '6px 10px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 'bold',
+                                            marginBottom: '15px',
+                                            border: '1px solid #FEE2E2',
+                                            textAlign: 'center'
+                                        }}>
+                                            Out of delivery range for {userAddress.pincode}
+                                        </div>
+                                    )}
+
+                                    <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0 || (userAddress && !isDeliverable(item))} />
                                 </div>
                             </div>
                         ))}
