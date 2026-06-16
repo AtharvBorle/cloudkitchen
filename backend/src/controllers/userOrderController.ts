@@ -19,10 +19,29 @@ export const createOrder = async (req: Request) => {
     const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
     if (!dbUser) throw new ApiError("User not found", 404);
 
-    const sellerProfile = await db.sellerProfile.findUnique({ where: { id: sellerId } });
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { id: sellerId },
+        include: {
+            subscriptions: {
+                where: { status: "ACTIVE" },
+                include: { plan: true }
+            }
+        }
+    });
     if (!sellerProfile) throw new ApiError("Seller not found", 404);
     if (!sellerProfile.isOnline) {
         throw new ApiError("This store is currently offline. Orders cannot be placed.", 400);
+    }
+
+    const now = new Date();
+    const hasActiveFoodSub = sellerProfile.subscriptions.some((sub: any) => 
+        sub.status === "ACTIVE" && 
+        (sub.validUntil === null || new Date(sub.validUntil) > now) &&
+        (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
+    );
+
+    if (!hasActiveFoodSub) {
+        throw new ApiError("This store is currently not accepting orders (No active subscription).", 400);
     }
 
     // --- Coupon Validation Logic ---
