@@ -38,7 +38,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 }
 
-// Delete (deactivate) a plan
+// Delete a plan (hard delete from database)
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getAuthSession();
@@ -51,10 +51,20 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             return NextResponse.json({ message: "ID is required" }, { status: 400 });
         }
 
-        // We soft delete it so existing subscriptions attached to it don't break
-        await db.subscriptionPlan.update({
-            where: { id },
-            data: { isActive: false }
+        // Clean up references to prevent foreign key errors
+        await db.subscription.updateMany({
+            where: { planId: id },
+            data: { planId: null }
+        });
+
+        await db.subscriptionCoupon.updateMany({
+            where: { planId: id },
+            data: { planId: null }
+        });
+
+        // Hard delete the plan from the database
+        await db.subscriptionPlan.delete({
+            where: { id }
         });
 
         return NextResponse.json({ message: "Plan deleted successfully" });
