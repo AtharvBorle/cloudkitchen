@@ -26,7 +26,7 @@ export default function SellerDashboardLayout({ children }: { children: ReactNod
                 const res = await fetchApi("/api/seller/dashboard/status");
                 if (res.ok) {
                     const data = await res.json();
-                    setStatusData(data);
+                    setStatusData(data.data || data);
                 }
             } catch (error) {
                 console.error("Error fetching seller dashboard status:", error);

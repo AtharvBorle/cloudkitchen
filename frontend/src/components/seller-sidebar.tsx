@@ -27,7 +27,7 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                 const res = await fetch("/api/seller/dashboard/status");
                 if (res.ok) {
                     const data = await res.json();
-                    setStatusData(data);
+                    setStatusData(data.data || data);
                 }
             } catch (err) {
                 console.error("Failed to fetch dashboard status in sidebar:", err);
@@ -53,7 +53,7 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
             const res = await fetch(`/api/seller/subscription/plans?category=${category}`);
             if (res.ok) {
                 const data = await res.json();
-                setCategoryPlans(data);
+                setCategoryPlans(data.data || data || []);
             }
         } catch (error) {
             console.error("Failed to load category plans:", error);

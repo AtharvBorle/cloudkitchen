@@ -30,7 +30,8 @@ export default function SellerPaymentPage() {
                     router.push("/dashboard/seller");
                     return;
                 }
-                const statusData = await statusRes.json();
+                const statusDataRaw = await statusRes.json();
+                const statusData = statusDataRaw.data || statusDataRaw;
                 
                 if (statusData.sellerProfile?.verificationStatus !== "APPROVED") {
                     router.push("/dashboard/seller");
@@ -50,7 +51,7 @@ export default function SellerPaymentPage() {
                 const plansRes = await fetchApi(url);
                 if (plansRes.ok) {
                     const plansData = await plansRes.json();
-                    setPlans(plansData);
+                    setPlans(plansData.data || plansData || []);
                 }
             } catch (error) {
                 console.error("Payment overview check failed:", error);
