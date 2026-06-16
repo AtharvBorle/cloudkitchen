@@ -64,7 +64,7 @@ export const createOrder = async (req: Request) => {
         }
 
         // 4. Category check
-        if (coupon.category && coupon.category !== "BOTH" && sellerProfile.businessCategory !== "BOTH" && coupon.category !== sellerProfile.businessCategory) {
+        if (coupon.category && coupon.category !== sellerProfile.businessCategory) {
             throw new ApiError(`This coupon is only valid for stores in the ${coupon.category} category.`, 400);
         }
     }

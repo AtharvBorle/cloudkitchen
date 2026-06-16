@@ -40,16 +40,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: "This coupon is not valid for the selected plan" }, { status: 400 });
         }
 
-        const session = await getAuthSession();
-        if (session?.user?.id) {
-            const seller = await db.sellerProfile.findUnique({
-                where: { userId: session.user.id }
-            });
-            if (seller) {
-                if (coupon.category && coupon.category !== "BOTH" && seller.businessCategory !== "BOTH" && coupon.category !== seller.businessCategory) {
-                    return NextResponse.json({ message: `This coupon is only valid for ${coupon.category} sellers` }, { status: 400 });
-                }
-            }
+        if (coupon.category && coupon.category !== plan.category) {
+            return NextResponse.json({ message: `This coupon is only valid for ${coupon.category} plans` }, { status: 400 });
         }
 
         if (coupon.maxUsage > 0 && coupon.currentUsage >= coupon.maxUsage) {

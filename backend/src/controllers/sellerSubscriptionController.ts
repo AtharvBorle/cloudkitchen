@@ -30,8 +30,9 @@ export const createSubscriptionOrder = async (req: Request) => {
     }
 
     let priceAmount = 0;
+    let plan: any = null;
     try {
-        const plan = await db.subscriptionPlan.findUnique({
+        plan = await db.subscriptionPlan.findUnique({
             where: { id: planId }
         });
         if (plan) {
@@ -63,8 +64,8 @@ export const createSubscriptionOrder = async (req: Request) => {
             throw new ApiError("This coupon is not valid for the selected plan", 400);
         }
 
-        if (coupon.category && coupon.category !== "BOTH" && sellerProfile.businessCategory !== "BOTH" && coupon.category !== sellerProfile.businessCategory) {
-            throw new ApiError(`This coupon is only valid for ${coupon.category} sellers`, 400);
+        if (coupon.category && coupon.category !== plan.category) {
+            throw new ApiError(`This coupon is only valid for ${coupon.category} plans`, 400);
         }
 
         if (coupon.maxUsage > 0 && coupon.currentUsage >= coupon.maxUsage) {
