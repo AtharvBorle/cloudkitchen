@@ -103,15 +103,27 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     Manage Menu
                 </Link>
 
-                <Link href="/dashboard/seller/inventory" style={getLinkStyle('/dashboard/seller/inventory')} onClick={onClose}>
+                <Link 
+                    href="/dashboard/seller/inventory" 
+                    style={getLinkStyle('/dashboard/seller/inventory')} 
+                    onClick={(e) => handleCategoryClick(e, "FOOD", isFoodActive)}
+                >
                     Inventory & Stock
                 </Link>
 
-                <Link href="/dashboard/seller/orders" style={getLinkStyle('/dashboard/seller/orders')} onClick={onClose}>
+                <Link 
+                    href="/dashboard/seller/orders" 
+                    style={getLinkStyle('/dashboard/seller/orders')} 
+                    onClick={(e) => handleCategoryClick(e, "FOOD", isFoodActive)}
+                >
                     Orders
                 </Link>
 
-                <Link href="/dashboard/seller/delivery" style={getLinkStyle('/dashboard/seller/delivery')} onClick={onClose}>
+                <Link 
+                    href="/dashboard/seller/delivery" 
+                    style={getLinkStyle('/dashboard/seller/delivery')} 
+                    onClick={(e) => handleCategoryClick(e, "FOOD", isFoodActive)}
+                >
                     Delivery Persons
                 </Link>
 

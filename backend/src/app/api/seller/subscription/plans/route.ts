@@ -8,18 +8,6 @@ export async function GET(req: NextRequest) {
         const url = new URL(req.url);
         let category = url.searchParams.get("category");
 
-        if (!category) {
-            const session = await getAuthSession();
-            if (session?.user?.id) {
-                const seller = await db.sellerProfile.findUnique({
-                    where: { userId: session.user.id }
-                });
-                if (seller) {
-                    category = seller.businessCategory;
-                }
-            }
-        }
-
         let whereClause: any = { isActive: true };
         if (category && category !== "BOTH") {
             whereClause.category = {
