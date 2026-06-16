@@ -174,7 +174,20 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 </div>
                                 <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{item.name}</h3>
+                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            {item.name}
+                                            <span style={{
+                                                display: 'inline-block',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                fontSize: '0.7rem',
+                                                fontWeight: 'bold',
+                                                color: 'white',
+                                                backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                            }}>
+                                                {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                                            </span>
+                                        </h3>
                                         <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
                                     </div>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>

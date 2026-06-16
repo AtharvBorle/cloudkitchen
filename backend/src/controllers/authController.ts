@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
 
-    let finalName, finalEmail, finalPhone, finalPassword, finalRole, finalSellerType, finalCity, finalPincode, finalBusinessName, finalAddressFlat, finalAddressArea, finalAddressLandmark, finalBusinessCategory;
+    let finalName, finalEmail, finalPhone, finalPassword, finalRole, finalSellerType, finalCity, finalPincode, finalBusinessName, finalAddressFlat, finalAddressArea, finalAddressLandmark, finalBusinessCategory, finalFoodType;
     let adhaarUrl = "pending_url", fssaiUrl = null;
     let kitchenImages: string[] = [];
     let cuisineImages: string[] = [];
@@ -27,6 +27,7 @@ export const registerUser = async (req: Request) => {
         finalAddressArea = body.addressArea;
         finalAddressLandmark = body.addressLandmark;
         finalBusinessCategory = body.businessCategory;
+        finalFoodType = body.foodType;
     } else {
         const formData = await req.formData();
 
@@ -43,6 +44,7 @@ export const registerUser = async (req: Request) => {
         finalAddressArea = formData.get("addressArea") as string;
         finalAddressLandmark = formData.get("addressLandmark") as string;
         finalBusinessCategory = formData.get("businessCategory") as string;
+        finalFoodType = formData.get("foodType") as string;
 
         const saveFile = async (file: File | null) => {
             if (!file || typeof file === "string" || file.size === 0) return null;
@@ -157,6 +159,7 @@ export const registerUser = async (req: Request) => {
                     fssaiUrl: fssaiUrl,
                     trackingId: `SHOP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
                     businessCategory: finalBusinessCategory || "FOOD",
+                    foodType: finalFoodType || "BOTH",
                 }
             });
             console.log("Seller profile created successfully");

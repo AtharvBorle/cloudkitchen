@@ -43,7 +43,8 @@ export default function SellerRegisterPage() {
         addressLandmark: "",
         city: "",
         pincode: "",
-        businessCategory: "FOOD"
+        businessCategory: "FOOD",
+        foodType: "BOTH"
     });
 
     const [adhaarFrontFile, setAdhaarFrontFile] = useState<File | null>(null);
@@ -212,6 +213,16 @@ export default function SellerRegisterPage() {
                                     <option value="BOTH">Both Food and Property</option>
                                 </select>
                             </div>
+
+                            {(formData.businessCategory === "FOOD" || formData.businessCategory === "BOTH") && (
+                                <div className="input-group">
+                                    <label style={{ fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "4px", display: "block" }}>Food Type Option</label>
+                                    <select name="foodType" value={formData.foodType} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
+                                        <option value="VEG">Veg Only</option>
+                                        <option value="BOTH">Both (Veg & Non-Veg)</option>
+                                    </select>
+                                </div>
+                            )}
 
                             <div className="input-group">
                                 <input name="addressFlat" type="text" value={formData.addressFlat} onChange={handleChange} className="input-field" placeholder="Flat no/Floor no/House" required />

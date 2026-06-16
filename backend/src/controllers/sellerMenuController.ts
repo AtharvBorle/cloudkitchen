@@ -27,7 +27,7 @@ export const getMenuItems = async () => {
         orderBy: { pincode: 'asc' }
     });
 
-    return { items, servedPincodes };
+    return { items, servedPincodes, foodType: sellerProfile.foodType };
 };
 
 export const createMenuItem = async (req: Request) => {
@@ -56,6 +56,7 @@ export const createMenuItem = async (req: Request) => {
     const closeTime = formData.get("closeTime") as string | null;
     const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
+    const itemType = sellerProfile.foodType === "VEG" ? "VEG" : (formData.get("itemType") as string || "VEG");
 
     if (!name || isNaN(price)) {
         throw new ApiError("Name and Price are required", 400);
@@ -81,6 +82,7 @@ export const createMenuItem = async (req: Request) => {
             closeTime: closeTime || null,
             operationalHours: operationalHours || null,
             imageUrl,
+            itemType,
         }
     });
 
@@ -114,6 +116,9 @@ export const updateMenuItem = async (req: Request, id: string) => {
     if (body.openTime !== undefined) dataToUpdate.openTime = body.openTime;
     if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
     if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
+    if (body.itemType !== undefined) {
+        dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : body.itemType;
+    }
 
     const updatedItem = await db.foodItem.update({
         where: { id },

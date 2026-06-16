@@ -133,7 +133,20 @@ export default function UserFoodPage() {
                             </Link>
                             <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <Link href={`/shop/${item.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px' }}>{item.name}</h3>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {item.name}
+                                        <span style={{
+                                            display: 'inline-block',
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 'bold',
+                                            color: 'white',
+                                            backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                        }}>
+                                            {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                                        </span>
+                                    </h3>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>By {item.sellerName} • {item.sellerCity}</p>
                                     <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                                     <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>

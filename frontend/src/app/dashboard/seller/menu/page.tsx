@@ -23,6 +23,8 @@ export default function ManageMenuPage() {
     const [placeNameInput, setPlaceNameInput] = useState("");
     const [servedPincodes, setServedPincodes] = useState<any[]>([]);
     const [addingPincode, setAddingPincode] = useState(false);
+    const [sellerFoodType, setSellerFoodType] = useState("BOTH");
+    const [itemType, setItemType] = useState("VEG");
     const [openTime, setOpenTime] = useState("");
     const [closeTime, setCloseTime] = useState("");
     const [dailyHours, setDailyHours] = useState<Record<string, { isOpen: boolean, openTime: string, closeTime: string }>>({
@@ -52,6 +54,7 @@ export default function ManageMenuPage() {
             if (res.ok) {
                 setItems(data.items || []);
                 setServedPincodes(data.servedPincodes || []);
+                setSellerFoodType(data.foodType || "BOTH");
             }
         } catch (error) {
             console.error("Failed to fetch menu");
@@ -82,7 +85,8 @@ export default function ManageMenuPage() {
                 deliveryPincodes: pincodeList.join(", ") || null,
                 openTime: openTime || null,
                 closeTime: closeTime || null,
-                operationalHours: JSON.stringify(dailyHours)
+                operationalHours: JSON.stringify(dailyHours),
+                itemType: sellerFoodType === "VEG" ? "VEG" : itemType
             });
             headers["Content-Type"] = "application/json";
         } else {
@@ -99,6 +103,7 @@ export default function ManageMenuPage() {
             if (openTime) formData.append("openTime", openTime);
             if (closeTime) formData.append("closeTime", closeTime);
             formData.append("operationalHours", JSON.stringify(dailyHours));
+            formData.append("itemType", sellerFoodType === "VEG" ? "VEG" : itemType);
             if (imageFile) formData.append("image", imageFile);
             bodyData = formData;
             // browser sets content type automatically for FormData
@@ -179,6 +184,7 @@ export default function ManageMenuPage() {
             });
         }
         setImageFile(null); // Assuming no image update for now
+        setItemType(item.itemType || "VEG");
         setIsModalOpen(true);
     };
 
@@ -187,6 +193,7 @@ export default function ManageMenuPage() {
         setEditingItemId(null);
         setName(""); setPrice(""); setDescription(""); setStockQuantity("-1"); setImageFile(null);
         setPincodeList([]);
+        setItemType("VEG");
         setOpenTime("");
         setCloseTime("");
         setDailyHours({
@@ -230,7 +237,20 @@ export default function ManageMenuPage() {
                             </div>
                             <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{item.name}</h3>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {item.name}
+                                        <span style={{
+                                            display: 'inline-block',
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 'bold',
+                                            color: 'white',
+                                            backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                        }}>
+                                            {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                                        </span>
+                                    </h3>
                                     <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
                                 </div>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '10px', flex: 1 }}>{item.description}</p>
@@ -327,6 +347,20 @@ export default function ManageMenuPage() {
                             <div className="input-group">
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)' }}>Stock Quantity (-1 for unlimited):</label>
                                 <input type="number" value={stockQuantity} onChange={e => setStockQuantity(e.target.value)} className="input-field" placeholder="Stock (-1 for no limit)" required />
+                            </div>
+
+                            <div className="input-group">
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>Food Category:</label>
+                                {sellerFoodType === "VEG" ? (
+                                    <div style={{ padding: '8px 12px', backgroundColor: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                        Veg (Default for Veg Only Seller)
+                                    </div>
+                                ) : (
+                                    <select value={itemType} onChange={e => setItemType(e.target.value)} className="input-field" required style={{ appearance: 'auto' }}>
+                                        <option value="VEG">Veg</option>
+                                        <option value="NON_VEG">Non-Veg</option>
+                                    </select>
+                                )}
                             </div>
 
                             <div className="input-group">

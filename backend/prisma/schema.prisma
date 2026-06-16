@@ -48,6 +48,7 @@ model SellerProfile {
   upiId              String?
   isOnline           Boolean @default(true)
   businessCategory   String  @default("FOOD")
+  foodType           String  @default("BOTH") // VEG or BOTH
 
   agentId String?
   agent   AgentProfile? @relation(fields: [agentId], references: [id])
@@ -105,6 +106,7 @@ model FoodItem {
   operationalHours String?       // JSON string of daily hours: { Mon: { isOpen: boolean, openTime: string, closeTime: string }, ... }
   categoryId       String?
   category         Category?     @relation(fields: [categoryId], references: [id])
+  itemType         String        @default("VEG") // VEG or NON_VEG
 }
 
 model Order {
