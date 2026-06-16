@@ -33,6 +33,8 @@ export const requestSellerRevision = async (req: Request) => {
     };
 
     const adhaarFile = formData.get("adhaarFile") as File;
+    const adhaarFrontFile = formData.get("adhaarFrontFile") as File;
+    const adhaarBackFile = formData.get("adhaarBackFile") as File;
     const fssaiFile = formData.get("fssaiFile") as File;
 
     const kitchenFiles: File[] = [];
@@ -56,14 +58,22 @@ export const requestSellerRevision = async (req: Request) => {
     }
 
     // Fire all these securely and concurrently
-    const [savedAdhaar, savedFssai, resolvedKitchen, resolvedCuisine] = await Promise.all([
+    const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, resolvedKitchen, resolvedCuisine] = await Promise.all([
         saveFile(adhaarFile),
+        saveFile(adhaarFrontFile),
+        saveFile(adhaarBackFile),
         saveFile(fssaiFile),
         Promise.all(kitchenFiles.map(saveFile)),
         Promise.all(cuisineFiles.map(saveFile))
     ]);
 
-    if (savedAdhaar) updateData.adhaarUrl = savedAdhaar;
+    if (savedAdhaarFront && savedAdhaarBack) {
+        updateData.adhaarUrl = JSON.stringify([savedAdhaarFront, savedAdhaarBack]);
+    } else if (savedAdhaarFront) {
+        updateData.adhaarUrl = JSON.stringify([savedAdhaarFront]);
+    } else if (savedAdhaar) {
+        updateData.adhaarUrl = savedAdhaar;
+    }
     if (savedFssai) updateData.fssaiUrl = savedFssai;
 
     if (hasNewKitchenImages) {

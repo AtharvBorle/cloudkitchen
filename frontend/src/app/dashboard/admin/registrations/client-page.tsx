@@ -289,27 +289,44 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     <h4 style={{ fontSize: "0.9rem", textTransform: "uppercase", color: "#94a3b8", fontWeight: "700", marginBottom: "1rem", letterSpacing: "0.5px" }}>Verification Documents</h4>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                         {/* Adhaar */}
-                                        <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                    <FileText size={20} color="#3b82f6" />
+                                        {(() => {
+                                            let adhaarUrls: string[] = [];
+                                            try {
+                                                if (app.adhaarUrl.startsWith("[")) {
+                                                    adhaarUrls = JSON.parse(app.adhaarUrl);
+                                                } else {
+                                                    adhaarUrls = [app.adhaarUrl];
+                                                }
+                                            } catch {
+                                                adhaarUrls = [app.adhaarUrl];
+                                            }
+
+                                            return adhaarUrls.map((url, idx) => (
+                                                <div key={idx} style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                            <FileText size={20} color="#3b82f6" />
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>
+                                                                Aadhaar Card {adhaarUrls.length > 1 ? (idx === 0 ? "(Front)" : "(Back)") : ""}
+                                                            </p>
+                                                            <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Identity Proof</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={(e) => openImage(e, url)}
+                                                        style={{
+                                                            padding: "8px 16px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e2e8f0", cursor: "pointer"
+                                                        }}
+                                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+                                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+                                                    >
+                                                        View <ExternalLink size={14} />
+                                                    </button>
                                                 </div>
-                                                <div>
-                                                    <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>Aadhaar Card</p>
-                                                    <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Identity Proof</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={(e) => openImage(e, app.adhaarUrl)}
-                                                style={{
-                                                    padding: "8px 16px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e2e8f0", cursor: "pointer"
-                                                }}
-                                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
-                                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
-                                            >
-                                                View <ExternalLink size={14} />
-                                            </button>
-                                        </div>
+                                            ));
+                                        })()}
 
                                         {/* FSSAI */}
                                         <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

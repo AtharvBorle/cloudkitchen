@@ -46,14 +46,16 @@ export default function SellerRegisterPage() {
         businessCategory: "FOOD"
     });
 
-    const [adhaarFile, setAdhaarFile] = useState<File | null>(null);
+    const [adhaarFrontFile, setAdhaarFrontFile] = useState<File | null>(null);
+    const [adhaarBackFile, setAdhaarBackFile] = useState<File | null>(null);
     const [fssaiFile, setFssaiFile] = useState<File | null>(null);
     const [kitchenImageFiles, setKitchenImageFiles] = useState<File[]>([]);
     const [cuisineImageFiles, setCuisineImageFiles] = useState<File[]>([]);
-    const [cameraMode, setCameraMode] = useState<'adhaar' | 'fssai' | 'kitchen' | 'cuisine' | null>(null);
+    const [cameraMode, setCameraMode] = useState<'adhaarFront' | 'adhaarBack' | 'fssai' | 'kitchen' | 'cuisine' | null>(null);
 
     const handleCameraCapture = (file: File) => {
-        if (cameraMode === 'adhaar') setAdhaarFile(file);
+        if (cameraMode === 'adhaarFront') setAdhaarFrontFile(file);
+        else if (cameraMode === 'adhaarBack') setAdhaarBackFile(file);
         else if (cameraMode === 'fssai') setFssaiFile(file);
         else if (cameraMode === 'kitchen') setKitchenImageFiles(prev => [...prev, file].slice(0, 3));
         else if (cameraMode === 'cuisine') setCuisineImageFiles(prev => [...prev, file].slice(0, 3));
@@ -91,8 +93,8 @@ export default function SellerRegisterPage() {
             return;
         }
 
-        if (!adhaarFile) {
-            setError("Aadhaar Card is required.");
+        if (!adhaarFrontFile || !adhaarBackFile) {
+            setError("Both front and back photos of your Aadhaar Card are required.");
             return;
         }
         if (categories.find(c => c.name === formData.sellerType)?.type === 'FOOD') {
@@ -115,7 +117,8 @@ export default function SellerRegisterPage() {
                 submitData.append(key, value);
             });
 
-            if (adhaarFile) submitData.append("adhaarFile", adhaarFile);
+            if (adhaarFrontFile) submitData.append("adhaarFrontFile", adhaarFrontFile);
+            if (adhaarBackFile) submitData.append("adhaarBackFile", adhaarBackFile);
             if (fssaiFile) submitData.append("fssaiFile", fssaiFile);
             kitchenImageFiles.forEach((file, index) => {
                 submitData.append(`kitchenImage_${index}`, file);
@@ -241,34 +244,67 @@ export default function SellerRegisterPage() {
                     {step === 3 && (
                         <div className="animate-fade-in">
 
-                            <div className="input-group">
-                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Aadhar Card (PDF/Image)</label>
-                                {!adhaarFile ? (
+                             <div className="input-group">
+                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Aadhaar Card Front Side</label>
+                                {!adhaarFrontFile ? (
                                     <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                                         <label className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
-                                            Upload File
-                                            <input type="file" onChange={(e) => handleFileChange(e, setAdhaarFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                            Upload Front
+                                            <input type="file" onChange={(e) => handleFileChange(e, setAdhaarFrontFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
                                         </label>
-                                        <button type="button" onClick={() => setCameraMode('adhaar')} className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                        <button type="button" onClick={() => setCameraMode('adhaarFront')} className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
                                             Take Photo
                                         </button>
                                     </div>
                                 ) : (
                                     <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "#f8fafc" }}>
-                                        {adhaarFile.type.startsWith("image/") ? (
-                                            <img src={URL.createObjectURL(adhaarFile)} alt="Aadhaar" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
+                                        {adhaarFrontFile.type.startsWith("image/") ? (
+                                            <img src={URL.createObjectURL(adhaarFrontFile)} alt="Aadhaar Front" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
                                         ) : (
                                             <div style={{ padding: "10px", backgroundColor: "#e2e8f0", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "bold", color: "#475569" }}>PDF</div>
                                         )}
                                         <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.9rem", color: "#334155" }}>
-                                            {adhaarFile.name}
+                                            {adhaarFrontFile.name}
                                         </div>
                                         <div style={{ display: "flex", gap: "10px" }}>
                                             <label style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>
                                                 Change
-                                                <input type="file" onChange={(e) => handleFileChange(e, setAdhaarFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                                <input type="file" onChange={(e) => handleFileChange(e, setAdhaarFrontFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
                                             </label>
-                                            <button type="button" onClick={() => setAdhaarFile(null)} style={{ padding: "6px 12px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Remove</button>
+                                            <button type="button" onClick={() => setAdhaarFrontFile(null)} style={{ padding: "6px 12px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Remove</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="input-group" style={{ marginTop: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Aadhaar Card Back Side</label>
+                                {!adhaarBackFile ? (
+                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                        <label className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                            Upload Back
+                                            <input type="file" onChange={(e) => handleFileChange(e, setAdhaarBackFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                        </label>
+                                        <button type="button" onClick={() => setCameraMode('adhaarBack')} className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                            Take Photo
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "#f8fafc" }}>
+                                        {adhaarBackFile.type.startsWith("image/") ? (
+                                            <img src={URL.createObjectURL(adhaarBackFile)} alt="Aadhaar Back" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
+                                        ) : (
+                                            <div style={{ padding: "10px", backgroundColor: "#e2e8f0", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "bold", color: "#475569" }}>PDF</div>
+                                        )}
+                                        <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.9rem", color: "#334155" }}>
+                                            {adhaarBackFile.name}
+                                        </div>
+                                        <div style={{ display: "flex", gap: "10px" }}>
+                                            <label style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>
+                                                Change
+                                                <input type="file" onChange={(e) => handleFileChange(e, setAdhaarBackFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                            </label>
+                                            <button type="button" onClick={() => setAdhaarBackFile(null)} style={{ padding: "6px 12px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Remove</button>
                                         </div>
                                     </div>
                                 )}

@@ -54,6 +54,8 @@ export const registerUser = async (req: Request) => {
         try {
             console.log("Starting concurrent file uploads...");
             const adhaarFile = formData.get("adhaarFile") as File;
+            const adhaarFrontFile = formData.get("adhaarFrontFile") as File;
+            const adhaarBackFile = formData.get("adhaarBackFile") as File;
             const fssaiFile = formData.get("fssaiFile") as File;
 
             const kitchenFiles: File[] = [];
@@ -69,14 +71,21 @@ export const registerUser = async (req: Request) => {
             }
 
             // Await all promises concurrently
-            const [savedAdhaar, savedFssai, resolvedKitchen, resolvedCuisine] = await Promise.all([
+            const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, resolvedKitchen, resolvedCuisine] = await Promise.all([
                 saveFile(adhaarFile),
+                saveFile(adhaarFrontFile),
+                saveFile(adhaarBackFile),
                 saveFile(fssaiFile),
                 Promise.all(kitchenFiles.map(saveFile)),
                 Promise.all(cuisineFiles.map(saveFile))
             ]);
 
-            if (savedAdhaar) {
+            if (savedAdhaarFront && savedAdhaarBack) {
+                adhaarUrl = JSON.stringify([savedAdhaarFront, savedAdhaarBack]);
+                console.log("Aadhar card saved (front & back):", adhaarUrl);
+            } else if (savedAdhaarFront) {
+                adhaarUrl = JSON.stringify([savedAdhaarFront]);
+            } else if (savedAdhaar) {
                 adhaarUrl = savedAdhaar;
                 console.log("Aadhar card saved:", adhaarUrl);
             }
