@@ -82,12 +82,25 @@ export const getUserDashboard = async () => {
         include: {
             user: { select: { name: true, city: true, pincode: true, phone: true } },
             foodItems: { where: { isAvailable: true } },
-            rooms: { where: { isAvailable: true } }
+            rooms: { where: { isAvailable: true } },
+            subscriptions: {
+                where: { status: "ACTIVE" },
+                include: { plan: true }
+            }
         }
     });
 
-    const foodItems = sellers.flatMap(seller =>
-        seller.foodItems
+    const now = new Date();
+
+    const foodItems = sellers.flatMap(seller => {
+        const hasActiveFoodSub = seller.subscriptions.some(sub => 
+            sub.status === "ACTIVE" && 
+            (sub.validUntil === null || new Date(sub.validUntil) > now) &&
+            (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
+        );
+        if (!hasActiveFoodSub) return [];
+
+        return seller.foodItems
             .filter(item => {
                 if (item.deliveryPincodes) {
                     const pins = item.deliveryPincodes.split(",").map(p => p.trim());
@@ -104,11 +117,18 @@ export const getUserDashboard = async () => {
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
-            }))
-    );
+            }));
+    });
 
-    const availableRooms = sellers.flatMap(seller =>
-        seller.rooms
+    const availableRooms = sellers.flatMap(seller => {
+        const hasActivePropertySub = seller.subscriptions.some(sub => 
+            sub.status === "ACTIVE" && 
+            (sub.validUntil === null || new Date(sub.validUntil) > now) &&
+            (sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH")
+        );
+        if (!hasActivePropertySub) return [];
+
+        return seller.rooms
             .filter(room => seller.user.pincode === userPincode)
             .map(room => ({
                 ...room,
@@ -119,8 +139,8 @@ export const getUserDashboard = async () => {
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
-            }))
-    );
+            }));
+    });
 
     return {
         foodItems,

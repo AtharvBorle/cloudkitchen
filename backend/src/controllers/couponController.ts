@@ -163,7 +163,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     }
 
     const role = session.user.role;
-    const { isActive, description, validUntil, discountPercentage, discountAmount, appliesToProductId, maxUsagesPerUser, maxUsers, minimumCartValue } = body;
+    const { isActive, code, category, description, validUntil, discountPercentage, discountAmount, appliesToProductId, maxUsagesPerUser, maxUsers, minimumCartValue } = body;
 
     if (role === "SELLER") {
         const sellerProfile = await prisma.sellerProfile.findUnique({
@@ -171,6 +171,15 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
             throw new ApiError("Forbidden: Cannot modify this coupon", 403);
+        }
+    }
+
+    if (code && code.toUpperCase() !== existingCoupon.code) {
+        const codeExists = await prisma.coupon.findUnique({
+            where: { code: code.toUpperCase() }
+        });
+        if (codeExists) {
+            throw new ApiError("Coupon code already exists", 400);
         }
     }
 
@@ -185,6 +194,9 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         maxUsers: maxUsers !== undefined ? (maxUsers ? parseInt(maxUsers) : null) : (existingCoupon as any).maxUsers,
         minimumCartValue: minimumCartValue !== undefined ? (minimumCartValue ? parseFloat(minimumCartValue) : null) : (existingCoupon as any).minimumCartValue
     };
+
+    if (code !== undefined) updateData.code = code.toUpperCase();
+    if (category !== undefined) updateData.category = category;
 
     const updatedCoupon = await prisma.coupon.update({
         where: { id: couponId },

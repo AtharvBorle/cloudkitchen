@@ -152,6 +152,25 @@ export default function SuperadminSellersPage() {
         }
     };
 
+        const handleToggleSellerActive = async (seller: any) => {
+        try {
+            const res = await fetchApi(`/api/superadmin/sellers/${seller.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    isActive: !seller.isActive
+                })
+            });
+            if (res.ok) {
+                fetchData();
+            } else {
+                alert("Failed to toggle seller status");
+            }
+        } catch (error) {
+            console.error("Error toggling seller status:", error);
+        }
+    };
+
     const handleLogout = async () => {
         await signOut({ callbackUrl: window.location.origin + "/admin" });
     };
@@ -264,6 +283,9 @@ export default function SuperadminSellersPage() {
                                         <td style={{ padding: '15px 20px', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                                 <button onClick={() => handleOpenEdit(seller)} className="btn btn-teal" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px' }}>Edit</button>
+                                                <button onClick={() => handleToggleSellerActive(seller)} className="btn" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', backgroundColor: seller.isActive ? '#e2e8f0' : '#d4efdf', color: seller.isActive ? '#475569' : '#27ae60' }}>
+                                                    {seller.isActive ? "Disable" : "Enable"}
+                                                </button>
                                                 <button onClick={() => handleDeleteSeller(seller.id)} className="btn btn-coral" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px' }}>Delete</button>
                                             </div>
                                         </td>
@@ -303,6 +325,9 @@ export default function SuperadminSellersPage() {
                                 <td style={{ padding: '15px 20px', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                         <button onClick={() => handleOpenEdit(seller)} className="btn btn-teal" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px' }}>Edit</button>
+                                        <button onClick={() => handleToggleSellerActive(seller)} className="btn" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px', backgroundColor: seller.isActive ? '#e2e8f0' : '#d4efdf', color: seller.isActive ? '#475569' : '#27ae60' }}>
+                                            {seller.isActive ? "Disable" : "Enable"}
+                                        </button>
                                         <button onClick={() => handleDeleteSeller(seller.id)} className="btn btn-coral" style={{ width: 'auto', padding: '6px 12px', fontSize: '0.85rem', borderRadius: '6px' }}>Delete</button>
                                     </div>
                                 </td>

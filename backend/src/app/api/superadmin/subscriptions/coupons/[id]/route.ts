@@ -7,7 +7,7 @@ const db = new PrismaClient();
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const body = await req.json();
-        const { isActive, maxUsage } = body;
+        const { code, description, discountPercentage, discountAmount, planId, maxUsage, isActive, category } = body;
         const { id } = await params;
 
         // Ensure coupon exists
@@ -19,9 +19,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             return NextResponse.json({ message: "Coupon not found" }, { status: 404 });
         }
 
+        if (code && code.toUpperCase() !== existing.code) {
+            const codeExists = await db.subscriptionCoupon.findUnique({
+                where: { code: code.toUpperCase() }
+            });
+            if (codeExists) {
+                return NextResponse.json({ message: "Coupon code already exists" }, { status: 400 });
+            }
+        }
+
         const updateData: any = {};
-        if (isActive !== undefined) updateData.isActive = isActive;
+        if (code !== undefined) updateData.code = code.toUpperCase();
+        if (description !== undefined) updateData.description = description;
+        if (discountPercentage !== undefined) updateData.discountPercentage = discountPercentage ? parseFloat(discountPercentage) : null;
+        if (discountAmount !== undefined) updateData.discountAmount = discountAmount ? parseFloat(discountAmount) : null;
+        if (planId !== undefined) updateData.planId = planId || null;
         if (maxUsage !== undefined) updateData.maxUsage = parseInt(maxUsage);
+        if (isActive !== undefined) updateData.isActive = isActive;
+        if (category !== undefined) updateData.category = category;
 
         const updated = await db.subscriptionCoupon.update({
             where: { id },

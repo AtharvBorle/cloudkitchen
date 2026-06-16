@@ -32,12 +32,24 @@ export const getPublicExploreData = unstable_cache(
                 },
                 rooms: {
                     where: { isAvailable: true }
+                },
+                subscriptions: {
+                    where: { status: "ACTIVE" },
+                    include: { plan: true }
                 }
             }
         });
 
-        const foodItems = sellers.flatMap(seller =>
-            seller.foodItems.map(item => ({
+        const now = new Date();
+
+        const foodItems = sellers.flatMap(seller => {
+            const hasActiveFoodSub = seller.subscriptions.some(sub => 
+                sub.status === "ACTIVE" && 
+                (sub.validUntil === null || new Date(sub.validUntil) > now) &&
+                (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
+            );
+            if (!hasActiveFoodSub) return [];
+            return seller.foodItems.map(item => ({
                 ...item,
                 sellerName: seller.businessName || seller.user.name,
                 sellerCity: seller.user.city,
@@ -46,11 +58,17 @@ export const getPublicExploreData = unstable_cache(
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
-            }))
-        );
+            }));
+        });
 
-        const availableRooms = sellers.flatMap(seller =>
-            seller.rooms.map(room => ({
+        const availableRooms = sellers.flatMap(seller => {
+            const hasActivePropertySub = seller.subscriptions.some(sub => 
+                sub.status === "ACTIVE" && 
+                (sub.validUntil === null || new Date(sub.validUntil) > now) &&
+                (sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH")
+            );
+            if (!hasActivePropertySub) return [];
+            return seller.rooms.map(room => ({
                 ...room,
                 sellerName: seller.businessName || seller.user.name,
                 sellerCity: seller.user.city,
@@ -59,8 +77,8 @@ export const getPublicExploreData = unstable_cache(
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
                 sellerIsOnline: seller.isOnline
-            }))
-        );
+            }));
+        });
 
         return { foodItems, availableRooms };
     },

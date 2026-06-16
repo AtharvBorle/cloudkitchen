@@ -47,6 +47,21 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const [maxUsers, setMaxUsers] = useState("");
     const [minimumCartValue, setMinimumCartValue] = useState("");
     const [couponCategory, setCouponCategory] = useState("BOTH");
+    // Edit Coupon State
+    const [editingCoupon, setEditingCoupon] = useState<CouponType | null>(null);
+    const [editCode, setEditCode] = useState("");
+    const [editDescription, setEditDescription] = useState("");
+    const [editDiscountType, setEditDiscountType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
+    const [editDiscountValue, setEditDiscountValue] = useState("");
+    const [editScopeType, setEditScopeType] = useState<"GLOBAL" | "SELLER">("GLOBAL");
+    const [editSellerId, setEditSellerId] = useState("");
+    const [editHasEndDate, setEditHasEndDate] = useState(false);
+    const [editValidUntil, setEditValidUntil] = useState("");
+    const [editMaxUsagesPerUser, setEditMaxUsagesPerUser] = useState("");
+    const [editMaxUsers, setEditMaxUsers] = useState("");
+    const [editMinimumCartValue, setEditMinimumCartValue] = useState("");
+    const [editCouponCategory, setEditCouponCategory] = useState("BOTH");
+    const [editIsActive, setEditIsActive] = useState(true);
 
     const fetchCoupons = async () => {
         try {
@@ -128,6 +143,86 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     };
 
     // Helper to find seller name 
+        const handleOpenEdit = (coupon: CouponType) => {
+        setEditingCoupon(coupon);
+        setEditCode(coupon.code);
+        setEditDescription(coupon.description || "");
+        if (coupon.discountPercentage !== null) {
+            setEditDiscountType("PERCENTAGE");
+            setEditDiscountValue(String(coupon.discountPercentage));
+        } else {
+            setEditDiscountType("AMOUNT");
+            setEditDiscountValue(String(coupon.discountAmount));
+        }
+        setEditScopeType(coupon.appliesToSellerId ? "SELLER" : "GLOBAL");
+        setEditSellerId(coupon.appliesToSellerId || "");
+        setEditHasEndDate(!!coupon.validUntil);
+        setEditValidUntil(coupon.validUntil ? new Date(coupon.validUntil).toISOString().slice(0, 16) : "");
+        setEditMaxUsagesPerUser(coupon.maxUsagesPerUser ? String(coupon.maxUsagesPerUser) : "");
+        setEditMaxUsers(coupon.maxUsers ? String(coupon.maxUsers) : "");
+        setEditMinimumCartValue(coupon.minimumCartValue ? String(coupon.minimumCartValue) : "");
+        setEditCouponCategory((coupon as any).category || "BOTH");
+        setEditIsActive(coupon.isActive);
+    };
+
+    const handleUpdateCoupon = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingCoupon) return;
+
+        try {
+            const payload = {
+                code: editCode,
+                description: editDescription,
+                appliesToSellerId: editScopeType === "SELLER" ? editSellerId : null,
+                discountPercentage: editDiscountType === "PERCENTAGE" ? parseFloat(editDiscountValue) : null,
+                discountAmount: editDiscountType === "AMOUNT" ? parseFloat(editDiscountValue) : null,
+                validUntil: editHasEndDate && editValidUntil ? new Date(editValidUntil).toISOString() : null,
+                maxUsagesPerUser: editMaxUsagesPerUser ? parseInt(editMaxUsagesPerUser) : null,
+                maxUsers: editMaxUsers ? parseInt(editMaxUsers) : null,
+                minimumCartValue: editMinimumCartValue ? parseFloat(editMinimumCartValue) : null,
+                category: editCouponCategory,
+                isActive: editIsActive
+            };
+
+            const res = await fetchApi(`/api/coupons/${editingCoupon.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert("Coupon updated successfully!");
+                setEditingCoupon(null);
+                fetchCoupons();
+            } else {
+                const data = await res.json();
+                alert(data.message || "Failed to update coupon");
+            }
+        } catch (error) {
+            console.error("Error updating coupon:", error);
+            alert("An error occurred");
+        }
+    };
+
+    const handleToggleActive = async (coupon: CouponType) => {
+        try {
+            const res = await fetchApi(`/api/coupons/${coupon.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    isActive: !coupon.isActive
+                })
+            });
+            if (res.ok) {
+                fetchCoupons();
+            } else {
+                alert("Failed to toggle coupon status");
+            }
+        } catch (error) {
+            console.error("Error toggling status:", error);
+        }
+    };
+
     const getTargetName = (id: string | null) => {
         if (!id) return "System Wide";
         const target = availableSellers.find(s => s.id === id);
@@ -414,22 +509,30 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                 position: "relative",
                                 overflow: "hidden",
                                 boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
-                                border: "1px solid #f1f5f9",
+                                border: coupon.isActive ? "1px solid #f1f5f9" : "1px dashed #ef4444",
                                 display: "flex",
-                                flexDirection: "column"
+                                flexDirection: "column",
+                                opacity: coupon.isActive ? 1 : 0.75
                             }}>
                                 <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "4px", backgroundColor: isExpired ? "#cbd5e1" : (isGlobal ? "var(--secondary)" : "var(--primary)") }} />
 
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
                                     <div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                                            <h3 style={{ fontSize: "1.5rem", fontWeight: "800", color: "#0f172a", letterSpacing: "1px", margin: 0 }}>{coupon.code}</h3>
+                                            <h3 style={{ fontSize: "1.5rem", fontWeight: "800", color: coupon.isActive ? "#0f172a" : "#94a3b8", letterSpacing: "1px", margin: 0 }}>{coupon.code}</h3>
                                             <span style={{ fontSize: "0.7rem", backgroundColor: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>{(coupon as any).category || "BOTH"}</span>
-                                            {!isExpired && (
-                                                <button onClick={() => handleDelete(coupon.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }} title="Delete Coupon">
+                                            {!coupon.isActive && (
+                                                <span style={{ fontSize: "0.7rem", backgroundColor: "#ef4444", color: "white", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>INACTIVE</span>
+                                            )}
+                                            <div style={{ display: "flex", gap: "8px", alignItems: "center", marginLeft: "10px" }}>
+                                                <button onClick={() => handleOpenEdit(coupon)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--teal)", fontWeight: "bold", fontSize: "0.85rem" }} title="Edit Coupon">Edit</button>
+                                                <button onClick={() => handleToggleActive(coupon)} style={{ background: "none", border: "none", cursor: "pointer", color: coupon.isActive ? "#e67e22" : "#27ae60", fontWeight: "bold", fontSize: "0.85rem" }}>
+                                                    {coupon.isActive ? "Deactivate" : "Activate"}
+                                                </button>
+                                                <button onClick={() => handleDelete(coupon.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "flex" }} title="Delete Coupon">
                                                     <Trash2 size={16} />
                                                 </button>
-                                            )}
+                                            </div>
                                         </div>
                                         <p style={{ color: "#64748b", margin: 0, fontSize: "0.9rem" }}>{coupon.description || "No description provided."}</p>
                                     </div>
@@ -496,6 +599,203 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
+
+            {/* Edit Coupon Modal */}
+            {editingCoupon && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '600px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '5px', color: '#0f172a' }}>Edit Coupon</h2>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '20px' }}>Modify settings for coupon {editCode}</p>
+
+                        <form onSubmit={handleUpdateCoupon} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Coupon Code*</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={editCode}
+                                            onChange={(e) => setEditCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", textTransform: "uppercase" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Internal Description</label>
+                                        <input
+                                            type="text"
+                                            value={editDescription}
+                                            onChange={(e) => setEditDescription(e.target.value)}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Discount Type*</label>
+                                        <div style={{ display: "flex", gap: "10px" }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditDiscountType("PERCENTAGE")}
+                                                style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${editDiscountType === "PERCENTAGE" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: editDiscountType === "PERCENTAGE" ? "#fff0f0" : "white", color: editDiscountType === "PERCENTAGE" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                            >
+                                                Percentage
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditDiscountType("AMOUNT")}
+                                                style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${editDiscountType === "AMOUNT" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: editDiscountType === "AMOUNT" ? "#fff0f0" : "white", color: editDiscountType === "AMOUNT" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                            >
+                                                Flat Amount
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>
+                                            {editDiscountType === "PERCENTAGE" ? "Percentage Off (%)" : "Amount Off (₹)"}*
+                                        </label>
+                                        <input
+                                            required
+                                            type="number"
+                                            min="1"
+                                            max={editDiscountType === "PERCENTAGE" ? "100" : undefined}
+                                            value={editDiscountValue}
+                                            onChange={(e) => setEditDiscountValue(e.target.value)}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr style={{ border: "none", borderTop: "1px solid #f1f5f9" }} />
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Application Scope</label>
+                                    <div style={{ display: "flex", gap: "10px", marginBottom: editScopeType === "SELLER" ? "1rem" : "0" }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditScopeType("GLOBAL")}
+                                            style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${editScopeType === "GLOBAL" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: editScopeType === "GLOBAL" ? "#fff0f0" : "white", color: editScopeType === "GLOBAL" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                        >
+                                            Global
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditScopeType("SELLER")}
+                                            style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${editScopeType === "SELLER" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: editScopeType === "SELLER" ? "#fff0f0" : "white", color: editScopeType === "SELLER" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                        >
+                                            Specific Seller
+                                        </button>
+                                    </div>
+                                    {editScopeType === "SELLER" && (
+                                        <select
+                                            required
+                                            value={editSellerId}
+                                            onChange={(e) => setEditSellerId(e.target.value)}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white" }}
+                                        >
+                                            <option value="">Select a seller...</option>
+                                            {availableSellers.map(s => (
+                                                <option key={s.id} value={s.id}>[{s.type}] {s.businessName || 'Unnamed Store'}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Expiration</label>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem" }}>
+                                        <input
+                                            type="checkbox"
+                                            id="editHasEndDate"
+                                            checked={!editHasEndDate}
+                                            onChange={(e) => setEditHasEndDate(!e.target.checked)}
+                                            style={{ width: "16px", height: "16px" }}
+                                        />
+                                        <label htmlFor="editHasEndDate" style={{ color: "#334155", fontSize: "0.85rem" }}>No expiration</label>
+                                    </div>
+                                    {editHasEndDate && (
+                                        <input
+                                            required
+                                            type="datetime-local"
+                                            value={editValidUntil}
+                                            onChange={(e) => setEditValidUntil(e.target.value)}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Seller Business Category</label>
+                                    <select
+                                        value={editCouponCategory}
+                                        onChange={(e) => setEditCouponCategory(e.target.value)}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white" }}
+                                    >
+                                        <option value="BOTH">Both (FOOD & PROPERTY)</option>
+                                        <option value="FOOD">Food Only (FOOD)</option>
+                                        <option value="PROPERTY">Property Only (PROPERTY)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Coupon Status</label>
+                                    <select
+                                        value={editIsActive ? "true" : "false"}
+                                        onChange={(e) => setEditIsActive(e.target.value === "true")}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white" }}
+                                    >
+                                        <option value="true">Active</option>
+                                        <option value="false">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Min Cart Value (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={editMinimumCartValue}
+                                        onChange={(e) => setEditMinimumCartValue(e.target.value)}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Max Usage/User</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={editMaxUsagesPerUser}
+                                        onChange={(e) => setEditMaxUsagesPerUser(e.target.value)}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Max Users</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={editMaxUsers}
+                                        onChange={(e) => setEditMaxUsers(e.target.value)}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                                <button type="button" onClick={() => setEditingCoupon(null)} style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '12px 24px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: 'pointer' }}>Cancel</button>
+                                <button type="submit" style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

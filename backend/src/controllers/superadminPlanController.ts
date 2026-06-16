@@ -8,8 +8,10 @@ export const getSubscriptionPlans = async () => {
         throw new ApiError("Unauthorized", 401);
     }
 
+    const whereClause = session.user.role === "SUPERADMIN" ? {} : { isActive: true };
+
     const plans = await db.subscriptionPlan.findMany({
-        where: { isActive: true },
+        where: whereClause,
         orderBy: { price: 'asc' }
     });
 
