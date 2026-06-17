@@ -6,6 +6,13 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 
+const formatDisplayName = (name: string) => {
+    return name
+        .split(/[_\s]+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+};
+
 export default function SuperadminSellersPage() {
     const router = useRouter();
     const [categories, setCategories] = useState<any[]>([]);
@@ -227,7 +234,7 @@ export default function SuperadminSellersPage() {
                             {categories.map(cat => (
                                 <div key={cat.id} style={{ display: 'flex', alignItems: 'center', backgroundColor: '#F8F9F9', padding: '8px 15px', borderRadius: '20px', border: '1px solid #EAEAEA' }}>
                                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', marginRight: '10px' }}>
-                                        {cat.name} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'normal' }}>({cat.type})</span>
+                                        {formatDisplayName(cat.name)} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'normal' }}>({cat.type})</span>
                                     </span>
                                     <button onClick={() => handleDeleteCategory(cat.id)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontWeight: 'bold' }}>&times;</button>
                                 </div>
@@ -371,11 +378,11 @@ export default function SuperadminSellersPage() {
                                     >
                                         <option value="">Select Category...</option>
                                         {categories.map(cat => (
-                                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                            <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
                                         ))}
                                         {/* Fallback for sellers with types that don't match any global category exactly */}
                                         {editType && !categories.some(c => c.name === editType) && (
-                                            <option value={editType}>{editType} (Legacy)</option>
+                                            <option value={editType}>{formatDisplayName(editType)} (Legacy)</option>
                                         )}
                                     </select>
                                 </div>

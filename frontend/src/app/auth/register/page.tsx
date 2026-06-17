@@ -7,6 +7,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CameraCaptureModal from '@/app/components/CameraCaptureModal';
 
+const formatDisplayName = (name: string) => {
+    return name
+        .split(/[_\s]+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+};
+
 export default function SellerRegisterPage() {
     const router = useRouter();
     const [step, setStep] = useState(1);
@@ -68,7 +75,15 @@ export default function SellerRegisterPage() {
         if (e.target.name === 'phone' || e.target.name === 'pincode') {
             value = value.replace(/\D/g, '');
         }
-        setFormData({ ...formData, [e.target.name]: value });
+        if (e.target.name === 'businessCategory') {
+            setFormData(prev => ({
+                ...prev,
+                businessCategory: value,
+                sellerType: "" // Reset business type when category changes
+            }));
+        } else {
+            setFormData(prev => ({ ...prev, [e.target.name]: value }));
+        }
     }
 
     const handleMultiFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<File[]>>) => {
@@ -197,11 +212,18 @@ export default function SellerRegisterPage() {
                             <div className="input-group">
                                 <select name="sellerType" value={formData.sellerType} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
                                     <option value="" disabled>Select Business Type</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                    ))}
+                                    {categories
+                                        .filter(cat => {
+                                            if (formData.businessCategory === "FOOD") return cat.type === "FOOD";
+                                            if (formData.businessCategory === "PROPERTY") return cat.type === "ROOM";
+                                            return true;
+                                        })
+                                        .map(cat => (
+                                            <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
+                                        ))
+                                    }
                                     {categories.length === 0 && (
-                                        <option value="HOMELY_FOOD" disabled>Loading categories...</option>
+                                        <option value="" disabled>Loading categories...</option>
                                     )}
                                 </select>
                             </div>
