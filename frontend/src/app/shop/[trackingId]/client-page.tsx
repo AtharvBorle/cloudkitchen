@@ -60,6 +60,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
     const [loading, setLoading] = useState(true);
     const [seller, setSeller] = useState<any | null>(null);
     const [error, setError] = useState<boolean>(false);
+    const [foodFilter, setFoodFilter] = useState<"ALL" | "VEG" | "NON_VEG">("ALL");
 
     const isDeliverable = (item: any) => {
         if (!userAddress || !userAddress.pincode) return true;
@@ -154,68 +155,114 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                 )}
 
                 {/* Menu Section */}
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '25px', borderBottom: '2px solid #EAEAEA', paddingBottom: '10px' }}>Menu</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '2px solid #EAEAEA', paddingBottom: '10px', flexWrap: 'wrap', gap: '15px' }}>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>Menu</h2>
+                    {seller.foodItems && seller.foodItems.length > 0 && (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {(["ALL", "VEG", "NON_VEG"] as const).map((filter) => {
+                                const label = filter === "ALL" ? "All" : filter === "VEG" ? "Veg 🌱" : "Non-Veg 🍖";
+                                const isActive = foodFilter === filter;
+                                return (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setFoodFilter(filter)}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: '20px',
+                                            border: isActive ? 'none' : '1px solid #D1D5DB',
+                                            backgroundColor: isActive ? '#10B981' : 'white',
+                                            color: isActive ? 'white' : 'var(--text-main)',
+                                            fontWeight: '600',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            boxShadow: isActive ? '0 4px 10px rgba(16, 185, 129, 0.25)' : 'none'
+                                        }}
+                                    >
+                                        {label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
 
-                {seller.foodItems.filter((item: any) => isCurrentlyOpen(item)).length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '40px' }}>No items available at the moment.</p>
-                ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px', marginBottom: '50px' }}>
-                        {seller.foodItems.filter((item: any) => isCurrentlyOpen(item)).map((item: any) => (
-                            <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ height: '200px', backgroundColor: '#EEE' }}>
-                                    <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                </div>
-                                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            {item.name}
-                                            <span style={{
-                                                display: 'inline-block',
-                                                padding: '2px 6px',
-                                                borderRadius: '4px',
-                                                fontSize: '0.7rem',
-                                                fontWeight: 'bold',
-                                                color: 'white',
-                                                backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
-                                            }}>
-                                                {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
-                                            </span>
-                                        </h3>
-                                        <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
-                                    </div>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
-                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                        {item.stockQuantity === 0 ? (
-                                            <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                        ) : item.stockQuantity > 0 ? (
-                                            <span>Only {item.stockQuantity} left!</span>
-                                        ) : (
-                                            <span style={{ color: '#10B981' }}>In Stock</span>
-                                        )}
-                                    </div>
+                {(() => {
+                    const filteredFoodItems = seller.foodItems
+                        .filter((item: any) => isCurrentlyOpen(item))
+                        .filter((item: any) => {
+                            if (foodFilter === "VEG") return item.itemType === "VEG";
+                            if (foodFilter === "NON_VEG") return item.itemType === "NON_VEG";
+                            return true;
+                        });
 
-                                    {userAddress && !isDeliverable(item) && (
-                                        <div style={{
-                                            backgroundColor: '#FEF2F2',
-                                            color: '#EF4444',
-                                            padding: '6px 10px',
-                                            borderRadius: '6px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 'bold',
-                                            marginBottom: '15px',
-                                            border: '1px solid #FEE2E2',
-                                            textAlign: 'center'
-                                        }}>
-                                            Out of delivery range for {userAddress.pincode}
+                    if (filteredFoodItems.length === 0) {
+                        return (
+                            <p style={{ color: 'var(--text-muted)', marginBottom: '40px' }}>
+                                {foodFilter === "ALL" ? "No items available at the moment." : `No ${foodFilter === "VEG" ? "Veg" : "Non-Veg"} items available.`}
+                            </p>
+                        );
+                    }
+
+                    return (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px', marginBottom: '50px' }}>
+                            {filteredFoodItems.map((item: any) => (
+                                <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ height: '200px', backgroundColor: '#EEE' }}>
+                                        <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    </div>
+                                    <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {item.name}
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 'bold',
+                                                    color: 'white',
+                                                    backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                                }}>
+                                                    {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                                                </span>
+                                            </h3>
+                                            <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
                                         </div>
-                                    )}
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
+                                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                            {item.stockQuantity === 0 ? (
+                                                <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
+                                            ) : item.stockQuantity > 0 ? (
+                                                <span>Only {item.stockQuantity} left!</span>
+                                            ) : (
+                                                <span style={{ color: '#10B981' }}>In Stock</span>
+                                            )}
+                                        </div>
 
-                                    <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0 || (userAddress && !isDeliverable(item))} />
+                                        {userAddress && !isDeliverable(item) && (
+                                            <div style={{
+                                                backgroundColor: '#FEF2F2',
+                                                color: '#EF4444',
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                marginBottom: '15px',
+                                                border: '1px solid #FEE2E2',
+                                                textAlign: 'center'
+                                            }}>
+                                                Out of delivery range for {userAddress.pincode}
+                                            </div>
+                                        )}
+
+                                        <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0 || (userAddress && !isDeliverable(item))} />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    );
+                })()}
 
                 {/* Rooms Section */}
                 {seller.rooms.length > 0 && (
