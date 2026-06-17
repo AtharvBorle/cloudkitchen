@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 
-function ExploreHeader() {
+export function ExploreHeader() {
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems } = useCart();

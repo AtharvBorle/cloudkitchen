@@ -5,6 +5,10 @@ import { fetchApi } from "@/lib/fetch-api";
 import Link from "next/link";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
+import { useSession } from "next-auth/react";
+import { UserHeader } from "@/app/dashboard/user/layout";
+import { ExploreHeader } from "@/app/explore/layout";
+import { useLocation } from "@/components/location-provider";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -51,27 +55,11 @@ const isCurrentlyOpen = (item: any) => {
 };
 
 export default function PublicShopClient({ trackingId }: { trackingId: string }) {
+    const { data: session, status } = useSession();
+    const { defaultAddress: userAddress } = useLocation();
     const [loading, setLoading] = useState(true);
     const [seller, setSeller] = useState<any | null>(null);
     const [error, setError] = useState<boolean>(false);
-    const [userAddress, setUserAddress] = useState<any | null>(null);
-
-    useEffect(() => {
-        const fetchUserAddress = async () => {
-            try {
-                const res = await fetchApi("/api/user/location/default");
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.pincode) {
-                        setUserAddress(data);
-                    }
-                }
-            } catch (err) {
-                console.error("Error fetching user address:", err);
-            }
-        };
-        fetchUserAddress();
-    }, []);
 
     const isDeliverable = (item: any) => {
         if (!userAddress || !userAddress.pincode) return true;
@@ -133,6 +121,11 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F8F9F9', paddingBottom: '50px' }}>
+            {status === "authenticated" && session?.user?.role === "USER" ? (
+                <UserHeader />
+            ) : (
+                <ExploreHeader />
+            )}
             <PopupBannerDisplay sellerId={seller.id} />
 
             {/* Header / Banner Area */}
