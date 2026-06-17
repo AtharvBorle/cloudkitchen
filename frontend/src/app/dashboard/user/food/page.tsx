@@ -109,36 +109,35 @@ export default function UserFoodPage() {
                     <p style={{ color: "var(--text-muted)" }}>Explore all available homely meals from verified kitchens.</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <button
-                        onClick={() => setVegOnly(!vegOnly)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            backgroundColor: vegOnly ? '#10B981' : 'white',
-                            color: vegOnly ? 'white' : 'var(--text-main)',
-                            border: '1px solid #EAEAEA',
-                            borderRadius: '8px',
-                            padding: '10px 18px',
-                            fontSize: '0.95rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            boxShadow: vegOnly ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none',
-                            outline: 'none',
-                            userSelect: 'none'
-                        }}
-                    >
-                        <span style={{
-                            display: 'inline-block',
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            backgroundColor: vegOnly ? '#fff' : '#10B981',
-                            transition: 'all 0.3s'
-                        }} />
-                        {vegOnly ? 'Veg Only 🌱' : 'Veg & Non-Veg 🍖'}
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', userSelect: 'none' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Veg Only 🌱</span>
+                        <div
+                            onClick={() => setVegOnly(!vegOnly)}
+                            style={{
+                                width: '50px',
+                                height: '26px',
+                                backgroundColor: vegOnly ? '#10B981' : '#E2E8F0',
+                                borderRadius: '9999px',
+                                position: 'relative',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                border: '1px solid #E2E8F0',
+                                boxShadow: vegOnly ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none'
+                            }}
+                        >
+                            <div style={{
+                                width: '20px',
+                                height: '20px',
+                                backgroundColor: 'white',
+                                borderRadius: '50%',
+                                position: 'absolute',
+                                top: '2px',
+                                left: vegOnly ? '26px' : '2px',
+                                transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)'
+                            }} />
+                        </div>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', border: '1px solid #EAEAEA', borderRadius: '8px', padding: '5px 15px', width: '300px' }}>
                         <Search size={18} color="var(--text-muted)" />
                         <input

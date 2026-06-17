@@ -156,36 +156,35 @@ export default function UserDashboard() {
                             style={{ flex: 1, border: "none", outline: "none", padding: "12px 15px", fontSize: "1rem", color: "#333" }}
                         />
                     </div>
-                    <button
-                        onClick={() => setVegOnly(!vegOnly)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            backgroundColor: vegOnly ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
-                            color: 'white',
-                            border: vegOnly ? 'none' : '1px solid rgba(255, 255, 255, 0.4)',
-                            borderRadius: '8px',
-                            padding: '12px 18px',
-                            fontSize: '0.95rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            boxShadow: vegOnly ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none',
-                            outline: 'none',
-                            userSelect: 'none'
-                        }}
-                    >
-                        <span style={{
-                            display: 'inline-block',
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            backgroundColor: vegOnly ? '#fff' : '#CBD5E1',
-                            transition: 'all 0.3s'
-                        }} />
-                        {vegOnly ? 'Veg Only 🌱' : 'Veg & Non-Veg 🍖'}
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', userSelect: 'none' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'white' }}>Veg Only 🌱</span>
+                        <div
+                            onClick={() => setVegOnly(!vegOnly)}
+                            style={{
+                                width: '50px',
+                                height: '26px',
+                                backgroundColor: vegOnly ? '#10B981' : 'rgba(255, 255, 255, 0.3)',
+                                borderRadius: '9999px',
+                                position: 'relative',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                border: '1px solid rgba(255, 255, 255, 0.4)',
+                                boxShadow: vegOnly ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none'
+                            }}
+                        >
+                            <div style={{
+                                width: '20px',
+                                height: '20px',
+                                backgroundColor: 'white',
+                                borderRadius: '50%',
+                                position: 'absolute',
+                                top: '2px',
+                                left: vegOnly ? '26px' : '2px',
+                                transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                            }} />
+                        </div>
+                    </div>
                 </div>
             </div>
 
