@@ -361,13 +361,6 @@ export const getOrderDetails = async (id: string) => {
                     }
                 }
             },
-            appliedCoupon: {
-                select: {
-                    code: true,
-                    discountPercentage: true,
-                    discountAmount: true
-                }
-            },
             deliveryPerson: {
                 select: {
                     id: true,
@@ -392,6 +385,21 @@ export const getOrderDetails = async (id: string) => {
         throw new ApiError("Forbidden", 403);
     }
 
-    return order;
+    let appliedCoupon = null;
+    if (order.appliedCouponId) {
+        appliedCoupon = await db.coupon.findUnique({
+            where: { id: order.appliedCouponId },
+            select: {
+                code: true,
+                discountPercentage: true,
+                discountAmount: true
+            }
+        });
+    }
+
+    return {
+        ...order,
+        appliedCoupon
+    };
 };
 
