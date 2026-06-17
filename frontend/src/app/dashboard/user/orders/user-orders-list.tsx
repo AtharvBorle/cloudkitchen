@@ -321,15 +321,25 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: "bold", paddingTop: "10px", borderTop: "1px solid #EEE", flexWrap: "wrap", gap: "10px" }}>
                             <div style={{ display: "flex", flexDirection: "column" }}>
                                 <span>Total Amount ({order.paymentMethod})</span>
-                                {order.status === 'PENDING' && (
-                                    <button
-                                        onClick={() => handleCancelOrder(order.id)}
-                                        disabled={cancellingId === order.id}
-                                        style={{ color: '#EF4444', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', textAlign: 'left', marginTop: '5px', opacity: cancellingId === order.id ? 0.5 : 1, border: 'none', background: 'none' }}
-                                    >
-                                        {cancellingId === order.id ? "Cancelling..." : "Cancel Order"}
-                                    </button>
-                                )}
+                                <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
+                                    {order.status === 'PENDING' && (
+                                        <button
+                                            onClick={() => handleCancelOrder(order.id)}
+                                            disabled={cancellingId === order.id}
+                                            style={{ color: '#EF4444', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', textAlign: 'left', opacity: cancellingId === order.id ? 0.5 : 1, border: 'none', background: 'none', padding: 0 }}
+                                        >
+                                            {cancellingId === order.id ? "Cancelling..." : "Cancel Order"}
+                                        </button>
+                                    )}
+                                    {order.status !== 'CANCELLED' && (
+                                        <button
+                                            onClick={() => window.open(`/invoice/order/${order.id}`, '_blank')}
+                                            style={{ color: 'var(--primary, #10B981)', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', border: 'none', background: 'none', padding: 0, fontWeight: '700' }}
+                                        >
+                                            View Invoice
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <span style={{ color: order.status === 'CANCELLED' ? 'var(--text-muted)' : 'var(--primary)', textDecoration: order.status === 'CANCELLED' ? 'line-through' : 'none' }}>₹{order.totalAmount}</span>
                         </div>

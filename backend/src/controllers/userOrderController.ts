@@ -333,3 +333,65 @@ export const verifyOrderPayment = async (req: Request) => {
 
     return { order: updatedOrder };
 };
+
+export const getOrderDetails = async (id: string) => {
+    const session = await getAuthSession();
+    if (!session || !session.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const order = await db.order.findUnique({
+        where: { id: id },
+        include: {
+            user: {
+                select: {
+                    name: true,
+                    email: true,
+                    phone: true
+                }
+            },
+            seller: {
+                include: {
+                    user: {
+                        select: {
+                            name: true,
+                            email: true,
+                            phone: true
+                        }
+                    }
+                }
+            },
+            appliedCoupon: {
+                select: {
+                    code: true,
+                    discountPercentage: true,
+                    discountAmount: true
+                }
+            },
+            deliveryPerson: {
+                select: {
+                    id: true,
+                    userId: true,
+                    name: true,
+                    phone: true
+                }
+            }
+        }
+    });
+
+    if (!order) {
+        throw new ApiError("Order not found", 404);
+    }
+
+    const isBuyer = order.userId === session.user.id;
+    const isSeller = order.seller.userId === session.user.id;
+    const isDeliveryBoy = order.deliveryPerson && order.deliveryPerson.userId === session.user.id;
+    const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
+
+    if (!isBuyer && !isSeller && !isDeliveryBoy && !isAdmin) {
+        throw new ApiError("Forbidden", 403);
+    }
+
+    return order;
+};
+

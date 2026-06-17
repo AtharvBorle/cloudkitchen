@@ -240,7 +240,31 @@ export default function SellerOrdersPage() {
                                                 </div>
                                             </div>
 
-                                            <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px' }}>
+                                            <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                                                <button
+                                                    onClick={() => window.open(`/invoice/order/${order.id}`, '_blank')}
+                                                    style={{
+                                                        padding: '10px 18px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: '700',
+                                                        border: '1px solid #CBD5E1',
+                                                        color: '#475569',
+                                                        backgroundColor: 'white',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                                                        e.currentTarget.style.borderColor = '#94A3B8';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.backgroundColor = 'white';
+                                                        e.currentTarget.style.borderColor = '#CBD5E1';
+                                                    }}
+                                                >
+                                                    Print Invoice
+                                                </button>
                                                 {renderActionButtons(order)}
                                             </div>
                                         </div>
