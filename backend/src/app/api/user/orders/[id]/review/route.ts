@@ -2,10 +2,10 @@ import { getOrderReview, submitOrderReview } from "@/controllers/userReviewContr
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 
-export async function GET(req: Request, { params }: { params: Promise<{ orderId: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { orderId } = await params;
-        const data = await getOrderReview(orderId);
+        const { id } = await params;
+        const data = await getOrderReview(id);
         return successResponse(data);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
@@ -14,10 +14,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ orderId:
     }
 }
 
-export async function POST(req: Request, { params }: { params: Promise<{ orderId: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { orderId } = await params;
-        const data = await submitOrderReview(orderId, req);
+        const { id } = await params;
+        const data = await submitOrderReview(id, req);
         return successResponse(data, "Review submitted successfully", 201);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
