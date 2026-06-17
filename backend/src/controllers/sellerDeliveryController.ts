@@ -19,10 +19,22 @@ export const getSellerDeliveryPersons = async () => {
 
     const deliveryPersons = await db.deliveryPerson.findMany({
         where: { sellerId: sellerProfile.id },
+        include: { user: true },
         orderBy: { createdAt: 'desc' }
     });
 
-    return { deliveryPersons };
+    const formatted = deliveryPersons.map(dp => ({
+        id: dp.id,
+        userId: dp.userId,
+        name: dp.name,
+        phone: dp.phone,
+        email: dp.user?.email || "",
+        isActive: dp.isActive,
+        createdAt: dp.createdAt,
+        updatedAt: dp.updatedAt
+    }));
+
+    return { deliveryPersons: formatted };
 };
 
 export const createSellerDeliveryPerson = async (req: Request) => {
@@ -96,7 +108,12 @@ export const createSellerDeliveryPerson = async (req: Request) => {
             return { user, deliveryPerson };
         });
 
-        return { deliveryPerson: result.deliveryPerson };
+        return {
+            deliveryPerson: {
+                ...result.deliveryPerson,
+                email: result.user.email
+            }
+        };
     } catch (error: any) {
         console.error("Database error during delivery person creation:", error);
         throw error;
@@ -129,6 +146,7 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
 
     const updated = await db.deliveryPerson.update({
         where: { id },
+        include: { user: true },
         data: {
             name: name || existing.name,
             phone: phone || existing.phone,
@@ -136,7 +154,18 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
         }
     });
 
-    return { deliveryPerson: updated };
+    return {
+        deliveryPerson: {
+            id: updated.id,
+            userId: updated.userId,
+            name: updated.name,
+            phone: updated.phone,
+            email: updated.user?.email || "",
+            isActive: updated.isActive,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt
+        }
+    };
 };
 
 export const deleteSellerDeliveryPerson = async (id: string) => {

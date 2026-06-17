@@ -2,7 +2,7 @@
 import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Phone, User, Trash2, Edit2, Plus, ArrowLeft } from "lucide-react";
+import { Phone, Mail, User, Trash2, Edit2, Plus, ArrowLeft } from "lucide-react";
 
 export default function DeliveryPersonsPage() {
     const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
@@ -142,6 +142,11 @@ export default function DeliveryPersonsPage() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#718096', fontSize: '0.9rem' }}>
                                         <Phone size={14} /> {dp.phone}
                                     </div>
+                                    {dp.email && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#718096', fontSize: '0.9rem', marginTop: '4px' }}>
+                                            <Mail size={14} /> {dp.email}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
