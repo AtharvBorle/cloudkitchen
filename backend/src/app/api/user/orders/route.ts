@@ -16,7 +16,12 @@ export async function GET() {
             orderBy: { createdAt: "desc" },
             include: {
                 seller: true,
-                deliveryPerson: true
+                deliveryPerson: true,
+                review: {
+                    include: {
+                        itemRatings: true
+                    }
+                }
             }
         });
 

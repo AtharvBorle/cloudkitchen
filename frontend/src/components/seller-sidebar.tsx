@@ -131,6 +131,10 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     Offers & Coupons
                 </Link>
 
+                <Link href="/dashboard/seller/reviews" style={getLinkStyle('/dashboard/seller/reviews')} onClick={onClose}>
+                    Reviews & Feedback
+                </Link>
+
                 <Link 
                     href="/dashboard/seller/rooms" 
                     style={getLinkStyle('/dashboard/seller/rooms')} 

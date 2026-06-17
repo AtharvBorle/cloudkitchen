@@ -11,7 +11,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
             include: {
                 user: true,
                 foodItems: {
-                    where: { isAvailable: true }
+                    where: { isAvailable: true },
+                    include: {
+                        itemRatings: true
+                    }
                 },
                 rooms: {
                     where: { isAvailable: true }
@@ -19,6 +22,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
                 subscriptions: {
                     where: { status: "ACTIVE" },
                     include: { plan: true }
+                },
+                reviews: {
+                    include: {
+                        user: {
+                            select: { name: true }
+                        },
+                        itemRatings: {
+                            include: {
+                                foodItem: {
+                                    select: { name: true }
+                                }
+                            }
+                        }
+                    },
+                    orderBy: { createdAt: "desc" }
                 }
             }
         });
@@ -50,7 +68,35 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
             seller.rooms = [];
         }
 
-        return successResponse(seller);
+        // Calculate seller's average rating
+        const totalReviews = seller.reviews.length;
+        const sumRating = seller.reviews.reduce((sum, r) => sum + r.rating, 0);
+        const averageRating = totalReviews > 0 ? parseFloat((sumRating / totalReviews).toFixed(1)) : 0;
+
+        // Process food items with their average rating
+        const processedFoodItems = seller.foodItems.map((item: any) => {
+            const ratings = item.itemRatings || [];
+            const totalRatings = ratings.length;
+            const sumItemRating = ratings.reduce((sum: number, r: any) => sum + r.rating, 0);
+            const avgRating = totalRatings > 0 ? parseFloat((sumItemRating / totalRatings).toFixed(1)) : 0;
+
+            return {
+                ...item,
+                averageRating: avgRating,
+                totalRatings: totalRatings,
+                itemRatings: undefined // Remove raw ratings array
+            };
+        });
+
+        // Construct response with rating stats
+        const responseData = {
+            ...seller,
+            foodItems: processedFoodItems,
+            averageRating,
+            totalReviews
+        };
+
+        return successResponse(responseData);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Fetch public shop error:", error);

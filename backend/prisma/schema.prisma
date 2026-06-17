@@ -26,6 +26,7 @@ model User {
   orders          Order[]
   bookings        Booking[]
   addresses       Address[]
+  reviews         Review[]
 }
 
 model SellerProfile {
@@ -59,6 +60,7 @@ model SellerProfile {
   deliveryPersons DeliveryPerson[]
   subscriptions   Subscription[]
   servedPincodes  ServedPincode[]
+  reviews         Review[]
 }
 
 model ServedPincode {
@@ -107,6 +109,7 @@ model FoodItem {
   categoryId       String?
   category         Category?     @relation(fields: [categoryId], references: [id])
   itemType         String        @default("VEG") // VEG or NON_VEG
+  itemRatings      ItemRating[]
 }
 
 model Order {
@@ -129,6 +132,7 @@ model Order {
   appliedCouponId   String?        // To track usage count per user
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+  review           Review?
 }
 
 model Room {
@@ -293,4 +297,33 @@ model DeliveryPerson {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   orders    Order[]
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sellerId    String
+  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  
+  rating      Int      // 1 to 5
+  comment     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  itemRatings ItemRating[]
+}
+
+model ItemRating {
+  id         String   @id @default(uuid())
+  reviewId   String
+  review     Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  foodItemId String
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+  
+  rating     Int      // 1 to 5
+  comment    String?
+  createdAt  DateTime @default(now())
 }

@@ -2,12 +2,20 @@
 import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Clock, CheckCircle, Package, Truck, XCircle, User, Phone } from "lucide-react";
+import { Clock, CheckCircle, Package, Truck, XCircle, User, Phone, Star } from "lucide-react";
 
 export default function UserOrdersList({ initialOrders }: { initialOrders: any[] }) {
     const [orders, setOrders] = useState(initialOrders);
     const [cancellingId, setCancellingId] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
+
+    // Modal state
+    const [reviewingOrder, setReviewingOrder] = useState<any | null>(null);
+    const [overallRating, setOverallRating] = useState(5);
+    const [overallComment, setOverallComment] = useState("");
+    const [itemRatings, setItemRatings] = useState<{ [foodItemId: string]: { rating: number; comment: string } }>({});
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [reviewError, setReviewError] = useState("");
 
     useEffect(() => {
         setMounted(true);
@@ -49,6 +57,127 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
         } finally {
             setCancellingId(null);
         }
+    };
+
+    // Open review modal
+    const openReviewModal = (order: any, parsedItems: any[]) => {
+        setReviewingOrder(order);
+        setOverallRating(5);
+        setOverallComment("");
+        setReviewError("");
+
+        // Initialize item ratings
+        const initialItemRatings: { [key: string]: { rating: number; comment: string } } = {};
+        parsedItems.forEach((item: any) => {
+            if (item.id) {
+                initialItemRatings[item.id] = { rating: 5, comment: "" };
+            }
+        });
+        setItemRatings(initialItemRatings);
+    };
+
+    const handleItemRatingChange = (itemId: string, rating: number) => {
+        setItemRatings(prev => ({
+            ...prev,
+            [itemId]: { ...prev[itemId], rating }
+        }));
+    };
+
+    const handleItemCommentChange = (itemId: string, comment: string) => {
+        setItemRatings(prev => ({
+            ...prev,
+            [itemId]: { ...prev[itemId], comment }
+        }));
+    };
+
+    const submitReview = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!reviewingOrder) return;
+
+        setSubmittingReview(true);
+        setReviewError("");
+
+        try {
+            const itemsArray = Object.keys(itemRatings).map(foodItemId => ({
+                foodItemId,
+                rating: itemRatings[foodItemId].rating,
+                comment: itemRatings[foodItemId].comment
+            }));
+
+            const res = await fetchApi(`/api/user/orders/${reviewingOrder.id}/review`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    rating: overallRating,
+                    comment: overallComment,
+                    itemRatings: itemsArray
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                // Update local orders state
+                setOrders(currentOrders =>
+                    currentOrders.map(order =>
+                        order.id === reviewingOrder.id
+                            ? { ...order, review: data.data?.review || data.data }
+                            : order
+                    )
+                );
+                setReviewingOrder(null);
+                alert("Thank you! Your feedback has been submitted successfully.");
+            } else {
+                setReviewError(data.message || "Failed to submit review.");
+            }
+        } catch (err) {
+            setReviewError("An error occurred. Please try again.");
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
+    const renderInteractiveStars = (currentRating: number, onChange: (rating: number) => void) => {
+        const stars = [];
+        for (let i = 1; i <= 5; i++) {
+            stars.push(
+                <button
+                    key={i}
+                    type="button"
+                    onClick={() => onChange(i)}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        outline: 'none'
+                    }}
+                >
+                    <Star
+                        size={28}
+                        fill={i <= currentRating ? "var(--coral, #F16F68)" : "none"}
+                        color={i <= currentRating ? "var(--coral, #F16F68)" : "#94A3B8"}
+                    />
+                </button>
+            );
+        }
+        return <div style={{ display: 'flex', gap: '5px' }}>{stars}</div>;
+    };
+
+    const renderStaticStars = (rating: number) => {
+        const stars = [];
+        for (let i = 1; i <= 5; i++) {
+            stars.push(
+                <Star
+                    key={i}
+                    size={16}
+                    fill={i <= rating ? "var(--coral, #F16F68)" : "none"}
+                    color={i <= rating ? "var(--coral, #F16F68)" : "#CBD5E1"}
+                    style={{ marginRight: '1px' }}
+                />
+            );
+        }
+        return <div style={{ display: 'flex' }}>{stars}</div>;
     };
 
     if (orders.length === 0) {
@@ -127,6 +256,68 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                             </div>
                         )}
 
+                        {/* Rating Display / Action Button */}
+                        {order.status === 'DELIVERED' && (
+                            <div style={{
+                                marginTop: '10px',
+                                marginBottom: '15px',
+                                padding: '15px',
+                                backgroundColor: '#F8FAF9',
+                                borderRadius: '8px',
+                                border: '1px solid #EAEAEA',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '10px'
+                            }}>
+                                {order.review ? (
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#334155' }}>Your Review:</span>
+                                            {renderStaticStars(order.review.rating)}
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--coral, #F16F68)' }}>{order.review.rating}/5</span>
+                                        </div>
+                                        {order.review.comment && (
+                                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
+                                                "{order.review.comment}"
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>
+                                            How was your food and ordering experience?
+                                        </span>
+                                        <button
+                                            onClick={() => openReviewModal(order, items)}
+                                            style={{
+                                                backgroundColor: 'white',
+                                                border: '2px solid var(--coral, #F16F68)',
+                                                color: 'var(--coral, #F16F68)',
+                                                padding: '8px 16px',
+                                                borderRadius: '8px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                fontSize: '0.85rem'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'var(--coral, #F16F68)';
+                                                e.currentTarget.style.color = 'white';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'white';
+                                                e.currentTarget.style.color = 'var(--coral, #F16F68)';
+                                            }}
+                                        >
+                                            Rate & Review
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: "bold", paddingTop: "10px", borderTop: "1px solid #EEE", flexWrap: "wrap", gap: "10px" }}>
                             <div style={{ display: "flex", flexDirection: "column" }}>
                                 <span>Total Amount ({order.paymentMethod})</span>
@@ -145,6 +336,217 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                     </div>
                 );
             })}
+
+            {/* Rating Modal Backdrop */}
+            {reviewingOrder && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    backdropFilter: 'blur(5px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 99999,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '20px',
+                        width: '100%',
+                        maxWidth: '550px',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        <div style={{
+                            padding: '20px 25px',
+                            borderBottom: '1px solid #F1F5F9',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', margin: 0 }}>
+                                Rate Order & Items
+                            </h3>
+                            <button
+                                onClick={() => setReviewingOrder(null)}
+                                style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 'bold',
+                                    color: '#64748B',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <form onSubmit={submitReview} style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {reviewError && (
+                                <div style={{
+                                    padding: '12px 15px',
+                                    backgroundColor: '#FEF2F2',
+                                    border: '1px solid #FCA5A5',
+                                    color: '#B91C1C',
+                                    borderRadius: '8px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '500'
+                                }}>
+                                    {reviewError}
+                                </div>
+                            )}
+
+                            {/* Section 1: Overall Rating */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <label style={{ fontWeight: '700', fontSize: '0.95rem', color: '#334155' }}>
+                                    Overall Order Experience
+                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    {renderInteractiveStars(overallRating, setOverallRating)}
+                                    <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--coral, #F16F68)' }}>
+                                        {overallRating} / 5
+                                    </span>
+                                </div>
+                                <textarea
+                                    value={overallComment}
+                                    onChange={(e) => setOverallComment(e.target.value)}
+                                    placeholder="Write a comment about your overall food taste, packaging, and delivery..."
+                                    style={{
+                                        width: '100%',
+                                        minHeight: '80px',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #CBD5E1',
+                                        fontSize: '0.9rem',
+                                        fontFamily: 'inherit',
+                                        resize: 'vertical',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Section 2: Items Ratings */}
+                            {Object.keys(itemRatings).length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', borderTop: '1px solid #F1F5F9', paddingTop: '20px' }}>
+                                    <label style={{ fontWeight: '700', fontSize: '0.95rem', color: '#334155' }}>
+                                        Rate Individual Items
+                                    </label>
+                                    
+                                    {(() => {
+                                        let parsedItems = [];
+                                        try {
+                                            parsedItems = typeof reviewingOrder.items === 'string' ? JSON.parse(reviewingOrder.items) : reviewingOrder.items;
+                                        } catch (e) {
+                                            parsedItems = [];
+                                        }
+
+                                        return parsedItems.map((item: any) => {
+                                            if (!item.id) return null;
+                                            const currentItemState = itemRatings[item.id] || { rating: 5, comment: "" };
+
+                                            return (
+                                                <div key={item.id} style={{
+                                                    backgroundColor: '#F8FAFC',
+                                                    padding: '15px',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid #E2E8F0',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '10px'
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1E293B' }}>
+                                                            {item.name}
+                                                        </span>
+                                                        <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: '500' }}>
+                                                            Qty: {item.quantity}
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        {renderInteractiveStars(currentItemState.rating, (r) => handleItemRatingChange(item.id, r))}
+                                                        <span style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--coral, #F16F68)' }}>
+                                                            {currentItemState.rating}/5
+                                                        </span>
+                                                    </div>
+
+                                                    <input
+                                                        type="text"
+                                                        value={currentItemState.comment}
+                                                        onChange={(e) => handleItemCommentChange(item.id, e.target.value)}
+                                                        placeholder={`Comment about ${item.name} (optional)...`}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '8px 12px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid #CBD5E1',
+                                                            fontSize: '0.85rem',
+                                                            fontFamily: 'inherit',
+                                                            outline: 'none'
+                                                        }}
+                                                    />
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* Footer Buttons */}
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                marginTop: '10px',
+                                borderTop: '1px solid #F1F5F9',
+                                paddingTop: '20px'
+                            }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setReviewingOrder(null)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #CBD5E1',
+                                        borderRadius: '10px',
+                                        fontWeight: '600',
+                                        color: '#475569',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={submittingReview}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: 'var(--coral, #F16F68)',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        fontWeight: '700',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        opacity: submittingReview ? 0.7 : 1
+                                    }}
+                                >
+                                    {submittingReview ? "Submitting..." : "Submit Review"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
