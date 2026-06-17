@@ -110,7 +110,7 @@ export default function UserFoodPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', userSelect: 'none' }}>
-                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Veg Only 🌱</span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)' }}>Pure Veg 🌱</span>
                         <div
                             onClick={() => setVegOnly(!vegOnly)}
                             style={{
