@@ -116,7 +116,8 @@ export const getUserDashboard = async () => {
                 sellerLocality: seller.addressLocality,
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline
+                sellerIsOnline: seller.isOnline,
+                sellerFoodType: seller.foodType
             }));
     });
 

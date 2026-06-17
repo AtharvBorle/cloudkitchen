@@ -54,6 +54,7 @@ const isCurrentlyOpen = (item: any) => {
 
 export default function UserFoodPage() {
     const { addToCart } = useCart();
+    const [vegOnly, setVegOnly] = useState(false);
     const [foodItems, setFoodItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -83,17 +84,22 @@ export default function UserFoodPage() {
 
     const placeholderImage = "https://via.placeholder.com/400x250?text=Delicious+Food";
 
-    const filteredFood = foodItems.filter(item =>
-        isCurrentlyOpen(item) && (
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    );
+    const filteredFood = foodItems.filter(item => {
+        if (!isCurrentlyOpen(item)) return false;
+        if (vegOnly) {
+            if (item.itemType !== 'VEG') return false;
+            if (item.sellerFoodType !== 'VEG') return false;
+        }
+        return (
+            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
 
     return (
         <div style={{ paddingBottom: '50px' }}>
@@ -102,15 +108,47 @@ export default function UserFoodPage() {
                     <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--text-main)", marginBottom: "5px" }}>Order Food</h1>
                     <p style={{ color: "var(--text-muted)" }}>Explore all available homely meals from verified kitchens.</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', border: '1px solid #EAEAEA', borderRadius: '8px', padding: '5px 15px', width: '300px' }}>
-                    <Search size={18} color="var(--text-muted)" />
-                    <input
-                        type="text"
-                        placeholder="Search area, locality, or food..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ border: 'none', outline: 'none', padding: '10px', width: '100%', fontSize: '0.95rem' }}
-                    />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button
+                        onClick={() => setVegOnly(!vegOnly)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            backgroundColor: vegOnly ? '#10B981' : 'white',
+                            color: vegOnly ? 'white' : 'var(--text-main)',
+                            border: '1px solid #EAEAEA',
+                            borderRadius: '8px',
+                            padding: '10px 18px',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: vegOnly ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none',
+                            outline: 'none',
+                            userSelect: 'none'
+                        }}
+                    >
+                        <span style={{
+                            display: 'inline-block',
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: vegOnly ? '#fff' : '#10B981',
+                            transition: 'all 0.3s'
+                        }} />
+                        {vegOnly ? 'Veg Only 🌱' : 'Veg & Non-Veg 🍖'}
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', border: '1px solid #EAEAEA', borderRadius: '8px', padding: '5px 15px', width: '300px' }}>
+                        <Search size={18} color="var(--text-muted)" />
+                        <input
+                            type="text"
+                            placeholder="Search area, locality, or food..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ border: 'none', outline: 'none', padding: '10px', width: '100%', fontSize: '0.95rem' }}
+                        />
+                    </div>
                 </div>
             </div>
 

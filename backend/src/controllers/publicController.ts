@@ -57,7 +57,8 @@ export const getPublicExploreData = unstable_cache(
                 sellerLocality: seller.addressLocality,
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline
+                sellerIsOnline: seller.isOnline,
+                sellerFoodType: seller.foodType
             }));
         });
 

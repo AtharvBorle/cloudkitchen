@@ -59,6 +59,7 @@ export default function UserDashboard() {
     const router = useRouter();
     const { defaultAddress } = useLocation();
 
+    const [vegOnly, setVegOnly] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [activePincode, setActivePincode] = useState<string | null>(null);
     const [foodItems, setFoodItems] = useState<any[]>([]);
@@ -106,17 +107,22 @@ export default function UserDashboard() {
         );
     }
 
-    const filteredFoodItems = foodItems.filter(item =>
-        isCurrentlyOpen(item) && (
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    );
+    const filteredFoodItems = foodItems.filter(item => {
+        if (!isCurrentlyOpen(item)) return false;
+        if (vegOnly) {
+            if (item.itemType !== 'VEG') return false;
+            if (item.sellerFoodType !== 'VEG') return false;
+        }
+        return (
+            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
 
     const filteredRooms = rooms.filter(room =>
         room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -140,7 +146,7 @@ export default function UserDashboard() {
                 backgroundImage: "linear-gradient(to right, var(--primary), var(--secondary))"
             }}>
                 <h1 style={{ fontSize: "2.25rem", fontWeight: "bold", marginBottom: "var(--spacing-2)" }}>Hungry? Or looking for a stay?</h1>
-                <div style={{ marginTop: "var(--spacing-6)", display: "flex", gap: "var(--spacing-4)", maxWidth: "500px", flexWrap: "wrap" }}>
+                <div style={{ marginTop: "var(--spacing-6)", display: "flex", gap: "var(--spacing-4)", maxWidth: "600px", flexWrap: "wrap", alignItems: "center" }}>
                     <div style={{ display: 'flex', flex: 2, minWidth: '250px', backgroundColor: 'white', borderRadius: '8px', overflow: 'hidden' }}>
                         <input
                             type="text"
@@ -150,6 +156,36 @@ export default function UserDashboard() {
                             style={{ flex: 1, border: "none", outline: "none", padding: "12px 15px", fontSize: "1rem", color: "#333" }}
                         />
                     </div>
+                    <button
+                        onClick={() => setVegOnly(!vegOnly)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            backgroundColor: vegOnly ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
+                            border: vegOnly ? 'none' : '1px solid rgba(255, 255, 255, 0.4)',
+                            borderRadius: '8px',
+                            padding: '12px 18px',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: vegOnly ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none',
+                            outline: 'none',
+                            userSelect: 'none'
+                        }}
+                    >
+                        <span style={{
+                            display: 'inline-block',
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: vegOnly ? '#fff' : '#CBD5E1',
+                            transition: 'all 0.3s'
+                        }} />
+                        {vegOnly ? 'Veg Only 🌱' : 'Veg & Non-Veg 🍖'}
+                    </button>
                 </div>
             </div>
 
