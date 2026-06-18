@@ -528,8 +528,8 @@ export default function ChatbotWidget() {
             {/* Chatbot Window */}
             {isOpen && (
                 <div style={{
-                    width: "400px",
-                    height: "600px",
+                    width: "min(400px, 90vw)",
+                    height: "min(600px, calc(100vh - 100px))",
                     backgroundColor: "white",
                     borderRadius: "20px",
                     boxShadow: "0 12px 40px rgba(0, 0, 0, 0.15)",
