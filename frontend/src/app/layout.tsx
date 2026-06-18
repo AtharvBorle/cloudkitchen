@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
 import { Providers } from '@/components/Providers';
+import ChatbotWidget from '@/components/chatbot-widget';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -22,6 +23,7 @@ export default function RootLayout({
         <Providers>
           <CartProvider>
             <main>{children}</main>
+            <ChatbotWidget />
           </CartProvider>
         </Providers>
       </body>

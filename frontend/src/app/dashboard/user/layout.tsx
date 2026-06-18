@@ -116,6 +116,7 @@ export function UserHeader() {
         { href: "/dashboard/user/orders", label: "My Orders" },
         { href: "/dashboard/user/bookings", label: "My Bookings" },
         { href: "/dashboard/user/profile", label: "My Profile" },
+        { href: "/dashboard/user/support", label: "Support" },
     ];
 
     const isActive = (href: string, exact?: boolean) => {

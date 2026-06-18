@@ -71,6 +71,16 @@ export default function SuperadminLayout({
                         }}>
                         Platform Coupons
                     </Link>
+                    <Link href="/dashboard/superadmin/support"
+                        style={{
+                            padding: "var(--spacing-2) var(--spacing-3)",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: pathname.includes("/support") ? "var(--primary)" : "transparent",
+                            color: pathname.includes("/support") ? "var(--text-inverse)" : "var(--text-main)",
+                            fontWeight: pathname.includes("/support") ? "500" : "normal"
+                        }}>
+                        Support & Tickets
+                    </Link>
                 </nav>
 
                 <div style={{ padding: "var(--spacing-4)", borderTop: "1px solid var(--border)" }}>

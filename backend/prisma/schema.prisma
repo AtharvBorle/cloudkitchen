@@ -27,6 +27,8 @@ model User {
   bookings        Booking[]
   addresses       Address[]
   reviews         Review[]
+  tickets         Ticket[]        @relation("UserTickets")
+  messagesSent    TicketMessage[] @relation("SenderMessages")
 }
 
 model SellerProfile {
@@ -327,3 +329,27 @@ model ItemRating {
   comment    String?
   createdAt  DateTime @default(now())
 }
+
+model Ticket {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  category    String          // FOOD, ROOM, PAYMENT, OTHER
+  status      String          @default("OPEN") // OPEN, IN_PROGRESS, CLOSED
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  messages    TicketMessage[]
+}
+
+model TicketMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  message   String
+  createdAt DateTime @default(now())
+}
+
