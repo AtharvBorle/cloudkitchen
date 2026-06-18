@@ -48,6 +48,13 @@ export default function SuperAdminSupportPage() {
         }
     };
 
+    const handleRefresh = async () => {
+        await fetchTickets();
+        if (selectedTicket) {
+            await fetchTicketDetails(selectedTicket.id);
+        }
+    };
+
     useEffect(() => {
         fetchTickets();
     }, []);
@@ -124,7 +131,7 @@ export default function SuperAdminSupportPage() {
                     <p style={{ color: "#64748B", fontSize: "0.9rem" }}>Manage, review, and solve customer and seller support inquiries</p>
                 </div>
                 <button
-                    onClick={fetchTickets}
+                    onClick={handleRefresh}
                     style={{
                         backgroundColor: "#F1F5F9",
                         border: "1px solid #CBD5E1",

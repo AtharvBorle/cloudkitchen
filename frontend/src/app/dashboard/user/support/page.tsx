@@ -55,6 +55,13 @@ export default function UserSupportPage() {
         }
     };
 
+    const handleRefresh = async () => {
+        await fetchTickets();
+        if (selectedTicket) {
+            await fetchTicketDetails(selectedTicket.id);
+        }
+    };
+
     useEffect(() => {
         fetchTickets();
     }, []);
@@ -162,7 +169,7 @@ export default function UserSupportPage() {
                 <div style={{ backgroundColor: "white", borderRadius: "16px", border: "1px solid #E2E8F0", padding: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #F1F5F9", paddingBottom: "12px" }}>
                         <span style={{ fontWeight: "700", color: "#334155", fontSize: "0.95rem" }}>My Tickets</span>
-                        <button onClick={() => fetchTickets()} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                        <button onClick={handleRefresh} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", display: "flex", alignItems: "center" }}>
                             <RefreshCw size={16} />
                         </button>
                     </div>
