@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Create ticket error:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(`Internal server error: ${error.message || error} ${error.stack || ""}`, 500);
     }
 }
 
@@ -20,6 +20,6 @@ export async function GET() {
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("List tickets error:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(`Internal server error: ${error.message || error} ${error.stack || ""}`, 500);
     }
 }

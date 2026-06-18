@@ -12,6 +12,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Send ticket message error:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(`Internal server error: ${error.message || error} ${error.stack || ""}`, 500);
     }
 }

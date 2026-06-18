@@ -12,7 +12,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Get ticket details error:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(`Internal server error: ${error.message || error} ${error.stack || ""}`, 500);
     }
 }
 
@@ -26,6 +26,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Update ticket status error:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(`Internal server error: ${error.message || error} ${error.stack || ""}`, 500);
     }
 }
