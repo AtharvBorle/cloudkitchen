@@ -17,6 +17,7 @@ export async function GET() {
             include: {
                 seller: true,
                 deliveryPerson: true,
+                refund: true,
                 review: {
                     include: {
                         itemRatings: true

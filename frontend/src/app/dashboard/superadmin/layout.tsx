@@ -81,6 +81,16 @@ export default function SuperadminLayout({
                         }}>
                         Support & Tickets
                     </Link>
+                    <Link href="/dashboard/superadmin/refunds"
+                        style={{
+                            padding: "var(--spacing-2) var(--spacing-3)",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: pathname.includes("/refunds") ? "var(--primary)" : "transparent",
+                            color: pathname.includes("/refunds") ? "var(--text-inverse)" : "var(--text-main)",
+                            fontWeight: pathname.includes("/refunds") ? "500" : "normal"
+                        }}>
+                        Manage Refunds
+                    </Link>
                 </nav>
 
                 <div style={{ padding: "var(--spacing-4)", borderTop: "1px solid var(--border)" }}>

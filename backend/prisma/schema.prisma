@@ -29,6 +29,7 @@ model User {
   reviews         Review[]
   tickets         Ticket[]        @relation("UserTickets")
   messagesSent    TicketMessage[] @relation("SenderMessages")
+  refunds         Refund[]
 }
 
 model SellerProfile {
@@ -135,6 +136,7 @@ model Order {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   review           Review?
+  refund           Refund?
 }
 
 model Room {
@@ -160,6 +162,7 @@ model Booking {
   endDate   DateTime
   status    String // PENDING, CONFIRMED, CANCELLED
   createdAt DateTime @default(now())
+  refund    Refund?
 }
 
 model SubscriptionPlan {
@@ -351,5 +354,25 @@ model TicketMessage {
   sender    User     @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
   message   String
   createdAt DateTime @default(now())
+}
+
+model Refund {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  orderId         String?  @unique
+  order           Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  bookingId       String?  @unique
+  booking         Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  amount          Float
+  reason          String
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  transactionId   String?  
+  adminNote       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
