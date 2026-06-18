@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare, X, Send, User, ChevronRight, Loader2, Sparkles, ChevronLeft, ShoppingBag, BedDouble, HelpCircle } from "lucide-react";
+import { MessageSquare, X, Send, User, ChevronRight, Loader2, Sparkles, ShoppingBag, BedDouble } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 
 interface Message {
@@ -26,6 +27,7 @@ interface Message {
 
 export default function ChatbotWidget() {
     const { data: session, status } = useSession();
+    const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState("");
@@ -51,26 +53,49 @@ export default function ChatbotWidget() {
 
     // Initial greeting on mount / reset
     const loadGreeting = () => {
-        setMessages([
-            {
-                id: "welcome",
-                sender: "bot",
-                text: "Hello! I am Mansi, your automated helper assistant. What can I help you with today? Please select an option below:",
-                timestamp: new Date(),
-                options: [
-                    { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
-                    { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
-                    { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
-                    { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
-                    { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
-                ]
-            }
-        ]);
+        const isSeller = session?.user?.role === "SELLER";
+        if (isSeller) {
+            setMessages([
+                {
+                    id: "welcome",
+                    sender: "bot",
+                    text: "Hello! I am Mansi, your automated seller helper assistant. How can I assist you with your business today? Please select an option:",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
+                        { label: "🍱 Menu & Listings Query", action: () => handleSelectOption("seller_listings") },
+                        { label: "💰 Payouts & Subscriptions", action: () => handleSelectOption("seller_payouts") },
+                        { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                    ]
+                }
+            ]);
+        } else {
+            setMessages([
+                {
+                    id: "welcome",
+                    sender: "bot",
+                    text: "Hello! I am Mansi, your automated helper assistant. What can I help you with today? Please select an option below:",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
+                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
+                        { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
+                        { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                    ]
+                }
+            ]);
+        }
     };
 
     useEffect(() => {
         loadGreeting();
-    }, [status]);
+    }, [status, session?.user?.role]);
+
+    // Hide chatbot on Superadmin and Admin dashboard pages
+    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin")) {
+        return null;
+    }
 
     const showTypingIndicator = (callback: () => void, delay = 800) => {
         setIsTyping(true);
@@ -85,6 +110,9 @@ export default function ChatbotWidget() {
         let userText = "";
         switch (optionType) {
             case "orders": userText = "📦 Issues with an Order"; break;
+            case "seller_orders": userText = "📈 Received Orders & Sales"; break;
+            case "seller_listings": userText = "🍱 Menu & Listings Query"; break;
+            case "seller_payouts": userText = "💰 Payouts & Subscriptions"; break;
             case "bookings": userText = "🛌 Issues with a Room Booking"; break;
             case "seller_info": userText = "🚀 Register as a Seller"; break;
             case "payments_info": userText = "💳 Payment & Refund policy"; break;
@@ -167,28 +195,100 @@ export default function ChatbotWidget() {
                 }
             }
 
+            else if (optionType === "seller_orders") {
+                if (status !== "authenticated") {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: "To view your kitchen's received orders, you need to be logged in first.",
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                    return;
+                }
+
+                try {
+                    const res = await fetchApi("/api/seller/orders");
+                    const data = await res.json();
+                    const orders = (data.orders || data.data?.orders || data.data || data || []).slice(0, 5); // top 5 recent orders
+
+                    if (orders.length === 0) {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "I couldn't find any recent received orders for your kitchen. Would you like to raise a support ticket?",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🎟️ Yes, raise custom ticket", action: () => handleSelectOption("custom_ticket") },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    } else {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "Please select the received order you are experiencing issues with:",
+                            timestamp: new Date(),
+                            ordersList: orders,
+                            options: [
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    }
+                } catch (error) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: "An error occurred while fetching your kitchen orders.",
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                }
+            }
+
             else if (optionType === "show_order_options") {
                 const order = payload;
-                setMessages(prev => [...prev, {
-                    id: `b_${Date.now()}`,
-                    sender: "bot",
-                    text: `Order #${order.id.slice(0, 8)} details:\n- Total: ₹${order.totalAmount}\n- Status: ${order.status}\n- Kitchen: ${order.seller?.businessName || "Partner Seller"}\n\nWhat is the nature of your concern?`,
-                    timestamp: new Date(),
-                    options: [
-                        { label: "🍕 Problem with items (missing/spoiled)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Problem with items", issueType: "ITEM_ISSUE" }) },
-                        { label: "🛵 Delivery delayed / didn't arrive", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🛵 Delivery delayed", issueType: "DELAYED" }) },
-                        { label: "❌ Request to Cancel this order", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "❌ Request cancellation", issueType: "CANCEL_REQUEST" }) },
-                        { label: "💰 Charged incorrect amount", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "💰 Charged incorrect amount", issueType: "CHARGE_ISSUE" }) },
-                        { label: "🎟️ Other issues (talk to customer care)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other issues", issueType: "OTHER_ORDER_ISSUE" }) },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ]
-                }]);
+                const isSeller = session?.user?.role === "SELLER";
+                if (isSeller) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: `Received Order #${order.id.slice(0, 8)} details:\n- Total Sales: ₹${order.totalAmount}\n- Status: ${order.status}\n- Customer Name: ${order.user?.name || "Customer"}\n\nWhat is the nature of your concern?`,
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🛵 Issue with Delivery Boy / Assignment", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🛵 Delivery Boy issue", issueType: "DELIVERY_ISSUE" }) },
+                            { label: "🍕 Food preparation / stock issue", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Prep / stock issue", issueType: "PREP_ISSUE" }) },
+                            { label: "❌ Request cancellation of this order", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "❌ Request cancellation", issueType: "CANCEL_REQUEST" }) },
+                            { label: "🎟️ Other issues (talk to customer care)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other issues", issueType: "OTHER_ORDER_ISSUE" }) },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                } else {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: `Order #${order.id.slice(0, 8)} details:\n- Total: ₹${order.totalAmount}\n- Status: ${order.status}\n- Kitchen: ${order.seller?.businessName || "Partner Seller"}\n\nWhat is the nature of your concern?`,
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🍕 Problem with items (missing/spoiled)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Problem with items", issueType: "ITEM_ISSUE" }) },
+                            { label: "🛵 Delivery delayed / didn't arrive", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🛵 Delivery delayed", issueType: "DELAYED" }) },
+                            { label: "❌ Request to Cancel this order", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "❌ Request cancellation", issueType: "CANCEL_REQUEST" }) },
+                            { label: "💰 Charged incorrect amount", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "💰 Charged incorrect amount", issueType: "CHARGE_ISSUE" }) },
+                            { label: "🎟️ Other issues (talk to customer care)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other issues", issueType: "OTHER_ORDER_ISSUE" }) },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                }
             }
 
             else if (optionType === "select_order_issue") {
-                const { order, issueLabel, issueType } = payload;
+                const { order, issueLabel } = payload;
                 const generatedTitle = `Order Issue: ${issueLabel} (#${order.id.slice(0, 8)})`;
-                const generatedDesc = `Order Reference: #${order.id}\nIssue Type: ${issueLabel}\nOrder Date: ${new Date(order.createdAt).toLocaleDateString()}\nTotal Amount: ₹${order.totalAmount}\nKitchen Business: ${order.seller?.businessName || "Unknown"}\nStatus: ${order.status}\n\nPlease describe the issue below or submit this ticket directly to support.`;
+                const generatedDesc = `Order Reference: #${order.id}\nIssue Type: ${issueLabel}\nOrder Date: ${new Date(order.createdAt).toLocaleDateString()}\nTotal Amount: ₹${order.totalAmount}\nStatus: ${order.status}\n\nPlease describe the details or submit directly.`;
 
                 setTicketCategory("FOOD");
                 setTicketTitle(generatedTitle);
@@ -197,7 +297,7 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "I have prepared a support ticket request based on your order. You can customize the details below and click Submit to log this with our support team:",
+                    text: "I have prepared a support ticket based on the order details. Customize details below and submit to log with customer care:",
                     timestamp: new Date(),
                     isTicketForm: true,
                     ticketData: {
@@ -329,6 +429,32 @@ export default function ChatbotWidget() {
                 }]);
             }
 
+            else if (optionType === "seller_listings") {
+                setMessages(prev => [...prev, {
+                    id: `b_${Date.now()}`,
+                    sender: "bot",
+                    text: "To manage your food menu items, kitchen settings, or room stay listings, please navigate to the respective tabs in your Seller Dashboard:\n- 'Manage Menu': Update availability/prices/add items.\n- 'Manage Rooms': Add rooms, check bookings.\n\nIf you are facing errors or need assistance, raise a support ticket below:",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "🎟️ Raise ticket for Listings support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Menu/Room listing assistance request", desc: "I need help with configuring my menu items or room stay details." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ]
+                }]);
+            }
+
+            else if (optionType === "seller_payouts") {
+                setMessages(prev => [...prev, {
+                    id: `b_${Date.now()}`,
+                    sender: "bot",
+                    text: "Payout details are processed weekly. You can track your subscription plan validity, payouts, and billing cycles in the 'Subscriptions' section of your Seller Dashboard.\n\nIf you missed a payout or have pricing inquiries, raise a ticket:",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "🎟️ Raise ticket for Payout issue", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Seller payout query", desc: "I am raising a query regarding my recent payout cycle or active subscription plan." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ]
+                }]);
+            }
+
             else if (optionType === "custom_ticket_prefilled") {
                 const { category, title, desc } = payload;
                 setTicketCategory(category);
@@ -382,37 +508,68 @@ export default function ChatbotWidget() {
             let replyText = "";
             let generatedOptions: { label: string; action: () => void }[] = [];
 
-            if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey")) {
-                replyText = "Hello! I am Mansi, your support helper. How can I help you today? Please choose an issue area:";
-                generatedOptions = [
-                    { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
-                    { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
-                    { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                ];
-            } else if (normalizedText.includes("food") || normalizedText.includes("order") || normalizedText.includes("item")) {
-                replyText = "It looks like you have issues or queries related to food orders. Would you like to select a recent order to get help?";
-                generatedOptions = [
-                    { label: "📦 Select an Order", action: () => handleSelectOption("orders") },
-                    { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                ];
-            } else if (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay")) {
-                replyText = "It looks like you have stay or room booking queries. Would you like to view your bookings?";
-                generatedOptions = [
-                    { label: "🛌 View Stay Bookings", action: () => handleSelectOption("bookings") },
-                    { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                ];
-            } else if (normalizedText.includes("refund") || normalizedText.includes("pay") || normalizedText.includes("money") || normalizedText.includes("failed")) {
-                replyText = "For payment and refund concerns, check out our support guidelines or raise a payment ticket:";
-                generatedOptions = [
-                    { label: "💳 View Payment Policies", action: () => handleSelectOption("payments_info") },
-                    { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                ];
+            const isSeller = session?.user?.role === "SELLER";
+            if (isSeller) {
+                if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey")) {
+                    replyText = "Hello! I am Mansi, your seller support helper. How can I help you today?";
+                    generatedOptions = [
+                        { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
+                        { label: "🍱 Menu & Listings", action: () => handleSelectOption("seller_listings") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                } else if (normalizedText.includes("order") || normalizedText.includes("sale") || normalizedText.includes("item") || normalizedText.includes("menu")) {
+                    replyText = "I can help you with received orders, menu listings, or inventory query. Please select an option:";
+                    generatedOptions = [
+                        { label: "📈 Received Orders", action: () => handleSelectOption("seller_orders") },
+                        { label: "🍱 Menu & Listings Query", action: () => handleSelectOption("seller_listings") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                } else if (normalizedText.includes("pay") || normalizedText.includes("payout") || normalizedText.includes("sub") || normalizedText.includes("money")) {
+                    replyText = "Need support with seller payouts or subscriptions?";
+                    generatedOptions = [
+                        { label: "💰 Payouts & Subscriptions", action: () => handleSelectOption("seller_payouts") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                } else {
+                    replyText = "I couldn't quite analyze that message. Would you like to raise a support ticket to speak with customer care directly?";
+                    generatedOptions = [
+                        { label: "🎟️ Raise a support ticket", action: () => handleSelectOption("custom_ticket") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
             } else {
-                replyText = "I couldn't quite analyze that message. Would you like to raise a support ticket to speak with a human support agent directly?";
-                generatedOptions = [
-                    { label: "🎟️ Raise a support ticket", action: () => handleSelectOption("custom_ticket") },
-                    { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                ];
+                if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey")) {
+                    replyText = "Hello! I am Mansi, your support helper. How can I help you today? Please choose an issue area:";
+                    generatedOptions = [
+                        { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
+                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                } else if (normalizedText.includes("food") || normalizedText.includes("order") || normalizedText.includes("item")) {
+                    replyText = "It looks like you have issues or queries related to food orders. Would you like to select a recent order to get help?";
+                    generatedOptions = [
+                        { label: "📦 Select an Order", action: () => handleSelectOption("orders") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                } else if (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay")) {
+                    replyText = "It looks like you have stay or room booking queries. Would you like to view your bookings?";
+                    generatedOptions = [
+                        { label: "🛌 View Stay Bookings", action: () => handleSelectOption("bookings") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                } else if (normalizedText.includes("refund") || normalizedText.includes("pay") || normalizedText.includes("money") || normalizedText.includes("failed")) {
+                    replyText = "For payment and refund concerns, check out our support guidelines or raise a payment ticket:";
+                    generatedOptions = [
+                        { label: "💳 View Payment Policies", action: () => handleSelectOption("payments_info") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                } else {
+                    replyText = "I couldn't quite analyze that message. Would you like to raise a support ticket to speak with customer care directly?";
+                    generatedOptions = [
+                        { label: "🎟️ Raise a support ticket", action: () => handleSelectOption("custom_ticket") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
             }
 
             setMessages(prev => [...prev, {
@@ -894,7 +1051,6 @@ export default function ChatbotWidget() {
                                 border: "none",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyCenter: "center",
                                 cursor: "pointer",
                                 transition: "all 0.2s",
                                 padding: "0",
