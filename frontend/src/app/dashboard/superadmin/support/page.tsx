@@ -18,6 +18,13 @@ export default function SuperAdminSupportPage() {
     const [submittingReply, setSubmittingReply] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
 
+    // User Activity for refunding
+    const [userActivity, setUserActivity] = useState<any | null>(null);
+    const [loadingActivity, setLoadingActivity] = useState(false);
+    const [targetRefund, setTargetRefund] = useState<{ type: 'ORDER' | 'BOOKING'; id: string; amount: number } | null>(null);
+    const [refundReason, setRefundReason] = useState("");
+    const [submittingRefund, setSubmittingRefund] = useState(false);
+
     const fetchTickets = async () => {
         try {
             setLoadingTickets(true);
@@ -33,13 +40,32 @@ export default function SuperAdminSupportPage() {
         }
     };
 
+    const fetchUserActivity = async (userId: string) => {
+        setLoadingActivity(true);
+        try {
+            const res = await fetchApi(`/api/superadmin/users/${userId}/activity`);
+            if (res.ok) {
+                const data = await res.json();
+                setUserActivity(data.data || data);
+            }
+        } catch (error) {
+            console.error("Error fetching user activity:", error);
+        } finally {
+            setLoadingActivity(false);
+        }
+    };
+
     const fetchTicketDetails = async (ticketId: string) => {
         try {
             setLoadingDetails(true);
             const res = await fetchApi(`/api/tickets/${ticketId}`);
             const data = await res.json();
             if (res.ok) {
-                setSelectedTicket(data.data || data);
+                const ticketData = data.data || data;
+                setSelectedTicket(ticketData);
+                if (ticketData.userId) {
+                    fetchUserActivity(ticketData.userId);
+                }
             }
         } catch (error) {
             console.error("Failed to load ticket details", error);
@@ -288,70 +314,216 @@ export default function SuperAdminSupportPage() {
                                 </div>
                             </div>
 
-                            {/* Conversation Thread */}
-                            <div style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "15px", maxHeight: "400px", minHeight: "300px", backgroundColor: "#F8FAFC" }}>
-                                {selectedTicket.messages?.map((msg: any) => {
-                                    const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN";
-                                    return (
-                                        <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: isAdmin ? "flex-end" : "flex-start", maxWidth: "80%" }}>
-                                            <div style={{
-                                                padding: "12px 16px",
-                                                borderRadius: "14px",
-                                                fontSize: "0.85rem",
-                                                lineHeight: "1.4",
-                                                backgroundColor: isAdmin ? "#1E293B" : "white",
-                                                color: isAdmin ? "white" : "#334155",
-                                                border: isAdmin ? "none" : "1px solid #E2E8F0",
-                                                boxShadow: isAdmin ? "none" : "0 2px 6px rgba(0,0,0,0.02)"
-                                            }}>
-                                                {msg.message}
-                                            </div>
-                                            <span style={{ fontSize: "0.65rem", color: "#94A3B8", marginTop: "4px", alignSelf: isAdmin ? "flex-end" : "flex-start" }}>
-                                                {isAdmin ? "You" : `${selectedTicket.user?.name} (${selectedTicket.user?.role})`} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                            {/* Split Layout: Chat on Left, User activity & refunds on Right */}
+                            <div style={{ display: "flex", flex: 1, minHeight: "450px" }}>
+                                {/* Left Side: Conversation Thread */}
+                                <div style={{ display: "flex", flexDirection: "column", flex: 1, borderRight: "1px solid #E2E8F0" }}>
+                                    <div style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "15px", maxHeight: "400px", minHeight: "300px", backgroundColor: "#F8FAFC" }}>
+                                        {selectedTicket.messages?.map((msg: any) => {
+                                            const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN";
+                                            return (
+                                                <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: isAdmin ? "flex-end" : "flex-start", maxWidth: "80%" }}>
+                                                    <div style={{
+                                                        padding: "12px 16px",
+                                                        borderRadius: "14px",
+                                                        fontSize: "0.85rem",
+                                                        lineHeight: "1.4",
+                                                        backgroundColor: isAdmin ? "#1E293B" : "white",
+                                                        color: isAdmin ? "white" : "#334155",
+                                                        border: isAdmin ? "none" : "1px solid #E2E8F0",
+                                                        boxShadow: isAdmin ? "none" : "0 2px 6px rgba(0,0,0,0.02)"
+                                                    }}>
+                                                        {msg.message}
+                                                    </div>
+                                                    <span style={{ fontSize: "0.65rem", color: "#94A3B8", marginTop: "4px", alignSelf: isAdmin ? "flex-end" : "flex-start" }}>
+                                                        {isAdmin ? "You" : `${selectedTicket.user?.name} (${selectedTicket.user?.role})`} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
 
-                            {/* Reply Input Section */}
-                            <div style={{ padding: "20px", borderTop: "1px solid #E2E8F0" }}>
-                                <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px" }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Type reply to customer/seller..."
-                                        value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
-                                        style={{
-                                            flex: 1,
-                                            padding: "12px 16px",
-                                            borderRadius: "10px",
-                                            border: "1px solid #CBD5E1",
-                                            outline: "none",
-                                            fontSize: "0.9rem"
-                                        }}
-                                        required
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={submittingReply || !replyText.trim()}
-                                        style={{
-                                            backgroundColor: "var(--primary, #10B981)",
-                                            color: "white",
-                                            border: "none",
-                                            padding: "0 20px",
-                                            borderRadius: "10px",
-                                            cursor: "pointer",
-                                            fontWeight: "700",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "6px"
-                                        }}
-                                    >
-                                        {submittingReply ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
-                                    </button>
-                                </form>
+                                    {/* Reply Input Section */}
+                                    <div style={{ padding: "20px", borderTop: "1px solid #E2E8F0" }}>
+                                        <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px" }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Type reply to customer/seller..."
+                                                value={replyText}
+                                                onChange={(e) => setReplyText(e.target.value)}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "12px 16px",
+                                                    borderRadius: "10px",
+                                                    border: "1px solid #CBD5E1",
+                                                    outline: "none",
+                                                    fontSize: "0.9rem"
+                                                }}
+                                                required
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={submittingReply || !replyText.trim()}
+                                                style={{
+                                                    backgroundColor: "var(--primary, #10B981)",
+                                                    color: "white",
+                                                    border: "none",
+                                                    padding: "0 20px",
+                                                    borderRadius: "10px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "700",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    gap: "6px"
+                                                }}
+                                            >
+                                                {submittingReply ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                {/* Right Side: User Activities & Refund Trigger */}
+                                <div style={{ width: "320px", backgroundColor: "#F8FAFC", display: "flex", flexDirection: "column", padding: "15px", overflowY: "auto", maxHeight: "550px", borderBottomRightRadius: "16px" }}>
+                                    <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
+                                        REFUND CONTROL PANEL
+                                    </h4>
+
+                                    {loadingActivity ? (
+                                        <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", padding: "30px" }}>
+                                            <Loader2 className="animate-spin" color="var(--primary)" size={20} />
+                                        </div>
+                                    ) : !userActivity ? (
+                                        <p style={{ fontSize: "0.75rem", color: "#64748B" }}>No user activity retrieved.</p>
+                                    ) : (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                                            
+                                            {/* Paid Food Orders */}
+                                            <div>
+                                                <h5 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>
+                                                    Paid Food Orders ({userActivity.orders?.filter((o: any) => o.isPaid).length || 0})
+                                                </h5>
+                                                {userActivity.orders?.filter((o: any) => o.isPaid).length === 0 ? (
+                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No paid food orders.</p>
+                                                ) : (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                                        {userActivity.orders?.filter((o: any) => o.isPaid).map((order: any) => (
+                                                            <div key={order.id} style={{ backgroundColor: "white", padding: "8px", borderRadius: "6px", border: "1px solid #E2E8F0", fontSize: "0.75rem" }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", marginBottom: "2px" }}>
+                                                                    <span>Order #{order.id.slice(0, 8)}</span>
+                                                                    <span style={{ color: "var(--primary)" }}>₹{order.totalAmount}</span>
+                                                                </div>
+                                                                <div style={{ fontSize: "0.7rem", color: "#64748B", marginBottom: "6px" }}>
+                                                                    Kitchen: {order.seller?.businessName || "Unknown"}<br/>
+                                                                    Status: {order.status}
+                                                                </div>
+                                                                {order.refund ? (
+                                                                    <div style={{
+                                                                        fontSize: "0.7rem",
+                                                                        fontWeight: "700",
+                                                                        padding: "3px 6px",
+                                                                        borderRadius: "4px",
+                                                                        backgroundColor: order.refund.status === 'APPROVED' ? '#D1FAE5' : order.refund.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
+                                                                        color: order.refund.status === 'APPROVED' ? '#065F46' : order.refund.status === 'REJECTED' ? '#991B1B' : '#92400E',
+                                                                        textAlign: "center"
+                                                                    }}>
+                                                                        Refund: {order.refund.status}
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setTargetRefund({ type: 'ORDER', id: order.id, amount: order.totalAmount });
+                                                                            setRefundReason("");
+                                                                        }}
+                                                                        style={{
+                                                                            width: "100%",
+                                                                            padding: "5px",
+                                                                            backgroundColor: "var(--coral, #F16F68)",
+                                                                            color: "white",
+                                                                            border: "none",
+                                                                            borderRadius: "4px",
+                                                                            fontWeight: "700",
+                                                                            cursor: "pointer",
+                                                                            fontSize: "0.7rem"
+                                                                        }}
+                                                                    >
+                                                                        Initiate Refund Request
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Confirmed Stay Bookings */}
+                                            <div>
+                                                <h5 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>
+                                                    Confirmed Room Bookings ({userActivity.bookings?.filter((b: any) => b.status === 'CONFIRMED').length || 0})
+                                                </h5>
+                                                {userActivity.bookings?.filter((b: any) => b.status === 'CONFIRMED').length === 0 ? (
+                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No confirmed bookings.</p>
+                                                ) : (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                                        {userActivity.bookings?.filter((b: any) => b.status === 'CONFIRMED').map((booking: any) => {
+                                                            const start = new Date(booking.startDate);
+                                                            const end = new Date(booking.endDate);
+                                                            const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+                                                            const bookingAmount = nights * booking.room.price;
+
+                                                            return (
+                                                                <div key={booking.id} style={{ backgroundColor: "white", padding: "8px", borderRadius: "6px", border: "1px solid #E2E8F0", fontSize: "0.75rem" }}>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", marginBottom: "2px" }}>
+                                                                        <span style={{ maxWidth: "70%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{booking.room.title}</span>
+                                                                        <span style={{ color: "var(--primary)" }}>₹{bookingAmount}</span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: "0.7rem", color: "#64748B", marginBottom: "6px" }}>
+                                                                        Nights: {nights} ({start.toLocaleDateString()} - {end.toLocaleDateString()})
+                                                                    </div>
+                                                                    {booking.refund ? (
+                                                                        <div style={{
+                                                                            fontSize: "0.7rem",
+                                                                            fontWeight: "700",
+                                                                            padding: "3px 6px",
+                                                                            borderRadius: "4px",
+                                                                            backgroundColor: booking.refund.status === 'APPROVED' ? '#D1FAE5' : booking.refund.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
+                                                                            color: booking.refund.status === 'APPROVED' ? '#065F46' : booking.refund.status === 'REJECTED' ? '#991B1B' : '#92400E',
+                                                                            textAlign: "center"
+                                                                        }}>
+                                                                            Refund: {booking.refund.status}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setTargetRefund({ type: 'BOOKING', id: booking.id, amount: bookingAmount });
+                                                                                setRefundReason("");
+                                                                            }}
+                                                                            style={{
+                                                                                width: "100%",
+                                                                                padding: "5px",
+                                                                                backgroundColor: "var(--coral, #F16F68)",
+                                                                                color: "white",
+                                                                                border: "none",
+                                                                                borderRadius: "4px",
+                                                                                fontWeight: "700",
+                                                                                cursor: "pointer",
+                                                                                fontSize: "0.7rem"
+                                                                            }}
+                                                                        >
+                                                                            Initiate Refund Request
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                         </div>
@@ -360,6 +532,172 @@ export default function SuperAdminSupportPage() {
 
             </div>
 
+            {/* Admin Refund Trigger Modal */}
+            {targetRefund && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    backdropFilter: 'blur(5px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 99999,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '20px',
+                        width: '100%',
+                        maxWidth: '500px',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        <div style={{
+                            padding: '20px 25px',
+                            borderBottom: '1px solid #F1F5F9',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', margin: 0 }}>
+                                Create Refund Request
+                            </h3>
+                            <button
+                                onClick={() => setTargetRefund(null)}
+                                style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 'bold',
+                                    color: '#64748B',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                if (!targetRefund || !refundReason.trim() || !selectedTicket) return;
+
+                                setSubmittingRefund(true);
+                                try {
+                                    const bodyData: any = {
+                                        reason: refundReason.trim(),
+                                        amount: targetRefund.amount
+                                    };
+                                    if (targetRefund.type === 'ORDER') {
+                                        bodyData.orderId = targetRefund.id;
+                                    } else {
+                                        bodyData.bookingId = targetRefund.id;
+                                    }
+
+                                    const res = await fetchApi("/api/refunds", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify(bodyData)
+                                    });
+
+                                    if (res.ok) {
+                                        alert("Refund request successfully created! It will show up in the Refunds section.");
+                                        setTargetRefund(null);
+                                        setRefundReason("");
+                                        if (selectedTicket.userId) {
+                                            fetchUserActivity(selectedTicket.userId);
+                                        }
+                                    } else {
+                                        const err = await res.json();
+                                        alert(err.message || "Failed to create refund request.");
+                                    }
+                                } catch (error) {
+                                    console.error("Initiate refund error:", error);
+                                    alert("An error occurred. Please try again.");
+                                } finally {
+                                    setSubmittingRefund(false);
+                                }
+                            }}
+                            style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}
+                        >
+                            <div style={{ backgroundColor: "#FFF8F7", padding: "12px 15px", borderRadius: "8px", border: "1px solid #FEE2E2" }}>
+                                <span style={{ display: "block", fontSize: "0.8rem", color: "#64748B", fontWeight: "600" }}>REFUNDABLE AMOUNT</span>
+                                <strong style={{ fontSize: "1.4rem", color: "var(--coral, #F16F68)" }}>₹{targetRefund.amount}</strong>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontWeight: '700', fontSize: '0.95rem', color: '#334155' }}>
+                                    Reason for Refund (Internal Note)
+                                </label>
+                                <textarea
+                                    value={refundReason}
+                                    onChange={(e) => setRefundReason(e.target.value)}
+                                    placeholder="Provide context on why this refund is being requested (from customer ticket details)..."
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        minHeight: '100px',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #CBD5E1',
+                                        fontSize: '0.9rem',
+                                        fontFamily: 'inherit',
+                                        resize: 'vertical',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                borderTop: '1px solid #F1F5F9',
+                                paddingTop: '20px'
+                            }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setTargetRefund(null)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #CBD5E1',
+                                        borderRadius: '10px',
+                                        fontWeight: '600',
+                                        color: '#475569',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={submittingRefund || !refundReason.trim()}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: 'var(--coral, #F16F68)',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        fontWeight: '700',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        opacity: submittingRefund ? 0.7 : 1
+                                    }}
+                                >
+                                    {submittingRefund ? "Creating..." : "Confirm & Send"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

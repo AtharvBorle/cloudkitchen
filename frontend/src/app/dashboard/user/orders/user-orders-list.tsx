@@ -17,10 +17,6 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewError, setReviewError] = useState("");
 
-    // Refund Modal state
-    const [refundingOrder, setRefundingOrder] = useState<any | null>(null);
-    const [refundReason, setRefundReason] = useState("");
-    const [submittingRefund, setSubmittingRefund] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -344,14 +340,6 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                                             View Invoice
                                         </button>
                                     )}
-                                    {order.isPaid && !order.refund && (
-                                        <button
-                                            onClick={() => setRefundingOrder(order)}
-                                            style={{ color: 'var(--coral, #F16F68)', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', border: 'none', background: 'none', padding: 0, fontWeight: '700' }}
-                                        >
-                                            Request Refund
-                                        </button>
-                                    )}
                                     {order.refund && (
                                         <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: order.refund.status === 'APPROVED' ? '#10B981' : order.refund.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }}>
                                             Refund: {order.refund.status}
@@ -575,176 +563,7 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                     </div>
                 </div>
             )}
-            {/* Refund Modal */}
-            {refundingOrder && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                    backdropFilter: 'blur(5px)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 99999,
-                    padding: '20px'
-                }}>
-                    <div style={{
-                        backgroundColor: 'white',
-                        borderRadius: '20px',
-                        width: '100%',
-                        maxWidth: '500px',
-                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                        border: '1px solid #E2E8F0',
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}>
-                        <div style={{
-                            padding: '20px 25px',
-                            borderBottom: '1px solid #F1F5F9',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', margin: 0 }}>
-                                Request Order Refund
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    setRefundingOrder(null);
-                                    setRefundReason("");
-                                }}
-                                style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    fontSize: '1.5rem',
-                                    fontWeight: 'bold',
-                                    color: '#64748B',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                &times;
-                            </button>
-                        </div>
 
-                        <form
-                            onSubmit={async (e) => {
-                                e.preventDefault();
-                                if (!refundingOrder || !refundReason.trim()) return;
-
-                                setSubmittingRefund(true);
-                                try {
-                                    const res = await fetchApi("/api/refunds", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                            orderId: refundingOrder.id,
-                                            amount: refundingOrder.totalAmount,
-                                            reason: refundReason.trim()
-                                        })
-                                    });
-
-                                    if (res.ok) {
-                                        const data = await res.json();
-                                        const newRefund = data.data || data;
-
-                                        setOrders(current =>
-                                            current.map(o => o.id === refundingOrder.id ? { ...o, refund: newRefund } : o)
-                                        );
-
-                                        alert("Refund request submitted successfully! Super Admin will review it.");
-                                        setRefundingOrder(null);
-                                        setRefundReason("");
-                                    } else {
-                                        const err = await res.json();
-                                        alert(err.message || "Failed to submit refund request.");
-                                    }
-                                } catch (error) {
-                                    console.error("Refund request error:", error);
-                                    alert("An error occurred. Please try again.");
-                                } finally {
-                                    setSubmittingRefund(false);
-                                }
-                            }}
-                            style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}
-                        >
-                            <div style={{ backgroundColor: "#FFF8F7", padding: "12px 15px", borderRadius: "8px", border: "1px solid #FEE2E2" }}>
-                                <span style={{ display: "block", fontSize: "0.8rem", color: "#64748B", fontWeight: "600" }}>REFUNDABLE AMOUNT</span>
-                                <strong style={{ fontSize: "1.4rem", color: "var(--coral, #F16F68)" }}>₹{refundingOrder.totalAmount}</strong>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label style={{ fontWeight: '700', fontSize: '0.95rem', color: '#334155' }}>
-                                    Reason for Refund
-                                </label>
-                                <textarea
-                                    value={refundReason}
-                                    onChange={(e) => setRefundReason(e.target.value)}
-                                    placeholder="Please provide details on why you are requesting a refund (e.g. food not delivered, item spoiled, incorrect items)..."
-                                    required
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '100px',
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #CBD5E1',
-                                        fontSize: '0.9rem',
-                                        fontFamily: 'inherit',
-                                        resize: 'vertical',
-                                        outline: 'none'
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{
-                                display: 'flex',
-                                gap: '12px',
-                                borderTop: '1px solid #F1F5F9',
-                                paddingTop: '20px'
-                            }}>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setRefundingOrder(null);
-                                        setRefundReason("");
-                                    }}
-                                    style={{
-                                        flex: 1,
-                                        padding: '12px',
-                                        backgroundColor: 'white',
-                                        border: '1px solid #CBD5E1',
-                                        borderRadius: '10px',
-                                        fontWeight: '600',
-                                        color: '#475569',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submittingRefund || !refundReason.trim()}
-                                    style={{
-                                        flex: 1,
-                                        padding: '12px',
-                                        backgroundColor: 'var(--coral, #F16F68)',
-                                        border: 'none',
-                                        borderRadius: '10px',
-                                        fontWeight: '700',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        opacity: submittingRefund ? 0.7 : 1
-                                    }}
-                                >
-                                    {submittingRefund ? "Submitting..." : "Submit Request"}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
