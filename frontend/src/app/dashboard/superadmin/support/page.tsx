@@ -142,6 +142,17 @@ export default function SuperAdminSupportPage() {
             let finalDescription = newTicketDescription.trim();
             if (retrievedOrder) {
                 finalDescription += `\n\n--- Associated Order Details ---\nOrder ID: ${retrievedOrder.id}\nKitchen: ${retrievedOrder.seller?.businessName || "Unknown"}\nTotal Amount: ₹${retrievedOrder.totalAmount}\nStatus: ${retrievedOrder.status}\nPaid: ${retrievedOrder.isPaid ? "YES" : "NO"}`;
+            } else if (enteredOrderId && newTicketCategory === 'ROOM') {
+                const matchedBooking = modalUserActivity?.bookings?.find((b: any) => b.id === enteredOrderId);
+                if (matchedBooking) {
+                    const start = new Date(matchedBooking.startDate).toLocaleDateString();
+                    const end = new Date(matchedBooking.endDate).toLocaleDateString();
+                    finalDescription += `\n\n--- Associated Booking Details ---\nBooking ID: ${matchedBooking.id}\nRoom: ${matchedBooking.room?.title || "Stay"}\nDates: ${start} to ${end}\nStatus: ${matchedBooking.status}`;
+                } else {
+                    finalDescription += `\n\n--- Associated Booking ID ---\nBooking ID: ${enteredOrderId}`;
+                }
+            } else if (enteredOrderId) {
+                finalDescription += `\n\n--- Associated ID ---\nID: ${enteredOrderId}`;
             }
 
             const res = await fetchApi("/api/tickets", {
@@ -905,7 +916,8 @@ export default function SuperAdminSupportPage() {
                             onSubmit={handleRaiseTicketSubmit}
                             style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto' }}
                         >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
+                            {/* 1. Select User */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative', flexShrink: 0 }}>
                                 <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
                                     Select User / Customer / Seller
                                 </label>
@@ -1000,6 +1012,37 @@ export default function SuperAdminSupportPage() {
                                 )}
                             </div>
 
+                            {/* 2. Category Selection */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+                                <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
+                                    Category
+                                </label>
+                                <select
+                                    value={newTicketCategory}
+                                    onChange={(e) => {
+                                        setNewTicketCategory(e.target.value);
+                                        setEnteredOrderId("");
+                                        setRetrievedOrder(null);
+                                    }}
+                                    required
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #CBD5E1',
+                                        fontSize: '0.9rem',
+                                        outline: 'none',
+                                        backgroundColor: 'white'
+                                    }}
+                                >
+                                    <option value="FOOD">FOOD</option>
+                                    <option value="ROOM">ROOM</option>
+                                    <option value="PAYMENT">PAYMENT</option>
+                                    <option value="REFUND">REFUND</option>
+                                    <option value="OTHER">OTHER</option>
+                                </select>
+                            </div>
+
+                            {/* 3. Recent Activity (Filtered by Category!) */}
                             {selectedUser && (
                                 <div style={{
                                     border: '1px solid #E2E8F0',
@@ -1009,11 +1052,10 @@ export default function SuperAdminSupportPage() {
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: '12px',
-                                    maxHeight: '220px',
-                                    overflowY: 'auto'
+                                    flexShrink: 0
                                 }}>
                                     <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569', margin: 0, borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
-                                        RECENT USER ACTIVITY (UP TO 5 ITEMS)
+                                        {newTicketCategory === 'ROOM' ? 'RECENT STAY BOOKINGS' : newTicketCategory === 'FOOD' || newTicketCategory === 'REFUND' ? 'RECENT FOOD ORDERS' : 'RECENT USER ACTIVITY'}
                                     </h4>
 
                                     {loadingModalActivity ? (
@@ -1022,69 +1064,29 @@ export default function SuperAdminSupportPage() {
                                         </div>
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {/* Recent Orders */}
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>
-                                                    Paid/Recent Orders
-                                                </div>
-                                                {(!modalUserActivity || !modalUserActivity.orders || modalUserActivity.orders.length === 0) ? (
-                                                    <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontStyle: 'italic' }}>No orders found.</span>
-                                                ) : (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                                        {modalUserActivity.orders.slice(0, 5).map((ord: any) => (
-                                                            <div
-                                                                key={ord.id}
-                                                                onClick={() => {
-                                                                    setEnteredOrderId(ord.id);
-                                                                    retrieveOrderDetails(ord.id);
-                                                                }}
-                                                                style={{
-                                                                    backgroundColor: 'white',
-                                                                    padding: '8px',
-                                                                    borderRadius: '6px',
-                                                                    border: enteredOrderId === ord.id ? '2px solid var(--primary, #10B981)' : '1px solid #E2E8F0',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '0.75rem',
-                                                                    display: 'flex',
-                                                                    justifyContent: 'space-between',
-                                                                    alignItems: 'center'
-                                                                }}
-                                                            >
-                                                                <div>
-                                                                    <span style={{ fontWeight: '700' }}>#{ord.id.slice(0, 8)}</span>
-                                                                    <div style={{ fontSize: '0.65rem', color: '#64748B' }}>
-                                                                        {ord.seller?.businessName || "Kitchen"} • {ord.status}
-                                                                    </div>
-                                                                </div>
-                                                                <strong style={{ color: '#10B981' }}>₹{ord.totalAmount}</strong>
-                                                            </div>
-                                                        ))}
+                                            {/* Recent Orders - Visible for non-ROOM categories */}
+                                            {newTicketCategory !== 'ROOM' && (
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>
+                                                        Recent Orders (Select to fill Order ID)
                                                     </div>
-                                                )}
-                                            </div>
-
-                                            {/* Recent Bookings */}
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>
-                                                    Room Bookings
-                                                </div>
-                                                {(!modalUserActivity || !modalUserActivity.bookings || modalUserActivity.bookings.length === 0) ? (
-                                                    <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontStyle: 'italic' }}>No bookings found.</span>
-                                                ) : (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                                        {modalUserActivity.bookings.slice(0, 5).map((bk: any) => {
-                                                            const start = new Date(bk.startDate);
-                                                            const end = new Date(bk.endDate);
-                                                            const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-                                                            const amount = nights * bk.room.price;
-                                                            return (
+                                                    {(!modalUserActivity || !modalUserActivity.orders || modalUserActivity.orders.length === 0) ? (
+                                                        <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontStyle: 'italic' }}>No orders found.</span>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                            {modalUserActivity.orders.slice(0, 5).map((ord: any) => (
                                                                 <div
-                                                                    key={bk.id}
+                                                                    key={ord.id}
+                                                                    onClick={() => {
+                                                                        setEnteredOrderId(ord.id);
+                                                                        retrieveOrderDetails(ord.id);
+                                                                    }}
                                                                     style={{
                                                                         backgroundColor: 'white',
                                                                         padding: '8px',
                                                                         borderRadius: '6px',
-                                                                        border: '1px solid #E2E8F0',
+                                                                        border: enteredOrderId === ord.id ? '2px solid var(--primary, #10B981)' : '1px solid #E2E8F0',
+                                                                        cursor: 'pointer',
                                                                         fontSize: '0.75rem',
                                                                         display: 'flex',
                                                                         justifyContent: 'space-between',
@@ -1092,34 +1094,83 @@ export default function SuperAdminSupportPage() {
                                                                     }}
                                                                 >
                                                                     <div>
-                                                                        <span style={{ fontWeight: '700' }}>{bk.room.title}</span>
+                                                                        <span style={{ fontWeight: '700' }}>#{ord.id.slice(0, 8)}</span>
                                                                         <div style={{ fontSize: '0.65rem', color: '#64748B' }}>
-                                                                            {start.toLocaleDateString()} to {end.toLocaleDateString()} • {bk.status}
+                                                                            {ord.seller?.businessName || "Kitchen"} • {ord.status}
                                                                         </div>
                                                                     </div>
-                                                                    <strong style={{ color: '#10B981' }}>₹{amount}</strong>
+                                                                    <strong style={{ color: '#10B981' }}>₹{ord.totalAmount}</strong>
                                                                 </div>
-                                                            );
-                                                        })}
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Recent Bookings - Visible for ROOM, PAYMENT, OTHER categories */}
+                                            {(newTicketCategory === 'ROOM' || newTicketCategory === 'PAYMENT' || newTicketCategory === 'OTHER') && (
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>
+                                                        Room Bookings (Select to fill Booking ID)
                                                     </div>
-                                                )}
-                                            </div>
+                                                    {(!modalUserActivity || !modalUserActivity.bookings || modalUserActivity.bookings.length === 0) ? (
+                                                        <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontStyle: 'italic' }}>No bookings found.</span>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                            {modalUserActivity.bookings.slice(0, 5).map((bk: any) => {
+                                                                const start = new Date(bk.startDate);
+                                                                const end = new Date(bk.endDate);
+                                                                const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+                                                                const amount = nights * bk.room.price;
+                                                                return (
+                                                                    <div
+                                                                        key={bk.id}
+                                                                        onClick={() => {
+                                                                            setEnteredOrderId(bk.id);
+                                                                        }}
+                                                                        style={{
+                                                                            backgroundColor: 'white',
+                                                                            padding: '8px',
+                                                                            borderRadius: '6px',
+                                                                            border: enteredOrderId === bk.id ? '2px solid var(--primary, #10B981)' : '1px solid #E2E8F0',
+                                                                            cursor: 'pointer',
+                                                                            fontSize: '0.75rem',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between',
+                                                                            alignItems: 'center'
+                                                                        }}
+                                                                    >
+                                                                        <div>
+                                                                            <span style={{ fontWeight: '700' }}>{bk.room.title}</span>
+                                                                            <div style={{ fontSize: '0.65rem', color: '#64748B' }}>
+                                                                                {start.toLocaleDateString()} to {end.toLocaleDateString()} • {bk.status}
+                                                                            </div>
+                                                                        </div>
+                                                                        <strong style={{ color: '#10B981' }}>₹{amount}</strong>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
                             )}
 
+                            {/* 4. Associate ID field */}
                             {selectedUser && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
                                     <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
-                                        Associate Order ID (Optional)
+                                        {newTicketCategory === 'ROOM' ? 'Associate Booking ID (Optional)' : 'Associate Order ID (Optional)'}
                                     </label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <input
                                             type="text"
                                             value={enteredOrderId}
                                             onChange={(e) => setEnteredOrderId(e.target.value)}
-                                            placeholder="Enter Order ID or select from recent orders..."
+                                            placeholder={newTicketCategory === 'ROOM' ? 'Enter Booking ID or select booking from list...' : 'Enter Order ID or select from recent orders...'}
                                             style={{
                                                 flex: 1,
                                                 padding: '10px 12px',
@@ -1129,26 +1180,28 @@ export default function SuperAdminSupportPage() {
                                                 outline: 'none'
                                             }}
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={() => retrieveOrderDetails(enteredOrderId)}
-                                            disabled={loadingRetrievedOrder || !enteredOrderId.trim()}
-                                            style={{
-                                                backgroundColor: '#1E293B',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '0 15px',
-                                                borderRadius: '8px',
-                                                cursor: 'pointer',
-                                                fontWeight: '600',
-                                                fontSize: '0.85rem'
-                                            }}
-                                        >
-                                            {loadingRetrievedOrder ? 'Fetching...' : 'Get Order'}
-                                        </button>
+                                        {newTicketCategory !== 'ROOM' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => retrieveOrderDetails(enteredOrderId)}
+                                                disabled={loadingRetrievedOrder || !enteredOrderId.trim()}
+                                                style={{
+                                                    backgroundColor: '#1E293B',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    padding: '0 15px',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: '600',
+                                                    fontSize: '0.85rem'
+                                                }}
+                                            >
+                                                {loadingRetrievedOrder ? 'Fetching...' : 'Get Order'}
+                                            </button>
+                                        )}
                                     </div>
 
-                                    {retrievedOrder && (
+                                    {retrievedOrder && newTicketCategory !== 'ROOM' && (
                                         <div style={{
                                             backgroundColor: '#E0F2FE',
                                             border: '1px solid #BAE6FD',
@@ -1168,32 +1221,8 @@ export default function SuperAdminSupportPage() {
                                 </div>
                             )}
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
-                                    Category
-                                </label>
-                                <select
-                                    value={newTicketCategory}
-                                    onChange={(e) => setNewTicketCategory(e.target.value)}
-                                    required
-                                    style={{
-                                        padding: '10px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #CBD5E1',
-                                        fontSize: '0.9rem',
-                                        outline: 'none',
-                                        backgroundColor: 'white'
-                                    }}
-                                >
-                                    <option value="FOOD">FOOD</option>
-                                    <option value="ROOM">ROOM</option>
-                                    <option value="PAYMENT">PAYMENT</option>
-                                    <option value="REFUND">REFUND</option>
-                                    <option value="OTHER">OTHER</option>
-                                </select>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {/* 5. Ticket Title */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
                                 <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
                                     Ticket Title
                                 </label>
@@ -1213,7 +1242,8 @@ export default function SuperAdminSupportPage() {
                                 />
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {/* 6. Description */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
                                 <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
                                     Description / Details
                                 </label>
@@ -1241,7 +1271,8 @@ export default function SuperAdminSupportPage() {
                                 gap: '12px',
                                 borderTop: '1px solid #F1F5F9',
                                 paddingTop: '20px',
-                                marginTop: '10px'
+                                marginTop: '10px',
+                                flexShrink: 0
                             }}>
                                 <button
                                     type="button"
