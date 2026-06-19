@@ -8,14 +8,17 @@ export const createTicket = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { title, description, category } = await req.json();
+    const { title, description, category, userId } = await req.json();
     if (!title || !description || !category) {
         throw new ApiError("Missing required fields", 400);
     }
 
+    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN";
+    const ticketUserId = (isSuperAdmin && userId) ? userId : session.user.id;
+
     const ticket = await db.ticket.create({
         data: {
-            userId: session.user.id,
+            userId: ticketUserId,
             title,
             description,
             category,

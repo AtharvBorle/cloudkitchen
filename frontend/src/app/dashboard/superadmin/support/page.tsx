@@ -25,6 +25,18 @@ export default function SuperAdminSupportPage() {
     const [refundReason, setRefundReason] = useState("");
     const [submittingRefund, setSubmittingRefund] = useState(false);
 
+    // Raise Ticket Modal State
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [systemUsers, setSystemUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+
+    // Form states
+    const [newTicketUserId, setNewTicketUserId] = useState("");
+    const [newTicketTitle, setNewTicketTitle] = useState("");
+    const [newTicketDescription, setNewTicketDescription] = useState("");
+    const [newTicketCategory, setNewTicketCategory] = useState("FOOD");
+    const [submittingNewTicket, setSubmittingNewTicket] = useState(false);
+
     const fetchTickets = async () => {
         try {
             setLoadingTickets(true);
@@ -52,6 +64,63 @@ export default function SuperAdminSupportPage() {
             console.error("Error fetching user activity:", error);
         } finally {
             setLoadingActivity(false);
+        }
+    };
+
+    const fetchUsers = async () => {
+        setLoadingUsers(true);
+        try {
+            const res = await fetchApi("/api/superadmin/users");
+            if (res.ok) {
+                const data = await res.json();
+                setSystemUsers(data.data || data);
+            }
+        } catch (error) {
+            console.error("Error fetching system users:", error);
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
+
+    const handleRaiseTicketSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newTicketUserId || !newTicketTitle.trim() || !newTicketDescription.trim() || !newTicketCategory) {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        setSubmittingNewTicket(true);
+        try {
+            const res = await fetchApi("/api/tickets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: newTicketUserId,
+                    title: newTicketTitle.trim(),
+                    description: newTicketDescription.trim(),
+                    category: newTicketCategory
+                })
+            });
+
+            if (res.ok) {
+                alert("Ticket successfully raised!");
+                setShowCreateModal(false);
+                // Reset form fields
+                setNewTicketUserId("");
+                setNewTicketTitle("");
+                setNewTicketDescription("");
+                setNewTicketCategory("FOOD");
+                // Refresh ticket list
+                fetchTickets();
+            } else {
+                const err = await res.json();
+                alert(err.message || "Failed to raise ticket.");
+            }
+        } catch (error) {
+            console.error("Raise ticket error:", error);
+            alert("An error occurred. Please try again.");
+        } finally {
+            setSubmittingNewTicket(false);
         }
     };
 
@@ -156,24 +225,47 @@ export default function SuperAdminSupportPage() {
                     <h1 style={{ fontSize: "2rem", fontWeight: "800", color: "#1E293B", marginBottom: "4px" }}>Support & Tickets Admin</h1>
                     <p style={{ color: "#64748B", fontSize: "0.9rem" }}>Manage, review, and solve customer and seller support inquiries</p>
                 </div>
-                <button
-                    onClick={handleRefresh}
-                    style={{
-                        backgroundColor: "#F1F5F9",
-                        border: "1px solid #CBD5E1",
-                        color: "#475569",
-                        padding: "8px 16px",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        fontWeight: "700",
-                        fontSize: "0.85rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px"
-                    }}
-                >
-                    <RefreshCw size={16} /> Refresh
-                </button>
+                <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                        onClick={() => {
+                            setShowCreateModal(true);
+                            fetchUsers();
+                        }}
+                        style={{
+                            backgroundColor: "var(--primary, #10B981)",
+                            color: "white",
+                            border: "none",
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            fontWeight: "700",
+                            fontSize: "0.85rem",
+                            display: "flex",
+                            alignItems: "center",
+                            boxShadow: "0 4px 10px rgba(16, 185, 129, 0.2)"
+                        }}
+                    >
+                        Raise Ticket
+                    </button>
+                    <button
+                        onClick={handleRefresh}
+                        style={{
+                            backgroundColor: "#F1F5F9",
+                            border: "1px solid #CBD5E1",
+                            color: "#475569",
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            fontWeight: "700",
+                            fontSize: "0.85rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px"
+                        }}
+                    >
+                        <RefreshCw size={16} /> Refresh
+                    </button>
+                </div>
             </div>
 
             {/* Split Screen Container */}
@@ -692,6 +784,206 @@ export default function SuperAdminSupportPage() {
                                     }}
                                 >
                                     {submittingRefund ? "Creating..." : "Confirm & Send"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Raise Ticket Modal */}
+            {showCreateModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    backdropFilter: 'blur(5px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 99999,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '20px',
+                        width: '100%',
+                        maxWidth: '500px',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                        border: '1px solid #E2E8F0',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        <div style={{
+                            padding: '20px 25px',
+                            borderBottom: '1px solid #F1F5F9',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', margin: 0 }}>
+                                Raise Support Ticket
+                            </h3>
+                            <button
+                                onClick={() => setShowCreateModal(false)}
+                                style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    fontSize: '1.5rem',
+                                    fontWeight: 'bold',
+                                    color: '#64748B',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <form
+                            onSubmit={handleRaiseTicketSubmit}
+                            style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '15px' }}
+                        >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
+                                    Select User / Customer / Seller
+                                </label>
+                                {loadingUsers ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#64748B' }}>
+                                        <Loader2 className="animate-spin" size={16} /> Loading users...
+                                    </div>
+                                ) : (
+                                    <select
+                                        value={newTicketUserId}
+                                        onChange={(e) => setNewTicketUserId(e.target.value)}
+                                        required
+                                        style={{
+                                            padding: '10px 12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #CBD5E1',
+                                            fontSize: '0.9rem',
+                                            outline: 'none',
+                                            backgroundColor: 'white'
+                                        }}
+                                    >
+                                        <option value="">-- Choose User --</option>
+                                        {systemUsers.map((user: any) => (
+                                            <option key={user.id} value={user.id}>
+                                                {user.name} ({user.email}) - {user.role}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
+                                    Category
+                                </label>
+                                <select
+                                    value={newTicketCategory}
+                                    onChange={(e) => setNewTicketCategory(e.target.value)}
+                                    required
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #CBD5E1',
+                                        fontSize: '0.9rem',
+                                        outline: 'none',
+                                        backgroundColor: 'white'
+                                    }}
+                                >
+                                    <option value="FOOD">FOOD</option>
+                                    <option value="ROOM">ROOM</option>
+                                    <option value="PAYMENT">PAYMENT</option>
+                                    <option value="REFUND">REFUND</option>
+                                    <option value="OTHER">OTHER</option>
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
+                                    Ticket Title
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newTicketTitle}
+                                    onChange={(e) => setNewTicketTitle(e.target.value)}
+                                    placeholder="Brief subject of the inquiry..."
+                                    required
+                                    style={{
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #CBD5E1',
+                                        fontSize: '0.9rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
+                                    Description / Details
+                                </label>
+                                <textarea
+                                    value={newTicketDescription}
+                                    onChange={(e) => setNewTicketDescription(e.target.value)}
+                                    placeholder="Enter full details about this support request..."
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        minHeight: '100px',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #CBD5E1',
+                                        fontSize: '0.9rem',
+                                        fontFamily: 'inherit',
+                                        resize: 'vertical',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                borderTop: '1px solid #F1F5F9',
+                                paddingTop: '20px',
+                                marginTop: '10px'
+                            }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #CBD5E1',
+                                        borderRadius: '10px',
+                                        fontWeight: '600',
+                                        color: '#475569',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={submittingNewTicket || !newTicketUserId}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        backgroundColor: 'var(--primary, #10B981)',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        fontWeight: '700',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        opacity: submittingNewTicket ? 0.7 : 1
+                                    }}
+                                >
+                                    {submittingNewTicket ? "Raising..." : "Create Ticket"}
                                 </button>
                             </div>
                         </form>
