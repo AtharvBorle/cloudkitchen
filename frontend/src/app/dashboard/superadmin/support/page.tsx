@@ -752,7 +752,7 @@ export default function SuperAdminSupportPage() {
                                 setSubmittingRefund(true);
                                 try {
                                     const bodyData: any = {
-                                        reason: refundReason.trim(),
+                                        reason: `[Ticket Ref: #${selectedTicket.id}] ${refundReason.trim()}`,
                                         amount: targetRefund.amount
                                     };
                                     if (targetRefund.type === 'ORDER') {

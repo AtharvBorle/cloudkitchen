@@ -80,6 +80,11 @@ export default function SuperAdminRefundsPage() {
         }
     };
 
+    const getTicketId = (reason: string) => {
+        const match = reason?.match(/\[Ticket Ref: #?([a-fA-F0-9-]+)\]/);
+        return match ? match[1] : null;
+    };
+
     const filteredRefunds = refunds.filter(r => {
         const matchesStatus = statusFilter === "ALL" || r.status === statusFilter;
         
@@ -244,8 +249,13 @@ export default function SuperAdminRefundsPage() {
                                         ₹{r.amount}
                                     </div>
                                     <div style={{ fontSize: "0.8rem", color: "#334155", marginBottom: "6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        Reason: {r.reason}
+                                        Reason: {r.reason ? r.reason.replace(/\[Ticket Ref: #?[a-fA-F0-9-]+\]\s*/, '') : ""}
                                     </div>
+                                    {getTicketId(r.reason) && (
+                                        <div style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.7rem', color: '#0369A1', backgroundColor: '#E0F2FE', padding: '2px 6px', borderRadius: '4px', marginBottom: '6px', fontWeight: 'bold', width: 'fit-content' }}>
+                                            Ticket ID: #{getTicketId(r.reason).slice(0, 8)}
+                                        </div>
+                                    )}
                                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94A3B8" }}>
                                         <span>By: {r.user?.name}</span>
                                         <span>{new Date(r.createdAt).toLocaleDateString()}</span>
@@ -283,7 +293,7 @@ export default function SuperAdminRefundsPage() {
                             </div>
 
                             {/* Section: Customer & Request metadata */}
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
                                 <div style={{ backgroundColor: "#F8FAFC", padding: "16px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
                                     <span style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: "#64748B", marginBottom: "8px" }}>CUSTOMER PROFILE</span>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -313,13 +323,31 @@ export default function SuperAdminRefundsPage() {
                                         <span style={{ fontSize: "0.8rem", color: "#94A3B8" }}>General Request</span>
                                     )}
                                 </div>
+
+                                <div style={{ backgroundColor: "#F8FAFC", padding: "16px", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                                    <span style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: "#64748B", marginBottom: "8px" }}>SUPPORT TICKET</span>
+                                    {getTicketId(selectedRefund.reason) ? (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                            <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#0369A1" }}>🎫 Associated Ticket</span>
+                                            <span style={{ fontSize: "0.8rem", color: "#475569", wordBreak: 'break-all' }}>ID: #{getTicketId(selectedRefund.reason).slice(0, 8)}</span>
+                                            <a 
+                                                href={`/dashboard/superadmin/support`}
+                                                style={{ fontSize: "0.75rem", color: "var(--primary, #10B981)", textDecoration: "underline", fontWeight: "600", marginTop: "4px" }}
+                                            >
+                                                Go to Support Panel
+                                            </a>
+                                        </div>
+                                    ) : (
+                                        <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontStyle: "italic" }}>No linked support ticket</span>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Section: Reason */}
                             <div style={{ backgroundColor: "#FFF8F7", border: "1px solid #FEE2E2", padding: "16px", borderRadius: "12px" }}>
                                 <span style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: "#B91C1C", marginBottom: "6px" }}>REASON FOR REFUND REQUEST</span>
                                 <p style={{ fontSize: "0.9rem", color: "#475569", lineHeight: "1.4", margin: 0 }}>
-                                    {selectedRefund.reason}
+                                    {selectedRefund.reason ? selectedRefund.reason.replace(/\[Ticket Ref: #?[a-fA-F0-9-]+\]\s*/, '') : ""}
                                 </p>
                             </div>
 
