@@ -32,6 +32,19 @@ export default function SuperAdminSupportPage() {
 
     // Form states
     const [newTicketUserId, setNewTicketUserId] = useState("");
+    const [selectedUser, setSelectedUser] = useState<any | null>(null);
+    const [userSearchQuery, setUserSearchQuery] = useState("");
+    const [showUserSuggestions, setShowUserSuggestions] = useState(false);
+
+    // Modal activity states
+    const [modalUserActivity, setModalUserActivity] = useState<any | null>(null);
+    const [loadingModalActivity, setLoadingModalActivity] = useState(false);
+
+    // Order lookup states
+    const [enteredOrderId, setEnteredOrderId] = useState("");
+    const [retrievedOrder, setRetrievedOrder] = useState<any | null>(null);
+    const [loadingRetrievedOrder, setLoadingRetrievedOrder] = useState(false);
+
     const [newTicketTitle, setNewTicketTitle] = useState("");
     const [newTicketDescription, setNewTicketDescription] = useState("");
     const [newTicketCategory, setNewTicketCategory] = useState("FOOD");
@@ -82,6 +95,41 @@ export default function SuperAdminSupportPage() {
         }
     };
 
+    const fetchUserActivityForModal = async (userId: string) => {
+        setLoadingModalActivity(true);
+        try {
+            const res = await fetchApi(`/api/superadmin/users/${userId}/activity`);
+            if (res.ok) {
+                const data = await res.json();
+                setModalUserActivity(data.data || data);
+            }
+        } catch (error) {
+            console.error("Error fetching modal user activity:", error);
+        } finally {
+            setLoadingModalActivity(false);
+        }
+    };
+
+    const retrieveOrderDetails = async (orderId: string) => {
+        if (!orderId.trim()) return;
+        setLoadingRetrievedOrder(true);
+        setRetrievedOrder(null);
+        try {
+            const res = await fetchApi(`/api/user/orders/${orderId.trim()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setRetrievedOrder(data.data || data);
+            } else {
+                alert("Order not found or invalid Order ID.");
+            }
+        } catch (error) {
+            console.error("Error retrieving order:", error);
+            alert("Error fetching order details.");
+        } finally {
+            setLoadingRetrievedOrder(false);
+        }
+    };
+
     const handleRaiseTicketSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newTicketUserId || !newTicketTitle.trim() || !newTicketDescription.trim() || !newTicketCategory) {
@@ -91,13 +139,18 @@ export default function SuperAdminSupportPage() {
 
         setSubmittingNewTicket(true);
         try {
+            let finalDescription = newTicketDescription.trim();
+            if (retrievedOrder) {
+                finalDescription += `\n\n--- Associated Order Details ---\nOrder ID: ${retrievedOrder.id}\nKitchen: ${retrievedOrder.seller?.businessName || "Unknown"}\nTotal Amount: ₹${retrievedOrder.totalAmount}\nStatus: ${retrievedOrder.status}\nPaid: ${retrievedOrder.isPaid ? "YES" : "NO"}`;
+            }
+
             const res = await fetchApi("/api/tickets", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     userId: newTicketUserId,
                     title: newTicketTitle.trim(),
-                    description: newTicketDescription.trim(),
+                    description: finalDescription,
                     category: newTicketCategory
                 })
             });
@@ -107,6 +160,11 @@ export default function SuperAdminSupportPage() {
                 setShowCreateModal(false);
                 // Reset form fields
                 setNewTicketUserId("");
+                setSelectedUser(null);
+                setUserSearchQuery("");
+                setModalUserActivity(null);
+                setEnteredOrderId("");
+                setRetrievedOrder(null);
                 setNewTicketTitle("");
                 setNewTicketDescription("");
                 setNewTicketCategory("FOOD");
@@ -810,11 +868,13 @@ export default function SuperAdminSupportPage() {
                         backgroundColor: 'white',
                         borderRadius: '20px',
                         width: '100%',
-                        maxWidth: '500px',
+                        maxWidth: '550px',
                         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                         border: '1px solid #E2E8F0',
                         display: 'flex',
-                        flexDirection: 'column'
+                        flexDirection: 'column',
+                        maxHeight: '90vh',
+                        overflow: 'hidden'
                     }}>
                         <div style={{
                             padding: '20px 25px',
@@ -843,9 +903,9 @@ export default function SuperAdminSupportPage() {
 
                         <form
                             onSubmit={handleRaiseTicketSubmit}
-                            style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '15px' }}
+                            style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto' }}
                         >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
                                 <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
                                     Select User / Customer / Seller
                                 </label>
@@ -854,28 +914,259 @@ export default function SuperAdminSupportPage() {
                                         <Loader2 className="animate-spin" size={16} /> Loading users...
                                     </div>
                                 ) : (
-                                    <select
-                                        value={newTicketUserId}
-                                        onChange={(e) => setNewTicketUserId(e.target.value)}
-                                        required
-                                        style={{
-                                            padding: '10px 12px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #CBD5E1',
-                                            fontSize: '0.9rem',
-                                            outline: 'none',
-                                            backgroundColor: 'white'
-                                        }}
-                                    >
-                                        <option value="">-- Choose User --</option>
-                                        {systemUsers.map((user: any) => (
-                                            <option key={user.id} value={user.id}>
-                                                {user.name} ({user.email}) - {user.role}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <>
+                                        <input
+                                            type="text"
+                                            placeholder="Type to search user (name, email, role)..."
+                                            value={userSearchQuery}
+                                            onChange={(e) => {
+                                                setUserSearchQuery(e.target.value);
+                                                setShowUserSuggestions(true);
+                                                if (selectedUser) {
+                                                    setSelectedUser(null);
+                                                    setNewTicketUserId("");
+                                                    setModalUserActivity(null);
+                                                    setEnteredOrderId("");
+                                                    setRetrievedOrder(null);
+                                                }
+                                            }}
+                                            onFocus={() => setShowUserSuggestions(true)}
+                                            style={{
+                                                padding: '10px 12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #CBD5E1',
+                                                fontSize: '0.9rem',
+                                                outline: 'none',
+                                                width: '100%'
+                                            }}
+                                        />
+
+                                        {showUserSuggestions && userSearchQuery && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                border: '1px solid #E2E8F0',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                                                maxHeight: '180px',
+                                                overflowY: 'auto',
+                                                zIndex: 10,
+                                                marginTop: '4px'
+                                            }}>
+                                                {systemUsers.filter(u => 
+                                                    u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                                    u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                                    u.role.toLowerCase().includes(userSearchQuery.toLowerCase())
+                                                ).length === 0 ? (
+                                                    <div style={{ padding: '10px', fontSize: '0.85rem', color: '#64748B', textAlign: 'center' }}>
+                                                        No users found
+                                                    </div>
+                                                ) : (
+                                                    systemUsers.filter(u => 
+                                                        u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                                        u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                                        u.role.toLowerCase().includes(userSearchQuery.toLowerCase())
+                                                    ).map((u: any) => (
+                                                        <div
+                                                            key={u.id}
+                                                            onClick={() => {
+                                                                setSelectedUser(u);
+                                                                setNewTicketUserId(u.id);
+                                                                setUserSearchQuery(`${u.name} (${u.email}) - ${u.role}`);
+                                                                setShowUserSuggestions(false);
+                                                                fetchUserActivityForModal(u.id);
+                                                            }}
+                                                            style={{
+                                                                padding: '10px 12px',
+                                                                fontSize: '0.85rem',
+                                                                color: '#334155',
+                                                                cursor: 'pointer',
+                                                                borderBottom: '1px solid #F1F5F9',
+                                                                transition: 'background 0.15s'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                        >
+                                                            <strong>{u.name}</strong> <span style={{ color: '#64748B' }}>({u.email})</span> • <span style={{ textTransform: 'lowercase', fontSize: '0.75rem', backgroundColor: '#E2E8F0', padding: '2px 6px', borderRadius: '4px' }}>{u.role}</span>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
+
+                            {selectedUser && (
+                                <div style={{
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '12px',
+                                    padding: '15px',
+                                    backgroundColor: '#F8FAFC',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px',
+                                    maxHeight: '220px',
+                                    overflowY: 'auto'
+                                }}>
+                                    <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569', margin: 0, borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
+                                        RECENT USER ACTIVITY (UP TO 5 ITEMS)
+                                    </h4>
+
+                                    {loadingModalActivity ? (
+                                        <div style={{ display: 'flex', justifyContent: 'center', padding: '15px' }}>
+                                            <Loader2 className="animate-spin" size={18} color="var(--primary)" />
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            {/* Recent Orders */}
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>
+                                                    Paid/Recent Orders
+                                                </div>
+                                                {(!modalUserActivity || !modalUserActivity.orders || modalUserActivity.orders.length === 0) ? (
+                                                    <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontStyle: 'italic' }}>No orders found.</span>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                        {modalUserActivity.orders.slice(0, 5).map((ord: any) => (
+                                                            <div
+                                                                key={ord.id}
+                                                                onClick={() => {
+                                                                    setEnteredOrderId(ord.id);
+                                                                    retrieveOrderDetails(ord.id);
+                                                                }}
+                                                                style={{
+                                                                    backgroundColor: 'white',
+                                                                    padding: '8px',
+                                                                    borderRadius: '6px',
+                                                                    border: enteredOrderId === ord.id ? '2px solid var(--primary, #10B981)' : '1px solid #E2E8F0',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '0.75rem',
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center'
+                                                                }}
+                                                            >
+                                                                <div>
+                                                                    <span style={{ fontWeight: '700' }}>#{ord.id.slice(0, 8)}</span>
+                                                                    <div style={{ fontSize: '0.65rem', color: '#64748B' }}>
+                                                                        {ord.seller?.businessName || "Kitchen"} • {ord.status}
+                                                                    </div>
+                                                                </div>
+                                                                <strong style={{ color: '#10B981' }}>₹{ord.totalAmount}</strong>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Recent Bookings */}
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#1E293B', marginBottom: '6px' }}>
+                                                    Room Bookings
+                                                </div>
+                                                {(!modalUserActivity || !modalUserActivity.bookings || modalUserActivity.bookings.length === 0) ? (
+                                                    <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontStyle: 'italic' }}>No bookings found.</span>
+                                                ) : (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                        {modalUserActivity.bookings.slice(0, 5).map((bk: any) => {
+                                                            const start = new Date(bk.startDate);
+                                                            const end = new Date(bk.endDate);
+                                                            const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+                                                            const amount = nights * bk.room.price;
+                                                            return (
+                                                                <div
+                                                                    key={bk.id}
+                                                                    style={{
+                                                                        backgroundColor: 'white',
+                                                                        padding: '8px',
+                                                                        borderRadius: '6px',
+                                                                        border: '1px solid #E2E8F0',
+                                                                        fontSize: '0.75rem',
+                                                                        display: 'flex',
+                                                                        justifyContent: 'space-between',
+                                                                        alignItems: 'center'
+                                                                    }}
+                                                                >
+                                                                    <div>
+                                                                        <span style={{ fontWeight: '700' }}>{bk.room.title}</span>
+                                                                        <div style={{ fontSize: '0.65rem', color: '#64748B' }}>
+                                                                            {start.toLocaleDateString()} to {end.toLocaleDateString()} • {bk.status}
+                                                                        </div>
+                                                                    </div>
+                                                                    <strong style={{ color: '#10B981' }}>₹{amount}</strong>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedUser && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
+                                        Associate Order ID (Optional)
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input
+                                            type="text"
+                                            value={enteredOrderId}
+                                            onChange={(e) => setEnteredOrderId(e.target.value)}
+                                            placeholder="Enter Order ID or select from recent orders..."
+                                            style={{
+                                                flex: 1,
+                                                padding: '10px 12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #CBD5E1',
+                                                fontSize: '0.9rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => retrieveOrderDetails(enteredOrderId)}
+                                            disabled={loadingRetrievedOrder || !enteredOrderId.trim()}
+                                            style={{
+                                                backgroundColor: '#1E293B',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '0 15px',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontWeight: '600',
+                                                fontSize: '0.85rem'
+                                            }}
+                                        >
+                                            {loadingRetrievedOrder ? 'Fetching...' : 'Get Order'}
+                                        </button>
+                                    </div>
+
+                                    {retrievedOrder && (
+                                        <div style={{
+                                            backgroundColor: '#E0F2FE',
+                                            border: '1px solid #BAE6FD',
+                                            borderRadius: '8px',
+                                            padding: '10px 12px',
+                                            fontSize: '0.8rem',
+                                            color: '#0369A1'
+                                        }}>
+                                            <div style={{ fontWeight: '700', marginBottom: '2px' }}>
+                                                Order ID Found & Verified:
+                                            </div>
+                                            <div>Kitchen: {retrievedOrder.seller?.businessName || "Unknown"}</div>
+                                            <div>Total amount: ₹{retrievedOrder.totalAmount} • Status: {retrievedOrder.status}</div>
+                                            <div>Paid: {retrievedOrder.isPaid ? 'YES' : 'NO'}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <label style={{ fontWeight: '700', fontSize: '0.9rem', color: '#334155' }}>
