@@ -21,12 +21,27 @@ export async function GET(req: Request) {
             take: 5
         });
 
-        if (!addresses || addresses.length === 0) {
-            return successResponse(null);
+        const defaultAddr = addresses.find((a: any) => a.isDefault === true) || addresses[0];
+        
+        if (defaultAddr) {
+            return successResponse(defaultAddr);
         }
 
-        const defaultAddr = addresses.find((a: any) => a.isDefault === true) || addresses[0];
-        return successResponse(defaultAddr);
+        const user = await db.user.findUnique({
+            where: { id: session.user.id },
+            select: { pincode: true }
+        });
+
+        if (user && user.pincode) {
+            return successResponse({
+                id: "virtual-gps",
+                type: "Current Area",
+                pincode: user.pincode,
+                isDefault: true
+            });
+        }
+
+        return successResponse(null);
     } catch (error) {
         console.error("GET /api/user/location/default error:", error);
         return errorResponse("Internal Server Error", 500);
