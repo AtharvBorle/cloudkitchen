@@ -217,9 +217,12 @@ export const createOrder = async (req: Request) => {
         }
     }
 
+    const shortOrderId = crypto.randomBytes(4).toString("hex");
+
     transactionOperations.push(
         db.order.create({
             data: {
+                id: shortOrderId,
                 userId: session.user.id,
                 sellerId,
                 status: "PENDING",
