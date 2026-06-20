@@ -205,7 +205,10 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", borderBottom: "1px solid #EEE", paddingBottom: "10px", flexWrap: "wrap", gap: "10px" }}>
                             <div>
                                 <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{order.seller.businessName || "Cloud Kitchen"}</div>
-                                <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                                <div style={{ fontSize: "0.8rem", color: "#475569", marginTop: "2px" }}>
+                                    Order ID: <span style={{ fontFamily: "monospace", fontWeight: "700", color: "#0F172A" }}>{order.id}</span>
+                                </div>
+                                <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px" }}>
                                     {mounted ? new Date(order.createdAt).toLocaleString() : new Date(order.createdAt).toISOString().split('T')[0]}
                                 </div>
                             </div>
