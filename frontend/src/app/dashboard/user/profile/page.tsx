@@ -144,25 +144,10 @@ export default function UserProfilePage() {
 
                     <div style={{ marginBottom: "20px" }}>
                         <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "8px", fontWeight: '500' }}>Phone Number</label>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                            <input
-                                type="tel"
-                                value={phoneInput}
-                                onChange={(e) => setPhoneInput(e.target.value)}
-                                className="input-field"
-                                style={{ width: '100%' }}
-                                placeholder="Enter phone number"
-                            />
-                            <button
-                                onClick={handleUpdatePhone}
-                                disabled={isSavingPhone || phoneInput === profile.phone}
-                                className="btn btn-primary"
-                                style={{ width: '100%', opacity: (isSavingPhone || phoneInput === profile.phone) ? 0.7 : 1 }}
-                            >
-                                {isSavingPhone ? "Saving..." : "Update"}
-                            </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", backgroundColor: "#F8FAFC", padding: "12px 16px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+                            <Phone size={16} color="#64748B" />
+                            <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#1E293B" }}>{profile.phone || "No phone number added"}</span>
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '5px' }}>This phone number will be used for delivery contacts.</p>
                     </div>
                 </div>
 
