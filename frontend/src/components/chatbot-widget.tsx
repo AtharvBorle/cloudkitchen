@@ -92,6 +92,45 @@ export default function ChatbotWidget() {
         loadGreeting();
     }, [status, session?.user?.role]);
 
+    useEffect(() => {
+        const handleOpenChatbot = () => {
+            setIsOpen(true);
+            setMessages(prev => {
+                if (prev.length > 0 && prev[prev.length - 1].text.includes("resolve your issue here first")) {
+                    return prev;
+                }
+                const isSeller = session?.user?.role === "SELLER";
+                const supportOptions = isSeller ? [
+                    { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
+                    { label: "🍱 Menu & Listings Query", action: () => handleSelectOption("seller_listings") },
+                    { label: "💰 Payouts & Subscriptions", action: () => handleSelectOption("seller_payouts") },
+                    { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                ] : [
+                    { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
+                    { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                    { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
+                    { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
+                    { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                ];
+
+                return [
+                    ...prev,
+                    {
+                        id: `support_prompt_${Date.now()}`,
+                        sender: "bot",
+                        text: "Let's see if we can resolve your issue here first! Please select a relevant option below. If you don't find the answer, click 'Raise a custom support ticket' to submit a ticket directly to support.",
+                        timestamp: new Date(),
+                        options: supportOptions
+                    }
+                ];
+            });
+        };
+        window.addEventListener("open-chatbot", handleOpenChatbot);
+        return () => {
+            window.removeEventListener("open-chatbot", handleOpenChatbot);
+        };
+    }, [status, session]);
+
     // Hide chatbot on Superadmin and Admin dashboard pages
     if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin")) {
         return null;

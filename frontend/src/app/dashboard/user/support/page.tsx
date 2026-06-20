@@ -142,7 +142,7 @@ export default function UserSupportPage() {
                     <p style={{ color: "#64748B", fontSize: "0.9rem" }}>Raise queries and connect with Cloud Rooms & Kitchen support</p>
                 </div>
                 <button
-                    onClick={() => setIsCreateModalOpen(true)}
+                    onClick={() => window.dispatchEvent(new Event("open-chatbot"))}
                     style={{
                         backgroundColor: "var(--coral, #F16F68)",
                         color: "white",
