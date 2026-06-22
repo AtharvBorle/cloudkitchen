@@ -194,11 +194,17 @@ export const updateUserLocation = async (req: Request) => {
     });
 
     let wasUpdated = false;
-    if (currentUser && currentUser.pincode !== finalPincode) {
-        await db.user.update({
-            where: { id: session.user.id },
-            data: { pincode: finalPincode }
-        });
+    if (currentUser) {
+        await db.$transaction([
+            db.user.update({
+                where: { id: session.user.id },
+                data: { pincode: finalPincode }
+            }),
+            db.address.updateMany({
+                where: { userId: session.user.id },
+                data: { isDefault: false }
+            })
+        ]);
         wasUpdated = true;
     }
 

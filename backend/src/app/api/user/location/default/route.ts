@@ -10,6 +10,11 @@ export async function GET(req: Request) {
             return errorResponse("Unauthorized", 401);
         }
 
+        const user = await db.user.findUnique({
+            where: { id: session.user.id },
+            select: { pincode: true }
+        });
+
         const addresses = await db.address.findMany({
             where: { userId: session.user.id },
             select: {
@@ -21,24 +26,38 @@ export async function GET(req: Request) {
             take: 5
         });
 
-        const defaultAddr = addresses.find((a: any) => a.isDefault === true) || addresses[0];
+        const activeDefaultAddress = addresses.find((a: any) => a.isDefault === true);
         
-        if (defaultAddr) {
-            return successResponse(defaultAddr);
+        // If there is an address explicitly marked as default, AND the user's active pincode matches it
+        if (activeDefaultAddress && user && user.pincode === activeDefaultAddress.pincode) {
+            return successResponse(activeDefaultAddress);
         }
 
-        const user = await db.user.findUnique({
-            where: { id: session.user.id },
-            select: { pincode: true }
-        });
-
+        // If user has set a different active location (GPS / map / manual) or has no default address marked
         if (user && user.pincode) {
             return successResponse({
                 id: "virtual-gps",
-                type: "Current Area",
+                type: "Current Location",
                 pincode: user.pincode,
                 isDefault: true
             });
+        }
+
+        // Fallback: If no GPS/user pincode is set but we have addresses, pick the first address and sync it
+        if (addresses.length > 0) {
+            const fallbackAddr = addresses[0];
+            await db.$transaction([
+                db.address.update({
+                    where: { id: fallbackAddr.id },
+                    data: { isDefault: true }
+                }),
+                db.user.update({
+                    where: { id: session.user.id },
+                    data: { pincode: fallbackAddr.pincode }
+                })
+            ]);
+            fallbackAddr.isDefault = true;
+            return successResponse(fallbackAddr);
         }
 
         return successResponse(null);
