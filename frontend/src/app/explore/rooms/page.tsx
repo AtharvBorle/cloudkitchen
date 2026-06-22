@@ -1,11 +1,10 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
-
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { BookRoomButton } from "@/components/cart-buttons";
+import { useLocation } from "@/components/location-provider";
 
 export default function ExploreRoomsPage() {
     const [rooms, setRooms] = useState<any[]>([]);
@@ -39,15 +38,25 @@ export default function ExploreRoomsPage() {
         }
     };
 
-    const filteredRooms = rooms.filter(room =>
-        room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const { defaultAddress } = useLocation();
+    const guestPincode = defaultAddress?.pincode ? defaultAddress.pincode.trim() : null;
+
+    const filteredRooms = rooms.filter(room => {
+        // Filter by guest location pincode if set
+        if (guestPincode && room.sellerPincode !== guestPincode) {
+            return false;
+        }
+
+        return (
+            room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            room.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
 
     return (
         <div style={{ paddingBottom: '50px' }}>

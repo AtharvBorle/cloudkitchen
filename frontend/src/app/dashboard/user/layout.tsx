@@ -156,7 +156,7 @@ export function UserHeader() {
     const router = useRouter();
     const { cartItems } = useCart();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { defaultAddress, isLoading: isLocationLoading, refreshAddress } = useLocation();
+    const { defaultAddress, isLoading: isLocationLoading, refreshAddress, setGuestLocation } = useLocation();
     const [isClient, setIsClient] = useState(false);
 
     // Inline Address Selector Modal State
@@ -243,7 +243,10 @@ export function UserHeader() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ pincode })
             });
-            if (updateRes.ok) {
+            if (updateRes.status === 401) {
+                setGuestLocation(pincode);
+                setIsAddressModalOpen(false);
+            } else if (updateRes.ok) {
                 await refreshAddress();
                 setIsAddressModalOpen(false);
             } else {
@@ -251,6 +254,8 @@ export function UserHeader() {
             }
         } catch (err) {
             console.error("Map selection error:", err);
+            setGuestLocation(pincode);
+            setIsAddressModalOpen(false);
         }
     };
 
@@ -301,7 +306,10 @@ export function UserHeader() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ pincode: gpsSuccessPincode })
             });
-            if (updateRes.ok) {
+            if (updateRes.status === 401) {
+                setGuestLocation(gpsSuccessPincode);
+                setIsAddressModalOpen(false);
+            } else if (updateRes.ok) {
                 await refreshAddress();
                 setIsAddressModalOpen(false);
             } else {
@@ -309,6 +317,8 @@ export function UserHeader() {
             }
         } catch (err) {
             console.error("GPS confirmation error:", err);
+            setGuestLocation(gpsSuccessPincode);
+            setIsAddressModalOpen(false);
         }
     };
 
@@ -328,6 +338,11 @@ export function UserHeader() {
                     isDefault: true
                 })
             });
+            if (res.status === 401) {
+                alert("Please sign in to save your address.");
+                router.push("/user");
+                return;
+            }
             if (res.ok) {
                 await refreshAddress();
                 setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "" });

@@ -1,11 +1,10 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
-
-
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { AddToCartButton } from "@/components/cart-buttons";
+import { useLocation } from "@/components/location-provider";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -80,17 +79,34 @@ export default function ExploreFoodPage() {
 
     const placeholderImage = "https://via.placeholder.com/400x250?text=Delicious+Food";
 
-    const filteredFood = foodItems.filter(item =>
-        isCurrentlyOpen(item) && (
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    );
+    const { defaultAddress } = useLocation();
+    const guestPincode = defaultAddress?.pincode ? defaultAddress.pincode.trim() : null;
+
+    const filteredFood = foodItems.filter(item => {
+        if (!isCurrentlyOpen(item)) return false;
+
+        // Filter by guest location pincode if set
+        if (guestPincode) {
+            let matchesPincode = false;
+            if (item.deliveryPincodes) {
+                const pins = item.deliveryPincodes.split(",").map((p: string) => p.trim());
+                matchesPincode = pins.includes(guestPincode);
+            } else {
+                matchesPincode = item.sellerPincode === guestPincode;
+            }
+            if (!matchesPincode) return false;
+        }
+
+        return (
+            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
 
     return (
         <div style={{ paddingBottom: '50px' }}>

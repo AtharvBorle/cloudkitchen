@@ -14,12 +14,14 @@ interface LocationContextType {
     defaultAddress: Address | null;
     isLoading: boolean;
     refreshAddress: () => Promise<void>;
+    setGuestLocation: (pincode: string) => void;
 }
 
 const LocationContext = createContext<LocationContextType>({
     defaultAddress: null,
     isLoading: true,
     refreshAddress: async () => { },
+    setGuestLocation: () => { },
 });
 
 export const useLocation = () => useContext(LocationContext);
@@ -36,19 +38,53 @@ export function LocationProvider({ children }: LocationProviderProps) {
         setIsLoading(true);
         try {
             const res = await fetchApi("/api/user/location/default");
-            if (res.ok) {
+            if (res.status === 401) {
+                // User is a guest
+                const guestPin = localStorage.getItem("guest-pincode");
+                if (guestPin) {
+                    setDefaultAddress({
+                        id: "guest-location",
+                        type: "Current Location",
+                        pincode: guestPin
+                    });
+                } else {
+                    setDefaultAddress(null);
+                }
+            } else if (res.ok) {
                 const addressData = await res.json();
                 if (addressData && addressData.pincode) {
                     setDefaultAddress(addressData);
                 } else {
                     setDefaultAddress(null);
                 }
+            } else {
+                setDefaultAddress(null);
             }
         } catch (err) {
             console.error("Failed to fetch address for header", err);
+            // Offline/error fallback to localStorage
+            const guestPin = localStorage.getItem("guest-pincode");
+            if (guestPin) {
+                setDefaultAddress({
+                    id: "guest-location",
+                    type: "Current Location",
+                    pincode: guestPin
+                });
+            } else {
+                setDefaultAddress(null);
+            }
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const setGuestLocation = (pincode: string) => {
+        localStorage.setItem("guest-pincode", pincode);
+        setDefaultAddress({
+            id: "guest-location",
+            type: "Current Location",
+            pincode: pincode
+        });
     };
 
     useEffect(() => {
@@ -56,7 +92,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     }, []);
 
     return (
-        <LocationContext.Provider value={{ defaultAddress, isLoading, refreshAddress: fetchAddress }}>
+        <LocationContext.Provider value={{ defaultAddress, isLoading, refreshAddress: fetchAddress, setGuestLocation }}>
             {children}
         </LocationContext.Provider>
     );
