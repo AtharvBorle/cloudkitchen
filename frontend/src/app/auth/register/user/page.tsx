@@ -21,13 +21,30 @@ export default function UserRegisterPage() {
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let { name, value } = e.target;
+        if (name === "phone") {
+            value = value.replace(/\D/g, "").slice(0, 10);
+        }
+        setFormData({ ...formData, [name]: value });
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setError("Please enter a valid email address.");
+            setLoading(false);
+            return;
+        }
+
+        if (formData.phone.length !== 10) {
+            setError("Mobile number must be exactly 10 digits.");
+            setLoading(false);
+            return;
+        }
 
         try {
             const res = await fetchApi("/api/auth/register", {

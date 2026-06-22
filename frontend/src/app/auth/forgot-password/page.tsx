@@ -11,6 +11,11 @@ export default function ForgotPasswordPage() {
 
     const handleSendOTP = async (e: React.FormEvent) => {
         e.preventDefault();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            alert("Please enter a valid email address.");
+            return;
+        }
         setLoading(true);
         // Mock Implementation for now
         setTimeout(() => {

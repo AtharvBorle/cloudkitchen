@@ -72,8 +72,11 @@ export default function SellerRegisterPage() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         let value = e.target.value;
-        if (e.target.name === 'phone' || e.target.name === 'pincode') {
-            value = value.replace(/\D/g, '');
+        if (e.target.name === 'phone') {
+            value = value.replace(/\D/g, '').slice(0, 10);
+        }
+        if (e.target.name === 'pincode') {
+            value = value.replace(/\D/g, '').slice(0, 6);
         }
         if (e.target.name === 'businessCategory') {
             setFormData(prev => ({
@@ -99,13 +102,84 @@ export default function SellerRegisterPage() {
         }
     }
 
-    const nextStep = () => setStep(prev => Math.min(prev + 1, 3));
+    const nextStep = () => {
+        if (step === 1) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!formData.name.trim()) {
+                setError("Full Name is required.");
+                return;
+            }
+            if (!emailRegex.test(formData.email)) {
+                setError("Please enter a valid email address.");
+                return;
+            }
+            if (formData.phone.length !== 10) {
+                setError("Mobile number must be exactly 10 digits.");
+                return;
+            }
+            if (formData.password.length < 6) {
+                setError("Password must be at least 6 characters.");
+                return;
+            }
+            setError("");
+        } else if (step === 2) {
+            if (!formData.businessName.trim()) {
+                setError("Business name is required.");
+                return;
+            }
+            if (!formData.sellerType) {
+                setError("Please select a business type.");
+                return;
+            }
+            if (!formData.addressFlat.trim()) {
+                setError("Flat/House address is required.");
+                return;
+            }
+            if (!formData.addressArea.trim()) {
+                setError("Area/Locality is required.");
+                return;
+            }
+            if (!formData.city.trim()) {
+                setError("City is required.");
+                return;
+            }
+            if (formData.pincode.length !== 6) {
+                setError("Pincode must be exactly 6 digits.");
+                return;
+            }
+            setError("");
+        }
+        setStep(prev => Math.min(prev + 1, 3));
+    };
+    
     const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (step < 3) {
             nextStep();
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setError("Please enter a valid email address.");
+            setStep(1);
+            return;
+        }
+        if (formData.phone.length !== 10) {
+            setError("Mobile number must be exactly 10 digits.");
+            setStep(1);
+            return;
+        }
+        if (formData.password.length < 6) {
+            setError("Password must be at least 6 characters.");
+            setStep(1);
+            return;
+        }
+        if (formData.pincode.length !== 6) {
+            setError("Pincode must be exactly 6 digits.");
+            setStep(2);
             return;
         }
 

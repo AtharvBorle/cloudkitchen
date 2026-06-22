@@ -38,6 +38,10 @@ export default function UserProfilePage() {
     };
 
     const handleUpdatePhone = async () => {
+        if (phoneInput.length !== 10) {
+            alert("Mobile number must be exactly 10 digits.");
+            return;
+        }
         setIsSavingPhone(true);
         try {
             const res = await fetchApi("/api/user/profile", {
@@ -61,6 +65,10 @@ export default function UserProfilePage() {
 
     const handleSaveAddress = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (addressForm.pincode.length !== 6) {
+            alert("Pincode must be exactly 6 digits.");
+            return;
+        }
         try {
             const method = editingAddressId ? "PUT" : "POST";
             const url = editingAddressId ? `/api/user/addresses/${editingAddressId}` : "/api/user/addresses";
@@ -144,9 +152,25 @@ export default function UserProfilePage() {
 
                     <div style={{ marginBottom: "20px" }}>
                         <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "8px", fontWeight: '500' }}>Phone Number</label>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", backgroundColor: "#F8FAFC", padding: "12px 16px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
-                            <Phone size={16} color="#64748B" />
-                            <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "#1E293B" }}>{profile.phone || "No phone number added"}</span>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                            <div style={{ display: "flex", flex: 1, alignItems: "center", gap: "10px", backgroundColor: "#F8FAFC", padding: "12px 16px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+                                <Phone size={16} color="#64748B" />
+                                <input
+                                    type="text"
+                                    value={phoneInput}
+                                    onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    placeholder="Enter 10-digit number"
+                                    style={{ border: 'none', background: 'none', width: '100%', outline: 'none', fontSize: '0.95rem', fontWeight: '600', color: '#1E293B' }}
+                                />
+                            </div>
+                            <button
+                                onClick={handleUpdatePhone}
+                                disabled={isSavingPhone}
+                                className="btn btn-primary"
+                                style={{ padding: '0 20px', fontSize: '0.9rem' }}
+                            >
+                                {isSavingPhone ? "Saving..." : "Save"}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -214,7 +238,7 @@ export default function UserProfilePage() {
                                         type="text"
                                         required
                                         value={addressForm.pincode}
-                                        onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
+                                        onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                                         className="input-field"
                                     />
                                 </div>
