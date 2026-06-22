@@ -525,7 +525,7 @@ export function UserHeader() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: "24px",
+            gap: "18px",
             padding: "15px var(--spacing-6)",
             position: "sticky",
             top: 0,
