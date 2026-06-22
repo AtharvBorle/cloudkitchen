@@ -265,7 +265,7 @@ export const cancelOrder = async (id: string) => {
 
     const order = await db.order.findUnique({
         where: { id: id },
-        select: { userId: true, status: true, isPaid: true, totalAmount: true }
+        select: { userId: true, status: true, isPaid: true, totalAmount: true, items: true }
     });
 
     if (!order) {
@@ -279,6 +279,34 @@ export const cancelOrder = async (id: string) => {
 
     if (order.status !== "PENDING") {
         throw new ApiError("Only pending orders can be cancelled", 400);
+    }
+
+    // Restore inventory stock for food items in the order
+    if (order.items) {
+        try {
+            const itemsList = JSON.parse(order.items);
+            if (Array.isArray(itemsList)) {
+                for (const item of itemsList) {
+                    if (item.id && item.quantity) {
+                        const foodItem = await db.foodItem.findUnique({
+                            where: { id: item.id }
+                        });
+                        if (foodItem && foodItem.stockQuantity !== -1) {
+                            const newStock = foodItem.stockQuantity + item.quantity;
+                            await db.foodItem.update({
+                                where: { id: item.id },
+                                data: {
+                                    stockQuantity: newStock,
+                                    isAvailable: true // Ensure item is marked available again
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Failed to restore inventory on cancelOrder:", error);
+        }
     }
 
     await db.order.update({
