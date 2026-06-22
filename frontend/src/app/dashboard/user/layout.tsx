@@ -584,7 +584,7 @@ export function UserHeader() {
                     )}
                 </div>
 
-                <nav className="desktop-only" style={{ display: "flex", gap: "1.2rem", alignItems: "center" }}>
+                <nav className="desktop-only" style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                     {navLinks.map((link) => (
                         <Link
                             key={link.href}
