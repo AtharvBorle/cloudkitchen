@@ -10,6 +10,7 @@ export default function ManageRoomsPage() {
     const [bookings, setBookings] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [editingRoom, setEditingRoom] = useState<any | null>(null);
 
     // Form state
     const [title, setTitle] = useState("");
@@ -45,19 +46,25 @@ export default function ManageRoomsPage() {
         formData.append("description", description);
         formData.append("capacity", capacity);
         if (imageFile) formData.append("image", imageFile);
+        if (editingRoom) {
+            formData.append("roomId", editingRoom.id);
+        }
 
         try {
-            const res = await fetchApi("/api/seller/rooms", {
-                method: "POST",
+            const url = "/api/seller/rooms";
+            const method = editingRoom ? "PATCH" : "POST";
+            const res = await fetchApi(url, {
+                method,
                 body: formData
             });
 
             if (res.ok) {
                 setIsModalOpen(false);
+                setEditingRoom(null);
                 setTitle(""); setPrice(""); setDescription(""); setCapacity("1"); setImageFile(null);
                 fetchRooms();
             } else {
-                alert("Failed to add room");
+                alert(editingRoom ? "Failed to update room" : "Failed to add room");
             }
         } catch (error) {
             console.error("Error submitting form");
@@ -97,7 +104,11 @@ export default function ManageRoomsPage() {
                     <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px' }}>My Rooms</h1>
                     <Link href="/dashboard/seller" style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>← Back to Dashboard</Link>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="btn" style={{ backgroundColor: '#2C3E50', color: 'white', width: 'auto' }}>
+                <button onClick={() => {
+                    setEditingRoom(null);
+                    setTitle(""); setPrice(""); setDescription(""); setCapacity("1"); setImageFile(null);
+                    setIsModalOpen(true);
+                }} className="btn" style={{ backgroundColor: '#2C3E50', color: 'white', width: 'auto' }}>
                     + Add Room
                 </button>
             </div>
@@ -123,8 +134,31 @@ export default function ManageRoomsPage() {
                                     </div>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '20px', flex: 1 }}>{room.description}</p>
 
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                                        <button style={{ backgroundColor: '#2C3E50', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '4px', fontSize: '0.85rem', cursor: 'pointer' }}>Delete</button>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                                        <button
+                                            onClick={() => {
+                                                setEditingRoom(room);
+                                                setTitle(room.title);
+                                                setPrice(room.price.toString());
+                                                setDescription(room.description || "");
+                                                setCapacity(room.capacity.toString());
+                                                setImageFile(null);
+                                                setIsModalOpen(true);
+                                            }}
+                                            style={{
+                                                backgroundColor: '#3B82F6',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '8px 15px',
+                                                borderRadius: '4px',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold',
+                                                flex: 1
+                                            }}
+                                        >
+                                            Edit
+                                        </button>
 
                                         <button
                                             onClick={() => toggleAvailability(room.id, room.isAvailable)}
@@ -136,10 +170,11 @@ export default function ManageRoomsPage() {
                                                 borderRadius: '4px',
                                                 fontSize: '0.85rem',
                                                 cursor: 'pointer',
-                                                fontWeight: 'bold'
+                                                fontWeight: 'bold',
+                                                flex: 1
                                             }}
                                         >
-                                            {room.isAvailable ? 'Available (Online)' : 'Unavailable (Offline)'}
+                                            {room.isAvailable ? 'Online' : 'Offline'}
                                         </button>
                                     </div>
                                 </div>
@@ -217,7 +252,7 @@ export default function ManageRoomsPage() {
             {isModalOpen && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
                     <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', width: '100%', maxWidth: '500px', boxShadow: 'var(--shadow-card)', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Add Room for Rent</h2>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>{editingRoom ? "Edit Room Details" : "Add Room for Rent"}</h2>
 
                         <form onSubmit={handleSubmit}>
                             <div className="input-group">
@@ -235,14 +270,15 @@ export default function ManageRoomsPage() {
                             </div>
 
                             <div className="input-group" style={{ marginTop: '20px' }}>
-                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Images</label>
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Image</label>
+                                {editingRoom && <span style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '5px' }}>Leave empty to keep the current image</span>}
                                 <input type="file" onChange={e => setImageFile(e.target.files?.[0] || null)} className="input-field" accept="image/*" />
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '30px' }}>
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn" style={{ backgroundColor: '#E0E0E0', width: 'auto', color: '#333' }}>Cancel</button>
                                 <button type="submit" className="btn btn-coral" style={{ width: 'auto' }} disabled={loading}>
-                                    {loading ? "Saving..." : "Save Room"}
+                                    {loading ? "Saving..." : (editingRoom ? "Update Room" : "Save Room")}
                                 </button>
                             </div>
                         </form>
