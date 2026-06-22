@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { ShoppingCart, LogOut, Menu, X, MapPin } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { LocationProvider, useLocation } from "@/components/location-provider";
 
@@ -20,9 +20,65 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
     const [loadingGeocode, setLoadingGeocode] = useState(false);
-    const [selectedPincode, setSelectedPincode] = useState<string | null>(null);
+    const [selectedPincode, setSelectedPincode] = useState<string>("");
     const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
     const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searching, setSearching] = useState(false);
+
+    const handleGeocode = async (lat: number, lng: number) => {
+        setLoadingGeocode(true);
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            if (res.ok) {
+                const data = await res.json();
+                const pincode = data.address?.postcode || "";
+                const displayName = data.display_name || "";
+                setSelectedPincode(pincode);
+                setSelectedAddress(displayName);
+            }
+        } catch (err) {
+            console.error("Reverse geocoding error:", err);
+        } finally {
+            setLoadingGeocode(false);
+        }
+    };
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchQuery.trim()) return;
+        setSearching(true);
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=in&limit=5`
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setSearchResults(data);
+            }
+        } catch (err) {
+            console.error("Search error:", err);
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const handleSelectResult = (result: any) => {
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        setCoords({ lat, lng: lon });
+        setSearchResults([]);
+        setSearchQuery("");
+        if (mapRef.current && markerRef.current) {
+            const L = (window as any).L;
+            if (L) {
+                mapRef.current.setView([lat, lon], 16);
+                markerRef.current.setLatLng([lat, lon]);
+            }
+        }
+        handleGeocode(lat, lon);
+    };
 
     useEffect(() => {
         const link = document.createElement("link");
@@ -35,44 +91,23 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
         script.async = true;
         document.body.appendChild(script);
 
-        script.onload = () => {
+        const initMap = (lat: number, lng: number) => {
             const L = (window as any).L;
             if (!L || !mapContainerRef.current) return;
 
-            const defaultLat = 19.0760;
-            const defaultLng = 72.8777;
-
-            const map = L.map(mapContainerRef.current).setView([defaultLat, defaultLng], 12);
+            // Zoom level 16 for close house-level detail
+            const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
             mapRef.current = map;
 
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
 
-            const marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+            const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
             markerRef.current = marker;
 
-            setCoords({ lat: defaultLat, lng: defaultLng });
-
-            const handleGeocode = async (lat: number, lng: number) => {
-                setLoadingGeocode(true);
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        const pincode = data.address?.postcode || "";
-                        const displayName = data.display_name || "";
-                        setSelectedPincode(pincode);
-                        setSelectedAddress(displayName);
-                    }
-                } catch (err) {
-                    console.error("Reverse geocoding error:", err);
-                } finally {
-                    setLoadingGeocode(false);
-                }
-            };
-
-            handleGeocode(defaultLat, defaultLng);
+            setCoords({ lat, lng });
+            handleGeocode(lat, lng);
 
             marker.on("dragend", () => {
                 const position = marker.getLatLng();
@@ -86,6 +121,22 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
                 setCoords({ lat, lng });
                 handleGeocode(lat, lng);
             });
+        };
+
+        script.onload = () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        initMap(position.coords.latitude, position.coords.longitude);
+                    },
+                    () => {
+                        initMap(19.0760, 72.8777); // Mumbai fallback
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                initMap(19.0760, 72.8777);
+            }
         };
 
         return () => {
@@ -107,6 +158,71 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%", marginTop: "5px" }}>
+            <form onSubmit={handleSearch} style={{ display: "flex", gap: "8px", position: "relative" }}>
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search area, street, society or city..."
+                    style={{
+                        flex: 1,
+                        padding: "8px 12px",
+                        border: "1px solid #CBD5E1",
+                        borderRadius: "8px",
+                        fontSize: "0.85rem",
+                        outline: "none"
+                    }}
+                />
+                <button
+                    type="submit"
+                    className="btn btn-secondary"
+                    style={{
+                        padding: "8px 16px",
+                        fontSize: "0.85rem",
+                        width: "auto",
+                        whiteSpace: "nowrap"
+                    }}
+                    disabled={searching}
+                >
+                    {searching ? "Searching..." : "Search"}
+                </button>
+
+                {searchResults.length > 0 && (
+                    <div style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        backgroundColor: "white",
+                        border: "1px solid #CBD5E1",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                        zIndex: 1000,
+                        maxHeight: "180px",
+                        overflowY: "auto",
+                        marginTop: "4px"
+                    }}>
+                        {searchResults.map((res, index) => (
+                            <div
+                                key={index}
+                                onClick={() => handleSelectResult(res)}
+                                style={{
+                                    padding: "8px 12px",
+                                    fontSize: "0.8rem",
+                                    borderBottom: index < searchResults.length - 1 ? "1px solid #E2E8F0" : "none",
+                                    cursor: "pointer",
+                                    color: "#334155"
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#F1F5F9"}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                            >
+                                {res.display_name}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </form>
+
             <div 
                 ref={mapContainerRef} 
                 style={{ 
@@ -124,13 +240,32 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                             <div style={{ fontSize: "0.8rem", color: "#64748B", maxHeight: "60px", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                <strong>Location:</strong> {selectedAddress || "No address found"}
+                                <strong>Detected Address:</strong> {selectedAddress || "No address found"}
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontSize: "0.95rem", fontWeight: "700", color: "#0F172A" }}>
-                                    Pincode: {selectedPincode || "Not found"}
-                                </span>
-                                {selectedPincode && (
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span style={{ fontSize: "0.9rem", fontWeight: "700", color: "#0F172A", whiteSpace: "nowrap" }}>
+                                        Confirm Pincode:
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={selectedPincode}
+                                        onChange={(e) => setSelectedPincode(e.target.value.replace(/\D/g, ""))}
+                                        style={{
+                                            width: "100px",
+                                            padding: "4px 8px",
+                                            border: "1px solid #CBD5E1",
+                                            borderRadius: "6px",
+                                            fontSize: "0.9rem",
+                                            fontWeight: "700",
+                                            color: "#0F172A",
+                                            textAlign: "center"
+                                        }}
+                                        placeholder="Pincode"
+                                        maxLength={6}
+                                    />
+                                </div>
+                                {selectedPincode && selectedPincode.length === 6 && (
                                     <button 
                                         type="button"
                                         onClick={handleConfirm}
@@ -148,8 +283,6 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
         </div>
     );
 }
-
-import { useRef } from "react";
 
 export function UserHeader() {
     const pathname = usePathname();
@@ -174,11 +307,18 @@ export function UserHeader() {
     const [isSavingAddress, setIsSavingAddress] = useState(false);
 
     // Tabbed selection state
-    const [locationTab, setLocationTab] = useState<"saved" | "map" | "gps">("saved");
+    const [locationTab, setLocationTab] = useState<"saved" | "map" | "gps" | "manual">("saved");
     const [gpsLoading, setGpsLoading] = useState(false);
     const [gpsError, setGpsError] = useState("");
     const [gpsSuccessPincode, setGpsSuccessPincode] = useState("");
     const [gpsAddress, setGpsAddress] = useState("");
+
+    const handleTabChange = (tab: "saved" | "map" | "gps" | "manual") => {
+        setLocationTab(tab);
+        setGpsSuccessPincode("");
+        setGpsError("");
+        setGpsAddress("");
+    };
 
     // Hydration Fix
     useEffect(() => {
@@ -294,7 +434,8 @@ export function UserHeader() {
             (error) => {
                 setGpsLoading(false);
                 setGpsError("Permission denied or location unavailable.");
-            }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     };
 
@@ -554,10 +695,10 @@ export function UserHeader() {
                         {!showAddForm ? (
                             <div>
                                 {/* Location Selection Methods Tabs */}
-                                <div style={{ display: "flex", gap: "8px", marginBottom: "15px", borderBottom: "1px solid #E2E8F0", paddingBottom: "10px" }}>
+                                <div style={{ display: "flex", gap: "8px", marginBottom: "15px", borderBottom: "1px solid #E2E8F0", paddingBottom: "10px", flexWrap: "wrap" }}>
                                     <button
                                         type="button"
-                                        onClick={() => setLocationTab("saved")}
+                                        onClick={() => handleTabChange("saved")}
                                         style={{
                                             padding: "6px 12px",
                                             borderRadius: "20px",
@@ -573,7 +714,7 @@ export function UserHeader() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setLocationTab("map")}
+                                        onClick={() => handleTabChange("map")}
                                         style={{
                                             padding: "6px 12px",
                                             borderRadius: "20px",
@@ -589,7 +730,7 @@ export function UserHeader() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setLocationTab("gps")}
+                                        onClick={() => handleTabChange("gps")}
                                         style={{
                                             padding: "6px 12px",
                                             borderRadius: "20px",
@@ -602,6 +743,22 @@ export function UserHeader() {
                                         }}
                                     >
                                         🛰️ Use GPS
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleTabChange("manual")}
+                                        style={{
+                                            padding: "6px 12px",
+                                            borderRadius: "20px",
+                                            border: "none",
+                                            backgroundColor: locationTab === "manual" ? "var(--primary)" : "#F1F5F9",
+                                            color: locationTab === "manual" ? "white" : "#475569",
+                                            fontSize: "0.8rem",
+                                            fontWeight: "600",
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        ✏️ Enter Pincode
                                     </button>
                                 </div>
 
@@ -702,9 +859,31 @@ export function UserHeader() {
                                             <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px", backgroundColor: "#F0FDF4", padding: "15px", borderRadius: "8px", border: "1px solid #BBF7D0", marginTop: "10px" }}>
                                                 <div style={{ fontSize: "0.8rem", color: "#166534", fontWeight: "600" }}>Detected Location:</div>
                                                 <div style={{ fontSize: "0.85rem", color: "#1E293B", maxHeight: "60px", overflow: "hidden", textOverflow: "ellipsis" }}>{gpsAddress}</div>
-                                                <div style={{ fontSize: "1.1rem", fontWeight: "800", color: "#166534" }}>Pincode: {gpsSuccessPincode}</div>
+                                                
+                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginTop: "5px" }}>
+                                                    <span style={{ fontSize: "0.95rem", fontWeight: "700", color: "#166534" }}>Confirm Pincode:</span>
+                                                    <input
+                                                        type="text"
+                                                        value={gpsSuccessPincode}
+                                                        onChange={(e) => setGpsSuccessPincode(e.target.value.replace(/\D/g, ""))}
+                                                        style={{
+                                                            width: "100px",
+                                                            padding: "4px 8px",
+                                                            border: "1px solid #BBF7D0",
+                                                            borderRadius: "6px",
+                                                            fontSize: "0.95rem",
+                                                            fontWeight: "700",
+                                                            color: "#166534",
+                                                            backgroundColor: "white",
+                                                            textAlign: "center"
+                                                        }}
+                                                        maxLength={6}
+                                                    />
+                                                </div>
+
                                                 <button
                                                     type="button"
+                                                    disabled={gpsSuccessPincode.length !== 6}
                                                     onClick={handleConfirmGps}
                                                     className="btn btn-primary"
                                                     style={{ marginTop: "10px" }}
@@ -713,6 +892,45 @@ export function UserHeader() {
                                                 </button>
                                             </div>
                                         )}
+                                    </div>
+                                )}
+
+                                {locationTab === "manual" && (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "15px", alignItems: "center", padding: "20px 10px", textAlign: "center" }}>
+                                        <div style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>
+                                            Enter your delivery pincode manually.
+                                        </div>
+                                        
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", width: "100%" }}>
+                                            <span style={{ fontSize: "0.95rem", fontWeight: "700", color: "#334155" }}>Pincode:</span>
+                                            <input
+                                                type="text"
+                                                value={gpsSuccessPincode}
+                                                onChange={(e) => setGpsSuccessPincode(e.target.value.replace(/\D/g, ""))}
+                                                style={{
+                                                    width: "120px",
+                                                    padding: "6px 12px",
+                                                    border: "1px solid #CBD5E1",
+                                                    borderRadius: "6px",
+                                                    fontSize: "0.95rem",
+                                                    fontWeight: "700",
+                                                    color: "#0F172A",
+                                                    textAlign: "center"
+                                                }}
+                                                placeholder="6-digit"
+                                                maxLength={6}
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            disabled={gpsSuccessPincode.length !== 6}
+                                            onClick={handleConfirmGps}
+                                            className="btn btn-primary"
+                                            style={{ marginTop: "10px", width: "100%" }}
+                                        >
+                                            Confirm & Set Location
+                                        </button>
                                     </div>
                                 )}
                             </div>
