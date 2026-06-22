@@ -525,6 +525,7 @@ export function UserHeader() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: "24px",
             padding: "15px var(--spacing-6)",
             position: "sticky",
             top: 0,
@@ -583,7 +584,7 @@ export function UserHeader() {
                     )}
                 </div>
 
-                <nav className="desktop-only" style={{ gap: "var(--spacing-6)", alignItems: "center" }}>
+                <nav className="desktop-only" style={{ display: "flex", gap: "var(--spacing-6)", alignItems: "center" }}>
                     {navLinks.map((link) => (
                         <Link
                             key={link.href}
@@ -599,7 +600,7 @@ export function UserHeader() {
                 </nav>
             </div>
 
-            <div className="desktop-only" style={{ alignItems: "center", gap: "10px" }}>
+            <div className="desktop-only" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                 <button onClick={() => router.push("/dashboard/user/checkout")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
                     <ShoppingCart size={18} /> Cart ({totalCount})
                 </button>

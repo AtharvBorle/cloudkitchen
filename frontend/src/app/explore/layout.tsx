@@ -519,6 +519,7 @@ export function ExploreHeader() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: "24px",
             padding: "15px var(--spacing-6)",
             position: "sticky",
             top: 0,
@@ -577,7 +578,7 @@ export function ExploreHeader() {
                     )}
                 </div>
 
-                <nav className="desktop-only" style={{ gap: "var(--spacing-6)", alignItems: "center" }}>
+                <nav className="desktop-only" style={{ display: "flex", gap: "var(--spacing-6)", alignItems: "center" }}>
                     {navLinks.map((link) => (
                         <Link
                             key={link.href}
@@ -593,7 +594,7 @@ export function ExploreHeader() {
                 </nav>
             </div>
 
-            <div className="desktop-only" style={{ alignItems: "center", gap: "10px" }}>
+            <div className="desktop-only" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                 <Link href="/user" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                     <LogIn size={18} /> Sign In
                 </Link>
