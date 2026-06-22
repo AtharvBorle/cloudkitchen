@@ -259,20 +259,21 @@ export const createOrder = async (req: Request) => {
 
 export const cancelOrder = async (id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "USER") {
+    if (!session || !session.user || (session.user.role !== "USER" && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
         throw new ApiError("Unauthorized", 401);
     }
 
     const order = await db.order.findUnique({
         where: { id: id },
-        select: { userId: true, status: true }
+        select: { userId: true, status: true, isPaid: true, totalAmount: true }
     });
 
     if (!order) {
         throw new ApiError("Order not found", 404);
     }
 
-    if (order.userId !== session.user.id) {
+    const isAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN";
+    if (order.userId !== session.user.id && !isAdmin) {
         throw new ApiError("Forbidden", 403);
     }
 
@@ -284,6 +285,25 @@ export const cancelOrder = async (id: string) => {
         where: { id: id },
         data: { status: "CANCELLED" }
     });
+
+    if (order.isPaid) {
+        const existingRefund = await db.refund.findUnique({
+            where: { orderId: id }
+        });
+        if (!existingRefund) {
+            await db.refund.create({
+                data: {
+                    userId: order.userId,
+                    orderId: id,
+                    amount: order.totalAmount,
+                    reason: isAdmin 
+                        ? "Order cancelled by Admin/Superadmin prior to preparation." 
+                        : "Order cancelled by customer prior to preparation.",
+                    status: "PENDING"
+                }
+            });
+        }
+    }
 
     return null;
 };

@@ -25,6 +25,103 @@ export default function SuperAdminSupportPage() {
     const [refundReason, setRefundReason] = useState("");
     const [submittingRefund, setSubmittingRefund] = useState(false);
 
+    // Order Action States (Cancellation)
+    const [actionOrderId, setActionOrderId] = useState("");
+    const [actionOrder, setActionOrder] = useState<any | null>(null);
+    const [loadingActionOrder, setLoadingActionOrder] = useState(false);
+    const [cancellingOrder, setCancellingOrder] = useState(false);
+
+    const handleSearchActionOrder = async (orderIdToSearch?: string) => {
+        const idToSearch = orderIdToSearch || actionOrderId;
+        if (!idToSearch.trim()) return;
+        setLoadingActionOrder(true);
+        setActionOrder(null);
+        try {
+            const res = await fetchApi(`/api/user/orders/${idToSearch.trim()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setActionOrder(data.data || data);
+            } else {
+                alert("Order not found or invalid Order ID.");
+            }
+        } catch (error) {
+            console.error("Error searching action order:", error);
+            alert("Error fetching order details.");
+        } finally {
+            setLoadingActionOrder(false);
+        }
+    };
+
+    const handleCancelActionOrder = async () => {
+        if (!actionOrder) return;
+        if (actionOrder.status !== "PENDING") {
+            alert("Only pending orders can be cancelled.");
+            return;
+        }
+        if (!window.confirm(`Are you sure you want to cancel order #${actionOrder.id.slice(0, 8)}?`)) {
+            return;
+        }
+
+        setCancellingOrder(true);
+        try {
+            const res = await fetchApi(`/api/user/orders/${actionOrder.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" }
+            });
+            if (res.ok) {
+                alert("Order cancelled successfully.");
+                // Re-fetch order details
+                await handleSearchActionOrder(actionOrder.id);
+                // Also update userActivity in case it was showing in the refund panel
+                if (selectedTicket?.userId) {
+                    fetchUserActivity(selectedTicket.userId);
+                }
+            } else {
+                const err = await res.json();
+                alert(err.message || "Failed to cancel order.");
+            }
+        } catch (error) {
+            console.error("Cancel order error:", error);
+            alert("An error occurred while cancelling the order.");
+        } finally {
+            setCancellingOrder(false);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedTicket) {
+            setActionOrder(null);
+            setActionOrderId("");
+            
+            // Search for potential 8-character hex order IDs in title and description
+            const textToSearch = `${selectedTicket.title} ${selectedTicket.description}`;
+            const potentialIds = textToSearch.match(/\b[0-9a-fA-F]{8}\b/g);
+            const ticketIdFirstPart = selectedTicket.id.split('-')[0];
+            
+            if (potentialIds) {
+                const validId = potentialIds.find(id => id.toLowerCase() !== ticketIdFirstPart.toLowerCase());
+                if (validId) {
+                    setActionOrderId(validId);
+                    const autoFetch = async () => {
+                        setLoadingActionOrder(true);
+                        try {
+                            const res = await fetchApi(`/api/user/orders/${validId.trim()}`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                setActionOrder(data.data || data);
+                            }
+                        } catch (error) {
+                            console.error("Error auto-searching action order:", error);
+                        } finally {
+                            setLoadingActionOrder(false);
+                        }
+                    };
+                    autoFetch();
+                }
+            }
+        }
+    }, [selectedTicket]);
+
     // Raise Ticket Modal State
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [systemUsers, setSystemUsers] = useState<any[]>([]);
@@ -260,7 +357,7 @@ export default function SuperAdminSupportPage() {
                 // Update in local tickets list
                 setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: newStatus } : t));
                 // Update selected ticket details
-                setSelectedTicket(prev => prev ? { ...prev, status: newStatus } : null);
+                setSelectedTicket((prev: any) => prev ? { ...prev, status: newStatus } : null);
             } else {
                 alert("Failed to update status.");
             }
@@ -548,6 +645,104 @@ export default function SuperAdminSupportPage() {
                                 {/* Right Side: User Activities & Refund Trigger */}
                                 <div style={{ width: "320px", backgroundColor: "#F8FAFC", display: "flex", flexDirection: "column", padding: "15px", overflowY: "auto", maxHeight: "550px", borderBottomRightRadius: "16px" }}>
                                     <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
+                                        ORDER & REFUND PANEL
+                                    </h4>
+
+                                    {/* Order Cancellation Control Section */}
+                                    <div style={{ marginBottom: "20px", borderBottom: "1px dashed #E2E8F0", paddingBottom: "15px" }}>
+                                        <h5 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>
+                                            Order Cancel Control
+                                        </h5>
+                                        <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Search Order ID..."
+                                                value={actionOrderId}
+                                                onChange={(e) => setActionOrderId(e.target.value)}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "8px 10px",
+                                                    borderRadius: "6px",
+                                                    border: "1px solid #CBD5E1",
+                                                    fontSize: "0.8rem",
+                                                    outline: "none"
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSearchActionOrder()}
+                                                disabled={loadingActionOrder || !actionOrderId.trim()}
+                                                style={{
+                                                    backgroundColor: "#1E293B",
+                                                    color: "white",
+                                                    border: "none",
+                                                    padding: "0 12px",
+                                                    borderRadius: "6px",
+                                                    cursor: "pointer",
+                                                    fontWeight: "600",
+                                                    fontSize: "0.75rem",
+                                                    opacity: (!actionOrderId.trim()) ? 0.6 : 1
+                                                }}
+                                            >
+                                                {loadingActionOrder ? "..." : "Search"}
+                                            </button>
+                                        </div>
+
+                                        {actionOrder && (
+                                            <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "8px", border: "1px solid #E2E8F0", fontSize: "0.75rem" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", marginBottom: "4px" }}>
+                                                    <span>Order #{actionOrder.id.slice(0, 8)}</span>
+                                                    <span style={{ color: "#F16F68" }}>₹{actionOrder.totalAmount}</span>
+                                                </div>
+                                                <div style={{ color: "#475569", marginBottom: "8px", lineHeight: "1.4" }}>
+                                                    <strong>Kitchen:</strong> {actionOrder.seller?.businessName || "Unknown"}<br/>
+                                                    <strong>Customer:</strong> {actionOrder.user?.name || "Unknown"}<br/>
+                                                    <strong>Status:</strong> <span style={{ 
+                                                        fontWeight: "700",
+                                                        color: actionOrder.status === 'PENDING' ? '#B45309' : actionOrder.status === 'CANCELLED' ? '#991B1B' : '#1E40AF'
+                                                    }}>{actionOrder.status}</span>
+                                                </div>
+
+                                                {actionOrder.status === "PENDING" ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCancelActionOrder}
+                                                        disabled={cancellingOrder}
+                                                        style={{
+                                                            width: "100%",
+                                                            padding: "8px",
+                                                            backgroundColor: "#EF4444",
+                                                            color: "white",
+                                                            border: "none",
+                                                            borderRadius: "6px",
+                                                            fontWeight: "700",
+                                                            cursor: "pointer",
+                                                            fontSize: "0.75rem",
+                                                            transition: "background 0.2s"
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DC2626'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
+                                                    >
+                                                        {cancellingOrder ? "Cancelling..." : "Cancel Order"}
+                                                    </button>
+                                                ) : (
+                                                    <div style={{ 
+                                                        textAlign: "center", 
+                                                        padding: "6px", 
+                                                        backgroundColor: "#F1F5F9", 
+                                                        color: "#64748B", 
+                                                        borderRadius: "4px",
+                                                        fontSize: "0.7rem",
+                                                        fontWeight: "600"
+                                                    }}>
+                                                        {actionOrder.status === "CANCELLED" ? "Already Cancelled" : "Cannot cancel (Preparing/Delivered)"}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em", marginTop: "10px" }}>
                                         REFUND CONTROL PANEL
                                     </h4>
 
