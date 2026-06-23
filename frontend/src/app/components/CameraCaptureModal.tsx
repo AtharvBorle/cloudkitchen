@@ -19,18 +19,34 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
 
     useEffect(() => {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude.toFixed(6);
-                    const lng = position.coords.longitude.toFixed(6);
-                    setLocationText(`LAT: ${lat}, LNG: ${lng}`);
-                },
-                (error) => {
-                    console.error("Error getting geolocation for live photo:", error);
-                    setLocationText("Location: Permission Denied");
-                },
-                { enableHighAccuracy: true, timeout: 5000 }
-            );
+            const retrieveLocation = (highAccuracy: boolean) => {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude.toFixed(6);
+                        const lng = position.coords.longitude.toFixed(6);
+                        setLocationText(`LAT: ${lat}, LNG: ${lng}`);
+                    },
+                    (error) => {
+                        console.error(`Error getting geolocation (highAccuracy=${highAccuracy}):`, error);
+                        if (highAccuracy) {
+                            // Fallback to low accuracy
+                            retrieveLocation(false);
+                        } else {
+                            if (error.code === error.PERMISSION_DENIED) {
+                                setLocationText("Location: Permission Denied");
+                            } else if (error.code === error.TIMEOUT) {
+                                setLocationText("Location: Timeout");
+                            } else {
+                                setLocationText("Location: Unavailable");
+                            }
+                        }
+                    },
+                    highAccuracy 
+                        ? { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                        : { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
+                );
+            };
+            retrieveLocation(true);
         } else {
             setLocationText("Location: Not Supported");
         }

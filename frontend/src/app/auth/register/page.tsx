@@ -538,7 +538,7 @@ export default function SellerRegisterPage() {
                                         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Kitchen Images (Exactly 3 Required)</label>
                                         {kitchenImageFiles.length === 0 ? (
                                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                                <label className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                                <label className="btn" style={{ display: "none" }}>
                                                     Upload Images
                                                     <input type="file" onChange={(e) => handleMultiFileChange(e, setKitchenImageFiles)} style={{ display: 'none' }} accept="image/*" multiple />
                                                 </label>
@@ -563,7 +563,7 @@ export default function SellerRegisterPage() {
                                                     <div style={{ display: "flex", gap: "10px" }}>
                                                         {kitchenImageFiles.length < 3 && (
                                                             <>
-                                                                <label style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>
+                                                                <label style={{ display: "none" }}>
                                                                     Upload Image
                                                                     <input type="file" accept="image/*" multiple onChange={(e) => {
                                                                         if (e.target.files) {
@@ -588,7 +588,7 @@ export default function SellerRegisterPage() {
                                         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Cuisine / Food Images (Exactly 3 Required)</label>
                                         {cuisineImageFiles.length === 0 ? (
                                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                                <label className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                                <label className="btn" style={{ display: "none" }}>
                                                     Upload Images
                                                     <input type="file" onChange={(e) => handleMultiFileChange(e, setCuisineImageFiles)} style={{ display: 'none' }} accept="image/*" multiple />
                                                 </label>
@@ -613,7 +613,7 @@ export default function SellerRegisterPage() {
                                                     <div style={{ display: "flex", gap: "10px" }}>
                                                         {cuisineImageFiles.length < 3 && (
                                                             <>
-                                                                <label style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>
+                                                                <label style={{ display: "none" }}>
                                                                     Upload Image
                                                                     <input type="file" accept="image/*" multiple onChange={(e) => {
                                                                         if (e.target.files) {

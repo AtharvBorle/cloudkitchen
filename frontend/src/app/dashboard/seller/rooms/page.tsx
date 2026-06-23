@@ -4,6 +4,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import CameraCaptureModal from "@/app/components/CameraCaptureModal";
 
 export default function ManageRoomsPage() {
     const [rooms, setRooms] = useState<any[]>([]);
@@ -18,6 +19,11 @@ export default function ManageRoomsPage() {
     const [description, setDescription] = useState("");
     const [capacity, setCapacity] = useState("1");
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [showCamera, setShowCamera] = useState(false);
+
+    const handleCameraCapture = (file: File) => {
+        setImageFile(file);
+    };
 
     const fetchRooms = async () => {
         try {
@@ -272,7 +278,22 @@ export default function ManageRoomsPage() {
                             <div className="input-group" style={{ marginTop: '20px' }}>
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Image</label>
                                 {editingRoom && <span style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '5px' }}>Leave empty to keep the current image</span>}
-                                <input type="file" onChange={e => setImageFile(e.target.files?.[0] || null)} className="input-field" accept="image/*" />
+                                {!imageFile ? (
+                                    <button type="button" onClick={() => setShowCamera(true)} className="btn" style={{ width: '100%', padding: '10px', backgroundColor: '#f8fafc', color: '#334155', border: '1px dashed #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                        Take Live Photo
+                                    </button>
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                                        <img src={URL.createObjectURL(imageFile)} alt="Room" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
+                                        <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.9rem', color: '#334155' }}>
+                                            {imageFile.name}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <button type="button" onClick={() => setShowCamera(true)} style={{ padding: '6px 12px', backgroundColor: '#e2e8f0', color: '#334155', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', border: 'none' }}>Change</button>
+                                            <button type="button" onClick={() => setImageFile(null)} style={{ padding: '6px 12px', backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>Remove</button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '30px' }}>
@@ -285,6 +306,7 @@ export default function ManageRoomsPage() {
                     </div>
                 </div>
             )}
+            {showCamera && <CameraCaptureModal onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />}
         </div>
     );
 }
