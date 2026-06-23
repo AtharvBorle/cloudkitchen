@@ -85,6 +85,10 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
     }, [facingMode]);
 
     const handleCapture = () => {
+        if (locationText === "Locating GPS...") {
+            alert("Please wait for GPS location detection to complete before capturing.");
+            return;
+        }
         if (videoRef.current && canvasRef.current) {
             const video = videoRef.current;
             const canvas = canvasRef.current;
@@ -195,12 +199,67 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
 
                 {!capturedImage ? (
                     <>
-                        <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: 'auto', minHeight: '300px', maxHeight: '75vh', objectFit: 'cover' }} />
+                        <div style={{ position: 'relative' }}>
+                            <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: 'auto', minHeight: '300px', maxHeight: '75vh', objectFit: 'cover', display: 'block' }} />
+                            <div style={{
+                                position: "absolute",
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                backgroundColor: locationText === "Locating GPS..." ? "rgba(217, 119, 6, 0.85)" : "rgba(0, 0, 0, 0.65)",
+                                color: "white",
+                                padding: "10px",
+                                fontSize: "0.85rem",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "8px",
+                                backdropFilter: "blur(4px)"
+                            }}>
+                                {locationText === "Locating GPS..." && (
+                                    <span style={{
+                                        width: "12px",
+                                        height: "12px",
+                                        border: "2px solid white",
+                                        borderTopColor: "transparent",
+                                        borderRadius: "50%",
+                                        animation: "spin 1s linear infinite",
+                                        display: "inline-block"
+                                    }} />
+                                )}
+                                {locationText}
+                            </div>
+                        </div>
                         <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#111' }}>
                             <button title="Switch Camera" aria-label="Switch Camera" onClick={toggleCamera} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', padding: '10px' }}>
                                 <RefreshCcw size={28} />
                             </button>
-                            <button title="Capture" aria-label="Capture" onClick={handleCapture} style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: 'white', border: '5px solid #ccc', cursor: 'pointer', outline: 'none', boxShadow: '0 0 0 2px white' }} />
+                            <button 
+                                title="Capture" 
+                                aria-label="Capture" 
+                                onClick={handleCapture} 
+                                style={{ 
+                                    width: '70px', 
+                                    height: '70px', 
+                                    borderRadius: '50%', 
+                                    backgroundColor: locationText === "Locating GPS..." ? '#94a3b8' : 'white', 
+                                    border: '5px solid #ccc', 
+                                    cursor: locationText === "Locating GPS..." ? 'not-allowed' : 'pointer', 
+                                    outline: 'none', 
+                                    boxShadow: '0 0 0 2px white',
+                                    opacity: locationText === "Locating GPS..." ? 0.6 : 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#475569',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {locationText === "Locating GPS..." && "GPS..."}
+                            </button>
                             <div style={{ width: '48px' }} /> {/* Spacer for centering */}
                         </div>
                     </>
@@ -215,6 +274,12 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                 )}
                 <canvas ref={canvasRef} style={{ display: 'none' }} />
             </div>
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 }
