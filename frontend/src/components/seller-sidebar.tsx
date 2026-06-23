@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 
 import { useState, useEffect } from "react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?: boolean; onClose?: () => void }) {
     const pathname = usePathname();
@@ -24,7 +25,7 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
     useEffect(() => {
         const fetchStatus = async () => {
             try {
-                const res = await fetch("/api/seller/dashboard/status");
+                const res = await fetchApi("/api/seller/dashboard/status");
                 if (res.ok) {
                     const data = await res.json();
                     setStatusData(data.data || data);
@@ -50,7 +51,7 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
         setCategoryPlans([]);
 
         try {
-            const res = await fetch(`/api/seller/subscription/plans?category=${category}`);
+            const res = await fetchApi(`/api/seller/subscription/plans?category=${category}`);
             if (res.ok) {
                 const data = await res.json();
                 setCategoryPlans(data.data || data || []);

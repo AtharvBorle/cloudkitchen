@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Power, PowerOff } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export function StoreStatusToggle({ initialStatus }: { initialStatus: boolean }) {
     const [isOnline, setIsOnline] = useState(initialStatus);
@@ -10,7 +11,7 @@ export function StoreStatusToggle({ initialStatus }: { initialStatus: boolean })
     const toggleStatus = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/seller/profile/status", {
+            const res = await fetchApi("/api/seller/profile/status", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isOnline: !isOnline })
