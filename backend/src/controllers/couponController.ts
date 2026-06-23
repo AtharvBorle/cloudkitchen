@@ -48,10 +48,7 @@ export const getAllCoupons = async () => {
 
         coupons = await prisma.coupon.findMany({
             where: {
-                OR: [
-                    { appliesToSellerId: null } as any,
-                    { appliesToSellerId: sellerProfile.id } as any
-                ]
+                appliesToSellerId: sellerProfile.id
             }
         });
     } else {
