@@ -46,6 +46,8 @@ model SellerProfile {
   bannerImageUrl     String?
   adhaarUrl          String
   fssaiUrl           String?
+  lightBillUrl       String?
+  passbookUrl        String?
   verificationStatus String  @default("PENDING") // PENDING, APPROVED, REJECTED, REVISION
   verificationNote   String?
   trackingId         String  @unique

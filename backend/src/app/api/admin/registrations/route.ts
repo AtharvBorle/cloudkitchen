@@ -29,6 +29,8 @@ export async function GET() {
             kitchenAddress: `${profile.addressFlat || ""}, ${profile.addressLocality || ""}${profile.addressLandmark ? `, ${profile.addressLandmark}` : ""}`,
             adhaarUrl: profile.adhaarUrl,
             fssaiUrl: profile.fssaiUrl,
+            lightBillUrl: profile.lightBillUrl,
+            passbookUrl: profile.passbookUrl,
             kitchenImages: (profile as any).kitchenImages ? JSON.parse((profile as any).kitchenImages) : [],
             cuisineImages: (profile as any).cuisineImages ? JSON.parse((profile as any).cuisineImages) : [],
             createdAt: profile.user.createdAt.toISOString(),

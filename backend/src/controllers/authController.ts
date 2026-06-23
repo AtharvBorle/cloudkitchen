@@ -8,7 +8,7 @@ export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
 
     let finalName, finalEmail, finalPhone, finalPassword, finalRole, finalSellerType, finalCity, finalPincode, finalBusinessName, finalAddressFlat, finalAddressArea, finalAddressLandmark, finalBusinessCategory, finalFoodType;
-    let adhaarUrl = "pending_url", fssaiUrl = null;
+    let adhaarUrl = "pending_url", fssaiUrl = null, lightBillUrl = null, passbookUrl = null;
     let kitchenImages: string[] = [];
     let cuisineImages: string[] = [];
 
@@ -59,6 +59,8 @@ export const registerUser = async (req: Request) => {
             const adhaarFrontFile = formData.get("adhaarFrontFile") as File;
             const adhaarBackFile = formData.get("adhaarBackFile") as File;
             const fssaiFile = formData.get("fssaiFile") as File;
+            const lightBillFile = formData.get("lightBillFile") as File;
+            const passbookFile = formData.get("passbookFile") as File;
 
             const kitchenFiles: File[] = [];
             for (let i = 0; i < 3; i++) {
@@ -73,11 +75,13 @@ export const registerUser = async (req: Request) => {
             }
 
             // Await all promises concurrently
-            const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, resolvedKitchen, resolvedCuisine] = await Promise.all([
+            const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, savedLightBill, savedPassbook, resolvedKitchen, resolvedCuisine] = await Promise.all([
                 saveFile(adhaarFile),
                 saveFile(adhaarFrontFile),
                 saveFile(adhaarBackFile),
                 saveFile(fssaiFile),
+                saveFile(lightBillFile),
+                saveFile(passbookFile),
                 Promise.all(kitchenFiles.map(saveFile)),
                 Promise.all(cuisineFiles.map(saveFile))
             ]);
@@ -95,6 +99,16 @@ export const registerUser = async (req: Request) => {
             if (savedFssai) {
                 fssaiUrl = savedFssai;
                 console.log("FSSAI license saved:", fssaiUrl);
+            }
+
+            if (savedLightBill) {
+                lightBillUrl = savedLightBill;
+                console.log("Light bill saved:", lightBillUrl);
+            }
+
+            if (savedPassbook) {
+                passbookUrl = savedPassbook;
+                console.log("Passbook saved:", passbookUrl);
             }
 
             kitchenImages = resolvedKitchen.filter(Boolean) as string[];
@@ -157,6 +171,8 @@ export const registerUser = async (req: Request) => {
                     cuisineImages: JSON.stringify(cuisineImages),
                     adhaarUrl: adhaarUrl,
                     fssaiUrl: fssaiUrl,
+                    lightBillUrl: lightBillUrl,
+                    passbookUrl: passbookUrl,
                     trackingId: `SHOP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
                     businessCategory: finalBusinessCategory || "FOOD",
                     foodType: finalFoodType || "BOTH",

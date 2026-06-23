@@ -15,6 +15,26 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
     const [isSecureContext, setIsSecureContext] = useState(true);
+    const [locationText, setLocationText] = useState<string>("Locating GPS...");
+
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lng = position.coords.longitude.toFixed(6);
+                    setLocationText(`LAT: ${lat}, LNG: ${lng}`);
+                },
+                (error) => {
+                    console.error("Error getting geolocation for live photo:", error);
+                    setLocationText("Location: Permission Denied");
+                },
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        } else {
+            setLocationText("Location: Not Supported");
+        }
+    }, []);
 
     useEffect(() => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -50,11 +70,49 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
 
     const handleCapture = () => {
         if (videoRef.current && canvasRef.current) {
-            const context = canvasRef.current.getContext('2d');
-            canvasRef.current.width = videoRef.current.videoWidth;
-            canvasRef.current.height = videoRef.current.videoHeight;
-            context?.drawImage(videoRef.current, 0, 0);
-            const dataUrl = canvasRef.current.toDataURL('image/jpeg');
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            if (context) {
+                // Draw the video frame
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Add watermark/location info overlay on the image itself
+                const padding = 15;
+                const fontSize = Math.max(14, Math.floor(canvas.width / 32));
+                context.font = `bold ${fontSize}px sans-serif`;
+                
+                const timestamp = new Date().toLocaleString();
+                const watermarkLines = [
+                    "LIVE VERIFICATION PHOTO",
+                    locationText,
+                    timestamp
+                ];
+                
+                // Calculate height and width for the background bar
+                const lineHeight = fontSize + 8;
+                const barHeight = watermarkLines.length * lineHeight + padding * 2;
+                
+                // Draw semi-transparent dark background band at the bottom
+                context.fillStyle = "rgba(0, 0, 0, 0.65)";
+                context.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
+                
+                // Draw white text lines
+                context.fillStyle = "#ffffff";
+                watermarkLines.forEach((line, index) => {
+                    context.fillText(
+                        line, 
+                        padding, 
+                        canvas.height - barHeight + padding + (index * lineHeight) + fontSize
+                    );
+                });
+            }
+            
+            const dataUrl = canvas.toDataURL('image/jpeg');
             setCapturedImage(dataUrl);
         }
     };

@@ -36,6 +36,8 @@ export const requestSellerRevision = async (req: Request) => {
     const adhaarFrontFile = formData.get("adhaarFrontFile") as File;
     const adhaarBackFile = formData.get("adhaarBackFile") as File;
     const fssaiFile = formData.get("fssaiFile") as File;
+    const lightBillFile = formData.get("lightBillFile") as File;
+    const passbookFile = formData.get("passbookFile") as File;
 
     const kitchenFiles: File[] = [];
     let hasNewKitchenImages = false;
@@ -58,11 +60,13 @@ export const requestSellerRevision = async (req: Request) => {
     }
 
     // Fire all these securely and concurrently
-    const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, resolvedKitchen, resolvedCuisine] = await Promise.all([
+    const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, savedLightBill, savedPassbook, resolvedKitchen, resolvedCuisine] = await Promise.all([
         saveFile(adhaarFile),
         saveFile(adhaarFrontFile),
         saveFile(adhaarBackFile),
         saveFile(fssaiFile),
+        saveFile(lightBillFile),
+        saveFile(passbookFile),
         Promise.all(kitchenFiles.map(saveFile)),
         Promise.all(cuisineFiles.map(saveFile))
     ]);
@@ -75,6 +79,8 @@ export const requestSellerRevision = async (req: Request) => {
         updateData.adhaarUrl = savedAdhaar;
     }
     if (savedFssai) updateData.fssaiUrl = savedFssai;
+    if (savedLightBill) updateData.lightBillUrl = savedLightBill;
+    if (savedPassbook) updateData.passbookUrl = savedPassbook;
 
     if (hasNewKitchenImages) {
         const kImages = resolvedKitchen.filter(Boolean) as string[];

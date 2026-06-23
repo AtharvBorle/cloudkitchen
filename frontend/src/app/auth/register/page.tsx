@@ -57,14 +57,18 @@ export default function SellerRegisterPage() {
     const [adhaarFrontFile, setAdhaarFrontFile] = useState<File | null>(null);
     const [adhaarBackFile, setAdhaarBackFile] = useState<File | null>(null);
     const [fssaiFile, setFssaiFile] = useState<File | null>(null);
+    const [lightBillFile, setLightBillFile] = useState<File | null>(null);
+    const [passbookFile, setPassbookFile] = useState<File | null>(null);
     const [kitchenImageFiles, setKitchenImageFiles] = useState<File[]>([]);
     const [cuisineImageFiles, setCuisineImageFiles] = useState<File[]>([]);
-    const [cameraMode, setCameraMode] = useState<'adhaarFront' | 'adhaarBack' | 'fssai' | 'kitchen' | 'cuisine' | null>(null);
+    const [cameraMode, setCameraMode] = useState<'adhaarFront' | 'adhaarBack' | 'fssai' | 'kitchen' | 'cuisine' | 'lightBill' | 'passbook' | null>(null);
 
     const handleCameraCapture = (file: File) => {
         if (cameraMode === 'adhaarFront') setAdhaarFrontFile(file);
         else if (cameraMode === 'adhaarBack') setAdhaarBackFile(file);
         else if (cameraMode === 'fssai') setFssaiFile(file);
+        else if (cameraMode === 'lightBill') setLightBillFile(file);
+        else if (cameraMode === 'passbook') setPassbookFile(file);
         else if (cameraMode === 'kitchen') setKitchenImageFiles(prev => [...prev, file].slice(0, 3));
         else if (cameraMode === 'cuisine') setCuisineImageFiles(prev => [...prev, file].slice(0, 3));
         setCameraMode(null);
@@ -187,6 +191,14 @@ export default function SellerRegisterPage() {
             setError("Both front and back photos of your Aadhaar Card are required.");
             return;
         }
+        if (!lightBillFile) {
+            setError("Electricity Bill (Light Bill) photo/file is required.");
+            return;
+        }
+        if (!passbookFile) {
+            setError("Bank Passbook photo/file is required.");
+            return;
+        }
         if (categories.find(c => c.name === formData.sellerType)?.type === 'FOOD') {
             if (kitchenImageFiles.length !== 3) {
                 setError("Exactly 3 Kitchen images are required.");
@@ -210,6 +222,8 @@ export default function SellerRegisterPage() {
             if (adhaarFrontFile) submitData.append("adhaarFrontFile", adhaarFrontFile);
             if (adhaarBackFile) submitData.append("adhaarBackFile", adhaarBackFile);
             if (fssaiFile) submitData.append("fssaiFile", fssaiFile);
+            if (lightBillFile) submitData.append("lightBillFile", lightBillFile);
+            if (passbookFile) submitData.append("passbookFile", passbookFile);
             kitchenImageFiles.forEach((file, index) => {
                 submitData.append(`kitchenImage_${index}`, file);
             });
@@ -418,6 +432,72 @@ export default function SellerRegisterPage() {
                             </div>
 
                             <div className="input-group" style={{ marginTop: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Electricity Bill (Light Bill)</label>
+                                {!lightBillFile ? (
+                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                        <label className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                            Upload File
+                                            <input type="file" onChange={(e) => handleFileChange(e, setLightBillFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                        </label>
+                                        <button type="button" onClick={() => setCameraMode('lightBill')} className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                            Take Photo
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "#f8fafc" }}>
+                                        {lightBillFile.type.startsWith("image/") ? (
+                                            <img src={URL.createObjectURL(lightBillFile)} alt="Light Bill" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
+                                        ) : (
+                                            <div style={{ padding: "10px", backgroundColor: "#e2e8f0", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "bold", color: "#475569" }}>PDF</div>
+                                        )}
+                                        <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.9rem", color: "#334155" }}>
+                                            {lightBillFile.name}
+                                        </div>
+                                        <div style={{ display: "flex", gap: "10px" }}>
+                                            <label style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>
+                                                Change
+                                                <input type="file" onChange={(e) => handleFileChange(e, setLightBillFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                            </label>
+                                            <button type="button" onClick={() => setLightBillFile(null)} style={{ padding: "6px 12px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Remove</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="input-group" style={{ marginTop: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Bank Passbook Photo</label>
+                                {!passbookFile ? (
+                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                        <label className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                            Upload File
+                                            <input type="file" onChange={(e) => handleFileChange(e, setPassbookFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                        </label>
+                                        <button type="button" onClick={() => setCameraMode('passbook')} className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                            Take Photo
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "#f8fafc" }}>
+                                        {passbookFile.type.startsWith("image/") ? (
+                                            <img src={URL.createObjectURL(passbookFile)} alt="Bank Passbook" style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
+                                        ) : (
+                                            <div style={{ padding: "10px", backgroundColor: "#e2e8f0", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "bold", color: "#475569" }}>PDF</div>
+                                        )}
+                                        <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.9rem", color: "#334155" }}>
+                                            {passbookFile.name}
+                                        </div>
+                                        <div style={{ display: "flex", gap: "10px" }}>
+                                            <label style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>
+                                                Change
+                                                <input type="file" onChange={(e) => handleFileChange(e, setPassbookFile)} style={{ display: 'none' }} accept=".pdf,image/*" />
+                                            </label>
+                                            <button type="button" onClick={() => setPassbookFile(null)} style={{ padding: "6px 12px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Remove</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="input-group" style={{ marginTop: '20px' }}>
                                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>FSSAI License (Optional)</label>
                                 {!fssaiFile ? (
                                     <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
@@ -446,9 +526,10 @@ export default function SellerRegisterPage() {
                                             </label>
                                             <button type="button" onClick={() => setFssaiFile(null)} style={{ padding: "6px 12px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Remove</button>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
+                                     </div>
+                                 )}
+                             </div>
+
 
                             {/* Conditionally show Kitchen and Cuisine images only if the selected category is FOOD related */}
                             {categories.find(c => c.name === formData.sellerType)?.type === 'FOOD' && (

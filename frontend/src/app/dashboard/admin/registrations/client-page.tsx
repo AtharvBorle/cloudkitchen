@@ -16,6 +16,8 @@ type ApplicationType = {
     kitchenAddress: string;
     adhaarUrl: string;
     fssaiUrl: string | null;
+    lightBillUrl: string | null;
+    passbookUrl: string | null;
     kitchenImages: string[];
     cuisineImages: string[];
     createdAt: string;
@@ -32,6 +34,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
     const [revisionChecks, setRevisionChecks] = useState({
         adhaar: false,
         fssai: false,
+        lightBill: false,
+        passbook: false,
         kitchenImages: false,
         cuisineImages: false,
     });
@@ -58,6 +62,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                 let generatedNote = "Please re-upload the following documents:\n";
                 if (revisionChecks.adhaar) generatedNote += "- Aadhaar Card\n";
                 if (revisionChecks.fssai) generatedNote += "- FSSAI Certificate\n";
+                if (revisionChecks.lightBill) generatedNote += "- Electricity Bill (Light Bill)\n";
+                if (revisionChecks.passbook) generatedNote += "- Bank Passbook\n";
                 if (revisionChecks.kitchenImages) generatedNote += "- Kitchen Images\n";
                 if (revisionChecks.cuisineImages) generatedNote += "- Cuisine / Food Images\n";
 
@@ -87,7 +93,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
             if (action === "REVISION") {
                 setRevisionAppId(null);
                 setRevisionNote("");
-                setRevisionChecks({ adhaar: false, fssai: false, kitchenImages: false, cuisineImages: false });
+                setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false });
             }
         }
     };
@@ -328,32 +334,86 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                             ));
                                         })()}
 
-                                        {/* FSSAI */}
-                                        <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                    <FileText size={20} color="#22c55e" />
-                                                </div>
-                                                <div>
-                                                    <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>FSSAI Certificate</p>
-                                                    <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Food Safety License</p>
-                                                </div>
-                                            </div>
-                                            {app.fssaiUrl ? (
-                                                <button
-                                                    onClick={(e) => app.fssaiUrl && openImage(e, app.fssaiUrl)}
-                                                    style={{
-                                                        padding: "8px 16px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e2e8f0", cursor: "pointer"
-                                                    }}
-                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
-                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
-                                                >
-                                                    View <ExternalLink size={14} />
-                                                </button>
-                                            ) : (
-                                                <span style={{ fontSize: "0.85rem", color: "#94a3b8", fontStyle: "italic", padding: "8px 16px" }}>Not provided</span>
-                                            )}
-                                        </div>
+                                         {/* FSSAI */}
+                                         <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                 <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                     <FileText size={20} color="#22c55e" />
+                                                 </div>
+                                                 <div>
+                                                     <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>FSSAI Certificate</p>
+                                                     <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Food Safety License</p>
+                                                 </div>
+                                             </div>
+                                             {app.fssaiUrl ? (
+                                                 <button
+                                                     onClick={(e) => app.fssaiUrl && openImage(e, app.fssaiUrl)}
+                                                     style={{
+                                                         padding: "8px 16px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e2e8f0", cursor: "pointer"
+                                                     }}
+                                                     onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+                                                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+                                                 >
+                                                     View <ExternalLink size={14} />
+                                                 </button>
+                                             ) : (
+                                                 <span style={{ fontSize: "0.85rem", color: "#94a3b8", fontStyle: "italic", padding: "8px 16px" }}>Not provided</span>
+                                             )}
+                                         </div>
+
+                                         {/* Light Bill */}
+                                         <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                 <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                     <FileText size={20} color="#f97316" />
+                                                 </div>
+                                                 <div>
+                                                     <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>Electricity Bill (Light Bill)</p>
+                                                     <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Address Proof</p>
+                                                 </div>
+                                             </div>
+                                             {app.lightBillUrl ? (
+                                                 <button
+                                                     onClick={(e) => app.lightBillUrl && openImage(e, app.lightBillUrl)}
+                                                     style={{
+                                                         padding: "8px 16px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e2e8f0", cursor: "pointer"
+                                                     }}
+                                                     onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+                                                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+                                                 >
+                                                     View <ExternalLink size={14} />
+                                                 </button>
+                                             ) : (
+                                                 <span style={{ fontSize: "0.85rem", color: "#94a3b8", fontStyle: "italic", padding: "8px 16px" }}>Not provided</span>
+                                             )}
+                                         </div>
+
+                                         {/* Bank Passbook */}
+                                         <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                 <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#faf5ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                     <FileText size={20} color="#a855f7" />
+                                                 </div>
+                                                 <div>
+                                                     <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>Bank Passbook</p>
+                                                     <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Bank Account Proof</p>
+                                                 </div>
+                                             </div>
+                                             {app.passbookUrl ? (
+                                                 <button
+                                                     onClick={(e) => app.passbookUrl && openImage(e, app.passbookUrl)}
+                                                     style={{
+                                                         padding: "8px 16px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", border: "1px solid #e2e8f0", cursor: "pointer"
+                                                     }}
+                                                     onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+                                                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+                                                 >
+                                                     View <ExternalLink size={14} />
+                                                 </button>
+                                             ) : (
+                                                 <span style={{ fontSize: "0.85rem", color: "#94a3b8", fontStyle: "italic", padding: "8px 16px" }}>Not provided</span>
+                                             )}
+                                         </div>
 
                                         {/* Kitchen Images Gallery */}
                                         {app.kitchenImages && app.kitchenImages.length > 0 && (
@@ -430,6 +490,14 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     <input type="checkbox" checked={revisionChecks.fssai} onChange={(e) => setRevisionChecks(prev => ({ ...prev, fssai: e.target.checked }))} />
                                     FSSAI Certificate
                                 </label>
+                                 <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                     <input type="checkbox" checked={revisionChecks.lightBill} onChange={(e) => setRevisionChecks(prev => ({ ...prev, lightBill: e.target.checked }))} />
+                                     Electricity Bill (Light Bill)
+                                 </label>
+                                 <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                     <input type="checkbox" checked={revisionChecks.passbook} onChange={(e) => setRevisionChecks(prev => ({ ...prev, passbook: e.target.checked }))} />
+                                     Bank Passbook
+                                 </label>
                                 <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
                                     <input type="checkbox" checked={revisionChecks.kitchenImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, kitchenImages: e.target.checked }))} />
                                     Kitchen Images
@@ -463,7 +531,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     onClick={() => {
                                         setRevisionAppId(null);
                                         setRevisionNote("");
-                                        setRevisionChecks({ adhaar: false, fssai: false, kitchenImages: false, cuisineImages: false });
+                                        setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false });
                                     }}
                                     style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#f1f5f9", color: "#475569", fontWeight: "600", border: "none", cursor: "pointer" }}
                                 >
