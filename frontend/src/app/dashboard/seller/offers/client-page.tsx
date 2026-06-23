@@ -163,6 +163,29 @@ export default function SellerOffersClient({ sellerId, products }: { sellerId: s
         }
     };
 
+    const handleToggleActive = async (coupon: CouponType) => {
+        try {
+            const res = await fetchApi(`/api/coupons/${coupon.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    isActive: !coupon.isActive
+                })
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                setCoupons(prev => prev.map(c => c.id === coupon.id ? updated : c));
+            } else {
+                const data = await res.json();
+                alert(data.message || "Failed to update status");
+            }
+        } catch (error) {
+            console.error("Error toggling coupon status:", error);
+            alert("An error occurred");
+        }
+    };
+
     return (
         <div style={{ animation: "fadeIn 0.5s ease" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
@@ -343,18 +366,18 @@ export default function SellerOffersClient({ sellerId, products }: { sellerId: s
                                         />
                                     )}
                                 </div>
-                                {editingCoupon && (
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                        <input
-                                            type="checkbox"
-                                            id="isActiveForm"
-                                            checked={isActive}
-                                            onChange={(e) => setIsActive(e.target.checked)}
-                                            style={{ width: "16px", height: "16px" }}
-                                        />
-                                        <label htmlFor="isActiveForm" style={{ color: "#334155", fontWeight: "600" }}>Coupon is Active</label>
-                                    </div>
-                                )}
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <input
+                                        type="checkbox"
+                                        id="isActiveForm"
+                                        checked={isActive}
+                                        onChange={(e) => setIsActive(e.target.checked)}
+                                        style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                                    />
+                                    <label htmlFor="isActiveForm" style={{ color: "#334155", fontWeight: "600", cursor: "pointer" }}>
+                                        Coupon is Active
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -477,9 +500,41 @@ export default function SellerOffersClient({ sellerId, products }: { sellerId: s
                                             "Never (Indefinite)"
                                         )}
                                     </div>
-                                    {!coupon.isActive && (
-                                        <div style={{ marginTop: "10px", fontSize: "0.8rem", color: "#ef4444", fontWeight: "bold" }}>
-                                            INACTIVE
+
+                                    {isGlobal ? (
+                                        <div style={{ marginTop: "12px", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.8rem", color: coupon.isActive ? "#16a34a" : "#ef4444", fontWeight: "bold" }}>
+                                            • {coupon.isActive ? "ACTIVE" : "INACTIVE"}
+                                        </div>
+                                    ) : (
+                                        <div style={{ marginTop: "12px", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                                            <div 
+                                                onClick={() => handleToggleActive(coupon)}
+                                                style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", userSelect: "none" }}
+                                            >
+                                                <div style={{
+                                                    position: "relative",
+                                                    width: "36px",
+                                                    height: "20px",
+                                                    backgroundColor: coupon.isActive ? "var(--primary)" : "#cbd5e1",
+                                                    borderRadius: "10px",
+                                                    transition: "background-color 0.2s ease-in-out"
+                                                }}>
+                                                    <div style={{
+                                                        position: "absolute",
+                                                        top: "2px",
+                                                        left: coupon.isActive ? "18px" : "2px",
+                                                        width: "16px",
+                                                        height: "16px",
+                                                        borderRadius: "50%",
+                                                        backgroundColor: "white",
+                                                        boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                                                        transition: "left 0.2s ease-in-out"
+                                                    }} />
+                                                </div>
+                                                <span style={{ fontSize: "0.8rem", fontWeight: "700", color: coupon.isActive ? "var(--primary)" : "#64748b" }}>
+                                                    {coupon.isActive ? "Active" : "Inactive"}
+                                                </span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
