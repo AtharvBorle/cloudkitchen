@@ -43,8 +43,8 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                         }
                     },
                     highAccuracy 
-                        ? { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-                        : { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
+                        ? { enableHighAccuracy: true, timeout: 3000, maximumAge: 60000 }
+                        : { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
                 );
             };
             retrieveLocation(true);
