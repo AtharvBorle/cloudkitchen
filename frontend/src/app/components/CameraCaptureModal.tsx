@@ -17,6 +17,25 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
     const [isSecureContext, setIsSecureContext] = useState(true);
     const [locationText, setLocationText] = useState<string>("Locating GPS...");
 
+    const fallbackIPLocation = async () => {
+        try {
+            setLocationText("Locating via IP...");
+            const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(5000) });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.latitude && data.longitude) {
+                    const lat = Number(data.latitude).toFixed(6);
+                    const lng = Number(data.longitude).toFixed(6);
+                    setLocationText(`LAT: ${lat}, LNG: ${lng} (approx)`);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("IP geolocation fallback failed:", e);
+        }
+        setLocationText("Location: Unavailable");
+    };
+
     const triggerGPSRetrieval = () => {
         setLocationText("Locating GPS...");
         if (navigator.geolocation) {
@@ -35,10 +54,9 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                         } else {
                             if (error.code === error.PERMISSION_DENIED) {
                                 setLocationText("Location: Permission Denied");
-                            } else if (error.code === error.TIMEOUT) {
-                                setLocationText("Location: Timeout");
                             } else {
-                                setLocationText("Location: Unavailable");
+                                // Timeout or unavailable — try IP-based fallback
+                                fallbackIPLocation();
                             }
                         }
                     },
@@ -49,7 +67,7 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
             };
             retrieveLocation(true);
         } else {
-            setLocationText("Location: Not Supported");
+            fallbackIPLocation();
         }
     };
 
@@ -89,9 +107,11 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
         };
     }, [facingMode]);
 
+    const isLocating = locationText.startsWith("Locating");
+
     const handleCapture = () => {
-        if (locationText === "Locating GPS...") {
-            alert("Please wait for GPS location detection to complete before capturing.");
+        if (isLocating) {
+            alert("Please wait for location detection to complete before capturing.");
             return;
         }
         if (videoRef.current && canvasRef.current) {
@@ -211,7 +231,7 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
-                                backgroundColor: locationText === "Locating GPS..." 
+                                backgroundColor: isLocating 
                                     ? "rgba(217, 119, 6, 0.85)" 
                                     : (locationText.startsWith("Location:") ? "rgba(239, 68, 68, 0.85)" : "rgba(0, 0, 0, 0.65)"),
                                 color: "white",
@@ -225,7 +245,7 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                                 gap: "8px",
                                 backdropFilter: "blur(4px)"
                             }}>
-                                {locationText === "Locating GPS..." && (
+                                {isLocating && (
                                     <span style={{
                                         width: "12px",
                                         height: "12px",
@@ -274,12 +294,12 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                                     width: '70px', 
                                     height: '70px', 
                                     borderRadius: '50%', 
-                                    backgroundColor: locationText === "Locating GPS..." ? '#94a3b8' : 'white', 
+                                    backgroundColor: isLocating ? '#94a3b8' : 'white', 
                                     border: '5px solid #ccc', 
-                                    cursor: locationText === "Locating GPS..." ? 'not-allowed' : 'pointer', 
+                                    cursor: isLocating ? 'not-allowed' : 'pointer', 
                                     outline: 'none', 
                                     boxShadow: '0 0 0 2px white',
-                                    opacity: locationText === "Locating GPS..." ? 0.6 : 1,
+                                    opacity: isLocating ? 0.6 : 1,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -288,7 +308,7 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                                     fontWeight: 'bold'
                                 }}
                             >
-                                {locationText === "Locating GPS..." && "GPS..."}
+                                {isLocating && "WAIT"}
                             </button>
                             <div style={{ width: '48px' }} /> {/* Spacer for centering */}
                         </div>
