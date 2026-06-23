@@ -17,7 +17,8 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
     const [isSecureContext, setIsSecureContext] = useState(true);
     const [locationText, setLocationText] = useState<string>("Locating GPS...");
 
-    useEffect(() => {
+    const triggerGPSRetrieval = () => {
+        setLocationText("Locating GPS...");
         if (navigator.geolocation) {
             const retrieveLocation = (highAccuracy: boolean) => {
                 navigator.geolocation.getCurrentPosition(
@@ -50,6 +51,10 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
         } else {
             setLocationText("Location: Not Supported");
         }
+    };
+
+    useEffect(() => {
+        triggerGPSRetrieval();
     }, []);
 
     useEffect(() => {
@@ -206,7 +211,9 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                                 bottom: 0,
                                 left: 0,
                                 right: 0,
-                                backgroundColor: locationText === "Locating GPS..." ? "rgba(217, 119, 6, 0.85)" : "rgba(0, 0, 0, 0.65)",
+                                backgroundColor: locationText === "Locating GPS..." 
+                                    ? "rgba(217, 119, 6, 0.85)" 
+                                    : (locationText.startsWith("Location:") ? "rgba(239, 68, 68, 0.85)" : "rgba(0, 0, 0, 0.65)"),
                                 color: "white",
                                 padding: "10px",
                                 fontSize: "0.85rem",
@@ -229,7 +236,30 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                                         display: "inline-block"
                                     }} />
                                 )}
-                                {locationText}
+                                <span>{locationText}</span>
+                                {locationText.startsWith("Location:") && (
+                                    <button 
+                                        type="button" 
+                                        onClick={triggerGPSRetrieval}
+                                        style={{
+                                            marginLeft: "10px",
+                                            padding: "4px 10px",
+                                            backgroundColor: "white",
+                                            color: "#ef4444",
+                                            border: "none",
+                                            borderRadius: "4px",
+                                            fontSize: "0.75rem",
+                                            fontWeight: "bold",
+                                            cursor: "pointer",
+                                            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                            transition: "background-color 0.2s"
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
+                                    >
+                                        Retry
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#111' }}>
