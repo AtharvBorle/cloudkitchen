@@ -61,7 +61,8 @@ export default function SellerRegisterPage() {
     const [passbookFile, setPassbookFile] = useState<File | null>(null);
     const [kitchenImageFiles, setKitchenImageFiles] = useState<File[]>([]);
     const [cuisineImageFiles, setCuisineImageFiles] = useState<File[]>([]);
-    const [cameraMode, setCameraMode] = useState<'adhaarFront' | 'adhaarBack' | 'fssai' | 'kitchen' | 'cuisine' | 'lightBill' | 'passbook' | null>(null);
+    const [roomImageFiles, setRoomImageFiles] = useState<File[]>([]);
+    const [cameraMode, setCameraMode] = useState<'adhaarFront' | 'adhaarBack' | 'fssai' | 'kitchen' | 'cuisine' | 'lightBill' | 'passbook' | 'room' | null>(null);
 
     const handleCameraCapture = (file: File) => {
         if (cameraMode === 'adhaarFront') setAdhaarFrontFile(file);
@@ -71,6 +72,7 @@ export default function SellerRegisterPage() {
         else if (cameraMode === 'passbook') setPassbookFile(file);
         else if (cameraMode === 'kitchen') setKitchenImageFiles(prev => [...prev, file].slice(0, 3));
         else if (cameraMode === 'cuisine') setCuisineImageFiles(prev => [...prev, file].slice(0, 3));
+        else if (cameraMode === 'room') setRoomImageFiles(prev => [...prev, file].slice(0, 3));
         setCameraMode(null);
     };
 
@@ -199,13 +201,19 @@ export default function SellerRegisterPage() {
             setError("Bank Passbook photo/file is required.");
             return;
         }
-        if (categories.find(c => c.name === formData.sellerType)?.type === 'FOOD') {
+        if (formData.businessCategory === 'FOOD' || formData.businessCategory === 'BOTH') {
             if (kitchenImageFiles.length !== 3) {
                 setError("Exactly 3 Kitchen images are required.");
                 return;
             }
             if (cuisineImageFiles.length !== 3) {
                 setError("Exactly 3 Cuisine images are required.");
+                return;
+            }
+        }
+        if (formData.businessCategory === 'PROPERTY' || formData.businessCategory === 'BOTH') {
+            if (roomImageFiles.length !== 3) {
+                setError("Exactly 3 Room photos are required.");
                 return;
             }
         }
@@ -229,6 +237,9 @@ export default function SellerRegisterPage() {
             });
             cuisineImageFiles.forEach((file, index) => {
                 submitData.append(`cuisineImage_${index}`, file);
+            });
+            roomImageFiles.forEach((file, index) => {
+                submitData.append(`roomImage_${index}`, file);
             });
 
             const res = await fetchApi("/api/auth/register", {
@@ -298,6 +309,14 @@ export default function SellerRegisterPage() {
                             </div>
 
                             <div className="input-group">
+                                <select name="businessCategory" value={formData.businessCategory} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
+                                    <option value="FOOD">Food Focus (Homely Food / Mess)</option>
+                                    <option value="PROPERTY">Property Focus (Rooms / Homestays)</option>
+                                    <option value="BOTH">Both Food and Property</option>
+                                </select>
+                            </div>
+
+                            <div className="input-group">
                                 <select name="sellerType" value={formData.sellerType} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
                                     <option value="" disabled>Select Business Type</option>
                                     {categories
@@ -313,14 +332,6 @@ export default function SellerRegisterPage() {
                                     {categories.length === 0 && (
                                         <option value="" disabled>Loading categories...</option>
                                     )}
-                                </select>
-                            </div>
-
-                            <div className="input-group">
-                                <select name="businessCategory" value={formData.businessCategory} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
-                                    <option value="FOOD">Food Focus (Homely Food / Mess)</option>
-                                    <option value="PROPERTY">Property Focus (Rooms / Homestays)</option>
-                                    <option value="BOTH">Both Food and Property</option>
                                 </select>
                             </div>
 
@@ -532,7 +543,7 @@ export default function SellerRegisterPage() {
 
 
                             {/* Conditionally show Kitchen and Cuisine images only if the selected category is FOOD related */}
-                            {categories.find(c => c.name === formData.sellerType)?.type === 'FOOD' && (
+                            {(formData.businessCategory === 'FOOD' || formData.businessCategory === 'BOTH') && (
                                 <>
                                     <div className="input-group" style={{ marginTop: '20px' }}>
                                         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Kitchen Images (Exactly 3 Required)</label>
@@ -634,6 +645,43 @@ export default function SellerRegisterPage() {
                                         )}
                                     </div>
                                 </>
+                            )}
+
+                            {(formData.businessCategory === 'PROPERTY' || formData.businessCategory === 'BOTH') && (
+                                <div className="input-group" style={{ marginTop: '20px' }}>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>Room Photos (Exactly 3 Required)</label>
+                                    {roomImageFiles.length === 0 ? (
+                                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                            <button type="button" onClick={() => setCameraMode('room')} className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                                Take Photos
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: "15px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "#f8fafc" }}>
+                                            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", marginBottom: "12px" }}>
+                                                {roomImageFiles.map((file, idx) => (
+                                                    <div key={idx} style={{ position: "relative" }}>
+                                                        <img src={URL.createObjectURL(file)} alt={`Room ${idx}`} style={{ width: "70px", height: "70px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
+                                                        <button type="button" onClick={() => setRoomImageFiles(prev => prev.filter((_, i) => i !== idx))} title="Remove image" style={{ position: 'absolute', top: '-6px', right: '-6px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '14px', lineHeight: '1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: "0 0 2px 0", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>&times;</button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <span style={{ fontSize: "0.8rem", color: roomImageFiles.length !== 3 ? "#ef4444" : "#64748b" }}>
+                                                    {roomImageFiles.length} / 3 selected
+                                                </span>
+                                                <div style={{ display: "flex", gap: "10px" }}>
+                                                    {roomImageFiles.length < 3 && (
+                                                        <button type="button" onClick={() => setCameraMode('room')} style={{ padding: "6px 12px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold", border: "none" }}>
+                                                            Take Photo
+                                                        </button>
+                                                    )}
+                                                    <button type="button" onClick={() => setRoomImageFiles([])} style={{ padding: "6px 12px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Clear All</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '30px' }}>

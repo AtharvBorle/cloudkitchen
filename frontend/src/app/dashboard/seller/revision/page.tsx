@@ -19,7 +19,8 @@ export default function RevisionPage() {
     const [fssaiFile, setFssaiFile] = useState<File | null>(null);
     const [kitchenImageFiles, setKitchenImageFiles] = useState<File[]>([]);
     const [cuisineImageFiles, setCuisineImageFiles] = useState<File[]>([]);
-    const [cameraMode, setCameraMode] = useState<'adhaarFront' | 'adhaarBack' | 'fssai' | 'kitchen' | 'cuisine' | null>(null);
+    const [roomImageFiles, setRoomImageFiles] = useState<File[]>([]);
+    const [cameraMode, setCameraMode] = useState<'adhaarFront' | 'adhaarBack' | 'fssai' | 'kitchen' | 'cuisine' | 'room' | null>(null);
 
     const handleCameraCapture = (file: File) => {
         if (cameraMode === 'adhaarFront') setAdhaarFrontFile(file);
@@ -27,6 +28,7 @@ export default function RevisionPage() {
         else if (cameraMode === 'fssai') setFssaiFile(file);
         else if (cameraMode === 'kitchen') setKitchenImageFiles(prev => [...prev, file].slice(0, 3));
         else if (cameraMode === 'cuisine') setCuisineImageFiles(prev => [...prev, file].slice(0, 3));
+        else if (cameraMode === 'room') setRoomImageFiles(prev => [...prev, file].slice(0, 3));
         setCameraMode(null);
     };
 
@@ -35,6 +37,7 @@ export default function RevisionPage() {
     const [needsFssai, setNeedsFssai] = useState(false);
     const [needsKitchen, setNeedsKitchen] = useState(false);
     const [needsCuisine, setNeedsCuisine] = useState(false);
+    const [needsRooms, setNeedsRooms] = useState(false);
 
     useEffect(() => {
         // Fetch the seller profile note
@@ -57,6 +60,7 @@ export default function RevisionPage() {
                     if (lowerNote.includes("fssai certificate")) setNeedsFssai(true);
                     if (lowerNote.includes("kitchen images")) setNeedsKitchen(true);
                     if (lowerNote.includes("cuisine / food images")) setNeedsCuisine(true);
+                    if (lowerNote.includes("room photos")) setNeedsRooms(true);
                 }
             } catch (error) {
                 console.error("Failed to fetch profile", error);
@@ -102,6 +106,10 @@ export default function RevisionPage() {
                 return;
             }
         }
+        if (needsRooms && roomImageFiles.length !== 3) {
+            alert("Please upload exactly 3 Room Photos.");
+            return;
+        }
 
         setSubmitting(true);
 
@@ -116,6 +124,9 @@ export default function RevisionPage() {
             });
             cuisineImageFiles.forEach((file, index) => {
                 formData.append(`cuisineImage_${index}`, file);
+            });
+            roomImageFiles.forEach((file, index) => {
+                formData.append(`roomImage_${index}`, file);
             });
 
             const res = await fetchApi("/api/seller/revision", {
@@ -380,6 +391,42 @@ export default function RevisionPage() {
                             </div>
                         )}
                     </>
+                )}
+
+                {needsRooms && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+                        <label style={{ fontWeight: "600", color: "#334155", display: "flex", justifyContent: "space-between" }}>
+                            <span>Room Photos Update</span>
+                            <span style={{ fontSize: "0.8rem", fontWeight: "normal", color: "#64748b" }}>{roomImageFiles.length} / 3 selected</span>
+                        </label>
+                        {roomImageFiles.length === 0 ? (
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                <button type="button" onClick={() => setCameraMode('room')} className="btn" style={{ padding: "10px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center", border: "1px dashed #cbd5e1", flex: 1 }}>
+                                    Take Photos
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ padding: "15px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "#f8fafc" }}>
+                                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
+                                    {roomImageFiles.map((file, idx) => (
+                                        <div key={idx} style={{ position: "relative" }}>
+                                            <img src={URL.createObjectURL(file)} alt={`Room ${idx}`} style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "6px", border: "1px solid #e2e8f0" }} />
+                                            <button type="button" onClick={() => setRoomImageFiles(prev => prev.filter((_, i) => i !== idx))} title="Remove image" style={{ position: 'absolute', top: '-6px', right: '-6px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '14px', lineHeight: '1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: "0 0 2px 0", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>&times;</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                {roomImageFiles.length !== 3 && <span style={{ fontSize: "0.8rem", color: "#ef4444", display: "block", marginBottom: "10px" }}>You MUST select exactly 3 images.</span>}
+                                <div style={{ display: "flex", gap: "10px" }}>
+                                    {roomImageFiles.length < 3 && (
+                                        <button type="button" onClick={() => setCameraMode('room')} style={{ padding: "8px 16px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold", border: "none" }}>
+                                            Take Photo
+                                        </button>
+                                    )}
+                                    <button type="button" onClick={() => setRoomImageFiles([])} style={{ padding: "8px 16px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Clear All</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 <hr style={{ border: "none", borderTop: "1px solid #f1f5f9", margin: "1rem 0" }} />

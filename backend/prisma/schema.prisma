@@ -43,6 +43,7 @@ model SellerProfile {
   addressLandmark    String?
   kitchenImages      String  @default("[]") // JSON stringified array of URLs (Max 3)
   cuisineImages      String  @default("[]") // JSON stringified array of URLs (Max 3)
+  roomImages         String  @default("[]") // JSON stringified array of URLs (Max 3)
   bannerImageUrl     String?
   adhaarUrl          String
   fssaiUrl           String?

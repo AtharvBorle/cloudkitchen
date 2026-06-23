@@ -11,6 +11,7 @@ export const registerUser = async (req: Request) => {
     let adhaarUrl = "pending_url", fssaiUrl = null, lightBillUrl = null, passbookUrl = null;
     let kitchenImages: string[] = [];
     let cuisineImages: string[] = [];
+    let roomImages: string[] = [];
 
     if (contentType.includes('application/json')) {
         const body = await req.json();
@@ -74,8 +75,14 @@ export const registerUser = async (req: Request) => {
                 if (cFile) cuisineFiles.push(cFile);
             }
 
+            const roomFiles: File[] = [];
+            for (let i = 0; i < 3; i++) {
+                const rFile = formData.get(`roomImage_${i}`) as File;
+                if (rFile) roomFiles.push(rFile);
+            }
+
             // Await all promises concurrently
-            const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, savedLightBill, savedPassbook, resolvedKitchen, resolvedCuisine] = await Promise.all([
+            const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, savedLightBill, savedPassbook, resolvedKitchen, resolvedCuisine, resolvedRooms] = await Promise.all([
                 saveFile(adhaarFile),
                 saveFile(adhaarFrontFile),
                 saveFile(adhaarBackFile),
@@ -83,7 +90,8 @@ export const registerUser = async (req: Request) => {
                 saveFile(lightBillFile),
                 saveFile(passbookFile),
                 Promise.all(kitchenFiles.map(saveFile)),
-                Promise.all(cuisineFiles.map(saveFile))
+                Promise.all(cuisineFiles.map(saveFile)),
+                Promise.all(roomFiles.map(saveFile))
             ]);
 
             if (savedAdhaarFront && savedAdhaarBack) {
@@ -113,6 +121,7 @@ export const registerUser = async (req: Request) => {
 
             kitchenImages = resolvedKitchen.filter(Boolean) as string[];
             cuisineImages = resolvedCuisine.filter(Boolean) as string[];
+            roomImages = resolvedRooms.filter(Boolean) as string[];
 
             console.log("All concurrent file uploads completed.");
         } catch (uploadError: any) {
@@ -169,6 +178,7 @@ export const registerUser = async (req: Request) => {
                     addressLandmark: finalAddressLandmark || null,
                     kitchenImages: JSON.stringify(kitchenImages),
                     cuisineImages: JSON.stringify(cuisineImages),
+                    roomImages: JSON.stringify(roomImages),
                     adhaarUrl: adhaarUrl,
                     fssaiUrl: fssaiUrl,
                     lightBillUrl: lightBillUrl,

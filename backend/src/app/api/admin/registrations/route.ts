@@ -33,6 +33,7 @@ export async function GET() {
             passbookUrl: profile.passbookUrl,
             kitchenImages: (profile as any).kitchenImages ? JSON.parse((profile as any).kitchenImages) : [],
             cuisineImages: (profile as any).cuisineImages ? JSON.parse((profile as any).cuisineImages) : [],
+            roomImages: (profile as any).roomImages ? JSON.parse((profile as any).roomImages) : [],
             createdAt: profile.user.createdAt.toISOString(),
             verificationStatus: profile.verificationStatus,
         }));

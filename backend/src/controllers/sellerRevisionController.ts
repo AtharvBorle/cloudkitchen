@@ -59,8 +59,18 @@ export const requestSellerRevision = async (req: Request) => {
         }
     }
 
+    const roomFiles: File[] = [];
+    let hasNewRoomImages = false;
+    for (let i = 0; i < 3; i++) {
+        const rFile = formData.get(`roomImage_${i}`) as File;
+        if (rFile) {
+            roomFiles.push(rFile);
+            hasNewRoomImages = true;
+        }
+    }
+
     // Fire all these securely and concurrently
-    const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, savedLightBill, savedPassbook, resolvedKitchen, resolvedCuisine] = await Promise.all([
+    const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, savedLightBill, savedPassbook, resolvedKitchen, resolvedCuisine, resolvedRooms] = await Promise.all([
         saveFile(adhaarFile),
         saveFile(adhaarFrontFile),
         saveFile(adhaarBackFile),
@@ -68,7 +78,8 @@ export const requestSellerRevision = async (req: Request) => {
         saveFile(lightBillFile),
         saveFile(passbookFile),
         Promise.all(kitchenFiles.map(saveFile)),
-        Promise.all(cuisineFiles.map(saveFile))
+        Promise.all(cuisineFiles.map(saveFile)),
+        Promise.all(roomFiles.map(saveFile))
     ]);
 
     if (savedAdhaarFront && savedAdhaarBack) {
@@ -90,6 +101,11 @@ export const requestSellerRevision = async (req: Request) => {
     if (hasNewCuisineImages) {
         const cImages = resolvedCuisine.filter(Boolean) as string[];
         updateData.cuisineImages = JSON.stringify(cImages);
+    }
+
+    if (hasNewRoomImages) {
+        const rImages = resolvedRooms.filter(Boolean) as string[];
+        updateData.roomImages = JSON.stringify(rImages);
     }
 
     await db.sellerProfile.update({

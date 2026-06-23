@@ -20,6 +20,7 @@ type ApplicationType = {
     passbookUrl: string | null;
     kitchenImages: string[];
     cuisineImages: string[];
+    roomImages?: string[];
     createdAt: string;
     verificationStatus?: string;
 };
@@ -38,6 +39,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
         passbook: false,
         kitchenImages: false,
         cuisineImages: false,
+        roomImages: false,
     });
 
     // Image Modal State
@@ -66,6 +68,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                 if (revisionChecks.passbook) generatedNote += "- Bank Passbook\n";
                 if (revisionChecks.kitchenImages) generatedNote += "- Kitchen Images\n";
                 if (revisionChecks.cuisineImages) generatedNote += "- Cuisine / Food Images\n";
+                if (revisionChecks.roomImages) generatedNote += "- Room Photos\n";
 
                 if (revisionNote.trim() !== "") {
                     generatedNote += `\nAdditional Notes from Admin:\n${revisionNote}`;
@@ -93,7 +96,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
             if (action === "REVISION") {
                 setRevisionAppId(null);
                 setRevisionNote("");
-                setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false });
+                setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false, roomImages: false });
             }
         }
     };
@@ -446,6 +449,22 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Room Photos Gallery */}
+                                        {app.roomImages && app.roomImages.length > 0 && (
+                                            <div style={{ marginTop: "1rem" }}>
+                                                <h5 style={{ fontSize: "0.85rem", color: "#64748b", marginBottom: "0.5rem", fontWeight: "600" }}>Room Photos ({app.roomImages.length})</h5>
+                                                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                                                    {app.roomImages.map((img, i) => (
+                                                        <div key={i} onClick={(e) => openImage(e, img)} style={{ cursor: "pointer", transition: "transform 0.2s" }} onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.05)"} onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}>
+                                                            <div style={{ width: "80px", height: "80px", borderRadius: "8px", overflow: "hidden", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
+                                                                <img src={img} alt={`Room Photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -506,6 +525,10 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     <input type="checkbox" checked={revisionChecks.cuisineImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, cuisineImages: e.target.checked }))} />
                                     Cuisine / Food Images
                                 </label>
+                                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                    <input type="checkbox" checked={revisionChecks.roomImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, roomImages: e.target.checked }))} />
+                                    Room Photos
+                                </label>
                             </div>
 
                             <div style={{ marginBottom: "2rem" }}>
@@ -531,7 +554,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     onClick={() => {
                                         setRevisionAppId(null);
                                         setRevisionNote("");
-                                        setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false });
+                                        setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false, roomImages: false });
                                     }}
                                     style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#f1f5f9", color: "#475569", fontWeight: "600", border: "none", cursor: "pointer" }}
                                 >
