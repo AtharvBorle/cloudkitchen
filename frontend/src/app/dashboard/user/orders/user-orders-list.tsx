@@ -335,7 +335,7 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                                             {cancellingId === order.id ? "Cancelling..." : "Cancel Order"}
                                         </button>
                                     )}
-                                    {order.status !== 'CANCELLED' && (
+                                    {order.status === 'DELIVERED' && (
                                         <button
                                             onClick={() => window.open(`/invoice/order/${order.id}`, '_blank')}
                                             style={{ color: 'var(--primary, #10B981)', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', border: 'none', background: 'none', padding: 0, fontWeight: '700' }}

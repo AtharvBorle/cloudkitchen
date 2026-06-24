@@ -28,9 +28,6 @@ function CheckoutContent() {
     const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
     const [discountAmount, setDiscountAmount] = useState(0);
-    const [couponCodeInput, setCouponCodeInput] = useState("");
-    const [couponError, setCouponError] = useState("");
-    const [couponSuccess, setCouponSuccess] = useState("");
 
     // Room Availability tracking
     const [bookedDates, setBookedDates] = useState<{ startDate: string, endDate: string }[]>([]);
@@ -299,38 +296,6 @@ function CheckoutContent() {
         }
     }, [appliedCoupon, cartTotal, isRoomBooking, roomDetails, bookingDates]);
 
-    const handleApplyCouponCode = () => {
-        setCouponError("");
-        setCouponSuccess("");
-
-        if (!couponCodeInput.trim()) {
-            setCouponError("Please enter a coupon code.");
-            return;
-        }
-
-        const code = couponCodeInput.trim().toUpperCase();
-        const found = availableCoupons.find(c => c.code.toUpperCase() === code);
-
-        if (!found) {
-            setCouponError("Invalid or expired coupon code.");
-            setAppliedCoupon(null);
-            return;
-        }
-
-        const baseTotal = isRoomBooking
-            ? Math.max(roomDetails.price * (bookingDates.end && bookingDates.start ? Math.ceil((new Date(bookingDates.end).getTime() - new Date(bookingDates.start).getTime()) / (1000 * 60 * 60 * 24)) : 1), roomDetails.price)
-            : cartTotal;
-
-        if (found.minimumCartValue && baseTotal < found.minimumCartValue) {
-            setCouponError(`Minimum order value of ₹${found.minimumCartValue} required for this coupon.`);
-            setAppliedCoupon(null);
-            return;
-        }
-
-        setAppliedCoupon(found);
-        setCouponSuccess(`Coupon ${found.code} applied successfully!`);
-    };
-
     if (!isClient) return null; // Wait for hydration to grab cart items
 
     const handleCheckout = async (e: React.FormEvent) => {
@@ -365,8 +330,7 @@ function CheckoutContent() {
                 // Calculate days to multiply by nightly price
                 const msPerDay = 1000 * 60 * 60 * 24;
                 const days = Math.ceil((new Date(bookingDates.end).getTime() - new Date(bookingDates.start).getTime()) / msPerDay);
-                const baseRoomTotal = days > 0 ? (roomDetails.price * days) : roomDetails.price;
-                const finalRoomTotal = Math.max(0, baseRoomTotal - discountAmount);
+                const totalAmount = days > 0 ? (roomDetails.price * days) : roomDetails.price;
 
                 const res = await fetchApi("/api/user/bookings", {
                     method: "POST",
@@ -375,7 +339,7 @@ function CheckoutContent() {
                         roomId: roomDetails.id,
                         startDate: bookingDates.start,
                         endDate: bookingDates.end,
-                        totalAmount: finalRoomTotal
+                        totalAmount: totalAmount
                     })
                 });
 
@@ -713,6 +677,11 @@ function CheckoutContent() {
                             <span>₹{roomDetails.price} / night</span>
                         </div>
                         <hr style={{ border: 'none', borderTop: '1px solid #EEE', marginBottom: '20px' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                            <span>Total Payable</span>
+                            <span>₹{totalPayable}</span>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '10px', textAlign: 'center' }}>Total will adjust based on selected dates above.</p>
                     </div>
                 ) : (
                     <div>
@@ -736,147 +705,83 @@ function CheckoutContent() {
                             ))}
                         </div>
                         <hr style={{ border: 'none', borderTop: '1px solid #EEE', marginBottom: '20px' }} />
-                    </div>
-                )}
 
-                {/* Coupons Section */}
-                <div style={{ marginBottom: "20px", padding: "15px", backgroundColor: "#F9FAFB", borderRadius: "8px", border: "1px dashed #CBD5E1" }}>
-                    <h4 style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Tag size={16} color="var(--primary)" />
-                        Apply Coupon
-                    </h4>
-                    <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-                        <input
-                            type="text"
-                            placeholder="Enter coupon code"
-                            value={couponCodeInput}
-                            onChange={(e) => {
-                                setCouponCodeInput(e.target.value.toUpperCase());
-                                setCouponError("");
-                                setCouponSuccess("");
-                            }}
-                            style={{
-                                flex: 1,
-                                padding: "8px 12px",
-                                border: "1px solid #EAEAEA",
-                                borderRadius: "6px",
-                                fontSize: "0.9rem",
-                                textTransform: "uppercase"
-                            }}
-                        />
-                        <button
-                            type="button"
-                            onClick={handleApplyCouponCode}
-                            style={{
-                                backgroundColor: "var(--primary)",
-                                color: "white",
-                                border: "none",
-                                padding: "8px 16px",
-                                borderRadius: "6px",
-                                fontSize: "0.9rem",
-                                fontWeight: "bold",
-                                cursor: "pointer"
-                            }}
-                        >
-                            Apply
-                        </button>
-                    </div>
-                    {couponError && (
-                        <div style={{ color: "#EF4444", fontSize: "0.85rem", marginBottom: "10px", fontWeight: "500" }}>
-                            ❌ {couponError}
-                        </div>
-                    )}
-                    {couponSuccess && (
-                        <div style={{ color: "#16a34a", fontSize: "0.85rem", marginBottom: "10px", fontWeight: "500" }}>
-                            ✅ {couponSuccess}
-                        </div>
-                    )}
+                        {/* Coupons Section */}
+                        {availableCoupons.length > 0 && (
+                            <div style={{ marginBottom: "20px", padding: "15px", backgroundColor: "#F9FAFB", borderRadius: "8px", border: "1px dashed #CBD5E1" }}>
+                                <h4 style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <Tag size={16} color="var(--primary)" />
+                                    Available Offers
+                                </h4>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    {availableCoupons.map((coupon) => {
+                                        const isMinOrderMet = !coupon.minimumCartValue || basePayable >= coupon.minimumCartValue;
 
-                    {availableCoupons.length > 0 && (
-                        <div style={{ marginTop: "15px" }}>
-                            <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#64748B", marginBottom: "10px", borderTop: "1px solid #EAEAEA", paddingTop: "10px" }}>
-                                Available Offers:
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                {availableCoupons.map((coupon) => {
-                                    const isMinOrderMet = !coupon.minimumCartValue || basePayable >= coupon.minimumCartValue;
-
-                                    return (
-                                        <label key={coupon.id} style={{
-                                            display: "flex",
-                                            alignItems: "flex-start",
-                                            gap: "10px",
-                                            cursor: isMinOrderMet ? "pointer" : "not-allowed",
-                                            padding: "10px",
-                                            backgroundColor: "white",
-                                            borderRadius: "6px",
-                                            border: appliedCoupon?.id === coupon.id ? "2px solid var(--primary)" : "1px solid #EAEAEA",
-                                            opacity: isMinOrderMet ? 1 : 0.6
-                                        }}>
-                                            <input
-                                                type="radio"
-                                                name="coupon"
-                                                disabled={!isMinOrderMet}
-                                                checked={appliedCoupon?.id === coupon.id}
-                                                onChange={() => {
-                                                    setAppliedCoupon(coupon);
-                                                    setCouponSuccess(`Coupon ${coupon.code} applied!`);
-                                                    setCouponError("");
-                                                    setCouponCodeInput(coupon.code);
-                                                }}
-                                                style={{ marginTop: "4px" }}
-                                            />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: "bold", color: "var(--primary)" }}>{coupon.code}</div>
-                                                <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{coupon.description}</div>
-                                                {!isMinOrderMet && (
-                                                    <div style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: "600", marginTop: "4px" }}>
-                                                        Min. Order ₹{coupon.minimumCartValue} required
+                                        return (
+                                            <label key={coupon.id} style={{
+                                                display: "flex",
+                                                alignItems: "flex-start",
+                                                gap: "10px",
+                                                cursor: isMinOrderMet ? "pointer" : "not-allowed",
+                                                padding: "10px",
+                                                backgroundColor: "white",
+                                                borderRadius: "6px",
+                                                border: appliedCoupon?.id === coupon.id ? "2px solid var(--primary)" : "1px solid #EAEAEA",
+                                                opacity: isMinOrderMet ? 1 : 0.6
+                                            }}>
+                                                <input
+                                                    type="radio"
+                                                    name="coupon"
+                                                    disabled={!isMinOrderMet}
+                                                    checked={appliedCoupon?.id === coupon.id}
+                                                    onChange={() => setAppliedCoupon(coupon)}
+                                                    style={{ marginTop: "4px" }}
+                                                />
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontWeight: "bold", color: "var(--primary)" }}>{coupon.code}</div>
+                                                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{coupon.description}</div>
+                                                    {!isMinOrderMet && (
+                                                        <div style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: "600", marginTop: "4px" }}>
+                                                            Min. Order ₹{coupon.minimumCartValue} required
+                                                        </div>
+                                                    )}
+                                                    <div style={{ fontSize: "0.8rem", fontWeight: "600", color: isMinOrderMet ? "#16a34a" : "#94a3b8", marginTop: "4px" }}>
+                                                        Save {coupon.discountPercentage ? `${coupon.discountPercentage}%` : `₹${coupon.discountAmount}`}
                                                     </div>
-                                                )}
-                                                <div style={{ fontSize: "0.8rem", fontWeight: "600", color: isMinOrderMet ? "#16a34a" : "#94a3b8", marginTop: "4px" }}>
-                                                    Save {coupon.discountPercentage ? `${coupon.discountPercentage}%` : `₹${coupon.discountAmount}`}
                                                 </div>
-                                            </div>
-                                        </label>
-                                    );
-                                })}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                                {appliedCoupon && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setAppliedCoupon(null)}
+                                        style={{ marginTop: "10px", fontSize: "0.85rem", color: "#EF4444", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                                    >
+                                        Remove Coupon
+                                    </button>
+                                )}
                             </div>
-                        </div>
-                    )}
-                    {appliedCoupon && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setAppliedCoupon(null);
-                                setCouponCodeInput("");
-                                setCouponSuccess("");
-                                setCouponError("");
-                            }}
-                            style={{ marginTop: "10px", fontSize: "0.85rem", color: "#EF4444", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-                        >
-                            Remove Coupon
-                        </button>
-                    )}
-                </div>
+                        )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '1rem', color: 'var(--text-main)' }}>
-                    <span>Subtotal</span>
-                    <span>₹{basePayable}</span>
-                </div>
-                {discountAmount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '1rem', color: '#16a34a', fontWeight: '500' }}>
-                        <span>Discount ({appliedCoupon?.code})</span>
-                        <span>- ₹{discountAmount}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '1rem', color: 'var(--text-main)' }}>
+                            <span>Subtotal</span>
+                            <span>₹{basePayable}</span>
+                        </div>
+                        {discountAmount > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '1rem', color: '#16a34a', fontWeight: '500' }}>
+                                <span>Discount ({appliedCoupon?.code})</span>
+                                <span>- ₹{discountAmount}</span>
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)', borderTop: '1px solid #EEE', paddingTop: '15px' }}>
+                            <span>Total Amount</span>
+                            <span>₹{totalPayable}</span>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--teal)', marginTop: '10px', fontWeight: '500', textAlign: 'center' }}>Ordering from {cartItems[0]?.sellerName}</p>
                     </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)', borderTop: '1px solid #EEE', paddingTop: '15px' }}>
-                    <span>Total Amount</span>
-                    <span>₹{totalPayable}</span>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--teal)', marginTop: '10px', fontWeight: '500', textAlign: 'center' }}>
-                    {isRoomBooking ? `Booking from ${roomDetails.sellerName}` : `Ordering from ${cartItems[0]?.sellerName}`}
-                </p>
             </div>
         </div>
     );
