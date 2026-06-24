@@ -131,7 +131,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10B981', marginBottom: '8px' }}>
                             <Receipt size={32} />
-                            <span style={{ fontSize: '1.6rem', fontWeight: '900', letterSpacing: '-0.03em', color: '#1E293B' }}>CLOUD ROOMS & KITCHEN</span>
+                            <span style={{ fontSize: '1.6rem', fontWeight: '900', letterSpacing: '-0.03em', color: '#1E293B' }}>NEOCLOUDBITES</span>
                         </div>
                         <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>Premium Food Delivery & Cozy Stays Booking Platform</p>
                     </div>
@@ -268,7 +268,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
 
                 {/* Footer Notes */}
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '20px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.8rem', color: '#94A3B8', margin: '0 0 5px' }}>Thank you for ordering with Cloud Rooms & Kitchen!</p>
+                    <p style={{ fontSize: '0.8rem', color: '#94A3B8', margin: '0 0 5px' }}>Thank you for ordering with NeoCloudBites!</p>
                     <p style={{ fontSize: '0.75rem', color: '#CBD5E1', margin: 0 }}>This is an electronically generated invoice and does not require a physical signature.</p>
                 </div>
             </div>
