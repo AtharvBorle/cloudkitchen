@@ -167,7 +167,7 @@ export default function UserProfilePage() {
                                 onClick={handleUpdatePhone}
                                 disabled={isSavingPhone}
                                 className="btn btn-primary"
-                                style={{ padding: '0 20px', fontSize: '0.9rem' }}
+                                style={{ padding: '0 24px', fontSize: '0.9rem', width: 'auto', whiteSpace: 'nowrap' }}
                             >
                                 {isSavingPhone ? "Saving..." : "Save"}
                             </button>
