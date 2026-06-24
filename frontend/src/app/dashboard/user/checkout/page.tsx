@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { Banknote, ShieldCheck, Tag, Zap } from "lucide-react";
 import Script from "next/script";
+import { useLocation } from "@/components/location-provider";
 
 function CheckoutContent() {
     const { cartItems, cartTotal, clearCart, addToCart, decreaseQuantity, removeFromCart } = useCart();
     const router = useRouter();
+    const { defaultAddress } = useLocation();
     const [isClient, setIsClient] = useState(false);
 
     // For Room booking direct bypass
@@ -75,7 +77,7 @@ function CheckoutContent() {
         if (isClient) {
             fetchUserProfile();
         }
-    }, [isClient]);
+    }, [isClient, defaultAddress]);
 
     // Fetch Seller data when items or room are confirmed
     useEffect(() => {

@@ -7,15 +7,18 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { BookRoomButton } from "@/components/cart-buttons";
+import { useLocation } from "@/components/location-provider";
 
 export default function UserRoomsPage() {
     const { initiateRoomBooking } = useCart();
+    const { defaultAddress } = useLocation();
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            setLoading(true);
             try {
                 const res = await fetchApi("/api/user/dashboard");
                 const data = await res.json();
@@ -28,7 +31,7 @@ export default function UserRoomsPage() {
         };
 
         fetchDashboardData();
-    }, []);
+    }, [defaultAddress?.pincode]);
 
     const roomPlaceholder = "https://placehold.co/400x250?text=Cozy+Room";
 

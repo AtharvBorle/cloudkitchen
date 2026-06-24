@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { ShoppingCart, Search } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { useLocation } from "@/components/location-provider";
 import { AddToCartButton } from "@/components/cart-buttons";
 
 const isCurrentlyOpen = (item: any) => {
@@ -54,6 +55,7 @@ const isCurrentlyOpen = (item: any) => {
 
 export default function UserFoodPage() {
     const { addToCart } = useCart();
+    const { defaultAddress } = useLocation();
     const [vegOnly, setVegOnly] = useState(false);
     const [foodItems, setFoodItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -61,6 +63,7 @@ export default function UserFoodPage() {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            setLoading(true);
             try {
                 const res = await fetchApi("/api/user/dashboard");
                 const data = await res.json();
@@ -80,7 +83,7 @@ export default function UserFoodPage() {
             const q = params.get("query");
             if (q) setSearchQuery(q);
         }
-    }, []);
+    }, [defaultAddress?.pincode]);
 
     const placeholderImage = "https://placehold.co/400x250?text=Delicious+Food";
 
