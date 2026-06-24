@@ -79,9 +79,7 @@ export default function ManageMenuPage() {
         formData.append("stockQuantity", stockQuantity);
         
         const deliveryPincodesStr = pincodeList.join(", ");
-        if (deliveryPincodesStr) {
-            formData.append("deliveryPincodes", deliveryPincodesStr);
-        }
+        formData.append("deliveryPincodes", deliveryPincodesStr);
         if (openTime) formData.append("openTime", openTime);
         if (closeTime) formData.append("closeTime", closeTime);
         formData.append("operationalHours", JSON.stringify(dailyHours));

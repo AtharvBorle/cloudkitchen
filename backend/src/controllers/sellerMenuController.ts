@@ -126,7 +126,9 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (price !== null && !isNaN(parseFloat(price))) dataToUpdate.price = parseFloat(price);
         if (isAvailable !== null) dataToUpdate.isAvailable = isAvailable === "true";
         if (stockQuantity !== null && !isNaN(parseInt(stockQuantity))) dataToUpdate.stockQuantity = parseInt(stockQuantity);
-        if (deliveryPincodes !== null) dataToUpdate.deliveryPincodes = deliveryPincodes;
+        if (deliveryPincodes !== null) {
+            dataToUpdate.deliveryPincodes = deliveryPincodes.trim() || null;
+        }
         if (openTime !== null) dataToUpdate.openTime = openTime;
         if (closeTime !== null) dataToUpdate.closeTime = closeTime;
         if (operationalHours !== null) dataToUpdate.operationalHours = operationalHours;
@@ -146,7 +148,9 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
         if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
         if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = parseInt(body.stockQuantity);
-        if (body.deliveryPincodes !== undefined) dataToUpdate.deliveryPincodes = body.deliveryPincodes;
+        if (body.deliveryPincodes !== undefined) {
+            dataToUpdate.deliveryPincodes = body.deliveryPincodes ? body.deliveryPincodes.trim() || null : null;
+        }
         if (body.openTime !== undefined) dataToUpdate.openTime = body.openTime;
         if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
         if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
