@@ -39,6 +39,135 @@ export default function ChatbotWidget() {
     const [ticketDesc, setTicketDesc] = useState("");
     const [submittingTicket, setSubmittingTicket] = useState(false);
 
+    // Draggable chatbot widget states
+    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const dragRef = useRef<{ startX: number; startY: number; posX: number; posY: number; moved: boolean }>({
+        startX: 0,
+        startY: 0,
+        posX: 0,
+        posY: 0,
+        moved: false
+    });
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement | HTMLButtonElement>) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
+            return;
+        }
+        if (target.closest('button') && !target.closest('.drag-handle-btn') && !target.closest('.drag-handle-header')) {
+            return;
+        }
+        
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        
+        setIsDragging(true);
+        dragRef.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            posX: rect.left,
+            posY: rect.top,
+            moved: false
+        };
+        
+        document.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener("mouseup", handleMouseUp);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        const dx = e.clientX - dragRef.current.startX;
+        const dy = e.clientY - dragRef.current.startY;
+        
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            dragRef.current.moved = true;
+        }
+        
+        let newX = dragRef.current.posX + dx;
+        let newY = dragRef.current.posY + dy;
+        
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+        }
+        
+        setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement | HTMLButtonElement>) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
+            return;
+        }
+        if (target.closest('button') && !target.closest('.drag-handle-btn') && !target.closest('.drag-handle-header')) {
+            return;
+        }
+        
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        
+        const touch = e.touches[0];
+        setIsDragging(true);
+        dragRef.current = {
+            startX: touch.clientX,
+            startY: touch.clientY,
+            posX: rect.left,
+            posY: rect.top,
+            moved: false
+        };
+        
+        document.addEventListener("touchmove", handleTouchMove, { passive: false });
+        document.addEventListener("touchend", handleTouchEnd);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+        const touch = e.touches[0];
+        const dx = touch.clientX - dragRef.current.startX;
+        const dy = touch.clientY - dragRef.current.startY;
+        
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            dragRef.current.moved = true;
+        }
+        
+        let newX = dragRef.current.posX + dx;
+        let newY = dragRef.current.posY + dy;
+        
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+        }
+        
+        setPosition({ x: newX, y: newY });
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        document.removeEventListener("touchmove", handleTouchMove);
+        document.removeEventListener("touchend", handleTouchEnd);
+    };
+
+    useEffect(() => {
+        return () => {
+            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mouseup", handleMouseUp);
+            document.removeEventListener("touchmove", handleTouchMove);
+            document.removeEventListener("touchend", handleTouchEnd);
+        };
+    }, []);
+
     const messageEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -678,13 +807,36 @@ export default function ChatbotWidget() {
         }
     };
 
+    const currentStyle: React.CSSProperties = position 
+        ? {
+            position: "fixed",
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            zIndex: 9999,
+          }
+        : {
+            position: "fixed",
+            bottom: "30px",
+            right: "30px",
+            zIndex: 9999,
+          };
+
     return (
-        <div style={{ position: "fixed", bottom: "30px", right: "30px", zIndex: 9999 }}>
+        <div ref={containerRef} style={currentStyle}>
             
             {/* Chatbot Toggle Button */}
             {!isOpen && (
                 <button
-                    onClick={() => setIsOpen(true)}
+                    className="drag-handle-btn"
+                    onMouseDown={handleMouseDown}
+                    onTouchStart={handleTouchStart}
+                    onClick={(e) => {
+                        if (dragRef.current.moved) {
+                            e.preventDefault();
+                            return;
+                        }
+                        setIsOpen(true);
+                    }}
                     style={{
                         width: "60px",
                         height: "60px",
@@ -696,15 +848,15 @@ export default function ChatbotWidget() {
                         justifyContent: "center",
                         boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
                         border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.3s ease",
+                        cursor: isDragging ? "grabbing" : "grab",
+                        transition: isDragging ? "none" : "all 0.3s ease",
                         position: "relative"
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "scale(1.1)";
+                        if (!isDragging) e.currentTarget.style.transform = "scale(1.1)";
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "scale(1)";
+                        if (!isDragging) e.currentTarget.style.transform = "scale(1)";
                     }}
                 >
                     <MessageSquare size={28} />
@@ -720,7 +872,7 @@ export default function ChatbotWidget() {
                     }} />
                 </button>
             )}
-
+ 
             {/* Chatbot Window */}
             {isOpen && (
                 <div style={{
@@ -733,18 +885,25 @@ export default function ChatbotWidget() {
                     flexDirection: "column",
                     overflow: "hidden",
                     border: "1px solid #E2E8F0",
-                    transition: "all 0.3s ease"
+                    transition: isDragging ? "none" : "all 0.3s ease"
                 }}>
                     
                     {/* Header */}
-                    <div style={{
-                        background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-                        padding: "20px",
-                        color: "white",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center"
-                    }}>
+                    <div 
+                        className="drag-handle-header"
+                        onMouseDown={handleMouseDown}
+                        onTouchStart={handleTouchStart}
+                        style={{
+                            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+                            padding: "20px",
+                            color: "white",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            cursor: isDragging ? "grabbing" : "grab",
+                            userSelect: "none"
+                        }}
+                    >
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <div style={{
                                 width: "40px",
