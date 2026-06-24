@@ -72,48 +72,29 @@ export default function ManageMenuPage() {
         const method = editingItemId ? "PUT" : "POST";
         const url = editingItemId ? `/api/seller/menu/${editingItemId}` : "/api/seller/menu";
 
-        let bodyData: any;
-        let headers: Record<string, string> = {};
-
-        if (editingItemId) {
-            // For PUT, we typically send JSON (assuming you don't need image update for MVP)
-            bodyData = JSON.stringify({
-                name,
-                price: parseFloat(price),
-                description,
-                stockQuantity: parseInt(stockQuantity),
-                deliveryPincodes: pincodeList.join(", ") || null,
-                openTime: openTime || null,
-                closeTime: closeTime || null,
-                operationalHours: JSON.stringify(dailyHours),
-                itemType: sellerFoodType === "VEG" ? "VEG" : itemType
-            });
-            headers["Content-Type"] = "application/json";
-        } else {
-            // For POST, use FormData for image
-            const formData = new FormData();
-            formData.append("name", name);
-            formData.append("price", price);
-            formData.append("description", description);
-            formData.append("stockQuantity", stockQuantity);
-            const deliveryPincodesStr = pincodeList.join(", ");
-            if (deliveryPincodesStr) {
-                formData.append("deliveryPincodes", deliveryPincodesStr);
-            }
-            if (openTime) formData.append("openTime", openTime);
-            if (closeTime) formData.append("closeTime", closeTime);
-            formData.append("operationalHours", JSON.stringify(dailyHours));
-            formData.append("itemType", sellerFoodType === "VEG" ? "VEG" : itemType);
-            if (imageFile) formData.append("image", imageFile);
-            bodyData = formData;
-            // browser sets content type automatically for FormData
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("price", price);
+        formData.append("description", description);
+        formData.append("stockQuantity", stockQuantity);
+        
+        const deliveryPincodesStr = pincodeList.join(", ");
+        if (deliveryPincodesStr) {
+            formData.append("deliveryPincodes", deliveryPincodesStr);
+        }
+        if (openTime) formData.append("openTime", openTime);
+        if (closeTime) formData.append("closeTime", closeTime);
+        formData.append("operationalHours", JSON.stringify(dailyHours));
+        formData.append("itemType", sellerFoodType === "VEG" ? "VEG" : itemType);
+        
+        if (imageFile) {
+            formData.append("image", imageFile);
         }
 
         try {
             const res = await fetchApi(url, {
                 method,
-                headers,
-                body: bodyData
+                body: formData
             });
 
             if (res.ok) {

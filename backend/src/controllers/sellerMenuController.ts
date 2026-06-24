@@ -95,8 +95,6 @@ export const updateMenuItem = async (req: Request, id: string) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const body = await req.json();
-
     const existingItem = await db.foodItem.findUnique({
         where: { id },
         include: { seller: true }
@@ -106,18 +104,55 @@ export const updateMenuItem = async (req: Request, id: string) => {
         throw new ApiError("Forbidden", 403);
     }
 
+    const contentType = req.headers.get("content-type") || "";
     const dataToUpdate: any = {};
-    if (body.name !== undefined) dataToUpdate.name = body.name;
-    if (body.description !== undefined) dataToUpdate.description = body.description;
-    if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
-    if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
-    if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = parseInt(body.stockQuantity);
-    if (body.deliveryPincodes !== undefined) dataToUpdate.deliveryPincodes = body.deliveryPincodes;
-    if (body.openTime !== undefined) dataToUpdate.openTime = body.openTime;
-    if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
-    if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
-    if (body.itemType !== undefined) {
-        dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : body.itemType;
+
+    if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        const name = formData.get("name") as string | null;
+        const price = formData.get("price") as string | null;
+        const description = formData.get("description") as string | null;
+        const stockQuantity = formData.get("stockQuantity") as string | null;
+        const deliveryPincodes = formData.get("deliveryPincodes") as string | null;
+        const openTime = formData.get("openTime") as string | null;
+        const closeTime = formData.get("closeTime") as string | null;
+        const operationalHours = formData.get("operationalHours") as string | null;
+        const itemType = formData.get("itemType") as string | null;
+        const isAvailable = formData.get("isAvailable") as string | null;
+        const imageFile = formData.get("image") as File | null;
+
+        if (name !== null) dataToUpdate.name = name;
+        if (description !== null) dataToUpdate.description = description;
+        if (price !== null && !isNaN(parseFloat(price))) dataToUpdate.price = parseFloat(price);
+        if (isAvailable !== null) dataToUpdate.isAvailable = isAvailable === "true";
+        if (stockQuantity !== null && !isNaN(parseInt(stockQuantity))) dataToUpdate.stockQuantity = parseInt(stockQuantity);
+        if (deliveryPincodes !== null) dataToUpdate.deliveryPincodes = deliveryPincodes;
+        if (openTime !== null) dataToUpdate.openTime = openTime;
+        if (closeTime !== null) dataToUpdate.closeTime = closeTime;
+        if (operationalHours !== null) dataToUpdate.operationalHours = operationalHours;
+        if (itemType !== null) {
+            dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : itemType;
+        }
+
+        if (imageFile && imageFile.size > 0) {
+            const bytes = await imageFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            dataToUpdate.imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
+        }
+    } else {
+        const body = await req.json();
+        if (body.name !== undefined) dataToUpdate.name = body.name;
+        if (body.description !== undefined) dataToUpdate.description = body.description;
+        if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
+        if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
+        if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = parseInt(body.stockQuantity);
+        if (body.deliveryPincodes !== undefined) dataToUpdate.deliveryPincodes = body.deliveryPincodes;
+        if (body.openTime !== undefined) dataToUpdate.openTime = body.openTime;
+        if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
+        if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
+        if (body.itemType !== undefined) {
+            dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : body.itemType;
+        }
     }
 
     const updatedItem = await db.foodItem.update({
