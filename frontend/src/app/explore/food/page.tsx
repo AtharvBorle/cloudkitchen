@@ -77,7 +77,7 @@ export default function ExploreFoodPage() {
         }
     }, []);
 
-    const placeholderImage = "https://via.placeholder.com/400x250?text=Delicious+Food";
+    const placeholderImage = "https://placehold.co/400x250?text=Delicious+Food";
 
     const { defaultAddress } = useLocation();
     const guestPincode = defaultAddress?.pincode ? defaultAddress.pincode.trim() : null;

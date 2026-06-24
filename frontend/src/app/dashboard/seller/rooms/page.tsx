@@ -92,7 +92,7 @@ export default function ManageRoomsPage() {
         }
     };
 
-    const placeholderImage = "https://via.placeholder.com/400x250?text=No+Room+Image";
+    const placeholderImage = "https://placehold.co/400x250?text=No+Room+Image";
 
     const getFirstImage = (jsonStr: string) => {
         try {

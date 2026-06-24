@@ -87,8 +87,8 @@ export default function UserDashboard() {
         fetchDashboardData();
     }, [defaultAddress?.pincode]);
 
-    const placeholderImage = "https://via.placeholder.com/400x250?text=Delicious+Food";
-    const roomPlaceholder = "https://via.placeholder.com/400x250?text=Cozy+Room";
+    const placeholderImage = "https://placehold.co/400x250?text=Delicious+Food";
+    const roomPlaceholder = "https://placehold.co/400x250?text=Cozy+Room";
 
     const getFirstImage = (jsonStr: string) => {
         try {

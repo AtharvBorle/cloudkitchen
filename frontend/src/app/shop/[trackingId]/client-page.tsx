@@ -111,7 +111,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
         );
     }
 
-    const placeholderImage = "https://via.placeholder.com/400x250?text=No+Image";
+    const placeholderImage = "https://placehold.co/400x250?text=No+Image";
 
     const getFirstImage = (jsonStr: string) => {
         try {

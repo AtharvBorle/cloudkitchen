@@ -27,7 +27,7 @@ export default function ExploreRoomsPage() {
         fetchDashboardData();
     }, []);
 
-    const roomPlaceholder = "https://via.placeholder.com/400x250?text=Cozy+Room";
+    const roomPlaceholder = "https://placehold.co/400x250?text=Cozy+Room";
 
     const getFirstImage = (jsonStr: string) => {
         try {

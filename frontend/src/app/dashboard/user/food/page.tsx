@@ -82,7 +82,7 @@ export default function UserFoodPage() {
         }
     }, []);
 
-    const placeholderImage = "https://via.placeholder.com/400x250?text=Delicious+Food";
+    const placeholderImage = "https://placehold.co/400x250?text=Delicious+Food";
 
     const filteredFood = foodItems.filter(item => {
         if (!isCurrentlyOpen(item)) return false;

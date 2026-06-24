@@ -210,7 +210,7 @@ export default function ManageMenuPage() {
     };
 
     // Generic placeholder if no image
-    const placeholderImage = "https://via.placeholder.com/400x250?text=No+Image";
+    const placeholderImage = "https://placehold.co/400x250?text=No+Image";
 
     return (
         <div style={{ position: 'relative' }}>
