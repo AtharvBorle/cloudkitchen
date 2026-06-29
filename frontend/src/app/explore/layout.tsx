@@ -346,6 +346,7 @@ export function ExploreHeader() {
     }, [isLocationLoading, defaultAddress]);
 
     const fetchUserAddresses = async () => {
+        if (!session || !session.user) return [];
         setIsFetchingAddresses(true);
         try {
             const res = await fetchApi("/api/user/profile");

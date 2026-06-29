@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { fetchApi } from "@/lib/fetch-api";
+import { useSession } from "next-auth/react";
 
 interface Address {
     id: string;
@@ -33,8 +34,25 @@ interface LocationProviderProps {
 export function LocationProvider({ children }: LocationProviderProps) {
     const [defaultAddress, setDefaultAddress] = useState<Address | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { status } = useSession();
 
     const fetchAddress = async () => {
+        if (status !== "authenticated") {
+            // User is a guest or session is loading
+            const guestPin = localStorage.getItem("guest-pincode");
+            if (guestPin) {
+                setDefaultAddress({
+                    id: "guest-location",
+                    type: "Current Location",
+                    pincode: guestPin
+                });
+            } else {
+                setDefaultAddress(null);
+            }
+            setIsLoading(status === "loading");
+            return;
+        }
+
         setIsLoading(true);
         try {
             const res = await fetchApi("/api/user/location/default");
@@ -89,7 +107,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
     useEffect(() => {
         fetchAddress();
-    }, []);
+    }, [status]);
 
     return (
         <LocationContext.Provider value={{ defaultAddress, isLoading, refreshAddress: fetchAddress, setGuestLocation }}>

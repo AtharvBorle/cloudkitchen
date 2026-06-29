@@ -15,13 +15,7 @@ function CheckoutContent() {
     const { defaultAddress } = useLocation();
     const [isClient, setIsClient] = useState(false);
 
-    useEffect(() => {
-        if (status === "loading") return;
-        if (!session || session.user.role !== "USER") {
-            const redirectUrl = window.location.pathname + window.location.search;
-            router.push(`/user?callbackUrl=${encodeURIComponent(redirectUrl)}`);
-        }
-    }, [session, status, router]);
+
 
     // For Room booking direct bypass
     const searchParams = useSearchParams();
@@ -84,10 +78,14 @@ function CheckoutContent() {
             }
         };
 
-        if (isClient) {
+        if (isClient && session?.user?.role === "USER") {
             fetchUserProfile();
+        } else if (isClient && status === "unauthenticated") {
+            setPhone("");
+            setAddresses([]);
+            setAddressId("");
         }
-    }, [isClient, defaultAddress]);
+    }, [isClient, defaultAddress, session, status]);
 
     // Fetch Seller data when items or room are confirmed
     useEffect(() => {
@@ -308,7 +306,7 @@ function CheckoutContent() {
         }
     }, [appliedCoupon, cartTotal, isRoomBooking, roomDetails, bookingDates]);
 
-    if (status === "loading" || !isClient || !session || session.user.role !== "USER") {
+    if (status === "loading" || !isClient) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
                 <div style={{ padding: '20px', fontSize: '1.2rem', color: 'var(--text-muted)' }}>Loading checkout...</div>
@@ -485,7 +483,7 @@ function CheckoutContent() {
             <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '15px' }}>Your Cart is Empty</h2>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Looks like you haven't added any delicious food yet!</p>
-                <button onClick={() => router.push("/dashboard/user/food")} className="btn btn-primary">Browse Menus</button>
+                <button onClick={() => router.push(session ? "/dashboard/user/food" : "/explore/food")} className="btn btn-primary">Browse Menus</button>
             </div>
         );
     }
@@ -515,163 +513,186 @@ function CheckoutContent() {
 
                 {error && <div style={{ padding: '15px', backgroundColor: '#FDE8E8', color: '#C81E1E', borderRadius: '8px', marginBottom: '20px', fontWeight: '500' }}>{error}</div>}
 
-                <form onSubmit={handleCheckout}>
-                    <div style={{ marginBottom: "25px" }}>
-                        <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "15px" }}>Contact Details</h3>
-                        <div style={{ marginBottom: "15px" }}>
-                            <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Phone Number</label>
-                            <input
-                                type="tel"
-                                readOnly
-                                value={phone}
-                                className="input-field"
-                                style={{ backgroundColor: '#F9FAFB', color: 'var(--text-muted)', cursor: 'not-allowed' }}
-                                placeholder="Phone missing - update in profile"
-                            />
-                            <p style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '5px' }}><a href="/dashboard/user/profile" style={{ textDecoration: 'underline' }}>Update phone number in Profile</a></p>
+                {(!session || session.user.role !== "USER") ? (
+                    <div style={{ padding: '30px 20px', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1', textAlign: 'center', margin: '20px 0' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                            <ShieldCheck size={32} color="#3B82F6" />
                         </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0F172A', marginBottom: '0.75rem' }}>Login Required to Place Order</h3>
+                        <p style={{ color: '#64748B', marginBottom: '1.75rem', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                            Please sign in to select your delivery address, configure payment details, and complete your order.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const redirectUrl = window.location.pathname + window.location.search;
+                                router.push(`/user?callbackUrl=${encodeURIComponent(redirectUrl)}`);
+                            }}
+                            className="btn btn-primary"
+                            style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 'bold', width: 'auto', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        >
+                            Sign In to Proceed
+                        </button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleCheckout}>
+                        <div style={{ marginBottom: "25px" }}>
+                            <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "15px" }}>Contact Details</h3>
+                            <div style={{ marginBottom: "15px" }}>
+                                <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Phone Number</label>
+                                <input
+                                    type="tel"
+                                    readOnly
+                                    value={phone}
+                                    className="input-field"
+                                    style={{ backgroundColor: '#F9FAFB', color: 'var(--text-muted)', cursor: 'not-allowed' }}
+                                    placeholder="Phone missing - update in profile"
+                                />
+                                <p style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '5px' }}><a href="/dashboard/user/profile" style={{ textDecoration: 'underline' }}>Update phone number in Profile</a></p>
+                            </div>
 
-                        {!isRoomBooking && (
-                            <div>
-                                <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Delivery Address</label>
-                                {addresses.length > 0 ? (
-                                    <select
-                                        className="input-field"
-                                        value={addressId}
-                                        onChange={(e) => setAddressId(e.target.value)}
-                                        style={{ backgroundColor: 'white', padding: '12px', border: '1px solid #EAEAEA', borderRadius: '8px', cursor: 'pointer', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right .7rem top 50%', backgroundSize: '.65rem auto' }}
-                                    >
-                                        <option value="" disabled>Select an address</option>
-                                        {addresses.map(addr => (
-                                            <option key={addr.id} value={addr.id}>
-                                                {addr.type} - {addr.houseNumber}, {addr.street}, {addr.pincode}
-                                            </option>
+                            {!isRoomBooking && (
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Delivery Address</label>
+                                    {addresses.length > 0 ? (
+                                        <select
+                                            className="input-field"
+                                            value={addressId}
+                                            onChange={(e) => setAddressId(e.target.value)}
+                                            style={{ backgroundColor: 'white', padding: '12px', border: '1px solid #EAEAEA', borderRadius: '8px', cursor: 'pointer', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right .7rem top 50%', backgroundSize: '.65rem auto' }}
+                                        >
+                                            <option value="" disabled>Select an address</option>
+                                            {addresses.map(addr => (
+                                                <option key={addr.id} value={addr.id}>
+                                                    {addr.type} - {addr.houseNumber}, {addr.street}, {addr.pincode}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div style={{ padding: '15px', backgroundColor: '#FFF4F2', color: '#D9534F', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                            No saved addresses found. <a href="/dashboard/user/profile" style={{ fontWeight: 'bold', textDecoration: 'underline' }}>Add an address in your Profile</a> to checkout.
+                                        </div>
+                                    )}
+
+                                    {selectedAddress && hasOutOfRangeItems && (
+                                        <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                            <span style={{ fontWeight: 'bold' }}>⚠️ Delivery Pincode Issue:</span>
+                                            <p style={{ marginTop: '5px' }}>
+                                                The following items in your cart are not deliverable to pincode <span style={{ fontWeight: 'bold' }}>{selectedAddress.pincode}</span>:
+                                            </p>
+                                            <ul style={{ marginTop: '5px', paddingLeft: '20px', listStyleType: 'disc' }}>
+                                                {outOfRangeItems.map((name: string, idx: number) => (
+                                                    <li key={idx} style={{ fontWeight: '500' }}>{name}</li>
+                                                ))}
+                                            </ul>
+                                            <p style={{ marginTop: '5px', fontSize: '0.85rem' }}>
+                                                Please select a different delivery address or remove these items from your cart to proceed.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {hasClosedItems && (
+                                        <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                            <span style={{ fontWeight: 'bold' }}>⚠️ Operational Hours Issue:</span>
+                                            <p style={{ marginTop: '5px' }}>
+                                                The following items in your cart are currently outside of their operational hours:
+                                            </p>
+                                            <ul style={{ marginTop: '5px', paddingLeft: '20px', listStyleType: 'disc' }}>
+                                                {closedItems.map((name: string, idx: number) => (
+                                                    <li key={idx} style={{ fontWeight: '500' }}>{name}</li>
+                                                ))}
+                                            </ul>
+                                            <p style={{ marginTop: '5px', fontSize: '0.85rem' }}>
+                                                Please remove these items from your cart to proceed.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {isRoomBooking && (
+                                <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-In Date</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            min={new Date().toISOString().split('T')[0]}
+                                            value={bookingDates.start}
+                                            onChange={(e) => setBookingDates({ ...bookingDates, start: e.target.value })}
+                                            className="input-field"
+                                        />
+                                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                                            🕑 Check-in from 12:00 PM
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-Out Date</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            min={bookingDates.start || new Date().toISOString().split('T')[0]}
+                                            value={bookingDates.end}
+                                            onChange={(e) => setBookingDates({ ...bookingDates, end: e.target.value })}
+                                            className="input-field"
+                                        />
+                                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                                            🕛 Check-out by 11:00 AM
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {dateOverlapError && (
+                                <div style={{ padding: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '4px', marginTop: '15px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                    ⚠️ {dateOverlapError}
+                                </div>
+                            )}
+                            {isRoomBooking && bookedDates.length > 0 && (
+                                <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#F8F9F9', borderRadius: '8px', border: '1px solid #EAEAEA' }}>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '8px' }}>Currently Booked Dates:</div>
+                                    <ul style={{ listStyleType: 'none', padding: 0, margin: 0, fontSize: '0.8rem', color: '#555' }}>
+                                        {bookedDates.map((b, idx) => (
+                                            <li key={idx}>🚫 {new Date(b.startDate).toLocaleDateString()} to {new Date(b.endDate).toLocaleDateString()}</li>
                                         ))}
-                                    </select>
-                                ) : (
-                                    <div style={{ padding: '15px', backgroundColor: '#FFF4F2', color: '#D9534F', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                        No saved addresses found. <a href="/dashboard/user/profile" style={{ fontWeight: 'bold', textDecoration: 'underline' }}>Add an address in your Profile</a> to checkout.
-                                    </div>
-                                )}
-
-                                {selectedAddress && hasOutOfRangeItems && (
-                                    <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                        <span style={{ fontWeight: 'bold' }}>⚠️ Delivery Pincode Issue:</span>
-                                        <p style={{ marginTop: '5px' }}>
-                                            The following items in your cart are not deliverable to pincode <span style={{ fontWeight: 'bold' }}>{selectedAddress.pincode}</span>:
-                                        </p>
-                                        <ul style={{ marginTop: '5px', paddingLeft: '20px', listStyleType: 'disc' }}>
-                                            {outOfRangeItems.map((name: string, idx: number) => (
-                                                <li key={idx} style={{ fontWeight: '500' }}>{name}</li>
-                                            ))}
-                                        </ul>
-                                        <p style={{ marginTop: '5px', fontSize: '0.85rem' }}>
-                                            Please select a different delivery address or remove these items from your cart to proceed.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {hasClosedItems && (
-                                    <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                        <span style={{ fontWeight: 'bold' }}>⚠️ Operational Hours Issue:</span>
-                                        <p style={{ marginTop: '5px' }}>
-                                            The following items in your cart are currently outside of their operational hours:
-                                        </p>
-                                        <ul style={{ marginTop: '5px', paddingLeft: '20px', listStyleType: 'disc' }}>
-                                            {closedItems.map((name: string, idx: number) => (
-                                                <li key={idx} style={{ fontWeight: '500' }}>{name}</li>
-                                            ))}
-                                        </ul>
-                                        <p style={{ marginTop: '5px', fontSize: '0.85rem' }}>
-                                            Please remove these items from your cart to proceed.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {isRoomBooking && (
-                            <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-In Date</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        min={new Date().toISOString().split('T')[0]}
-                                        value={bookingDates.start}
-                                        onChange={(e) => setBookingDates({ ...bookingDates, start: e.target.value })}
-                                        className="input-field"
-                                    />
-                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                        🕑 Check-in from 12:00 PM
-                                    </div>
+                                    </ul>
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-Out Date</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        min={bookingDates.start || new Date().toISOString().split('T')[0]}
-                                        value={bookingDates.end}
-                                        onChange={(e) => setBookingDates({ ...bookingDates, end: e.target.value })}
-                                        className="input-field"
-                                    />
-                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                        🕛 Check-out by 11:00 AM
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {dateOverlapError && (
-                            <div style={{ padding: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '4px', marginTop: '15px', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                ⚠️ {dateOverlapError}
-                            </div>
-                        )}
-                        {isRoomBooking && bookedDates.length > 0 && (
-                            <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#F8F9F9', borderRadius: '8px', border: '1px solid #EAEAEA' }}>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '8px' }}>Currently Booked Dates:</div>
-                                <ul style={{ listStyleType: 'none', padding: 0, margin: 0, fontSize: '0.8rem', color: '#555' }}>
-                                    {bookedDates.map((b, idx) => (
-                                        <li key={idx}>🚫 {new Date(b.startDate).toLocaleDateString()} to {new Date(b.endDate).toLocaleDateString()}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{ marginBottom: "30px" }}>
-                        <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "15px" }}>Payment Method</h3>
-                        <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", flexDirection: "column" }}>
-
-                            <label style={{ flex: '1 1 auto', border: paymentMethod === 'ONLINE' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <input type="radio" value="ONLINE" checked={paymentMethod === 'ONLINE'} onChange={() => setPaymentMethod('ONLINE')} style={{ display: 'none' }} />
-                                <Zap size={24} color={paymentMethod === 'ONLINE' ? 'var(--primary)' : 'var(--text-muted)'} />
-                                <div>
-                                    <div style={{ fontWeight: 'bold' }}>Pay Online (Razorpay)</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Credit Card, UPI, Net Banking</div>
-                                </div>
-                            </label>
-
-                            <label style={{ flex: '1 1 auto', border: paymentMethod === 'COD' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <input type="radio" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ display: 'none' }} />
-                                <Banknote size={24} color={paymentMethod === 'COD' ? 'var(--primary)' : 'var(--text-muted)'} />
-                                <div>
-                                    <div style={{ fontWeight: 'bold' }}>Pay on Delivery</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cash or UPI</div>
-                                </div>
-                            </label>
+                            )}
                         </div>
-                    </div>
 
-                    <button type="submit" disabled={isSubmitting || hasOutOfRangeItems || hasClosedItems} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: (isSubmitting || hasOutOfRangeItems || hasClosedItems) ? 0.7 : 1 }}>
-                        {isSubmitting ? "Processing..." : (
-                            <>
-                                <ShieldCheck size={20} />
-                                {isRoomBooking ? "Confirm Booking" : "Place Order"}
-                            </>
-                        )}
-                    </button>
-                </form>
+                        <div style={{ marginBottom: "30px" }}>
+                            <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "15px" }}>Payment Method</h3>
+                            <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", flexDirection: "column" }}>
+
+                                <label style={{ flex: '1 1 auto', border: paymentMethod === 'ONLINE' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <input type="radio" value="ONLINE" checked={paymentMethod === 'ONLINE'} onChange={() => setPaymentMethod('ONLINE')} style={{ display: 'none' }} />
+                                    <Zap size={24} color={paymentMethod === 'ONLINE' ? 'var(--primary)' : 'var(--text-muted)'} />
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>Pay Online (Razorpay)</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Credit Card, UPI, Net Banking</div>
+                                    </div>
+                                </label>
+
+                                <label style={{ flex: '1 1 auto', border: paymentMethod === 'COD' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <input type="radio" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ display: 'none' }} />
+                                    <Banknote size={24} color={paymentMethod === 'COD' ? 'var(--primary)' : 'var(--text-muted)'} />
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>Pay on Delivery</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cash or UPI</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" disabled={isSubmitting || hasOutOfRangeItems || hasClosedItems} className="btn btn-primary" style={{ width: "100%", padding: "15px", fontSize: "1.1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", opacity: (isSubmitting || hasOutOfRangeItems || hasClosedItems) ? 0.7 : 1 }}>
+                            {isSubmitting ? "Processing..." : (
+                                <>
+                                    <ShieldCheck size={20} />
+                                    {isRoomBooking ? "Confirm Booking" : "Place Order"}
+                                </>
+                            )}
+                        </button>
+                    </form>
+                )}
             </div>
 
             {/* Right Column - Order Summary */}
