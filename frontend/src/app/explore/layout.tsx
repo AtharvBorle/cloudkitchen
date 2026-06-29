@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { ShoppingCart, LogIn, Menu, X, ArrowRight, MapPin } from "lucide-react";
+import { ShoppingCart, LogIn, LogOut, Menu, X, ArrowRight, MapPin } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useLocation, LocationProvider } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
+import { useSession, signOut } from "next-auth/react";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -283,6 +284,7 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
 }
 
 export function ExploreHeader() {
+    const { data: session } = useSession();
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems } = useCart();
@@ -595,9 +597,23 @@ export function ExploreHeader() {
             </div>
 
             <div className="desktop-only" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                <Link href="/user" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
-                    <LogIn size={18} /> Sign In
-                </Link>
+                <button onClick={() => router.push("/dashboard/user/checkout")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
+                    <ShoppingCart size={18} /> Cart ({totalCount})
+                </button>
+                {session ? (
+                    <>
+                        <Link href="/dashboard/user" className="btn btn-secondary" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            Dashboard
+                        </Link>
+                        <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                            <LogOut size={18} /> Sign Out
+                        </button>
+                    </>
+                ) : (
+                    <Link href="/user" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                        <LogIn size={18} /> Sign In
+                    </Link>
+                )}
             </div>
 
             <button className="mobile-only" onClick={() => setIsMenuOpen(true)} style={{ color: "var(--text-main)", background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -637,9 +653,23 @@ export function ExploreHeader() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "auto", paddingTop: "20px", borderTop: "1px solid var(--surface-border)" }}>
-                    <Link href="/user" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                        <LogIn size={18} /> Sign In
-                    </Link>
+                    <button onClick={() => { setIsMenuOpen(false); router.push("/dashboard/user/checkout"); }} className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontWeight: "bold" }}>
+                        <ShoppingCart size={18} /> Cart ({totalCount})
+                    </button>
+                    {session ? (
+                        <>
+                            <Link href="/dashboard/user" className="btn btn-secondary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                Dashboard
+                            </Link>
+                            <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); signOut({ callbackUrl: window.location.origin + "/" }); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                <LogOut size={18} /> Sign Out
+                            </button>
+                        </>
+                    ) : (
+                        <Link href="/user" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                            <LogIn size={18} /> Sign In
+                        </Link>
+                    )}
                 </div>
             </div>
 

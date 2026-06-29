@@ -2,10 +2,10 @@
 import { fetchApi } from "@/lib/fetch-api";
 
 
-import { signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { ShoppingCart, LogOut, Menu, X, MapPin } from "lucide-react";
+import { ShoppingCart, LogOut, LogIn, Menu, X, MapPin } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
@@ -285,6 +285,7 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
 }
 
 export function UserHeader() {
+    const { data: session } = useSession();
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems } = useCart();
@@ -604,9 +605,15 @@ export function UserHeader() {
                 <button onClick={() => router.push("/dashboard/user/checkout")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
                     <ShoppingCart size={18} /> Cart ({totalCount})
                 </button>
-                <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
-                    <LogOut size={18} /> Sign Out
-                </button>
+                {session ? (
+                    <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                        <LogOut size={18} /> Sign Out
+                    </button>
+                ) : (
+                    <button className="btn btn-primary" onClick={() => router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`)} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                        <LogIn size={18} /> Sign In
+                    </button>
+                )}
             </div>
 
             <button className="mobile-only" onClick={() => setIsMenuOpen(true)} style={{ color: "var(--text-main)", background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -649,9 +656,15 @@ export function UserHeader() {
                     <button onClick={() => { setIsMenuOpen(false); router.push("/dashboard/user/checkout"); }} className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontWeight: "bold" }}>
                         <ShoppingCart size={18} /> Cart ({totalCount})
                     </button>
-                    <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                        <LogOut size={18} /> Sign Out
-                    </button>
+                    {session ? (
+                        <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                            <LogOut size={18} /> Sign Out
+                        </button>
+                    ) : (
+                        <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                            <LogIn size={18} /> Sign In
+                        </button>
+                    )}
                 </div>
             </div>
 

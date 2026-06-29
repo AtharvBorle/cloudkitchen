@@ -6,12 +6,22 @@ import { useCart } from "@/context/CartContext";
 import { Banknote, ShieldCheck, Tag, Zap } from "lucide-react";
 import Script from "next/script";
 import { useLocation } from "@/components/location-provider";
+import { useSession } from "next-auth/react";
 
 function CheckoutContent() {
+    const { data: session, status } = useSession();
     const { cartItems, cartTotal, clearCart, addToCart, decreaseQuantity, removeFromCart } = useCart();
     const router = useRouter();
     const { defaultAddress } = useLocation();
     const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        if (status === "loading") return;
+        if (!session || session.user.role !== "USER") {
+            const redirectUrl = window.location.pathname + window.location.search;
+            router.push(`/user?callbackUrl=${encodeURIComponent(redirectUrl)}`);
+        }
+    }, [session, status, router]);
 
     // For Room booking direct bypass
     const searchParams = useSearchParams();
@@ -298,7 +308,13 @@ function CheckoutContent() {
         }
     }, [appliedCoupon, cartTotal, isRoomBooking, roomDetails, bookingDates]);
 
-    if (!isClient) return null; // Wait for hydration to grab cart items
+    if (status === "loading" || !isClient || !session || session.user.role !== "USER") {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                <div style={{ padding: '20px', fontSize: '1.2rem', color: 'var(--text-muted)' }}>Loading checkout...</div>
+            </div>
+        );
+    }
 
     const handleCheckout = async (e: React.FormEvent) => {
         e.preventDefault();

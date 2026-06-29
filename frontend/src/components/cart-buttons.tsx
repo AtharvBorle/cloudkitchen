@@ -16,10 +16,6 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
     const cartItem = cartItems.find((i: any) => i.id === item.id);
 
     const handleAction = () => {
-        if (!session) {
-            router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`);
-            return;
-        }
 
         // Validate stock quantity limits
         if (item.stockQuantity !== undefined && item.stockQuantity !== -1) {
@@ -106,10 +102,6 @@ export function BookRoomButton({ room, fullWidth = true, disabled = false }: { r
     const pathname = usePathname();
 
     const handleAction = () => {
-        if (!session) {
-            router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`);
-            return;
-        }
         initiateRoomBooking(room);
     };
 
