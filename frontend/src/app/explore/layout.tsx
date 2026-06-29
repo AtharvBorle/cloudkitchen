@@ -378,6 +378,11 @@ export function ExploreHeader() {
     };
 
     const handleSelectOnMap = async (pincode: string) => {
+        if (!session || !session.user) {
+            setGuestLocation(pincode);
+            setIsAddressModalOpen(false);
+            return;
+        }
         try {
             const updateRes = await fetchApi("/api/user/location", {
                 method: "POST",
@@ -442,6 +447,11 @@ export function ExploreHeader() {
 
     const handleConfirmGps = async () => {
         if (!gpsSuccessPincode) return;
+        if (!session || !session.user) {
+            setGuestLocation(gpsSuccessPincode);
+            setIsAddressModalOpen(false);
+            return;
+        }
         try {
             const updateRes = await fetchApi("/api/user/location", {
                 method: "POST",

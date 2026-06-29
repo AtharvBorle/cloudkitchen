@@ -8,21 +8,32 @@ import { Search } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
+import { useSession } from "next-auth/react";
 
 export default function UserRoomsPage() {
     const { initiateRoomBooking } = useCart();
     const { defaultAddress } = useLocation();
+    const { status } = useSession();
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            if (status === "loading") return;
             setLoading(true);
             try {
-                const res = await fetchApi("/api/user/dashboard");
+                const url = (status === "authenticated") ? "/api/user/dashboard" : "/api/public/explore";
+                const res = await fetchApi(url);
                 const data = await res.json();
-                if (res.ok) setRooms(data.availableRooms);
+                if (res.ok) {
+                    let availableRooms = data.availableRooms || [];
+                    if (status !== "authenticated" && defaultAddress?.pincode) {
+                        const guestPin = defaultAddress.pincode.trim();
+                        availableRooms = availableRooms.filter((room: any) => room.sellerPincode === guestPin);
+                    }
+                    setRooms(availableRooms);
+                }
             } catch (error) {
                 console.error("Failed to fetch rooms", error);
             } finally {
@@ -31,7 +42,7 @@ export default function UserRoomsPage() {
         };
 
         fetchDashboardData();
-    }, [defaultAddress?.pincode]);
+    }, [defaultAddress?.pincode, status]);
 
     const roomPlaceholder = "https://placehold.co/400x250?text=Cozy+Room";
 

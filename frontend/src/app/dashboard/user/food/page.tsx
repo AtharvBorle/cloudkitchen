@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
 import { AddToCartButton } from "@/components/cart-buttons";
+import { useSession } from "next-auth/react";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -56,6 +57,7 @@ const isCurrentlyOpen = (item: any) => {
 export default function UserFoodPage() {
     const { addToCart } = useCart();
     const { defaultAddress } = useLocation();
+    const { status } = useSession();
     const [vegOnly, setVegOnly] = useState(false);
     const [foodItems, setFoodItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -63,11 +65,26 @@ export default function UserFoodPage() {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            if (status === "loading") return;
             setLoading(true);
             try {
-                const res = await fetchApi("/api/user/dashboard");
+                const url = (status === "authenticated") ? "/api/user/dashboard" : "/api/public/explore";
+                const res = await fetchApi(url);
                 const data = await res.json();
-                if (res.ok) setFoodItems(data.foodItems);
+                if (res.ok) {
+                    let items = data.foodItems || [];
+                    if (status !== "authenticated" && defaultAddress?.pincode) {
+                        const guestPin = defaultAddress.pincode.trim();
+                        items = items.filter((item: any) => {
+                            if (item.deliveryPincodes) {
+                                const pins = item.deliveryPincodes.split(",").map((p: any) => p.trim());
+                                return pins.includes(guestPin);
+                            }
+                            return item.sellerPincode === guestPin;
+                        });
+                    }
+                    setFoodItems(items);
+                }
             } catch (error) {
                 console.error("Failed to fetch food items", error);
             } finally {
@@ -83,7 +100,7 @@ export default function UserFoodPage() {
             const q = params.get("query");
             if (q) setSearchQuery(q);
         }
-    }, [defaultAddress?.pincode]);
+    }, [defaultAddress?.pincode, status]);
 
     const placeholderImage = "https://placehold.co/400x250?text=Delicious+Food";
 

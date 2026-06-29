@@ -9,6 +9,7 @@ import { ShoppingCart, LogIn } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
+import { useSession } from "next-auth/react";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -58,6 +59,7 @@ export default function UserDashboard() {
     const { addToCart, initiateRoomBooking } = useCart();
     const router = useRouter();
     const { defaultAddress } = useLocation();
+    const { status } = useSession();
 
     const [vegOnly, setVegOnly] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -68,14 +70,31 @@ export default function UserDashboard() {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            if (status === "loading") return;
             setLoading(true);
             try {
-                const res = await fetchApi("/api/user/dashboard");
+                const url = (status === "authenticated") ? "/api/user/dashboard" : "/api/public/explore";
+                const res = await fetchApi(url);
                 const data = await res.json();
                 if (res.ok) {
-                    setFoodItems(data.foodItems);
-                    setRooms(data.availableRooms);
-                    setActivePincode(data.userPincode || null);
+                    let items = data.foodItems || [];
+                    let availableRooms = data.availableRooms || [];
+                    
+                    if (status !== "authenticated" && defaultAddress?.pincode) {
+                        const guestPin = defaultAddress.pincode.trim();
+                        items = items.filter((item: any) => {
+                            if (item.deliveryPincodes) {
+                                const pins = item.deliveryPincodes.split(",").map((p: any) => p.trim());
+                                return pins.includes(guestPin);
+                            }
+                            return item.sellerPincode === guestPin;
+                        });
+                        availableRooms = availableRooms.filter((room: any) => room.sellerPincode === guestPin);
+                    }
+                    
+                    setFoodItems(items);
+                    setRooms(availableRooms);
+                    setActivePincode(data.userPincode || defaultAddress?.pincode || null);
                 }
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);
@@ -85,7 +104,7 @@ export default function UserDashboard() {
         };
 
         fetchDashboardData();
-    }, [defaultAddress?.pincode]);
+    }, [defaultAddress?.pincode, status]);
 
     const placeholderImage = "https://placehold.co/400x250?text=Delicious+Food";
     const roomPlaceholder = "https://placehold.co/400x250?text=Cozy+Room";
