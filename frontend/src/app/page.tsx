@@ -1,11 +1,13 @@
 "use client";
 
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 
 export default function Home() {
+  redirect('/explore/food');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
