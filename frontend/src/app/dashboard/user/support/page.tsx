@@ -21,6 +21,16 @@ export default function UserSupportPage() {
     const [replyText, setReplyText] = useState("");
     const [submittingReply, setSubmittingReply] = useState(false);
 
+    // Search, filter, and pagination states
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [categoryFilter, setCategoryFilter] = useState("ALL");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter, categoryFilter]);
+
     const fetchTickets = async (selectFirst = false) => {
         try {
             setLoadingTickets(true);
@@ -119,6 +129,15 @@ export default function UserSupportPage() {
         }
     };
 
+    const filteredTickets = tickets.filter(t => {
+        const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
+        const matchesCategory = categoryFilter === "ALL" || t.category === categoryFilter;
+        return matchesStatus && matchesCategory;
+    });
+
+    const totalPages = Math.ceil(filteredTickets.length / pageSize);
+    const paginatedTickets = filteredTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case "OPEN":
@@ -174,6 +193,30 @@ export default function UserSupportPage() {
                         </button>
                     </div>
 
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "5px" }}>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.8rem", fontWeight: "600", outline: "none", backgroundColor: "#F8FAFC" }}
+                        >
+                            <option value="ALL">All Status</option>
+                            <option value="OPEN">Open</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.8rem", fontWeight: "600", outline: "none", backgroundColor: "#F8FAFC" }}
+                        >
+                            <option value="ALL">All Categories</option>
+                            <option value="FOOD">Food</option>
+                            <option value="ROOM">Room</option>
+                            <option value="PAYMENT">Payment</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+
                     {loadingTickets ? (
                         <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}>
                             <Loader2 className="animate-spin" color="var(--primary)" />
@@ -183,34 +226,80 @@ export default function UserSupportPage() {
                             <MessageSquare size={36} style={{ margin: "0 auto 10px" }} />
                             <p style={{ fontSize: "0.85rem" }}>No tickets raised yet.</p>
                         </div>
+                    ) : filteredTickets.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "40px 20px", color: "#94A3B8" }}>
+                            <MessageSquare size={36} style={{ margin: "0 auto 10px" }} />
+                            <p style={{ fontSize: "0.85rem" }}>No matching tickets found.</p>
+                        </div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", maxHeight: "600px" }}>
-                            {tickets.map(t => (
-                                <div
-                                    key={t.id}
-                                    onClick={() => fetchTicketDetails(t.id)}
+                        <>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", maxHeight: "450px" }}>
+                                {paginatedTickets.map(t => (
+                                    <div
+                                        key={t.id}
+                                        onClick={() => fetchTicketDetails(t.id)}
+                                        style={{
+                                            padding: "16px",
+                                            borderRadius: "12px",
+                                            border: `1px solid ${selectedTicket?.id === t.id ? "var(--coral, #F16F68)" : "#E2E8F0"}`,
+                                            backgroundColor: selectedTicket?.id === t.id ? "#FFF8F7" : "white",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s"
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                            <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#94A3B8" }}>{t.category}</span>
+                                            {getStatusBadge(t.status)}
+                                        </div>
+                                        <div style={{ fontWeight: "700", fontSize: "0.9rem", color: "#1E293B", marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                            {t.title}
+                                        </div>
+                                        <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+                                            Last update: {new Date(t.updatedAt).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {/* Pagination Controls */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #F1F5F9" }}>
+                                <button
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage((prev: number) => Math.max(prev - 1, 1))}
                                     style={{
-                                        padding: "16px",
-                                        borderRadius: "12px",
-                                        border: `1px solid ${selectedTicket?.id === t.id ? "var(--coral, #F16F68)" : "#E2E8F0"}`,
-                                        backgroundColor: selectedTicket?.id === t.id ? "#FFF8F7" : "white",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s"
+                                        padding: "6px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #E2E8F0",
+                                        backgroundColor: currentPage === 1 ? "#F1F5F9" : "white",
+                                        color: currentPage === 1 ? "#94A3B8" : "#475569",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "700",
+                                        cursor: currentPage === 1 ? "not-allowed" : "pointer"
                                     }}
                                 >
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                        <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#94A3B8" }}>{t.category}</span>
-                                        {getStatusBadge(t.status)}
-                                    </div>
-                                    <div style={{ fontWeight: "700", fontSize: "0.9rem", color: "#1E293B", marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {t.title}
-                                    </div>
-                                    <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-                                        Last update: {new Date(t.updatedAt).toLocaleDateString()}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                    Prev
+                                </button>
+                                <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "600" }}>
+                                    Page {currentPage} of {Math.max(totalPages, 1)}
+                                </span>
+                                <button
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    onClick={() => setCurrentPage((prev: number) => Math.min(prev + 1, totalPages))}
+                                    style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #E2E8F0",
+                                        backgroundColor: (currentPage === totalPages || totalPages === 0) ? "#F1F5F9" : "white",
+                                        color: (currentPage === totalPages || totalPages === 0) ? "#94A3B8" : "#475569",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "700",
+                                        cursor: (currentPage === totalPages || totalPages === 0) ? "not-allowed" : "pointer"
+                                    }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
 

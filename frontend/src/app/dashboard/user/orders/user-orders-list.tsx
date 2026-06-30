@@ -9,6 +9,20 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
     const [cancellingId, setCancellingId] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
 
+    // Search and Pagination States
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+
+    useEffect(() => {
+        setOrders(initialOrders);
+    }, [initialOrders]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter]);
+
     // Modal state
     const [reviewingOrder, setReviewingOrder] = useState<any | null>(null);
     const [overallRating, setOverallRating] = useState(5);
@@ -181,6 +195,35 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
         return <div style={{ display: 'flex' }}>{stars}</div>;
     };
 
+    const filteredOrders = orders.filter((order: any) => {
+        const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
+        
+        let items = [];
+        try {
+            items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        } catch (e) {
+            items = [];
+        }
+
+        const itemsString = Array.isArray(items) 
+            ? items.map((item: any) => item.name).join(" ").toLowerCase()
+            : "";
+        
+        const kitchenName = order.seller?.businessName?.toLowerCase() || "";
+        const orderId = order.id?.toLowerCase() || "";
+        const searchLower = searchQuery.toLowerCase().trim();
+
+        const matchesSearch = !searchLower ||
+            kitchenName.includes(searchLower) ||
+            orderId.includes(searchLower) ||
+            itemsString.includes(searchLower);
+
+        return matchesStatus && matchesSearch;
+    });
+
+    const totalPages = Math.ceil(filteredOrders.length / pageSize);
+    const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     if (orders.length === 0) {
         return (
             <div style={{ padding: "40px", textAlign: "center", backgroundColor: "white", borderRadius: "12px", boxShadow: "var(--shadow-card)" }}>
@@ -192,169 +235,261 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {orders.map((order: any) => {
-                let items = [];
-                try {
-                    items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-                } catch (e) {
-                    items = [];
-                }
+            
+            {/* Filter controls */}
+            <div style={{ display: "flex", gap: "15px", backgroundColor: "white", padding: "15px", borderRadius: "12px", boxShadow: "var(--shadow-card)", flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: "200px" }}>
+                    <input
+                        type="text"
+                        placeholder="Search by kitchen name, order ID, or food items..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none"
+                        }}
+                    />
+                </div>
+                <div style={{ minWidth: "150px" }}>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none",
+                            fontWeight: "600",
+                            backgroundColor: "white",
+                            color: "#334155"
+                        }}
+                    >
+                        <option value="ALL">All Statuses</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="PREPARING">Preparing</option>
+                        <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
+                        <option value="DELIVERED">Delivered</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                </div>
+            </div>
 
-                return (
-                    <div key={order.id} style={{ backgroundColor: "white", padding: "20px", borderRadius: "12px", boxShadow: "var(--shadow-card)", borderLeft: order.status === 'CANCELLED' ? '4px solid #EF4444' : 'none', opacity: order.status === 'CANCELLED' ? 0.7 : 1 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", borderBottom: "1px solid #EEE", paddingBottom: "10px", flexWrap: "wrap", gap: "10px" }}>
-                            <div>
-                                <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{order.seller.businessName || "Cloud Kitchen"}</div>
-                                <div style={{ fontSize: "0.8rem", color: "#475569", marginTop: "2px" }}>
-                                    Order ID: <span style={{ fontFamily: "monospace", fontWeight: "700", color: "#0F172A" }}>{order.id}</span>
-                                </div>
-                                <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                    {mounted ? new Date(order.createdAt).toLocaleString() : new Date(order.createdAt).toISOString().split('T')[0]}
-                                </div>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", fontSize: "0.95rem" }}>
-                                {getStatusIcon(order.status)}
-                                <span style={{ color: order.status === 'CANCELLED' ? '#EF4444' : 'inherit' }}>{order.status.replace(/_/g, " ")}</span>
-                            </div>
-                        </div>
+            {filteredOrders.length === 0 ? (
+                <div style={{ padding: "40px", textAlign: "center", backgroundColor: "white", borderRadius: "12px", boxShadow: "var(--shadow-card)" }}>
+                    <p style={{ color: "var(--text-muted)" }}>No orders match your search criteria.</p>
+                </div>
+            ) : (
+                <>
+                    {paginatedOrders.map((order: any) => {
+                        let items = [];
+                        try {
+                            items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                        } catch (e) {
+                            items = [];
+                        }
 
-                        <div style={{ marginBottom: "15px" }}>
-                            {Array.isArray(items) && items.map((item: any, idx: number) => (
-                                <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                                    <span>{item.quantity} x {item.name}</span>
-                                    <span>₹{item.price * item.quantity}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {order.deliveryPerson && (
-                            <div style={{
-                                backgroundColor: '#F8FAFC', padding: '15px', borderRadius: '10px',
-                                marginBottom: '15px', border: '1px solid #E2E8F0',
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                            }}>
-                                <div>
-                                    <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: '800', marginBottom: '4px', letterSpacing: '0.05em' }}>
-                                        Delivery Partner
-                                    </div>
-                                    <div style={{ fontWeight: '700', color: '#1A1C23', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{ backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '50%' }}>
-                                            <User size={14} />
-                                        </div>
-                                        {order.deliveryPerson.name}
-                                    </div>
-                                </div>
-                                {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
-                                    <a
-                                        href={`tel:${order.deliveryPerson.phone}`}
-                                        style={{
-                                            backgroundColor: '#10B981', color: 'white', padding: '10px 18px',
-                                            borderRadius: '8px', textDecoration: 'none', fontSize: '0.9rem',
-                                            fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px',
-                                            boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
-                                        }}
-                                    >
-                                        <Phone size={16} /> Call
-                                    </a>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Rating Display / Action Button */}
-                        {order.status === 'DELIVERED' && (
-                            <div style={{
-                                marginTop: '10px',
-                                marginBottom: '15px',
-                                padding: '15px',
-                                backgroundColor: '#F8FAF9',
-                                borderRadius: '8px',
-                                border: '1px solid #EAEAEA',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: '10px'
-                            }}>
-                                {order.review ? (
+                        return (
+                            <div key={order.id} style={{ backgroundColor: "white", padding: "20px", borderRadius: "12px", boxShadow: "var(--shadow-card)", borderLeft: order.status === 'CANCELLED' ? '4px solid #EF4444' : 'none', opacity: order.status === 'CANCELLED' ? 0.7 : 1 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", borderBottom: "1px solid #EEE", paddingBottom: "10px", flexWrap: "wrap", gap: "10px" }}>
                                     <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#334155' }}>Your Review:</span>
-                                            {renderStaticStars(order.review.rating)}
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--coral, #F16F68)' }}>{order.review.rating}/5</span>
+                                        <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{order.seller.businessName || "Cloud Kitchen"}</div>
+                                        <div style={{ fontSize: "0.8rem", color: "#475569", marginTop: "2px" }}>
+                                            Order ID: <span style={{ fontFamily: "monospace", fontWeight: "700", color: "#0F172A" }}>{order.id}</span>
                                         </div>
-                                        {order.review.comment && (
-                                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
-                                                "{order.review.comment}"
-                                            </p>
+                                        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                                            {mounted ? new Date(order.createdAt).toLocaleString() : new Date(order.createdAt).toISOString().split('T')[0]}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", fontSize: "0.95rem" }}>
+                                        {getStatusIcon(order.status)}
+                                        <span style={{ color: order.status === 'CANCELLED' ? '#EF4444' : 'inherit' }}>{order.status.replace(/_/g, " ")}</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginBottom: "15px" }}>
+                                    {Array.isArray(items) && items.map((item: any, idx: number) => (
+                                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                                            <span>{item.quantity} x {item.name}</span>
+                                            <span>₹{item.price * item.quantity}</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {order.deliveryPerson && (
+                                    <div style={{
+                                        backgroundColor: '#F8FAFC', padding: '15px', borderRadius: '10px',
+                                        marginBottom: '15px', border: '1px solid #E2E8F0',
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                    }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: '800', marginBottom: '4px', letterSpacing: '0.05em' }}>
+                                                Delivery Partner
+                                            </div>
+                                            <div style={{ fontWeight: '700', color: '#1A1C23', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '50%' }}>
+                                                    <User size={14} />
+                                                </div>
+                                                {order.deliveryPerson.name}
+                                            </div>
+                                        </div>
+                                        {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+                                            <a
+                                                href={`tel:${order.deliveryPerson.phone}`}
+                                                style={{
+                                                    backgroundColor: '#10B981', color: 'white', padding: '10px 18px',
+                                                    borderRadius: '8px', textDecoration: 'none', fontSize: '0.9rem',
+                                                    fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px',
+                                                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+                                                }}
+                                            >
+                                                <Phone size={16} /> Call
+                                            </a>
                                         )}
                                     </div>
-                                ) : (
-                                    <>
-                                        <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>
-                                            How was your food and ordering experience?
-                                        </span>
-                                        <button
-                                            onClick={() => openReviewModal(order, items)}
-                                            style={{
-                                                backgroundColor: 'white',
-                                                border: '2px solid var(--coral, #F16F68)',
-                                                color: 'var(--coral, #F16F68)',
-                                                padding: '8px 16px',
-                                                borderRadius: '8px',
-                                                fontWeight: 'bold',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                fontSize: '0.85rem'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = 'var(--coral, #F16F68)';
-                                                e.currentTarget.style.color = 'white';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = 'white';
-                                                e.currentTarget.style.color = 'var(--coral, #F16F68)';
-                                            }}
-                                        >
-                                            Rate & Review
-                                        </button>
-                                    </>
                                 )}
-                            </div>
-                        )}
 
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: "bold", paddingTop: "10px", borderTop: "1px solid #EEE", flexWrap: "wrap", gap: "10px" }}>
-                            <div style={{ display: "flex", flexDirection: "column" }}>
-                                <span>Total Amount ({order.paymentMethod})</span>
-                                <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
-                                    {order.status === 'PENDING' && (
-                                        <button
-                                            onClick={() => handleCancelOrder(order.id)}
-                                            disabled={cancellingId === order.id}
-                                            style={{ color: '#EF4444', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', textAlign: 'left', opacity: cancellingId === order.id ? 0.5 : 1, border: 'none', background: 'none', padding: 0 }}
-                                        >
-                                            {cancellingId === order.id ? "Cancelling..." : "Cancel Order"}
-                                        </button>
-                                    )}
-                                    {order.status === 'DELIVERED' && (
-                                        <button
-                                            onClick={() => window.open(`/invoice/order/${order.id}`, '_blank')}
-                                            style={{ color: 'var(--primary, #10B981)', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', border: 'none', background: 'none', padding: 0, fontWeight: '700' }}
-                                        >
-                                            View Invoice
-                                        </button>
-                                    )}
-                                    {order.refund && (
-                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: order.refund.status === 'APPROVED' ? '#10B981' : order.refund.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }}>
-                                            Refund: {order.refund.status}
-                                        </span>
-                                    )}
+                                {/* Rating Display / Action Button */}
+                                {order.status === 'DELIVERED' && (
+                                    <div style={{
+                                        marginTop: '10px',
+                                        marginBottom: '15px',
+                                        padding: '15px',
+                                        backgroundColor: '#F8FAF9',
+                                        borderRadius: '8px',
+                                        border: '1px solid #EAEAEA',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        flexWrap: 'wrap',
+                                        gap: '10px'
+                                    }}>
+                                        {order.review ? (
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#334155' }}>Your Review:</span>
+                                                    {renderStaticStars(order.review.rating)}
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--coral, #F16F68)' }}>{order.review.rating}/5</span>
+                                                </div>
+                                                {order.review.comment && (
+                                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>
+                                                        "{order.review.comment}"
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>
+                                                    How was your food and ordering experience?
+                                                </span>
+                                                <button
+                                                    onClick={() => openReviewModal(order, items)}
+                                                    style={{
+                                                        backgroundColor: 'white',
+                                                        border: '2px solid var(--coral, #F16F68)',
+                                                        color: 'var(--coral, #F16F68)',
+                                                        padding: '8px 16px',
+                                                        borderRadius: '8px',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        fontSize: '0.85rem'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.backgroundColor = 'var(--coral, #F16F68)';
+                                                        e.currentTarget.style.color = 'white';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.backgroundColor = 'white';
+                                                        e.currentTarget.style.color = 'var(--coral, #F16F68)';
+                                                    }}
+                                                >
+                                                    Rate & Review
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: "bold", paddingTop: "10px", borderTop: "1px solid #EEE", flexWrap: "wrap", gap: "10px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <span>Total Amount ({order.paymentMethod})</span>
+                                        <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
+                                            {order.status === 'PENDING' && (
+                                                <button
+                                                    onClick={() => handleCancelOrder(order.id)}
+                                                    disabled={cancellingId === order.id}
+                                                    style={{ color: '#EF4444', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', textAlign: 'left', opacity: cancellingId === order.id ? 0.5 : 1, border: 'none', background: 'none', padding: 0 }}
+                                                >
+                                                    {cancellingId === order.id ? "Cancelling..." : "Cancel Order"}
+                                                </button>
+                                            )}
+                                            {order.status === 'DELIVERED' && (
+                                                <button
+                                                    onClick={() => window.open(`/invoice/order/${order.id}`, '_blank')}
+                                                    style={{ color: 'var(--primary, #10B981)', fontSize: '0.85rem', textDecoration: 'underline', cursor: 'pointer', border: 'none', background: 'none', padding: 0, fontWeight: '700' }}
+                                                >
+                                                    View Invoice
+                                                </button>
+                                            )}
+                                            {order.refund && (
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: order.refund.status === 'APPROVED' ? '#10B981' : order.refund.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }}>
+                                                    Refund: {order.refund.status}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span style={{ color: order.status === 'CANCELLED' ? 'var(--text-muted)' : 'var(--primary)', textDecoration: order.status === 'CANCELLED' ? 'line-through' : 'none' }}>₹{order.totalAmount}</span>
                                 </div>
                             </div>
-                            <span style={{ color: order.status === 'CANCELLED' ? 'var(--text-muted)' : 'var(--primary)', textDecoration: order.status === 'CANCELLED' ? 'line-through' : 'none' }}>₹{order.totalAmount}</span>
-                        </div>
+                        );
+                    })}
+
+                    {/* Pagination Controls */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", paddingTop: "15px", borderTop: "1px solid #E2E8F0" }}>
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            style={{
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                border: "1px solid #E2E8F0",
+                                backgroundColor: currentPage === 1 ? "#F1F5F9" : "white",
+                                color: currentPage === 1 ? "#94A3B8" : "#475569",
+                                fontSize: "0.85rem",
+                                fontWeight: "700",
+                                cursor: currentPage === 1 ? "not-allowed" : "pointer"
+                            }}
+                        >
+                            Previous
+                        </button>
+                        <span style={{ fontSize: "0.9rem", color: "#64748B", fontWeight: "600" }}>
+                            Page {currentPage} of {Math.max(totalPages, 1)}
+                        </span>
+                        <button
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            style={{
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                border: "1px solid #E2E8F0",
+                                backgroundColor: (currentPage === totalPages || totalPages === 0) ? "#F1F5F9" : "white",
+                                color: (currentPage === totalPages || totalPages === 0) ? "#94A3B8" : "#475569",
+                                fontSize: "0.85rem",
+                                fontWeight: "700",
+                                cursor: (currentPage === totalPages || totalPages === 0) ? "not-allowed" : "pointer"
+                            }}
+                        >
+                            Next
+                        </button>
                     </div>
-                );
-            })}
+                </>
+            )}
 
             {/* Rating Modal Backdrop */}
             {reviewingOrder && (

@@ -10,6 +10,14 @@ export default function SuperAdminRefundsPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
+    
+    // Pagination States
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter]);
 
     // Process state
     const [adminNote, setAdminNote] = useState("");
@@ -61,7 +69,7 @@ export default function SuperAdminRefundsPage() {
                 
                 // Update local list
                 setRefunds(prev => prev.map(r => r.id === selectedRefund.id ? { ...r, ...updated } : r));
-                setSelectedRefund(prev => prev ? { ...prev, ...updated } : null);
+                setSelectedRefund((prev: any) => prev ? { ...prev, ...updated } : null);
                 
                 // Reset form inputs
                 setAdminNote("");
@@ -80,7 +88,8 @@ export default function SuperAdminRefundsPage() {
         }
     };
 
-    const getTicketId = (reason: string) => {
+    const getTicketId = (reason: string | null | undefined) => {
+        if (!reason) return null;
         const match = reason?.match(/\[Ticket Ref: #?([a-fA-F0-9-]+)\]/);
         return match ? match[1] : null;
     };
@@ -101,6 +110,9 @@ export default function SuperAdminRefundsPage() {
 
         return matchesStatus && matchesSearch;
     });
+
+    const totalPages = Math.ceil(filteredRefunds.length / pageSize);
+    const paginatedRefunds = filteredRefunds.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -221,48 +233,89 @@ export default function SuperAdminRefundsPage() {
                             <p style={{ fontSize: "0.85rem" }}>No refund requests found.</p>
                         </div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", maxHeight: "550px" }}>
-                            {filteredRefunds.map(r => (
-                                <div
-                                    key={r.id}
-                                    onClick={() => {
-                                        setSelectedRefund(r);
-                                        setAdminNote("");
-                                        setTransactionId("");
-                                    }}
+                        <>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", maxHeight: "420px" }}>
+                                {paginatedRefunds.map(r => (
+                                    <div
+                                        key={r.id}
+                                        onClick={() => {
+                                            setSelectedRefund(r);
+                                            setAdminNote("");
+                                            setTransactionId("");
+                                        }}
+                                        style={{
+                                            padding: "16px",
+                                            borderRadius: "12px",
+                                            border: `1px solid ${selectedRefund?.id === r.id ? "var(--coral, #F16F68)" : "#E2E8F0"}`,
+                                            backgroundColor: selectedRefund?.id === r.id ? "#FFF8F7" : "white",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s"
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                            <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748B" }}>
+                                                {r.orderId ? "🍕 FOOD ORDER" : "🛌 STAY BOOKING"}
+                                            </span>
+                                            {getStatusBadge(r.status)}
+                                        </div>
+                                        <div style={{ fontWeight: "800", fontSize: "1.05rem", color: "#1E293B", marginBottom: "4px" }}>
+                                            ₹{r.amount}
+                                        </div>
+                                        <div style={{ fontSize: "0.8rem", color: "#334155", marginBottom: "6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                            Reason: {r.reason ? r.reason.replace(/\[Ticket Ref: #?[a-fA-F0-9-]+\]\s*/, '') : ""}
+                                        </div>
+                                        {getTicketId(r.reason) && (
+                                            <div style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.7rem', color: '#0369A1', backgroundColor: '#E0F2FE', padding: '2px 6px', borderRadius: '4px', marginBottom: '6px', fontWeight: 'bold', width: 'fit-content' }}>
+                                                Ticket ID: #{getTicketId(r.reason)?.slice(0, 8)}
+                                            </div>
+                                        )}
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94A3B8" }}>
+                                            <span>By: {r.user?.name}</span>
+                                            <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #F1F5F9" }}>
+                                <button
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                     style={{
-                                        padding: "16px",
-                                        borderRadius: "12px",
-                                        border: `1px solid ${selectedRefund?.id === r.id ? "var(--coral, #F16F68)" : "#E2E8F0"}`,
-                                        backgroundColor: selectedRefund?.id === r.id ? "#FFF8F7" : "white",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s"
+                                        padding: "6px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #E2E8F0",
+                                        backgroundColor: currentPage === 1 ? "#F1F5F9" : "white",
+                                        color: currentPage === 1 ? "#94A3B8" : "#475569",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "700",
+                                        cursor: currentPage === 1 ? "not-allowed" : "pointer"
                                     }}
                                 >
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                        <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#64748B" }}>
-                                            {r.orderId ? "🍕 FOOD ORDER" : "🛌 STAY BOOKING"}
-                                        </span>
-                                        {getStatusBadge(r.status)}
-                                    </div>
-                                    <div style={{ fontWeight: "800", fontSize: "1.05rem", color: "#1E293B", marginBottom: "4px" }}>
-                                        ₹{r.amount}
-                                    </div>
-                                    <div style={{ fontSize: "0.8rem", color: "#334155", marginBottom: "6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        Reason: {r.reason ? r.reason.replace(/\[Ticket Ref: #?[a-fA-F0-9-]+\]\s*/, '') : ""}
-                                    </div>
-                                    {getTicketId(r.reason) && (
-                                        <div style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.7rem', color: '#0369A1', backgroundColor: '#E0F2FE', padding: '2px 6px', borderRadius: '4px', marginBottom: '6px', fontWeight: 'bold', width: 'fit-content' }}>
-                                            Ticket ID: #{getTicketId(r.reason).slice(0, 8)}
-                                        </div>
-                                    )}
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94A3B8" }}>
-                                        <span>By: {r.user?.name}</span>
-                                        <span>{new Date(r.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                    Prev
+                                </button>
+                                <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "600" }}>
+                                    Page {currentPage} of {Math.max(totalPages, 1)}
+                                </span>
+                                <button
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #E2E8F0",
+                                        backgroundColor: (currentPage === totalPages || totalPages === 0) ? "#F1F5F9" : "white",
+                                        color: (currentPage === totalPages || totalPages === 0) ? "#94A3B8" : "#475569",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "700",
+                                        cursor: (currentPage === totalPages || totalPages === 0) ? "not-allowed" : "pointer"
+                                    }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -329,7 +382,7 @@ export default function SuperAdminRefundsPage() {
                                     {getTicketId(selectedRefund.reason) ? (
                                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                             <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#0369A1" }}>🎫 Associated Ticket</span>
-                                            <span style={{ fontSize: "0.8rem", color: "#475569", wordBreak: 'break-all' }}>ID: #{getTicketId(selectedRefund.reason).slice(0, 8)}</span>
+                                            <span style={{ fontSize: "0.8rem", color: "#475569", wordBreak: 'break-all' }}>ID: #{getTicketId(selectedRefund.reason)?.slice(0, 8)}</span>
                                             <a 
                                                 href={`/dashboard/superadmin/support`}
                                                 style={{ fontSize: "0.75rem", color: "var(--primary, #10B981)", textDecoration: "underline", fontWeight: "600", marginTop: "4px" }}

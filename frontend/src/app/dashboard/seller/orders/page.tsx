@@ -13,6 +13,16 @@ export default function SellerOrdersPage() {
     const [upiId, setUpiId] = useState("");
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
+    // Search, filter, pagination states
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter]);
+
     const fetchOrders = async () => {
         try {
             const res = await fetchApi("/api/seller/orders");
@@ -168,6 +178,33 @@ export default function SellerOrdersPage() {
         }
     };
 
+    const filteredOrders = orders.filter((order) => {
+        const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
+
+        const customerName = order.user?.name?.toLowerCase() || "";
+        const customerEmail = order.user?.email?.toLowerCase() || "";
+        const customerPhone = (order.customerPhone || order.user?.phone || "").toLowerCase();
+        const address = order.deliveryAddress?.toLowerCase() || "";
+        const orderId = order.id?.toLowerCase() || "";
+
+        const itemsList = parseItems(order.items);
+        const itemsString = itemsList.map((item: any) => item.name).join(" ").toLowerCase();
+
+        const searchLower = searchQuery.toLowerCase().trim();
+        const matchesSearch = !searchLower ||
+            customerName.includes(searchLower) ||
+            customerEmail.includes(searchLower) ||
+            customerPhone.includes(searchLower) ||
+            address.includes(searchLower) ||
+            orderId.includes(searchLower) ||
+            itemsString.includes(searchLower);
+
+        return matchesStatus && matchesSearch;
+    });
+
+    const totalPages = Math.ceil(filteredOrders.length / pageSize);
+    const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     return (
         <div style={{ position: 'relative', maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
@@ -179,14 +216,63 @@ export default function SellerOrdersPage() {
                 </div>
             </div>
 
+            {/* Filter controls */}
+            <div style={{ display: "flex", gap: "15px", backgroundColor: "white", padding: "15px", borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.02)", border: "1px solid #F1F5F9", marginBottom: "24px", flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: "200px" }}>
+                    <input
+                        type="text"
+                        placeholder="Search by customer name, address, order ID, items..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none"
+                        }}
+                    />
+                </div>
+                <div style={{ minWidth: "150px" }}>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none",
+                            fontWeight: "600",
+                            backgroundColor: "white",
+                            color: "#334155"
+                        }}
+                    >
+                        <option value="ALL">All Statuses</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="PREPARING">Preparing</option>
+                        <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
+                        <option value="DELIVERED">Delivered</option>
+                    </select>
+                </div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {orders.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '80px', backgroundColor: 'white', borderRadius: '16px', border: '1px dashed #E2E8F0' }}>
                         <p style={{ color: '#94A3B8', fontSize: '1.1rem' }}>No orders at the moment. Good things come to those who wait!</p>
                     </div>
+                ) : filteredOrders.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '80px', backgroundColor: 'white', borderRadius: '16px', border: '1px solid #F1F5F9' }}>
+                        <p style={{ color: '#94A3B8', fontSize: '1.1rem' }}>No orders match your search criteria.</p>
+                    </div>
                 ) : (
-                    orders.map((order, index) => {
-                        const mockOrderNumber = orders.length - index;
+                    <>
+                        {paginatedOrders.map((order) => {
+                        const orderIdx = orders.findIndex(o => o.id === order.id);
+                        const mockOrderNumber = orderIdx !== -1 ? orders.length - orderIdx : 0;
                         const itemsList = parseItems(order.items);
                         const fallbackCustomerName = order.user?.name || "Customer";
 
@@ -274,8 +360,48 @@ export default function SellerOrdersPage() {
                                 </div>
                             </div>
                         );
-                    })
-                )}
+                    })}
+
+                    {/* Pagination Controls */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", padding: "20px", backgroundColor: "white", borderRadius: "16px", border: "1px solid #F1F5F9" }}>
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            style={{
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                border: "1px solid #E2E8F0",
+                                backgroundColor: currentPage === 1 ? "#F1F5F9" : "white",
+                                color: currentPage === 1 ? "#94A3B8" : "#475569",
+                                fontSize: "0.85rem",
+                                fontWeight: "700",
+                                cursor: currentPage === 1 ? "not-allowed" : "pointer"
+                            }}
+                        >
+                            Previous
+                        </button>
+                        <span style={{ fontSize: "0.9rem", color: "#64748B", fontWeight: "600" }}>
+                            Page {currentPage} of {Math.max(totalPages, 1)}
+                        </span>
+                        <button
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            style={{
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                border: "1px solid #E2E8F0",
+                                backgroundColor: (currentPage === totalPages || totalPages === 0) ? "#F1F5F9" : "white",
+                                color: (currentPage === totalPages || totalPages === 0) ? "#94A3B8" : "#475569",
+                                fontSize: "0.85rem",
+                                fontWeight: "700",
+                                cursor: (currentPage === totalPages || totalPages === 0) ? "not-allowed" : "pointer"
+                            }}
+                        >
+                            Next
+                        </button>
+                    </div>
+                </>
+            )}
             </div>
 
             {/* Payment QR Modal */}

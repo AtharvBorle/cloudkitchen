@@ -13,6 +13,16 @@ export default function ManageRoomsPage() {
     const [loading, setLoading] = useState(false);
     const [editingRoom, setEditingRoom] = useState<any | null>(null);
 
+    // Bookings Search, Filter, Pagination States
+    const [bookingSearchQuery, setBookingSearchQuery] = useState("");
+    const [bookingStatusFilter, setBookingStatusFilter] = useState("ALL");
+    const [bookingCurrentPage, setBookingCurrentPage] = useState(1);
+    const [bookingPageSize, setBookingPageSize] = useState(5);
+
+    useEffect(() => {
+        setBookingCurrentPage(1);
+    }, [bookingSearchQuery, bookingStatusFilter]);
+
     // Form state
     const [title, setTitle] = useState("");
     const [price, setPrice] = useState("");
@@ -103,6 +113,27 @@ export default function ManageRoomsPage() {
         }
     };
 
+    const filteredBookings = bookings.filter((booking: any) => {
+        const matchesStatus = bookingStatusFilter === "ALL" || booking.status === bookingStatusFilter;
+
+        const roomTitle = (booking.room?.title || "").toLowerCase();
+        const customerName = (booking.user?.name || "").toLowerCase();
+        const customerPhone = (booking.user?.phone || "").toLowerCase();
+        const id = (booking.id || "").toLowerCase();
+
+        const searchLower = bookingSearchQuery.toLowerCase().trim();
+        const matchesSearch = !searchLower ||
+            roomTitle.includes(searchLower) ||
+            customerName.includes(searchLower) ||
+            customerPhone.includes(searchLower) ||
+            id.includes(searchLower);
+
+        return matchesStatus && matchesSearch;
+    });
+
+    const totalBookingPages = Math.ceil(filteredBookings.length / bookingPageSize);
+    const paginatedBookings = filteredBookings.slice((bookingCurrentPage - 1) * bookingPageSize, bookingCurrentPage * bookingPageSize);
+
     return (
         <div style={{ position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
@@ -189,9 +220,55 @@ export default function ManageRoomsPage() {
                     )}
                 </div>
 
-                {/* Received Bookings Mock Section */}
+                {/* Received Bookings Section */}
                 <div>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>Received Bookings</h2>
+
+                    {/* Filter controls */}
+                    {bookings.length > 0 && (
+                        <div style={{ display: "flex", gap: "15px", backgroundColor: "white", padding: "15px", borderRadius: "12px", boxShadow: "var(--shadow-card)", border: "1px solid #F1F5F9", marginBottom: "20px", flexWrap: "wrap", alignItems: "center" }}>
+                            <div style={{ flex: 1, minWidth: "200px" }}>
+                                <input
+                                    type="text"
+                                    placeholder="Search bookings by room title, customer name, phone..."
+                                    value={bookingSearchQuery}
+                                    onChange={(e) => setBookingSearchQuery(e.target.value)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "10px 12px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #CBD5E1",
+                                        fontSize: "0.85rem",
+                                        outline: "none"
+                                    }}
+                                />
+                            </div>
+                            <div style={{ minWidth: "150px" }}>
+                                <select
+                                    value={bookingStatusFilter}
+                                    onChange={(e) => setBookingStatusFilter(e.target.value)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "10px 12px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #CBD5E1",
+                                        fontSize: "0.85rem",
+                                        outline: "none",
+                                        fontWeight: "600",
+                                        backgroundColor: "white",
+                                        color: "#334155"
+                                    }}
+                                >
+                                    <option value="ALL">All Statuses</option>
+                                    <option value="CONFIRMED">Confirmed</option>
+                                    <option value="PENDING">Pending</option>
+                                    <option value="COMPLETED">Completed</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
                     <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead style={{ backgroundColor: '#F8F9F9' }}>
@@ -210,8 +287,14 @@ export default function ManageRoomsPage() {
                                             No bookings received yet.
                                         </td>
                                     </tr>
+                                ) : filteredBookings.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
+                                            No bookings match your search criteria.
+                                        </td>
+                                    </tr>
                                 ) : (
-                                    bookings.map((booking: any) => {
+                                    paginatedBookings.map((booking: any) => {
                                         const start = new Date(booking.startDate);
                                         const end = new Date(booking.endDate);
                                         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
@@ -250,6 +333,47 @@ export default function ManageRoomsPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {filteredBookings.length > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "15px", padding: "15px 20px", backgroundColor: "white", borderRadius: "8px", boxShadow: "var(--shadow-card)" }}>
+                            <button
+                                disabled={bookingCurrentPage === 1}
+                                onClick={() => setBookingCurrentPage(prev => Math.max(prev - 1, 1))}
+                                style={{
+                                    padding: "8px 16px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #E2E8F0",
+                                    backgroundColor: bookingCurrentPage === 1 ? "#F1F5F9" : "white",
+                                    color: bookingCurrentPage === 1 ? "#94A3B8" : "#475569",
+                                    fontSize: "0.85rem",
+                                    fontWeight: "700",
+                                    cursor: bookingCurrentPage === 1 ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                Previous
+                            </button>
+                            <span style={{ fontSize: "0.9rem", color: "#64748B", fontWeight: "600" }}>
+                                Page {bookingCurrentPage} of {Math.max(totalBookingPages, 1)}
+                            </span>
+                            <button
+                                disabled={bookingCurrentPage === totalBookingPages || totalBookingPages === 0}
+                                onClick={() => setBookingCurrentPage(prev => Math.min(prev + 1, totalBookingPages))}
+                                style={{
+                                    padding: "8px 16px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #E2E8F0",
+                                    backgroundColor: (bookingCurrentPage === totalBookingPages || totalBookingPages === 0) ? "#F1F5F9" : "white",
+                                    color: (bookingCurrentPage === totalBookingPages || totalBookingPages === 0) ? "#94A3B8" : "#475569",
+                                    fontSize: "0.85rem",
+                                    fontWeight: "700",
+                                    cursor: (bookingCurrentPage === totalBookingPages || totalBookingPages === 0) ? "not-allowed" : "pointer"
+                                }}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
 
             </div>

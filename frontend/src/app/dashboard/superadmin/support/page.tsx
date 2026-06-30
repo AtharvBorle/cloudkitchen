@@ -10,10 +10,7 @@ export default function SuperAdminSupportPage() {
     const [loadingTickets, setLoadingTickets] = useState(true);
     const [loadingDetails, setLoadingDetails] = useState(false);
     
-    // Filter State
-    const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
-    // Chat reply state
     const [replyText, setReplyText] = useState("");
     const [submittingReply, setSubmittingReply] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -30,6 +27,17 @@ export default function SuperAdminSupportPage() {
     const [actionOrder, setActionOrder] = useState<any | null>(null);
     const [loadingActionOrder, setLoadingActionOrder] = useState(false);
     const [cancellingOrder, setCancellingOrder] = useState(false);
+
+    // Search, filter, and pagination states
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [categoryFilter, setCategoryFilter] = useState("ALL");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter, categoryFilter]);
 
     const handleSearchActionOrder = async (orderIdToSearch?: string) => {
         const idToSearch = orderIdToSearch || actionOrderId;
@@ -369,9 +377,24 @@ export default function SuperAdminSupportPage() {
     };
 
     const filteredTickets = tickets.filter(t => {
-        if (statusFilter === "ALL") return true;
-        return t.status === statusFilter;
+        const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
+        const matchesCategory = categoryFilter === "ALL" || t.category === categoryFilter;
+        
+        const searchLower = searchQuery.toLowerCase().trim();
+        const matchesSearch = !searchLower || 
+            (t.title && t.title.toLowerCase().includes(searchLower)) ||
+            (t.category && t.category.toLowerCase().includes(searchLower)) ||
+            (t.description && t.description.toLowerCase().includes(searchLower)) ||
+            (t.user?.name && t.user.name.toLowerCase().includes(searchLower)) ||
+            (t.user?.email && t.user.email.toLowerCase().includes(searchLower)) ||
+            (t.id && t.id.toLowerCase().includes(searchLower));
+
+        return matchesStatus && matchesCategory && matchesSearch;
     });
+
+    const totalPages = Math.ceil(filteredTickets.length / pageSize);
+    const paginatedTickets = filteredTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -440,6 +463,56 @@ export default function SuperAdminSupportPage() {
                 {/* Left side: Filters and Tickets List */}
                 <div style={{ backgroundColor: "white", borderRadius: "16px", border: "1px solid #E2E8F0", padding: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
                     
+                    {/* Search Input */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: "800", color: "#64748B" }}>
+                            SEARCH TICKETS
+                        </span>
+                        <input
+                            type="text"
+                            placeholder="Search by title, user, email or ID..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                                width: "100%",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #CBD5E1",
+                                fontSize: "0.85rem",
+                                outline: "none",
+                                backgroundColor: "#F8FAFC"
+                            }}
+                        />
+                    </div>
+
+                    {/* Category Filter */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: "800", color: "#64748B" }}>
+                            FILTER BY CATEGORY
+                        </span>
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            style={{
+                                width: "100%",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #CBD5E1",
+                                fontSize: "0.85rem",
+                                fontWeight: "600",
+                                outline: "none",
+                                backgroundColor: "#F8FAFC",
+                                color: "#1E293B"
+                            }}
+                        >
+                            <option value="ALL">All Categories</option>
+                            <option value="FOOD">Food</option>
+                            <option value="ROOM">Room</option>
+                            <option value="PAYMENT">Payment</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+
                     {/* Status Filter Tab Group */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         <span style={{ fontSize: "0.75rem", fontWeight: "800", color: "#64748B", display: "flex", alignItems: "center", gap: "5px" }}>
@@ -480,42 +553,83 @@ export default function SuperAdminSupportPage() {
                     ) : filteredTickets.length === 0 ? (
                         <div style={{ textAlign: "center", padding: "40px 20px", color: "#94A3B8" }}>
                             <AlertCircle size={32} style={{ margin: "0 auto 10px" }} />
-                            <p style={{ fontSize: "0.85rem" }}>No tickets found matching status.</p>
+                            <p style={{ fontSize: "0.85rem" }}>No matching tickets found.</p>
                         </div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", maxHeight: "600px" }}>
-                            {filteredTickets.map(t => {
-                                const colors = getStatusColor(t.status);
-                                return (
-                                    <div
-                                        key={t.id}
-                                        onClick={() => fetchTicketDetails(t.id)}
-                                        style={{
-                                            padding: "16px",
-                                            borderRadius: "12px",
-                                            border: `1px solid ${selectedTicket?.id === t.id ? "var(--coral, #F16F68)" : "#E2E8F0"}`,
-                                            backgroundColor: selectedTicket?.id === t.id ? "#FFF8F7" : "white",
-                                            cursor: "pointer",
-                                            transition: "all 0.2s"
-                                        }}
-                                    >
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                            <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#94A3B8" }}>{t.category}</span>
-                                            <span style={{ backgroundColor: colors.bg, color: colors.text, padding: "4px 8px", borderRadius: "10px", fontSize: "0.7rem", fontWeight: "bold" }}>
-                                                {t.status.replace("_", " ")}
-                                            </span>
+                        <>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", maxHeight: "400px" }}>
+                                {paginatedTickets.map(t => {
+                                    const colors = getStatusColor(t.status);
+                                    return (
+                                        <div
+                                            key={t.id}
+                                            onClick={() => fetchTicketDetails(t.id)}
+                                            style={{
+                                                padding: "16px",
+                                                borderRadius: "12px",
+                                                border: `1px solid ${selectedTicket?.id === t.id ? "var(--coral, #F16F68)" : "#E2E8F0"}`,
+                                                backgroundColor: selectedTicket?.id === t.id ? "#FFF8F7" : "white",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s"
+                                            }}
+                                        >
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                                <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#94A3B8" }}>{t.category}</span>
+                                                <span style={{ backgroundColor: colors.bg, color: colors.text, padding: "4px 8px", borderRadius: "10px", fontSize: "0.7rem", fontWeight: "bold" }}>
+                                                    {t.status.replace("_", " ")}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontWeight: "700", fontSize: "0.9rem", color: "#1E293B", marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                {t.title}
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                                                <span style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: "600" }}>{t.user?.name} ({t.user?.role})</span>
+                                                <span style={{ fontSize: "0.7rem", color: "#94A3B8" }}>{new Date(t.updatedAt).toLocaleDateString()}</span>
+                                            </div>
                                         </div>
-                                        <div style={{ fontWeight: "700", fontSize: "0.9rem", color: "#1E293B", marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                            {t.title}
-                                        </div>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
-                                            <span style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: "600" }}>{t.user?.name} ({t.user?.role})</span>
-                                            <span style={{ fontSize: "0.7rem", color: "#94A3B8" }}>{new Date(t.updatedAt).toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #F1F5F9" }}>
+                                <button
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage((prev: number) => Math.max(prev - 1, 1))}
+                                    style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #E2E8F0",
+                                        backgroundColor: currentPage === 1 ? "#F1F5F9" : "white",
+                                        color: currentPage === 1 ? "#94A3B8" : "#475569",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "700",
+                                        cursor: currentPage === 1 ? "not-allowed" : "pointer"
+                                    }}
+                                >
+                                    Prev
+                                </button>
+                                <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "600" }}>
+                                    Page {currentPage} of {Math.max(totalPages, 1)}
+                                </span>
+                                <button
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    onClick={() => setCurrentPage((prev: number) => Math.min(prev + 1, totalPages))}
+                                    style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #E2E8F0",
+                                        backgroundColor: (currentPage === totalPages || totalPages === 0) ? "#F1F5F9" : "white",
+                                        color: (currentPage === totalPages || totalPages === 0) ? "#94A3B8" : "#475569",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "700",
+                                        cursor: (currentPage === totalPages || totalPages === 0) ? "not-allowed" : "pointer"
+                                    }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
 
