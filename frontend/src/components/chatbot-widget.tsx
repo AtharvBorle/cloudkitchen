@@ -181,6 +181,35 @@ export default function ChatbotWidget() {
         }
     }, [messages, isOpen, isTyping]);
 
+    // Keep chatbot window within viewport boundaries when opened or resized
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const adjustPosition = () => {
+            const container = containerRef.current;
+            if (!container) return;
+            
+            const rect = container.getBoundingClientRect();
+            if (position) {
+                const maxX = window.innerWidth - rect.width;
+                const maxY = window.innerHeight - rect.height;
+                const newX = Math.max(0, Math.min(position.x, maxX));
+                const newY = Math.max(0, Math.min(position.y, maxY));
+                if (newX !== position.x || newY !== position.y) {
+                    setPosition({ x: newX, y: newY });
+                }
+            }
+        };
+
+        const handle = requestAnimationFrame(adjustPosition);
+        window.addEventListener("resize", adjustPosition);
+        
+        return () => {
+            cancelAnimationFrame(handle);
+            window.removeEventListener("resize", adjustPosition);
+        };
+    }, [isOpen, position]);
+
     // Initial greeting on mount / reset
     const loadGreeting = () => {
         const isSeller = session?.user?.role === "SELLER";
