@@ -1,6 +1,6 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { Banknote, ShieldCheck, Tag, Zap, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
@@ -50,54 +50,58 @@ function InteractiveCalendar({ bookedDates, startValue, endValue, onChange }: In
         });
     };
 
+    // Calculate occupied nights
+    const occupiedNights = useMemo(() => {
+        const nights = new Set<string>();
+        bookedDates.forEach(b => {
+            const start = new Date(b.startDate);
+            const end = new Date(b.endDate);
+            const temp = new Date(start);
+            while (temp < end) {
+                const y = temp.getUTCFullYear();
+                const m = String(temp.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(temp.getUTCDate()).padStart(2, '0');
+                nights.add(`${y}-${m}-${d}`);
+                temp.setDate(temp.getDate() + 1);
+            }
+        });
+        return nights;
+    }, [bookedDates]);
+
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = getFirstDayOfMonth(year, month);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-    const isDateBooked = (date: Date) => {
-        const dTime = date.getTime();
-        return bookedDates.some(b => {
-            const bStart = new Date(b.startDate.split("T")[0]).getTime();
-            const bEnd = new Date(b.endDate.split("T")[0]).getTime();
-            return dTime >= bStart && dTime < bEnd;
+    const checkInDateStr = startValue;
+    const checkOutDateStr = endValue;
+
+    // Find the first occupied night after checkIn
+    const firstOccupiedNightAfterCheckIn = useMemo<string | null>(() => {
+        if (!checkInDateStr) return null;
+        let earliest: string | null = null;
+        occupiedNights.forEach(night => {
+            if (night >= checkInDateStr) {
+                if (!earliest || night < earliest) {
+                    earliest = night;
+                }
+            }
         });
-    };
+        return earliest;
+    }, [checkInDateStr, occupiedNights]);
 
-    const handleDateClick = (day: number) => {
-        const selectedDate = new Date(year, month, day);
-        selectedDate.setHours(0, 0, 0, 0);
-        const dateStr = selectedDate.toISOString().split("T")[0];
-
-        if (!startValue || (startValue && endValue)) {
+    const handleDateClick = (dayStr: string) => {
+        if (!checkInDateStr || (checkInDateStr && checkOutDateStr)) {
             // Set Check-in
-            onChange({ start: dateStr, end: "" });
+            onChange({ start: dayStr, end: "" });
         } else {
-            // Check-out selection
-            const start = new Date(startValue);
-            start.setHours(0, 0, 0, 0);
-            
-            if (selectedDate <= start) {
-                // If user clicks a date before or same as check-in, make it the new check-in
-                onChange({ start: dateStr, end: "" });
+            // Set Check-out
+            if (dayStr <= checkInDateStr) {
+                // Reset Check-in
+                onChange({ start: dayStr, end: "" });
             } else {
-                // Check if any intermediate date is booked
-                let hasBookedBetween = false;
-                const temp = new Date(start);
-                while (temp < selectedDate) {
-                    if (isDateBooked(temp)) {
-                        hasBookedBetween = true;
-                        break;
-                    }
-                    temp.setDate(temp.getDate() + 1);
-                }
-
-                if (hasBookedBetween) {
-                    alert("Selected range overlaps with already booked dates. Please choose another range.");
-                    onChange({ start: dateStr, end: "" });
-                } else {
-                    onChange({ start: startValue, end: dateStr });
-                }
+                onChange({ start: checkInDateStr, end: dayStr });
             }
         }
     };
@@ -108,15 +112,13 @@ function InteractiveCalendar({ bookedDates, startValue, endValue, onChange }: In
         days.push(<div key={`empty-${i}`} style={{ width: "36px", height: "36px" }} />);
     }
 
-    const checkInTime = startValue ? new Date(startValue).getTime() : null;
-    const checkOutTime = endValue ? new Date(endValue).getTime() : null;
-
     for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        date.setHours(0, 0, 0, 0);
-        const dateTime = date.getTime();
-        const isPast = dateTime < today.getTime();
-        const isBooked = isDateBooked(date);
+        const mStr = String(month + 1).padStart(2, '0');
+        const dStr = String(day).padStart(2, '0');
+        const dayStr = `${year}-${mStr}-${dStr}`;
+
+        const isPast = dayStr < todayStr;
+        const isBooked = occupiedNights.has(dayStr);
         
         let style: React.CSSProperties = {
             width: "36px",
@@ -134,34 +136,60 @@ function InteractiveCalendar({ bookedDates, startValue, endValue, onChange }: In
 
         let isDisabled = false;
         
-        const isSelectedStart = startValue && dateTime === checkInTime;
-        const isSelectedEnd = endValue && dateTime === checkOutTime;
-        const isWithinRange = checkInTime && checkOutTime && dateTime > checkInTime && dateTime < checkOutTime;
+        const isSelectedStart = checkInDateStr && dayStr === checkInDateStr;
+        const isSelectedEnd = checkOutDateStr && dayStr === checkOutDateStr;
+        const isWithinRange = checkInDateStr && checkOutDateStr && dayStr > checkInDateStr && dayStr < checkOutDateStr;
 
         if (isPast) {
             style.color = "#CBD5E1";
             style.backgroundColor = "transparent";
             style.cursor = "not-allowed";
             isDisabled = true;
-        } else if (isBooked) {
-            style.color = "#DC2626"; // Dark Red
-            style.backgroundColor = "#FEE2E2"; // Light Red
-            style.border = "1px solid #FCA5A5";
-            style.cursor = "not-allowed";
-            isDisabled = true;
-        } else if (isSelectedStart || isSelectedEnd) {
+        } else if (!checkInDateStr || (checkInDateStr && checkOutDateStr)) {
+            // Selecting Check-In
+            if (isBooked) {
+                style.color = "#DC2626";
+                style.backgroundColor = "#FEE2E2";
+                style.border = "1px solid #FCA5A5";
+                style.cursor = "not-allowed";
+                isDisabled = true;
+            } else {
+                style.color = "#16A34A";
+                style.backgroundColor = "#F0FDF4";
+                style.border = "1px solid #BBF7D0";
+            }
+        } else {
+            // Selecting Check-Out
+            const isValidCheckout = dayStr > checkInDateStr && (!firstOccupiedNightAfterCheckIn || dayStr <= firstOccupiedNightAfterCheckIn);
+
+            if (isSelectedStart) {
+                style.color = "white";
+                style.backgroundColor = "var(--primary, #16a34a)";
+                style.fontWeight = "bold";
+            } else if (isValidCheckout) {
+                style.color = "#16A34A";
+                style.backgroundColor = "#F0FDF4";
+                style.border = "1px solid #BBF7D0";
+            } else {
+                style.color = "#DC2626";
+                style.backgroundColor = "#FEE2E2";
+                style.border = "1px solid #FCA5A5";
+                style.cursor = "not-allowed";
+                isDisabled = true;
+            }
+        }
+
+        if (isSelectedStart || isSelectedEnd) {
             style.color = "white";
-            style.backgroundColor = "var(--primary, #16a34a)"; // Dark Green
+            style.backgroundColor = "var(--primary, #16a34a)";
             style.fontWeight = "bold";
             style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
+            style.border = "none";
         } else if (isWithinRange) {
             style.color = "#15803D";
-            style.backgroundColor = "#DCFCE7"; // Pale Green
-            style.borderRadius = "0"; // Connecting range style
-        } else {
-            style.color = "#16A34A"; // Green
-            style.backgroundColor = "#F0FDF4"; // Light Green
-            style.border = "1px solid #BBF7D0";
+            style.backgroundColor = "#DCFCE7";
+            style.borderRadius = "0";
+            style.border = "none";
         }
 
         days.push(
@@ -169,8 +197,20 @@ function InteractiveCalendar({ bookedDates, startValue, endValue, onChange }: In
                 key={`day-${day}`}
                 type="button"
                 disabled={isDisabled}
-                onClick={() => handleDateClick(day)}
+                onClick={() => handleDateClick(dayStr)}
                 style={style}
+                onMouseEnter={(e) => {
+                    if (!isDisabled && !isSelectedStart && !isSelectedEnd && !isWithinRange) {
+                        e.currentTarget.style.backgroundColor = "#DCFCE7";
+                        e.currentTarget.style.color = "#15803D";
+                    }
+                }}
+                onMouseLeave={(e) => {
+                    if (!isDisabled && !isSelectedStart && !isSelectedEnd && !isWithinRange) {
+                        e.currentTarget.style.backgroundColor = isBooked ? "#FEE2E2" : "#F0FDF4";
+                        e.currentTarget.style.color = isBooked ? "#DC2626" : "#16A34A";
+                    }
+                }}
             >
                 {day}
             </button>
@@ -191,17 +231,14 @@ function InteractiveCalendar({ bookedDates, startValue, endValue, onChange }: In
                 </button>
             </div>
             
-            {/* Weekday Header */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", textAlign: "center", marginBottom: "8px", fontWeight: "600", color: "#64748B", fontSize: "0.75rem" }}>
                 <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
             </div>
             
-            {/* Days Grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", justifyItems: "center" }}>
                 {days}
             </div>
 
-            {/* Legend */}
             <div style={{ display: "flex", justifyContent: "center", gap: "15px", marginTop: "15px", paddingTop: "10px", borderTop: "1px solid #F1F5F9", fontSize: "0.75rem", fontWeight: "600" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                     <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0" }} />
@@ -448,20 +485,49 @@ function CheckoutContent() {
             return;
         }
 
-        const start = new Date(bookingDates.start);
-        const end = new Date(bookingDates.end);
+        const start = bookingDates.start;
+        const end = bookingDates.end;
 
         if (start >= end) {
             setDateOverlapError("Check-out date must be after check-in date.");
             return;
         }
 
-        const isOverlapping = bookedDates.some(booking => {
-            const bStart = new Date(booking.startDate);
-            const bEnd = new Date(booking.endDate);
-            // Overlap condition: Proposed Start < Existing End AND Proposed End > Existing Start
-            return start < bEnd && end > bStart;
+        // Build occupied set
+        const occupied = new Set<string>();
+        bookedDates.forEach(b => {
+            const bStart = new Date(b.startDate);
+            const bEnd = new Date(b.endDate);
+            const temp = new Date(bStart);
+            while (temp < bEnd) {
+                const y = temp.getUTCFullYear();
+                const m = String(temp.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(temp.getUTCDate()).padStart(2, '0');
+                occupied.add(`${y}-${m}-${d}`);
+                temp.setDate(temp.getDate() + 1);
+            }
         });
+
+        // Check if any night from check-in up to check-out (exclusive) is occupied
+        const [sYear, sMonth, sDay] = start.split("-").map(Number);
+        const temp = new Date(sYear, sMonth - 1, sDay);
+        
+        const [eYear, eMonth, eDay] = end.split("-").map(Number);
+        const checkOutDate = new Date(eYear, eMonth - 1, eDay);
+        
+        let isOverlapping = false;
+        
+        while (temp < checkOutDate) {
+            const y = temp.getFullYear();
+            const m = String(temp.getMonth() + 1).padStart(2, '0');
+            const d = String(temp.getDate()).padStart(2, '0');
+            const key = `${y}-${m}-${d}`;
+            if (occupied.has(key)) {
+                isOverlapping = true;
+                break;
+            }
+            temp.setDate(temp.getDate() + 1);
+        }
 
         if (isOverlapping) {
             setDateOverlapError("These dates are already booked.");
