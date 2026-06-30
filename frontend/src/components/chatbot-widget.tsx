@@ -709,61 +709,111 @@ export default function ChatbotWidget() {
 
             const isSeller = session?.user?.role === "SELLER";
             if (isSeller) {
-                if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey")) {
-                    replyText = "Hello! I am Mansi, your seller support helper. How can I help you today?";
+                // Seller Query Routing
+                if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
+                    replyText = "Hello! I am Mansi, your automated seller helper assistant. How can I assist you with your business today?";
                     generatedOptions = [
                         { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
                         { label: "🍱 Menu & Listings", action: () => handleSelectOption("seller_listings") },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ];
-                } else if (normalizedText.includes("order") || normalizedText.includes("sale") || normalizedText.includes("item") || normalizedText.includes("menu")) {
-                    replyText = "I can help you with received orders, menu listings, or inventory query. Please select an option:";
-                    generatedOptions = [
-                        { label: "📈 Received Orders", action: () => handleSelectOption("seller_orders") },
-                        { label: "🍱 Menu & Listings Query", action: () => handleSelectOption("seller_listings") },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ];
-                } else if (normalizedText.includes("pay") || normalizedText.includes("payout") || normalizedText.includes("sub") || normalizedText.includes("money")) {
-                    replyText = "Need support with seller payouts or subscriptions?";
-                    generatedOptions = [
                         { label: "💰 Payouts & Subscriptions", action: () => handleSelectOption("seller_payouts") },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
-                } else {
-                    replyText = "I couldn't quite analyze that message. Would you like to raise a support ticket to speak with customer care directly?";
+                }
+                else if (normalizedText.includes("order") || normalizedText.includes("sale") || normalizedText.includes("customer") || normalizedText.includes("earning") || normalizedText.includes("revenue")) {
+                    replyText = "You can view your received kitchen orders, manage delivery status, or cancel/process orders directly in the [Received Orders](/dashboard/seller/orders) section of your Seller Dashboard.\n\nNeed assistance with a specific order?";
+                    generatedOptions = [
+                        { label: "📈 Select recent order", action: () => handleSelectOption("seller_orders") },
+                        { label: "🎟️ Raise order support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: "Seller Order Support", desc: "I need help with a customer order on my kitchen." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("menu") || normalizedText.includes("listing") || normalizedText.includes("food") || normalizedText.includes("room") || normalizedText.includes("dish") || normalizedText.includes("price") || normalizedText.includes("add") || normalizedText.includes("modify") || normalizedText.includes("create")) {
+                    replyText = "To manage your products:\n- **Food Menu**: Go to the 'Manage Menu' section of your Seller Dashboard to add food items, set prices, and update availability.\n- **Room Stays**: Go to the 'Manage Rooms' section to add room types, set prices, and check bookings.\n\nNeed help configuration listings?";
+                    generatedOptions = [
+                        { label: "🎟️ Raise listing ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Listing configuration support", desc: "I need help configuring my kitchen food menu or room booking listings." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("pay") || normalizedText.includes("payout") || normalizedText.includes("money") || normalizedText.includes("billing") || normalizedText.includes("subscription") || normalizedText.includes("plan") || normalizedText.includes("fee") || normalizedText.includes("commission")) {
+                    replyText = "Seller payouts are processed weekly. You can track your active subscription plan validity, billing history, and payout logs in the **Subscriptions** section of your Seller Dashboard.\n\nIf you have a payout discrepancy, raise a support ticket below:";
+                    generatedOptions = [
+                        { label: "🎟️ Payout support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Seller Payout Inquiry", desc: "I have questions about my weekly payout cycle or subscription plan details." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("profile") || normalizedText.includes("account") || normalizedText.includes("business") || normalizedText.includes("address") || normalizedText.includes("phone") || normalizedText.includes("email") || normalizedText.includes("password")) {
+                    replyText = "You can update your personal contact info, business location, and account password in the profile section.\n\nFor major modifications (like shop name, GSTIN, FSSAI certificate updates, or bank info details), raise a verification ticket:";
+                    generatedOptions = [
+                        { label: "🎟️ Update account details ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Account Details Modification", desc: "I need to request manual verification to update my official FSSAI / Aadhaar / business details." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("pending") || normalizedText.includes("approve") || normalizedText.includes("verify") || normalizedText.includes("document") || normalizedText.includes("aadhaar") || normalizedText.includes("fssai") || normalizedText.includes("register")) {
+                    replyText = "Superadmins manually verify all registered sellers. Please check that you uploaded a clear front/back of your Aadhaar card and a valid FSSAI certificate. Verification takes 24-48 business hours.\n\nIf you are stuck pending approval, raise a ticket:";
+                    generatedOptions = [
+                        { label: "🎟️ Registration support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Pending Approval", desc: "My seller account is still pending verification. Please review my uploaded documents." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else {
+                    replyText = "I couldn't match that query directly. Would you like to raise a support ticket to speak with superadmin support directly?";
                     generatedOptions = [
                         { label: "🎟️ Raise a support ticket", action: () => handleSelectOption("custom_ticket") },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
             } else {
-                if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey")) {
-                    replyText = "Hello! I am Mansi, your support helper. How can I help you today? Please choose an issue area:";
+                // User / Customer Query Routing
+                if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
+                    replyText = "Hello! I am Mansi, your automated helper assistant. How can I help you today? Please choose an issue area or type your question:";
                     generatedOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        { label: "🤝 Become a Seller", action: () => handleSelectOption("seller_info") },
+                        { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
-                } else if (normalizedText.includes("food") || normalizedText.includes("order") || normalizedText.includes("item")) {
-                    replyText = "It looks like you have issues or queries related to food orders. Would you like to select a recent order to get help?";
+                }
+                else if (normalizedText.includes("food") || normalizedText.includes("order") || normalizedText.includes("item") || normalizedText.includes("dish") || normalizedText.includes("delivery") || normalizedText.includes("menu") || normalizedText.includes("buy")) {
+                    replyText = "To order delicious food, browse our active cloud kitchens at our [Explore Food](/explore/food) page. You can add items to your cart, set your delivery address, and proceed to checkout.\n\nIf you want to track a recent order or report missing/incorrect food items, select below:";
                     generatedOptions = [
-                        { label: "📦 Select an Order", action: () => handleSelectOption("orders") },
+                        { label: "📦 Select recent order", action: () => handleSelectOption("orders") },
+                        { label: "🎟️ Raise order support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: "Food order assistance request", desc: "I need help with my food order delivery or quality." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
-                } else if (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay")) {
-                    replyText = "It looks like you have stay or room booking queries. Would you like to view your bookings?";
+                }
+                else if (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay") || normalizedText.includes("hotel") || normalizedText.includes("check-in") || normalizedText.includes("checkin") || normalizedText.includes("check-out") || normalizedText.includes("checkout") || normalizedText.includes("time") || normalizedText.includes("date")) {
+                    replyText = "You can book comfortable stays on our [Explore Rooms](/explore/rooms) page. Note these rules:\n- **Check-in time**: 12:00 PM\n- **Check-out time**: 11:00 AM\n- **Overlapping dates**: Check-in on day X is allowed if the previous booking checkout was on day X at 11:00 AM.\n- **Calendar status**: Available dates are colored **green**, booked dates are **red**.\n\nTo view or manage bookings, select below:";
                     generatedOptions = [
                         { label: "🛌 View Stay Bookings", action: () => handleSelectOption("bookings") },
+                        { label: "🎟️ Stay support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "ROOM", title: "Room stay assistance request", desc: "I have inquiries or issues with my room booking/dates." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
-                } else if (normalizedText.includes("refund") || normalizedText.includes("pay") || normalizedText.includes("money") || normalizedText.includes("failed")) {
-                    replyText = "For payment and refund concerns, check out our support guidelines or raise a payment ticket:";
+                }
+                else if (normalizedText.includes("cancel") || normalizedText.includes("refund") || normalizedText.includes("money") || normalizedText.includes("deduct") || normalizedText.includes("failed") || normalizedText.includes("pay") || normalizedText.includes("payment")) {
+                    replyText = "We support Cash on Delivery (COD) and secure online payment via Razorpay. \n- **Cancellations**: Refunds for cancellations are initiated immediately and reflect in 24-48 business hours.\n- **Payment deductions**: If money was deducted but booking/order failed, raise a ticket below for immediate refund processing.";
                     generatedOptions = [
                         { label: "💳 View Payment Policies", action: () => handleSelectOption("payments_info") },
+                        { label: "🎟️ Payment support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Payment deduction failure", desc: "Money was deducted from my account but booking/order failed. Please verify." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
-                } else {
-                    replyText = "I couldn't quite analyze that message. Would you like to raise a support ticket to speak with customer care directly?";
+                }
+                else if (normalizedText.includes("seller") || normalizedText.includes("partner") || normalizedText.includes("register") || normalizedText.includes("shop") || normalizedText.includes("business")) {
+                    replyText = "Want to partner with us as a Seller? You can register directly by clicking the button below. Please prepare your business details, Aadhaar card front/back, and FSSAI certificate. If you have registration issues, raise a ticket below:";
+                    generatedOptions = [
+                        { label: "🤝 Become a Seller", action: () => { window.open("/auth/register", "_blank"); } },
+                        { label: "🎟️ Raise ticket for Seller support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have inquiries about registering as a seller on the platform." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("profile") || normalizedText.includes("account") || normalizedText.includes("password") || normalizedText.includes("details") || normalizedText.includes("change") || normalizedText.includes("edit") || normalizedText.includes("address")) {
+                    replyText = "You can manage your saved addresses, default delivery coordinates, profile name, and password in your [User Profile](/dashboard/user/profile).\n\nMake sure to set a default location pin to display kitchens delivering to your zone!";
+                    generatedOptions = [
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else {
+                    replyText = "I couldn't match that query directly. Would you like to raise a support ticket to speak with customer care directly?";
                     generatedOptions = [
                         { label: "🎟️ Raise a support ticket", action: () => handleSelectOption("custom_ticket") },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
@@ -836,6 +886,56 @@ export default function ChatbotWidget() {
         } finally {
             setSubmittingTicket(false);
         }
+    };
+
+    const renderMessageText = (text: string) => {
+        const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        const parts: (string | React.ReactNode)[] = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+            const [fullMatch, linkText, linkUrl] = match;
+            const index = match.index;
+
+            if (index > lastIndex) {
+                parts.push(text.substring(lastIndex, index));
+            }
+
+            const isExternal = linkUrl.startsWith("http");
+            if (isExternal) {
+                parts.push(
+                    <a
+                        key={index}
+                        href={linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline" }}
+                    >
+                        {linkText}
+                    </a>
+                );
+            } else {
+                parts.push(
+                    <Link
+                        key={index}
+                        href={linkUrl}
+                        style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline" }}
+                        onClick={() => setIsOpen(false)}
+                    >
+                        {linkText}
+                    </Link>
+                );
+            }
+
+            lastIndex = regex.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+            parts.push(text.substring(lastIndex));
+        }
+
+        return parts.length > 0 ? parts : text;
     };
 
     const currentStyle: React.CSSProperties = position 
@@ -1081,7 +1181,7 @@ export default function ChatbotWidget() {
                                         border: msg.sender === "bot" ? "1px solid #E2E8F0" : "none",
                                         whiteSpace: "pre-line"
                                     }}>
-                                        {msg.text}
+                                        {renderMessageText(msg.text)}
                                         {msg.isTicketSuccess && msg.ticketId && (
                                             <div style={{ marginTop: "10px", borderTop: "1px solid #E2E8F0", paddingTop: "8px" }}>
                                                 <Link
