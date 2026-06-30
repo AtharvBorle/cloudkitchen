@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageSquare, X, Send, User, ChevronRight, Loader2, Sparkles, ShoppingBag, BedDouble } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
@@ -28,6 +28,7 @@ interface Message {
 export default function ChatbotWidget() {
     const { data: session, status } = useSession();
     const pathname = usePathname();
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState("");
@@ -575,9 +576,10 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "Want to partner with us as a Seller? You can register by clicking 'Become a Seller' on the homepage. Provide business details, Aadhaar card front/back, and FSSAI certificate. If you have registration issues, raise a ticket below:",
+                    text: "Want to partner with us as a Seller? You can register directly by clicking the button below. Please prepare your business details, Aadhaar card front/back, and FSSAI certificate. If you have registration issues, raise a ticket below:",
                     timestamp: new Date(),
                     options: [
+                        { label: "🤝 Become a Seller", action: () => { router.push("/auth/register"); } },
                         { label: "🎟️ Raise ticket for Seller support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have inquiries about registering as a seller on the platform." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
