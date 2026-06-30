@@ -218,7 +218,7 @@ export default function ChatbotWidget() {
                 {
                     id: "welcome",
                     sender: "bot",
-                    text: "Hello! I am Mansi, your automated seller helper assistant. How can I assist you with your business today? Please select an option:",
+                    text: "Hello! I am Mansi, your seller assistant. How can I assist you with your business today? Please select an option:",
                     timestamp: new Date(),
                     options: [
                         { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
@@ -233,7 +233,7 @@ export default function ChatbotWidget() {
                 {
                     id: "welcome",
                     sender: "bot",
-                    text: "Hello! I am Mansi, your automated helper assistant. What can I help you with today? Please select an option below:",
+                    text: "Hello! I am Mansi, your support assistant. What can I help you with today? Please select an option below:",
                     timestamp: new Date(),
                     options: [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
@@ -711,7 +711,7 @@ export default function ChatbotWidget() {
             if (isSeller) {
                 // Seller Query Routing
                 if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
-                    replyText = "Hello! I am Mansi, your automated seller helper assistant. How can I assist you with your business today?";
+                    replyText = "Hello! I am Mansi, your seller assistant. How can I assist you with your business today?";
                     generatedOptions = [
                         { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
                         { label: "🍱 Menu & Listings", action: () => handleSelectOption("seller_listings") },
@@ -765,7 +765,7 @@ export default function ChatbotWidget() {
             } else {
                 // User / Customer Query Routing
                 if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
-                    replyText = "Hello! I am Mansi, your automated helper assistant. How can I help you today? Please choose an issue area or type your question:";
+                    replyText = "Hello! I am Mansi, your support assistant. How can I help you today? Please choose an issue area or type your question:";
                     generatedOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
