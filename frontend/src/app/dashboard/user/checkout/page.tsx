@@ -3,10 +3,222 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { Banknote, ShieldCheck, Tag, Zap } from "lucide-react";
+import { Banknote, ShieldCheck, Tag, Zap, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import Script from "next/script";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+
+const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
+};
+
+const getFirstDayOfMonth = (year: number, month: number) => {
+    return new Date(year, month, 1).getDay();
+};
+
+interface InteractiveCalendarProps {
+    bookedDates: { startDate: string; endDate: string }[];
+    startValue: string;
+    endValue: string;
+    onChange: (dates: { start: string; end: string }) => void;
+}
+
+function InteractiveCalendar({ bookedDates, startValue, endValue, onChange }: InteractiveCalendarProps) {
+    const [currentDate, setCurrentDate] = useState(() => new Date());
+    
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const handlePrevMonth = () => {
+        setCurrentDate(prev => {
+            const newDate = new Date(prev);
+            newDate.setMonth(newDate.getMonth() - 1);
+            return newDate;
+        });
+    };
+
+    const handleNextMonth = () => {
+        setCurrentDate(prev => {
+            const newDate = new Date(prev);
+            newDate.setMonth(newDate.getMonth() + 1);
+            return newDate;
+        });
+    };
+
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const isDateBooked = (date: Date) => {
+        const dTime = date.getTime();
+        return bookedDates.some(b => {
+            const bStart = new Date(b.startDate.split("T")[0]).getTime();
+            const bEnd = new Date(b.endDate.split("T")[0]).getTime();
+            return dTime >= bStart && dTime < bEnd;
+        });
+    };
+
+    const handleDateClick = (day: number) => {
+        const selectedDate = new Date(year, month, day);
+        selectedDate.setHours(0, 0, 0, 0);
+        const dateStr = selectedDate.toISOString().split("T")[0];
+
+        if (!startValue || (startValue && endValue)) {
+            // Set Check-in
+            onChange({ start: dateStr, end: "" });
+        } else {
+            // Check-out selection
+            const start = new Date(startValue);
+            start.setHours(0, 0, 0, 0);
+            
+            if (selectedDate <= start) {
+                // If user clicks a date before or same as check-in, make it the new check-in
+                onChange({ start: dateStr, end: "" });
+            } else {
+                // Check if any intermediate date is booked
+                let hasBookedBetween = false;
+                const temp = new Date(start);
+                while (temp < selectedDate) {
+                    if (isDateBooked(temp)) {
+                        hasBookedBetween = true;
+                        break;
+                    }
+                    temp.setDate(temp.getDate() + 1);
+                }
+
+                if (hasBookedBetween) {
+                    alert("Selected range overlaps with already booked dates. Please choose another range.");
+                    onChange({ start: dateStr, end: "" });
+                } else {
+                    onChange({ start: startValue, end: dateStr });
+                }
+            }
+        }
+    };
+
+    const days = [];
+    // Offset cells for days of week
+    for (let i = 0; i < firstDay; i++) {
+        days.push(<div key={`empty-${i}`} style={{ width: "36px", height: "36px" }} />);
+    }
+
+    const checkInTime = startValue ? new Date(startValue).getTime() : null;
+    const checkOutTime = endValue ? new Date(endValue).getTime() : null;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        date.setHours(0, 0, 0, 0);
+        const dateTime = date.getTime();
+        const isPast = dateTime < today.getTime();
+        const isBooked = isDateBooked(date);
+        
+        let style: React.CSSProperties = {
+            width: "36px",
+            height: "36px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "50%",
+            fontSize: "0.85rem",
+            fontWeight: "600",
+            cursor: "pointer",
+            border: "none",
+            transition: "all 0.2s"
+        };
+
+        let isDisabled = false;
+        
+        const isSelectedStart = startValue && dateTime === checkInTime;
+        const isSelectedEnd = endValue && dateTime === checkOutTime;
+        const isWithinRange = checkInTime && checkOutTime && dateTime > checkInTime && dateTime < checkOutTime;
+
+        if (isPast) {
+            style.color = "#CBD5E1";
+            style.backgroundColor = "transparent";
+            style.cursor = "not-allowed";
+            isDisabled = true;
+        } else if (isBooked) {
+            style.color = "#DC2626"; // Dark Red
+            style.backgroundColor = "#FEE2E2"; // Light Red
+            style.border = "1px solid #FCA5A5";
+            style.cursor = "not-allowed";
+            isDisabled = true;
+        } else if (isSelectedStart || isSelectedEnd) {
+            style.color = "white";
+            style.backgroundColor = "var(--primary, #16a34a)"; // Dark Green
+            style.fontWeight = "bold";
+            style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
+        } else if (isWithinRange) {
+            style.color = "#15803D";
+            style.backgroundColor = "#DCFCE7"; // Pale Green
+            style.borderRadius = "0"; // Connecting range style
+        } else {
+            style.color = "#16A34A"; // Green
+            style.backgroundColor = "#F0FDF4"; // Light Green
+            style.border = "1px solid #BBF7D0";
+        }
+
+        days.push(
+            <button
+                key={`day-${day}`}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => handleDateClick(day)}
+                style={style}
+            >
+                {day}
+            </button>
+        );
+    }
+
+    return (
+        <div style={{ border: "1px solid #E2E8F0", borderRadius: "12px", padding: "15px", backgroundColor: "#FFF", width: "100%", maxWidth: "340px", margin: "15px auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                <button type="button" onClick={handlePrevMonth} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}>
+                    <ChevronLeft size={20} color="#475569" />
+                </button>
+                <span style={{ fontWeight: "700", color: "#1E293B", fontSize: "0.95rem" }}>
+                    {monthNames[month]} {year}
+                </span>
+                <button type="button" onClick={handleNextMonth} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}>
+                    <ChevronRight size={20} color="#475569" />
+                </button>
+            </div>
+            
+            {/* Weekday Header */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", textAlign: "center", marginBottom: "8px", fontWeight: "600", color: "#64748B", fontSize: "0.75rem" }}>
+                <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+            </div>
+            
+            {/* Days Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", justifyItems: "center" }}>
+                {days}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "15px", marginTop: "15px", paddingTop: "10px", borderTop: "1px solid #F1F5F9", fontSize: "0.75rem", fontWeight: "600" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0" }} />
+                    <span style={{ color: "#16A34A" }}>Available</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#FEE2E2", border: "1px solid #FCA5A5" }} />
+                    <span style={{ color: "#DC2626" }}>Booked</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "var(--primary, #16a34a)" }} />
+                    <span style={{ color: "#334155" }}>Selected</span>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function CheckoutContent() {
     const { data: session, status } = useSession();
@@ -611,34 +823,51 @@ function CheckoutContent() {
                             )}
 
                             {isRoomBooking && (
-                                <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-In Date</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            min={new Date().toISOString().split('T')[0]}
-                                            value={bookingDates.start}
-                                            onChange={(e) => setBookingDates({ ...bookingDates, start: e.target.value })}
-                                            className="input-field"
-                                        />
-                                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                            🕑 Check-in from 12:00 PM
+                                <div style={{ marginTop: '15px' }}>
+                                    <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-In Date</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                readOnly
+                                                value={bookingDates.start}
+                                                style={{ backgroundColor: '#F9FAFB', cursor: 'pointer' }}
+                                                className="input-field"
+                                                placeholder="Select on calendar"
+                                            />
+                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                                                🕑 Check-in from 12:00 PM
+                                            </div>
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-Out Date</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                readOnly
+                                                value={bookingDates.end}
+                                                style={{ backgroundColor: '#F9FAFB', cursor: 'pointer' }}
+                                                className="input-field"
+                                                placeholder="Select on calendar"
+                                            />
+                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                                                🕛 Check-out by 11:00 AM
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-Out Date</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            min={bookingDates.start || new Date().toISOString().split('T')[0]}
-                                            value={bookingDates.end}
-                                            onChange={(e) => setBookingDates({ ...bookingDates, end: e.target.value })}
-                                            className="input-field"
-                                        />
-                                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                            🕛 Check-out by 11:00 AM
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1E293B', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <CalendarIcon size={16} color="var(--primary)" />
+                                            Select Dates on Calendar
                                         </div>
+                                        <InteractiveCalendar
+                                            bookedDates={bookedDates}
+                                            startValue={bookingDates.start}
+                                            endValue={bookingDates.end}
+                                            onChange={(dates) => setBookingDates(dates)}
+                                        />
                                     </div>
                                 </div>
                             )}
