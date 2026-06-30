@@ -579,7 +579,7 @@ export default function ChatbotWidget() {
                     text: "Want to partner with us as a Seller? You can register directly by clicking the button below. Please prepare your business details, Aadhaar card front/back, and FSSAI certificate. If you have registration issues, raise a ticket below:",
                     timestamp: new Date(),
                     options: [
-                        { label: "🤝 Become a Seller", action: () => { router.push("/auth/register"); } },
+                        { label: "🤝 Become a Seller", action: () => { window.open("/auth/register", "_blank"); } },
                         { label: "🎟️ Raise ticket for Seller support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have inquiries about registering as a seller on the platform." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
