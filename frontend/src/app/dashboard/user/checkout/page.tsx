@@ -287,6 +287,7 @@ function CheckoutContent() {
     // Room Availability tracking
     const [bookedDates, setBookedDates] = useState<{ startDate: string, endDate: string }[]>([]);
     const [dateOverlapError, setDateOverlapError] = useState("");
+    const [showCalendar, setShowCalendar] = useState(false);
 
     // Seller processing
     const [sellerUpiId, setSellerUpiId] = useState<string | null>(null);
@@ -891,8 +892,8 @@ function CheckoutContent() {
                             {isRoomBooking && (
                                 <div style={{ marginTop: '15px' }}>
                                     <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-In Date</label>
+                                        <div style={{ flex: 1 }} onClick={() => setShowCalendar(true)}>
+                                            <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px", cursor: 'pointer' }}>Check-In Date</label>
                                             <input
                                                 type="text"
                                                 required
@@ -906,8 +907,8 @@ function CheckoutContent() {
                                                 🕑 Check-in from 12:00 PM
                                             </div>
                                         </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check-Out Date</label>
+                                        <div style={{ flex: 1 }} onClick={() => setShowCalendar(true)}>
+                                            <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px", cursor: 'pointer' }}>Check-Out Date</label>
                                             <input
                                                 type="text"
                                                 required
@@ -923,18 +924,114 @@ function CheckoutContent() {
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                        <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1E293B', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <CalendarIcon size={16} color="var(--primary)" />
-                                            Select Dates on Calendar
+                                    {showCalendar && (
+                                        <div style={{
+                                            position: 'fixed',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100vw',
+                                            height: '100vh',
+                                            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                                            backdropFilter: 'blur(4px)',
+                                            zIndex: 9999,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '20px'
+                                        }}>
+                                            <div style={{
+                                                backgroundColor: '#FFF',
+                                                borderRadius: '16px',
+                                                padding: '20px',
+                                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                                                width: '100%',
+                                                maxWidth: '380px',
+                                                position: 'relative'
+                                            }}>
+                                                {/* Header */}
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1E293B', margin: 0 }}>Select Booking Dates</h3>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setShowCalendar(false);
+                                                        }}
+                                                        style={{
+                                                            background: '#F1F5F9',
+                                                            border: 'none',
+                                                            borderRadius: '50%',
+                                                            width: '30px',
+                                                            height: '30px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            color: '#64748B',
+                                                            fontSize: '1rem',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+
+                                                {/* Selected Summary */}
+                                                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '8px', border: '1px dashed #E2E8F0' }}>
+                                                    <div style={{ flex: 1, textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase', fontWeight: '700' }}>Check-In</div>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: '700', color: bookingDates.start ? 'var(--primary)' : '#94A3B8' }}>
+                                                            {bookingDates.start || "Select date"}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ alignSelf: 'center', color: '#CBD5E1', fontWeight: 'bold' }}>→</div>
+                                                    <div style={{ flex: 1, textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase', fontWeight: '700' }}>Check-Out</div>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: '700', color: bookingDates.end ? 'var(--primary)' : '#94A3B8' }}>
+                                                            {bookingDates.end || "Select date"}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <InteractiveCalendar
+                                                    bookedDates={bookedDates}
+                                                    startValue={bookingDates.start}
+                                                    endValue={bookingDates.end}
+                                                    onChange={(dates) => {
+                                                        setBookingDates(dates);
+                                                        if (dates.start && dates.end) {
+                                                            setTimeout(() => {
+                                                                setShowCalendar(false);
+                                                            }, 600);
+                                                        }
+                                                    }}
+                                                />
+
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowCalendar(false);
+                                                    }}
+                                                    disabled={!bookingDates.start || !bookingDates.end}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px',
+                                                        backgroundColor: (bookingDates.start && bookingDates.end) ? 'var(--primary, #16a34a)' : '#CBD5E1',
+                                                        color: 'white',
+                                                        borderRadius: '8px',
+                                                        fontWeight: '700',
+                                                        border: 'none',
+                                                        marginTop: '15px',
+                                                        cursor: (bookingDates.start && bookingDates.end) ? 'pointer' : 'not-allowed',
+                                                        transition: 'background-color 0.2s'
+                                                    }}
+                                                >
+                                                    Confirm Dates
+                                                </button>
+                                            </div>
                                         </div>
-                                        <InteractiveCalendar
-                                            bookedDates={bookedDates}
-                                            startValue={bookingDates.start}
-                                            endValue={bookingDates.end}
-                                            onChange={(dates) => setBookingDates(dates)}
-                                        />
-                                    </div>
+                                    )}
                                 </div>
                             )}
                             {dateOverlapError && (
