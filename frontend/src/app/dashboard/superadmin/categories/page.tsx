@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/fetch-api";
-import { Plus, Trash2, FolderPlus, Layers, Folder, Image, FileImage } from "lucide-react";
+import { Plus, Trash2, FolderPlus, Layers, Folder, Edit, X } from "lucide-react";
 
 export default function FoodCategoriesPage() {
     const [foodCategories, setFoodCategories] = useState<any[]>([]);
@@ -18,10 +18,27 @@ export default function FoodCategoriesPage() {
     const [newSubNames, setNewSubNames] = useState<Record<string, string>>({});
     const [subImages, setSubImages] = useState<Record<string, File | null>>({});
 
-    const fetchData = async () => {
-        setLoading(true);
+    // Edit Category Modal state
+    const [isEditCatModalOpen, setIsEditCatModalOpen] = useState(false);
+    const [editCatId, setEditCatId] = useState("");
+    const [editCatName, setEditCatName] = useState("");
+    const [editCatParentId, setEditCatParentId] = useState("");
+    const [editCatImage, setEditCatImage] = useState<File | null>(null);
+    const [editCatImagePreview, setEditCatImagePreview] = useState<string | null>(null);
+
+    // Edit Subcategory Modal state
+    const [isEditSubModalOpen, setIsEditSubModalOpen] = useState(false);
+    const [editSubId, setEditSubId] = useState("");
+    const [editSubName, setEditSubName] = useState("");
+    const [editSubImage, setEditSubImage] = useState<File | null>(null);
+    const [editSubImagePreview, setEditSubImagePreview] = useState<string | null>(null);
+
+    const fetchData = async (showSilently = false) => {
+        if (!showSilently) setLoading(true);
         try {
-            const res = await fetchApi("/api/superadmin/food-categories");
+            const res = await fetchApi(`/api/superadmin/food-categories?t=${Date.now()}`, {
+                cache: "no-store"
+            });
             if (res.ok) {
                 const data = await res.json();
                 setFoodCategories(data.foodCategories || []);
@@ -64,10 +81,9 @@ export default function FoodCategoriesPage() {
             if (res.ok) {
                 setNewCatName("");
                 setCatImage(null);
-                // Reset file input element if any
                 const fileInput = document.getElementById("cat-image-input") as HTMLInputElement;
                 if (fileInput) fileInput.value = "";
-                fetchData();
+                fetchData(true);
             } else {
                 const err = await res.json();
                 alert(err.message || "Failed to create category");
@@ -86,7 +102,7 @@ export default function FoodCategoriesPage() {
         try {
             const res = await fetchApi(`/api/superadmin/food-categories/${id}`, { method: "DELETE" });
             if (res.ok) {
-                fetchData();
+                fetchData(true);
             } else {
                 alert("Failed to delete category");
             }
@@ -119,10 +135,9 @@ export default function FoodCategoriesPage() {
             if (res.ok) {
                 setNewSubNames(prev => ({ ...prev, [foodCategoryId]: "" }));
                 setSubImages(prev => ({ ...prev, [foodCategoryId]: null }));
-                // Reset file input element if any
                 const fileInput = document.getElementById(`sub-image-input-${foodCategoryId}`) as HTMLInputElement;
                 if (fileInput) fileInput.value = "";
-                fetchData();
+                fetchData(true);
             } else {
                 const err = await res.json();
                 alert(err.message || "Failed to create sub-category");
@@ -141,9 +156,89 @@ export default function FoodCategoriesPage() {
         try {
             const res = await fetchApi(`/api/superadmin/food-subcategories/${id}`, { method: "DELETE" });
             if (res.ok) {
-                fetchData();
+                fetchData(true);
             } else {
                 alert("Failed to delete sub-category");
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const openEditCategoryModal = (fc: any) => {
+        setEditCatId(fc.id);
+        setEditCatName(fc.name);
+        setEditCatParentId(fc.categoryId);
+        setEditCatImage(null);
+        setEditCatImagePreview(fc.imageUrl || null);
+        setIsEditCatModalOpen(true);
+    };
+
+    const openEditSubCategoryModal = (sub: any) => {
+        setEditSubId(sub.id);
+        setEditSubName(sub.name);
+        setEditSubImage(null);
+        setEditSubImagePreview(sub.imageUrl || null);
+        setIsEditSubModalOpen(true);
+    };
+
+    const handleUpdateFoodCategory = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editCatName.trim() || !editCatParentId) return;
+
+        setActionLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append("name", editCatName);
+            formData.append("categoryId", editCatParentId);
+            if (editCatImage) {
+                formData.append("image", editCatImage);
+            }
+
+            const res = await fetchApi(`/api/superadmin/food-categories/${editCatId}`, {
+                method: "PATCH",
+                body: formData
+            });
+
+            if (res.ok) {
+                setIsEditCatModalOpen(false);
+                fetchData(true);
+            } else {
+                const err = await res.json();
+                alert(err.message || "Failed to update category");
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleUpdateSubCategory = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editSubName.trim()) return;
+
+        setActionLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append("name", editSubName);
+            if (editSubImage) {
+                formData.append("image", editSubImage);
+            }
+
+            const res = await fetchApi(`/api/superadmin/food-subcategories/${editSubId}`, {
+                method: "PATCH",
+                body: formData
+            });
+
+            if (res.ok) {
+                setIsEditSubModalOpen(false);
+                fetchData(true);
+            } else {
+                const err = await res.json();
+                alert(err.message || "Failed to update sub-category");
             }
         } catch (error) {
             console.error(error);
@@ -157,7 +252,7 @@ export default function FoodCategoriesPage() {
             <div style={{ marginBottom: "var(--spacing-8)" }}>
                 <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--text-main)", marginBottom: "var(--spacing-2)" }}>Food Categories</h1>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
-                    Configure the food categories and sub-categories available to sellers, including custom category/subcategory images.
+                    Configure and edit the food categories and sub-categories available to sellers.
                 </p>
             </div>
 
@@ -329,21 +424,23 @@ export default function FoodCategoriesPage() {
                                                                 {fc.name}
                                                             </h4>
                                                         </div>
-                                                        <button
-                                                            onClick={() => handleDeleteFoodCategory(fc.id)}
-                                                            style={{
-                                                                background: "none",
-                                                                border: "none",
-                                                                color: "var(--coral)",
-                                                                cursor: "pointer",
-                                                                padding: "4px",
-                                                                borderRadius: "4px"
-                                                            }}
-                                                            title="Delete category"
-                                                            disabled={actionLoading}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                            <button
+                                                                onClick={() => openEditCategoryModal(fc)}
+                                                                style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", padding: "4px" }}
+                                                                title="Edit category"
+                                                            >
+                                                                <Edit size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteFoodCategory(fc.id)}
+                                                                style={{ background: "none", border: "none", color: "var(--coral)", cursor: "pointer", padding: "4px" }}
+                                                                title="Delete category"
+                                                                disabled={actionLoading}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     {/* Subcategories list */}
@@ -370,20 +467,29 @@ export default function FoodCategoriesPage() {
                                                                         )}
                                                                         <span style={{ color: "var(--text-main)", fontWeight: "500" }}>{sub.name}</span>
                                                                     </div>
-                                                                    <button
-                                                                        onClick={() => handleDeleteSubCategory(sub.id)}
-                                                                        style={{
-                                                                            background: "none",
-                                                                            border: "none",
-                                                                            color: "var(--text-muted)",
-                                                                            cursor: "pointer",
-                                                                            fontSize: "0.95rem"
-                                                                        }}
-                                                                        title="Delete subcategory"
-                                                                        disabled={actionLoading}
-                                                                    >
-                                                                        &times;
-                                                                    </button>
+                                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                        <button
+                                                                            onClick={() => openEditSubCategoryModal(sub)}
+                                                                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", padding: "2px" }}
+                                                                            title="Edit subcategory"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteSubCategory(sub.id)}
+                                                                            style={{
+                                                                                background: "none",
+                                                                                border: "none",
+                                                                                color: "var(--text-muted)",
+                                                                                cursor: "pointer",
+                                                                                fontSize: "0.95rem"
+                                                                            }}
+                                                                            title="Delete subcategory"
+                                                                            disabled={actionLoading}
+                                                                        >
+                                                                            &times;
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             ))
                                                         ) : (
@@ -464,6 +570,203 @@ export default function FoodCategoriesPage() {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* Edit Category Modal */}
+            {isEditCatModalOpen && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: "var(--surface)",
+                        padding: "30px",
+                        borderRadius: "var(--radius-lg)",
+                        width: "100%",
+                        maxWidth: "450px",
+                        boxShadow: "var(--shadow-lg)",
+                        position: "relative"
+                    }}>
+                        <button
+                            onClick={() => setIsEditCatModalOpen(false)}
+                            style={{ position: "absolute", top: "15px", right: "15px", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                        >
+                            <X size={20} />
+                        </button>
+                        <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "20px", color: "var(--text-main)" }}>Edit Food Category</h3>
+                        <form onSubmit={handleUpdateFoodCategory} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>Name</label>
+                                <input
+                                    type="text"
+                                    value={editCatName}
+                                    onChange={(e) => setEditCatName(e.target.value)}
+                                    className="input-field"
+                                    required
+                                    disabled={actionLoading}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>Seller Category Type</label>
+                                <select
+                                    value={editCatParentId}
+                                    onChange={(e) => setEditCatParentId(e.target.value)}
+                                    className="input-field"
+                                    style={{ appearance: "auto" }}
+                                    required
+                                    disabled={actionLoading}
+                                >
+                                    {parentCategories.map((p) => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>Update Image (Optional)</label>
+                                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0] || null;
+                                            setEditCatImage(file);
+                                            if (file) {
+                                                setEditCatImagePreview(URL.createObjectURL(file));
+                                            }
+                                        }}
+                                        style={{ flex: 1, fontSize: "0.8rem" }}
+                                        disabled={actionLoading}
+                                    />
+                                    {editCatImagePreview && (
+                                        <img
+                                            src={editCatImagePreview}
+                                            alt="Preview"
+                                            style={{ width: "45px", height: "45px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                            <div style={{ display: "flex", gap: "12px", marginTop: "10px" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditCatModalOpen(false)}
+                                    className="btn btn-secondary"
+                                    style={{ flex: 1 }}
+                                    disabled={actionLoading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn btn-coral"
+                                    style={{ flex: 1 }}
+                                    disabled={actionLoading}
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Subcategory Modal */}
+            {isEditSubModalOpen && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: "var(--surface)",
+                        padding: "30px",
+                        borderRadius: "var(--radius-lg)",
+                        width: "100%",
+                        maxWidth: "450px",
+                        boxShadow: "var(--shadow-lg)",
+                        position: "relative"
+                    }}>
+                        <button
+                            onClick={() => setIsEditSubModalOpen(false)}
+                            style={{ position: "absolute", top: "15px", right: "15px", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                        >
+                            <X size={20} />
+                        </button>
+                        <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "20px", color: "var(--text-main)" }}>Edit Food Sub-Category</h3>
+                        <form onSubmit={handleUpdateSubCategory} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>Name</label>
+                                <input
+                                    type="text"
+                                    value={editSubName}
+                                    onChange={(e) => setEditSubName(e.target.value)}
+                                    className="input-field"
+                                    required
+                                    disabled={actionLoading}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>Update Image (Optional)</label>
+                                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0] || null;
+                                            setEditSubImage(file);
+                                            if (file) {
+                                                setEditSubImagePreview(URL.createObjectURL(file));
+                                            }
+                                        }}
+                                        style={{ flex: 1, fontSize: "0.8rem" }}
+                                        disabled={actionLoading}
+                                    />
+                                    {editSubImagePreview && (
+                                        <img
+                                            src={editSubImagePreview}
+                                            alt="Preview"
+                                            style={{ width: "40px", height: "40px", borderRadius: "4px", objectFit: "cover", border: "1px solid var(--border)" }}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                            <div style={{ display: "flex", gap: "12px", marginTop: "10px" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditSubModalOpen(false)}
+                                    className="btn btn-secondary"
+                                    style={{ flex: 1 }}
+                                    disabled={actionLoading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn btn-coral"
+                                    style={{ flex: 1 }}
+                                    disabled={actionLoading}
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>
