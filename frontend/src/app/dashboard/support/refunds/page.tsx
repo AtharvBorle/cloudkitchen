@@ -46,8 +46,20 @@ export default function SupportRefundsPage() {
     const handleProcessRefund = async (status: "APPROVED" | "REJECTED") => {
         if (!selectedRefund || processing) return;
 
-        if (status === "APPROVED" && !transactionId.trim()) {
-            alert("Transaction/Reference ID is required to approve a refund.");
+        if (status === "APPROVED") {
+            if (!transactionId.trim()) {
+                alert("Transaction/Reference ID is required to approve a refund.");
+                return;
+            }
+            const txRegex = /^[a-zA-Z0-9_-]{8,40}$/;
+            if (!txRegex.test(transactionId.trim())) {
+                alert("Please enter a valid alphanumeric Transaction/Reference ID (8 to 40 characters).");
+                return;
+            }
+        }
+
+        if (!adminNote.trim() || adminNote.trim().length < 5) {
+            alert("Please provide an Admin Note of at least 5 characters.");
             return;
         }
 

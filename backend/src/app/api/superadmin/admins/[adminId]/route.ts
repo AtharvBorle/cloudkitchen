@@ -19,6 +19,41 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
             return NextResponse.json({ message: "Admin not found" }, { status: 404 });
         }
 
+        if (name !== undefined) {
+            if (!name.trim() || name.trim().length < 2) {
+                return NextResponse.json({ message: "Name must be at least 2 characters long" }, { status: 400 });
+            }
+        }
+
+        if (email !== undefined) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return NextResponse.json({ message: "Invalid email format" }, { status: 400 });
+            }
+            const emailInUse = await db.user.findFirst({
+                where: {
+                    email,
+                    id: { not: adminId }
+                }
+            });
+            if (emailInUse) {
+                return NextResponse.json({ message: "Email already in use by another user" }, { status: 409 });
+            }
+        }
+
+        if (phone !== undefined && phone !== "") {
+            const phoneRegex = /^[0-9]{10}$/;
+            if (!phoneRegex.test(phone)) {
+                return NextResponse.json({ message: "Phone number must be exactly 10 digits" }, { status: 400 });
+            }
+        }
+
+        if (password !== undefined && password !== "") {
+            if (password.length < 6) {
+                return NextResponse.json({ message: "Password must be at least 6 characters long" }, { status: 400 });
+            }
+        }
+
         const updatedUser = await db.user.update({
             where: { id: adminId },
             data: {

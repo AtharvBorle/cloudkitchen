@@ -45,6 +45,26 @@ export const createAdmin = async (req: Request) => {
         throw new ApiError("Missing required fields", 400);
     }
 
+    if (name.trim().length < 2) {
+        throw new ApiError("Name must be at least 2 characters long", 400);
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        throw new ApiError("Invalid email format", 400);
+    }
+
+    if (phone) {
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(phone)) {
+            throw new ApiError("Phone number must be exactly 10 digits", 400);
+        }
+    }
+
+    if (password.length < 6) {
+        throw new ApiError("Password must be at least 6 characters long", 400);
+    }
+
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
         throw new ApiError("User with this email already exists", 409);

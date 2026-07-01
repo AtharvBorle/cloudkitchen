@@ -241,6 +241,14 @@ export default function SupportTicketsPage() {
             alert("Please fill in all fields.");
             return;
         }
+        if (newTicketTitle.trim().length < 5) {
+            alert("Ticket title must be at least 5 characters long.");
+            return;
+        }
+        if (newTicketDescription.trim().length < 10) {
+            alert("Ticket description must be at least 10 characters long.");
+            return;
+        }
 
         setSubmittingNewTicket(true);
         try {
@@ -331,6 +339,11 @@ export default function SupportTicketsPage() {
     const handleSendReply = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!replyText.trim() || !selectedTicket) return;
+
+        if (replyText.trim().length < 2) {
+            alert("Reply message must be at least 2 characters long.");
+            return;
+        }
 
         setSubmittingReply(true);
         try {
@@ -717,42 +730,57 @@ export default function SupportTicketsPage() {
 
                                     {/* Reply Input Section */}
                                     <div style={{ padding: "20px", borderTop: "1px solid #E2E8F0" }}>
-                                        <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px" }}>
-                                            <input
-                                                type="text"
-                                                placeholder="Type reply to customer/seller..."
-                                                value={replyText}
-                                                onChange={(e) => setReplyText(e.target.value)}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: "12px 16px",
-                                                    borderRadius: "10px",
-                                                    border: "1px solid #CBD5E1",
-                                                    outline: "none",
-                                                    fontSize: "0.9rem"
-                                                }}
-                                                required
-                                            />
-                                            <button
-                                                type="submit"
-                                                disabled={submittingReply || !replyText.trim()}
-                                                style={{
-                                                    backgroundColor: "var(--primary, #10B981)",
-                                                    color: "white",
-                                                    border: "none",
-                                                    padding: "0 20px",
-                                                    borderRadius: "10px",
-                                                    cursor: "pointer",
-                                                    fontWeight: "700",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    gap: "6px"
-                                                }}
-                                            >
-                                                {submittingReply ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
-                                            </button>
-                                        </form>
+                                        {selectedTicket.status === "CLOSED" ? (
+                                            <div style={{
+                                                backgroundColor: "#F1F5F9",
+                                                border: "1px solid #CBD5E1",
+                                                borderRadius: "10px",
+                                                padding: "12px",
+                                                textAlign: "center",
+                                                color: "#475569",
+                                                fontWeight: "600",
+                                                fontSize: "0.85rem"
+                                            }}>
+                                                🔒 This ticket has been closed. No further replies can be sent.
+                                            </div>
+                                        ) : (
+                                            <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px" }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Type reply to customer/seller..."
+                                                    value={replyText}
+                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: "12px 16px",
+                                                        borderRadius: "10px",
+                                                        border: "1px solid #CBD5E1",
+                                                        outline: "none",
+                                                        fontSize: "0.9rem"
+                                                    }}
+                                                    required
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={submittingReply || !replyText.trim()}
+                                                    style={{
+                                                        backgroundColor: "var(--primary, #10B981)",
+                                                        color: "white",
+                                                        border: "none",
+                                                        padding: "0 20px",
+                                                        borderRadius: "10px",
+                                                        cursor: "pointer",
+                                                        fontWeight: "700",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        gap: "6px"
+                                                    }}
+                                                >
+                                                    {submittingReply ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                                                </button>
+                                            </form>
+                                        )}
                                     </div>
                                 </div>
 
@@ -1057,6 +1085,11 @@ export default function SupportTicketsPage() {
                             onSubmit={async (e) => {
                                 e.preventDefault();
                                 if (!targetRefund || !refundReason.trim() || !selectedTicket) return;
+
+                                if (refundReason.trim().length < 10) {
+                                    alert("Please provide a refund reason of at least 10 characters.");
+                                    return;
+                                }
 
                                 setSubmittingRefund(true);
                                 try {

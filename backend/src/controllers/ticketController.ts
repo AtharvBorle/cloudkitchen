@@ -140,6 +140,10 @@ export const sendTicketMessage = async (id: string, req: Request) => {
         throw new ApiError("Ticket not found", 404);
     }
 
+    if (ticket.status === "CLOSED") {
+        throw new ApiError("Cannot reply to a closed ticket", 400);
+    }
+
     const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
     if (!isSuperAdmin && ticket.userId !== session.user.id) {
         throw new ApiError("Forbidden", 403);

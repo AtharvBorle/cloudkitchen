@@ -46,6 +46,27 @@ export default function SuperadminDashboard() {
 
     const handleCreateAdmin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validation
+        if (!newName.trim() || newName.trim().length < 2) {
+            alert("Name must be at least 2 characters long.");
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            alert("Please enter a valid email address.");
+            return;
+        }
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(newPhone)) {
+            alert("Phone number must be exactly 10 digits.");
+            return;
+        }
+        if (newPassword.length < 6) {
+            alert("Password must be at least 6 characters long.");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -84,6 +105,27 @@ export default function SuperadminDashboard() {
     const handleUpdateAdmin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingAdmin) return;
+
+        // Validation
+        if (!editName.trim() || editName.trim().length < 2) {
+            alert("Name must be at least 2 characters long.");
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(editEmail)) {
+            alert("Please enter a valid email address.");
+            return;
+        }
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(editPhone)) {
+            alert("Phone number must be exactly 10 digits.");
+            return;
+        }
+        if (editPassword && editPassword.length < 6) {
+            alert("New password must be at least 6 characters long.");
+            return;
+        }
+
         setLoading(true);
 
         try {

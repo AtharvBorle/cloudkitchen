@@ -80,6 +80,15 @@ export default function UserSupportPage() {
         e.preventDefault();
         if (!newTitle.trim() || !newDescription.trim()) return;
 
+        if (newTitle.trim().length < 5) {
+            alert("Ticket title must be at least 5 characters long.");
+            return;
+        }
+        if (newDescription.trim().length < 10) {
+            alert("Ticket description must be at least 10 characters long.");
+            return;
+        }
+
         setSubmittingTicket(true);
         try {
             const res = await fetchApi("/api/tickets", {
@@ -109,6 +118,11 @@ export default function UserSupportPage() {
     const handleSendReply = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!replyText.trim() || !selectedTicket) return;
+
+        if (replyText.trim().length < 2) {
+            alert("Reply message must be at least 2 characters long.");
+            return;
+        }
 
         setSubmittingReply(true);
         try {

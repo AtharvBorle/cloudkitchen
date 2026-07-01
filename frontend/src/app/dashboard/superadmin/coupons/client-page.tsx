@@ -84,6 +84,54 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const handleCreateCoupon = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validation
+        const cleanCode = code.toUpperCase().replace(/\s+/g, '');
+        if (!cleanCode || cleanCode.length < 3) {
+            alert("Coupon Code must be at least 3 characters long.");
+            return;
+        }
+        const codeRegex = /^[A-Z0-9]{3,20}$/;
+        if (!codeRegex.test(cleanCode)) {
+            alert("Coupon Code must be alphanumeric only (3-20 characters).");
+            return;
+        }
+        if (description.trim() && description.trim().length < 5) {
+            alert("Description should be at least 5 characters long.");
+            return;
+        }
+        const parsedVal = parseFloat(discountValue);
+        if (isNaN(parsedVal) || parsedVal <= 0) {
+            alert("Discount value must be greater than 0.");
+            return;
+        }
+        if (discountType === "PERCENTAGE" && parsedVal > 100) {
+            alert("Percentage discount cannot exceed 100%.");
+            return;
+        }
+        if (scopeType === "SELLER" && !sellerId) {
+            alert("Please select a seller for specific scope.");
+            return;
+        }
+        if (hasEndDate && validUntil) {
+            const expiryDate = new Date(validUntil);
+            if (expiryDate <= new Date()) {
+                alert("Expiration date must be in the future.");
+                return;
+            }
+        }
+        if (minimumCartValue && parseFloat(minimumCartValue) < 0) {
+            alert("Minimum cart value cannot be negative.");
+            return;
+        }
+        if (maxUsagesPerUser && parseInt(maxUsagesPerUser) < 1) {
+            alert("Max usages per user must be at least 1.");
+            return;
+        }
+        if (maxUsers && parseInt(maxUsers) < 1) {
+            alert("Max users count must be at least 1.");
+            return;
+        }
+
         try {
             const payload = {
                 code,
@@ -168,6 +216,54 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const handleUpdateCoupon = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingCoupon) return;
+
+        // Validation
+        const cleanCode = editCode.toUpperCase().replace(/\s+/g, '');
+        if (!cleanCode || cleanCode.length < 3) {
+            alert("Coupon Code must be at least 3 characters long.");
+            return;
+        }
+        const codeRegex = /^[A-Z0-9]{3,20}$/;
+        if (!codeRegex.test(cleanCode)) {
+            alert("Coupon Code must be alphanumeric only (3-20 characters).");
+            return;
+        }
+        if (editDescription.trim() && editDescription.trim().length < 5) {
+            alert("Description should be at least 5 characters long.");
+            return;
+        }
+        const parsedVal = parseFloat(editDiscountValue);
+        if (isNaN(parsedVal) || parsedVal <= 0) {
+            alert("Discount value must be greater than 0.");
+            return;
+        }
+        if (editDiscountType === "PERCENTAGE" && parsedVal > 100) {
+            alert("Percentage discount cannot exceed 100%.");
+            return;
+        }
+        if (editScopeType === "SELLER" && !editSellerId) {
+            alert("Please select a seller for specific scope.");
+            return;
+        }
+        if (editHasEndDate && editValidUntil) {
+            const expiryDate = new Date(editValidUntil);
+            if (expiryDate <= new Date()) {
+                alert("Expiration date must be in the future.");
+                return;
+            }
+        }
+        if (editMinimumCartValue && parseFloat(editMinimumCartValue) < 0) {
+            alert("Minimum cart value cannot be negative.");
+            return;
+        }
+        if (editMaxUsagesPerUser && parseInt(editMaxUsagesPerUser) < 1) {
+            alert("Max usages per user must be at least 1.");
+            return;
+        }
+        if (editMaxUsers && parseInt(editMaxUsers) < 1) {
+            alert("Max users count must be at least 1.");
+            return;
+        }
 
         try {
             const payload = {
