@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { uploadImage } from "@/lib/upload";
 
 export const getFoodCategories = async () => {
     const session = await getAuthSession();
@@ -32,7 +33,10 @@ export const createFoodCategory = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { name, categoryId } = await req.json();
+    const formData = await req.formData();
+    const name = formData.get("name") as string;
+    const categoryId = formData.get("categoryId") as string;
+    const imageFile = formData.get("image") as File | null;
 
     if (!name || !name.trim()) {
         throw new ApiError("Category name is required", 400);
@@ -55,10 +59,18 @@ export const createFoodCategory = async (req: Request) => {
         throw new ApiError("Food category already exists under this parent category", 400);
     }
 
+    let imageUrl = null;
+    if (imageFile && imageFile.size > 0) {
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "categories");
+    }
+
     const foodCategory = await db.foodCategory.create({
         data: {
             name: cleanedName,
-            categoryId
+            categoryId,
+            imageUrl
         },
         include: {
             category: true,
@@ -92,7 +104,10 @@ export const createFoodSubCategory = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { name, foodCategoryId } = await req.json();
+    const formData = await req.formData();
+    const name = formData.get("name") as string;
+    const foodCategoryId = formData.get("foodCategoryId") as string;
+    const imageFile = formData.get("image") as File | null;
 
     if (!name || !name.trim()) {
         throw new ApiError("Sub-category name is required", 400);
@@ -115,10 +130,18 @@ export const createFoodSubCategory = async (req: Request) => {
         throw new ApiError("Sub-category already exists under this food category", 400);
     }
 
+    let imageUrl = null;
+    if (imageFile && imageFile.size > 0) {
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "subcategories");
+    }
+
     const subCategory = await db.foodSubCategory.create({
         data: {
             name: cleanedName,
-            foodCategoryId
+            foodCategoryId,
+            imageUrl
         }
     });
 

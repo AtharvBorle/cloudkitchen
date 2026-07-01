@@ -101,6 +101,7 @@ model Category {
 model FoodCategory {
   id            String            @id @default(uuid())
   name          String
+  imageUrl      String?
   categoryId    String
   category      Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   subCategories FoodSubCategory[]
@@ -110,6 +111,7 @@ model FoodCategory {
 model FoodSubCategory {
   id             String       @id @default(uuid())
   name           String
+  imageUrl       String?
   foodCategoryId String
   foodCategory   FoodCategory @relation(fields: [foodCategoryId], references: [id], onDelete: Cascade)
   foodItems      FoodItem[]

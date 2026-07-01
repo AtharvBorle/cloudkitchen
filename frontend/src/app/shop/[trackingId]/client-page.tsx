@@ -322,8 +322,15 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                     )}
                                                     {/* Sub-Category Badge */}
                                                     {item.foodSubCategory && (
-                                                        <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                                            🏷️ {item.foodSubCategory.name}
+                                                        <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            {item.foodSubCategory.imageUrl ? (
+                                                                <img
+                                                                    src={item.foodSubCategory.imageUrl}
+                                                                    alt={item.foodSubCategory.name}
+                                                                    style={{ width: "14px", height: "14px", borderRadius: "3px", objectFit: "cover" }}
+                                                                />
+                                                            ) : "🏷️"}
+                                                            {item.foodSubCategory.name}
                                                         </span>
                                                     )}
                                                 </div>
@@ -364,16 +371,26 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
 
                             return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', marginBottom: '50px' }}>
-                                    {Object.entries(groupedItems).map(([categoryName, items]) => (
-                                        <div key={categoryName}>
-                                            <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '15px', borderBottom: '1px solid #EAEAEA', paddingBottom: '8px' }}>
-                                                {categoryName}
-                                            </h3>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
-                                                {items.map(renderItemCard)}
+                                    {Object.entries(groupedItems).map(([categoryName, items]) => {
+                                        const catImageUrl = items[0]?.foodCategory?.imageUrl;
+                                        return (
+                                            <div key={categoryName}>
+                                                <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '15px', borderBottom: '1px solid #EAEAEA', paddingBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    {catImageUrl && (
+                                                        <img
+                                                            src={catImageUrl}
+                                                            alt={categoryName}
+                                                            style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid #EAEAEA" }}
+                                                        />
+                                                    )}
+                                                    {categoryName}
+                                                </h3>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
+                                                    {items.map(renderItemCard)}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                     {uncategorizedItems.length > 0 && (
                                         <div>
                                             <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '15px', borderBottom: '1px solid #EAEAEA', paddingBottom: '8px' }}>
