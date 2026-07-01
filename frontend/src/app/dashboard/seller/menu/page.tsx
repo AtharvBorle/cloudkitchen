@@ -25,6 +25,9 @@ export default function ManageMenuPage() {
     const [addingPincode, setAddingPincode] = useState(false);
     const [sellerFoodType, setSellerFoodType] = useState("BOTH");
     const [itemType, setItemType] = useState("VEG");
+    const [foodCategories, setFoodCategories] = useState<any[]>([]);
+    const [foodCategoryId, setFoodCategoryId] = useState("");
+    const [foodSubCategoryId, setFoodSubCategoryId] = useState("");
     const [openTime, setOpenTime] = useState("");
     const [closeTime, setCloseTime] = useState("");
     const [dailyHours, setDailyHours] = useState<Record<string, { isOpen: boolean, openTime: string, closeTime: string }>>({
@@ -55,6 +58,7 @@ export default function ManageMenuPage() {
                 setItems(data.items || []);
                 setServedPincodes(data.servedPincodes || []);
                 setSellerFoodType(data.foodType || "BOTH");
+                setFoodCategories(data.foodCategories || []);
             }
         } catch (error) {
             console.error("Failed to fetch menu");
@@ -84,6 +88,8 @@ export default function ManageMenuPage() {
         if (closeTime) formData.append("closeTime", closeTime);
         formData.append("operationalHours", JSON.stringify(dailyHours));
         formData.append("itemType", sellerFoodType === "VEG" ? "VEG" : itemType);
+        if (foodCategoryId) formData.append("foodCategoryId", foodCategoryId);
+        if (foodSubCategoryId) formData.append("foodSubCategoryId", foodSubCategoryId);
         
         if (imageFile) {
             formData.append("image", imageFile);
@@ -164,6 +170,8 @@ export default function ManageMenuPage() {
         }
         setImageFile(null); // Assuming no image update for now
         setItemType(item.itemType || "VEG");
+        setFoodCategoryId(item.foodCategoryId || "");
+        setFoodSubCategoryId(item.foodSubCategoryId || "");
         setIsModalOpen(true);
     };
 
@@ -173,6 +181,8 @@ export default function ManageMenuPage() {
         setName(""); setPrice(""); setDescription(""); setStockQuantity("-1"); setImageFile(null);
         setPincodeList([]);
         setItemType("VEG");
+        setFoodCategoryId("");
+        setFoodSubCategoryId("");
         setOpenTime("");
         setCloseTime("");
         setDailyHours({
@@ -216,7 +226,7 @@ export default function ManageMenuPage() {
                             </div>
                             <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                         {item.name}
                                         <span style={{
                                             display: 'inline-block',
@@ -230,6 +240,18 @@ export default function ManageMenuPage() {
                                             {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
                                         </span>
                                     </h3>
+                                    {item.foodCategory && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px', marginBottom: '5px', width: '100%' }}>
+                                            <span style={{ backgroundColor: '#E0F2FE', color: '#0369A1', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                                📁 {item.foodCategory.name}
+                                            </span>
+                                            {item.foodSubCategory && (
+                                                <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                                    🏷️ {item.foodSubCategory.name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                     <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
                                 </div>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '10px', flex: 1 }}>{item.description}</p>
@@ -329,7 +351,7 @@ export default function ManageMenuPage() {
                             </div>
 
                             <div className="input-group">
-                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>Food Category:</label>
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>Food Type:</label>
                                 {sellerFoodType === "VEG" ? (
                                     <div style={{ padding: '8px 12px', backgroundColor: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>
                                         Veg (Default for Veg Only Seller)
@@ -341,6 +363,42 @@ export default function ManageMenuPage() {
                                     </select>
                                 )}
                             </div>
+
+                            {/* Food Category Dropdowns */}
+                            <div className="input-group">
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>Food Category:</label>
+                                <select
+                                    value={foodCategoryId}
+                                    onChange={(e) => {
+                                        setFoodCategoryId(e.target.value);
+                                        setFoodSubCategoryId("");
+                                    }}
+                                    className="input-field"
+                                    style={{ appearance: 'auto' }}
+                                >
+                                    <option value="">Select Category...</option>
+                                    {foodCategories.map((fc) => (
+                                        <option key={fc.id} value={fc.id}>{fc.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {foodCategoryId && (
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>Food Sub-Category:</label>
+                                    <select
+                                        value={foodSubCategoryId}
+                                        onChange={(e) => setFoodSubCategoryId(e.target.value)}
+                                        className="input-field"
+                                        style={{ appearance: 'auto' }}
+                                    >
+                                        <option value="">Select Sub-Category...</option>
+                                        {(foodCategories.find((fc) => fc.id === foodCategoryId)?.subCategories || []).map((sub: any) => (
+                                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
                             <div className="input-group">
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>

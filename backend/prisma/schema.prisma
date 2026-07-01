@@ -91,31 +91,53 @@ model AgentProfile {
 }
 
 model Category {
-  id        String     @id @default(uuid())
-  name      String
-  type      String // FOOD or ROOM
-  foodItems FoodItem[]
+  id             String         @id @default(uuid())
+  name           String
+  type           String // FOOD or ROOM
+  foodItems      FoodItem[]
+  foodCategories FoodCategory[]
+}
+
+model FoodCategory {
+  id            String            @id @default(uuid())
+  name          String
+  categoryId    String
+  category      Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subCategories FoodSubCategory[]
+  foodItems     FoodItem[]
+}
+
+model FoodSubCategory {
+  id             String       @id @default(uuid())
+  name           String
+  foodCategoryId String
+  foodCategory   FoodCategory @relation(fields: [foodCategoryId], references: [id], onDelete: Cascade)
+  foodItems      FoodItem[]
 }
 
 model FoodItem {
-  id               String        @id @default(uuid())
-  sellerId         String
-  seller           SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  name             String
-  description      String
-  price            Float
-  imageUrl         String?
-  availableDays    String        @default("Mon,Tue,Wed,Thu,Fri,Sat,Sun")
-  isAvailable      Boolean       @default(true)
-  stockQuantity    Int           @default(-1)
-  deliveryPincodes String?
-  openTime         String?       // Format: HH:MM, e.g. "08:00"
-  closeTime        String?       // Format: HH:MM, e.g. "22:00"
-  operationalHours String?       // JSON string of daily hours: { Mon: { isOpen: boolean, openTime: string, closeTime: string }, ... }
-  categoryId       String?
-  category         Category?     @relation(fields: [categoryId], references: [id])
-  itemType         String        @default("VEG") // VEG or NON_VEG
-  itemRatings      ItemRating[]
+  id                String           @id @default(uuid())
+  sellerId          String
+  seller            SellerProfile    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  name              String
+  description       String
+  price             Float
+  imageUrl          String?
+  availableDays     String           @default("Mon,Tue,Wed,Thu,Fri,Sat,Sun")
+  isAvailable       Boolean          @default(true)
+  stockQuantity     Int              @default(-1)
+  deliveryPincodes  String?
+  openTime          String? // Format: HH:MM, e.g. "08:00"
+  closeTime         String? // Format: HH:MM, e.g. "22:00"
+  operationalHours  String? // JSON string of daily hours: { Mon: { isOpen: boolean, openTime: string, closeTime: string }, ... }
+  categoryId        String?
+  category          Category?        @relation(fields: [categoryId], references: [id])
+  foodCategoryId    String?
+  foodCategory      FoodCategory?    @relation(fields: [foodCategoryId], references: [id])
+  foodSubCategoryId String?
+  foodSubCategory   FoodSubCategory? @relation(fields: [foodSubCategoryId], references: [id])
+  itemType          String           @default("VEG") // VEG or NON_VEG
+  itemRatings       ItemRating[]
 }
 
 model Order {

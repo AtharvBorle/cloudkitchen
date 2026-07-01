@@ -271,74 +271,119 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 );
                             }
 
-                            return (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px', marginBottom: '50px' }}>
-                                    {filteredFoodItems.map((item: any) => (
-                                        <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ height: '200px', backgroundColor: '#EEE' }}>
-                                                <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            </div>
-                                            <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
-                                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            {item.name}
-                                                            <span style={{
-                                                                display: 'inline-block',
-                                                                padding: '2px 6px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '0.7rem',
-                                                                fontWeight: 'bold',
-                                                                color: 'white',
-                                                                backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
-                                                            }}>
-                                                                {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                            // Group items by category
+                            const groupedItems: Record<string, any[]> = {};
+                            const uncategorizedItems: any[] = [];
+
+                            filteredFoodItems.forEach((item: any) => {
+                                if (item.foodCategory && item.foodCategory.name) {
+                                    const catName = item.foodCategory.name;
+                                    if (!groupedItems[catName]) {
+                                        groupedItems[catName] = [];
+                                    }
+                                    groupedItems[catName].push(item);
+                                } else {
+                                    uncategorizedItems.push(item);
+                                }
+                            });
+
+                            const renderItemCard = (item: any) => (
+                                <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ height: '200px', backgroundColor: '#EEE' }}>
+                                        <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    </div>
+                                    <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {item.name}
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        color: 'white',
+                                                        backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                                    }}>
+                                                        {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                                                    </span>
+                                                </span>
+                                                
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                                    {/* Item Rating Badge */}
+                                                    {item.averageRating > 0 && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', width: 'fit-content' }}>
+                                                            <Star size={12} fill="#D97706" color="#D97706" />
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#D97706' }}>
+                                                                {item.averageRating} ({item.totalRatings})
                                                             </span>
+                                                        </div>
+                                                    )}
+                                                    {/* Sub-Category Badge */}
+                                                    {item.foodSubCategory && (
+                                                        <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                                            🏷️ {item.foodSubCategory.name}
                                                         </span>
-                                                        
-                                                        {/* Item Rating Badge */}
-                                                        {item.averageRating > 0 && (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', width: 'fit-content' }}>
-                                                                <Star size={12} fill="#D97706" color="#D97706" />
-                                                                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#D97706' }}>
-                                                                    {item.averageRating} ({item.totalRatings})
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </h3>
-                                                    <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
-                                                </div>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
-                                                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                                    {item.stockQuantity === 0 ? (
-                                                        <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                                    ) : item.stockQuantity > 0 ? (
-                                                        <span>Only {item.stockQuantity} left!</span>
-                                                    ) : (
-                                                        <span style={{ color: '#10B981' }}>In Stock</span>
                                                     )}
                                                 </div>
+                                            </h3>
+                                            <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
+                                        </div>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
+                                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                            {item.stockQuantity === 0 ? (
+                                                <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
+                                            ) : item.stockQuantity > 0 ? (
+                                                <span>Only {item.stockQuantity} left!</span>
+                                            ) : (
+                                                <span style={{ color: '#10B981' }}>In Stock</span>
+                                            )}
+                                        </div>
 
-                                                {userAddress && !isDeliverable(item) && (
-                                                    <div style={{
-                                                        backgroundColor: '#FEF2F2',
-                                                        color: '#EF4444',
-                                                        padding: '6px 10px',
-                                                        borderRadius: '6px',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 'bold',
-                                                        marginBottom: '15px',
-                                                        border: '1px solid #FEE2E2',
-                                                        textAlign: 'center'
-                                                    }}>
-                                                        Out of delivery range for {userAddress.pincode}
-                                                    </div>
-                                                )}
+                                        {userAddress && !isDeliverable(item) && (
+                                            <div style={{
+                                                backgroundColor: '#FEF2F2',
+                                                color: '#EF4444',
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                marginBottom: '15px',
+                                                border: '1px solid #FEE2E2',
+                                                textAlign: 'center'
+                                            }}>
+                                                Out of delivery range for {userAddress.pincode}
+                                            </div>
+                                        )}
 
-                                                <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0 || !!(userAddress && !isDeliverable(item))} />
+                                        <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0 || !!(userAddress && !isDeliverable(item))} />
+                                    </div>
+                                </div>
+                            );
+
+                            return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', marginBottom: '50px' }}>
+                                    {Object.entries(groupedItems).map(([categoryName, items]) => (
+                                        <div key={categoryName}>
+                                            <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '15px', borderBottom: '1px solid #EAEAEA', paddingBottom: '8px' }}>
+                                                {categoryName}
+                                            </h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
+                                                {items.map(renderItemCard)}
                                             </div>
                                         </div>
                                     ))}
+                                    {uncategorizedItems.length > 0 && (
+                                        <div>
+                                            <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '15px', borderBottom: '1px solid #EAEAEA', paddingBottom: '8px' }}>
+                                                General Menu
+                                            </h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
+                                                {uncategorizedItems.map(renderItemCard)}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })()}

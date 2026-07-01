@@ -51,6 +51,16 @@ export default function SuperadminLayout({
                         }}>
                         Sellers & Categories
                     </Link>
+                    <Link href="/dashboard/superadmin/categories"
+                        style={{
+                            padding: "var(--spacing-2) var(--spacing-3)",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: pathname.includes("/categories") ? "var(--primary)" : "transparent",
+                            color: pathname.includes("/categories") ? "var(--text-inverse)" : "var(--text-main)",
+                            fontWeight: pathname.includes("/categories") ? "500" : "normal"
+                        }}>
+                        Food Categories
+                    </Link>
                     <Link href="/dashboard/superadmin/subscriptions"
                         style={{
                             padding: "var(--spacing-2) var(--spacing-3)",

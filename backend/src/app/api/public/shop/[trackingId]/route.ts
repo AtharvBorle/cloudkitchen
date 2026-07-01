@@ -13,7 +13,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
                 foodItems: {
                     where: { isAvailable: true },
                     include: {
-                        itemRatings: true
+                        itemRatings: true,
+                        foodCategory: true,
+                        foodSubCategory: true
                     }
                 },
                 rooms: {

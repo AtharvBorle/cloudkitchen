@@ -19,6 +19,10 @@ export const getMenuItems = async () => {
 
     const items = await db.foodItem.findMany({
         where: { sellerId: sellerProfile.id },
+        include: {
+            foodCategory: true,
+            foodSubCategory: true
+        },
         orderBy: { name: 'asc' }
     });
 
@@ -27,7 +31,28 @@ export const getMenuItems = async () => {
         orderBy: { pincode: 'asc' }
     });
 
-    return { items, servedPincodes, foodType: sellerProfile.foodType };
+    // Find the Category matching the seller's type (e.g. Bakery)
+    const matchingCategory = await db.category.findFirst({
+        where: {
+            name: { equals: sellerProfile.type, mode: "insensitive" },
+            type: "FOOD"
+        }
+    });
+
+    let foodCategories: any[] = [];
+    if (matchingCategory) {
+        foodCategories = await db.foodCategory.findMany({
+            where: { categoryId: matchingCategory.id },
+            include: {
+                subCategories: {
+                    orderBy: { name: 'asc' }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
+    }
+
+    return { items, servedPincodes, foodType: sellerProfile.foodType, foodCategories };
 };
 
 export const createMenuItem = async (req: Request) => {
@@ -57,6 +82,8 @@ export const createMenuItem = async (req: Request) => {
     const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
     const itemType = sellerProfile.foodType === "VEG" ? "VEG" : (formData.get("itemType") as string || "VEG");
+    const foodCategoryId = formData.get("foodCategoryId") as string | null;
+    const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
     if (!name || isNaN(price)) {
         throw new ApiError("Name and Price are required", 400);
@@ -83,6 +110,8 @@ export const createMenuItem = async (req: Request) => {
             operationalHours: operationalHours || null,
             imageUrl,
             itemType,
+            foodCategoryId: foodCategoryId || null,
+            foodSubCategoryId: foodSubCategoryId || null
         }
     });
 
@@ -120,6 +149,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
         const itemType = formData.get("itemType") as string | null;
         const isAvailable = formData.get("isAvailable") as string | null;
         const imageFile = formData.get("image") as File | null;
+        const foodCategoryId = formData.get("foodCategoryId") as string | null;
+        const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
         if (name !== null) dataToUpdate.name = name;
         if (description !== null) dataToUpdate.description = description;
@@ -135,6 +166,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (itemType !== null) {
             dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : itemType;
         }
+        if (foodCategoryId !== null) dataToUpdate.foodCategoryId = foodCategoryId || null;
+        if (foodSubCategoryId !== null) dataToUpdate.foodSubCategoryId = foodSubCategoryId || null;
 
         if (imageFile && imageFile.size > 0) {
             const bytes = await imageFile.arrayBuffer();
@@ -144,7 +177,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
     } else {
         const body = await req.json();
         if (body.name !== undefined) dataToUpdate.name = body.name;
-        if (body.description !== undefined) dataToUpdate.description = body.description;
+        if (body.description !== undefined) dataToUpdate.description = body.comment !== undefined ? body.comment : body.description;
         if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
         if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
         if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = parseInt(body.stockQuantity);
@@ -157,6 +190,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.itemType !== undefined) {
             dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : body.itemType;
         }
+        if (body.foodCategoryId !== undefined) dataToUpdate.foodCategoryId = body.foodCategoryId || null;
+        if (body.foodSubCategoryId !== undefined) dataToUpdate.foodSubCategoryId = body.foodSubCategoryId || null;
     }
 
     const updatedItem = await db.foodItem.update({
