@@ -15,7 +15,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
         const { adminId } = await params;
 
         const existingUser = await db.user.findUnique({ where: { id: adminId } });
-        if (!existingUser || existingUser.role !== "AGENT") {
+        if (!existingUser || !["AGENT", "SUPPORT"].includes(existingUser.role)) {
             return NextResponse.json({ message: "Admin not found" }, { status: 404 });
         }
 
@@ -27,12 +27,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
                 phone: phone !== undefined ? phone : existingUser.phone,
                 isActive: isActive !== undefined ? isActive : existingUser.isActive,
                 passwordHash: password ? await bcrypt.hash(password, 10) : existingUser.passwordHash,
+                role: body.role || existingUser.role,
             },
             select: {
                 id: true,
                 name: true,
                 email: true,
                 phone: true,
+                role: true,
                 isActive: true,
                 agentProfile: {
                     select: {
@@ -58,15 +60,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
             });
 
             // Refresh to get updated agent profile
-            const refreshedUser = await db.user.findUnique({
-                where: { id: adminId },
-                select: {
-                    id: true, name: true, email: true, phone: true, isActive: true,
-                    agentProfile: {
-                        select: { canManageOffers: true, canManageBanners: true }
-                    }
-                }
-            });
+             const refreshedUser = await db.user.findUnique({
+                 where: { id: adminId },
+                 select: {
+                     id: true, name: true, email: true, phone: true, role: true, isActive: true,
+                     agentProfile: {
+                         select: { canManageOffers: true, canManageBanners: true }
+                     }
+                 }
+             });
             return NextResponse.json({ message: "Admin updated successfully", admin: refreshedUser }, { status: 200 });
         }
 
@@ -89,7 +91,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ admin
 
         // Ensure we are only deleting AGENTs
         const existingUser = await db.user.findUnique({ where: { id: adminId } });
-        if (!existingUser || existingUser.role !== "AGENT") {
+        if (!existingUser || !["AGENT", "SUPPORT"].includes(existingUser.role)) {
             return NextResponse.json({ message: "Admin not found or invalid type" }, { status: 404 });
         }
 

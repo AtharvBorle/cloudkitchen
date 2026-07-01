@@ -13,7 +13,7 @@ export const createTicket = async (req: Request) => {
         throw new ApiError("Missing required fields", 400);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN";
+    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
     const ticketUserId = (isSuperAdmin && userId) ? userId : session.user.id;
 
     const ticket = await db.ticket.create({
@@ -44,7 +44,7 @@ export const listTickets = async () => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN";
+    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
 
     const tickets = await db.ticket.findMany({
         where: isSuperAdmin ? {} : { userId: session.user.id },
@@ -102,7 +102,7 @@ export const getTicketDetails = async (id: string) => {
         throw new ApiError("Ticket not found", 404);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN";
+    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
     if (!isSuperAdmin && ticket.userId !== session.user.id) {
         throw new ApiError("Forbidden", 403);
     }
@@ -112,7 +112,7 @@ export const getTicketDetails = async (id: string) => {
 
 export const updateTicketStatus = async (id: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -140,7 +140,7 @@ export const sendTicketMessage = async (id: string, req: Request) => {
         throw new ApiError("Ticket not found", 404);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN";
+    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
     if (!isSuperAdmin && ticket.userId !== session.user.id) {
         throw new ApiError("Forbidden", 403);
     }

@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 export async function GET(req: Request) {
     try {
         const session = await getAuthSession();
-        if (!session?.user || session.user.role !== "SUPERADMIN") {
+        if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "SUPPORT")) {
             throw new ApiError("Unauthorized", 401);
         }
 

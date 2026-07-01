@@ -88,8 +88,8 @@ export const authConfig: NextAuthConfig = {
                     console.log(`Role mismatch: User role is ${user.role}, but tried to login as SELLER`);
                     throw new CustomAuthError("ROLE_MISMATCH_SELLER");
                 }
-                if (loginType === "ADMIN" && user.role !== "AGENT" && user.role !== "SUPERADMIN") {
-                    console.log(`Role mismatch: User role is ${user.role}, but tried to login as ADMIN/AGENT`);
+                if (loginType === "ADMIN" && user.role !== "AGENT" && user.role !== "SUPERADMIN" && user.role !== "SUPPORT") {
+                    console.log(`Role mismatch: User role is ${user.role}, but tried to login as ADMIN/AGENT/SUPPORT`);
                     throw new CustomAuthError("ROLE_MISMATCH_ADMIN");
                 }
                 if (loginType === "DELIVERY" && user.role !== "DELIVERY") {

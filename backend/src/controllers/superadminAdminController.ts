@@ -10,14 +10,21 @@ export const getAdmins = async () => {
     }
 
     const admins = await db.user.findMany({
-        where: { role: "AGENT" },
+        where: { role: { in: ["AGENT", "SUPPORT"] } },
         orderBy: { createdAt: 'desc' },
         select: {
             id: true,
             name: true,
             email: true,
             phone: true,
+            role: true,
             isActive: true,
+            agentProfile: {
+                select: {
+                    canManageOffers: true,
+                    canManageBanners: true
+                }
+            }
         }
     });
 
@@ -31,7 +38,8 @@ export const createAdmin = async (req: Request) => {
     }
 
     const body = await req.json();
-    const { name, email, phone, password } = body;
+    const { name, email, phone, password, role } = body;
+    const targetRole = role === "SUPPORT" ? "SUPPORT" : "AGENT";
 
     if (!name || !email || !password) {
         throw new ApiError("Missing required fields", 400);
@@ -51,15 +59,17 @@ export const createAdmin = async (req: Request) => {
                 email,
                 phone: phone || "",
                 passwordHash: hashedPassword,
-                role: "AGENT",
+                role: targetRole,
                 city: "System",
                 pincode: "000000",
             }
         });
 
-        await prisma.agentProfile.create({
-            data: { userId: user.id }
-        });
+        if (targetRole === "AGENT") {
+            await prisma.agentProfile.create({
+                data: { userId: user.id }
+            });
+        }
 
         return user;
     });

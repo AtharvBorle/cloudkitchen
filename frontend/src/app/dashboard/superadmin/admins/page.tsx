@@ -17,6 +17,7 @@ export default function SuperadminDashboard() {
     const [newEmail, setNewEmail] = useState("");
     const [newPhone, setNewPhone] = useState("");
     const [newPassword, setNewPassword] = useState("");
+    const [newRole, setNewRole] = useState("AGENT");
 
     // Edit Modal State
     const [editingAdmin, setEditingAdmin] = useState<any | null>(null);
@@ -24,6 +25,7 @@ export default function SuperadminDashboard() {
     const [editEmail, setEditEmail] = useState("");
     const [editPhone, setEditPhone] = useState("");
     const [editPassword, setEditPassword] = useState("");
+    const [editRole, setEditRole] = useState("AGENT");
     const [editIsActive, setEditIsActive] = useState(true);
     const [editCanManageOffers, setEditCanManageOffers] = useState(false);
     const [editCanManageBanners, setEditCanManageBanners] = useState(false);
@@ -50,11 +52,11 @@ export default function SuperadminDashboard() {
             const res = await fetchApi("/api/superadmin/admins", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, password: newPassword })
+                body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, password: newPassword, role: newRole })
             });
 
             if (res.ok) {
-                setNewName(""); setNewEmail(""); setNewPhone(""); setNewPassword("");
+                setNewName(""); setNewEmail(""); setNewPhone(""); setNewPassword(""); setNewRole("AGENT");
                 fetchAdmins();
             } else {
                 const data = await res.json();
@@ -73,6 +75,7 @@ export default function SuperadminDashboard() {
         setEditEmail(admin.email);
         setEditPhone(admin.phone);
         setEditPassword("");
+        setEditRole(admin.role || "AGENT");
         setEditIsActive(admin.isActive);
         setEditCanManageOffers(admin.agentProfile?.canManageOffers || false);
         setEditCanManageBanners(admin.agentProfile?.canManageBanners || false);
@@ -92,6 +95,7 @@ export default function SuperadminDashboard() {
                     email: editEmail,
                     phone: editPhone,
                     isActive: editIsActive,
+                    role: editRole,
                     password: editPassword || undefined,
                     canManageOffers: editCanManageOffers,
                     canManageBanners: editCanManageBanners
@@ -170,6 +174,10 @@ export default function SuperadminDashboard() {
                     <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="input-field" placeholder="Email" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
                     <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="input-field" placeholder="Phone" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
                     <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="Password" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
+                    <select value={newRole} onChange={e => setNewRole(e.target.value)} className="input-field" style={{ flex: 1, minWidth: '150px', marginBottom: 0, appearance: 'auto', border: '1px solid #cbd5e1' }} required>
+                        <option value="AGENT">Regional Agent</option>
+                        <option value="SUPPORT">Support Admin</option>
+                    </select>
                     <button type="submit" className="btn btn-coral" style={{ width: 'auto', padding: '12px 25px' }} disabled={loading}>
                         Create Admin
                     </button>
@@ -184,6 +192,7 @@ export default function SuperadminDashboard() {
                             <th style={{ padding: '15px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)' }}>ID</th>
                             <th style={{ padding: '15px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)' }}>Name</th>
                             <th style={{ padding: '15px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)' }}>Email</th>
+                            <th style={{ padding: '15px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)' }}>Role</th>
                             <th style={{ padding: '15px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)' }}>Status</th>
                             <th style={{ padding: '15px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'right' }}>Action</th>
                         </tr>
@@ -194,6 +203,13 @@ export default function SuperadminDashboard() {
                                 <td style={{ padding: '15px 20px', color: '#64748b' }}>{index + 1}</td>
                                 <td style={{ padding: '15px 20px', color: '#334155', fontWeight: '500' }}>{admin.name}</td>
                                 <td style={{ padding: '15px 20px', color: '#475569' }}>{admin.email}</td>
+                                <td style={{ padding: '15px 20px', color: '#475569' }}>
+                                     {admin.role === "SUPPORT" ? (
+                                         <span style={{ backgroundColor: '#EBF5FB', color: '#2980B9', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>Support Admin</span>
+                                     ) : (
+                                         <span style={{ backgroundColor: '#FCF3CF', color: '#B7950B', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>Regional Agent</span>
+                                     )}
+                                 </td>
                                 <td style={{ padding: '15px 20px', color: '#475569' }}>
                                     {admin.isActive ? (
                                         <span style={{ backgroundColor: '#E8F8F5', color: '#16A085', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>Active</span>
@@ -211,7 +227,7 @@ export default function SuperadminDashboard() {
                         ))}
                         {admins.length === 0 && (
                             <tr>
-                                <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>No admins found.</td>
+                                <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>No admins found.</td>
                             </tr>
                         )}
                     </tbody>
@@ -257,29 +273,43 @@ export default function SuperadminDashboard() {
                                 </select>
                             </div>
 
-                            <div className="input-group" style={{ marginTop: '15px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '10px', color: '#475569', fontWeight: '500' }}>Agent Permissions (Global)</label>
-
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={editCanManageOffers}
-                                        onChange={(e) => setEditCanManageOffers(e.target.checked)}
-                                        style={{ width: '16px', height: '16px', accentColor: 'var(--coral)' }}
-                                    />
-                                    <span style={{ fontSize: '0.9rem', color: '#334155' }}>Can Manage Global Offers (Coupons)</span>
-                                </label>
-
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={editCanManageBanners}
-                                        onChange={(e) => setEditCanManageBanners(e.target.checked)}
-                                        style={{ width: '16px', height: '16px', accentColor: 'var(--coral)' }}
-                                    />
-                                    <span style={{ fontSize: '0.9rem', color: '#334155' }}>Can Manage Global Popup Banners</span>
-                                </label>
+                            <div className="input-group">
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Role</label>
+                                <select
+                                    value={editRole}
+                                    onChange={e => setEditRole(e.target.value)}
+                                    className="input-field" style={{ appearance: 'auto', border: '1px solid #cbd5e1' }}
+                                >
+                                    <option value="AGENT">Regional Agent</option>
+                                    <option value="SUPPORT">Support Admin</option>
+                                </select>
                             </div>
+
+                            {editRole === "AGENT" && (
+                                <div className="input-group" style={{ marginTop: '15px' }}>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '10px', color: '#475569', fontWeight: '500' }}>Agent Permissions (Global)</label>
+
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={editCanManageOffers}
+                                            onChange={(e) => setEditCanManageOffers(e.target.checked)}
+                                            style={{ width: '16px', height: '16px', accentColor: 'var(--coral)' }}
+                                        />
+                                        <span style={{ fontSize: '0.9rem', color: '#334155' }}>Can Manage Global Offers (Coupons)</span>
+                                    </label>
+
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={editCanManageBanners}
+                                            onChange={(e) => setEditCanManageBanners(e.target.checked)}
+                                            style={{ width: '16px', height: '16px', accentColor: 'var(--coral)' }}
+                                        />
+                                        <span style={{ fontSize: '0.9rem', color: '#334155' }}>Can Manage Global Popup Banners</span>
+                                    </label>
+                                </div>
+                            )}
 
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px' }}>
                                 <button type="button" onClick={() => setEditingAdmin(null)} className="btn" style={{ backgroundColor: '#f1f5f9', color: '#475569', width: 'auto', padding: '10px 20px', border: '1px solid #cbd5e1', borderRadius: '8px' }}>

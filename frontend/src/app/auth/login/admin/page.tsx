@@ -60,6 +60,8 @@ export default function AdminLoginPage() {
                     let redirectPath = "/dashboard/admin";
                     if (role === "SUPERADMIN") {
                         redirectPath = "/dashboard/superadmin";
+                    } else if (role === "SUPPORT") {
+                        redirectPath = "/dashboard/support";
                     } else if (role === "SELLER") {
                         redirectPath = "/dashboard/seller";
                     } else if (role === "DELIVERY") {

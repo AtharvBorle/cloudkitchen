@@ -68,7 +68,7 @@ export const listRefunds = async () => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN";
+    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "SUPPORT";
 
     const refunds = await db.refund.findMany({
         where: isSuperAdmin ? {} : { userId: session.user.id },
@@ -109,8 +109,8 @@ export const listRefunds = async () => {
 
 export const updateRefundStatus = async (req: Request, refundId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized. Only Superadmin can fulfill refunds", 403);
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "SUPPORT")) {
+        throw new ApiError("Unauthorized. Only Superadmin or Support Admin can fulfill refunds", 403);
     }
 
     const { status, transactionId, adminNote } = await req.json();
