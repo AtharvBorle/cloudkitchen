@@ -249,6 +249,45 @@ export default function FoodCategoriesPage() {
 
     return (
         <div style={{ minHeight: "100vh", backgroundColor: "var(--background)", padding: "var(--spacing-6)", fontFamily: "var(--font-sans)" }}>
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                .loader-spinner {
+                    border: 4px solid rgba(255, 255, 255, 0.2);
+                    border-top: 4px solid #FF5A5F;
+                    border-radius: 50%;
+                    width: 50px;
+                    height: 50px;
+                    animation: spin 1s linear infinite;
+                    margin-bottom: 20px;
+                }
+            `}</style>
+
+            {/* Global Loader Overlay during actions */}
+            {actionLoading && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "rgba(0, 0, 0, 0.7)",
+                    backdropFilter: "blur(5px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 9999,
+                    color: "#ffffff"
+                }}>
+                    <div className="loader-spinner" />
+                    <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", margin: 0 }}>Uploading Image & Updating Catalog</h3>
+                    <p style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "0.9rem", marginTop: "8px" }}>Please wait while files sync to Cloud Storage...</p>
+                </div>
+            )}
+
             <div style={{ marginBottom: "var(--spacing-8)" }}>
                 <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--text-main)", marginBottom: "var(--spacing-2)" }}>Food Categories</h1>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
@@ -343,7 +382,7 @@ export default function FoodCategoriesPage() {
                         style={{ height: "40px", padding: "0 25px", display: "flex", alignItems: "center", gap: "8px" }}
                         disabled={actionLoading || parentCategories.length === 0}
                     >
-                        <Plus size={16} /> Add Category
+                        <Plus size={16} /> {actionLoading ? "Saving..." : "Add Category"}
                     </button>
                 </form>
             </div>
@@ -671,7 +710,7 @@ export default function FoodCategoriesPage() {
                                     style={{ flex: 1 }}
                                     disabled={actionLoading}
                                 >
-                                    Save Changes
+                                    {actionLoading ? "Saving..." : "Save Changes"}
                                 </button>
                             </div>
                         </form>
@@ -762,7 +801,7 @@ export default function FoodCategoriesPage() {
                                     style={{ flex: 1 }}
                                     disabled={actionLoading}
                                 >
-                                    Save Changes
+                                    {actionLoading ? "Saving..." : "Save Changes"}
                                 </button>
                             </div>
                         </form>
