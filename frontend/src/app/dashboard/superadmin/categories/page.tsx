@@ -211,27 +211,36 @@ export default function FoodCategoriesPage() {
                             )}
                         </select>
                     </div>
-                    <div style={{ width: "220px" }}>
+                    <div style={{ width: "260px" }}>
                         <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>
                             Category Image (Optional)
                         </label>
-                        <input
-                            id="cat-image-input"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setCatImage(e.target.files?.[0] || null)}
-                            style={{
-                                width: "100%",
-                                fontSize: "0.8rem",
-                                padding: "8px",
-                                border: "1px solid var(--border)",
-                                borderRadius: "var(--radius-md)",
-                                backgroundColor: "var(--background)",
-                                color: "var(--text-main)",
-                                outline: "none"
-                            }}
-                            disabled={actionLoading}
-                        />
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <input
+                                id="cat-image-input"
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setCatImage(e.target.files?.[0] || null)}
+                                style={{
+                                    flex: 1,
+                                    fontSize: "0.8rem",
+                                    padding: "8px",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: "var(--radius-md)",
+                                    backgroundColor: "var(--background)",
+                                    color: "var(--text-main)",
+                                    outline: "none"
+                                }}
+                                disabled={actionLoading}
+                            />
+                            {catImage && (
+                                <img
+                                    src={URL.createObjectURL(catImage)}
+                                    alt="Preview"
+                                    style={{ width: "38px", height: "38px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }}
+                                />
+                            )}
+                        </div>
                     </div>
                     <button
                         type="submit"
@@ -413,14 +422,14 @@ export default function FoodCategoriesPage() {
                                                         />
                                                     </div>
                                                     <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                                        <div style={{ flex: 1, position: "relative" }}>
+                                                        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px" }}>
                                                             <input
                                                                 id={`sub-image-input-${fc.id}`}
                                                                 type="file"
                                                                 accept="image/*"
                                                                 onChange={(e) => setSubImages({ ...subImages, [fc.id]: e.target.files?.[0] || null })}
                                                                 style={{
-                                                                    width: "100%",
+                                                                    flex: 1,
                                                                     fontSize: "0.75rem",
                                                                     padding: "4px",
                                                                     border: "1px solid var(--border)",
@@ -430,6 +439,13 @@ export default function FoodCategoriesPage() {
                                                                 }}
                                                                 disabled={actionLoading}
                                                             />
+                                                            {subImages[fc.id] && (
+                                                                <img
+                                                                    src={URL.createObjectURL(subImages[fc.id]!)}
+                                                                    alt="Preview"
+                                                                    style={{ width: "24px", height: "24px", borderRadius: "4px", objectFit: "cover", border: "1px solid var(--border)" }}
+                                                                />
+                                                            )}
                                                         </div>
                                                         <button
                                                             onClick={() => handleCreateSubCategory(fc.id)}
