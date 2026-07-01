@@ -42,7 +42,11 @@ export const getMenuItems = async () => {
     let foodCategories: any[] = [];
     if (matchingCategory) {
         foodCategories = await db.foodCategory.findMany({
-            where: { categoryId: matchingCategory.id },
+            where: {
+                categories: {
+                    some: { id: matchingCategory.id }
+                }
+            },
             include: {
                 subCategories: {
                     orderBy: { name: 'asc' }

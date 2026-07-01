@@ -95,15 +95,14 @@ model Category {
   name           String
   type           String // FOOD or ROOM
   foodItems      FoodItem[]
-  foodCategories FoodCategory[]
+  foodCategories FoodCategory[] @relation("CategoryToFoodCategory")
 }
 
 model FoodCategory {
   id            String            @id @default(uuid())
   name          String
   imageUrl      String?
-  categoryId    String
-  category      Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categories    Category[]        @relation("CategoryToFoodCategory")
   subCategories FoodSubCategory[]
   foodItems     FoodItem[]
 }

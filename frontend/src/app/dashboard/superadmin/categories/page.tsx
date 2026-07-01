@@ -12,7 +12,7 @@ export default function FoodCategoriesPage() {
 
     // Form inputs
     const [newCatName, setNewCatName] = useState("");
-    const [selectedParentId, setSelectedParentId] = useState("");
+    const [selectedParentIds, setSelectedParentIds] = useState<string[]>([]);
     const [catImage, setCatImage] = useState<File | null>(null);
 
     const [newSubNames, setNewSubNames] = useState<Record<string, string>>({});
@@ -22,7 +22,7 @@ export default function FoodCategoriesPage() {
     const [isEditCatModalOpen, setIsEditCatModalOpen] = useState(false);
     const [editCatId, setEditCatId] = useState("");
     const [editCatName, setEditCatName] = useState("");
-    const [editCatParentId, setEditCatParentId] = useState("");
+    const [editCatParentIds, setEditCatParentIds] = useState<string[]>([]);
     const [editCatImage, setEditCatImage] = useState<File | null>(null);
     const [editCatImagePreview, setEditCatImagePreview] = useState<string | null>(null);
 
@@ -43,8 +43,10 @@ export default function FoodCategoriesPage() {
                 const data = await res.json();
                 setFoodCategories(data.foodCategories || []);
                 setParentCategories(data.parentCategories || []);
-                if (data.parentCategories && data.parentCategories.length > 0 && !selectedParentId) {
-                    setSelectedParentId(data.parentCategories[0].id);
+                
+                // Initialize selected parent IDs if empty
+                if (data.parentCategories && data.parentCategories.length > 0 && selectedParentIds.length === 0) {
+                    setSelectedParentIds([data.parentCategories[0].id]);
                 }
             } else {
                 console.error("Failed to load categories");
@@ -62,13 +64,13 @@ export default function FoodCategoriesPage() {
 
     const handleCreateFoodCategory = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newCatName.trim() || !selectedParentId) return;
+        if (!newCatName.trim() || selectedParentIds.length === 0) return;
         
         setActionLoading(true);
         try {
             const formData = new FormData();
             formData.append("name", newCatName);
-            formData.append("categoryId", selectedParentId);
+            formData.append("categoryIds", selectedParentIds.join(","));
             if (catImage) {
                 formData.append("image", catImage);
             }
@@ -170,7 +172,7 @@ export default function FoodCategoriesPage() {
     const openEditCategoryModal = (fc: any) => {
         setEditCatId(fc.id);
         setEditCatName(fc.name);
-        setEditCatParentId(fc.categoryId);
+        setEditCatParentIds(fc.categories ? fc.categories.map((c: any) => c.id) : []);
         setEditCatImage(null);
         setEditCatImagePreview(fc.imageUrl || null);
         setIsEditCatModalOpen(true);
@@ -186,13 +188,13 @@ export default function FoodCategoriesPage() {
 
     const handleUpdateFoodCategory = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!editCatName.trim() || !editCatParentId) return;
+        if (!editCatName.trim() || editCatParentIds.length === 0) return;
 
         setActionLoading(true);
         try {
             const formData = new FormData();
             formData.append("name", editCatName);
-            formData.append("categoryId", editCatParentId);
+            formData.append("categoryIds", editCatParentIds.join(","));
             if (editCatImage) {
                 formData.append("image", editCatImage);
             }
@@ -323,28 +325,49 @@ export default function FoodCategoriesPage() {
                             disabled={actionLoading}
                         />
                     </div>
-                    <div style={{ width: "200px" }}>
+                    
+                    <div style={{ flex: 2, minWidth: "250px" }}>
                         <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>
-                            Seller Category Type (Parent)
+                            Seller Category Type (Parent - Select Multi)
                         </label>
-                        <select
-                            value={selectedParentId}
-                            onChange={(e) => setSelectedParentId(e.target.value)}
-                            className="input-field"
-                            style={{ marginBottom: 0, appearance: "auto", width: "100%" }}
-                            required
-                            disabled={actionLoading}
-                        >
-                            {parentCategories.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name}
-                                </option>
-                            ))}
+                        <div style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "12px",
+                            border: "1px solid var(--border)",
+                            padding: "8px 12px",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: "var(--background)",
+                            maxHeight: "80px",
+                            overflowY: "auto"
+                        }}>
+                            {parentCategories.map((p) => {
+                                const isChecked = selectedParentIds.includes(p.id);
+                                return (
+                                    <label key={p.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", fontWeight: "500", color: "var(--text-main)", cursor: "pointer" }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => {
+                                                if (isChecked) {
+                                                    setSelectedParentIds(selectedParentIds.filter(id => id !== p.id));
+                                                } else {
+                                                    setSelectedParentIds([...selectedParentIds, p.id]);
+                                                }
+                                            }}
+                                            disabled={actionLoading}
+                                            style={{ cursor: "pointer" }}
+                                        />
+                                        {p.name}
+                                    </label>
+                                );
+                            })}
                             {parentCategories.length === 0 && (
-                                <option value="">No food type seller categories found</option>
+                                <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No business categories found</span>
                             )}
-                        </select>
+                        </div>
                     </div>
+
                     <div style={{ width: "260px" }}>
                         <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>
                             Category Image (Optional)
@@ -380,7 +403,7 @@ export default function FoodCategoriesPage() {
                         type="submit"
                         className="btn btn-coral"
                         style={{ height: "40px", padding: "0 25px", display: "flex", alignItems: "center", gap: "8px" }}
-                        disabled={actionLoading || parentCategories.length === 0}
+                        disabled={actionLoading || parentCategories.length === 0 || selectedParentIds.length === 0}
                     >
                         <Plus size={16} /> {actionLoading ? "Saving..." : "Add Category"}
                     </button>
@@ -401,7 +424,9 @@ export default function FoodCategoriesPage() {
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
                     {parentCategories.map((parent) => {
-                        const categoriesInParent = foodCategories.filter((fc) => fc.categoryId === parent.id);
+                        const categoriesInParent = foodCategories.filter((fc) => 
+                            fc.categories && fc.categories.some((c: any) => c.id === parent.id)
+                        );
 
                         return (
                             <div key={parent.id} style={{
@@ -459,9 +484,18 @@ export default function FoodCategoriesPage() {
                                                                     <Folder size={14} color="var(--primary)" />
                                                                 </div>
                                                             )}
-                                                            <h4 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--text-main)", margin: 0 }}>
-                                                                {fc.name}
-                                                            </h4>
+                                                            <div>
+                                                                <h4 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--text-main)", margin: 0 }}>
+                                                                    {fc.name}
+                                                                </h4>
+                                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
+                                                                    {fc.categories && fc.categories.map((c: any) => (
+                                                                        <span key={c.id} style={{ fontSize: "0.65rem", padding: "2px 6px", backgroundColor: "var(--surface)", border: "1px solid var(--border)", borderRadius: "4px", color: "var(--text-muted)" }}>
+                                                                            {c.name}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                         <div style={{ display: "flex", gap: "8px" }}>
                                                             <button
@@ -654,21 +688,46 @@ export default function FoodCategoriesPage() {
                                     disabled={actionLoading}
                                 />
                             </div>
+                            
                             <div>
-                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>Seller Category Type</label>
-                                <select
-                                    value={editCatParentId}
-                                    onChange={(e) => setEditCatParentId(e.target.value)}
-                                    className="input-field"
-                                    style={{ appearance: "auto" }}
-                                    required
-                                    disabled={actionLoading}
-                                >
-                                    {parentCategories.map((p) => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>
+                                    Seller Category Type (Parent - Select Multi)
+                                </label>
+                                <div style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: "12px",
+                                    border: "1px solid var(--border)",
+                                    padding: "8px 12px",
+                                    borderRadius: "var(--radius-md)",
+                                    backgroundColor: "var(--background)",
+                                    maxHeight: "100px",
+                                    overflowY: "auto"
+                                }}>
+                                    {parentCategories.map((p) => {
+                                        const isChecked = editCatParentIds.includes(p.id);
+                                        return (
+                                            <label key={p.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", fontWeight: "500", color: "var(--text-main)", cursor: "pointer" }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={() => {
+                                                        if (isChecked) {
+                                                            setEditCatParentIds(editCatParentIds.filter(id => id !== p.id));
+                                                        } else {
+                                                            setEditCatParentIds([...editCatParentIds, p.id]);
+                                                        }
+                                                    }}
+                                                    disabled={actionLoading}
+                                                    style={{ cursor: "pointer" }}
+                                                />
+                                                {p.name}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
+
                             <div>
                                 <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "5px", color: "var(--text-muted)" }}>Update Image (Optional)</label>
                                 <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
@@ -708,7 +767,7 @@ export default function FoodCategoriesPage() {
                                     type="submit"
                                     className="btn btn-coral"
                                     style={{ flex: 1 }}
-                                    disabled={actionLoading}
+                                    disabled={actionLoading || editCatParentIds.length === 0}
                                 >
                                     {actionLoading ? "Saving..." : "Save Changes"}
                                 </button>

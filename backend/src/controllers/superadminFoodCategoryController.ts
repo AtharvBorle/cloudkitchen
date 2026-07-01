@@ -11,7 +11,7 @@ export const getFoodCategories = async () => {
 
     const foodCategories = await db.foodCategory.findMany({
         include: {
-            category: true,
+            categories: true,
             subCategories: {
                 orderBy: { name: 'asc' }
             }
@@ -35,28 +35,37 @@ export const createFoodCategory = async (req: Request) => {
 
     const formData = await req.formData();
     const name = formData.get("name") as string;
-    const categoryId = formData.get("categoryId") as string;
+    const categoryIdsString = formData.get("categoryIds") as string || formData.get("categoryId") as string;
     const imageFile = formData.get("image") as File | null;
 
     if (!name || !name.trim()) {
         throw new ApiError("Category name is required", 400);
     }
-    if (!categoryId) {
-        throw new ApiError("Parent category is required", 400);
+    if (!categoryIdsString) {
+        throw new ApiError("At least one parent category is required", 400);
     }
 
     const cleanedName = name.trim();
+    const categoryIds = categoryIdsString ? categoryIdsString.split(",").map(id => id.trim()).filter(Boolean) : [];
 
-    // Check if food category already exists under this parent global category
+    if (categoryIds.length === 0) {
+        throw new ApiError("At least one parent category is required", 400);
+    }
+
+    // Check if food category already exists under any of the selected parent categories
     const existing = await db.foodCategory.findFirst({
         where: {
             name: { equals: cleanedName, mode: 'insensitive' },
-            categoryId
+            categories: {
+                some: {
+                    id: { in: categoryIds }
+                }
+            }
         }
     });
 
     if (existing) {
-        throw new ApiError("Food category already exists under this parent category", 400);
+        throw new ApiError("Food category already exists under one of the selected parent categories", 400);
     }
 
     let imageUrl = null;
@@ -69,11 +78,13 @@ export const createFoodCategory = async (req: Request) => {
     const foodCategory = await db.foodCategory.create({
         data: {
             name: cleanedName,
-            categoryId,
+            categories: {
+                connect: categoryIds.map(id => ({ id }))
+            },
             imageUrl
         },
         include: {
-            category: true,
+            categories: true,
             subCategories: true
         }
     });
@@ -177,15 +188,19 @@ export const updateFoodCategory = async (id: string, req: Request) => {
 
     const formData = await req.formData();
     const name = formData.get("name") as string;
-    const categoryId = formData.get("categoryId") as string;
+    const categoryIdsString = formData.get("categoryIds") as string || formData.get("categoryId") as string;
     const imageFile = formData.get("image") as File | null;
 
     const dataToUpdate: any = {};
     if (name && name.trim()) {
         dataToUpdate.name = name.trim();
     }
-    if (categoryId) {
-        dataToUpdate.categoryId = categoryId;
+    
+    if (categoryIdsString !== undefined) {
+        const categoryIds = categoryIdsString ? categoryIdsString.split(",").map(id => id.trim()).filter(Boolean) : [];
+        dataToUpdate.categories = {
+            set: categoryIds.map(id => ({ id }))
+        };
     }
 
     if (imageFile && imageFile.size > 0) {
@@ -198,7 +213,7 @@ export const updateFoodCategory = async (id: string, req: Request) => {
         where: { id },
         data: dataToUpdate,
         include: {
-            category: true,
+            categories: true,
             subCategories: true
         }
     });
