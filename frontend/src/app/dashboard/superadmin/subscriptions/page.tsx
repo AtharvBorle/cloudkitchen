@@ -24,7 +24,6 @@ export default function SuperadminSubscriptionsPage() {
     const [planFeatures, setPlanFeatures] = useState<string[]>([]);
     const [newFeature, setNewFeature] = useState("");
     const [newPlanCategory, setNewPlanCategory] = useState("BOTH");
-    const [newCouponCategory, setNewCouponCategory] = useState("BOTH");
     const [searchQuery, setSearchQuery] = useState("");
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
@@ -47,7 +46,6 @@ export default function SuperadminSubscriptionsPage() {
     const [editSubCouponAmount, setEditSubCouponAmount] = useState("");
     const [editSubCouponPlanId, setEditSubCouponPlanId] = useState("");
     const [editSubCouponMaxUsage, setEditSubCouponMaxUsage] = useState("");
-    const [editSubCouponCategory, setEditSubCouponCategory] = useState("BOTH");
     const [editSubCouponIsActive, setEditSubCouponIsActive] = useState(true);
 
     const fetchData = async () => {
@@ -141,6 +139,9 @@ export default function SuperadminSubscriptionsPage() {
         e.preventDefault();
         setLoading(true);
 
+        const selectedPlan = plans.find(p => p.id === newPlanId);
+        const resolvedCategory = selectedPlan ? (selectedPlan.category || "BOTH") : "BOTH";
+
         try {
             const res = await fetchApi("/api/superadmin/subscriptions/coupons", {
                 method: "POST",
@@ -151,12 +152,12 @@ export default function SuperadminSubscriptionsPage() {
                     discountAmount: newDiscountAmount ? parseFloat(newDiscountAmount) : null,
                     maxUsage: newMaxUsage ? parseInt(newMaxUsage) : 0,
                     planId: newPlanId || null,
-                    category: newCouponCategory
+                    category: resolvedCategory
                 })
             });
 
             if (res.ok) {
-                setNewCode(""); setNewDiscountPercent(""); setNewDiscountAmount(""); setNewMaxUsage(""); setNewPlanId(""); setNewCouponCategory("BOTH");
+                setNewCode(""); setNewDiscountPercent(""); setNewDiscountAmount(""); setNewMaxUsage(""); setNewPlanId("");
                 fetchData();
             } else {
                 const data = await res.json();
@@ -252,13 +253,16 @@ export default function SuperadminSubscriptionsPage() {
         setEditSubCouponAmount(coupon.discountAmount ? String(coupon.discountAmount) : "");
         setEditSubCouponPlanId(coupon.planId || "");
         setEditSubCouponMaxUsage(String(coupon.maxUsage));
-        setEditSubCouponCategory(coupon.category || "BOTH");
         setEditSubCouponIsActive(coupon.isActive);
     };
 
     const handleUpdateSubCoupon = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingSubCoupon) return;
+
+        const selectedPlan = plans.find(p => p.id === editSubCouponPlanId);
+        const resolvedCategory = selectedPlan ? (selectedPlan.category || "BOTH") : "BOTH";
+
         try {
             const res = await fetchApi(`/api/superadmin/subscriptions/coupons/${editingSubCoupon.id}`, {
                 method: "PUT",
@@ -270,7 +274,7 @@ export default function SuperadminSubscriptionsPage() {
                     discountAmount: editSubCouponAmount ? parseFloat(editSubCouponAmount) : null,
                     planId: editSubCouponPlanId || null,
                     maxUsage: parseInt(editSubCouponMaxUsage) || 0,
-                    category: editSubCouponCategory,
+                    category: resolvedCategory,
                     isActive: editSubCouponIsActive
                 })
             });
@@ -479,16 +483,11 @@ export default function SuperadminSubscriptionsPage() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                        <select value={newPlanId} onChange={e => setNewPlanId(e.target.value)} className="input-field" style={{ flex: 1, minWidth: '200px', marginBottom: 0 }}>
+                        <select value={newPlanId} onChange={e => setNewPlanId(e.target.value)} className="input-field" style={{ flex: 2, minWidth: '200px', marginBottom: 0 }}>
                             <option value="">All Plans (Global)</option>
                             {plans.map((plan: any) => (
                                 <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
                             ))}
-                        </select>
-                        <select value={newCouponCategory} onChange={e => setNewCouponCategory(e.target.value)} className="input-field" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                            <option value="BOTH">Both Categories (FOOD & PROPERTY)</option>
-                            <option value="FOOD">Food Focus Only (FOOD)</option>
-                            <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
                         </select>
                         <input type="number" value={newMaxUsage} onChange={e => setNewMaxUsage(e.target.value)} className="input-field" placeholder="Max Usage (0 for unlimited)" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} min="0" />
                     </div>
@@ -701,18 +700,10 @@ export default function SuperadminSubscriptionsPage() {
                                     ))}
                                 </select>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
                                 <div className="input-group">
                                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Max Usage</label>
                                     <input type="number" value={editSubCouponMaxUsage} onChange={e => setEditSubCouponMaxUsage(e.target.value)} className="input-field" min="0" required />
-                                </div>
-                                <div className="input-group">
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Category</label>
-                                    <select value={editSubCouponCategory} onChange={e => setEditSubCouponCategory(e.target.value)} className="input-field">
-                                        <option value="BOTH">Both (FOOD & PROPERTY)</option>
-                                        <option value="FOOD">Food Focus Only (FOOD)</option>
-                                        <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
-                                    </select>
                                 </div>
                             </div>
                             <div className="input-group">
