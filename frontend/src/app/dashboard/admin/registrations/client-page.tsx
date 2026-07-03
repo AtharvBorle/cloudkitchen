@@ -154,19 +154,30 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                         }}>
                                             {app.type.toUpperCase()}
                                         </span>
-                                        {app.verificationStatus === "APPROVED" && (
+                                        {app.verificationStatus !== "APPROVED" ? (
+                                            <span style={{
+                                                fontSize: "0.75rem",
+                                                padding: "4px 10px",
+                                                backgroundColor: "#fee2e2",
+                                                color: "#ef4444",
+                                                borderRadius: "20px",
+                                                fontWeight: "600"
+                                            }}>
+                                                New Seller Application
+                                            </span>
+                                        ) : (
                                             <span style={{
                                                 fontSize: "0.75rem",
                                                 padding: "4px 10px",
                                                 backgroundColor: "#dcfce7",
                                                 color: "#166534",
                                                 borderRadius: "20px",
-                                                fontWeight: "600",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "4px"
+                                                fontWeight: "600"
                                             }}>
-                                                Category Request: {app.foodVerificationStatus === "PENDING" || app.foodVerificationStatus === "REVISION" ? "FOOD" : "PROPERTY"}
+                                                Category Upgrade Request: {[
+                                                    (app.foodVerificationStatus === "PENDING" || app.foodVerificationStatus === "REVISION") && "FOOD",
+                                                    (app.propertyVerificationStatus === "PENDING" || app.propertyVerificationStatus === "REVISION") && "PROPERTY"
+                                                ].filter(Boolean).join(" & ")}
                                             </span>
                                         )}
                                         {(app.verificationStatus === "REVISION" || app.foodVerificationStatus === "REVISION" || app.propertyVerificationStatus === "REVISION") && (
@@ -260,7 +271,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                         onMouseOut={(e) => !processingId && (e.currentTarget.style.backgroundColor = "var(--secondary)")}
                                     >
                                         {processingId === app.id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
-                                        Approve Seller
+                                        {app.verificationStatus === "APPROVED" ? "Approve Category Upgrade" : "Approve Seller"}
                                     </button>
                                 </div>
                             </div>
@@ -493,102 +504,121 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
 
             {/* Revision Modal */}
             {
-                revisionAppId && (
-                    <div style={{
-                        position: "fixed",
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: "rgba(0,0,0,0.5)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 1000,
-                        padding: "1rem"
-                    }}>
+                revisionAppId && (() => {
+                    const targetApp = applications.find(a => a.id === revisionAppId);
+                    const isCategoryUpgrade = targetApp?.verificationStatus === "APPROVED";
+                    const isFoodPending = targetApp?.foodVerificationStatus === "PENDING" || targetApp?.foodVerificationStatus === "REVISION";
+                    const isPropertyPending = targetApp?.propertyVerificationStatus === "PENDING" || targetApp?.propertyVerificationStatus === "REVISION";
+
+                    return (
                         <div style={{
-                            backgroundColor: "white",
-                            borderRadius: "16px",
-                            padding: "2rem",
-                            width: "100%",
-                            maxWidth: "500px",
-                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                            position: "fixed",
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: "rgba(0,0,0,0.5)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 1000,
+                            padding: "1rem"
                         }}>
-                            <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#0f172a", marginBottom: "0.5rem" }}>Request Document Revision</h3>
-                            <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
-                                Select the documents that need to be re-uploaded by the seller.
-                            </p>
+                            <div style={{
+                                backgroundColor: "white",
+                                borderRadius: "16px",
+                                padding: "2rem",
+                                width: "100%",
+                                maxWidth: "500px",
+                                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                            }}>
+                                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#0f172a", marginBottom: "0.5rem" }}>Request Document Revision</h3>
+                                <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+                                    Select the documents that need to be re-uploaded by the seller.
+                                </p>
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "1.5rem" }}>
-                                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
-                                    <input type="checkbox" checked={revisionChecks.adhaar} onChange={(e) => setRevisionChecks(prev => ({ ...prev, adhaar: e.target.checked }))} />
-                                    Aadhaar Card
-                                </label>
-                                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
-                                    <input type="checkbox" checked={revisionChecks.fssai} onChange={(e) => setRevisionChecks(prev => ({ ...prev, fssai: e.target.checked }))} />
-                                    FSSAI Certificate
-                                </label>
-                                 <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
-                                     <input type="checkbox" checked={revisionChecks.lightBill} onChange={(e) => setRevisionChecks(prev => ({ ...prev, lightBill: e.target.checked }))} />
-                                     Electricity Bill (Light Bill)
-                                 </label>
-                                 <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
-                                     <input type="checkbox" checked={revisionChecks.passbook} onChange={(e) => setRevisionChecks(prev => ({ ...prev, passbook: e.target.checked }))} />
-                                     Bank Passbook
-                                 </label>
-                                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
-                                    <input type="checkbox" checked={revisionChecks.kitchenImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, kitchenImages: e.target.checked }))} />
-                                    Kitchen Images
-                                </label>
-                                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
-                                    <input type="checkbox" checked={revisionChecks.cuisineImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, cuisineImages: e.target.checked }))} />
-                                    Cuisine / Food Images
-                                </label>
-                                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
-                                    <input type="checkbox" checked={revisionChecks.roomImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, roomImages: e.target.checked }))} />
-                                    Room Photos
-                                </label>
-                            </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "1.5rem" }}>
+                                    {!isCategoryUpgrade && (
+                                        <>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                                <input type="checkbox" checked={revisionChecks.adhaar} onChange={(e) => setRevisionChecks(prev => ({ ...prev, adhaar: e.target.checked }))} />
+                                                Aadhaar Card
+                                            </label>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                                <input type="checkbox" checked={revisionChecks.lightBill} onChange={(e) => setRevisionChecks(prev => ({ ...prev, lightBill: e.target.checked }))} />
+                                                Electricity Bill (Light Bill)
+                                            </label>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                                <input type="checkbox" checked={revisionChecks.passbook} onChange={(e) => setRevisionChecks(prev => ({ ...prev, passbook: e.target.checked }))} />
+                                                Bank Passbook
+                                            </label>
+                                        </>
+                                    )}
 
-                            <div style={{ marginBottom: "2rem" }}>
-                                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "600", color: "#334155", marginBottom: "8px" }}>Additional Notes</label>
-                                <textarea
-                                    value={revisionNote}
-                                    onChange={(e) => setRevisionNote(e.target.value)}
-                                    placeholder="E.g. The Aadhaar card image is too blurry to read."
-                                    style={{
-                                        width: "100%",
-                                        minHeight: "100px",
-                                        padding: "12px",
-                                        borderRadius: "8px",
-                                        border: "1px solid #cbd5e1",
-                                        resize: "vertical",
-                                        fontFamily: "inherit"
-                                    }}
-                                />
-                            </div>
+                                    {(!isCategoryUpgrade || isFoodPending) && (
+                                        <>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                                <input type="checkbox" checked={revisionChecks.fssai} onChange={(e) => setRevisionChecks(prev => ({ ...prev, fssai: e.target.checked }))} />
+                                                FSSAI Certificate
+                                            </label>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                                <input type="checkbox" checked={revisionChecks.kitchenImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, kitchenImages: e.target.checked }))} />
+                                                Kitchen Images
+                                            </label>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                                <input type="checkbox" checked={revisionChecks.cuisineImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, cuisineImages: e.target.checked }))} />
+                                                Cuisine / Food Images
+                                            </label>
+                                        </>
+                                    )}
 
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-                                <button
-                                    onClick={() => {
-                                        setRevisionAppId(null);
-                                        setRevisionNote("");
-                                        setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false, roomImages: false });
-                                    }}
-                                    style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#f1f5f9", color: "#475569", fontWeight: "600", border: "none", cursor: "pointer" }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => handleAction(revisionAppId, "REVISION")}
-                                    disabled={processingId !== null}
-                                    style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#d97706", color: "white", fontWeight: "600", border: "none", cursor: processingId ? "not-allowed" : "pointer", opacity: processingId ? 0.7 : 1, display: "flex", alignItems: "center", gap: "8px" }}
-                                >
-                                    {processingId ? <Loader2 size={16} className="animate-spin" /> : <AlertCircle size={16} />}
-                                    Send Request
-                                </button>
+                                    {(!isCategoryUpgrade || isPropertyPending) && (
+                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
+                                            <input type="checkbox" checked={revisionChecks.roomImages} onChange={(e) => setRevisionChecks(prev => ({ ...prev, roomImages: e.target.checked }))} />
+                                            Room Photos
+                                        </label>
+                                    )}
+                                </div>
+
+                                <div style={{ marginBottom: "2rem" }}>
+                                    <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "600", color: "#334155", marginBottom: "8px" }}>Additional Notes</label>
+                                    <textarea
+                                        value={revisionNote}
+                                        onChange={(e) => setRevisionNote(e.target.value)}
+                                        placeholder="E.g. The Aadhaar card image is too blurry to read."
+                                        style={{
+                                            width: "100%",
+                                            minHeight: "100px",
+                                            padding: "12px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #cbd5e1",
+                                            resize: "vertical",
+                                            fontFamily: "inherit"
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+                                    <button
+                                        onClick={() => {
+                                            setRevisionAppId(null);
+                                            setRevisionNote("");
+                                            setRevisionChecks({ adhaar: false, fssai: false, lightBill: false, passbook: false, kitchenImages: false, cuisineImages: false, roomImages: false });
+                                        }}
+                                        style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#f1f5f9", color: "#475569", fontWeight: "600", border: "none", cursor: "pointer" }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => handleAction(revisionAppId, "REVISION")}
+                                        disabled={processingId !== null}
+                                        style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#d97706", color: "white", fontWeight: "600", border: "none", cursor: processingId ? "not-allowed" : "pointer", opacity: processingId ? 0.7 : 1, display: "flex", alignItems: "center", gap: "8px" }}
+                                    >
+                                        {processingId ? <Loader2 size={16} className="animate-spin" /> : <AlertCircle size={16} />}
+                                        Send Request
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )
+                    );
+                })()
             }
 
             {/* Image Viewer Modal */}

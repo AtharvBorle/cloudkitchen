@@ -163,17 +163,20 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
                 updateData.propertyVerificationStatus = "APPROVED";
             }
         } else if (status === "REJECTED") {
-            if (seller.foodVerificationStatus === "PENDING") {
+            if (seller.foodVerificationStatus === "PENDING" || seller.foodVerificationStatus === "REVISION") {
                 updateData.foodVerificationStatus = "REJECTED";
             }
-            if (seller.propertyVerificationStatus === "PENDING") {
+            if (seller.propertyVerificationStatus === "PENDING" || seller.propertyVerificationStatus === "REVISION") {
                 updateData.propertyVerificationStatus = "REJECTED";
             }
+            if (verificationNote) {
+                updateData.verificationNote = verificationNote;
+            }
         } else if (status === "REVISION") {
-            if (seller.foodVerificationStatus === "PENDING") {
+            if (seller.foodVerificationStatus === "PENDING" || seller.foodVerificationStatus === "REVISION") {
                 updateData.foodVerificationStatus = "REVISION";
             }
-            if (seller.propertyVerificationStatus === "PENDING") {
+            if (seller.propertyVerificationStatus === "PENDING" || seller.propertyVerificationStatus === "REVISION") {
                 updateData.propertyVerificationStatus = "REVISION";
             }
             if (verificationNote) {
@@ -195,11 +198,14 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
             if (seller.propertyVerificationStatus === "PENDING" || seller.propertyVerificationStatus === "REVISION") {
                 updateData.propertyVerificationStatus = "REJECTED";
             }
+            if (verificationNote) {
+                updateData.verificationNote = verificationNote;
+            }
         } else if (status === "REVISION") {
-            if (seller.foodVerificationStatus === "PENDING") {
+            if (seller.foodVerificationStatus === "PENDING" || seller.foodVerificationStatus === "REVISION") {
                 updateData.foodVerificationStatus = "REVISION";
             }
-            if (seller.propertyVerificationStatus === "PENDING") {
+            if (seller.propertyVerificationStatus === "PENDING" || seller.propertyVerificationStatus === "REVISION") {
                 updateData.propertyVerificationStatus = "REVISION";
             }
             if (verificationNote) {

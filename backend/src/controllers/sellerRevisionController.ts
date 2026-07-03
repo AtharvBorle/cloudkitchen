@@ -32,6 +32,13 @@ export const requestSellerRevision = async (req: Request) => {
         verificationNote: null
     };
 
+    if (profile.businessCategory === "FOOD" || profile.businessCategory === "BOTH") {
+        updateData.foodVerificationStatus = "PENDING";
+    }
+    if (profile.businessCategory === "PROPERTY" || profile.businessCategory === "BOTH") {
+        updateData.propertyVerificationStatus = "PENDING";
+    }
+
     const adhaarFile = formData.get("adhaarFile") as File;
     const adhaarFrontFile = formData.get("adhaarFrontFile") as File;
     const adhaarBackFile = formData.get("adhaarBackFile") as File;
