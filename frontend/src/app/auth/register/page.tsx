@@ -50,9 +50,21 @@ export default function SellerRegisterPage() {
         addressLandmark: "",
         city: "",
         pincode: "",
-        businessCategory: "FOOD",
+        businessCategory: "",
         foodType: "BOTH"
     });
+
+    const [foodSellerType, setFoodSellerType] = useState("");
+    const [roomSellerType, setRoomSellerType] = useState("");
+
+    useEffect(() => {
+        if (formData.businessCategory === "BOTH") {
+            setFormData(prev => ({
+                ...prev,
+                sellerType: (foodSellerType && roomSellerType) ? `${foodSellerType}, ${roomSellerType}` : ""
+            }));
+        }
+    }, [foodSellerType, roomSellerType, formData.businessCategory]);
 
     const [adhaarFrontFile, setAdhaarFrontFile] = useState<File | null>(null);
     const [adhaarBackFile, setAdhaarBackFile] = useState<File | null>(null);
@@ -90,6 +102,8 @@ export default function SellerRegisterPage() {
                 businessCategory: value,
                 sellerType: "" // Reset business type when category changes
             }));
+            setFoodSellerType("");
+            setRoomSellerType("");
         } else {
             setFormData(prev => ({ ...prev, [e.target.name]: value }));
         }
@@ -133,8 +147,15 @@ export default function SellerRegisterPage() {
                 setError("Business name is required.");
                 return;
             }
+            if (!formData.businessCategory) {
+                setError("Please select a business category.");
+                return;
+            }
             if (!formData.sellerType) {
-                setError("Please select a business type.");
+                setError(formData.businessCategory === "BOTH"
+                    ? "Please select both Food and Property business types."
+                    : "Please select a business type."
+                );
                 return;
             }
             if (!formData.addressFlat.trim()) {
@@ -310,30 +331,83 @@ export default function SellerRegisterPage() {
 
                             <div className="input-group">
                                 <select name="businessCategory" value={formData.businessCategory} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
+                                    <option value="" disabled>Select Business Category</option>
                                     <option value="FOOD">Food Focus (Homely Food / Mess)</option>
                                     <option value="PROPERTY">Property Focus (Rooms / Homestays)</option>
                                     <option value="BOTH">Both Food and Property</option>
                                 </select>
                             </div>
 
-                            <div className="input-group">
-                                <select name="sellerType" value={formData.sellerType} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
-                                    <option value="" disabled>Select Business Type</option>
-                                    {categories
-                                        .filter(cat => {
-                                            if (formData.businessCategory === "FOOD") return cat.type === "FOOD";
-                                            if (formData.businessCategory === "PROPERTY") return cat.type === "ROOM";
-                                            return true;
-                                        })
-                                        .map(cat => (
-                                            <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
-                                        ))
-                                    }
-                                    {categories.length === 0 && (
-                                        <option value="" disabled>Loading categories...</option>
-                                    )}
-                                </select>
-                            </div>
+                            {formData.businessCategory === "" && (
+                                <div className="input-group">
+                                    <select className="input-field" disabled style={{ appearance: "auto" }}>
+                                        <option value="">Select Business Category First</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            {(formData.businessCategory === "FOOD" || formData.businessCategory === "PROPERTY") && (
+                                <div className="input-group">
+                                    <select name="sellerType" value={formData.sellerType} onChange={handleChange} className="input-field" required style={{ appearance: "auto" }}>
+                                        <option value="" disabled>Select Business Type</option>
+                                        {categories
+                                            .filter(cat => {
+                                                if (formData.businessCategory === "FOOD") return cat.type === "FOOD";
+                                                if (formData.businessCategory === "PROPERTY") return cat.type === "ROOM";
+                                                return true;
+                                            })
+                                            .map(cat => (
+                                                <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
+                                            ))
+                                        }
+                                        {categories.length === 0 && (
+                                            <option value="" disabled>Loading categories...</option>
+                                        )}
+                                    </select>
+                                </div>
+                            )}
+
+                            {formData.businessCategory === "BOTH" && (
+                                <>
+                                    <div className="input-group">
+                                        <label style={{ fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "4px", display: "block" }}>Food Business Type</label>
+                                        <select 
+                                            value={foodSellerType} 
+                                            onChange={e => setFoodSellerType(e.target.value)} 
+                                            className="input-field" 
+                                            required 
+                                            style={{ appearance: "auto" }}
+                                        >
+                                            <option value="" disabled>Select Food Business Type</option>
+                                            {categories
+                                                .filter(cat => cat.type === "FOOD")
+                                                .map(cat => (
+                                                    <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
+                                                ))
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label style={{ fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "4px", display: "block" }}>Property Business Type</label>
+                                        <select 
+                                            value={roomSellerType} 
+                                            onChange={e => setRoomSellerType(e.target.value)} 
+                                            className="input-field" 
+                                            required 
+                                            style={{ appearance: "auto" }}
+                                        >
+                                            <option value="" disabled>Select Property Business Type</option>
+                                            {categories
+                                                .filter(cat => cat.type === "ROOM")
+                                                .map(cat => (
+                                                    <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
+                                                ))
+                                            }
+                                        </select>
+                                    </div>
+                                </>
+                            )}
 
                             {(formData.businessCategory === "FOOD" || formData.businessCategory === "BOTH") && (
                                 <div className="input-group">
