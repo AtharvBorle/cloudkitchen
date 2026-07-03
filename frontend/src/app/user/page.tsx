@@ -18,6 +18,8 @@ export default function UserPortalRoot() {
                 router.push("/dashboard/superadmin");
             } else if (role === "AGENT") {
                 router.push("/dashboard/admin");
+            } else if (role === "SUPPORT") {
+                router.push("/dashboard/support");
             } else if (role === "SELLER") {
                 router.push("/dashboard/seller");
             } else if (role === "DELIVERY") {
