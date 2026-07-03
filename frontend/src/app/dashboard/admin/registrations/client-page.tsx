@@ -23,6 +23,8 @@ type ApplicationType = {
     roomImages?: string[];
     createdAt: string;
     verificationStatus?: string;
+    foodVerificationStatus?: string;
+    propertyVerificationStatus?: string;
 };
 
 export default function RegistrationsClient({ initialApplications }: { initialApplications: ApplicationType[] }) {
@@ -152,7 +154,22 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                         }}>
                                             {app.type.toUpperCase()}
                                         </span>
-                                        {app.verificationStatus === "REVISION" && (
+                                        {app.verificationStatus === "APPROVED" && (
+                                            <span style={{
+                                                fontSize: "0.75rem",
+                                                padding: "4px 10px",
+                                                backgroundColor: "#dcfce7",
+                                                color: "#166534",
+                                                borderRadius: "20px",
+                                                fontWeight: "600",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "4px"
+                                            }}>
+                                                Category Request: {app.foodVerificationStatus === "PENDING" || app.foodVerificationStatus === "REVISION" ? "FOOD" : "PROPERTY"}
+                                            </span>
+                                        )}
+                                        {(app.verificationStatus === "REVISION" || app.foodVerificationStatus === "REVISION" || app.propertyVerificationStatus === "REVISION") && (
                                             <span style={{
                                                 fontSize: "0.75rem",
                                                 padding: "4px 10px",

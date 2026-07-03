@@ -141,13 +141,71 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
         }
     }
 
+    const seller = await db.sellerProfile.findUnique({
+        where: { id: sellerId }
+    });
+
+    if (!seller) {
+        throw new ApiError("Seller not found", 404);
+    }
+
     const updateData: any = {
-        verificationStatus: status,
         agentId: adminProfileId
     };
 
-    if (action === "REVISION" && verificationNote) {
-        updateData.verificationNote = verificationNote;
+    if (seller.verificationStatus !== "APPROVED") {
+        updateData.verificationStatus = status;
+        if (status === "APPROVED") {
+            if (seller.businessCategory === "FOOD" || seller.businessCategory === "BOTH") {
+                updateData.foodVerificationStatus = "APPROVED";
+            }
+            if (seller.businessCategory === "PROPERTY" || seller.businessCategory === "BOTH") {
+                updateData.propertyVerificationStatus = "APPROVED";
+            }
+        } else if (status === "REJECTED") {
+            if (seller.foodVerificationStatus === "PENDING") {
+                updateData.foodVerificationStatus = "REJECTED";
+            }
+            if (seller.propertyVerificationStatus === "PENDING") {
+                updateData.propertyVerificationStatus = "REJECTED";
+            }
+        } else if (status === "REVISION") {
+            if (seller.foodVerificationStatus === "PENDING") {
+                updateData.foodVerificationStatus = "REVISION";
+            }
+            if (seller.propertyVerificationStatus === "PENDING") {
+                updateData.propertyVerificationStatus = "REVISION";
+            }
+            if (verificationNote) {
+                updateData.verificationNote = verificationNote;
+            }
+        }
+    } else {
+        if (status === "APPROVED") {
+            if (seller.foodVerificationStatus === "PENDING" || seller.foodVerificationStatus === "REVISION") {
+                updateData.foodVerificationStatus = "APPROVED";
+            }
+            if (seller.propertyVerificationStatus === "PENDING" || seller.propertyVerificationStatus === "REVISION") {
+                updateData.propertyVerificationStatus = "APPROVED";
+            }
+        } else if (status === "REJECTED") {
+            if (seller.foodVerificationStatus === "PENDING" || seller.foodVerificationStatus === "REVISION") {
+                updateData.foodVerificationStatus = "REJECTED";
+            }
+            if (seller.propertyVerificationStatus === "PENDING" || seller.propertyVerificationStatus === "REVISION") {
+                updateData.propertyVerificationStatus = "REJECTED";
+            }
+        } else if (status === "REVISION") {
+            if (seller.foodVerificationStatus === "PENDING") {
+                updateData.foodVerificationStatus = "REVISION";
+            }
+            if (seller.propertyVerificationStatus === "PENDING") {
+                updateData.propertyVerificationStatus = "REVISION";
+            }
+            if (verificationNote) {
+                updateData.verificationNote = verificationNote;
+            }
+        }
     }
 
     const updatedProfile = await db.sellerProfile.update({

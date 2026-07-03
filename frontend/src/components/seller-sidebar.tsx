@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/fetch-api";
+import CameraCaptureModal from "@/app/components/CameraCaptureModal";
 
 export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?: boolean; onClose?: () => void }) {
     const pathname = usePathname();
@@ -39,17 +40,127 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
     }, []);
 
     const [submitting, setSubmitting] = useState(false);
+    const [fssaiFile, setFssaiFile] = useState<File | null>(null);
+    const [kitchenImages, setKitchenImages] = useState<(File | null)[]>([null, null, null]);
+    const [cuisineImages, setCuisineImages] = useState<(File | null)[]>([null, null, null]);
+    const [roomImages, setRoomImages] = useState<(File | null)[]>([null, null, null]);
+    const [cameraMode, setCameraMode] = useState<'fssai' | 'kitchen0' | 'kitchen1' | 'kitchen2' | 'cuisine0' | 'cuisine1' | 'cuisine2' | 'room0' | 'room1' | 'room2' | null>(null);
 
-    const handleApplyCategory = async (category: "FOOD" | "PROPERTY") => {
+    const handleCameraCapture = (file: File) => {
+        if (cameraMode === 'fssai') {
+            setFssaiFile(file);
+        } else if (cameraMode?.startsWith('kitchen')) {
+            const idx = parseInt(cameraMode.replace('kitchen', ''));
+            const copy = [...kitchenImages];
+            copy[idx] = file;
+            setKitchenImages(copy);
+        } else if (cameraMode?.startsWith('cuisine')) {
+            const idx = parseInt(cameraMode.replace('cuisine', ''));
+            const copy = [...cuisineImages];
+            copy[idx] = file;
+            setCuisineImages(copy);
+        } else if (cameraMode?.startsWith('room')) {
+            const idx = parseInt(cameraMode.replace('room', ''));
+            const copy = [...roomImages];
+            copy[idx] = file;
+            setRoomImages(copy);
+        }
+        setCameraMode(null);
+    };
+
+    const renderFieldInput = (
+        label: string,
+        file: File | null,
+        setFile: (f: File | null) => void,
+        cameraModeName: string,
+        required: boolean
+    ) => {
+        return (
+            <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "4px" }}>
+                    {label} {required && " *"}
+                </label>
+                {!file ? (
+                    <div style={{ display: "flex", gap: "8px" }}>
+                        <label style={{ flex: 1, padding: "8px", backgroundColor: "#f8fafc", color: "#475569", borderRadius: "8px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600", textAlign: "center", border: "1px dashed #cbd5e1" }}>
+                            Upload
+                            <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                style={{ display: "none" }}
+                            />
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => setCameraMode(cameraModeName as any)}
+                            style={{ flex: 1, padding: "8px", backgroundColor: "#f8fafc", color: "#475569", borderRadius: "8px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600", textAlign: "center", border: "1px dashed #cbd5e1" }}
+                        >
+                            Take Photo
+                        </button>
+                    </div>
+                ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "#f8fafc" }}>
+                        <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.8rem", color: "#334155" }}>
+                            {file.name}
+                        </div>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                            <label style={{ padding: "4px 8px", backgroundColor: "#e2e8f0", color: "#334155", borderRadius: "6px", cursor: "pointer", fontSize: "0.75rem", fontWeight: "600" }}>
+                                Change
+                                <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                    style={{ display: "none" }}
+                                />
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setFile(null)}
+                                style={{ padding: "4px 8px", backgroundColor: "#fee2e2", color: "#ef4444", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.75rem", fontWeight: "600" }}
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const handleFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         setSubmitting(true);
         try {
+            const formData = new FormData();
+            formData.append("category", modalCategory!);
+
+            if (modalCategory === "FOOD") {
+                if (fssaiFile) formData.append("fssaiFile", fssaiFile);
+                kitchenImages.forEach((img, idx) => {
+                    if (img) formData.append(`kitchenImage_${idx}`, img);
+                });
+                cuisineImages.forEach((img, idx) => {
+                    if (img) formData.append(`cuisineImage_${idx}`, img);
+                });
+            } else if (modalCategory === "PROPERTY") {
+                roomImages.forEach((img, idx) => {
+                    if (img) formData.append(`roomImage_${idx}`, img);
+                });
+            }
+
             const res = await fetchApi("/api/seller/category-application", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ category })
+                body: formData
             });
+
             if (res.ok) {
-                alert(`Successfully applied for ${category === "FOOD" ? "Food" : "Property"} verification!`);
+                alert(`Successfully submitted application for ${modalCategory === "FOOD" ? "Food" : "Property"} verification!`);
+                setFssaiFile(null);
+                setKitchenImages([null, null, null]);
+                setCuisineImages([null, null, null]);
+                setRoomImages([null, null, null]);
+                setModalOpen(false);
                 await fetchStatus();
             } else {
                 const errData = await res.json();
@@ -261,14 +372,14 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                             textAlign: "center",
                             border: "1px solid #e2e8f0"
                         }}>
-                            {verification !== "APPROVED" ? (
+                            {verification === "PENDING" ? (
                                 <>
                                     <div style={{
                                         width: "60px",
                                         height: "60px",
                                         borderRadius: "50%",
-                                        backgroundColor: verification === "PENDING" ? "#fef3c7" : "#fee2e2",
-                                        color: verification === "PENDING" ? "#d97706" : "#ef4444",
+                                        backgroundColor: "#fef3c7",
+                                        color: "#d97706",
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
@@ -276,21 +387,13 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                                         fontWeight: "bold",
                                         margin: "0 auto 1rem"
                                     }}>
-                                        {verification === "PENDING" ? "⏳" : "📝"}
+                                        ⏳
                                     </div>
                                     <h3 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "0.5rem" }}>
-                                        {verification === "PENDING" ? "Verification Pending" : `${modalCategory === "FOOD" ? "Food" : "Property"} Category Verification`}
+                                        Verification Pending
                                     </h3>
                                     <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: "1.5", marginBottom: "1.5rem" }}>
-                                        {verification === "PENDING" 
-                                            ? `Your request to add the ${modalCategory.toLowerCase()} category is under review. Our admins will verify your documents shortly.`
-                                            : `To enable ${modalCategory === "FOOD" ? "food items and ordering" : "room listings and bookings"}, you must submit an application for admin verification.`
-                                        }
-                                        {verification === "REJECTED" && (
-                                            <span style={{ display: "block", color: "#ef4444", fontWeight: "bold", marginTop: "10px" }}>
-                                                Note: Your previous request was rejected. You may re-apply.
-                                            </span>
-                                        )}
+                                        Your request to add the {modalCategory.toLowerCase()} category is under review. Our admins will verify your documents shortly.
                                     </p>
                                     <div style={{ display: "flex", gap: "10px" }}>
                                         <button
@@ -305,28 +408,145 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                                                 fontWeight: "600"
                                             }}
                                         >
-                                            {verification === "PENDING" ? "Close" : "Cancel"}
+                                            Close
                                         </button>
-                                        {verification !== "PENDING" && (
-                                            <button
-                                                onClick={() => handleApplyCategory(modalCategory)}
-                                                disabled={submitting}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: "10px",
-                                                    borderRadius: "10px",
-                                                    backgroundColor: "var(--coral, #F16F68)",
-                                                    color: "white",
-                                                    border: "none",
-                                                    cursor: "pointer",
-                                                    fontWeight: "600"
-                                                }}
-                                            >
-                                                {submitting ? "Applying..." : "Apply Now"}
-                                            </button>
-                                        )}
                                     </div>
                                 </>
+                            ) : verification !== "APPROVED" ? (
+                                <form onSubmit={handleFormSubmit} style={{ textAlign: "left" }}>
+                                    <h3 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "0.5rem", textAlign: "center" }}>
+                                        {modalCategory === "FOOD" ? "Food Category Verification" : "Property Category Verification"}
+                                    </h3>
+                                    <p style={{ color: "#64748b", fontSize: "0.9rem", lineHeight: "1.5", marginBottom: "1.5rem", textAlign: "center" }}>
+                                        Please upload the required verification documents to add this category.
+                                    </p>
+
+                                    {verification === "REJECTED" && (
+                                        <div style={{ backgroundColor: "#fef2f2", color: "#b91c1c", padding: "10px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "1rem", fontWeight: "500" }}>
+                                            Your previous request was rejected. Please re-upload correct documents.
+                                        </div>
+                                    )}
+
+                                    {verification === "REVISION" && (
+                                        <div style={{ backgroundColor: "#fffbeb", color: "#b45309", padding: "10px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "1rem", fontWeight: "500" }}>
+                                            <strong>Revision requested:</strong> {statusData?.sellerProfile?.verificationNote || "Please re-upload your documents."}
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "320px", overflowY: "auto", paddingRight: "4px" }}>
+                                        {modalCategory === "FOOD" && (
+                                            <>
+                                                {renderFieldInput(
+                                                    "FSSAI Certificate File (PDF/Image)",
+                                                    fssaiFile,
+                                                    setFssaiFile,
+                                                    "fssai",
+                                                    !statusData?.sellerProfile?.fssaiUrl
+                                                )}
+
+                                                <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "12px", marginTop: "4px" }}>
+                                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                                                        Kitchen Images (Upload 1 to 3 images) *
+                                                    </label>
+                                                    {renderFieldInput("Kitchen Image 1", kitchenImages[0], (f) => {
+                                                        const copy = [...kitchenImages];
+                                                        copy[0] = f;
+                                                        setKitchenImages(copy);
+                                                    }, "kitchen0", !statusData?.sellerProfile?.kitchenImages || JSON.parse(statusData.sellerProfile.kitchenImages).length === 0)}
+                                                    {renderFieldInput("Kitchen Image 2", kitchenImages[1], (f) => {
+                                                        const copy = [...kitchenImages];
+                                                        copy[1] = f;
+                                                        setKitchenImages(copy);
+                                                    }, "kitchen1", false)}
+                                                    {renderFieldInput("Kitchen Image 3", kitchenImages[2], (f) => {
+                                                        const copy = [...kitchenImages];
+                                                        copy[2] = f;
+                                                        setKitchenImages(copy);
+                                                    }, "kitchen2", false)}
+                                                </div>
+
+                                                <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "12px", marginTop: "4px" }}>
+                                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                                                        Cuisine / Food Images (Upload 1 to 3 images) *
+                                                    </label>
+                                                    {renderFieldInput("Cuisine Image 1", cuisineImages[0], (f) => {
+                                                        const copy = [...cuisineImages];
+                                                        copy[0] = f;
+                                                        setCuisineImages(copy);
+                                                    }, "cuisine0", !statusData?.sellerProfile?.cuisineImages || JSON.parse(statusData.sellerProfile.cuisineImages).length === 0)}
+                                                    {renderFieldInput("Cuisine Image 2", cuisineImages[1], (f) => {
+                                                        const copy = [...cuisineImages];
+                                                        copy[1] = f;
+                                                        setCuisineImages(copy);
+                                                    }, "cuisine1", false)}
+                                                    {renderFieldInput("Cuisine Image 3", cuisineImages[2], (f) => {
+                                                        const copy = [...cuisineImages];
+                                                        copy[2] = f;
+                                                        setCuisineImages(copy);
+                                                    }, "cuisine2", false)}
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {modalCategory === "PROPERTY" && (
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                                                    Room Images (Upload 1 to 3 photos) *
+                                                </label>
+                                                {renderFieldInput("Room Image 1", roomImages[0], (f) => {
+                                                    const copy = [...roomImages];
+                                                    copy[0] = f;
+                                                    setRoomImages(copy);
+                                                }, "room0", !statusData?.sellerProfile?.roomImages || JSON.parse(statusData.sellerProfile.roomImages).length === 0)}
+                                                {renderFieldInput("Room Image 2", roomImages[1], (f) => {
+                                                    const copy = [...roomImages];
+                                                    copy[1] = f;
+                                                    setRoomImages(copy);
+                                                }, "room1", false)}
+                                                {renderFieldInput("Room Image 3", roomImages[2], (f) => {
+                                                    const copy = [...roomImages];
+                                                    copy[2] = f;
+                                                    setRoomImages(copy);
+                                                }, "room2", false)}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "10px", marginTop: "1.5rem" }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalOpen(false)}
+                                            style={{
+                                                flex: 1,
+                                                padding: "10px",
+                                                border: "1px solid #cbd5e1",
+                                                borderRadius: "10px",
+                                                backgroundColor: "white",
+                                                cursor: "pointer",
+                                                fontWeight: "600"
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={submitting}
+                                            style={{
+                                                flex: 1,
+                                                padding: "10px",
+                                                borderRadius: "10px",
+                                                backgroundColor: "var(--coral, #F16F68)",
+                                                color: "white",
+                                                border: "none",
+                                                cursor: submitting ? "not-allowed" : "pointer",
+                                                fontWeight: "600",
+                                                opacity: submitting ? 0.7 : 1
+                                            }}
+                                        >
+                                            {submitting ? "Uploading..." : "Submit Documents"}
+                                        </button>
+                                    </div>
+                                </form>
                             ) : (
                                 <>
                                     <div style={{
@@ -424,6 +644,12 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     </div>
                 );
             })()}
+            {cameraMode && (
+                <CameraCaptureModal
+                    onCapture={handleCameraCapture}
+                    onClose={() => setCameraMode(null)}
+                />
+            )}
         </>
     );
 }

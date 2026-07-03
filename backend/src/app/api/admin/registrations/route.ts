@@ -12,7 +12,13 @@ export async function GET() {
         }
 
         const pendingProfiles = await db.sellerProfile.findMany({
-            where: { verificationStatus: { in: ["PENDING", "REVISION"] } },
+            where: {
+                OR: [
+                    { verificationStatus: { in: ["PENDING", "REVISION"] } },
+                    { foodVerificationStatus: { in: ["PENDING", "REVISION"] } },
+                    { propertyVerificationStatus: { in: ["PENDING", "REVISION"] } }
+                ]
+            },
             include: { user: true },
             orderBy: {
                 user: { createdAt: "desc" }
@@ -36,6 +42,8 @@ export async function GET() {
             roomImages: (profile as any).roomImages ? JSON.parse((profile as any).roomImages) : [],
             createdAt: profile.user.createdAt.toISOString(),
             verificationStatus: profile.verificationStatus,
+            foodVerificationStatus: profile.foodVerificationStatus,
+            propertyVerificationStatus: profile.propertyVerificationStatus,
         }));
 
         return successResponse(applications);
