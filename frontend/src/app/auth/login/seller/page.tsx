@@ -122,7 +122,7 @@ export default function SellerLoginPage() {
                 </div>
 
                 <div className="auth-footer-text" style={{ marginTop: '15px' }}>
-                    <Link href="/auth/forgot-password" style={{ color: 'var(--text-muted)' }}>Forgot Password?</Link>
+                    <Link href="/auth/forgot-password?type=seller" style={{ color: 'var(--text-muted)' }}>Forgot Password?</Link>
                 </div>
             </div>
         </div>
