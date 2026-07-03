@@ -273,7 +273,7 @@ export default function SellerRegisterPage() {
             if (!res.ok) throw new Error(data.message || "Registration failed");
 
             setSuccess(true);
-            setTimeout(() => router.push("/auth/login"), 2000);
+            setTimeout(() => router.push("/auth/login/seller"), 2000);
         } catch (err: any) {
             setError(err.message);
             setStep(1); // Jump back to show errors if needed

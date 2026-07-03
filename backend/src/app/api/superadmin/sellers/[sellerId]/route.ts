@@ -10,7 +10,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
         }
 
         const body = await req.json();
-        const { name, phone, isActive, businessName, type, verificationStatus, isOnline } = body;
+        const { name, phone, isActive, businessName, type, verificationStatus, isOnline, foodVerificationStatus, propertyVerificationStatus } = body;
         const { sellerId } = await params;
 
         const existingUser = await db.user.findUnique({
@@ -34,13 +34,32 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
 
         // Update the seller profile if it exists
         if (existingUser.sellerProfile) {
+            let finalFoodStatus = foodVerificationStatus;
+            let finalPropertyStatus = propertyVerificationStatus;
+
+            if (verificationStatus === "APPROVED" && existingUser.sellerProfile.verificationStatus !== "APPROVED") {
+                const category = existingUser.sellerProfile.businessCategory;
+                if (category === "FOOD") {
+                    finalFoodStatus = "APPROVED";
+                    finalPropertyStatus = "NONE";
+                } else if (category === "PROPERTY") {
+                    finalFoodStatus = "NONE";
+                    finalPropertyStatus = "APPROVED";
+                } else if (category === "BOTH") {
+                    finalFoodStatus = "APPROVED";
+                    finalPropertyStatus = "APPROVED";
+                }
+            }
+
             await db.sellerProfile.update({
                 where: { userId: sellerId },
                 data: {
                     businessName: businessName || existingUser.sellerProfile.businessName,
                     type: type || existingUser.sellerProfile.type,
                     verificationStatus: verificationStatus || existingUser.sellerProfile.verificationStatus,
-                    isOnline: isOnline !== undefined ? isOnline : existingUser.sellerProfile.isOnline
+                    isOnline: isOnline !== undefined ? isOnline : existingUser.sellerProfile.isOnline,
+                    foodVerificationStatus: finalFoodStatus !== undefined ? finalFoodStatus : existingUser.sellerProfile.foodVerificationStatus,
+                    propertyVerificationStatus: finalPropertyStatus !== undefined ? finalPropertyStatus : existingUser.sellerProfile.propertyVerificationStatus,
                 }
             });
         }

@@ -32,6 +32,9 @@ export default function SuperadminSellersPage() {
     const [editType, setEditType] = useState("");
     const [editVerificationStatus, setEditVerificationStatus] = useState("PENDING");
     const [editIsOnline, setEditIsOnline] = useState(true);
+    const [editFoodVerificationStatus, setEditFoodVerificationStatus] = useState("NONE");
+    const [editPropertyVerificationStatus, setEditPropertyVerificationStatus] = useState("NONE");
+    const [editBusinessCategory, setEditBusinessCategory] = useState("FOOD");
 
     const fetchData = async () => {
         try {
@@ -106,6 +109,9 @@ export default function SuperadminSellersPage() {
         setEditType(seller.type || "");
         setEditVerificationStatus(seller.verificationStatus || "PENDING");
         setEditIsOnline(seller.isOnline || false);
+        setEditFoodVerificationStatus(seller.foodVerificationStatus || "NONE");
+        setEditPropertyVerificationStatus(seller.propertyVerificationStatus || "NONE");
+        setEditBusinessCategory(seller.businessCategory || "FOOD");
     };
 
     const handleUpdateSeller = async (e: React.FormEvent) => {
@@ -124,7 +130,9 @@ export default function SuperadminSellersPage() {
                     businessName: editBusinessName,
                     type: editType,
                     verificationStatus: editVerificationStatus,
-                    isOnline: editIsOnline
+                    isOnline: editIsOnline,
+                    foodVerificationStatus: editFoodVerificationStatus,
+                    propertyVerificationStatus: editPropertyVerificationStatus
                 })
             });
 
@@ -401,37 +409,76 @@ export default function SuperadminSellersPage() {
                             </div>
 
                             <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
-                                <div className="input-group" style={{ marginBottom: '15px' }}>
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Verification Status</label>
-                                    <select
-                                        value={editVerificationStatus}
-                                        onChange={e => setEditVerificationStatus(e.target.value)}
-                                        className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1' }}
-                                    >
-                                        <option value="PENDING">Pending (Admin Action Required)</option>
-                                        <option value="APPROVED">Approved (Can Accept Orders)</option>
-                                        <option value="REJECTED">Rejected</option>
-                                    </select>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category & Document Verifications</div>
+                                
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Registered Category</label>
+                                        <div style={{ padding: '8px 12px', backgroundColor: '#e2e8f0', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b' }}>
+                                            {editBusinessCategory}
+                                        </div>
+                                    </div>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Overall Profile Status</label>
+                                        <select
+                                            value={editVerificationStatus}
+                                            onChange={e => setEditVerificationStatus(e.target.value)}
+                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                        >
+                                            <option value="PENDING">Pending (Profile Review)</option>
+                                            <option value="APPROVED">Approved (Profile Verified)</option>
+                                            <option value="REJECTED">Rejected</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Food Verification</label>
+                                        <select
+                                            value={editFoodVerificationStatus}
+                                            onChange={e => setEditFoodVerificationStatus(e.target.value)}
+                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                        >
+                                            <option value="NONE">None (Not Registered)</option>
+                                            <option value="PENDING">Pending Approval</option>
+                                            <option value="APPROVED">Approved</option>
+                                            <option value="REJECTED">Rejected</option>
+                                        </select>
+                                    </div>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Property Verification</label>
+                                        <select
+                                            value={editPropertyVerificationStatus}
+                                            onChange={e => setEditPropertyVerificationStatus(e.target.value)}
+                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                        >
+                                            <option value="NONE">None (Not Registered)</option>
+                                            <option value="PENDING">Pending Approval</option>
+                                            <option value="APPROVED">Approved</option>
+                                            <option value="REJECTED">Rejected</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Account Status</label>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Account Status</label>
                                         <select
                                             value={editIsActive ? "true" : "false"}
                                             onChange={e => setEditIsActive(e.target.value === "true")}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1' }}
+                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
                                         >
                                             <option value="true">Enabled (Login Allowed)</option>
                                             <option value="false">Disabled (Login Blocked)</option>
                                         </select>
                                     </div>
                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Store Visibility</label>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Store Visibility</label>
                                         <select
                                             value={editIsOnline ? "true" : "false"}
                                             onChange={e => setEditIsOnline(e.target.value === "true")}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1' }}
+                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
                                         >
                                             <option value="true">Online (Visible to Users)</option>
                                             <option value="false">Offline (Hidden)</option>

@@ -8,11 +8,30 @@ export async function GET(req: NextRequest) {
         const url = new URL(req.url);
         let category = url.searchParams.get("category");
 
+        const session = await getAuthSession();
+        let sellerCategory: string | null = null;
+        if (session?.user && session.user.role === "SELLER") {
+            const seller = await db.sellerProfile.findUnique({
+                where: { userId: session.user.id }
+            });
+            if (seller) {
+                sellerCategory = seller.businessCategory;
+            }
+        }
+
         let whereClause: any = { isActive: true };
-        if (category && category !== "BOTH") {
-            whereClause.category = {
-                in: [category, "BOTH"]
-            };
+        if (sellerCategory === "FOOD") {
+            whereClause.category = "FOOD";
+        } else if (sellerCategory === "PROPERTY") {
+            whereClause.category = "PROPERTY";
+        } else if (sellerCategory === "BOTH") {
+            if (category && category !== "BOTH") {
+                whereClause.category = category;
+            }
+        } else {
+            if (category && category !== "BOTH") {
+                whereClause.category = category;
+            }
         }
 
         const dbPlans = await db.subscriptionPlan.findMany({

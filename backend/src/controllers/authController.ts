@@ -186,6 +186,8 @@ export const registerUser = async (req: Request) => {
                     trackingId: `SHOP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
                     businessCategory: finalBusinessCategory || "FOOD",
                     foodType: finalFoodType || "BOTH",
+                    foodVerificationStatus: (finalBusinessCategory === "PROPERTY") ? "NONE" : "PENDING",
+                    propertyVerificationStatus: (finalBusinessCategory === "PROPERTY" || finalBusinessCategory === "BOTH") ? "PENDING" : "NONE",
                 }
             });
             console.log("Seller profile created successfully");

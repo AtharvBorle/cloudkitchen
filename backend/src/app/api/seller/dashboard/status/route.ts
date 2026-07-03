@@ -31,8 +31,8 @@ export async function GET() {
             }
         });
 
-        const isFoodActive = activeSubs.some(sub => sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH");
-        const isPropertyActive = activeSubs.some(sub => sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH");
+        const isFoodActive = activeSubs.some(sub => sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH") && sellerProfile.foodVerificationStatus === "APPROVED";
+        const isPropertyActive = activeSubs.some(sub => sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH") && sellerProfile.propertyVerificationStatus === "APPROVED";
 
         return successResponse({
             sellerProfile,

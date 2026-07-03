@@ -22,20 +22,46 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
         return () => window.removeEventListener("resize", checkScreen);
     }, []);
 
-    useEffect(() => {
-        const fetchStatus = async () => {
-            try {
-                const res = await fetchApi("/api/seller/dashboard/status");
-                if (res.ok) {
-                    const data = await res.json();
-                    setStatusData(data.data || data);
-                }
-            } catch (err) {
-                console.error("Failed to fetch dashboard status in sidebar:", err);
+    const fetchStatus = async () => {
+        try {
+            const res = await fetchApi("/api/seller/dashboard/status");
+            if (res.ok) {
+                const data = await res.json();
+                setStatusData(data.data || data);
             }
-        };
+        } catch (err) {
+            console.error("Failed to fetch dashboard status in sidebar:", err);
+        }
+    };
+
+    useEffect(() => {
         fetchStatus();
     }, []);
+
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleApplyCategory = async (category: "FOOD" | "PROPERTY") => {
+        setSubmitting(true);
+        try {
+            const res = await fetchApi("/api/seller/category-application", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ category })
+            });
+            if (res.ok) {
+                alert(`Successfully applied for ${category === "FOOD" ? "Food" : "Property"} verification!`);
+                await fetchStatus();
+            } else {
+                const errData = await res.json();
+                alert(errData.message || "Failed to submit application");
+            }
+        } catch (error) {
+            console.error("Error applying for category:", error);
+            alert("An error occurred. Please try again.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     const isFoodActive = statusData ? statusData.isFoodActive : true;
     const isPropertyActive = statusData ? statusData.isPropertyActive : true;
@@ -49,6 +75,14 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
         setModalCategory(category);
         setModalOpen(true);
         setCategoryPlans([]);
+
+        const verification = category === "FOOD"
+            ? (statusData?.sellerProfile?.foodVerificationStatus || "NONE")
+            : (statusData?.sellerProfile?.propertyVerificationStatus || "NONE");
+
+        if (verification !== "APPROVED") {
+            return;
+        }
 
         try {
             const res = await fetchApi(`/api/seller/subscription/plans?category=${category}`);
@@ -196,124 +230,200 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                 </aside>
             )}
 
-            {modalOpen && modalCategory && (
-                <div style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    width: "100vw",
-                    height: "100vh",
-                    backgroundColor: "rgba(0, 0, 0, 0.6)",
-                    backdropFilter: "blur(4px)",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    zIndex: 99999,
-                    color: "#1e293b",
-                    padding: "1rem"
-                }}>
+            {modalOpen && modalCategory && (() => {
+                const verification = modalCategory === "FOOD"
+                    ? (statusData?.sellerProfile?.foodVerificationStatus || "NONE")
+                    : (statusData?.sellerProfile?.propertyVerificationStatus || "NONE");
+
+                return (
                     <div style={{
-                        backgroundColor: "white",
-                        borderRadius: "20px",
-                        padding: "2rem",
-                        maxWidth: "480px",
-                        width: "100%",
-                        boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-                        textAlign: "center",
-                        border: "1px solid #e2e8f0"
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100vw",
+                        height: "100vh",
+                        backgroundColor: "rgba(0, 0, 0, 0.6)",
+                        backdropFilter: "blur(4px)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 99999,
+                        color: "#1e293b",
+                        padding: "1rem"
                     }}>
                         <div style={{
-                            width: "60px",
-                            height: "60px",
-                            borderRadius: "50%",
-                            backgroundColor: "#fee2e2",
-                            color: "#ef4444",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "1.5rem",
-                            fontWeight: "bold",
-                            margin: "0 auto 1rem"
+                            backgroundColor: "white",
+                            borderRadius: "20px",
+                            padding: "2rem",
+                            maxWidth: "480px",
+                            width: "100%",
+                            boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                            textAlign: "center",
+                            border: "1px solid #e2e8f0"
                         }}>
-                            🔒
-                        </div>
-                        <h3 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "0.5rem" }}>
-                            {modalCategory === "FOOD" ? "Activate Food Services" : "Activate Room Bookings"}
-                        </h3>
-                        <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: "1.5", marginBottom: "1.5rem" }}>
-                            You currently do not have an active subscription plan for this category. Upgrade now to enable these dashboard features and expand your business!
-                        </p>
-
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "1.5rem" }}>
-                            {categoryPlans.length === 0 ? (
-                                <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Loading available plans...</div>
+                            {verification !== "APPROVED" ? (
+                                <>
+                                    <div style={{
+                                        width: "60px",
+                                        height: "60px",
+                                        borderRadius: "50%",
+                                        backgroundColor: verification === "PENDING" ? "#fef3c7" : "#fee2e2",
+                                        color: verification === "PENDING" ? "#d97706" : "#ef4444",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "1.5rem",
+                                        fontWeight: "bold",
+                                        margin: "0 auto 1rem"
+                                    }}>
+                                        {verification === "PENDING" ? "⏳" : "📝"}
+                                    </div>
+                                    <h3 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "0.5rem" }}>
+                                        {verification === "PENDING" ? "Verification Pending" : `${modalCategory === "FOOD" ? "Food" : "Property"} Category Verification`}
+                                    </h3>
+                                    <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: "1.5", marginBottom: "1.5rem" }}>
+                                        {verification === "PENDING" 
+                                            ? `Your request to add the ${modalCategory.toLowerCase()} category is under review. Our admins will verify your documents shortly.`
+                                            : `To enable ${modalCategory === "FOOD" ? "food items and ordering" : "room listings and bookings"}, you must submit an application for admin verification.`
+                                        }
+                                        {verification === "REJECTED" && (
+                                            <span style={{ display: "block", color: "#ef4444", fontWeight: "bold", marginTop: "10px" }}>
+                                                Note: Your previous request was rejected. You may re-apply.
+                                            </span>
+                                        )}
+                                    </p>
+                                    <div style={{ display: "flex", gap: "10px" }}>
+                                        <button
+                                            onClick={() => setModalOpen(false)}
+                                            style={{
+                                                flex: 1,
+                                                padding: "10px",
+                                                border: "1px solid #cbd5e1",
+                                                borderRadius: "10px",
+                                                backgroundColor: "white",
+                                                cursor: "pointer",
+                                                fontWeight: "600"
+                                            }}
+                                        >
+                                            {verification === "PENDING" ? "Close" : "Cancel"}
+                                        </button>
+                                        {verification !== "PENDING" && (
+                                            <button
+                                                onClick={() => handleApplyCategory(modalCategory)}
+                                                disabled={submitting}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "10px",
+                                                    borderRadius: "10px",
+                                                    backgroundColor: "var(--coral, #F16F68)",
+                                                    color: "white",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                    fontWeight: "600"
+                                                }}
+                                            >
+                                                {submitting ? "Applying..." : "Apply Now"}
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
                             ) : (
-                                categoryPlans.map(plan => (
-                                    <Link
-                                        key={plan.id}
-                                        href={`/dashboard/seller/payment?planId=${plan.id}&category=${modalCategory}`}
-                                        onClick={() => setModalOpen(false)}
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            backgroundColor: "#f8fafc",
-                                            padding: "12px 16px",
-                                            borderRadius: "12px",
-                                            border: "1px solid #e2e8f0",
-                                            textDecoration: "none",
-                                            color: "inherit",
-                                            transition: "all 0.2s"
-                                        }}
-                                    >
-                                        <div style={{ textAlign: "left" }}>
-                                            <div style={{ fontWeight: "700", fontSize: "0.95rem" }}>{plan.name}</div>
-                                            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{plan.durationMonths} Months</div>
-                                        </div>
-                                        <div style={{ fontWeight: "800", color: "var(--coral, #F16F68)" }}>
-                                            ₹{plan.price} →
-                                        </div>
-                                    </Link>
-                                ))
+                                <>
+                                    <div style={{
+                                        width: "60px",
+                                        height: "60px",
+                                        borderRadius: "50%",
+                                        backgroundColor: "#fee2e2",
+                                        color: "#ef4444",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "1.5rem",
+                                        fontWeight: "bold",
+                                        margin: "0 auto 1rem"
+                                    }}>
+                                        🔒
+                                    </div>
+                                    <h3 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "0.5rem" }}>
+                                        {modalCategory === "FOOD" ? "Activate Food Services" : "Activate Room Bookings"}
+                                    </h3>
+                                    <p style={{ color: "#64748b", fontSize: "0.95rem", lineHeight: "1.5", marginBottom: "1.5rem" }}>
+                                        You currently do not have an active subscription plan for this category. Upgrade now to enable these dashboard features and expand your business!
+                                    </p>
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "1.5rem" }}>
+                                        {categoryPlans.length === 0 ? (
+                                            <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Loading available plans...</div>
+                                        ) : (
+                                            categoryPlans.map(plan => (
+                                                <Link
+                                                    key={plan.id}
+                                                    href={`/dashboard/seller/payment?planId=${plan.id}&category=${modalCategory}`}
+                                                    onClick={() => setModalOpen(false)}
+                                                    style={{
+                                                        display: "flex",
+                                                        justifyContent: "space-between",
+                                                        alignItems: "center",
+                                                        backgroundColor: "#f8fafc",
+                                                        padding: "12px 16px",
+                                                        borderRadius: "12px",
+                                                        border: "1px solid #e2e8f0",
+                                                        textDecoration: "none",
+                                                        color: "inherit",
+                                                        transition: "all 0.2s"
+                                                    }}
+                                                >
+                                                    <div style={{ textAlign: "left" }}>
+                                                        <div style={{ fontWeight: "700", fontSize: "0.95rem" }}>{plan.name}</div>
+                                                        <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{plan.durationMonths} Months</div>
+                                                    </div>
+                                                    <div style={{ fontWeight: "800", color: "var(--coral, #F16F68)" }}>
+                                                        ₹{plan.price} →
+                                                    </div>
+                                                </Link>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "10px" }}>
+                                        <button
+                                            onClick={() => setModalOpen(false)}
+                                            style={{
+                                                flex: 1,
+                                                padding: "10px",
+                                                border: "1px solid #cbd5e1",
+                                                borderRadius: "10px",
+                                                backgroundColor: "white",
+                                                cursor: "pointer",
+                                                fontWeight: "600"
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <Link
+                                            href={`/dashboard/seller/payment?category=${modalCategory}`}
+                                            onClick={() => setModalOpen(false)}
+                                            style={{
+                                                flex: 1,
+                                                padding: "10px",
+                                                borderRadius: "10px",
+                                                backgroundColor: "var(--coral, #F16F68)",
+                                                color: "white",
+                                                textAlign: "center",
+                                                textDecoration: "none",
+                                                fontWeight: "600",
+                                                fontSize: "0.95rem"
+                                            }}
+                                        >
+                                            View All Plans
+                                        </Link>
+                                    </div>
+                                </>
                             )}
                         </div>
-
-                        <div style={{ display: "flex", gap: "10px" }}>
-                            <button
-                                onClick={() => setModalOpen(false)}
-                                style={{
-                                    flex: 1,
-                                    padding: "10px",
-                                    border: "1px solid #cbd5e1",
-                                    borderRadius: "10px",
-                                    backgroundColor: "white",
-                                    cursor: "pointer",
-                                    fontWeight: "600"
-                                }}
-                            >
-                                Cancel
-                            </button>
-                            <Link
-                                href={`/dashboard/seller/payment?category=${modalCategory}`}
-                                onClick={() => setModalOpen(false)}
-                                style={{
-                                    flex: 1,
-                                    padding: "10px",
-                                    borderRadius: "10px",
-                                    backgroundColor: "var(--coral, #F16F68)",
-                                    color: "white",
-                                    textAlign: "center",
-                                    textDecoration: "none",
-                                    fontWeight: "600",
-                                    fontSize: "0.95rem"
-                                }}
-                            >
-                                View All Plans
-                            </Link>
-                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </>
     );
 }

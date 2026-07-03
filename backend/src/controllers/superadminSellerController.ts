@@ -35,6 +35,9 @@ export const getSuperadminSellers = async () => {
         verificationStatus: seller.sellerProfile?.verificationStatus || "PENDING",
         isOnline: seller.sellerProfile?.isOnline || false,
         trackingId: seller.sellerProfile?.trackingId || null,
+        foodVerificationStatus: seller.sellerProfile?.foodVerificationStatus || "NONE",
+        propertyVerificationStatus: seller.sellerProfile?.propertyVerificationStatus || "NONE",
+        businessCategory: seller.sellerProfile?.businessCategory || "FOOD",
         hasActiveSubscription: (seller.sellerProfile?.subscriptions?.length ?? 0) > 0,
         subscriptionValidUntil: seller.sellerProfile?.subscriptions?.[0]?.validUntil || null
     }));
