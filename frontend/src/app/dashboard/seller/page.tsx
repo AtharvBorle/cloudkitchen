@@ -67,7 +67,7 @@ export default function SellerDashboardOverview() {
         );
     }
 
-    const { sellerProfile, todayOrdersCount, totalRevenue, menuItemsCount, roomsCount, validUntilDate } = data;
+    const { sellerProfile, todayOrdersCount, totalRevenue, menuItemsCount, roomsCount, validUntilDate, isFoodActive, isPropertyActive } = data;
 
     const formattedValidUntilDate = validUntilDate
         ? new Date(validUntilDate).toLocaleDateString()
@@ -113,12 +113,33 @@ export default function SellerDashboardOverview() {
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-                <Link href="/dashboard/seller/menu" className="btn btn-coral" style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px' }}>
-                    Add New Menu Item
-                </Link>
-                <Link href="/dashboard/seller/rooms" className="btn btn-teal" style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px' }}>
-                    List a Room
-                </Link>
+                {isFoodActive ? (
+                    <Link href="/dashboard/seller/menu" className="btn btn-coral" style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px' }}>
+                        Add New Menu Item
+                    </Link>
+                ) : (
+                    <button
+                        onClick={() => alert("Please activate your Food category subscription or wait for admin approval in the sidebar to add menu items.")}
+                        className="btn btn-coral"
+                        style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px', opacity: 0.6, cursor: 'not-allowed' }}
+                    >
+                        🔒 Add New Menu Item (Locked)
+                    </button>
+                )}
+
+                {isPropertyActive ? (
+                    <Link href="/dashboard/seller/rooms" className="btn btn-teal" style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px' }}>
+                        List a Room
+                    </Link>
+                ) : (
+                    <button
+                        onClick={() => alert("Please activate your Property category subscription or wait for admin approval in the sidebar to list rooms.")}
+                        className="btn btn-teal"
+                        style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px', opacity: 0.6, cursor: 'not-allowed' }}
+                    >
+                        🔒 List a Room (Locked)
+                    </button>
+                )}
             </div>
         </div>
     );

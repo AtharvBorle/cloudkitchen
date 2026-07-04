@@ -3,19 +3,44 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
 
+const checkPropertyCategoryActive = async (userId: string) => {
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { userId }
+    });
+
+    if (!sellerProfile) {
+        throw new ApiError("Seller profile not found", 404);
+    }
+
+    const activeSubs = await db.subscription.findMany({
+        where: {
+            sellerId: sellerProfile.id,
+            status: "ACTIVE",
+            validUntil: {
+                gt: new Date()
+            }
+        },
+        include: {
+            plan: true
+        }
+    });
+
+    const isPropertyActive = activeSubs.some(sub => sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH") && sellerProfile.propertyVerificationStatus === "APPROVED";
+
+    if (!isPropertyActive) {
+        throw new ApiError("Property subscription not active or approved", 403);
+     }
+
+    return sellerProfile;
+};
+
 export const createSellerRoom = async (req: Request) => {
     const session = await getAuthSession();
     if (!session?.user || session.user.role !== "SELLER") {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { userId: session.user.id }
-    });
-
-    if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
-    }
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
 
     const formData = await req.formData();
     const title = formData.get("title") as string;
@@ -56,13 +81,7 @@ export const getSellerRooms = async () => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { userId: session.user.id }
-    });
-
-    if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
-    }
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
 
     const rooms = await db.room.findMany({
         where: { sellerId: sellerProfile.id },
@@ -89,13 +108,7 @@ export const updateSellerRoom = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { userId: session.user.id }
-    });
-
-    if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
-    }
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
 
     const contentType = req.headers.get("content-type") || "";
     let roomId: string | null = null;

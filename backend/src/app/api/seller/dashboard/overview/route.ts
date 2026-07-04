@@ -39,15 +39,23 @@ export async function GET() {
         });
         const totalRevenue = allOrders.reduce((sum, order) => sum + order.totalAmount, 0);
 
-        const activeSub = await db.subscription.findFirst({
+        const activeSubs = await db.subscription.findMany({
             where: {
                 sellerId: sellerProfile.id,
-                status: "ACTIVE"
+                status: "ACTIVE",
+                validUntil: {
+                    gt: new Date()
+                }
             },
-            orderBy: {
-                validUntil: "desc"
+            include: {
+                plan: true
             }
         });
+
+        const isFoodActive = activeSubs.some(sub => sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH") && sellerProfile.foodVerificationStatus === "APPROVED";
+        const isPropertyActive = activeSubs.some(sub => sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH") && sellerProfile.propertyVerificationStatus === "APPROVED";
+
+        const newestActiveSub = activeSubs.sort((a, b) => b.validUntil.getTime() - a.validUntil.getTime())[0];
 
         return successResponse({
             sellerProfile,
@@ -55,7 +63,9 @@ export async function GET() {
             totalRevenue,
             menuItemsCount,
             roomsCount,
-            validUntilDate: activeSub?.validUntil || null
+            validUntilDate: newestActiveSub?.validUntil || null,
+            isFoodActive,
+            isPropertyActive
         });
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

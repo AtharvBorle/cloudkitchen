@@ -10,6 +10,8 @@ export default function ManageMenuPage() {
     const [items, setItems] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [forbidden, setForbidden] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
 
     // Form state
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -53,8 +55,19 @@ export default function ManageMenuPage() {
     const fetchMenu = async () => {
         try {
             const res = await fetchApi("/api/seller/menu");
+            if (res.status === 403) {
+                try {
+                    const errData = await res.json();
+                    setErrorMsg(errData.error || "Food subscription not active");
+                } catch {
+                    setErrorMsg("Food subscription not active");
+                }
+                setForbidden(true);
+                return;
+            }
             const data = await res.json();
             if (res.ok) {
+                setForbidden(false);
                 setItems(data.items || []);
                 setServedPincodes(data.servedPincodes || []);
                 setSellerFoodType(data.foodType || "BOTH");
@@ -200,6 +213,27 @@ export default function ManageMenuPage() {
 
     // Generic placeholder if no image
     const placeholderImage = "https://placehold.co/400x250?text=No+Image";
+
+    if (forbidden) {
+        return (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "65vh", backgroundColor: "#f8fafc", padding: "1.25rem", textAlign: "center" }}>
+                <div style={{ backgroundColor: "white", padding: "2.5rem 1.5rem", borderRadius: "24px", boxShadow: "0 20px 50px rgba(0,0,0,0.05)", maxWidth: "480px", width: "100%", border: "1px solid #F1F5F9" }}>
+                    <div style={{ width: "72px", height: "72px", borderRadius: "50%", backgroundColor: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <h1 style={{ fontSize: "1.6rem", fontWeight: "800", color: "#0f172a", marginBottom: "0.75rem", letterSpacing: "-0.5px" }}>Food Category Locked</h1>
+                    <p style={{ color: "#64748b", marginBottom: "2rem", lineHeight: "1.6", fontSize: "0.95rem" }}>
+                        {errorMsg || "Access to the menu dashboard requires an approved Food Category application and an active subscription."}
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Link href="/dashboard/seller" className="btn btn-coral" style={{ padding: "14px", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                            Go to Overview
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{ position: 'relative' }}>

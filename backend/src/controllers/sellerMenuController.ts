@@ -3,19 +3,44 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
 
+const checkFoodCategoryActive = async (userId: string) => {
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { userId }
+    });
+
+    if (!sellerProfile) {
+        throw new ApiError("Seller profile not found", 404);
+    }
+
+    const activeSubs = await db.subscription.findMany({
+        where: {
+            sellerId: sellerProfile.id,
+            status: "ACTIVE",
+            validUntil: {
+                gt: new Date()
+            }
+        },
+        include: {
+            plan: true
+        }
+    });
+
+    const isFoodActive = activeSubs.some(sub => sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH") && sellerProfile.foodVerificationStatus === "APPROVED";
+
+    if (!isFoodActive) {
+        throw new ApiError("Food subscription not active or approved", 403);
+    }
+
+    return sellerProfile;
+};
+
 export const getMenuItems = async () => {
     const session = await getAuthSession();
     if (!session?.user || session.user.role !== "SELLER") {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { userId: session.user.id }
-    });
-
-    if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
-    }
+    const sellerProfile = await checkFoodCategoryActive(session.user.id);
 
     const items = await db.foodItem.findMany({
         where: { sellerId: sellerProfile.id },
@@ -65,13 +90,7 @@ export const createMenuItem = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { userId: session.user.id }
-    });
-
-    if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
-    }
+    const sellerProfile = await checkFoodCategoryActive(session.user.id);
 
     const formData = await req.formData();
     const name = formData.get("name") as string;
@@ -127,6 +146,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
     if (!session || !session.user || session.user.role !== "SELLER") {
         throw new ApiError("Unauthorized", 401);
     }
+
+    await checkFoodCategoryActive(session.user.id);
 
     const existingItem = await db.foodItem.findUnique({
         where: { id },
@@ -212,6 +233,8 @@ export const deleteMenuItem = async (id: string) => {
         throw new ApiError("Unauthorized", 401);
     }
 
+    await checkFoodCategoryActive(session.user.id);
+
     const existingItem = await db.foodItem.findUnique({
         where: { id },
         include: { seller: true }
@@ -234,13 +257,7 @@ export const addServedPincode = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { userId: session.user.id }
-    });
-
-    if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
-    }
+    const sellerProfile = await checkFoodCategoryActive(session.user.id);
 
     const body = await req.json();
     const { pincode, name } = body;
@@ -286,13 +303,7 @@ export const deleteServedPincode = async (id: string) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { userId: session.user.id }
-    });
-
-    if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
-    }
+    const sellerProfile = await checkFoodCategoryActive(session.user.id);
 
     const existing = await db.servedPincode.findUnique({
         where: { id }
