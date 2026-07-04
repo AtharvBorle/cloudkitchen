@@ -66,6 +66,7 @@ export default function UserDashboard() {
     const [activePincode, setActivePincode] = useState<string | null>(null);
     const [foodItems, setFoodItems] = useState<any[]>([]);
     const [rooms, setRooms] = useState<any[]>([]);
+    const [foodCategories, setFoodCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -94,6 +95,7 @@ export default function UserDashboard() {
                     
                     setFoodItems(items);
                     setRooms(availableRooms);
+                    setFoodCategories(data.foodCategories || []);
                     setActivePincode(data.userPincode || defaultAddress?.pincode || null);
                 }
             } catch (error) {
@@ -141,6 +143,15 @@ export default function UserDashboard() {
             item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.description?.toLowerCase().includes(searchQuery.toLowerCase())
         );
+    });
+
+    const categoriesMap: { [key: string]: any[] } = {};
+    filteredFoodItems.forEach(item => {
+        const catName = item.foodCategory?.name || "Signature Dishes";
+        if (!categoriesMap[catName]) {
+            categoriesMap[catName] = [];
+        }
+        categoriesMap[catName].push(item);
     });
 
     const filteredRooms = rooms.filter(room =>
@@ -207,6 +218,61 @@ export default function UserDashboard() {
                 </div>
             </div>
 
+            {/* Browse by Category Slider */}
+            {foodCategories.length > 0 && (
+                <div style={{ marginBottom: '40px' }}>
+                    <h2 style={{ fontSize: "1.3rem", fontWeight: "bold", color: "var(--text-main)", marginBottom: "15px" }}>In the Mood for Something Special?</h2>
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: '20px', 
+                        overflowX: 'auto', 
+                        paddingBottom: '15px',
+                    }} className="hide-scrollbar">
+                        {foodCategories.map((cat: any) => (
+                            <div 
+                                key={cat.id} 
+                                onClick={() => {
+                                    router.push(`/dashboard/user/food?category=${encodeURIComponent(cat.id)}`);
+                                }}
+                                style={{ 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center', 
+                                    minWidth: '85px', 
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s'
+                                }}
+                                className="category-circle-card"
+                            >
+                                <div style={{ 
+                                    width: '70px', 
+                                    height: '70px', 
+                                    borderRadius: '50%', 
+                                    overflow: 'hidden', 
+                                    border: '2px solid #EAEAEA', 
+                                    marginBottom: '8px',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                                    backgroundColor: '#f9f9f9',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img 
+                                        src={cat.imageUrl || `https://placehold.co/100x100?text=${encodeURIComponent(cat.name)}`} 
+                                        alt={cat.name} 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                    />
+                                </div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-main)', textAlign: 'center', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', width: '85px' }}>
+                                    {cat.name}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Featured Food Section */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--text-main)" }}>Popular Bites Near You</h2>
@@ -218,49 +284,77 @@ export default function UserDashboard() {
                     No food items available in this area right now. Check back later!
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px', marginBottom: '50px' }}>
-                    {filteredFoodItems.slice(0, 4).map(item => (
-                        <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s ease' }} className="hover-lift">
-                            <Link href={`/shop/${item.sellerTrackingId}`} style={{ display: 'block', height: '180px', position: 'relative' }}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '5px 10px', borderRadius: '20px', fontWeight: 'bold', color: 'var(--coral)', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                                    ₹{item.price}
+                <div style={{ marginBottom: '50px' }}>
+                    {Object.keys(categoriesMap).map((catName) => {
+                        const items = categoriesMap[catName];
+                        return (
+                            <div key={catName} style={{ marginBottom: '35px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{catName}</h3>
+                                    <span style={{ height: '2px', backgroundColor: '#EAEAEA', flex: 1 }} />
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>{items.length} options</span>
                                 </div>
-                            </Link>
-                            <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                <Link href={`/shop/${item.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {item.name}
-                                        <span style={{
-                                            display: 'inline-block',
-                                            padding: '2px 6px',
-                                            borderRadius: '4px',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 'bold',
-                                            color: 'white',
-                                            backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
-                                        }}>
-                                            {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
-                                        </span>
-                                    </h3>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>By {item.sellerName} • {item.sellerCity}</p>
-                                    <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                        {item.stockQuantity === 0 ? (
-                                            <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                        ) : item.stockQuantity > 0 ? (
-                                            <span>Only {item.stockQuantity} left!</span>
-                                        ) : (
-                                            <span style={{ color: '#10B981' }}>In Stock</span>
-                                        )}
-                                    </div>
-                                </Link>
-
-                                <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
+                                <div style={{ 
+                                    display: 'flex', 
+                                    gap: '20px', 
+                                    overflowX: 'auto', 
+                                    padding: '5px 5px 15px 5px',
+                                }} className="hide-scrollbar">
+                                    {items.map(item => (
+                                        <div key={item.id} style={{ 
+                                            backgroundColor: 'white', 
+                                            borderRadius: '12px', 
+                                            overflow: 'hidden', 
+                                            boxShadow: 'var(--shadow-card)', 
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            width: '280px',
+                                            flexShrink: 0,
+                                            transition: 'transform 0.2s ease, box-shadow 0.2s' 
+                                        }} className="hover-lift">
+                                            <Link href={`/shop/${item.sellerTrackingId}`} style={{ display: 'block', height: '160px', position: 'relative' }}>
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '4px 8px', borderRadius: '20px', fontWeight: 'bold', color: 'var(--coral)', fontSize: '0.85rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                                                    ₹{item.price}
+                                                </div>
+                                            </Link>
+                                            <div style={{ padding: '15px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                <Link href={`/shop/${item.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                    <h4 style={{ fontSize: '1.05rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {item.name}
+                                                        <span style={{
+                                                            display: 'inline-block',
+                                                            padding: '1px 4px',
+                                                            borderRadius: '3px',
+                                                            fontSize: '0.6rem',
+                                                            fontWeight: 'bold',
+                                                            color: 'white',
+                                                            backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                                        }}>
+                                                            {item.itemType === 'NON_VEG' ? 'N' : 'V'}
+                                                        </span>
+                                                    </h4>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '8px' }}>By {item.sellerName}</p>
+                                                    <p style={{ color: '#555', fontSize: '0.8rem', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4rem' }}>{item.description}</p>
+                                                    <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '10px' }}>
+                                                        {item.stockQuantity === 0 ? (
+                                                            <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
+                                                        ) : item.stockQuantity > 0 ? (
+                                                            <span>Only {item.stockQuantity} left!</span>
+                                                        ) : (
+                                                            <span style={{ color: '#10B981' }}>In Stock</span>
+                                                        )}
+                                                    </div>
+                                                </Link>
+                                                <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -312,6 +406,16 @@ export default function UserDashboard() {
                 .hover-lift:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+                }
+                .category-circle-card:hover {
+                    transform: scale(1.05);
+                }
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .hide-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
                 }
             `}</style>
         </div>

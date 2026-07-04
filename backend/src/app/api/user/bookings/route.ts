@@ -26,7 +26,7 @@ export async function GET() {
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Fetch user bookings error:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(error.stack || error.message || String(error), 500);
     }
 }
 

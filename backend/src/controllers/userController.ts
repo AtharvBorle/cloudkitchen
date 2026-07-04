@@ -61,12 +61,17 @@ export const getUserDashboard = async () => {
         where: { id: session.user.id }
     });
 
+    const foodCategories = await db.foodCategory.findMany({
+        orderBy: { name: 'asc' }
+    });
+
     const userPincode = currentUser?.pincode ? currentUser.pincode.trim() : null;
     if (!userPincode) {
         return {
             foodItems: [],
             availableRooms: [],
-            userPincode: null
+            userPincode: null,
+            foodCategories
         };
     }
 
@@ -81,7 +86,13 @@ export const getUserDashboard = async () => {
         },
         include: {
             user: { select: { name: true, city: true, pincode: true, phone: true } },
-            foodItems: { where: { isAvailable: true } },
+            foodItems: {
+                where: { isAvailable: true },
+                include: {
+                    category: true,
+                    foodCategory: true
+                }
+            },
             rooms: { where: { isAvailable: true } },
             subscriptions: {
                 where: { status: "ACTIVE" },
@@ -146,7 +157,8 @@ export const getUserDashboard = async () => {
     return {
         foodItems,
         availableRooms,
-        userPincode
+        userPincode,
+        foodCategories
     };
 };
 

@@ -28,7 +28,11 @@ export const getPublicExploreData = unstable_cache(
                     select: { name: true, city: true, pincode: true, phone: true }
                 },
                 foodItems: {
-                    where: { isAvailable: true }
+                    where: { isAvailable: true },
+                    include: {
+                        category: true,
+                        foodCategory: true
+                    }
                 },
                 rooms: {
                     where: { isAvailable: true }
@@ -38,6 +42,10 @@ export const getPublicExploreData = unstable_cache(
                     include: { plan: true }
                 }
             }
+        });
+
+        const foodCategories = await db.foodCategory.findMany({
+            orderBy: { name: 'asc' }
         });
 
         const now = new Date();
@@ -81,7 +89,7 @@ export const getPublicExploreData = unstable_cache(
             }));
         });
 
-        return { foodItems, availableRooms };
+        return { foodItems, availableRooms, foodCategories };
     },
     ["public-explore-data"],
     { revalidate: 30, tags: ["explore"] }
