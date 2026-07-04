@@ -214,6 +214,17 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
         }
     }
 
+    const finalFoodStatus = updateData.foodVerificationStatus !== undefined ? updateData.foodVerificationStatus : seller.foodVerificationStatus;
+    const finalPropertyStatus = updateData.propertyVerificationStatus !== undefined ? updateData.propertyVerificationStatus : seller.propertyVerificationStatus;
+
+    if (finalFoodStatus === "APPROVED" && finalPropertyStatus === "APPROVED") {
+        updateData.businessCategory = "BOTH";
+    } else if (finalFoodStatus === "APPROVED") {
+        updateData.businessCategory = "FOOD";
+    } else if (finalPropertyStatus === "APPROVED") {
+        updateData.businessCategory = "PROPERTY";
+    }
+
     const updatedProfile = await db.sellerProfile.update({
         where: { id: sellerId },
         data: updateData

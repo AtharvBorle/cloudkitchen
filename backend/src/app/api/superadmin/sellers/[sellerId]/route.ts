@@ -51,6 +51,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
                 }
             }
 
+            const resolvedFoodStatus = finalFoodStatus !== undefined ? finalFoodStatus : existingUser.sellerProfile.foodVerificationStatus;
+            const resolvedPropertyStatus = finalPropertyStatus !== undefined ? finalPropertyStatus : existingUser.sellerProfile.propertyVerificationStatus;
+            
+            let resolvedBusinessCategory = existingUser.sellerProfile.businessCategory;
+            if (resolvedFoodStatus === "APPROVED" && resolvedPropertyStatus === "APPROVED") {
+                resolvedBusinessCategory = "BOTH";
+            } else if (resolvedFoodStatus === "APPROVED") {
+                resolvedBusinessCategory = "FOOD";
+            } else if (resolvedPropertyStatus === "APPROVED") {
+                resolvedBusinessCategory = "PROPERTY";
+            }
+
             await db.sellerProfile.update({
                 where: { userId: sellerId },
                 data: {
@@ -60,6 +72,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
                     isOnline: isOnline !== undefined ? isOnline : existingUser.sellerProfile.isOnline,
                     foodVerificationStatus: finalFoodStatus !== undefined ? finalFoodStatus : existingUser.sellerProfile.foodVerificationStatus,
                     propertyVerificationStatus: finalPropertyStatus !== undefined ? finalPropertyStatus : existingUser.sellerProfile.propertyVerificationStatus,
+                    businessCategory: resolvedBusinessCategory
                 }
             });
         }

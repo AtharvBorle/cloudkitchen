@@ -10,8 +10,9 @@ export async function GET(req: NextRequest) {
 
         const session = await getAuthSession();
         let sellerCategory: string | null = null;
+        let seller: any = null;
         if (session?.user && session.user.role === "SELLER") {
-            const seller = await db.sellerProfile.findUnique({
+            seller = await db.sellerProfile.findUnique({
                 where: { userId: session.user.id }
             });
             if (seller) {
@@ -20,17 +21,26 @@ export async function GET(req: NextRequest) {
         }
 
         let whereClause: any = { isActive: true };
-        if (sellerCategory === "FOOD") {
-            whereClause.category = "FOOD";
-        } else if (sellerCategory === "PROPERTY") {
-            whereClause.category = "PROPERTY";
-        } else if (sellerCategory === "BOTH") {
-            if (category && category !== "BOTH") {
-                whereClause.category = category;
+        if (category && category !== "BOTH") {
+            const hasFoodApproval = sellerCategory === "FOOD" || sellerCategory === "BOTH" || (seller && seller.foodVerificationStatus === "APPROVED");
+            const hasPropertyApproval = sellerCategory === "PROPERTY" || sellerCategory === "BOTH" || (seller && seller.propertyVerificationStatus === "APPROVED");
+            
+            if (category === "FOOD" && hasFoodApproval) {
+                whereClause.category = "FOOD";
+            } else if (category === "PROPERTY" && hasPropertyApproval) {
+                whereClause.category = "PROPERTY";
+            } else {
+                if (sellerCategory === "FOOD") {
+                    whereClause.category = "FOOD";
+                } else if (sellerCategory === "PROPERTY") {
+                    whereClause.category = "PROPERTY";
+                }
             }
         } else {
-            if (category && category !== "BOTH") {
-                whereClause.category = category;
+            if (sellerCategory === "FOOD") {
+                whereClause.category = "FOOD";
+            } else if (sellerCategory === "PROPERTY") {
+                whereClause.category = "PROPERTY";
             }
         }
 
