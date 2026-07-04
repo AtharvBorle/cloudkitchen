@@ -706,7 +706,7 @@ export default function SuperAdminSupportPage() {
                                 <div style={{ display: "flex", flexDirection: "column", flex: 1, borderRight: "1px solid #E2E8F0" }}>
                                     <div style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "15px", maxHeight: "400px", minHeight: "300px", backgroundColor: "#F8FAFC" }}>
                                         {selectedTicket.messages?.map((msg: any) => {
-                                            const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN";
+                                            const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN" || msg.sender.role === "SUPPORT";
                                             return (
                                                 <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: isAdmin ? "flex-end" : "flex-start", maxWidth: "80%" }}>
                                                     <div style={{
@@ -722,7 +722,7 @@ export default function SuperAdminSupportPage() {
                                                         {msg.message}
                                                     </div>
                                                     <span style={{ fontSize: "0.65rem", color: "#94A3B8", marginTop: "4px", alignSelf: isAdmin ? "flex-end" : "flex-start" }}>
-                                                        {isAdmin ? "You" : `${selectedTicket.user?.name} (${selectedTicket.user?.role})`} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN" ? `${msg.sender.name} (Admin)` : msg.sender.role === "SUPPORT" ? `${msg.sender.name} (Support)` : `${msg.sender.name} (${msg.sender.role})`} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                             );

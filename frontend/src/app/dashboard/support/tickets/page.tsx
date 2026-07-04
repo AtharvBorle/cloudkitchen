@@ -722,7 +722,7 @@ export default function SupportTicketsPage() {
                                                         {msg.message}
                                                     </div>
                                                     <span style={{ fontSize: "0.65rem", color: "#94A3B8", marginTop: "4px", alignSelf: isAdmin ? "flex-end" : "flex-start" }}>
-                                                        {isAdmin ? "You" : `${selectedTicket.user?.name} (${selectedTicket.user?.role})`} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN" ? `${msg.sender.name} (Admin)` : msg.sender.role === "SUPPORT" ? `${msg.sender.name} (Support)` : `${msg.sender.name} (${msg.sender.role})`} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                             );
