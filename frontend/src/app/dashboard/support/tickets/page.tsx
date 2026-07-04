@@ -62,8 +62,8 @@ export default function SupportTicketsPage() {
 
     const handleCancelActionOrder = async () => {
         if (!actionOrder) return;
-        if (actionOrder.status !== "PENDING") {
-            alert("Only pending orders can be cancelled.");
+        if (actionOrder.status === "CANCELLED" || actionOrder.status === "DELIVERED") {
+            alert("This order cannot be cancelled (Delivered or already Cancelled).");
             return;
         }
         if (!window.confirm(`Are you sure you want to cancel order #${actionOrder.id.slice(0, 8)}?`)) {
@@ -845,7 +845,7 @@ export default function SupportTicketsPage() {
                                                     }}>{actionOrder.status}</span>
                                                 </div>
 
-                                                {actionOrder.status === "PENDING" ? (
+                                                {actionOrder.status !== "CANCELLED" && actionOrder.status !== "DELIVERED" ? (
                                                     <button
                                                         type="button"
                                                         onClick={handleCancelActionOrder}
@@ -877,7 +877,7 @@ export default function SupportTicketsPage() {
                                                         fontSize: "0.7rem",
                                                         fontWeight: "600"
                                                     }}>
-                                                        {actionOrder.status === "CANCELLED" ? "Already Cancelled" : "Cannot cancel (Preparing/Delivered)"}
+                                                        {actionOrder.status === "CANCELLED" ? "Already Cancelled" : "Cannot cancel (Delivered)"}
                                                     </div>
                                                 )}
                                             </div>

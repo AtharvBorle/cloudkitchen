@@ -277,9 +277,14 @@ export const cancelOrder = async (id: string) => {
         throw new ApiError("Forbidden", 403);
     }
 
-    if (order.status !== "PENDING") {
+    if (order.status === "CANCELLED" || order.status === "DELIVERED") {
+        throw new ApiError(`Cannot cancel order in ${order.status} state`, 400);
+    }
+
+    if (order.status !== "PENDING" && !isAdmin) {
         throw new ApiError("Only pending orders can be cancelled", 400);
     }
+
 
     // Restore inventory stock for food items in the order
     if (order.items) {
