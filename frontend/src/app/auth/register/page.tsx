@@ -998,10 +998,12 @@ export default function SellerRegisterPage() {
                         </div>
 
                         <h3 style={{ fontSize: "1.25rem", fontWeight: "800", color: "#0f172a", marginBottom: "0.5rem" }}>
-                            Submitting Application
+                            {uploadProgress === 100 ? "Processing Application..." : "Submitting Application"}
                         </h3>
                         <p style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "1.5rem" }}>
-                            Uploading your documents. Please do not close or refresh this page.
+                            {uploadProgress === 100 
+                                ? "Documents uploaded successfully! The server is now processing and registering your seller profile. Please wait..." 
+                                : "Uploading your documents. Please do not close or refresh this page."}
                         </p>
 
                         <div style={{ width: "100%", backgroundColor: "#e2e8f0", borderRadius: "9999px", height: "8px", overflow: "hidden", marginBottom: "0.5rem" }}>
@@ -1015,7 +1017,7 @@ export default function SellerRegisterPage() {
                         </div>
                         
                         <span style={{ fontSize: "0.875rem", fontWeight: "700", color: "#F16F68" }}>
-                            {uploadProgress}%
+                            {uploadProgress === 100 ? "100% (Verifying & processing...)" : `${uploadProgress}%`}
                         </span>
                     </div>
                     
