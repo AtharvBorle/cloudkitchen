@@ -257,7 +257,7 @@ export const createOrder = async (req: Request) => {
     };
 };
 
-export const cancelOrder = async (id: string) => {
+export const cancelOrder = async (id: string, ticketId?: string) => {
     const session = await getAuthSession();
     if (!session || !session.user || (session.user.role !== "USER" && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT" && session.user.role !== "AGENT")) {
         throw new ApiError("Unauthorized", 401);
@@ -324,14 +324,18 @@ export const cancelOrder = async (id: string) => {
             where: { orderId: id }
         });
         if (!existingRefund) {
+            let baseReason = isAdmin 
+                ? "Order cancelled by Admin/Superadmin prior to preparation." 
+                : "Order cancelled by customer prior to preparation.";
+            if (ticketId) {
+                baseReason = `[Ticket Ref: #${ticketId}] ${baseReason}`;
+            }
             await db.refund.create({
                 data: {
                     userId: order.userId,
                     orderId: id,
                     amount: order.totalAmount,
-                    reason: isAdmin 
-                        ? "Order cancelled by Admin/Superadmin prior to preparation." 
-                        : "Order cancelled by customer prior to preparation.",
+                    reason: baseReason,
                     status: "PENDING"
                 }
             });

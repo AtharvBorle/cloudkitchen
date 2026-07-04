@@ -74,7 +74,8 @@ export default function SuperAdminSupportPage() {
         try {
             const res = await fetchApi(`/api/user/orders/${actionOrder.id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketId: selectedTicket?.id })
             });
             if (res.ok) {
                 alert("Order cancelled successfully.");

@@ -20,7 +20,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const id = (await params).id;
         if (!id) return errorResponse("Order ID is required", 400);
 
-        await cancelOrder(id);
+        let ticketId: string | undefined = undefined;
+        try {
+            const body = await req.json();
+            ticketId = body?.ticketId;
+        } catch (e) {
+            // Body might be empty or invalid JSON, ignore
+        }
+
+        await cancelOrder(id, ticketId);
         return successResponse(null, "Order cancelled successfully", 200);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
