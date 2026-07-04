@@ -1054,6 +1054,24 @@ export function UserHeader() {
     );
 }
 export default function UserLayout({ children }: { children: React.ReactNode }) {
+    const { data: session, status } = useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (status === "loading") return;
+        if (!session) {
+            router.push("/user");
+        }
+    }, [session, status, router]);
+
+    if (status === "loading" || !session) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--background)' }}>
+                <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>Checking authorization...</span>
+            </div>
+        );
+    }
+
     return (
         <LocationProvider>
             <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: "var(--background)" }}>

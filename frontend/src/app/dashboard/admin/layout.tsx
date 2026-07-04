@@ -1,12 +1,39 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag } from "lucide-react";
+import { useEffect } from "react";
 
 export default function adminLayout({ children }: { children: React.ReactNode }) {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const pathname = usePathname();
+
+    useEffect(() => {
+        if (status === "loading") return;
+        if (!session || (session.user.role !== "ADMIN" && session.user.role !== "AGENT")) {
+            router.replace("/admin");
+        }
+    }, [session, status, router]);
+
+    if (status === "loading" || !session || (session.user.role !== "ADMIN" && session.user.role !== "AGENT")) {
+        return (
+            <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fafc", fontFamily: "var(--font-sans)" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                    <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: "3px solid var(--primary)", borderTopColor: "transparent", animation: "spin 1s linear infinite" }} />
+                    <span style={{ fontSize: "1rem", color: "#64748b", fontWeight: "500" }}>Loading Operations Portal...</span>
+                </div>
+                <style>{`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
 
     const navLinks = [
         { href: "/dashboard/admin", label: "Overview", icon: <LayoutDashboard size={20} /> },

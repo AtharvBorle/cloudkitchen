@@ -1,15 +1,44 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function SuperadminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const pathname = usePathname();
+
+    useEffect(() => {
+        if (status === "loading") return;
+
+        if (!session || session.user.role !== "SUPERADMIN") {
+            router.push("/admin");
+            return;
+        }
+    }, [session, status, router]);
+
+    if (status === "loading" || !session || session.user.role !== "SUPERADMIN") {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#F0F2F5', fontFamily: 'var(--font-sans, sans-serif)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: "3px solid var(--coral, #F16F68)", borderTopColor: "transparent", animation: "spin 1s linear infinite" }} />
+                    <span style={{ fontSize: "1rem", color: "#64748b", fontWeight: "500" }}>Loading Superadmin Panel...</span>
+                </div>
+                <style>{`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--background)" }}>

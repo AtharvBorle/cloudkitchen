@@ -15,8 +15,17 @@ export function Providers({ children }: { children: ReactNode }) {
             }
         };
         document.addEventListener('wheel', handleWheel, { passive: false });
+
+        const handlePageShow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+        window.addEventListener("pageshow", handlePageShow);
+
         return () => {
             document.removeEventListener('wheel', handleWheel);
+            window.removeEventListener("pageshow", handlePageShow);
         };
     }, []);
 
