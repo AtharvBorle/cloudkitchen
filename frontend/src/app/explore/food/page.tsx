@@ -174,23 +174,33 @@ export default function ExploreFoodPage() {
                             className="category-circle-card"
                         >
                             <div style={{ 
-                                width: '65px', 
-                                height: '65px', 
+                                width: '64px', 
+                                height: '64px', 
                                 borderRadius: '50%', 
-                                border: selectedCategoryId === null ? '3px solid var(--teal)' : '2px solid #EAEAEA', 
-                                marginBottom: '8px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                                backgroundColor: selectedCategoryId === null ? 'var(--teal)' : '#f9f9f9',
+                                border: selectedCategoryId === null ? '3px solid var(--teal)' : '2px solid #E2E8F0', 
+                                boxShadow: selectedCategoryId === null ? '0 4px 15px rgba(0,128,128,0.3)' : '0 2px 6px rgba(0,0,0,0.05)',
+                                backgroundColor: selectedCategoryId === null ? 'var(--teal)' : 'white',
                                 color: selectedCategoryId === null ? 'white' : 'var(--text-main)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontWeight: 'bold',
-                                fontSize: '0.9rem'
+                                fontSize: '0.9rem',
+                                transition: 'all 0.2s ease',
+                                transform: selectedCategoryId === null ? 'scale(1.1)' : 'scale(1)'
                             }}>
                                 All
                             </div>
-                            <span style={{ fontSize: '0.8rem', fontWeight: selectedCategoryId === null ? '700' : '600', color: 'var(--text-main)' }}>
+                            <span style={{ 
+                                fontSize: '0.8rem', 
+                                fontWeight: selectedCategoryId === null ? '700' : '500', 
+                                color: selectedCategoryId === null ? 'var(--teal)' : 'var(--text-main)', 
+                                backgroundColor: selectedCategoryId === null ? 'rgba(0,128,128,0.08)' : 'transparent',
+                                padding: '4px 10px',
+                                borderRadius: '12px',
+                                marginTop: '6px',
+                                transition: 'all 0.2s ease'
+                            }}>
                                 All Items
                             </span>
                         </div>
@@ -212,26 +222,42 @@ export default function ExploreFoodPage() {
                                     className="category-circle-card"
                                 >
                                     <div style={{ 
-                                        width: '65px', 
-                                        height: '65px', 
+                                        width: '64px', 
+                                        height: '64px', 
                                         borderRadius: '50%', 
                                         overflow: 'hidden', 
-                                        border: isSelected ? '3px solid var(--teal)' : '2px solid #EAEAEA', 
-                                        marginBottom: '8px',
-                                        boxShadow: isSelected ? '0 2px 10px rgba(0, 128, 128, 0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
-                                        backgroundColor: '#f9f9f9',
+                                        border: isSelected ? '3px solid var(--teal)' : '2px solid #E2E8F0',
+                                        padding: isSelected ? '2px' : '0px',
+                                        boxShadow: isSelected ? '0 4px 15px rgba(0,128,128,0.3)' : '0 2px 6px rgba(0,0,0,0.05)',
+                                        backgroundColor: 'white',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        transition: 'all 0.2s ease',
+                                        transform: isSelected ? 'scale(1.1)' : 'scale(1)'
                                     }}>
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img 
                                             src={cat.imageUrl || `https://placehold.co/100x100?text=${encodeURIComponent(cat.name)}`} 
                                             alt={cat.name} 
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
                                         />
                                     </div>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: isSelected ? '700' : '600', color: 'var(--text-main)', textAlign: 'center', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', width: '85px' }}>
+                                    <span style={{ 
+                                        fontSize: '0.8rem', 
+                                        fontWeight: isSelected ? '700' : '500', 
+                                        color: isSelected ? 'var(--teal)' : 'var(--text-main)', 
+                                        backgroundColor: isSelected ? 'rgba(0,128,128,0.08)' : 'transparent',
+                                        padding: '4px 10px',
+                                        borderRadius: '12px',
+                                        marginTop: '6px',
+                                        textAlign: 'center', 
+                                        whiteSpace: 'nowrap', 
+                                        textOverflow: 'ellipsis', 
+                                        overflow: 'hidden', 
+                                        width: '85px',
+                                        transition: 'all 0.2s ease'
+                                    }}>
                                         {cat.name}
                                     </span>
                                 </div>
