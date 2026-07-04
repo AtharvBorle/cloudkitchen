@@ -159,7 +159,16 @@ export default function ManageRoomsPage() {
                         {errorMsg || "Access to the room listing dashboard requires an approved Property Category application and an active subscription."}
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <Link href="/dashboard/seller" className="btn btn-coral" style={{ padding: "14px", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <button
+                            onClick={() => {
+                                window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } }));
+                            }}
+                            className="btn btn-coral"
+                            style={{ padding: "14px", borderRadius: "12px", border: "none", fontWeight: "700", fontSize: "1.05rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                        >
+                            Apply / Upgrade Property Category
+                        </button>
+                        <Link href="/dashboard/seller" className="btn" style={{ padding: "14px", border: "1px solid #cbd5e1", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#475569" }}>
                             Go to Overview
                         </Link>
                     </div>

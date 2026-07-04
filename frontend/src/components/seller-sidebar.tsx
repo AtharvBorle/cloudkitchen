@@ -16,6 +16,9 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
     const [modalCategory, setModalCategory] = useState<"FOOD" | "PROPERTY" | null>(null);
     const [categoryPlans, setCategoryPlans] = useState<any[]>([]);
 
+    const isFoodActive = statusData ? statusData.isFoodActive : true;
+    const isPropertyActive = statusData ? statusData.isPropertyActive : true;
+
     useEffect(() => {
         const checkScreen = () => setIsMobile(window.innerWidth <= 768);
         checkScreen();
@@ -38,6 +41,17 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
     useEffect(() => {
         fetchStatus();
     }, []);
+
+    useEffect(() => {
+        const handleOpenUpgrade = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const category = customEvent.detail?.category;
+            const isActive = category === "FOOD" ? isFoodActive : isPropertyActive;
+            handleCategoryClick(null, category, isActive);
+        };
+        window.addEventListener("open-category-upgrade", handleOpenUpgrade);
+        return () => window.removeEventListener("open-category-upgrade", handleOpenUpgrade);
+    }, [statusData, isFoodActive, isPropertyActive]);
 
     const [submitting, setSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -175,15 +189,14 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
         }
     };
 
-    const isFoodActive = statusData ? statusData.isFoodActive : true;
-    const isPropertyActive = statusData ? statusData.isPropertyActive : true;
 
-    const handleCategoryClick = async (e: React.MouseEvent, category: "FOOD" | "PROPERTY", isActive: boolean) => {
+
+    const handleCategoryClick = async (e: React.MouseEvent | null, category: "FOOD" | "PROPERTY", isActive: boolean) => {
         if (isActive) {
             if (onClose) onClose();
             return;
         }
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         setModalCategory(category);
         setModalOpen(true);
         setCategoryPlans([]);

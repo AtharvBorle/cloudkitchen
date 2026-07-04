@@ -29,7 +29,7 @@ const checkPropertyCategoryActive = async (userId: string) => {
 
     if (!isPropertyActive) {
         throw new ApiError("Property subscription not active or approved", 403);
-     }
+    }
 
     return sellerProfile;
 };

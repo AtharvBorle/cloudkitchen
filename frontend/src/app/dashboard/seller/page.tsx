@@ -119,11 +119,13 @@ export default function SellerDashboardOverview() {
                     </Link>
                 ) : (
                     <button
-                        onClick={() => alert("Please activate your Food category subscription or wait for admin approval in the sidebar to add menu items.")}
+                        onClick={() => {
+                            window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "FOOD" } }));
+                        }}
                         className="btn btn-coral"
-                        style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px', opacity: 0.6, cursor: 'not-allowed' }}
+                        style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px', cursor: 'pointer' }}
                     >
-                        🔒 Add New Menu Item (Locked)
+                        Add New Menu Item
                     </button>
                 )}
 
@@ -133,11 +135,13 @@ export default function SellerDashboardOverview() {
                     </Link>
                 ) : (
                     <button
-                        onClick={() => alert("Please activate your Property category subscription or wait for admin approval in the sidebar to list rooms.")}
+                        onClick={() => {
+                            window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } }));
+                        }}
                         className="btn btn-teal"
-                        style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px', opacity: 0.6, cursor: 'not-allowed' }}
+                        style={{ flex: '1 1 auto', textAlign: 'center', padding: '15px 20px', borderRadius: '8px', cursor: 'pointer' }}
                     >
-                        🔒 List a Room (Locked)
+                        List a Room
                     </button>
                 )}
             </div>
