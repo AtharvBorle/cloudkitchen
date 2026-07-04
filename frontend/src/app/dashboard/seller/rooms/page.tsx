@@ -116,6 +116,25 @@ export default function ManageRoomsPage() {
         }
     };
 
+    const handleUpdateBookingStatus = async (bookingId: string, status: 'CONFIRMED' | 'CANCELLED') => {
+        try {
+            const res = await fetchApi("/api/seller/rooms/bookings", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bookingId, status })
+            });
+            if (res.ok) {
+                fetchRooms();
+            } else {
+                const err = await res.json();
+                alert(err.error || "Failed to update booking status");
+            }
+        } catch (error) {
+            console.error("Failed to update booking status", error);
+            alert("An error occurred");
+        }
+    };
+
     const placeholderImage = "https://placehold.co/400x250?text=No+Room+Image";
 
     const getFirstImage = (jsonStr: string) => {
@@ -359,16 +378,60 @@ export default function ManageRoomsPage() {
                                                 </td>
                                                 <td style={{ padding: '15px 20px', fontWeight: 'bold' }}>₹{estimatedAmount}</td>
                                                 <td style={{ padding: '15px 20px' }}>
-                                                    <span style={{
-                                                        padding: '4px 10px',
-                                                        borderRadius: '12px',
-                                                        fontSize: '0.8rem',
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: booking.status === 'CONFIRMED' ? '#d1fae5' : '#fee2e2',
-                                                        color: booking.status === 'CONFIRMED' ? '#059669' : '#dc2626'
-                                                    }}>
-                                                        {booking.status}
-                                                    </span>
+                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+                                                         <span style={{
+                                                             padding: '4px 10px',
+                                                             borderRadius: '12px',
+                                                             fontSize: '0.8rem',
+                                                             fontWeight: 'bold',
+                                                             backgroundColor: booking.status === 'CONFIRMED' ? '#d1fae5' : booking.status === 'PENDING' ? '#fef3c7' : '#fee2e2',
+                                                             color: booking.status === 'CONFIRMED' ? '#059669' : booking.status === 'PENDING' ? '#d97706' : '#dc2626'
+                                                         }}>
+                                                             {booking.status}
+                                                         </span>
+                                                         {booking.status === 'PENDING' && (
+                                                             <div style={{ display: 'flex', gap: '6px' }}>
+                                                                 <button
+                                                                     onClick={() => handleUpdateBookingStatus(booking.id, 'CONFIRMED')}
+                                                                     style={{
+                                                                         backgroundColor: '#10b981',
+                                                                         color: 'white',
+                                                                         border: 'none',
+                                                                         padding: '4px 10px',
+                                                                         borderRadius: '6px',
+                                                                         fontSize: '0.75rem',
+                                                                         fontWeight: '700',
+                                                                         cursor: 'pointer',
+                                                                         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                                                         transition: 'background-color 0.15s'
+                                                                     }}
+                                                                     onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+                                                                     onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+                                                                 >
+                                                                     Confirm
+                                                                 </button>
+                                                                 <button
+                                                                     onClick={() => handleUpdateBookingStatus(booking.id, 'CANCELLED')}
+                                                                     style={{
+                                                                         backgroundColor: '#ef4444',
+                                                                         color: 'white',
+                                                                         border: 'none',
+                                                                         padding: '4px 10px',
+                                                                         borderRadius: '6px',
+                                                                         fontSize: '0.75rem',
+                                                                         fontWeight: '700',
+                                                                         cursor: 'pointer',
+                                                                         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                                                         transition: 'background-color 0.15s'
+                                                                     }}
+                                                                     onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+                                                                     onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#ef4444')}
+                                                                 >
+                                                                     Reject
+                                                                 </button>
+                                                             </div>
+                                                         )}
+                                                     </div>
                                                 </td>
                                             </tr>
                                         )

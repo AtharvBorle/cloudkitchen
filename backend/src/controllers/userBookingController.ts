@@ -67,7 +67,7 @@ export const createBooking = async (req: Request) => {
             userId: session.user.id,
             startDate: requestedStart,
             endDate: requestedEnd,
-            status: "CONFIRMED",
+            status: "PENDING",
         }
     });
 

@@ -172,3 +172,38 @@ export const updateSellerRoom = async (req: Request) => {
 
     return { room: updatedRoom };
 };
+
+export const updateSellerBookingStatus = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
+
+    const { bookingId, status } = await req.json();
+
+    if (!bookingId || !status || !["CONFIRMED", "CANCELLED"].includes(status)) {
+        throw new ApiError("Booking ID and valid status (CONFIRMED or CANCELLED) are required", 400);
+    }
+
+    const booking = await db.booking.findUnique({
+        where: { id: bookingId },
+        include: { room: true }
+    });
+
+    if (!booking) {
+        throw new ApiError("Booking not found", 404);
+    }
+
+    if (booking.room.sellerId !== sellerProfile.id) {
+        throw new ApiError("Unauthorized. This booking does not belong to your property.", 403);
+    }
+
+    const updatedBooking = await db.booking.update({
+        where: { id: bookingId },
+        data: { status }
+    });
+
+    return { booking: updatedBooking };
+};

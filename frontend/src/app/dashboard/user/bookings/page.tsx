@@ -149,8 +149,8 @@ export default function UserBookingsPage() {
                                             borderRadius: "20px",
                                             fontSize: "0.8rem",
                                             fontWeight: "bold",
-                                            backgroundColor: hasPassed ? "#E5E7EB" : "#D1FAE5",
-                                            color: hasPassed ? "#6B7280" : "#065F46"
+                                            backgroundColor: hasPassed ? "#E5E7EB" : (booking.status === "CONFIRMED" ? "#D1FAE5" : booking.status === "PENDING" ? "#FEF3C7" : "#FEE2E2"),
+                                            color: hasPassed ? "#6B7280" : (booking.status === "CONFIRMED" ? "#065F46" : booking.status === "PENDING" ? "#D97706" : "#DC2626")
                                         }}>
                                             {hasPassed ? "Completed" : booking.status}
                                         </span>
