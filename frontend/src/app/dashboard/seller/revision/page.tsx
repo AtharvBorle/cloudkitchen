@@ -1,5 +1,5 @@
 "use client";
-import { fetchApi } from "@/lib/fetch-api";
+import { fetchApi, uploadWithProgress } from "@/lib/fetch-api";
 
 
 import { useState, useEffect } from "react";
@@ -11,6 +11,7 @@ export default function RevisionPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [note, setNote] = useState("");
     const [type, setType] = useState("FOOD");
 
@@ -129,9 +130,9 @@ export default function RevisionPage() {
                 formData.append(`roomImage_${index}`, file);
             });
 
-            const res = await fetchApi("/api/seller/revision", {
-                method: "POST",
-                body: formData,
+            setUploadProgress(0);
+            const res = await uploadWithProgress("/api/seller/revision", formData, (pct) => {
+                setUploadProgress(pct);
             });
 
             if (res.ok) {
@@ -470,6 +471,108 @@ export default function RevisionPage() {
                     to { transform: rotate(360deg); }
                 }
             `}</style>
+            {submitting && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(15, 23, 42, 0.7)",
+                    backdropFilter: "blur(8px)",
+                    zIndex: 9999,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    color: "white",
+                    fontFamily: "var(--font-sans, sans-serif)",
+                }}>
+                    <div style={{
+                        backgroundColor: "white",
+                        padding: "2.5rem",
+                        borderRadius: "24px",
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        maxWidth: "400px",
+                        width: "90%",
+                        textAlign: "center",
+                        color: "#1e293b"
+                    }}>
+                        <div style={{
+                            position: "relative",
+                            width: "80px",
+                            height: "80px",
+                            marginBottom: "1.5rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}>
+                            <div style={{
+                                boxSizing: "border-box",
+                                display: "block",
+                                position: "absolute",
+                                width: "64px",
+                                height: "64px",
+                                margin: "8px",
+                                border: "8px solid #F16F68",
+                                borderRadius: "50%",
+                                animation: "lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite",
+                                borderColor: "#F16F68 transparent transparent transparent"
+                            }}></div>
+                            <div style={{
+                                boxSizing: "border-box",
+                                display: "block",
+                                position: "absolute",
+                                width: "64px",
+                                height: "64px",
+                                margin: "8px",
+                                border: "8px solid #F16F68",
+                                borderRadius: "50%",
+                                animation: "lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite",
+                                borderColor: "transparent #F16F68 transparent transparent",
+                                animationDelay: "-0.3s"
+                            }}></div>
+                            <div style={{
+                                boxSizing: "border-box",
+                                display: "block",
+                                position: "absolute",
+                                width: "64px",
+                                height: "64px",
+                                margin: "8px",
+                                border: "8px solid #F16F68",
+                                borderRadius: "50%",
+                                animation: "lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite",
+                                borderColor: "transparent transparent #F16F68 transparent",
+                                animationDelay: "-0.15s"
+                            }}></div>
+                        </div>
+
+                        <h3 style={{ fontSize: "1.25rem", fontWeight: "800", color: "#0f172a", marginBottom: "0.5rem" }}>
+                            Submitting Revision Documents
+                        </h3>
+                        <p style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "1.5rem" }}>
+                            Uploading corrected files. Please do not close or refresh this page.
+                        </p>
+
+                        <div style={{ width: "100%", backgroundColor: "#e2e8f0", borderRadius: "9999px", height: "8px", overflow: "hidden", marginBottom: "0.5rem" }}>
+                            <div style={{
+                                height: "100%",
+                                width: `${uploadProgress}%`,
+                                background: "linear-gradient(90deg, #F16F68 0%, #ff8a84 100%)",
+                                borderRadius: "9999px",
+                                transition: "width 0.2s ease-out"
+                            }}></div>
+                        </div>
+                        
+                        <span style={{ fontSize: "0.875rem", fontWeight: "700", color: "#F16F68" }}>
+                            {uploadProgress}%
+                        </span>
+                    </div>
+                </div>
+            )}
             {cameraMode && <CameraCaptureModal onCapture={handleCameraCapture} onClose={() => setCameraMode(null)} />}
         </div>
     );

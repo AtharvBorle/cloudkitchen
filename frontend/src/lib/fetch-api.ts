@@ -41,3 +41,61 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
 
     return res;
 }
+
+export function uploadWithProgress(
+    url: string,
+    formData: FormData,
+    onProgress: (percent: number) => void
+): Promise<{ ok: boolean; status: number; json: () => Promise<any> }> {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let target = url;
+        if (target.startsWith("/api/")) {
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+            target = `${apiBase.replace(/\/$/, "")}${target}`;
+        }
+        
+        xhr.open("POST", target);
+        xhr.withCredentials = true;
+
+        xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                onProgress(percent);
+            }
+        });
+
+        xhr.addEventListener("load", () => {
+            const responseText = xhr.responseText;
+            const ok = xhr.status >= 200 && xhr.status < 300;
+            
+            resolve({
+                ok,
+                status: xhr.status,
+                json: async () => {
+                    try {
+                        const parsed = JSON.parse(responseText);
+                        if (parsed && typeof parsed === 'object') {
+                            if ('success' in parsed) {
+                                if (parsed.success) {
+                                    return parsed.data !== undefined ? parsed.data : parsed;
+                                } else {
+                                    return { ...parsed, message: parsed.error || parsed.message };
+                                }
+                            }
+                        }
+                        return parsed;
+                    } catch (e) {
+                        return { message: "Failed to parse response" };
+                    }
+                }
+            });
+        });
+
+        xhr.addEventListener("error", () => {
+            reject(new Error("Network upload error"));
+        });
+
+        xhr.send(formData);
+    });
+}
