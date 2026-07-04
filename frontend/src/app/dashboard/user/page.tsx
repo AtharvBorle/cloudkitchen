@@ -218,10 +218,15 @@ export default function UserDashboard() {
                 </div>
             </div>
 
+            {/* Featured Food Section */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--text-main)" }}>Popular Bites Near You</h2>
+                <Link href="/dashboard/user/food" style={{ color: 'var(--teal)', fontWeight: 'bold' }}>View All Food &rarr;</Link>
+            </div>
+
             {/* Browse by Category Slider */}
             {foodCategories.length > 0 && (
-                <div style={{ marginBottom: '40px' }}>
-                    <h2 style={{ fontSize: "1.3rem", fontWeight: "bold", color: "var(--text-main)", marginBottom: "15px" }}>In the Mood for Something Special?</h2>
+                <div style={{ marginBottom: '30px' }}>
                     <div style={{ 
                         display: 'flex', 
                         gap: '20px', 
@@ -272,12 +277,6 @@ export default function UserDashboard() {
                     </div>
                 </div>
             )}
-
-            {/* Featured Food Section */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--text-main)" }}>Popular Bites Near You</h2>
-                <Link href="/dashboard/user/food" style={{ color: 'var(--teal)', fontWeight: 'bold' }}>View All Food &rarr;</Link>
-            </div>
 
             {filteredFoodItems.length === 0 ? (
                 <div style={{ backgroundColor: '#F8F9F9', padding: '40px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)', marginBottom: '40px' }}>
