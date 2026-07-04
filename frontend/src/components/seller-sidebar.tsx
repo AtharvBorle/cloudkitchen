@@ -708,7 +708,7 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     bottom: 0,
                     backgroundColor: "rgba(15, 23, 42, 0.7)",
                     backdropFilter: "blur(8px)",
-                    zIndex: 9999,
+                    zIndex: 100000,
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "center",
