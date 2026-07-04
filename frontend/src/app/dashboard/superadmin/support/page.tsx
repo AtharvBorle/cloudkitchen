@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { fetchApi } from "@/lib/fetch-api";
 import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter } from "lucide-react";
 
 export default function SuperAdminSupportPage() {
+    const { data: session } = useSession();
     const [tickets, setTickets] = useState<any[]>([]);
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [loadingTickets, setLoadingTickets] = useState(true);
@@ -707,6 +709,22 @@ export default function SuperAdminSupportPage() {
                                     <div style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "15px", maxHeight: "400px", minHeight: "300px", backgroundColor: "#F8FAFC" }}>
                                         {selectedTicket.messages?.map((msg: any) => {
                                             const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN" || msg.sender.role === "SUPPORT";
+                                            const getSenderLabel = (m: any) => {
+                                                if (m.sender.id === session?.user?.id) {
+                                                    return "You";
+                                                }
+                                                const role = m.sender.role;
+                                                if (role === "SUPERADMIN" || role === "ADMIN") {
+                                                    return `${m.sender.name} (Admin)`;
+                                                }
+                                                if (role === "SUPPORT") {
+                                                    return `${m.sender.name} (Support)`;
+                                                }
+                                                if (role === "SELLER") {
+                                                    return `${m.sender.name} (Seller)`;
+                                                }
+                                                return `${m.sender.name} (${role})`;
+                                            };
                                             return (
                                                 <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: isAdmin ? "flex-end" : "flex-start", maxWidth: "80%" }}>
                                                     <div style={{
@@ -722,7 +740,7 @@ export default function SuperAdminSupportPage() {
                                                         {msg.message}
                                                     </div>
                                                     <span style={{ fontSize: "0.65rem", color: "#94A3B8", marginTop: "4px", alignSelf: isAdmin ? "flex-end" : "flex-start" }}>
-                                                        {msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN" ? `${msg.sender.name} (Admin)` : msg.sender.role === "SUPPORT" ? `${msg.sender.name} (Support)` : `${msg.sender.name} (${msg.sender.role})`} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {getSenderLabel(msg)} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                             );

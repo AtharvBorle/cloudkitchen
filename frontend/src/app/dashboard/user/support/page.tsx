@@ -348,6 +348,8 @@ export default function UserSupportPage() {
                             <div style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "15px", maxHeight: "400px", minHeight: "300px", backgroundColor: "#F8FAFC" }}>
                                 {selectedTicket.messages?.map((msg: any) => {
                                     const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN" || msg.sender.role === "SUPPORT";
+                                    const isSupport = msg.sender.role === "SUPPORT";
+                                    const isSuperAdminOrAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN";
                                     return (
                                         <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: isAdmin ? "flex-start" : "flex-end", maxWidth: "80%" }}>
                                             <div style={{
@@ -363,7 +365,7 @@ export default function UserSupportPage() {
                                                 {msg.message}
                                             </div>
                                             <span style={{ fontSize: "0.65rem", color: "#94A3B8", marginTop: "4px", alignSelf: isAdmin ? "flex-start" : "flex-end", display: "flex", alignItems: "center", gap: "4px" }}>
-                                                {isAdmin ? "Admin Reply" : "You"} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {isSuperAdminOrAdmin ? "Admin Reply" : isSupport ? "Support Reply" : "You"} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                     );
