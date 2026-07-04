@@ -634,7 +634,8 @@ function CheckoutContent() {
                         roomId: roomDetails.id,
                         startDate: bookingDates.start,
                         endDate: bookingDates.end,
-                        totalAmount: totalAmount
+                        totalAmount: totalAmount,
+                        paymentMethod: paymentMethod
                     })
                 });
 
@@ -1068,8 +1069,8 @@ function CheckoutContent() {
                                     <input type="radio" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ display: 'none' }} />
                                     <Banknote size={24} color={paymentMethod === 'COD' ? 'var(--primary)' : 'var(--text-muted)'} />
                                     <div>
-                                        <div style={{ fontWeight: 'bold' }}>Pay on Delivery</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cash or UPI</div>
+                                        <div style={{ fontWeight: 'bold' }}>{isRoomBooking ? "Pay on Check-in/out" : "Pay on Delivery"}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isRoomBooking ? "Cash or UPI at the property" : "Cash or UPI"}</div>
                                     </div>
                                 </label>
                             </div>

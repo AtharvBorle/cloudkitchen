@@ -181,16 +181,21 @@ model Room {
 }
 
 model Booking {
-  id        String   @id @default(uuid())
-  roomId    String
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  startDate DateTime
-  endDate   DateTime
-  status    String // PENDING, CONFIRMED, CANCELLED
-  createdAt DateTime @default(now())
-  refund    Refund?
+  id                String   @id @default(uuid())
+  roomId            String
+  room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate         DateTime
+  endDate           DateTime
+  status            String // PENDING, CONFIRMED, CANCELLED
+  paymentMethod     String   @default("COD") // ONLINE, COD
+  totalAmount       Float    @default(0)
+  isPaid            Boolean  @default(false)
+  razorpayOrderId   String?  @unique
+  razorpayPaymentId String?  @unique
+  createdAt         DateTime @default(now())
+  refund            Refund?
 }
 
 model SubscriptionPlan {

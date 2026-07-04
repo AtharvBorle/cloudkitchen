@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
+import Script from "next/script";
 
 export default function UserBookingsPage() {
     const { data: session, status } = useSession();
@@ -48,6 +49,65 @@ export default function UserBookingsPage() {
 
         fetchBookings();
     }, [session, status, router]);
+
+    const handlePayBookingNow = async (booking: any) => {
+        try {
+            const res = await fetchApi(`/api/user/bookings/${booking.id}/pay`, {
+                method: "POST"
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.error || "Failed to initiate booking payment");
+                return;
+            }
+
+            const data = await res.json();
+            const razorpayOrder = data.razorpayOrder;
+            
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_SBd0GNxh5TYLm3",
+                amount: razorpayOrder.amount,
+                currency: "INR",
+                name: "Neo Cloud Room",
+                description: `Room Booking Payment - ${booking.room.title}`,
+                order_id: razorpayOrder.id,
+                handler: async function (response: any) {
+                    try {
+                        const verifyRes = await fetchApi(`/api/user/bookings/${booking.id}/verify`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        });
+
+                        if (verifyRes.ok) {
+                            alert("Payment successful!");
+                            window.location.reload();
+                        } else {
+                            const verifyData = await verifyRes.json();
+                            alert(verifyData.message || "Payment verification failed.");
+                        }
+                    } catch (e) {
+                        alert("An error occurred during payment verification.");
+                    }
+                },
+                prefill: {
+                    contact: session?.user?.phone || ""
+                },
+                theme: {
+                    color: "#16a34a"
+                }
+            };
+            const rzp = new (window as any).Razorpay(options);
+            rzp.open();
+        } catch (error) {
+            console.error("Booking payment failed:", error);
+            alert("An error occurred while preparing checkout.");
+        }
+    };
 
     if (status === "loading" || loading) {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>Loading bookings...</div>;
@@ -173,9 +233,57 @@ export default function UserBookingsPage() {
                                         </div>
                                     </div>
                                     <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+                                        
+                                        <div style={{ fontSize: "0.85rem", margin: "5px 0", padding: "10px", borderRadius: "8px", backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                                <span style={{ color: "#64748B" }}>Payment Method:</span>
+                                                <span style={{ fontWeight: "600", color: "#334155" }}>
+                                                    {booking.paymentMethod === "COD" ? "Pay on Check-in/out" : "Pay Online"}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                                <span style={{ color: "#64748B" }}>Amount:</span>
+                                                <span style={{ fontWeight: "700", color: "#0F172A" }}>
+                                                    ₹{booking.totalAmount}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                <span style={{ color: "#64748B" }}>Payment Status:</span>
+                                                <span style={{ fontWeight: "bold", color: booking.isPaid ? "#16A34A" : "#F59E0B" }}>
+                                                    {booking.isPaid ? "Paid" : "Unpaid"}
+                                                </span>
+                                            </div>
+                                        </div>
+
                                         <Link href={`/shop/${booking.room.seller.trackingId}`} style={{ display: "block", textAlign: "center", color: "var(--primary)", fontWeight: "500", padding: "10px", border: "1px solid var(--primary)", borderRadius: "8px" }}>
                                             Contact Host
                                         </Link>
+
+                                        {booking.status === 'CONFIRMED' && booking.paymentMethod === 'COD' && !booking.isPaid && (
+                                            <button
+                                                onClick={() => handlePayBookingNow(booking)}
+                                                style={{
+                                                    display: "block",
+                                                    width: "100%",
+                                                    textAlign: "center",
+                                                    backgroundColor: "var(--primary)",
+                                                    color: "white",
+                                                    fontWeight: "bold",
+                                                    padding: "10px",
+                                                    border: "none",
+                                                    borderRadius: "8px",
+                                                    cursor: "pointer",
+                                                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                                                    transition: "background-color 0.2s"
+                                                }}
+                                                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#15803d")}
+                                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "var(--primary)")}
+                                            >
+                                                Pay Now
+                                            </button>
+                                        )}
+
                                         {booking.refund && (
                                             <div style={{ textAlign: "center", fontSize: "0.85rem", fontWeight: "bold", color: booking.refund.status === 'APPROVED' ? '#10B981' : booking.refund.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }}>
                                                 Refund Status: {booking.refund.status}

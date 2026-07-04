@@ -361,9 +361,7 @@ export default function ManageRoomsPage() {
                                         const start = new Date(booking.startDate);
                                         const end = new Date(booking.endDate);
                                         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
-                                        // Price is estimated as room cost * days booked, logic can be adjusted later if db stores actual paid amount
-                                        const estimatedAmount = (booking.room?.price || 1000) * (days === 0 ? 1 : days);
+                                        const estimatedAmount = booking.totalAmount || (booking.room?.price || 1000) * (days === 0 ? 1 : days);
 
                                         return (
                                             <tr key={booking.id} style={{ borderBottom: '1px solid #EAEAEA' }}>
@@ -379,16 +377,31 @@ export default function ManageRoomsPage() {
                                                 <td style={{ padding: '15px 20px', fontWeight: 'bold' }}>₹{estimatedAmount}</td>
                                                 <td style={{ padding: '15px 20px' }}>
                                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
-                                                         <span style={{
-                                                             padding: '4px 10px',
-                                                             borderRadius: '12px',
-                                                             fontSize: '0.8rem',
-                                                             fontWeight: 'bold',
-                                                             backgroundColor: booking.status === 'CONFIRMED' ? '#d1fae5' : booking.status === 'PENDING' ? '#fef3c7' : '#fee2e2',
-                                                             color: booking.status === 'CONFIRMED' ? '#059669' : booking.status === 'PENDING' ? '#d97706' : '#dc2626'
-                                                         }}>
-                                                             {booking.status}
-                                                         </span>
+                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                             <span style={{
+                                                                 padding: '4px 10px',
+                                                                 borderRadius: '12px',
+                                                                 fontSize: '0.8rem',
+                                                                 fontWeight: 'bold',
+                                                                 backgroundColor: booking.status === 'CONFIRMED' ? '#d1fae5' : booking.status === 'PENDING' ? '#fef3c7' : '#fee2e2',
+                                                                 color: booking.status === 'CONFIRMED' ? '#059669' : booking.status === 'PENDING' ? '#d97706' : '#dc2626'
+                                                             }}>
+                                                                 {booking.status}
+                                                             </span>
+                                                             <span style={{
+                                                                 padding: '4px 10px',
+                                                                 borderRadius: '12px',
+                                                                 fontSize: '0.8rem',
+                                                                 fontWeight: 'bold',
+                                                                 backgroundColor: booking.isPaid ? '#d1fae5' : '#fee2e2',
+                                                                 color: booking.isPaid ? '#059669' : '#dc2626'
+                                                             }}>
+                                                                 {booking.isPaid ? 'Paid' : 'Unpaid'}
+                                                             </span>
+                                                         </div>
+                                                         <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '500' }}>
+                                                             Method: {booking.paymentMethod === 'COD' ? 'Pay on Check-in/out' : 'Pay Online'}
+                                                         </div>
                                                          {booking.status === 'PENDING' && (
                                                              <div style={{ display: 'flex', gap: '6px' }}>
                                                                  <button
