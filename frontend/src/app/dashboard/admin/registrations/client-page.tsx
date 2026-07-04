@@ -328,8 +328,9 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                         {/* Adhaar */}
                                         {(() => {
                                             let adhaarUrls: string[] = [];
+                                            const isAadhaar = app.adhaarUrl.startsWith("[");
                                             try {
-                                                if (app.adhaarUrl.startsWith("[")) {
+                                                if (isAadhaar) {
                                                     adhaarUrls = JSON.parse(app.adhaarUrl);
                                                 } else {
                                                     adhaarUrls = [app.adhaarUrl];
@@ -337,7 +338,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                             } catch {
                                                 adhaarUrls = [app.adhaarUrl];
                                             }
-
+ 
                                             return adhaarUrls.map((url, idx) => (
                                                 <div key={idx} style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -346,7 +347,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                                         </div>
                                                         <div>
                                                             <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>
-                                                                Aadhaar Card {adhaarUrls.length > 1 ? (idx === 0 ? "(Front)" : "(Back)") : ""}
+                                                                {isAadhaar ? `Aadhaar Card ${adhaarUrls.length > 1 ? (idx === 0 ? "(Front)" : "(Back)") : ""}` : "PAN Card"}
                                                             </p>
                                                             <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Identity Proof</p>
                                                         </div>
@@ -427,7 +428,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                                  </div>
                                                  <div>
                                                      <p style={{ fontWeight: "600", color: "#334155", margin: 0 }}>Bank Passbook</p>
-                                                     <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Bank Account Proof</p>
+                                                     <p style={{ fontSize: "0.8rem", color: "#64748b", margin: 0 }}>Address Proof</p>
                                                  </div>
                                              </div>
                                              {app.passbookUrl ? (
@@ -717,3 +718,4 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
         </div >
     );
 }
+
