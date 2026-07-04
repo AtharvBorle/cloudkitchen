@@ -6,16 +6,17 @@ import { X, RefreshCcw, Camera } from 'lucide-react';
 interface CameraCaptureModalProps {
     onCapture: (file: File) => void;
     onClose: () => void;
+    skipWatermark?: boolean;
 }
 
-export default function CameraCaptureModal({ onCapture, onClose }: CameraCaptureModalProps) {
+export default function CameraCaptureModal({ onCapture, onClose, skipWatermark = false }: CameraCaptureModalProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
     const [isSecureContext, setIsSecureContext] = useState(true);
-    const [locationText, setLocationText] = useState<string>("Locating GPS...");
+    const [locationText, setLocationText] = useState<string>(skipWatermark ? "" : "Locating GPS...");
 
     const fallbackIPLocation = async () => {
         try {
@@ -72,8 +73,10 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
     };
 
     useEffect(() => {
-        triggerGPSRetrieval();
-    }, []);
+        if (!skipWatermark) {
+            triggerGPSRetrieval();
+        }
+    }, [skipWatermark]);
 
     useEffect(() => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -107,7 +110,7 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
         };
     }, [facingMode]);
 
-    const isLocating = locationText.startsWith("Locating");
+    const isLocating = !skipWatermark && locationText.startsWith("Locating");
 
     const handleCapture = () => {
         if (isLocating) {
@@ -126,35 +129,37 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                 // Draw the video frame
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // Add watermark/location info overlay on the image itself
-                const padding = 15;
-                const fontSize = Math.max(14, Math.floor(canvas.width / 32));
-                context.font = `bold ${fontSize}px sans-serif`;
-                
-                const timestamp = new Date().toLocaleString();
-                const watermarkLines = [
-                    "LIVE VERIFICATION PHOTO",
-                    locationText,
-                    timestamp
-                ];
-                
-                // Calculate height and width for the background bar
-                const lineHeight = fontSize + 8;
-                const barHeight = watermarkLines.length * lineHeight + padding * 2;
-                
-                // Draw semi-transparent dark background band at the bottom
-                context.fillStyle = "rgba(0, 0, 0, 0.65)";
-                context.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
-                
-                // Draw white text lines
-                context.fillStyle = "#ffffff";
-                watermarkLines.forEach((line, index) => {
-                    context.fillText(
-                        line, 
-                        padding, 
-                        canvas.height - barHeight + padding + (index * lineHeight) + fontSize
-                    );
-                });
+                if (!skipWatermark) {
+                    // Add watermark/location info overlay on the image itself
+                    const padding = 15;
+                    const fontSize = Math.max(14, Math.floor(canvas.width / 32));
+                    context.font = `bold ${fontSize}px sans-serif`;
+                    
+                    const timestamp = new Date().toLocaleString();
+                    const watermarkLines = [
+                        "LIVE VERIFICATION PHOTO",
+                        locationText,
+                        timestamp
+                    ];
+                    
+                    // Calculate height and width for the background bar
+                    const lineHeight = fontSize + 8;
+                    const barHeight = watermarkLines.length * lineHeight + padding * 2;
+                    
+                    // Draw semi-transparent dark background band at the bottom
+                    context.fillStyle = "rgba(0, 0, 0, 0.65)";
+                    context.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
+                    
+                    // Draw white text lines
+                    context.fillStyle = "#ffffff";
+                    watermarkLines.forEach((line, index) => {
+                        context.fillText(
+                            line, 
+                            padding, 
+                            canvas.height - barHeight + padding + (index * lineHeight) + fontSize
+                        );
+                    });
+                }
             }
             
             const dataUrl = canvas.toDataURL('image/jpeg');
@@ -223,64 +228,65 @@ export default function CameraCaptureModal({ onCapture, onClose }: CameraCapture
                 </button>
 
                 {!capturedImage ? (
-                    <>
-                        <div style={{ position: 'relative' }}>
+                    <>                        <div style={{ position: 'relative' }}>
                             <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: 'auto', minHeight: '300px', maxHeight: '75vh', objectFit: 'cover', display: 'block' }} />
-                            <div style={{
-                                position: "absolute",
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                backgroundColor: isLocating 
-                                    ? "rgba(217, 119, 6, 0.85)" 
-                                    : (locationText.startsWith("Location:") ? "rgba(239, 68, 68, 0.85)" : "rgba(0, 0, 0, 0.65)"),
-                                color: "white",
-                                padding: "10px",
-                                fontSize: "0.85rem",
-                                fontWeight: "bold",
-                                textAlign: "center",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "8px",
-                                backdropFilter: "blur(4px)"
-                            }}>
-                                {isLocating && (
-                                    <span style={{
-                                        width: "12px",
-                                        height: "12px",
-                                        border: "2px solid white",
-                                        borderTopColor: "transparent",
-                                        borderRadius: "50%",
-                                        animation: "spin 1s linear infinite",
-                                        display: "inline-block"
-                                    }} />
-                                )}
-                                <span>{locationText}</span>
-                                {locationText.startsWith("Location:") && (
-                                    <button 
-                                        type="button" 
-                                        onClick={triggerGPSRetrieval}
-                                        style={{
-                                            marginLeft: "10px",
-                                            padding: "4px 10px",
-                                            backgroundColor: "white",
-                                            color: "#ef4444",
-                                            border: "none",
-                                            borderRadius: "4px",
-                                            fontSize: "0.75rem",
-                                            fontWeight: "bold",
-                                            cursor: "pointer",
-                                            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                                            transition: "background-color 0.2s"
-                                        }}
-                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
-                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
-                                    >
-                                        Retry
-                                    </button>
-                                )}
-                            </div>
+                            {!skipWatermark && (
+                                <div style={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    backgroundColor: isLocating 
+                                        ? "rgba(217, 119, 6, 0.85)" 
+                                        : (locationText.startsWith("Location:") ? "rgba(239, 68, 68, 0.85)" : "rgba(0, 0, 0, 0.65)"),
+                                    color: "white",
+                                    padding: "10px",
+                                    fontSize: "0.85rem",
+                                    fontWeight: "bold",
+                                    textAlign: "center",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "8px",
+                                    backdropFilter: "blur(4px)"
+                                }}>
+                                    {isLocating && (
+                                        <span style={{
+                                            width: "12px",
+                                            height: "12px",
+                                            border: "2px solid white",
+                                            borderTopColor: "transparent",
+                                            borderRadius: "50%",
+                                            animation: "spin 1s linear infinite",
+                                            display: "inline-block"
+                                        }} />
+                                    )}
+                                    <span>{locationText}</span>
+                                    {locationText.startsWith("Location:") && (
+                                        <button 
+                                            type="button" 
+                                            onClick={triggerGPSRetrieval}
+                                            style={{
+                                                marginLeft: "10px",
+                                                padding: "4px 10px",
+                                                backgroundColor: "white",
+                                                color: "#ef4444",
+                                                border: "none",
+                                                borderRadius: "4px",
+                                                fontSize: "0.75rem",
+                                                fontWeight: "bold",
+                                                cursor: "pointer",
+                                                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                                transition: "background-color 0.2s"
+                                            }}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
+                                        >
+                                            Retry
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#111' }}>
                             <button title="Switch Camera" aria-label="Switch Camera" onClick={toggleCamera} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', padding: '10px' }}>
