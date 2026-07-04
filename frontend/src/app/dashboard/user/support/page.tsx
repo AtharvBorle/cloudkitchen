@@ -143,6 +143,28 @@ export default function UserSupportPage() {
         }
     };
 
+    const handleMarkAsResolved = async (ticketId: string) => {
+        if (!confirm("Are you sure your issue is resolved and you want to close/resolve this ticket?")) {
+            return;
+        }
+        try {
+            const res = await fetchApi(`/api/tickets/${ticketId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "RESOLVED" })
+            });
+            if (res.ok) {
+                await fetchTickets();
+                await fetchTicketDetails(ticketId);
+            } else {
+                alert("Failed to mark ticket as resolved.");
+            }
+        } catch (error) {
+            console.error("Error marking ticket as resolved:", error);
+            alert("An error occurred. Please try again.");
+        }
+    };
+
     const filteredTickets = tickets.filter(t => {
         const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
         const matchesCategory = categoryFilter === "ALL" || t.category === categoryFilter;
@@ -158,6 +180,8 @@ export default function UserSupportPage() {
                 return <span style={{ backgroundColor: "#DCFCE7", color: "#166534", padding: "4px 10px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "bold" }}>OPEN</span>;
             case "IN_PROGRESS":
                 return <span style={{ backgroundColor: "#DBEAFE", color: "#1E40AF", padding: "4px 10px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "bold" }}>IN PROGRESS</span>;
+            case "RESOLVED":
+                return <span style={{ backgroundColor: "#D1FAE5", color: "#065F46", padding: "4px 10px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "bold" }}>RESOLVED</span>;
             case "CLOSED":
                 return <span style={{ backgroundColor: "#F1F5F9", color: "#475569", padding: "4px 10px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "bold" }}>CLOSED</span>;
             default:
@@ -216,6 +240,7 @@ export default function UserSupportPage() {
                             <option value="ALL">All Status</option>
                             <option value="OPEN">Open</option>
                             <option value="IN_PROGRESS">In Progress</option>
+                            <option value="RESOLVED">Resolved</option>
                             <option value="CLOSED">Closed</option>
                         </select>
                         <select
@@ -341,7 +366,32 @@ export default function UserSupportPage() {
                                     </div>
                                     <span style={{ fontSize: "0.8rem", color: "#94A3B8" }}>Ref: #{selectedTicket.id.slice(0, 8)}</span>
                                 </div>
-                                {getStatusBadge(selectedTicket.status)}
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    {selectedTicket.status !== "CLOSED" && selectedTicket.status !== "RESOLVED" && (
+                                        <button
+                                            onClick={() => handleMarkAsResolved(selectedTicket.id)}
+                                            style={{
+                                                backgroundColor: "#10B981",
+                                                color: "white",
+                                                border: "none",
+                                                padding: "6px 12px",
+                                                borderRadius: "8px",
+                                                fontSize: "0.75rem",
+                                                fontWeight: "700",
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                boxShadow: "0 2px 5px rgba(16, 185, 129, 0.2)",
+                                                transition: "all 0.2s"
+                                            }}
+                                        >
+                                            <CheckCircle2 size={14} />
+                                            Mark as Resolved
+                                        </button>
+                                    )}
+                                    {getStatusBadge(selectedTicket.status)}
+                                </div>
                             </div>
 
                             {/* Thread Body */}
@@ -374,7 +424,7 @@ export default function UserSupportPage() {
 
                             {/* Reply Footer */}
                             <div style={{ padding: "20px", borderTop: "1px solid #E2E8F0" }}>
-                                {selectedTicket.status === "CLOSED" ? (
+                                {selectedTicket.status === "CLOSED" || selectedTicket.status === "RESOLVED" ? (
                                     <div style={{ textAlign: "center", padding: "10px", backgroundColor: "#F1F5F9", color: "#475569", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "600" }}>
                                         This ticket has been marked resolved and closed.
                                     </div>

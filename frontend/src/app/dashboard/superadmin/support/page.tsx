@@ -416,6 +416,7 @@ export default function SuperAdminSupportPage() {
         switch (status) {
             case "OPEN": return { bg: "#DCFCE7", text: "#166534" };
             case "IN_PROGRESS": return { bg: "#DBEAFE", text: "#1E40AF" };
+            case "RESOLVED": return { bg: "#D1FAE5", text: "#065F46" };
             case "CLOSED": return { bg: "#F1F5F9", text: "#475569" };
             default: return { bg: "#E2E8F0", text: "#1E293B" };
         }
@@ -535,7 +536,7 @@ export default function SuperAdminSupportPage() {
                             <Filter size={14} /> FILTER BY STATUS
                         </span>
                         <div style={{ display: "flex", gap: "5px", backgroundColor: "#F1F5F9", padding: "4px", borderRadius: "8px" }}>
-                            {["ALL", "OPEN", "IN_PROGRESS", "CLOSED"].map(filter => (
+                            {["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map(filter => (
                                 <button
                                     key={filter}
                                     onClick={() => setStatusFilter(filter)}
@@ -675,6 +676,23 @@ export default function SuperAdminSupportPage() {
                                         <span>Ref: #{selectedTicket.id.slice(0, 8)}</span>
                                         <span>• Raised by: <strong>{selectedTicket.user?.name}</strong> ({selectedTicket.user?.email})</span>
                                     </div>
+                                    {selectedTicket.status === "RESOLVED" && (
+                                        <div style={{
+                                            marginTop: "8px",
+                                            padding: "6px 12px",
+                                            backgroundColor: "#D1FAE5",
+                                            color: "#065F46",
+                                            borderRadius: "8px",
+                                            fontSize: "0.8rem",
+                                            fontWeight: "700",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "6px"
+                                        }}>
+                                            <CheckCircle2 size={14} />
+                                            {selectedTicket.user?.role === "SELLER" ? "Marked as resolved by Seller" : "Marked as resolved by Customer"}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Status Switcher Dropdown */}
@@ -697,6 +715,7 @@ export default function SuperAdminSupportPage() {
                                     >
                                         <option value="OPEN">OPEN</option>
                                         <option value="IN_PROGRESS">IN PROGRESS</option>
+                                        <option value="RESOLVED">RESOLVED</option>
                                         <option value="CLOSED">CLOSED</option>
                                     </select>
                                 </div>

@@ -112,21 +112,40 @@ export const getTicketDetails = async (id: string) => {
 
 export const updateTicketStatus = async (id: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
+    if (!session?.user) {
         throw new ApiError("Unauthorized", 401);
     }
 
     const { status } = await req.json();
-    if (!status || !["OPEN", "IN_PROGRESS", "CLOSED"].includes(status)) {
+    if (!status || !["OPEN", "IN_PROGRESS", "CLOSED", "RESOLVED"].includes(status)) {
         throw new ApiError("Invalid status value", 400);
     }
 
-    const ticket = await db.ticket.update({
+    const ticket = await db.ticket.findUnique({
+        where: { id }
+    });
+
+    if (!ticket) {
+        throw new ApiError("Ticket not found", 404);
+    }
+
+    const isAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
+    const isOwner = ticket.userId === session.user.id;
+
+    if (!isAdmin && !isOwner) {
+        throw new ApiError("Forbidden", 403);
+    }
+
+    if (!isAdmin && status !== "RESOLVED" && status !== "OPEN") {
+        throw new ApiError("Forbidden status change for ticket owner", 403);
+    }
+
+    const updatedTicket = await db.ticket.update({
         where: { id },
         data: { status }
     });
 
-    return ticket;
+    return updatedTicket;
 };
 
 export const sendTicketMessage = async (id: string, req: Request) => {
