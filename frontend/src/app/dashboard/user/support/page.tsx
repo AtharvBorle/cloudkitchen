@@ -347,7 +347,7 @@ export default function UserSupportPage() {
                             {/* Thread Body */}
                             <div style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "15px", maxHeight: "400px", minHeight: "300px", backgroundColor: "#F8FAFC" }}>
                                 {selectedTicket.messages?.map((msg: any) => {
-                                    const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN";
+                                    const isAdmin = msg.sender.role === "SUPERADMIN" || msg.sender.role === "ADMIN" || msg.sender.role === "SUPPORT";
                                     return (
                                         <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: isAdmin ? "flex-start" : "flex-end", maxWidth: "80%" }}>
                                             <div style={{
