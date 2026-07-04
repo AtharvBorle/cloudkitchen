@@ -259,7 +259,7 @@ export const createOrder = async (req: Request) => {
 
 export const cancelOrder = async (id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || (session.user.role !== "USER" && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
+    if (!session || !session.user || (session.user.role !== "USER" && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT" && session.user.role !== "AGENT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -272,7 +272,7 @@ export const cancelOrder = async (id: string) => {
         throw new ApiError("Order not found", 404);
     }
 
-    const isAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT" || session.user.role === "AGENT";
     if (order.userId !== session.user.id && !isAdmin) {
         throw new ApiError("Forbidden", 403);
     }
@@ -430,7 +430,7 @@ export const getOrderDetails = async (id: string) => {
     const isBuyer = order.userId === session.user.id;
     const isSeller = order.seller.userId === session.user.id;
     const isDeliveryBoy = order.deliveryPerson && order.deliveryPerson.userId === session.user.id;
-    const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
+    const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN" || session.user.role === "SUPPORT" || session.user.role === "AGENT";
 
     if (!isBuyer && !isSeller && !isDeliveryBoy && !isAdmin) {
         throw new ApiError("Forbidden", 403);
