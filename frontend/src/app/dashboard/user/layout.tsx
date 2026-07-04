@@ -1056,15 +1056,18 @@ export function UserHeader() {
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const pathname = usePathname();
+
+    const isCheckout = pathname === "/dashboard/user/checkout";
 
     useEffect(() => {
         if (status === "loading") return;
-        if (!session) {
+        if (!session && !isCheckout) {
             router.push("/user");
         }
-    }, [session, status, router]);
+    }, [session, status, router, isCheckout]);
 
-    if (status === "loading" || !session) {
+    if (status === "loading" || (!session && !isCheckout)) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--background)' }}>
                 <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>Checking authorization...</span>
