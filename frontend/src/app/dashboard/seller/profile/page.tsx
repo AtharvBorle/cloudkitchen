@@ -367,29 +367,44 @@ export default function ProfileAndQRPage() {
                         {subData?.hasActiveSub ? (() => {
                             const activeSubs = subData.activeSubs || [];
                             const foodSubs = activeSubs.filter((s: any) => s.plan?.category === 'FOOD' || s.plan?.category === 'BOTH');
-                            const foodExpiry = foodSubs.length > 0 
-                                ? new Date(Math.max(...foodSubs.map((s: any) => new Date(s.validUntil).getTime()))) 
-                                : null;
                             const propertySubs = activeSubs.filter((s: any) => s.plan?.category === 'PROPERTY' || s.plan?.category === 'BOTH');
-                            const propertyExpiry = propertySubs.length > 0 
-                                ? new Date(Math.max(...propertySubs.map((s: any) => new Date(s.validUntil).getTime()))) 
-                                : null;
 
                             const getStackedSubs = (subsList: any[]) => {
-                                const sorted = [...subsList].sort((a, b) => new Date(a.validUntil).getTime() - new Date(b.validUntil).getTime());
-                                return sorted.map((sub, index) => {
-                                    const expiry = new Date(sub.validUntil);
-                                    let start = new Date(sub.createdAt);
-                                    if (index > 0) {
-                                        start = new Date(sorted[index - 1].validUntil);
+                                const sorted = [...subsList].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                                const result = [];
+                                let currentEnd: Date | null = null;
+                                
+                                for (let i = 0; i < sorted.length; i++) {
+                                    const sub = sorted[i];
+                                    const duration = sub.plan?.durationMonths || 1;
+                                    const created = new Date(sub.createdAt);
+                                    
+                                    let start: Date;
+                                    if (currentEnd && currentEnd > created) {
+                                        start = new Date(currentEnd);
+                                    } else {
+                                        start = created;
                                     }
-                                    return {
+                                    
+                                    const end = new Date(start);
+                                    end.setMonth(end.getMonth() + duration);
+                                    
+                                    result.push({
                                         ...sub,
                                         startDate: start,
-                                        endDate: expiry
-                                    };
-                                });
+                                        endDate: end
+                                    });
+                                    
+                                    currentEnd = end;
+                                }
+                                return result;
                             };
+
+                            const stackedFood = getStackedSubs(foodSubs);
+                            const foodExpiry = stackedFood.length > 0 ? stackedFood[stackedFood.length - 1].endDate : null;
+
+                            const stackedProperty = getStackedSubs(propertySubs);
+                            const propertyExpiry = stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
 
                             return (
                                 <div style={{ marginBottom: '20px' }}>
@@ -397,97 +412,91 @@ export default function ProfileAndQRPage() {
                                         <CheckCircle2 size={18} /> Active Subscriptions
                                     </div>
 
-                                    {foodExpiry && (() => {
-                                        const stackedFood = getStackedSubs(foodSubs);
-                                        return (
-                                            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                                    <div>
-                                                        <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C', display: 'block' }}>Food Services</span>
-                                                        <span style={{ fontSize: '0.8rem', color: '#718096' }}>{stackedFood.length} plan{stackedFood.length > 1 ? 's' : ''} active/stacked</span>
-                                                    </div>
-                                                    <span style={{ 
-                                                        fontSize: '0.75rem', 
-                                                        fontWeight: 'bold', 
-                                                        backgroundColor: '#E6FFFA', 
-                                                        color: '#00A389', 
-                                                        padding: '2px 8px', 
-                                                        borderRadius: '12px' 
-                                                    }}>
-                                                        FOOD
-                                                    </span>
+                                    {foodExpiry && (
+                                        <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                                <div>
+                                                    <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C', display: 'block' }}>Food Services</span>
+                                                    <span style={{ fontSize: '0.8rem', color: '#718096' }}>{stackedFood.length} plan{stackedFood.length > 1 ? 's' : ''} active/stacked</span>
                                                 </div>
-
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', borderTop: '1px dashed #E2E8F0', paddingTop: '10px' }}>
-                                                    {stackedFood.map((sub: any, idx: number) => (
-                                                        <div key={sub.id} style={{ fontSize: '0.85rem', color: '#4A5568', backgroundColor: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #EDF2F7' }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginBottom: '4px', color: '#2D3748' }}>
-                                                                <span>{idx + 1}. {sub.plan?.name || "Subscription Plan"}</span>
-                                                                <span style={{ color: '#F16F68' }}>₹{sub.amount || sub.plan?.price}</span>
-                                                            </div>
-                                                            <div style={{ fontSize: '0.75rem', color: '#718096' }}>
-                                                                Purchased: {new Date(sub.createdAt).toLocaleDateString()}
-                                                            </div>
-                                                            <div style={{ fontSize: '0.75rem', color: '#4A5568', marginTop: '2px', fontWeight: '500' }}>
-                                                                Validity: {sub.startDate.toLocaleDateString()} - {sub.endDate.toLocaleDateString()}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-
-                                                <div style={{ marginTop: '12px', fontSize: '0.9rem', fontWeight: 'bold', color: '#2D3748', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '10px' }}>
-                                                    <span>Final Expiry:</span>
-                                                    <span style={{ color: '#00A389' }}>{foodExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                                                </div>
+                                                <span style={{ 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: 'bold', 
+                                                    backgroundColor: '#E6FFFA', 
+                                                    color: '#00A389', 
+                                                    padding: '2px 8px', 
+                                                    borderRadius: '12px' 
+                                                }}>
+                                                    FOOD
+                                                </span>
                                             </div>
-                                        );
-                                    })()}
 
-                                    {propertyExpiry && (() => {
-                                        const stackedProperty = getStackedSubs(propertySubs);
-                                        return (
-                                            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                                    <div>
-                                                        <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C', display: 'block' }}>Property Bookings</span>
-                                                        <span style={{ fontSize: '0.8rem', color: '#718096' }}>{stackedProperty.length} plan{stackedProperty.length > 1 ? 's' : ''} active/stacked</span>
-                                                    </div>
-                                                    <span style={{ 
-                                                        fontSize: '0.75rem', 
-                                                        fontWeight: 'bold', 
-                                                        backgroundColor: '#EBF4FF', 
-                                                        color: '#3B82F6', 
-                                                        padding: '2px 8px', 
-                                                        borderRadius: '12px' 
-                                                    }}>
-                                                        PROPERTY
-                                                    </span>
-                                                </div>
-
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', borderTop: '1px dashed #E2E8F0', paddingTop: '10px' }}>
-                                                    {stackedProperty.map((sub: any, idx: number) => (
-                                                        <div key={sub.id} style={{ fontSize: '0.85rem', color: '#4A5568', backgroundColor: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #EDF2F7' }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginBottom: '4px', color: '#2D3748' }}>
-                                                                <span>{idx + 1}. {sub.plan?.name || "Subscription Plan"}</span>
-                                                                <span style={{ color: '#3B82F6' }}>₹{sub.amount || sub.plan?.price}</span>
-                                                            </div>
-                                                            <div style={{ fontSize: '0.75rem', color: '#718096' }}>
-                                                                Purchased: {new Date(sub.createdAt).toLocaleDateString()}
-                                                            </div>
-                                                            <div style={{ fontSize: '0.75rem', color: '#4A5568', marginTop: '2px', fontWeight: '500' }}>
-                                                                Validity: {sub.startDate.toLocaleDateString()} - {sub.endDate.toLocaleDateString()}
-                                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', borderTop: '1px dashed #E2E8F0', paddingTop: '10px' }}>
+                                                {stackedFood.map((sub: any, idx: number) => (
+                                                    <div key={sub.id} style={{ fontSize: '0.85rem', color: '#4A5568', backgroundColor: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #EDF2F7' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginBottom: '4px', color: '#2D3748' }}>
+                                                            <span>{idx + 1}. {sub.plan?.name || "Subscription Plan"}</span>
+                                                            <span style={{ color: '#F16F68' }}>₹{sub.amount || sub.plan?.price}</span>
                                                         </div>
-                                                    ))}
-                                                </div>
-
-                                                <div style={{ marginTop: '12px', fontSize: '0.9rem', fontWeight: 'bold', color: '#2D3748', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '10px' }}>
-                                                    <span>Final Expiry:</span>
-                                                    <span style={{ color: '#3B82F6' }}>{propertyExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                                                </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#718096' }}>
+                                                            Purchased: {new Date(sub.createdAt).toLocaleDateString()}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#4A5568', marginTop: '2px', fontWeight: '500' }}>
+                                                            Validity: {sub.startDate.toLocaleDateString()} - {sub.endDate.toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        );
-                                    })()}
+
+                                            <div style={{ marginTop: '12px', fontSize: '0.9rem', fontWeight: 'bold', color: '#2D3748', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '10px' }}>
+                                                <span>Final Expiry:</span>
+                                                <span style={{ color: '#00A389' }}>{foodExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {propertyExpiry && (
+                                        <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                                <div>
+                                                    <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C', display: 'block' }}>Property Bookings</span>
+                                                    <span style={{ fontSize: '0.8rem', color: '#718096' }}>{stackedProperty.length} plan{stackedProperty.length > 1 ? 's' : ''} active/stacked</span>
+                                                </div>
+                                                <span style={{ 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: 'bold', 
+                                                    backgroundColor: '#EBF4FF', 
+                                                    color: '#3B82F6', 
+                                                    padding: '2px 8px', 
+                                                    borderRadius: '12px' 
+                                                }}>
+                                                    PROPERTY
+                                                </span>
+                                            </div>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', borderTop: '1px dashed #E2E8F0', paddingTop: '10px' }}>
+                                                {stackedProperty.map((sub: any, idx: number) => (
+                                                    <div key={sub.id} style={{ fontSize: '0.85rem', color: '#4A5568', backgroundColor: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #EDF2F7' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginBottom: '4px', color: '#2D3748' }}>
+                                                            <span>{idx + 1}. {sub.plan?.name || "Subscription Plan"}</span>
+                                                            <span style={{ color: '#3B82F6' }}>₹{sub.amount || sub.plan?.price}</span>
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#718096' }}>
+                                                            Purchased: {new Date(sub.createdAt).toLocaleDateString()}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#4A5568', marginTop: '2px', fontWeight: '500' }}>
+                                                            Validity: {sub.startDate.toLocaleDateString()} - {sub.endDate.toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div style={{ marginTop: '12px', fontSize: '0.9rem', fontWeight: 'bold', color: '#2D3748', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '10px' }}>
+                                                <span>Final Expiry:</span>
+                                                <span style={{ color: '#3B82F6' }}>{propertyExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })() : (
