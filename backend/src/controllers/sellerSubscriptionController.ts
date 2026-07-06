@@ -64,7 +64,13 @@ export const createSubscriptionOrder = async (req: Request) => {
             throw new ApiError("This coupon is not valid for the selected plan", 400);
         }
 
-        if (coupon.category && coupon.category !== "BOTH" && coupon.category !== plan.category) {
+        const isCategoryMatch = 
+            !coupon.category || 
+            coupon.category === "BOTH" || 
+            plan.category === "BOTH" || 
+            coupon.category === plan.category;
+
+        if (!isCategoryMatch) {
             throw new ApiError(`This coupon is only valid for ${coupon.category} plans`, 400);
         }
 

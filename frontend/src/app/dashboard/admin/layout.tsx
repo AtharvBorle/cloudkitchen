@@ -3,7 +3,7 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag } from "lucide-react";
+import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag, Bike } from "lucide-react";
 import { useEffect } from "react";
 
 export default function adminLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +40,7 @@ export default function adminLayout({ children }: { children: React.ReactNode })
         { href: "/dashboard/admin/registrations", label: "Seller Approvals", icon: <Users size={20} /> },
         { href: "/dashboard/admin/banners", label: "Popup Banners", icon: <ImageIcon size={20} /> },
         { href: "/dashboard/admin/coupons", label: "Offers & Coupons", icon: <Tag size={20} /> },
+        { href: "/dashboard/admin/delivery", label: "Delivery Staff", icon: <Bike size={20} /> },
     ];
 
     return (

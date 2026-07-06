@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 
 export const getDeliveryOrders = async () => {
     const session = await getAuthSession();
@@ -135,12 +136,20 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
         throw new ApiError("Order not assigned to you", 404);
     }
 
-    const updatedOrder = await db.order.update({
-        where: { id: orderId },
-        data: {
-            status,
-            isPaid: status === "DELIVERED" && order.paymentMethod === "COD" ? true : order.isPaid
+    const updatedOrder = await db.$transaction(async (tx) => {
+        const uo = await tx.order.update({
+            where: { id: orderId },
+            data: {
+                status,
+                isPaid: status === "DELIVERED" && order.paymentMethod === "COD" ? true : order.isPaid
+            }
+        });
+
+        if (status === "DELIVERED" && order.status !== "DELIVERED") {
+            await handleCodOrderDelivered(tx, orderId);
         }
+
+        return uo;
     });
 
     return { order: updatedOrder };

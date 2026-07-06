@@ -40,7 +40,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: "This coupon is not valid for the selected plan" }, { status: 400 });
         }
 
-        if (coupon.category && coupon.category !== "BOTH" && coupon.category !== plan.category) {
+        const isCategoryMatch = 
+            !coupon.category || 
+            coupon.category === "BOTH" || 
+            plan.category === "BOTH" || 
+            coupon.category === plan.category;
+
+        if (!isCategoryMatch) {
             return NextResponse.json({ message: `This coupon is only valid for ${coupon.category} plans` }, { status: 400 });
         }
 

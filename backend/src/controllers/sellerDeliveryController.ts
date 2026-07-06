@@ -30,6 +30,7 @@ export const getSellerDeliveryPersons = async () => {
         phone: dp.phone,
         email: dp.user?.email || "",
         isActive: dp.isActive,
+        outstandingBalance: dp.outstandingBalance,
         createdAt: dp.createdAt,
         updatedAt: dp.updatedAt
     }));
@@ -237,4 +238,128 @@ export const assignDeliveryPersonToOrder = async (req: Request, orderId: string)
     });
 
     return { order: updatedOrder };
+};
+
+export const collectDeliveryCash = async (req: Request, deliveryPersonId: string) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id }
+    });
+
+    if (!sellerProfile) {
+        throw new ApiError("Seller profile not found", 404);
+    }
+
+    const deliveryPerson = await db.deliveryPerson.findFirst({
+        where: { id: deliveryPersonId, sellerId: sellerProfile.id }
+    });
+
+    if (!deliveryPerson) {
+        throw new ApiError("Delivery person not found or not assigned to this seller", 404);
+    }
+
+    const { amount } = await req.json();
+    const collectAmount = parseFloat(amount);
+
+    if (isNaN(collectAmount) || collectAmount <= 0) {
+        throw new ApiError("Invalid collection amount", 400);
+    }
+
+    if (collectAmount > deliveryPerson.outstandingBalance) {
+        throw new ApiError("Collection amount cannot exceed outstanding balance", 400);
+    }
+
+    const updated = await db.$transaction(async (tx) => {
+        const dp = await tx.deliveryPerson.update({
+            where: { id: deliveryPersonId },
+            data: {
+                outstandingBalance: { decrement: collectAmount }
+            }
+        });
+
+        await tx.deliveryTransaction.create({
+            data: {
+                deliveryPersonId,
+                type: "SETTLEMENT",
+                amount: collectAmount,
+                description: `Cash collected by seller from delivery boy`,
+                status: "COMPLETED"
+            }
+        });
+
+        return dp;
+    });
+
+    return { outstandingBalance: updated.outstandingBalance };
+};
+
+export const getDeliveryTransactions = async (deliveryPersonId: string) => {
+    const session = await getAuthSession();
+    if (!session?.user || !["SELLER", "ADMIN", "SUPERADMIN"].includes(session.user.role)) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const transactions = await db.deliveryTransaction.findMany({
+        where: { deliveryPersonId },
+        include: { order: true },
+        orderBy: { createdAt: "desc" }
+    });
+
+    return { transactions };
+};
+
+export const adjustDeliveryBalance = async (req: Request, deliveryPersonId: string) => {
+    const session = await getAuthSession();
+    if (!session?.user || !["SELLER", "ADMIN", "SUPERADMIN"].includes(session.user.role)) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const { amount, type, description } = await req.json(); // type: "INCREMENT" or "DECREMENT"
+    const adjAmount = parseFloat(amount);
+
+    if (isNaN(adjAmount) || adjAmount <= 0) {
+        throw new ApiError("Invalid adjustment amount", 400);
+    }
+
+    const deliveryPerson = await db.deliveryPerson.findUnique({
+        where: { id: deliveryPersonId }
+    });
+
+    if (!deliveryPerson) {
+        throw new ApiError("Delivery person not found", 404);
+    }
+
+    const isDecrement = type === "DECREMENT";
+    const finalAmount = isDecrement ? -adjAmount : adjAmount;
+
+    if (isDecrement && adjAmount > deliveryPerson.outstandingBalance) {
+        throw new ApiError("Adjustment would make outstanding balance negative", 400);
+    }
+
+    const updated = await db.$transaction(async (tx) => {
+        const dp = await tx.deliveryPerson.update({
+            where: { id: deliveryPersonId },
+            data: {
+                outstandingBalance: isDecrement ? { decrement: adjAmount } : { increment: adjAmount }
+            }
+        });
+
+        await tx.deliveryTransaction.create({
+            data: {
+                deliveryPersonId,
+                type: "ADJUSTMENT",
+                amount: finalAmount,
+                description: description || `Balance adjustment by ${session.user.role.toLowerCase()}`,
+                status: "COMPLETED"
+            }
+        });
+
+        return dp;
+    });
+
+    return { outstandingBalance: updated.outstandingBalance };
 };

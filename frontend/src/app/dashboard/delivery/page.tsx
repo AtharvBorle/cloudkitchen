@@ -109,6 +109,7 @@ export default function DeliveryDashboard() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
     const [collectCashModalOrder, setCollectCashModalOrder] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
 
     const fetchOrders = async () => {
         try {
@@ -122,8 +123,19 @@ export default function DeliveryDashboard() {
         }
     };
 
+    const fetchProfile = async () => {
+        try {
+            const res = await fetchApi("/api/delivery/profile");
+            const data = await res.json();
+            if (res.ok) setProfile(data.profile);
+        } catch (error) {
+            console.error("Failed to fetch profile");
+        }
+    };
+
     useEffect(() => {
         fetchOrders();
+        fetchProfile();
     }, []);
 
     const updateStatus = async (orderId: string, newStatus: string) => {
@@ -133,7 +145,10 @@ export default function DeliveryDashboard() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: newStatus })
             });
-            if (res.ok) fetchOrders();
+            if (res.ok) {
+                fetchOrders();
+                fetchProfile();
+            }
             else alert("Failed to update status");
         } catch (error) {
             console.error("Update error", error);
@@ -221,6 +236,47 @@ export default function DeliveryDashboard() {
                     <h1 style={{ fontSize: '2.2rem', fontWeight: '900', color: '#1A1C23', marginBottom: '8px' }}>Delivery Hub</h1>
                     <p style={{ color: '#718096', fontSize: '1.1rem' }}>Manage your pickups and deliveries in real-time.</p>
                 </div>
+            </div>
+
+            {profile && (
+                <div style={{
+                    background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+                    borderRadius: "16px",
+                    padding: "24px",
+                    color: "white",
+                    boxShadow: "0 10px 25px rgba(15, 23, 42, 0.15)",
+                    marginBottom: "25px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "15px"
+                }}>
+                    <div>
+                        <div style={{ fontSize: "0.85rem", opacity: 0.8, fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            Outstanding COD Balance
+                        </div>
+                        <div style={{ fontSize: "2.2rem", fontWeight: "900", marginTop: "4px" }}>
+                            ₹{profile.outstandingBalance.toFixed(2)}
+                        </div>
+                        <p style={{ fontSize: "0.85rem", opacity: 0.7, marginTop: "8px", maxWidth: "480px", lineHeight: "1.4" }}>
+                            This shows the cash you have collected from COD orders that you owe to the seller. Settle this outstanding balance with your seller directly.
+                        </p>
+                    </div>
+                    <div style={{
+                        backgroundColor: "rgba(255, 255, 255, 0.08)",
+                        padding: "12px 20px",
+                        borderRadius: "12px",
+                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                        minWidth: "200px"
+                    }}>
+                        <div style={{ fontSize: "0.75rem", opacity: 0.7, textTransform: "uppercase", fontWeight: "600" }}>Seller Outlet</div>
+                        <div style={{ fontWeight: "800", fontSize: "1rem", marginTop: "4px", color: "#10B981" }}>
+                            {profile.seller?.businessName || "Your Partner Seller"}
+                        </div>
+                    </div>
+                </div>
+            )}
 
                 {/* Tabs */}
                 <div style={{ display: 'flex', backgroundColor: '#EDF2F7', padding: '4px', borderRadius: '12px', gap: '4px' }}>
@@ -237,7 +293,7 @@ export default function DeliveryDashboard() {
                         History
                     </button>
                 </div>
-            </div>
+
 
             {/* Collect Cash Modal */}
             {collectCashModalOrder && (

@@ -26,21 +26,21 @@ export async function GET(req: NextRequest) {
             const hasPropertyApproval = sellerCategory === "PROPERTY" || sellerCategory === "BOTH" || (seller && seller.propertyVerificationStatus === "APPROVED");
             
             if (category === "FOOD" && hasFoodApproval) {
-                whereClause.category = "FOOD";
+                whereClause.category = { in: ["FOOD", "BOTH"] };
             } else if (category === "PROPERTY" && hasPropertyApproval) {
-                whereClause.category = "PROPERTY";
+                whereClause.category = { in: ["PROPERTY", "BOTH"] };
             } else {
                 if (sellerCategory === "FOOD") {
-                    whereClause.category = "FOOD";
+                    whereClause.category = { in: ["FOOD", "BOTH"] };
                 } else if (sellerCategory === "PROPERTY") {
-                    whereClause.category = "PROPERTY";
+                    whereClause.category = { in: ["PROPERTY", "BOTH"] };
                 }
             }
         } else {
             if (sellerCategory === "FOOD") {
-                whereClause.category = "FOOD";
+                whereClause.category = { in: ["FOOD", "BOTH"] };
             } else if (sellerCategory === "PROPERTY") {
-                whereClause.category = "PROPERTY";
+                whereClause.category = { in: ["PROPERTY", "BOTH"] };
             }
         }
 

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 
 export const getSellerOrders = async () => {
     const session = await getAuthSession();
@@ -52,12 +53,20 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
         throw new ApiError("Order not found", 404);
     }
 
-    const updatedOrder = await db.order.update({
-        where: { id: orderId },
-        data: {
-            status: status || existingOrder.status,
-            isPaid: typeof isPaid === 'boolean' ? isPaid : existingOrder.isPaid
+    const updatedOrder = await db.$transaction(async (tx) => {
+        const uo = await tx.order.update({
+            where: { id: orderId },
+            data: {
+                status: status || existingOrder.status,
+                isPaid: typeof isPaid === 'boolean' ? isPaid : existingOrder.isPaid
+            }
+        });
+
+        if (status === "DELIVERED" && existingOrder.status !== "DELIVERED") {
+            await handleCodOrderDelivered(tx, orderId);
         }
+
+        return uo;
     });
 
     return { order: updatedOrder };
