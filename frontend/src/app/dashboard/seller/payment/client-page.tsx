@@ -1,12 +1,12 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Script from "next/script";
+import Link from "next/link";
 import { CheckCircle2, ShieldCheck, Zap } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
-export default function SellerPaymentClient({ plans }: { plans: any[] }) {
+export default function SellerPaymentClient({ plans, statusData }: { plans: any[]; statusData: any }) {
     const searchParams = useSearchParams();
     const queryPlanId = searchParams.get("planId");
     const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +14,12 @@ export default function SellerPaymentClient({ plans }: { plans: any[] }) {
     const [couponCode, setCouponCode] = useState("");
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
     const [couponError, setCouponError] = useState("");
+
+    useEffect(() => {
+        if (!selectedPlanId && plans.length > 0) {
+            setSelectedPlanId(plans[0].id);
+        }
+    }, [plans, selectedPlanId]);
 
     const handleApplyCoupon = async () => {
         if (!couponCode) return;
@@ -116,16 +122,53 @@ export default function SellerPaymentClient({ plans }: { plans: any[] }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#f8fafc", padding: "1.25rem" }}>
             <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
-            <div style={{ backgroundColor: "white", padding: "2rem 1.25rem", borderRadius: "24px", boxShadow: "0 20px 50px rgba(0,0,0,0.06)", maxWidth: "500px", width: "100%", textAlign: "center", border: "1px solid #e2e8f0" }}>
+            <div style={{ backgroundColor: "white", padding: "2rem 1.25rem", borderRadius: "24px", boxShadow: "0 20px 50px rgba(0,0,0,0.06)", maxWidth: "500px", width: "100%", border: "1px solid #e2e8f0" }}>
 
-                <div style={{ width: "72px", height: "72px", borderRadius: "50%", backgroundColor: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
-                    <ShieldCheck size={36} color="#16a34a" />
+                <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "1.5rem" }}>
+                    <Link href="/dashboard/seller" style={{ display: "flex", alignItems: "center", gap: "5px", color: "#F16F68", textDecoration: "none", fontSize: "0.9rem", fontWeight: "600" }}>
+                        ← Back to Dashboard
+                    </Link>
                 </div>
 
-                <h1 style={{ fontSize: "1.6rem", fontWeight: "800", color: "#0f172a", marginBottom: "0.5rem", letterSpacing: "-0.5px" }}>Choose Your Plan</h1>
-                <p style={{ color: "#64748b", marginBottom: "2rem", fontSize: "1rem", lineHeight: "1.5" }}>
-                    Your documents are verified! Activate your store today.
-                </p>
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ width: "72px", height: "72px", borderRadius: "50%", backgroundColor: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
+                        <ShieldCheck size={36} color="#16a34a" />
+                    </div>
+
+                    <h1 style={{ fontSize: "1.6rem", fontWeight: "800", color: "#0f172a", marginBottom: "0.5rem", letterSpacing: "-0.5px" }}>Choose Your Plan</h1>
+                    <p style={{ color: "#64748b", marginBottom: "2rem", fontSize: "1rem", lineHeight: "1.5" }}>
+                        Select a plan to subscribe or upgrade your cloud store.
+                    </p>
+                </div>
+
+                {statusData?.hasActiveSub && (
+                    <div style={{ 
+                        backgroundColor: "#f0fdf4", 
+                        border: "1px solid #bbf7d0", 
+                        borderRadius: "18px", 
+                        padding: "1.25rem", 
+                        marginBottom: "1.5rem",
+                        textAlign: "left"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#16a34a", fontWeight: "800", marginBottom: "10px", fontSize: "0.95rem" }}>
+                            <ShieldCheck size={18} /> Active Subscription
+                        </div>
+                        {statusData.activeSubs?.map((sub: any) => (
+                            <div key={sub.id} style={{ fontSize: "0.9rem", color: "#1e293b", borderBottom: statusData.activeSubs.length > 1 ? "1px dashed #bbf7d0" : "none", paddingBottom: "8px", marginBottom: "8px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700" }}>
+                                    <span>{sub.plan?.name}</span>
+                                    <span>₹{sub.plan?.price}</span>
+                                </div>
+                                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
+                                    Category: <strong style={{ color: "#0f172a" }}>{sub.plan?.category === 'BOTH' ? 'ALL' : sub.plan?.category}</strong>
+                                </div>
+                                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "2px" }}>
+                                    Expires: {new Date(sub.validUntil).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "2rem" }}>
                     {plans.length === 0 ? (

@@ -13,6 +13,7 @@ export default function SellerPaymentPage() {
     const queryCategory = searchParams.get("category");
     const [loading, setLoading] = useState(true);
     const [plans, setPlans] = useState<any[]>([]);
+    const [statusData, setStatusData] = useState<any>(null);
 
     useEffect(() => {
         if (status === "loading") return;
@@ -31,15 +32,10 @@ export default function SellerPaymentPage() {
                     return;
                 }
                 const statusDataRaw = await statusRes.json();
-                const statusData = statusDataRaw.data || statusDataRaw;
+                const sData = statusDataRaw.data || statusDataRaw;
+                setStatusData(sData);
                 
-                if (statusData.sellerProfile?.verificationStatus !== "APPROVED") {
-                    router.push("/dashboard/seller");
-                    return;
-                }
-
-                // If they already have both active, they don't need another plan
-                if (statusData.isFoodActive && statusData.isPropertyActive) {
+                if (sData.sellerProfile?.verificationStatus !== "APPROVED") {
                     router.push("/dashboard/seller");
                     return;
                 }
@@ -67,5 +63,5 @@ export default function SellerPaymentPage() {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>Loading payment options...</div>;
     }
 
-    return <SellerPaymentClient plans={plans} />;
+    return <SellerPaymentClient plans={plans} statusData={statusData} />;
 }
