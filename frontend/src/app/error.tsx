@@ -36,29 +36,45 @@ export default function Error({
                     zIndex: 1
                 }}
             />
-            
-            {/* Floating Action Buttons */}
+
+            {/* Invisible Clickable Overlay over the baked-in "GO HOME" button */}
             <div style={{
                 position: 'absolute',
-                bottom: '10%',
+                top: '74%',
                 left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 10,
-                display: 'flex',
-                gap: '15px'
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10
+            }}>
+                <Link href="/" style={{ textDecoration: 'none', display: 'block' }}>
+                    <div style={{
+                        width: '280px',
+                        height: '70px',
+                        cursor: 'pointer',
+                        backgroundColor: 'rgba(255, 255, 255, 0)',
+                        borderRadius: '8px'
+                    }} />
+                </Link>
+            </div>
+            
+            {/* Retry Button positioned floating at the top-right corner to avoid overlap */}
+            <div style={{
+                position: 'absolute',
+                top: '30px',
+                right: '30px',
+                zIndex: 15
             }}>
                 <button 
                     onClick={() => reset()}
                     style={{
-                        padding: '14px 36px',
+                        padding: '12px 28px',
                         borderRadius: '50px',
-                        backgroundColor: 'var(--teal, #008080)',
+                        backgroundColor: '#EF4444',
                         color: '#ffffff',
                         fontWeight: '700',
-                        fontSize: '1rem',
+                        fontSize: '0.95rem',
                         border: 'none',
                         cursor: 'pointer',
-                        boxShadow: '0 8px 32px rgba(0, 128, 128, 0.25)',
+                        boxShadow: '0 8px 32px rgba(239, 68, 68, 0.3)',
                         transition: 'all 0.3s ease',
                         letterSpacing: '0.5px'
                     }}
@@ -73,36 +89,6 @@ export default function Error({
                 >
                     Try Again
                 </button>
-                
-                <Link href="/" style={{ textDecoration: 'none' }}>
-                    <span
-                        style={{
-                            display: 'inline-block',
-                            padding: '14px 36px',
-                            borderRadius: '50px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            color: '#000000',
-                            fontWeight: '700',
-                            fontSize: '1rem',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                            cursor: 'pointer',
-                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
-                            backdropFilter: 'blur(8px)',
-                            transition: 'all 0.3s ease',
-                            letterSpacing: '0.5px'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#ffffff';
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-                            e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                    >
-                        Go Home
-                    </span>
-                </Link>
             </div>
         </div>
     );

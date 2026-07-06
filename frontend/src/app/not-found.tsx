@@ -27,44 +27,22 @@ export default function NotFound() {
                 }}
             />
             
-            {/* Floating Go Home Button */}
+            {/* Invisible Clickable Overlay over the baked-in "GO HOME" button */}
             <div style={{
                 position: 'absolute',
-                bottom: '10%',
+                top: '74%', // Positioned exactly over the baked-in button
                 left: '50%',
-                transform: 'translateX(-50%)',
+                transform: 'translate(-50%, -50%)',
                 zIndex: 10
             }}>
-                <Link href="/" style={{ textDecoration: 'none' }}>
-                    <span
-                        style={{
-                            display: 'inline-block',
-                            padding: '14px 36px',
-                            borderRadius: '50px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            color: '#000000',
-                            fontWeight: '700',
-                            fontSize: '1rem',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                            cursor: 'pointer',
-                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
-                            backdropFilter: 'blur(8px)',
-                            transition: 'all 0.3s ease',
-                            letterSpacing: '0.5px'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#ffffff';
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 255, 255, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.25)';
-                        }}
-                    >
-                        Go to Homepage
-                    </span>
+                <Link href="/" style={{ textDecoration: 'none', display: 'block' }}>
+                    <div style={{
+                        width: '280px',
+                        height: '70px',
+                        cursor: 'pointer',
+                        backgroundColor: 'rgba(255, 255, 255, 0)', // Fully transparent
+                        borderRadius: '8px'
+                    }} />
                 </Link>
             </div>
         </div>
