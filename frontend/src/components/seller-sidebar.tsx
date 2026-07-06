@@ -348,6 +348,10 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                     Profile & QR
                 </Link>
 
+                <Link href="/dashboard/seller/payment" style={getLinkStyle('/dashboard/seller/payment')} onClick={onClose}>
+                    Subscription
+                </Link>
+
                 <Link href="/dashboard/seller/support" style={getLinkStyle('/dashboard/seller/support')} onClick={onClose}>
                     Support & Tickets
                 </Link>
