@@ -207,7 +207,6 @@ export const verifySubscriptionPayment = async (req: Request) => {
 
     // Update seller businessCategory if plan category is BOTH or counterpart
     let targetCategory = sellerProfile.businessCategory;
-    const planCategory = plan.category || "BOTH";
 
     if (planCategory === "BOTH") {
         targetCategory = "BOTH";
