@@ -28,6 +28,9 @@ export async function GET() {
             },
             include: {
                 plan: true
+            },
+            orderBy: {
+                validUntil: "asc"
             }
         });
 

@@ -168,7 +168,23 @@ export const verifySubscriptionPayment = async (req: Request) => {
 
     const durationMonths = plan.durationMonths || 1;
 
-    const validUntil = new Date();
+    // Find the latest active subscription for the same plan to stack/extend validity
+    const latestActiveSub = await db.subscription.findFirst({
+        where: {
+            sellerId: sellerProfile.id,
+            planId: planId,
+            status: "ACTIVE",
+            validUntil: {
+                gt: new Date()
+            }
+        },
+        orderBy: {
+            validUntil: "desc"
+        }
+    });
+
+    const baseDate = latestActiveSub ? new Date(latestActiveSub.validUntil) : new Date();
+    const validUntil = new Date(baseDate);
     validUntil.setMonth(validUntil.getMonth() + durationMonths);
 
     const newSubscription = await (db as any).subscription.create({
