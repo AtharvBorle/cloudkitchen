@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { getCategoryExpiries } from "@/lib/subscription";
 
 const checkPropertyCategoryActive = async (userId: string) => {
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -25,7 +26,8 @@ const checkPropertyCategoryActive = async (userId: string) => {
         }
     });
 
-    const isPropertyActive = activeSubs.some(sub => sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH") && sellerProfile.propertyVerificationStatus === "APPROVED";
+    const { propertyExpiry } = getCategoryExpiries(activeSubs);
+    const isPropertyActive = (propertyExpiry ? propertyExpiry > new Date() : false) && sellerProfile.propertyVerificationStatus === "APPROVED";
 
     if (!isPropertyActive) {
         throw new ApiError("Property subscription not active or approved", 403);

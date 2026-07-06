@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { getCategoryExpiries } from "@/lib/subscription";
 
 const checkFoodCategoryActive = async (userId: string) => {
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -25,7 +26,8 @@ const checkFoodCategoryActive = async (userId: string) => {
         }
     });
 
-    const isFoodActive = activeSubs.some(sub => sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH") && sellerProfile.foodVerificationStatus === "APPROVED";
+    const { foodExpiry } = getCategoryExpiries(activeSubs);
+    const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
 
     if (!isFoodActive) {
         throw new ApiError("Food subscription not active or approved", 403);

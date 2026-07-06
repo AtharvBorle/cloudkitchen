@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
+import { getCategoryExpiries } from "@/lib/subscription";
 
 export async function GET(req: Request, { params }: { params: Promise<{ trackingId: string }> }) {
     try {
@@ -47,17 +48,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
             throw new ApiError("Shop not found", 404);
         }
 
-        const now = new Date();
-        const isFoodActive = seller.subscriptions.some(sub => 
-            sub.status === "ACTIVE" && 
-            (sub.validUntil === null || new Date(sub.validUntil) > now) &&
-            (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
-        );
-        const isPropertyActive = seller.subscriptions.some(sub => 
-            sub.status === "ACTIVE" && 
-            (sub.validUntil === null || new Date(sub.validUntil) > now) &&
-            (sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH")
-        );
+        const { foodExpiry, propertyExpiry } = getCategoryExpiries(seller.subscriptions);
+        const isFoodActive = foodExpiry ? foodExpiry > new Date() : false;
+        const isPropertyActive = propertyExpiry ? propertyExpiry > new Date() : false;
 
         if (!isFoodActive && !isPropertyActive) {
             throw new ApiError("Shop is currently inactive (No active subscription)", 404);

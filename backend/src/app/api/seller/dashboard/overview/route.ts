@@ -2,6 +2,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
+import { getCategoryExpiries } from "@/lib/subscription";
 
 export async function GET() {
     try {
@@ -52,8 +53,9 @@ export async function GET() {
             }
         });
 
-        const isFoodActive = activeSubs.some(sub => sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH") && sellerProfile.foodVerificationStatus === "APPROVED";
-        const isPropertyActive = activeSubs.some(sub => sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH") && sellerProfile.propertyVerificationStatus === "APPROVED";
+        const { foodExpiry, propertyExpiry } = getCategoryExpiries(activeSubs);
+        const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
+        const isPropertyActive = (propertyExpiry ? propertyExpiry > new Date() : false) && sellerProfile.propertyVerificationStatus === "APPROVED";
 
         const newestActiveSub = activeSubs.sort((a, b) => b.validUntil.getTime() - a.validUntil.getTime())[0];
 
