@@ -93,7 +93,7 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
 
                     if (verifyRes.ok) {
                         alert("Subscription activated successfully!");
-                        window.location.href = "/dashboard/seller";
+                        window.location.reload();
                     } else {
                         const verifyData = await verifyRes.json();
                         alert(verifyData.message || "Payment verification failed.");
