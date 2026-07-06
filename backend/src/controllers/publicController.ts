@@ -162,7 +162,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         });
 
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            return c.category === sellerCategory;
+            return c.category === "BOTH" || c.category === sellerCategory;
         });
 
         const safeCoupons = filteredCoupons.map((c: any) => ({
