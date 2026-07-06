@@ -68,6 +68,12 @@ export default function ManageRoomsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!editingRoom && !imageFile) {
+            alert("Please upload or take a room image.");
+            return;
+        }
+
         setLoading(true);
 
         const formData = new FormData();
@@ -520,7 +526,7 @@ export default function ManageRoomsPage() {
                             </div>
 
                             <div className="input-group" style={{ marginTop: '20px' }}>
-                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Image</label>
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', fontWeight: 'bold' }}>Image {!editingRoom && <span style={{ color: '#EF4444' }}>*</span>}</label>
                                 {editingRoom && <span style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '5px' }}>Leave empty to keep the current image</span>}
                                 {!imageFile ? (
                                     <div style={{ display: "flex", gap: "8px" }}>

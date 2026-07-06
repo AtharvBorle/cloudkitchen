@@ -112,12 +112,17 @@ export const createMenuItem = async (req: Request) => {
         throw new ApiError("Name and Price are required", 400);
     }
 
-    let imageUrl = null;
-    if (imageFile && imageFile.size > 0) {
-        const bytes = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
+    if (!foodCategoryId) {
+        throw new ApiError("Food Category is required", 400);
     }
+
+    if (!imageFile || imageFile.size === 0) {
+        throw new ApiError("Image is required", 400);
+    }
+
+    const bytes = await imageFile.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
 
     const foodItem = await db.foodItem.create({
         data: {

@@ -53,13 +53,14 @@ export const createSellerRoom = async (req: Request) => {
         throw new ApiError("Title and Price are required", 400);
     }
 
-    let imagesArray: string[] = [];
-    if (imageFile && imageFile.size > 0) {
-        const bytes = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "rooms");
-        imagesArray.push(imageUrl);
+    if (!imageFile || imageFile.size === 0) {
+        throw new ApiError("Image is required", 400);
     }
+
+    const bytes = await imageFile.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "rooms");
+    const imagesArray = [imageUrl];
 
     const room = await db.room.create({
         data: {

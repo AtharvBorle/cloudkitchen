@@ -84,6 +84,18 @@ export default function ManageMenuPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!editingItemId) {
+            if (!imageFile) {
+                alert("Please upload an image.");
+                return;
+            }
+            if (!foodCategoryId) {
+                alert("Please select a food category.");
+                return;
+            }
+        }
+
         setLoading(true);
 
         const method = editingItemId ? "PUT" : "POST";
@@ -409,7 +421,7 @@ export default function ManageMenuPage() {
 
                             {/* Food Category Dropdowns */}
                             <div className="input-group">
-                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>Food Category:</label>
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', color: 'var(--text-main)', fontWeight: 'bold' }}>Food Category <span style={{ color: '#EF4444' }}>*</span>:</label>
                                 <select
                                     value={foodCategoryId}
                                     onChange={(e) => {
@@ -418,6 +430,7 @@ export default function ManageMenuPage() {
                                     }}
                                     className="input-field"
                                     style={{ appearance: 'auto' }}
+                                    required
                                 >
                                     <option value="">Select Category...</option>
                                     {foodCategories.map((fc) => (
@@ -603,8 +616,9 @@ export default function ManageMenuPage() {
                             </div>
 
                             <div className="input-group" style={{ marginTop: '20px' }}>
-                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Image</label>
-                                <input type="file" onChange={e => setImageFile(e.target.files?.[0] || null)} className="input-field" accept="image/*" />
+                                <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', fontWeight: 'bold' }}>Image {!editingItemId && <span style={{ color: '#EF4444' }}>*</span>}</label>
+                                {editingItemId && <span style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '5px' }}>Leave empty to keep the current image</span>}
+                                <input type="file" onChange={e => setImageFile(e.target.files?.[0] || null)} className="input-field" accept="image/*" required={!editingItemId} />
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '30px' }}>
