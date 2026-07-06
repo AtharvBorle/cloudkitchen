@@ -5,6 +5,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
+import { Sparkles, Calendar, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export default function ProfileAndQRPage() {
     const [loading, setLoading] = useState(false);
@@ -29,13 +30,16 @@ export default function ProfileAndQRPage() {
 
     const [bannerFile, setBannerFile] = useState<File | null>(null);
 
+    const [subData, setSubData] = useState<any>(null);
+
     // Hardcode origin for demo purposes if window is undefined
     const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
     const shopUrl = `${origin}/shop/${trackingId}`;
 
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchProfileAndSub = async () => {
             try {
+                // Fetch profile
                 const res = await fetchApi("/api/seller/profile");
                 const data = await res.json();
                 if (res.ok) {
@@ -65,14 +69,21 @@ export default function ProfileAndQRPage() {
 
                     setOriginalData(profileData);
                 }
+
+                // Fetch subscription status
+                const subRes = await fetchApi("/api/seller/dashboard/status");
+                if (subRes.ok) {
+                    const subResData = await subRes.json();
+                    setSubData(subResData.data || subResData);
+                }
             } catch (error) {
-                console.error("Error fetching profile");
+                console.error("Error fetching profile and subscription details:", error);
             } finally {
                 setFetching(false);
             }
         };
 
-        fetchProfile();
+        fetchProfileAndSub();
     }, []);
 
     const handleCancel = () => {
@@ -337,6 +348,69 @@ export default function ProfileAndQRPage() {
                                 </button>
                             </div>
                         )}
+                    </div>
+
+                    {/* Subscription & Plans Card */}
+                    <div style={{ 
+                        backgroundColor: 'white', 
+                        padding: '30px', 
+                        borderRadius: '8px', 
+                        boxShadow: 'var(--shadow-card)',
+                        borderLeft: subData?.hasActiveSub ? '6px solid #10B981' : '6px solid #F16F68',
+                        textAlign: 'left'
+                    }}>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1A202C' }}>
+                            <Sparkles size={20} color={subData?.hasActiveSub ? '#10B981' : '#F16F68'} />
+                            Subscription & Plan
+                        </h2>
+                        
+                        {subData?.hasActiveSub ? (
+                            <div style={{ marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', color: '#10B981', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                                    <CheckCircle2 size={18} /> Active Subscription
+                                </div>
+
+                                {subData.activeSubs?.map((sub: any) => (
+                                    <div key={sub.id} style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C' }}>{sub.plan?.name}</span>
+                                            <span style={{ 
+                                                fontSize: '0.75rem', 
+                                                fontWeight: 'bold', 
+                                                backgroundColor: '#E6FFFA', 
+                                                color: '#00A389', 
+                                                padding: '2px 8px', 
+                                                borderRadius: '12px' 
+                                            }}>
+                                                {sub.plan?.category === 'BOTH' ? 'ALL' : sub.plan?.category}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#718096', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                            <Calendar size={14} />
+                                            <span>Expires: {new Date(sub.validUntil).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#4A5568', marginTop: '8px' }}>
+                                            Price: ₹{sub.plan?.price} / {sub.plan?.durationMonths} month{sub.plan?.durationMonths > 1 ? 's' : ''}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#F16F68', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                                    <AlertTriangle size={18} /> No Active Subscription
+                                </div>
+                                <p style={{ fontSize: '0.9rem', color: '#718096', lineHeight: '1.5' }}>
+                                    You do not have an active subscription plan. Please select a plan to unlock all seller dashboard features and list items.
+                                </p>
+                            </div>
+                        )}
+
+                        <Link href="/dashboard/seller/payment" style={{ textDecoration: 'none' }}>
+                            <button className="btn btn-coral" style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                                {subData?.hasActiveSub ? "Upgrade Plan" : "Get Subscription"}
+                            </button>
+                        </Link>
                     </div>
 
                 </div>
