@@ -167,15 +167,20 @@ export const verifySubscriptionPayment = async (req: Request) => {
     }
 
     const durationMonths = plan.durationMonths || 1;
+    const planCategory = plan.category || "BOTH";
 
-    // Find the latest active subscription for the same plan to stack/extend validity
+    // Find the latest active subscription for the same category to stack/extend validity
     const latestActiveSub = await db.subscription.findFirst({
         where: {
             sellerId: sellerProfile.id,
-            planId: planId,
             status: "ACTIVE",
             validUntil: {
                 gt: new Date()
+            },
+            plan: {
+                category: {
+                    in: planCategory === "BOTH" ? ["FOOD", "PROPERTY", "BOTH"] : [planCategory, "BOTH"]
+                }
             }
         },
         orderBy: {

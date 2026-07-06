@@ -364,38 +364,69 @@ export default function ProfileAndQRPage() {
                             Subscription & Plan
                         </h2>
                         
-                        {subData?.hasActiveSub ? (
-                            <div style={{ marginBottom: '20px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', color: '#10B981', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                                    <CheckCircle2 size={18} /> Active Subscription
-                                </div>
+                        {subData?.hasActiveSub ? (() => {
+                            const activeSubs = subData.activeSubs || [];
+                            const foodSubs = activeSubs.filter((s: any) => s.plan?.category === 'FOOD' || s.plan?.category === 'BOTH');
+                            const foodExpiry = foodSubs.length > 0 
+                                ? new Date(Math.max(...foodSubs.map((s: any) => new Date(s.validUntil).getTime()))) 
+                                : null;
+                            const propertySubs = activeSubs.filter((s: any) => s.plan?.category === 'PROPERTY' || s.plan?.category === 'BOTH');
+                            const propertyExpiry = propertySubs.length > 0 
+                                ? new Date(Math.max(...propertySubs.map((s: any) => new Date(s.validUntil).getTime()))) 
+                                : null;
 
-                                {subData.activeSubs?.map((sub: any) => (
-                                    <div key={sub.id} style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C' }}>{sub.plan?.name}</span>
-                                            <span style={{ 
-                                                fontSize: '0.75rem', 
-                                                fontWeight: 'bold', 
-                                                backgroundColor: '#E6FFFA', 
-                                                color: '#00A389', 
-                                                padding: '2px 8px', 
-                                                borderRadius: '12px' 
-                                            }}>
-                                                {sub.plan?.category === 'BOTH' ? 'ALL' : sub.plan?.category}
-                                            </span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#718096', fontSize: '0.85rem', marginBottom: '4px' }}>
-                                            <Calendar size={14} />
-                                            <span>Expires: {new Date(sub.validUntil).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                                        </div>
-                                        <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#4A5568', marginTop: '8px' }}>
-                                            Price: ₹{sub.plan?.price} / {sub.plan?.durationMonths} month{sub.plan?.durationMonths > 1 ? 's' : ''}
-                                        </div>
+                            return (
+                                <div style={{ marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', color: '#10B981', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                                        <CheckCircle2 size={18} /> Active Subscriptions
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
+
+                                    {foodExpiry && (
+                                        <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C' }}>Food Services</span>
+                                                <span style={{ 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: 'bold', 
+                                                    backgroundColor: '#E6FFFA', 
+                                                    color: '#00A389', 
+                                                    padding: '2px 8px', 
+                                                    borderRadius: '12px' 
+                                                }}>
+                                                    FOOD
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#718096', fontSize: '0.85rem' }}>
+                                                <Calendar size={14} />
+                                                <span>Expiry: {foodExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {propertyExpiry && (
+                                        <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '15px', marginBottom: '15px', border: '1px solid #E2E8F0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                <span style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1A202C' }}>Property Bookings</span>
+                                                <span style={{ 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: 'bold', 
+                                                    backgroundColor: '#EBF4FF', 
+                                                    color: '#3B82F6', 
+                                                    padding: '2px 8px', 
+                                                    borderRadius: '12px' 
+                                                }}>
+                                                    PROPERTY
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#718096', fontSize: '0.85rem' }}>
+                                                <Calendar size={14} />
+                                                <span>Expiry: {propertyExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })() : (
                             <div style={{ marginBottom: '20px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#F16F68', fontWeight: 'bold', fontSize: '0.95rem' }}>
                                     <AlertTriangle size={18} /> No Active Subscription

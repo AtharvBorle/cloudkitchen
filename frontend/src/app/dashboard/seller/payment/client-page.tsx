@@ -141,34 +141,56 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
                     </p>
                 </div>
 
-                {statusData?.hasActiveSub && (
-                    <div style={{ 
-                        backgroundColor: "#f0fdf4", 
-                        border: "1px solid #bbf7d0", 
-                        borderRadius: "18px", 
-                        padding: "1.25rem", 
-                        marginBottom: "1.5rem",
-                        textAlign: "left"
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#16a34a", fontWeight: "800", marginBottom: "10px", fontSize: "0.95rem" }}>
-                            <ShieldCheck size={18} /> Active Subscription
-                        </div>
-                        {statusData.activeSubs?.map((sub: any) => (
-                            <div key={sub.id} style={{ fontSize: "0.9rem", color: "#1e293b", borderBottom: statusData.activeSubs.length > 1 ? "1px dashed #bbf7d0" : "none", paddingBottom: "8px", marginBottom: "8px" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700" }}>
-                                    <span>{sub.plan?.name}</span>
-                                    <span>₹{sub.plan?.price}</span>
-                                </div>
-                                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
-                                    Category: <strong style={{ color: "#0f172a" }}>{sub.plan?.category === 'BOTH' ? 'ALL' : sub.plan?.category}</strong>
-                                </div>
-                                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "2px" }}>
-                                    Expires: {new Date(sub.validUntil).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </div>
+                {statusData?.hasActiveSub && (() => {
+                    const activeSubs = statusData.activeSubs || [];
+                    const foodSubs = activeSubs.filter((s: any) => s.plan?.category === 'FOOD' || s.plan?.category === 'BOTH');
+                    const foodExpiry = foodSubs.length > 0 
+                        ? new Date(Math.max(...foodSubs.map((s: any) => new Date(s.validUntil).getTime()))) 
+                        : null;
+                    const propertySubs = activeSubs.filter((s: any) => s.plan?.category === 'PROPERTY' || s.plan?.category === 'BOTH');
+                    const propertyExpiry = propertySubs.length > 0 
+                        ? new Date(Math.max(...propertySubs.map((s: any) => new Date(s.validUntil).getTime()))) 
+                        : null;
+
+                    return (
+                        <div style={{ 
+                            backgroundColor: "#f0fdf4", 
+                            border: "1px solid #bbf7d0", 
+                            borderRadius: "18px", 
+                            padding: "1.25rem", 
+                            marginBottom: "1.5rem",
+                            textAlign: "left"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#16a34a", fontWeight: "800", marginBottom: "12px", fontSize: "0.95rem" }}>
+                                <ShieldCheck size={18} /> Active Subscriptions
                             </div>
-                        ))}
-                    </div>
-                )}
+                            
+                            {foodExpiry && (
+                                <div style={{ fontSize: "0.9rem", color: "#1e293b", marginBottom: propertyExpiry ? "10px" : "0", borderBottom: propertyExpiry ? "1px dashed #bbf7d0" : "none", paddingBottom: propertyExpiry ? "10px" : "0" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700" }}>
+                                        <span>Food Services Category</span>
+                                        <span style={{ fontSize: "0.75rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>FOOD</span>
+                                    </div>
+                                    <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
+                                        Expiry Date: {foodExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {propertyExpiry && (
+                                <div style={{ fontSize: "0.9rem", color: "#1e293b", marginTop: foodExpiry ? "10px" : "0" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700" }}>
+                                        <span>Property Bookings Category</span>
+                                        <span style={{ fontSize: "0.75rem", backgroundColor: "#dbeafe", color: "#1e40af", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>PROPERTY</span>
+                                    </div>
+                                    <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
+                                        Expiry Date: {propertyExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "2rem" }}>
                     {plans.length === 0 ? (
