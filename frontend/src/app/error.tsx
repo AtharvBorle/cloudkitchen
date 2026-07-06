@@ -37,26 +37,52 @@ export default function Error({
                 }}
             />
 
-            {/* Invisible Clickable Overlay over the baked-in "GO HOME" button */}
+            {/* Visible Neon sci-fi "GO HOME" Button positioned overlay */}
             <div style={{
                 position: 'absolute',
-                top: '82%', // Shifted lower to perfectly align with the baked-in button
+                top: '82%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 zIndex: 10
             }}>
-                <Link href="/" style={{ textDecoration: 'none', display: 'block' }}>
-                    <div style={{
-                        width: '320px', // Enlarged target area
-                        height: '80px',
-                        cursor: 'pointer',
-                        backgroundColor: 'transparent',
-                        borderRadius: '8px'
-                    }} />
+                <Link href="/" style={{ textDecoration: 'none' }}>
+                    <span
+                        style={{
+                            display: 'inline-block',
+                            padding: '14px 45px',
+                            borderRadius: '4px',
+                            border: '2px solid #00f0ff',
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            color: '#ffffff',
+                            fontWeight: '800',
+                            fontSize: '1.1rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '2px',
+                            cursor: 'pointer',
+                            boxShadow: '0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.2)',
+                            textShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
+                            transition: 'all 0.3s ease',
+                            fontFamily: 'monospace, system-ui, sans-serif'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(0, 240, 255, 0.2)';
+                            e.currentTarget.style.boxShadow = '0 0 25px rgba(0, 240, 255, 0.6), inset 0 0 15px rgba(0, 240, 255, 0.4)';
+                            e.currentTarget.style.textShadow = '0 0 12px rgba(255, 255, 255, 1), 0 0 8px rgba(0, 240, 255, 0.8)';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+                            e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.2)';
+                            e.currentTarget.style.textShadow = '0 0 8px rgba(255, 255, 255, 0.8)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                    >
+                        GO HOME
+                    </span>
                 </Link>
             </div>
             
-            {/* Retry Button positioned floating at the top-right corner to avoid overlap */}
+            {/* Retry Button positioned floating at the top-right corner */}
             <div style={{
                 position: 'absolute',
                 top: '30px',
