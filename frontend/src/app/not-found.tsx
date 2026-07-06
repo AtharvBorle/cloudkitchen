@@ -30,17 +30,17 @@ export default function NotFound() {
             {/* Invisible Clickable Overlay over the baked-in "GO HOME" button */}
             <div style={{
                 position: 'absolute',
-                top: '74%', // Positioned exactly over the baked-in button
+                top: '82%', // Shifted lower to perfectly align with the baked-in button
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 zIndex: 10
             }}>
                 <Link href="/" style={{ textDecoration: 'none', display: 'block' }}>
                     <div style={{
-                        width: '280px',
-                        height: '70px',
+                        width: '320px', // Enlarged target area
+                        height: '80px',
                         cursor: 'pointer',
-                        backgroundColor: 'rgba(255, 255, 255, 0)', // Fully transparent
+                        backgroundColor: 'transparent',
                         borderRadius: '8px'
                     }} />
                 </Link>
