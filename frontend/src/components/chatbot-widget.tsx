@@ -1101,8 +1101,37 @@ export default function ChatbotWidget() {
                                             📝 Submit Support Ticket
                                         </div>
                                         {status !== "authenticated" ? (
-                                            <div style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: "600", textAlign: "center" }}>
-                                                Please log in to submit support tickets.
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", padding: "10px 0" }}>
+                                                <div style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: "600", textAlign: "center" }}>
+                                                    Please log in to submit support tickets.
+                                                </div>
+                                                <Link
+                                                    href="/auth/login"
+                                                    style={{
+                                                        backgroundColor: "#1E293B",
+                                                        color: "white",
+                                                        padding: "8px 20px",
+                                                        borderRadius: "8px",
+                                                        fontSize: "0.8rem",
+                                                        fontWeight: "700",
+                                                        textDecoration: "none",
+                                                        textAlign: "center",
+                                                        transition: "all 0.2s ease",
+                                                        cursor: "pointer",
+                                                        boxShadow: "0 4px 12px rgba(30, 41, 59, 0.15)",
+                                                        display: "inline-block"
+                                                    }}
+                                                    onMouseOver={(e) => {
+                                                        e.currentTarget.style.backgroundColor = "#0F172A";
+                                                        e.currentTarget.style.transform = "translateY(-1px)";
+                                                    }}
+                                                    onMouseOut={(e) => {
+                                                        e.currentTarget.style.backgroundColor = "#1E293B";
+                                                        e.currentTarget.style.transform = "translateY(0)";
+                                                    }}
+                                                >
+                                                    🔑 Log In
+                                                </Link>
                                             </div>
                                         ) : (
                                             <form onSubmit={handleTicketSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
