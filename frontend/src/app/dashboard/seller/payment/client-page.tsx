@@ -152,6 +152,22 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
                         ? new Date(Math.max(...propertySubs.map((s: any) => new Date(s.validUntil).getTime()))) 
                         : null;
 
+                    const getStackedSubs = (subsList: any[]) => {
+                        const sorted = [...subsList].sort((a, b) => new Date(a.validUntil).getTime() - new Date(b.validUntil).getTime());
+                        return sorted.map((sub, index) => {
+                            const expiry = new Date(sub.validUntil);
+                            let start = new Date(sub.createdAt);
+                            if (index > 0) {
+                                start = new Date(sorted[index - 1].validUntil);
+                            }
+                            return {
+                                ...sub,
+                                startDate: start,
+                                endDate: expiry
+                            };
+                        });
+                    };
+
                     return (
                         <div style={{ 
                             backgroundColor: "#f0fdf4", 
@@ -165,29 +181,79 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
                                 <ShieldCheck size={18} /> Active Subscriptions
                             </div>
                             
-                            {foodExpiry && (
-                                <div style={{ fontSize: "0.9rem", color: "#1e293b", marginBottom: propertyExpiry ? "10px" : "0", borderBottom: propertyExpiry ? "1px dashed #bbf7d0" : "none", paddingBottom: propertyExpiry ? "10px" : "0" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700" }}>
-                                        <span>Food Services Category</span>
-                                        <span style={{ fontSize: "0.75rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>FOOD</span>
-                                    </div>
-                                    <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
-                                        Expiry Date: {foodExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                    </div>
-                                </div>
-                            )}
+                            {foodExpiry && (() => {
+                                const stackedFood = getStackedSubs(foodSubs);
+                                return (
+                                    <div style={{ marginBottom: propertyExpiry ? "1.5rem" : "0", borderBottom: propertyExpiry ? "1px dashed #bbf7d0" : "none", paddingBottom: propertyExpiry ? "1.5rem" : "0" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", marginBottom: "8px" }}>
+                                            <div>
+                                                <span style={{ fontSize: "0.95rem", color: "#1e293b", display: "block" }}>Food Services</span>
+                                                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{stackedFood.length} plan{stackedFood.length > 1 ? 's' : ''} active/stacked</span>
+                                            </div>
+                                            <span style={{ fontSize: "0.75rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", alignSelf: "flex-start" }}>FOOD</span>
+                                        </div>
 
-                            {propertyExpiry && (
-                                <div style={{ fontSize: "0.9rem", color: "#1e293b", marginTop: foodExpiry ? "10px" : "0" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700" }}>
-                                        <span>Property Bookings Category</span>
-                                        <span style={{ fontSize: "0.75rem", backgroundColor: "#dbeafe", color: "#1e40af", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>PROPERTY</span>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "6px", margin: "10px 0" }}>
+                                            {stackedFood.map((sub: any, idx: number) => (
+                                                <div key={sub.id} style={{ fontSize: '0.8rem', color: '#4A5568', backgroundColor: 'white', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginBottom: '2px', color: '#2D3748' }}>
+                                                        <span>{idx + 1}. {sub.plan?.name || "Subscription Plan"}</span>
+                                                        <span style={{ color: '#16a34a' }}>₹{sub.amount || sub.plan?.price}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.7rem', color: '#718096' }}>
+                                                        Purchased: {new Date(sub.createdAt).toLocaleDateString()}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.7rem', color: '#4A5568', marginTop: '2px', fontWeight: '500' }}>
+                                                        Validity: {sub.startDate.toLocaleDateString()} - {sub.endDate.toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", fontWeight: "bold", color: "#1e293b", borderTop: "1px solid #dcfce7", paddingTop: "8px" }}>
+                                            <span>Final Expiry:</span>
+                                            <span style={{ color: "#15803d" }}>{foodExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
-                                        Expiry Date: {propertyExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                );
+                            })()}
+
+                            {propertyExpiry && (() => {
+                                const stackedProperty = getStackedSubs(propertySubs);
+                                return (
+                                    <div style={{ marginTop: foodExpiry ? "1.5rem" : "0" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", marginBottom: "8px" }}>
+                                            <div>
+                                                <span style={{ fontSize: "0.95rem", color: "#1e293b", display: "block" }}>Property Bookings</span>
+                                                <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{stackedProperty.length} plan{stackedProperty.length > 1 ? 's' : ''} active/stacked</span>
+                                            </div>
+                                            <span style={{ fontSize: "0.75rem", backgroundColor: "#dbeafe", color: "#1e40af", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", alignSelf: "flex-start" }}>PROPERTY</span>
+                                        </div>
+
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "6px", margin: "10px 0" }}>
+                                            {stackedProperty.map((sub: any, idx: number) => (
+                                                <div key={sub.id} style={{ fontSize: '0.8rem', color: '#4A5568', backgroundColor: 'white', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginBottom: '2px', color: '#2D3748' }}>
+                                                        <span>{idx + 1}. {sub.plan?.name || "Subscription Plan"}</span>
+                                                        <span style={{ color: '#3B82F6' }}>₹{sub.amount || sub.plan?.price}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.7rem', color: '#718096' }}>
+                                                        Purchased: {new Date(sub.createdAt).toLocaleDateString()}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.7rem', color: '#4A5568', marginTop: '2px', fontWeight: '500' }}>
+                                                        Validity: {sub.startDate.toLocaleDateString()} - {sub.endDate.toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", fontWeight: "bold", color: "#1e293b", borderTop: "1px solid #dbeafe", paddingTop: "8px" }}>
+                                            <span>Final Expiry:</span>
+                                            <span style={{ color: "#1e40af" }}>{propertyExpiry.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
                         </div>
                     );
                 })()}
