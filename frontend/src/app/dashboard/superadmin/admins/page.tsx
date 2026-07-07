@@ -279,86 +279,94 @@ export default function SuperadminDashboard() {
             {/* Edit Modal */}
             {editingAdmin && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-                        <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '20px', color: 'var(--text-main)' }}>Edit Admin</h2>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '90%', maxWidth: '800px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', margin: 0, color: 'var(--text-main)' }}>Edit Admin</h2>
 
-                        <form onSubmit={handleUpdateAdmin}>
-                            <div className="input-group">
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Name</label>
-                                <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="input-field" required />
-                            </div>
+                        <form onSubmit={handleUpdateAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                {/* Left Column: Basic Details */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Name</label>
+                                        <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="input-field" style={{ marginBottom: 0 }} required />
+                                    </div>
 
-                            <div className="input-group">
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Email</label>
-                                <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input-field" required />
-                            </div>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Email</label>
+                                        <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input-field" style={{ marginBottom: 0 }} required />
+                                    </div>
 
-                            <div className="input-group">
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Phone</label>
-                                <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input-field" required />
-                            </div>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Phone</label>
+                                        <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input-field" style={{ marginBottom: 0 }} required />
+                                    </div>
 
-                            <div className="input-group">
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>New Password (optional)</label>
-                                <input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="input-field" placeholder="Leave blank to keep current" />
-                            </div>
-
-                            <div className="input-group">
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Account Status</label>
-                                <select
-                                    value={editIsActive ? "true" : "false"}
-                                    onChange={e => setEditIsActive(e.target.value === "true")}
-                                    className="input-field" style={{ appearance: 'auto', border: '1px solid #cbd5e1' }}
-                                >
-                                    <option value="true">Active</option>
-                                    <option value="false">Inactive</option>
-                                </select>
-                            </div>
-
-                            <div className="input-group">
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Role</label>
-                                <select
-                                    value={editRole}
-                                    onChange={e => setEditRole(e.target.value)}
-                                    className="input-field" style={{ appearance: 'auto', border: '1px solid #cbd5e1' }}
-                                >
-                                    <option value="AGENT">Regional Agent</option>
-                                    <option value="SUPPORT">Support Admin</option>
-                                </select>
-                            </div>
-
-                            {editRole === "AGENT" && (
-                                <div className="input-group" style={{ marginTop: '15px' }}>
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '10px', color: '#475569', fontWeight: '500' }}>Agent Permissions (Global)</label>
-
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={editCanManageOffers}
-                                            onChange={(e) => setEditCanManageOffers(e.target.checked)}
-                                            style={{ width: '16px', height: '16px', accentColor: 'var(--coral)' }}
-                                        />
-                                        <span style={{ fontSize: '0.9rem', color: '#334155' }}>Can Manage Global Offers (Coupons)</span>
-                                    </label>
-
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={editCanManageBanners}
-                                            onChange={(e) => setEditCanManageBanners(e.target.checked)}
-                                            style={{ width: '16px', height: '16px', accentColor: 'var(--coral)' }}
-                                        />
-                                        <span style={{ fontSize: '0.9rem', color: '#334155' }}>Can Manage Global Popup Banners</span>
-                                    </label>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>New Password (optional)</label>
+                                        <input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="input-field" placeholder="Leave blank to keep current" style={{ marginBottom: 0 }} />
+                                    </div>
                                 </div>
-                            )}
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px' }}>
-                                <button type="button" onClick={() => setEditingAdmin(null)} className="btn" style={{ backgroundColor: '#f1f5f9', color: '#475569', width: 'auto', padding: '10px 20px', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
+                                {/* Right Column: Status, Role & Permissions */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Account Status</label>
+                                        <select
+                                            value={editIsActive ? "true" : "false"}
+                                            onChange={e => setEditIsActive(e.target.value === "true")}
+                                            className="input-field" style={{ appearance: 'auto', border: '1px solid #cbd5e1', marginBottom: 0 }}
+                                        >
+                                            <option value="true">Active</option>
+                                            <option value="false">Inactive</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Role</label>
+                                        <select
+                                            value={editRole}
+                                            onChange={e => setEditRole(e.target.value)}
+                                            className="input-field" style={{ appearance: 'auto', border: '1px solid #cbd5e1', marginBottom: 0 }}
+                                        >
+                                            <option value="AGENT">Regional Agent</option>
+                                            <option value="SUPPORT">Support Admin</option>
+                                        </select>
+                                    </div>
+
+                                    {editRole === "AGENT" && (
+                                        <div className="input-group" style={{ marginTop: '10px', marginBottom: 0 }}>
+                                            <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '12px', color: '#475569', fontWeight: '600' }}>Agent Permissions (Global)</label>
+
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: 'pointer', userSelect: 'none' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={editCanManageOffers}
+                                                    onChange={(e) => setEditCanManageOffers(e.target.checked)}
+                                                    style={{ width: '18px', height: '18px', accentColor: 'var(--coral)', cursor: 'pointer' }}
+                                                />
+                                                <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>Can Manage Global Offers (Coupons)</span>
+                                            </label>
+
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={editCanManageBanners}
+                                                    onChange={(e) => setEditCanManageBanners(e.target.checked)}
+                                                    style={{ width: '18px', height: '18px', accentColor: 'var(--coral)', cursor: 'pointer' }}
+                                                />
+                                                <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>Can Manage Global Popup Banners</span>
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
+                                <button type="button" onClick={() => setEditingAdmin(null)} className="btn" style={{ backgroundColor: '#f1f5f9', color: '#475569', width: 'auto', padding: '10px 24px', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
                                     Cancel
                                 </button>
-                                <button type="submit" className="btn btn-coral" style={{ width: 'auto', padding: '10px 20px', borderRadius: '8px' }} disabled={loading}>
-                                    {loading ? "Waiting..." : "Update Admin"}
+                                <button type="submit" className="btn btn-coral" style={{ width: 'auto', padding: '10px 24px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }} disabled={loading}>
+                                    {loading ? "Saving Changes..." : "Update Admin"}
                                 </button>
                             </div>
                         </form>

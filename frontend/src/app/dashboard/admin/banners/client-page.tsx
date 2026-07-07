@@ -1,9 +1,7 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
-
-
 import { useState, useEffect } from "react";
-import { Image as ImageIcon, Plus, Trash2, Eye, Link as LinkIcon, Store, Globe, Power, Loader2 } from "lucide-react";
+import { Image as ImageIcon, Plus, Trash2, Eye, Link as LinkIcon, Store, Globe, Power, Loader2, Edit2 } from "lucide-react";
 
 type SellerType = {
     id: string;
@@ -28,6 +26,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [canManage, setCanManage] = useState(true);
+    const [editingBanner, setEditingBanner] = useState<PopupBannerType | null>(null);
 
     // Form State
     const [title, setTitle] = useState("");
@@ -56,34 +55,54 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
         }
     };
 
-    const handleCreateBanner = async (e: React.FormEvent) => {
+    const handleResetForm = () => {
+        setTitle("");
+        setImageFile(null);
+        setRedirectUrl("");
+        setTarget("GLOBAL");
+        setEditingBanner(null);
+        setShowForm(false);
+    };
+
+    const handleOpenEdit = (banner: PopupBannerType) => {
+        setEditingBanner(banner);
+        setTitle(banner.title);
+        setRedirectUrl(banner.redirectUrl || "");
+        setTarget(banner.appliesToSellerId || "GLOBAL");
+        setImageFile(null);
+        setShowForm(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!canManage) return alert("You do not have permission to manage popup banners.");
-        if (!title || !imageFile) return alert("Title and Image file are required.");
+        if (!title) return alert("Title is required.");
+        if (!editingBanner && !imageFile) return alert("Image file is required.");
 
         setIsSubmitting(true);
         try {
             const formData = new FormData();
             formData.append("title", title);
-            if (redirectUrl) formData.append("redirectUrl", redirectUrl);
+            formData.append("redirectUrl", redirectUrl || "");
             formData.append("appliesToSellerId", target);
-            formData.append("image", imageFile);
+            if (imageFile) {
+                formData.append("image", imageFile);
+            }
 
-            const res = await fetchApi("/api/admin/popup-banners", {
-                method: "POST",
+            const url = editingBanner ? `/api/admin/popup-banners/${editingBanner.id}` : "/api/admin/popup-banners";
+            const method = editingBanner ? "PUT" : "POST";
+
+            const res = await fetchApi(url, {
+                method,
                 body: formData
             });
 
             if (res.ok) {
-                setTitle("");
-                setImageFile(null);
-                setRedirectUrl("");
-                setTarget("GLOBAL");
-                setShowForm(false);
+                handleResetForm();
                 fetchBanners();
             } else {
                 const err = await res.json();
-                alert(err.message || "Failed to create banner");
+                alert(err.message || `Failed to ${editingBanner ? 'update' : 'create'} banner`);
             }
         } catch (error) {
             console.error(error);
@@ -194,11 +213,13 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                     marginBottom: "2rem"
                 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-                        <h3 style={{ fontSize: "1.25rem", fontWeight: "600", color: "#1e293b", margin: 0 }}>Design New Popup</h3>
-                        <button onClick={() => setShowForm(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontWeight: "500" }}>Cancel</button>
+                        <h3 style={{ fontSize: "1.25rem", fontWeight: "600", color: "#1e293b", margin: 0 }}>
+                            {editingBanner ? "Edit Popup Banner" : "Design New Popup"}
+                        </h3>
+                        <button onClick={handleResetForm} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontWeight: "500" }}>Cancel</button>
                     </div>
 
-                    <form onSubmit={handleCreateBanner} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
                             <div>
                                 <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Campaign Title</label>
@@ -230,14 +251,24 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
 
                         <div>
                             <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Upload Image (Square or Portrait Recommended)</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                                style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", backgroundColor: "white" }}
-                                required
-                                disabled={!canManage}
-                            />
+                            <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+                                {editingBanner?.imageUrl && (
+                                    <img src={editingBanner.imageUrl} alt="Current Preview" style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                                    style={{ flex: 1, padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", backgroundColor: "white" }}
+                                    required={!editingBanner}
+                                    disabled={!canManage}
+                                />
+                            </div>
+                            {editingBanner && (
+                                <span style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px", display: "block" }}>
+                                    Leave blank to keep the current image.
+                                </span>
+                            )}
                         </div>
 
                         <div>
@@ -261,7 +292,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                 }}
                             >
                                 {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-                                Launch Popup Campaign
+                                {editingBanner ? "Save Changes" : "Launch Popup Campaign"}
                             </button>
                         </div>
                     </form>
@@ -331,6 +362,17 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                     >
                                         <Power size={14} color={banner.isActive ? "#ef4444" : "#22c55e"} />
                                         {banner.isActive ? "Pause" : "Activate"}
+                                    </button>
+                                    <button
+                                        onClick={() => handleOpenEdit(banner)}
+                                        style={{
+                                            padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "white", color: "#475569", cursor: canManage ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", opacity: canManage ? 1 : 0.6
+                                        }}
+                                        onMouseOver={(e) => { if (canManage) e.currentTarget.style.backgroundColor = "#f8fafc"; }}
+                                        onMouseOut={(e) => { if (canManage) e.currentTarget.style.backgroundColor = "white"; }}
+                                        disabled={!canManage}
+                                    >
+                                        <Edit2 size={16} />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(banner.id)}

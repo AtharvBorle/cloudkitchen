@@ -123,6 +123,63 @@ export const createPopupBanner = async (req: Request) => {
     return { banner: newBanner };
 };
 
+export const updatePopupBanner = async (req: Request, id: string) => {
+    const session = await getAuthSession();
+    if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    if (session.user.role === "AGENT") {
+        const agentProfile = await db.agentProfile.findUnique({
+            where: { userId: session.user.id }
+        });
+        if (!agentProfile || !agentProfile.canManageBanners) {
+            throw new ApiError("You do not have permission to manage popup banners", 403);
+        }
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+    let dataToUpdate: any = {};
+
+    if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        const title = formData.get("title") as string | null;
+        const redirectUrl = formData.get("redirectUrl") as string | null;
+        const appliesToSellerId = formData.get("appliesToSellerId") as string | null;
+        const imageFile = formData.get("image") as File | null;
+        const isActiveStr = formData.get("isActive") as string | null;
+
+        if (title) dataToUpdate.title = title;
+        if (redirectUrl !== null) {
+            dataToUpdate.redirectUrl = (redirectUrl === "" || redirectUrl === "null") ? null : redirectUrl;
+        }
+        if (appliesToSellerId !== null) {
+            dataToUpdate.appliesToSellerId = appliesToSellerId === "GLOBAL" ? null : appliesToSellerId;
+        }
+        if (isActiveStr !== null) {
+            dataToUpdate.isActive = isActiveStr === "true";
+        }
+        if (imageFile && imageFile.size > 0 && typeof imageFile !== "string") {
+            const buffer = Buffer.from(await imageFile.arrayBuffer());
+            const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "banners");
+            dataToUpdate.imageUrl = imageUrl;
+        }
+    } else {
+        const body = await req.json();
+        const { isActive } = body;
+        if (isActive !== undefined) {
+            dataToUpdate.isActive = isActive;
+        }
+    }
+
+    const updatedBanner = await db.popupBanner.update({
+        where: { id },
+        data: dataToUpdate
+    });
+
+    return { banner: updatedBanner };
+};
+
 export const updateSellerRegistrationStatus = async (req: Request) => {
     const session = await getAuthSession();
 
