@@ -299,7 +299,7 @@ export const collectDeliveryCash = async (req: Request, deliveryPersonId: string
 
 export const getDeliveryTransactions = async (deliveryPersonId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || !["SELLER", "ADMIN", "SUPERADMIN"].includes(session.user.role)) {
+    if (!session?.user || !["SELLER", "ADMIN", "SUPERADMIN", "AGENT"].includes(session.user.role)) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -314,7 +314,7 @@ export const getDeliveryTransactions = async (deliveryPersonId: string) => {
 
 export const adjustDeliveryBalance = async (req: Request, deliveryPersonId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || !["SELLER", "ADMIN", "SUPERADMIN"].includes(session.user.role)) {
+    if (!session?.user || !["SELLER", "ADMIN", "SUPERADMIN", "AGENT"].includes(session.user.role)) {
         throw new ApiError("Unauthorized", 401);
     }
 

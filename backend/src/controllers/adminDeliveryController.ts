@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api-error";
 
 export const getAdminDeliveryPersons = async () => {
     const session = await getAuthSession();
-    if (!session?.user || !["ADMIN", "SUPERADMIN"].includes(session.user.role)) {
+    if (!session?.user || !["ADMIN", "SUPERADMIN", "AGENT"].includes(session.user.role)) {
         throw new ApiError("Unauthorized", 401);
     }
 
