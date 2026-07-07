@@ -169,6 +169,13 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
             throw new ApiError("Forbidden: Cannot modify this coupon", 403);
         }
+    } else if (role === "AGENT") {
+        const agentProfile = await prisma.agentProfile.findUnique({
+            where: { userId: session.user.id }
+        });
+        if (!agentProfile || !agentProfile.canManageOffers) {
+            throw new ApiError("You do not have permission to manage offers", 403);
+        }
     }
 
     if (code && code.toUpperCase() !== existingCoupon.code) {
@@ -225,6 +232,13 @@ export const deleteCoupon = async (couponId: string) => {
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
             throw new ApiError("Forbidden: Cannot delete this coupon", 403);
+        }
+    } else if (role === "AGENT") {
+        const agentProfile = await prisma.agentProfile.findUnique({
+            where: { userId: session.user.id }
+        });
+        if (!agentProfile || !agentProfile.canManageOffers) {
+            throw new ApiError("You do not have permission to manage offers", 403);
         }
     }
 

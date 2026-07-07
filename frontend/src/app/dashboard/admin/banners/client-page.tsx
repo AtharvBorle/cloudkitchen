@@ -27,6 +27,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [canManage, setCanManage] = useState(true);
 
     // Form State
     const [title, setTitle] = useState("");
@@ -44,6 +45,9 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
             const data = await res.json();
             if (res.ok) {
                 setBanners(data.banners);
+                if (data.canManageBanners !== undefined) {
+                    setCanManage(data.canManageBanners);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch banners");
@@ -54,6 +58,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
 
     const handleCreateBanner = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!canManage) return alert("You do not have permission to manage popup banners.");
         if (!title || !imageFile) return alert("Title and Image file are required.");
 
         setIsSubmitting(true);
@@ -77,7 +82,8 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                 setShowForm(false);
                 fetchBanners();
             } else {
-                alert("Failed to create banner");
+                const err = await res.json();
+                alert(err.message || "Failed to create banner");
             }
         } catch (error) {
             console.error(error);
@@ -87,6 +93,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
     };
 
     const handleToggleActive = async (id: string, currentStatus: boolean) => {
+        if (!canManage) return alert("You do not have permission to manage popup banners.");
         try {
             const res = await fetchApi(`/api/admin/popup-banners/${id}`, {
                 method: "PUT",
@@ -96,6 +103,9 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
 
             if (res.ok) {
                 setBanners(prev => prev.map(b => b.id === id ? { ...b, isActive: !currentStatus } : b));
+            } else {
+                const err = await res.json();
+                alert(err.message || "Failed to update banner status");
             }
         } catch (error) {
             console.error(error);
@@ -103,6 +113,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
     };
 
     const handleDelete = async (id: string) => {
+        if (!canManage) return alert("You do not have permission to manage popup banners.");
         if (!confirm("Are you sure you want to delete this popup banner? This cannot be undone.")) return;
 
         try {
@@ -112,6 +123,9 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
 
             if (res.ok) {
                 setBanners(prev => prev.filter(b => b.id !== id));
+            } else {
+                const err = await res.json();
+                alert(err.message || "Failed to delete banner");
             }
         } catch (error) {
             console.error(error);
@@ -120,6 +134,25 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
 
     return (
         <div style={{ animation: "fadeIn 0.5s ease-out" }}>
+            {/* View-Only Mode Warning */}
+            {!canManage && (
+                <div style={{
+                    backgroundColor: "#fffdf5",
+                    border: "1px solid #fef08a",
+                    borderRadius: "12px",
+                    padding: "12px 16px",
+                    color: "#854d0e",
+                    fontSize: "0.9rem",
+                    marginBottom: "1.5rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontWeight: "500"
+                }}>
+                    <span>⚠️ You are in view-only mode. You do not have permission to create, toggle, or delete popup banners. Please contact Superadmin to request access.</span>
+                </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
                 <div>
                     <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#0f172a", marginBottom: "0.5rem" }}>
@@ -127,7 +160,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                     </h2>
                     <p style={{ color: "#64748b" }}>Create promotional popups that display when users visit stores.</p>
                 </div>
-                {!showForm && (
+                {!showForm && canManage && (
                     <button
                         onClick={() => setShowForm(true)}
                         style={{
@@ -176,6 +209,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                     placeholder="e.g. Diwali Mega Sale 50% Off"
                                     style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none" }}
                                     required
+                                    disabled={!canManage}
                                 />
                             </div>
                             <div>
@@ -184,6 +218,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                     value={target}
                                     onChange={(e) => setTarget(e.target.value)}
                                     style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", backgroundColor: "white", appearance: "auto" }}
+                                    disabled={!canManage}
                                 >
                                     <option value="GLOBAL">Global (All Users & Stores)</option>
                                     <optgroup label="Specific Stores">
@@ -201,6 +236,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                                 style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", backgroundColor: "white" }}
                                 required
+                                disabled={!canManage}
                             />
                         </div>
 
@@ -212,15 +248,16 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                 onChange={(e) => setRedirectUrl(e.target.value)}
                                 placeholder="https://yourstore.com/promo"
                                 style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none" }}
+                                disabled={!canManage}
                             />
                         </div>
 
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
                             <button
                                 type="submit"
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || !canManage}
                                 style={{
-                                    backgroundColor: "var(--primary)", color: "white", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.7 : 1
+                                    backgroundColor: "var(--primary)", color: "white", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px", cursor: (isSubmitting || !canManage) ? "not-allowed" : "pointer", opacity: (isSubmitting || !canManage) ? 0.7 : 1
                                 }}
                             >
                                 {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
@@ -238,7 +275,7 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                 <div style={{ backgroundColor: "white", padding: "4rem 2rem", borderRadius: "16px", textAlign: "center", border: "1px dashed #cbd5e1", color: "#64748b" }}>
                     <ImageIcon size={48} color="#cbd5e1" style={{ margin: "0 auto 1rem" }} />
                     <h3 style={{ fontSize: "1.25rem", color: "#334155", marginBottom: "0.5rem" }}>No Active Popups</h3>
-                    <p>Click "New Popup Banner" to create your first promotional campaign.</p>
+                    <p>{canManage ? 'Click "New Popup Banner" to create your first promotional campaign.' : 'No promotional campaigns exist yet.'}</p>
                 </div>
             ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.5rem" }}>
@@ -286,10 +323,11 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                     <button
                                         onClick={() => handleToggleActive(banner.id, banner.isActive)}
                                         style={{
-                                            flex: 1, padding: "8px", borderRadius: "8px", fontWeight: "600", fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", border: "1px solid #e2e8f0", backgroundColor: "white", color: "#334155"
+                                            flex: 1, padding: "8px", borderRadius: "8px", fontWeight: "600", fontSize: "0.85rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: canManage ? "pointer" : "not-allowed", border: "1px solid #e2e8f0", backgroundColor: "white", color: "#334155", opacity: canManage ? 1 : 0.6
                                         }}
-                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
-                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
+                                        onMouseOver={(e) => { if (canManage) e.currentTarget.style.backgroundColor = "#f8fafc"; }}
+                                        onMouseOut={(e) => { if (canManage) e.currentTarget.style.backgroundColor = "white"; }}
+                                        disabled={!canManage}
                                     >
                                         <Power size={14} color={banner.isActive ? "#ef4444" : "#22c55e"} />
                                         {banner.isActive ? "Pause" : "Activate"}
@@ -297,10 +335,11 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                     <button
                                         onClick={() => handleDelete(banner.id)}
                                         style={{
-                                            padding: "8px 12px", borderRadius: "8px", border: "1px solid #fee2e2", backgroundColor: "#fef2f2", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
+                                            padding: "8px 12px", borderRadius: "8px", border: "1px solid #fee2e2", backgroundColor: "#fef2f2", color: "#ef4444", cursor: canManage ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", opacity: canManage ? 1 : 0.5
                                         }}
-                                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = "#fee2e2"; e.currentTarget.style.borderColor = "#fca5a5"; }}
-                                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = "#fef2f2"; e.currentTarget.style.borderColor = "#fee2e2"; }}
+                                        onMouseOver={(e) => { if (canManage) { e.currentTarget.style.backgroundColor = "#fee2e2"; e.currentTarget.style.borderColor = "#fca5a5"; } }}
+                                        onMouseOut={(e) => { if (canManage) { e.currentTarget.style.backgroundColor = "#fef2f2"; e.currentTarget.style.borderColor = "#fee2e2"; } }}
+                                        disabled={!canManage}
                                     >
                                         <Trash2 size={16} />
                                     </button>

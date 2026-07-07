@@ -9,6 +9,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
 
+        if (session.user.role === "AGENT") {
+            const agentProfile = await db.agentProfile.findUnique({
+                where: { userId: session.user.id }
+            });
+            if (!agentProfile || !agentProfile.canManageBanners) {
+                return NextResponse.json({ message: "You do not have permission to manage popup banners" }, { status: 403 });
+            }
+        }
+
         const body = await req.json();
         const { isActive } = body;
         const { id } = await params;
@@ -31,6 +40,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         const session = await getAuthSession();
         if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        }
+
+        if (session.user.role === "AGENT") {
+            const agentProfile = await db.agentProfile.findUnique({
+                where: { userId: session.user.id }
+            });
+            if (!agentProfile || !agentProfile.canManageBanners) {
+                return NextResponse.json({ message: "You do not have permission to manage popup banners" }, { status: 403 });
+            }
         }
 
         const { id } = await params;

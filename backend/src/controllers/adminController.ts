@@ -40,6 +40,14 @@ export const getPopupBanners = async () => {
         throw new ApiError("Unauthorized", 401);
     }
 
+    let canManageBanners = true;
+    if (session.user.role === "AGENT") {
+        const agentProfile = await db.agentProfile.findUnique({
+            where: { userId: session.user.id }
+        });
+        canManageBanners = agentProfile?.canManageBanners || false;
+    }
+
     const banners = await db.popupBanner.findMany({
         orderBy: { createdAt: 'desc' },
     });
@@ -61,7 +69,7 @@ export const getPopupBanners = async () => {
         sellerTrackingId: b.appliesToSellerId ? sellersMap[b.appliesToSellerId]?.trackingId : null
     }));
 
-    return { banners: bannersWithSellerNames };
+    return { banners: bannersWithSellerNames, canManageBanners };
 };
 
 export const createPopupBanner = async (req: Request) => {

@@ -183,7 +183,8 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
             if (res.ok) {
                 setCoupons(prev => prev.filter(c => c.id !== id));
             } else {
-                alert("Failed to delete coupon");
+                const data = await res.json();
+                alert(data.message || "Failed to delete coupon");
             }
         } catch (error) {
             console.error("Error deleting coupon:", error);
@@ -312,7 +313,8 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
             if (res.ok) {
                 fetchCoupons();
             } else {
-                alert("Failed to toggle coupon status");
+                const data = await res.json();
+                alert(data.message || "Failed to toggle coupon status");
             }
         } catch (error) {
             console.error("Error toggling status:", error);
