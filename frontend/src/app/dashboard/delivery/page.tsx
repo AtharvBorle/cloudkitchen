@@ -10,9 +10,10 @@ const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuc
     const [dragX, setDragX] = useState(0);
     const trackRef = useRef<HTMLDivElement>(null);
     const thumbRef = useRef<HTMLDivElement>(null);
+    const hasTriggeredRef = useRef(false);
 
     const handleDrag = (clientX: number) => {
-        if (isSwiped || !trackRef.current || !thumbRef.current) return;
+        if (isSwiped || hasTriggeredRef.current || !trackRef.current || !thumbRef.current) return;
 
         const trackRect = trackRef.current.getBoundingClientRect();
         const thumbRect = thumbRef.current.getBoundingClientRect();
@@ -24,6 +25,7 @@ const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuc
         if (newX < 0) newX = 0;
         if (newX > maxDrag) {
             newX = maxDrag;
+            hasTriggeredRef.current = true;
             setIsSwiped(true);
             onSwipeSuccess();
         }
@@ -65,7 +67,9 @@ const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuc
                         window.removeEventListener('mousemove', onMouseMove);
                         window.removeEventListener('mouseup', onMouseUp);
                         // Optional: Reset if not fully swiped
-                        setDragX(prev => prev >= (trackRef.current!.getBoundingClientRect().width - thumbRef.current!.getBoundingClientRect().width - 8) ? prev : 0);
+                        if (!hasTriggeredRef.current) {
+                            setDragX(0);
+                        }
                     };
                     window.addEventListener('mousemove', onMouseMove);
                     window.addEventListener('mouseup', onMouseUp);
@@ -75,7 +79,9 @@ const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuc
                     const onTouchEnd = () => {
                         window.removeEventListener('touchmove', onTouchMove);
                         window.removeEventListener('touchend', onTouchEnd);
-                        setDragX(prev => prev >= (trackRef.current!.getBoundingClientRect().width - thumbRef.current!.getBoundingClientRect().width - 8) ? prev : 0);
+                        if (!hasTriggeredRef.current) {
+                            setDragX(0);
+                        }
                     };
                     window.addEventListener('touchmove', onTouchMove, { passive: false });
                     window.addEventListener('touchend', onTouchEnd);
