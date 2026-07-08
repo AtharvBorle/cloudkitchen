@@ -40,6 +40,11 @@ export default function ChatbotWidget() {
     const [ticketDesc, setTicketDesc] = useState("");
     const [submittingTicket, setSubmittingTicket] = useState(false);
 
+    // Category Request states for chatbot widget
+    const [reqCategoryType, setReqCategoryType] = useState("FOOD"); // "FOOD" or "ROOM"
+    const [reqCategoryName, setReqCategoryName] = useState("");
+    const [reqParentCategoryName, setReqParentCategoryName] = useState("");
+
     // Draggable chatbot widget states
     const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -790,6 +795,12 @@ export default function ChatbotWidget() {
                 setTicketTitle(title);
                 setTicketDesc(desc);
 
+                if (category === "NEW_CATEGORY_REQUEST") {
+                    setReqCategoryType("FOOD");
+                    setReqCategoryName("");
+                    setReqParentCategoryName("");
+                }
+
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
@@ -808,6 +819,9 @@ export default function ChatbotWidget() {
                 setTicketCategory("FOOD");
                 setTicketTitle("");
                 setTicketDesc("");
+                setReqCategoryType("FOOD");
+                setReqCategoryName("");
+                setReqParentCategoryName("");
 
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
@@ -1011,9 +1025,31 @@ export default function ChatbotWidget() {
             alert("Please log in to raise a support ticket.");
             return;
         }
-        if (!ticketTitle.trim() || !ticketDesc.trim()) {
-            alert("Please provide both a title and description.");
-            return;
+
+        let finalTitle = ticketTitle.trim();
+        let finalDescription = ticketDesc.trim();
+
+        if (ticketCategory === "NEW_CATEGORY_REQUEST") {
+            if (!reqCategoryName.trim()) {
+                alert("Please enter the requested category name.");
+                return;
+            }
+            if (reqCategoryType === "FOOD" && !reqParentCategoryName.trim()) {
+                alert("Please enter a parent business category.");
+                return;
+            }
+            finalTitle = `Request Category: ${reqCategoryName.trim()} (${reqCategoryType})`;
+            finalDescription = `--- Category Request Metadata ---
+Request Type: ${reqCategoryType === "FOOD" ? "Food Category" : "Room Category"}
+Requested Name: ${reqCategoryName.trim()}
+Parent Category Name: ${reqCategoryType === "FOOD" ? reqParentCategoryName.trim() : ""}
+
+Details: Category request submitted via chatbot assistant.`;
+        } else {
+            if (!finalTitle || !finalDescription) {
+                alert("Please provide both a title and description.");
+                return;
+            }
         }
 
         setSubmittingTicket(true);
@@ -1022,8 +1058,8 @@ export default function ChatbotWidget() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    title: ticketTitle.trim(),
-                    description: ticketDesc.trim(),
+                    title: finalTitle,
+                    description: finalDescription,
                     category: ticketCategory
                 })
             });
@@ -1032,6 +1068,8 @@ export default function ChatbotWidget() {
                 // Clear inputs
                 setTicketTitle("");
                 setTicketDesc("");
+                setReqCategoryName("");
+                setReqParentCategoryName("");
                 
                 // Clear active forms and show ticket creation success message
                 setMessages(prev => {
@@ -1325,28 +1363,70 @@ export default function ChatbotWidget() {
                                                         )}
                                                     </select>
                                                 </div>
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>TITLE / SUBJECT</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Title Summary..."
-                                                        value={ticketTitle}
-                                                        onChange={(e) => setTicketTitle(e.target.value)}
-                                                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
-                                                        required
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>DESCRIPTION</label>
-                                                    <textarea
-                                                        placeholder="Explain the problem..."
-                                                        rows={3}
-                                                        value={ticketDesc}
-                                                        onChange={(e) => setTicketDesc(e.target.value)}
-                                                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.85rem", resize: "none" }}
-                                                        required
-                                                    />
-                                                </div>
+                                                {ticketCategory === "NEW_CATEGORY_REQUEST" ? (
+                                                    <>
+                                                        <div>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>REQUESTED CATEGORY TYPE</label>
+                                                            <select
+                                                                value={reqCategoryType}
+                                                                onChange={(e) => setReqCategoryType(e.target.value)}
+                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                            >
+                                                                <option value="FOOD">Food Category</option>
+                                                                <option value="ROOM">Room Category</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>REQUESTED CATEGORY NAME</label>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="e.g. Mocktails, Milkshakes, Suites..."
+                                                                value={reqCategoryName}
+                                                                onChange={(e) => setReqCategoryName(e.target.value)}
+                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                                required
+                                                            />
+                                                        </div>
+                                                        {reqCategoryType === "FOOD" && (
+                                                            <div>
+                                                                <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>PARENT BUSINESS CATEGORY NAME</label>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="e.g. Homely Food, Fast Food..."
+                                                                    value={reqParentCategoryName}
+                                                                    onChange={(e) => setReqParentCategoryName(e.target.value)}
+                                                                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                                    required
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>TITLE / SUBJECT</label>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Title Summary..."
+                                                                value={ticketTitle}
+                                                                onChange={(e) => setTicketTitle(e.target.value)}
+                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>DESCRIPTION</label>
+                                                            <textarea
+                                                                placeholder="Explain the problem..."
+                                                                rows={3}
+                                                                value={ticketDesc}
+                                                                onChange={(e) => setTicketDesc(e.target.value)}
+                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.85rem", resize: "none" }}
+                                                                required
+                                                            />
+                                                        </div>
+                                                    </>
+                                                )}
                                                 <button
                                                     type="submit"
                                                     disabled={submittingTicket}
