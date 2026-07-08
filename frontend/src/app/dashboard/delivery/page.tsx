@@ -1,7 +1,7 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect, useRef } from "react";
-import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet } from "lucide-react";
+import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet, Download } from "lucide-react";
 import Script from "next/script";
 
 // Swipe Action Component
@@ -152,6 +152,58 @@ export default function DeliveryDashboard() {
         } finally {
             setLoadingTx(false);
         }
+    };
+
+    const downloadCSV = () => {
+        if (!transactions || transactions.length === 0) return;
+        
+        // CSV headers
+        const headers = ["Date", "Time", "Transaction ID", "Type", "Amount (INR)", "Description", "Order ID", "Status"];
+        
+        // Map transactions to rows
+        const rows = transactions.map((tx: any) => {
+            const date = new Date(tx.createdAt).toLocaleDateString();
+            const time = new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            let typeLabel = tx.type;
+            if (tx.type === 'COD_COLLECTION') typeLabel = 'Credited (COD Collect)';
+            else if (tx.type === 'SETTLEMENT') typeLabel = 'Debited (Settlement)';
+            else if (tx.type === 'ADJUSTMENT') typeLabel = 'Adjustment';
+
+            return [
+                date,
+                time,
+                tx.id,
+                typeLabel,
+                tx.amount,
+                tx.description || "",
+                tx.orderId || "",
+                tx.status
+            ];
+        });
+        
+        // Construct CSV content
+        const csvContent = [
+            headers.join(","),
+            ...rows.map((row: any[]) => 
+                row.map(value => {
+                    const stringVal = String(value).replace(/"/g, '""');
+                    return stringVal.includes(",") || stringVal.includes("\n") || stringVal.includes('"') 
+                        ? `"${stringVal}"` 
+                        : stringVal;
+                }).join(",")
+            )
+        ].join("\n");
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `My_Transactions_${profile?.name?.replace(/\s+/g, '_') || 'delivery'}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     useEffect(() => {
@@ -520,7 +572,19 @@ export default function DeliveryDashboard() {
 
                     {/* Transaction History Log */}
                     <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0F172A', marginBottom: '20px' }}>Wallet Transaction Logs</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0F172A', margin: 0 }}>Wallet Transaction Logs</h3>
+                            {transactions.length > 0 && (
+                                <button
+                                    onClick={downloadCSV}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #3182CE', backgroundColor: 'white', color: '#3182CE', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem', transition: 'all 0.2s' }}
+                                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#EBF8FF'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
+                                >
+                                    <Download size={16} /> Export CSV
+                                </button>
+                            )}
+                        </div>
 
                         {loadingTx ? (
                             <p style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>Loading transactions...</p>
