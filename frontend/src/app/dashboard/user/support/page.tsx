@@ -32,19 +32,7 @@ export default function UserSupportPage() {
     // Category Request States
     const [reqCategoryType, setReqCategoryType] = useState("FOOD"); // "FOOD" or "ROOM"
     const [reqCategoryName, setReqCategoryName] = useState("");
-    const [reqParentCategoryId, setReqParentCategoryId] = useState("");
-    const [parentCategories, setParentCategories] = useState<any[]>([]);
-
-    useEffect(() => {
-        if (isCreateModalOpen && session?.user?.role === "SELLER") {
-            fetchApi("/api/public/categories")
-                .then(res => res.json())
-                .then(data => {
-                    setParentCategories(data.categories || []);
-                })
-                .catch(err => console.error("Error loading categories:", err));
-        }
-    }, [isCreateModalOpen, session?.user?.role]);
+    const [reqParentCategoryName, setReqParentCategoryName] = useState("");
 
     useEffect(() => {
         setCurrentPage(1);
@@ -106,19 +94,16 @@ export default function UserSupportPage() {
                 alert("Please enter the requested category name.");
                 return;
             }
-            if (reqCategoryType === "FOOD" && !reqParentCategoryId) {
-                alert("Please select a parent business category.");
+            if (reqCategoryType === "FOOD" && !reqParentCategoryName.trim()) {
+                alert("Please enter a parent business category.");
                 return;
             }
-            const parentCat = parentCategories.find((c: any) => c.id === reqParentCategoryId);
-            const parentName = parentCat ? parentCat.name : "";
             
             finalTitle = `Request Category: ${reqCategoryName.trim()} (${reqCategoryType})`;
             finalDescription = `--- Category Request Metadata ---
 Request Type: ${reqCategoryType === "FOOD" ? "Food Category" : "Room Category"}
 Requested Name: ${reqCategoryName.trim()}
-Parent Category ID: ${reqParentCategoryId}
-Parent Category Name: ${parentName}
+Parent Category Name: ${reqParentCategoryName.trim()}
 
 Details: ${newDescription.trim()}`;
         } else {
@@ -149,7 +134,7 @@ Details: ${newDescription.trim()}`;
                 setNewTitle("");
                 setNewDescription("");
                 setReqCategoryName("");
-                setReqParentCategoryId("");
+                setReqParentCategoryName("");
                 setIsCreateModalOpen(false);
                 await fetchTickets(true); // reload and select the raised ticket
             } else {
@@ -583,18 +568,15 @@ Details: ${newDescription.trim()}`;
 
                                     {reqCategoryType === "FOOD" && (
                                         <div>
-                                            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>PARENT BUSINESS CATEGORY</label>
-                                            <select
-                                                value={reqParentCategoryId}
-                                                onChange={(e) => setReqParentCategoryId(e.target.value)}
+                                            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>PARENT BUSINESS CATEGORY NAME</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Homely Food, Fast Food, Sweets..."
+                                                value={reqParentCategoryName}
+                                                onChange={(e) => setReqParentCategoryName(e.target.value)}
                                                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
                                                 required
-                                            >
-                                                <option value="">Select Parent Business Category...</option>
-                                                {parentCategories.filter((c: any) => c.type === "FOOD").map((c: any) => (
-                                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                                ))}
-                                            </select>
+                                            />
                                         </div>
                                     )}
                                 </>

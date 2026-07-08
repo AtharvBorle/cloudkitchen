@@ -46,14 +46,12 @@ export default function SuperAdminSupportPage() {
         if (!description) return null;
         const typeMatch = description.match(/Request Type:\s*(.+)/i);
         const nameMatch = description.match(/Requested Name:\s*(.+)/i);
-        const parentIdMatch = description.match(/Parent Category ID:\s*(.+)/i);
         const parentNameMatch = description.match(/Parent Category Name:\s*(.+)/i);
 
         if (nameMatch) {
             return {
                 type: typeMatch ? typeMatch[1].trim() : "Food Category",
                 name: nameMatch[1].trim(),
-                parentId: parentIdMatch ? parentIdMatch[1].trim() : "",
                 parentName: parentNameMatch ? parentNameMatch[1].trim() : ""
             };
         }
@@ -68,9 +66,46 @@ export default function SuperAdminSupportPage() {
 
         try {
             if (reqDetails.type === "Food Category") {
+                // 1. Fetch public categories to check if parent category name exists
+                const catsRes = await fetch("/api/public/categories");
+                if (!catsRes.ok) {
+                    throw new Error("Failed to fetch existing business categories.");
+                }
+                const catsData = await catsRes.json();
+                const categories = catsData.categories || catsData.data || catsData || [];
+                
+                const parentName = reqDetails.parentName ? reqDetails.parentName.trim() : "";
+                if (!parentName) {
+                    throw new Error("Parent category name is missing from request.");
+                }
+                
+                // Case-insensitive search for parent category name
+                let parentCat = categories.find((c: any) => c.name.toLowerCase() === parentName.toLowerCase() && c.type === "FOOD");
+                let parentId = parentCat ? parentCat.id : null;
+                
+                // 2. If parent category name does not exist, create it first
+                if (!parentId) {
+                    const createParentRes = await fetchApi("/api/superadmin/categories", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: parentName,
+                            type: "FOOD"
+                        })
+                    });
+                    if (!createParentRes.ok) {
+                        const errorData = await createParentRes.json();
+                        throw new Error(errorData.message || errorData.error || `Failed to create parent category "${parentName}".`);
+                    }
+                    const newParentData = await createParentRes.json();
+                    const newParent = newParentData.category || newParentData.data || newParentData;
+                    parentId = newParent.id;
+                }
+                
+                // 3. Create the food category (item category) under parent category ID
                 const formData = new FormData();
                 formData.append("name", reqDetails.name);
-                formData.append("categoryIds", reqDetails.parentId);
+                formData.append("categoryIds", parentId);
 
                 const res = await fetch("/api/superadmin/food-categories", {
                     method: "POST",
@@ -79,9 +114,9 @@ export default function SuperAdminSupportPage() {
                 
                 const data = await res.json();
                 if (res.ok) {
-                    setCategoryCreatedMsg(`Food Category "${reqDetails.name}" created successfully!`);
+                    setCategoryCreatedMsg(`Food Category "${reqDetails.name}" successfully created under parent "${parentName}"!`);
                 } else {
-                    setCategoryErrorMsg(data.message || data.error || "Failed to create category.");
+                    setCategoryErrorMsg(data.message || data.error || "Failed to create food category.");
                 }
             } else {
                 const res = await fetchApi("/api/superadmin/categories", {
