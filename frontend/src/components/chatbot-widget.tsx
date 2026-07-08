@@ -213,6 +213,7 @@ export default function ChatbotWidget() {
     // Initial greeting on mount / reset
     const loadGreeting = () => {
         const isSeller = session?.user?.role === "SELLER";
+        const isDelivery = session?.user?.role === "DELIVERY";
         if (isSeller) {
             setMessages([
                 {
@@ -224,6 +225,21 @@ export default function ChatbotWidget() {
                         { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
                         { label: "🍱 Menu & Listings Query", action: () => handleSelectOption("seller_listings") },
                         { label: "💰 Payouts & Subscriptions", action: () => handleSelectOption("seller_payouts") },
+                        { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                    ]
+                }
+            ]);
+        } else if (isDelivery) {
+            setMessages([
+                {
+                    id: "welcome",
+                    sender: "bot",
+                    text: "Hello! I am Mansi, your delivery assistant. How can I help you with your deliveries or wallet today? Please select an option:",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
+                        { label: "💰 Wallet & Earnings", action: () => handleSelectOption("delivery_wallet") },
+                        { label: "⚙️ Duty & Profile Status", action: () => handleSelectOption("delivery_duty") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ]
                 }
@@ -259,18 +275,31 @@ export default function ChatbotWidget() {
                     return prev;
                 }
                 const isSeller = session?.user?.role === "SELLER";
-                const supportOptions = isSeller ? [
-                    { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
-                    { label: "🍱 Menu & Listings Query", action: () => handleSelectOption("seller_listings") },
-                    { label: "💰 Payouts & Subscriptions", action: () => handleSelectOption("seller_payouts") },
-                    { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
-                ] : [
-                    { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
-                    { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
-                    { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
-                    { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
-                    { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
-                ];
+                const isDelivery = session?.user?.role === "DELIVERY";
+                let supportOptions = [];
+                if (isSeller) {
+                    supportOptions = [
+                        { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
+                        { label: "🍱 Menu & Listings Query", action: () => handleSelectOption("seller_listings") },
+                        { label: "💰 Payouts & Subscriptions", action: () => handleSelectOption("seller_payouts") },
+                        { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                    ];
+                } else if (isDelivery) {
+                    supportOptions = [
+                        { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
+                        { label: "💰 Wallet, Cash Owed & Earnings", action: () => handleSelectOption("delivery_wallet") },
+                        { label: "⚙️ Shift Duty / Profile Status", action: () => handleSelectOption("delivery_duty") },
+                        { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                    ];
+                } else {
+                    supportOptions = [
+                        { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
+                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
+                        { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
+                        { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                    ];
+                }
 
                 return [
                     ...prev,
@@ -311,6 +340,9 @@ export default function ChatbotWidget() {
             case "seller_orders": userText = "📈 Received Orders & Sales"; break;
             case "seller_listings": userText = "🍱 Menu & Listings Query"; break;
             case "seller_payouts": userText = "💰 Payouts & Subscriptions"; break;
+            case "delivery_orders": userText = "🛵 My Assigned Orders"; break;
+            case "delivery_wallet": userText = "💰 Wallet & Earnings"; break;
+            case "delivery_duty": userText = "⚙️ Shift Duty & Profile Status"; break;
             case "bookings": userText = "🛌 Issues with a Room Booking"; break;
             case "seller_info": userText = "🚀 Register as a Seller"; break;
             case "payments_info": userText = "💳 Payment & Refund policy"; break;
@@ -337,7 +369,89 @@ export default function ChatbotWidget() {
                 return;
             }
 
-            if (optionType === "orders") {
+            if (optionType === "delivery_orders") {
+                if (status !== "authenticated") {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: "To view your assigned orders, you need to be logged in first.",
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                    return;
+                }
+
+                try {
+                    const res = await fetchApi("/api/delivery/orders");
+                    const data = await res.json();
+                    const orders = (data.orders || []).slice(0, 5); // top 5 recent orders
+
+                    if (orders.length === 0) {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "I couldn't find any recent assigned orders for you. Would you like to raise a support ticket?",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🎟️ Yes, raise custom ticket", action: () => handleSelectOption("custom_ticket") },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    } else {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "Please select the assigned order you are experiencing issues with:",
+                            timestamp: new Date(),
+                            ordersList: orders,
+                            options: [
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    }
+                } catch (error) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: "An error occurred while fetching your assigned orders.",
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                }
+            }
+
+            else if (optionType === "delivery_wallet") {
+                setMessages(prev => [...prev, {
+                    id: `b_${Date.now()}`,
+                    sender: "bot",
+                    text: "You can track your Cash Owed to Seller and view full transaction logs in the **Wallet & Transactions** tab of your Delivery Dashboard.\n\nWhat is the nature of your concern?",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "🎟️ Cash settlement discrepancy ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Cash Settlement Discrepancy", desc: "I am raising a query regarding my cash settlement logs or outstanding balance." }) },
+                        { label: "🎟️ Manual Adjustment request ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Manual Adjustment Request", desc: "I need to request a manual adjustment to my delivery wallet balance." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ]
+                }]);
+            }
+
+            else if (optionType === "delivery_duty") {
+                setMessages(prev => [...prev, {
+                    id: `b_${Date.now()}`,
+                    sender: "bot",
+                    text: "Your active duty status determines if you receive new orders. To toggle your status, update your profile options in the **My Profile** tab.\n\nNeed to report a shift timing or profile configuration issue?",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "🎟️ Profile / Duty timing support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Shift Duty / Profile Issue", desc: "I need help with my duty timing, active status toggle, or contact information." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ]
+                }]);
+            }
+
+            else if (optionType === "orders") {
                 if (status !== "authenticated") {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
@@ -451,6 +565,7 @@ export default function ChatbotWidget() {
             else if (optionType === "show_order_options") {
                 const order = payload;
                 const isSeller = session?.user?.role === "SELLER";
+                const isDelivery = session?.user?.role === "DELIVERY";
                 if (isSeller) {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
@@ -462,6 +577,20 @@ export default function ChatbotWidget() {
                             { label: "🍕 Food preparation / stock issue", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Prep / stock issue", issueType: "PREP_ISSUE" }) },
                             { label: "❌ Request cancellation of this order", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "❌ Request cancellation", issueType: "CANCEL_REQUEST" }) },
                             { label: "🎟️ Other issues (talk to customer care)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other issues", issueType: "OTHER_ORDER_ISSUE" }) },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                } else if (isDelivery) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: `Assigned Order #${order.id.slice(0, 8)} details:\n- Total Price: ₹${order.totalAmount}\n- Status: ${order.status}\n- Address: ${order.deliveryAddress}\n\nWhat is the nature of your concern?`,
+                        timestamp: new Date(),
+                        options: [
+                            { label: "📍 Customer address incorrect / unreachable", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "📍 Unreachable customer / bad address", issueType: "ADDRESS_ISSUE" }) },
+                            { label: "🍕 Food item damaged / spilled during transit", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Damaged food transit", issueType: "DAMAGE_ISSUE" }) },
+                            { label: "💵 COD Cash Collection issues", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "💵 Cash Collection issue", issueType: "CASH_ISSUE" }) },
+                            { label: "🎟️ Other issues", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other delivery issues", issueType: "OTHER_DELIVERY_ISSUE" }) },
                             { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                         ]
                     }]);
@@ -708,7 +837,50 @@ export default function ChatbotWidget() {
             let generatedOptions: { label: string; action: () => void }[] = [];
 
             const isSeller = session?.user?.role === "SELLER";
-            if (isSeller) {
+            const isDelivery = session?.user?.role === "DELIVERY";
+            if (isDelivery) {
+                // Delivery Query Routing
+                if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
+                    replyText = "Hello! I am Mansi, your delivery assistant. How can I help you with your deliveries or wallet today?";
+                    generatedOptions = [
+                        { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
+                        { label: "💰 Wallet & Earnings", action: () => handleSelectOption("delivery_wallet") },
+                        { label: "⚙️ Duty & Profile Status", action: () => handleSelectOption("delivery_duty") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("order") || normalizedText.includes("assign") || normalizedText.includes("deliver") || normalizedText.includes("customer") || normalizedText.includes("address") || normalizedText.includes("client")) {
+                    replyText = "You can view your active delivery tasks, mark orders as picked up, or confirm cash collection directly in your Delivery Dashboard.\n\nNeed assistance with a specific assigned order?";
+                    generatedOptions = [
+                        { label: "🛵 View Assigned Orders", action: () => handleSelectOption("delivery_orders") },
+                        { label: "🎟️ Raise delivery support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Delivery Order Assistance", desc: "I need help with an order delivery details or status update." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("wallet") || normalizedText.includes("earning") || normalizedText.includes("cash") || normalizedText.includes("cod") || normalizedText.includes("owe") || normalizedText.includes("settle") || normalizedText.includes("pay") || normalizedText.includes("money") || normalizedText.includes("balance") || normalizedText.includes("adjustment")) {
+                    replyText = "Your wallet logs display Cash Owed to Seller and transaction histories (COD Collections, Settlements, and Adjustments). Settle your outstanding COD balance directly with your seller partner.\n\nDo you have a balance query?";
+                    generatedOptions = [
+                        { label: "💰 View Wallet Options", action: () => handleSelectOption("delivery_wallet") },
+                        { label: "🎟️ Settle balance ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Wallet Balance Discrepancy", desc: "I have a discrepancy in my outstanding balance or settlement history." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else if (normalizedText.includes("duty") || normalizedText.includes("shift") || normalizedText.includes("profile") || normalizedText.includes("timing") || normalizedText.includes("status") || normalizedText.includes("offline") || normalizedText.includes("online")) {
+                    replyText = "To toggle your duty status (online/offline) or edit your phone number/email, please visit the **My Profile** tab in your Delivery Dashboard.\n\nNeed manual shift assistance?";
+                    generatedOptions = [
+                        { label: "⚙️ View Duty Options", action: () => handleSelectOption("delivery_duty") },
+                        { label: "🎟️ Duty assistance ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Shift Duty Assistance", desc: "I need manual assistance with configuring my duty status or profile settings." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+                else {
+                    replyText = "I couldn't match that query directly. Would you like to raise a support ticket to speak with our support team?";
+                    generatedOptions = [
+                        { label: "🎟️ Raise a support ticket", action: () => handleSelectOption("custom_ticket") },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ];
+                }
+            } else if (isSeller) {
                 // Seller Query Routing
                 if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
                     replyText = "Hello! I am Mansi, your seller assistant. How can I assist you with your business today?";
@@ -1214,7 +1386,7 @@ export default function ChatbotWidget() {
                                         {msg.isTicketSuccess && msg.ticketId && (
                                             <div style={{ marginTop: "10px", borderTop: "1px solid #E2E8F0", paddingTop: "8px" }}>
                                                 <Link
-                                                    href={session?.user.role === "SELLER" ? "/dashboard/seller/support" : "/dashboard/user/support"}
+                                                    href={session?.user.role === "SELLER" ? "/dashboard/seller/support" : session?.user.role === "DELIVERY" ? "/dashboard/delivery" : "/dashboard/user/support"}
                                                     style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline", fontSize: "0.8rem", display: "inline-flex", alignItems: "center" }}
                                                     onClick={() => setIsOpen(false)}
                                                 >
