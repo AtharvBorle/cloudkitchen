@@ -534,12 +534,12 @@ export default function DeliveryPersonsPage() {
 
                                                 if (tx.type === 'COD_COLLECTION') {
                                                     typeColor = '#2F855A';
-                                                    typeLabel = 'COD Collect';
+                                                    typeLabel = 'Credited (COD Collect)';
                                                     amountPrefix = '+ ';
                                                     amountColor = '#2F855A';
                                                 } else if (tx.type === 'SETTLEMENT') {
                                                     typeColor = '#2B6CB0';
-                                                    typeLabel = 'Settlement';
+                                                    typeLabel = 'Debited (Settlement)';
                                                     amountPrefix = '- ';
                                                     amountColor = '#2B6CB0';
                                                 } else if (tx.type === 'ADJUSTMENT') {

@@ -249,3 +249,26 @@ export const updateDeliveryProfile = async (req: Request) => {
 
     return { profile: updatedProfile };
 };
+
+export const getDeliveryPersonTransactions = async () => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "DELIVERY") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const deliveryProfile = await db.deliveryPerson.findUnique({
+        where: { userId: session.user.id }
+    });
+
+    if (!deliveryProfile) {
+        throw new ApiError("Delivery profile not found", 404);
+    }
+
+    const transactions = await db.deliveryTransaction.findMany({
+        where: { deliveryPersonId: deliveryProfile.id },
+        include: { order: true },
+        orderBy: { createdAt: "desc" }
+    });
+
+    return { transactions };
+};

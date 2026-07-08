@@ -1,7 +1,7 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect, useRef } from "react";
-import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck } from "lucide-react";
+import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet } from "lucide-react";
 import Script from "next/script";
 
 // Swipe Action Component
@@ -113,9 +113,11 @@ const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuc
 export default function DeliveryDashboard() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
+    const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY' | 'WALLET'>('ACTIVE');
     const [collectCashModalOrder, setCollectCashModalOrder] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [loadingTx, setLoadingTx] = useState(false);
 
     const fetchOrders = async () => {
         try {
@@ -139,10 +141,29 @@ export default function DeliveryDashboard() {
         }
     };
 
+    const fetchTransactions = async () => {
+        setLoadingTx(true);
+        try {
+            const res = await fetchApi("/api/delivery/transactions");
+            const data = await res.json();
+            if (res.ok) setTransactions(data.transactions || []);
+        } catch (error) {
+            console.error("Failed to fetch transactions");
+        } finally {
+            setLoadingTx(false);
+        }
+    };
+
     useEffect(() => {
         fetchOrders();
         fetchProfile();
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'WALLET') {
+            fetchTransactions();
+        }
+    }, [activeTab]);
 
     const updateStatus = async (orderId: string, newStatus: string) => {
         try {
@@ -219,6 +240,7 @@ export default function DeliveryDashboard() {
         // Assume money is manually collected, we just update status to DELIVERED
         await updateStatus(orderId, 'DELIVERED');
         setCollectCashModalOrder(null);
+        fetchTransactions();
     };
 
     // Segregate orders
@@ -297,6 +319,12 @@ export default function DeliveryDashboard() {
                         style={{ padding: '10px 20px', backgroundColor: activeTab === 'HISTORY' ? 'white' : 'transparent', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: activeTab === 'HISTORY' ? 'var(--primary)' : '#718096', boxShadow: activeTab === 'HISTORY' ? '0 2px 10px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s' }}
                     >
                         History
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('WALLET')}
+                        style={{ padding: '10px 20px', backgroundColor: activeTab === 'WALLET' ? 'white' : 'transparent', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: activeTab === 'WALLET' ? 'var(--primary)' : '#718096', boxShadow: activeTab === 'WALLET' ? '0 2px 10px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                        Wallet & Transactions
                     </button>
                 </div>
 
@@ -418,7 +446,7 @@ export default function DeliveryDashboard() {
                         ))}
                     </div>
                 )
-            ) : (
+            ) : activeTab === 'HISTORY' ? (
                 // HISTORY VIEW
                 Object.keys(groupedHistory).length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '80px 20px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
@@ -461,6 +489,115 @@ export default function DeliveryDashboard() {
                         ))}
                     </div>
                 )
+            ) : (
+                // WALLET VIEW
+                <div style={{ animation: "fadeIn 0.5s ease-out", display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                        {/* Summary Card 1: Cash Owed */}
+                        <div style={{ flex: 1, minWidth: '240px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Cash Owed to Seller</span>
+                                <div style={{ backgroundColor: '#FEE2E2', padding: '6px', borderRadius: '8px' }}>
+                                    <Wallet size={20} color="#EF4444" />
+                                </div>
+                            </div>
+                            <h3 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#1E293B' }}>₹{profile?.outstandingBalance.toFixed(2)}</h3>
+                            <p style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '5px' }}>Total COD collected but not yet remitted.</p>
+                        </div>
+
+                        {/* Summary Card 2: Total Transactions */}
+                        <div style={{ flex: 1, minWidth: '240px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }}>Total Transactions</span>
+                                <div style={{ backgroundColor: '#E0F2FE', padding: '6px', borderRadius: '8px' }}>
+                                    <Clock size={20} color="#0284C7" />
+                                </div>
+                            </div>
+                            <h3 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#1E293B' }}>{transactions.length}</h3>
+                            <p style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '5px' }}>All transactions in your wallet history.</p>
+                        </div>
+                    </div>
+
+                    {/* Transaction History Log */}
+                    <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0F172A', marginBottom: '20px' }}>Wallet Transaction Logs</h3>
+
+                        {loadingTx ? (
+                            <p style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>Loading transactions...</p>
+                        ) : transactions.length === 0 ? (
+                            <p style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>No transactions recorded yet.</p>
+                        ) : (
+                            <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
+                                    <thead>
+                                        <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                                            <th style={{ padding: '12px 16px', fontWeight: '600', color: '#475569' }}>Date / Time</th>
+                                            <th style={{ padding: '12px 16px', fontWeight: '600', color: '#475569' }}>Type</th>
+                                            <th style={{ padding: '12px 16px', fontWeight: '600', color: '#475569' }}>Amount</th>
+                                            <th style={{ padding: '12px 16px', fontWeight: '600', color: '#475569' }}>Details</th>
+                                            <th style={{ padding: '12px 16px', fontWeight: '600', color: '#475569' }}>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transactions.map((tx: any) => {
+                                            let typeColor = '#475569';
+                                            let typeLabel = tx.type;
+                                            let amountPrefix = '';
+                                            let amountColor = '#475569';
+
+                                            if (tx.type === 'COD_COLLECTION') {
+                                                typeColor = '#16A34A';
+                                                typeLabel = 'Credited (COD Collect)';
+                                                amountPrefix = '+ ';
+                                                amountColor = '#16A34A';
+                                            } else if (tx.type === 'SETTLEMENT') {
+                                                typeColor = '#2563EB';
+                                                typeLabel = 'Debited (Settlement)';
+                                                amountPrefix = '- ';
+                                                amountColor = '#2563EB';
+                                            } else if (tx.type === 'ADJUSTMENT') {
+                                                typeColor = '#CA8A04';
+                                                typeLabel = 'Adjustment';
+                                                amountPrefix = tx.amount < 0 ? '- ' : '+ ';
+                                                amountColor = tx.amount < 0 ? '#DC2626' : '#16A34A';
+                                            }
+
+                                            return (
+                                                <tr key={tx.id} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                                                    <td style={{ padding: '12px 16px', color: '#475569' }}>
+                                                        {new Date(tx.createdAt).toLocaleDateString()} <br />
+                                                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                                                            {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '12px 16px' }}>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: typeColor, backgroundColor: typeColor + '10', padding: '2px 8px', borderRadius: '12px' }}>
+                                                            {typeLabel}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '12px 16px', fontWeight: '700', color: amountColor }}>
+                                                        {amountPrefix}₹{Math.abs(tx.amount).toFixed(2)}
+                                                    </td>
+                                                    <td style={{ padding: '12px 16px', color: '#475569', fontSize: '0.85rem' }}>
+                                                        {tx.description}
+                                                        {tx.orderId && (
+                                                            <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '2px' }}>Order: #{tx.orderId.slice(-6)}</div>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '12px 16px' }}>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '12px' }}>
+                                                            {tx.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );
