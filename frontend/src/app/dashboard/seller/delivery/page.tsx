@@ -221,12 +221,20 @@ export default function DeliveryPersonsPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to remove this delivery person?")) return;
+    const handleDelete = async (dp: any) => {
+        if (dp.outstandingBalance > 0) {
+            alert(`Cannot delete ${dp.name} because they have an outstanding COD balance of ₹${dp.outstandingBalance.toFixed(2)}.`);
+            return;
+        }
+        if (!confirm(`Are you sure you want to remove ${dp.name}?`)) return;
         try {
-            const res = await fetchApi(`/api/seller/delivery/${id}`, { method: "DELETE" });
-            if (res.ok) fetchDeliveryPersons();
-            else alert("Failed to delete.");
+            const res = await fetchApi(`/api/seller/delivery/${dp.id}`, { method: "DELETE" });
+            if (res.ok) {
+                fetchDeliveryPersons();
+            } else {
+                const err = await res.json();
+                alert(err.message || "Failed to delete.");
+            }
         } catch (error) {
             console.error("Delete error", error);
         }
@@ -354,7 +362,7 @@ export default function DeliveryPersonsPage() {
                                         <Edit2 size={16} />
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(dp.id)}
+                                        onClick={() => handleDelete(dp)}
                                         style={{ backgroundColor: '#FFF5F5', border: '1px solid #FED7D7', padding: '8px', borderRadius: '6px', cursor: 'pointer', color: '#E53E3E' }}
                                     >
                                         <Trash2 size={16} />

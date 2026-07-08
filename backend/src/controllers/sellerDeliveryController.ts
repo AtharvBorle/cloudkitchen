@@ -191,6 +191,10 @@ export const deleteSellerDeliveryPerson = async (id: string) => {
         throw new ApiError("Delivery person not found", 404);
     }
 
+    if (existing.outstandingBalance > 0) {
+        throw new ApiError("Cannot delete delivery person with an outstanding COD balance", 400);
+    }
+
     await db.deliveryPerson.delete({
         where: { id }
     });
