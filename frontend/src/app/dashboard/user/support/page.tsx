@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { fetchApi } from "@/lib/fetch-api";
 import { MessageSquare, Plus, Clock, CheckCircle2, User, Send, Loader2, RefreshCw } from "lucide-react";
 
 export default function UserSupportPage() {
+    const { data: session } = useSession();
     const [tickets, setTickets] = useState<any[]>([]);
     const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
     const [loadingTickets, setLoadingTickets] = useState(true);
@@ -26,6 +28,23 @@ export default function UserSupportPage() {
     const [categoryFilter, setCategoryFilter] = useState("ALL");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(5);
+
+    // Category Request States
+    const [reqCategoryType, setReqCategoryType] = useState("FOOD"); // "FOOD" or "ROOM"
+    const [reqCategoryName, setReqCategoryName] = useState("");
+    const [reqParentCategoryId, setReqParentCategoryId] = useState("");
+    const [parentCategories, setParentCategories] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (isCreateModalOpen && session?.user?.role === "SELLER") {
+            fetchApi("/api/public/categories")
+                .then(res => res.json())
+                .then(data => {
+                    setParentCategories(data.categories || []);
+                })
+                .catch(err => console.error("Error loading categories:", err));
+        }
+    }, [isCreateModalOpen, session?.user?.role]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -78,14 +97,40 @@ export default function UserSupportPage() {
 
     const handleCreateTicket = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newTitle.trim() || !newDescription.trim()) return;
+        
+        let finalTitle = newTitle.trim();
+        let finalDescription = newDescription.trim();
+        
+        if (newCategory === "NEW_CATEGORY_REQUEST") {
+            if (!reqCategoryName.trim()) {
+                alert("Please enter the requested category name.");
+                return;
+            }
+            if (reqCategoryType === "FOOD" && !reqParentCategoryId) {
+                alert("Please select a parent business category.");
+                return;
+            }
+            const parentCat = parentCategories.find((c: any) => c.id === reqParentCategoryId);
+            const parentName = parentCat ? parentCat.name : "";
+            
+            finalTitle = `Request Category: ${reqCategoryName.trim()} (${reqCategoryType})`;
+            finalDescription = `--- Category Request Metadata ---
+Request Type: ${reqCategoryType === "FOOD" ? "Food Category" : "Room Category"}
+Requested Name: ${reqCategoryName.trim()}
+Parent Category ID: ${reqParentCategoryId}
+Parent Category Name: ${parentName}
 
-        if (newTitle.trim().length < 5) {
-            alert("Ticket title must be at least 5 characters long.");
-            return;
+Details: ${newDescription.trim()}`;
+        } else {
+            if (!newTitle.trim() || !newDescription.trim()) return;
+            if (newTitle.trim().length < 5) {
+                alert("Ticket title must be at least 5 characters long.");
+                return;
+            }
         }
-        if (newDescription.trim().length < 10) {
-            alert("Ticket description must be at least 10 characters long.");
+
+        if (finalDescription.length < 10) {
+            alert("Ticket description/details must be at least 10 characters long.");
             return;
         }
 
@@ -95,14 +140,16 @@ export default function UserSupportPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    title: newTitle.trim(),
-                    description: newDescription.trim(),
+                    title: finalTitle,
+                    description: finalDescription,
                     category: newCategory
                 })
             });
             if (res.ok) {
                 setNewTitle("");
                 setNewDescription("");
+                setReqCategoryName("");
+                setReqParentCategoryId("");
                 setIsCreateModalOpen(false);
                 await fetchTickets(true); // reload and select the raised ticket
             } else {
@@ -485,27 +532,85 @@ export default function UserSupportPage() {
                                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>CATEGORY</label>
                                 <select
                                     value={newCategory}
-                                    onChange={(e) => setNewCategory(e.target.value)}
+                                    onChange={(e) => {
+                                        setNewCategory(e.target.value);
+                                        if (e.target.value === "NEW_CATEGORY_REQUEST") {
+                                            setNewTitle("Request New Item Category");
+                                        } else {
+                                            setNewTitle("");
+                                        }
+                                    }}
                                     style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
                                 >
                                     <option value="FOOD">Food / Order Query</option>
                                     <option value="ROOM">Room Stay / Booking Query</option>
                                     <option value="PAYMENT">Payment & Pricing Query</option>
                                     <option value="OTHER">Other Issue</option>
+                                    {session?.user?.role === "SELLER" && (
+                                        <option value="NEW_CATEGORY_REQUEST">Request New Item Category</option>
+                                    )}
                                 </select>
                             </div>
 
-                            <div>
-                                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>TITLE</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter a brief title for your query"
-                                    value={newTitle}
-                                    onChange={(e) => setNewTitle(e.target.value)}
-                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
-                                    required
-                                />
-                            </div>
+                            {newCategory === "NEW_CATEGORY_REQUEST" ? (
+                                <>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>REQUESTED CATEGORY TYPE</label>
+                                        <select
+                                            value={reqCategoryType}
+                                            onChange={(e) => {
+                                                setReqCategoryType(e.target.value);
+                                                setReqParentCategoryId("");
+                                            }}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
+                                        >
+                                            <option value="FOOD">Food Category (Item Category)</option>
+                                            <option value="ROOM">Room Category (Parent Category)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>REQUESTED CATEGORY NAME</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Mocktails, Milkshakes, Suites..."
+                                            value={reqCategoryName}
+                                            onChange={(e) => setReqCategoryName(e.target.value)}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
+                                            required
+                                        />
+                                    </div>
+
+                                    {reqCategoryType === "FOOD" && (
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>PARENT BUSINESS CATEGORY</label>
+                                            <select
+                                                value={reqParentCategoryId}
+                                                onChange={(e) => setReqParentCategoryId(e.target.value)}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
+                                                required
+                                            >
+                                                <option value="">Select Parent Business Category...</option>
+                                                {parentCategories.filter((c: any) => c.type === "FOOD").map((c: any) => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>TITLE</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter a brief title for your query"
+                                        value={newTitle}
+                                        onChange={(e) => setNewTitle(e.target.value)}
+                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
+                                        required
+                                    />
+                                </div>
+                            )}
 
                             <div>
                                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>DESCRIPTION</label>

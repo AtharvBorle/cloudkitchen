@@ -5,7 +5,7 @@ import { uploadImage } from "@/lib/upload";
 
 export const getFoodCategories = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -29,7 +29,7 @@ export const getFoodCategories = async () => {
 
 export const createFoodCategory = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -94,7 +94,7 @@ export const createFoodCategory = async (req: Request) => {
 
 export const deleteFoodCategory = async (id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -111,7 +111,7 @@ export const deleteFoodCategory = async (id: string) => {
 
 export const createFoodSubCategory = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -161,7 +161,7 @@ export const createFoodSubCategory = async (req: Request) => {
 
 export const deleteFoodSubCategory = async (id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -178,7 +178,7 @@ export const deleteFoodSubCategory = async (id: string) => {
 
 export const updateFoodCategory = async (id: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -223,7 +223,7 @@ export const updateFoodCategory = async (id: string, req: Request) => {
 
 export const updateFoodSubCategory = async (id: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 

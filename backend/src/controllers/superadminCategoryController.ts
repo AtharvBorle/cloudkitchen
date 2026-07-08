@@ -5,7 +5,7 @@ import { revalidateTag } from "next/cache";
 
 export const getCategories = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 
@@ -23,7 +23,7 @@ export const getCategories = async () => {
 
 export const createCategory = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
+    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
         throw new ApiError("Unauthorized", 401);
     }
 

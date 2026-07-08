@@ -37,6 +37,77 @@ export default function SupportTicketsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
+    // Category Creation Action States
+    const [creatingCategory, setCreatingCategory] = useState(false);
+    const [categoryCreatedMsg, setCategoryCreatedMsg] = useState("");
+    const [categoryErrorMsg, setCategoryErrorMsg] = useState("");
+
+    const parseCategoryRequest = (description: string) => {
+        if (!description) return null;
+        const typeMatch = description.match(/Request Type:\s*(.+)/i);
+        const nameMatch = description.match(/Requested Name:\s*(.+)/i);
+        const parentIdMatch = description.match(/Parent Category ID:\s*(.+)/i);
+        const parentNameMatch = description.match(/Parent Category Name:\s*(.+)/i);
+
+        if (nameMatch) {
+            return {
+                type: typeMatch ? typeMatch[1].trim() : "Food Category",
+                name: nameMatch[1].trim(),
+                parentId: parentIdMatch ? parentIdMatch[1].trim() : "",
+                parentName: parentNameMatch ? parentNameMatch[1].trim() : ""
+            };
+        }
+        return null;
+    };
+
+    const handleCreateCategoryFromTicket = async (reqDetails: any) => {
+        if (!reqDetails) return;
+        setCreatingCategory(true);
+        setCategoryCreatedMsg("");
+        setCategoryErrorMsg("");
+
+        try {
+            if (reqDetails.type === "Food Category") {
+                const formData = new FormData();
+                formData.append("name", reqDetails.name);
+                formData.append("categoryIds", reqDetails.parentId);
+
+                const res = await fetch("/api/superadmin/food-categories", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    setCategoryCreatedMsg(`Food Category "${reqDetails.name}" created successfully!`);
+                } else {
+                    setCategoryErrorMsg(data.message || data.error || "Failed to create category.");
+                }
+            } else {
+                const res = await fetchApi("/api/superadmin/categories", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: reqDetails.name,
+                        type: "ROOM"
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    setCategoryCreatedMsg(`Room Category "${reqDetails.name}" created successfully!`);
+                } else {
+                    setCategoryErrorMsg(data.message || data.error || "Failed to create category.");
+                }
+            }
+        } catch (error: any) {
+            console.error("Error creating category:", error);
+            setCategoryErrorMsg(error.message || "An error occurred.");
+        } finally {
+            setCreatingCategory(false);
+        }
+    };
+
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, statusFilter, categoryFilter]);
@@ -103,6 +174,9 @@ export default function SupportTicketsPage() {
         if (selectedTicket) {
             setActionOrder(null);
             setActionOrderId("");
+            setCategoryCreatedMsg("");
+            setCategoryErrorMsg("");
+            setCreatingCategory(false);
             
             // Search for potential 8-character hex order IDs in title and description
             const textToSearch = `${selectedTicket.title} ${selectedTicket.description}`;
@@ -824,6 +898,68 @@ export default function SupportTicketsPage() {
 
                                 {/* Right Side: User Activities & Refund Trigger */}
                                 <div style={{ width: "320px", backgroundColor: "#F8FAFC", display: "flex", flexDirection: "column", padding: "15px", overflowY: "auto", maxHeight: "550px", borderBottomRightRadius: "16px" }}>
+                                    {selectedTicket.category === "NEW_CATEGORY_REQUEST" && (() => {
+                                         const reqDetails = parseCategoryRequest(selectedTicket.description);
+                                         if (!reqDetails) return null;
+
+                                         return (
+                                             <div style={{ marginBottom: "20px", borderBottom: "1px dashed #E2E8F0", paddingBottom: "15px" }}>
+                                                 <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
+                                                     CATEGORY REQUEST PANEL
+                                                 </h4>
+                                                 <div style={{ backgroundColor: "white", padding: "12px", borderRadius: "8px", border: "1px solid #E2E8F0", fontSize: "0.75rem" }}>
+                                                     <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "10px" }}>
+                                                         <div>
+                                                             <strong style={{ color: "#475569" }}>Requested Name:</strong>
+                                                             <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "#1E293B", marginTop: "2px" }}>{reqDetails.name}</div>
+                                                         </div>
+                                                         <div>
+                                                             <strong style={{ color: "#475569" }}>Type:</strong>
+                                                             <div style={{ fontWeight: "600", color: "#1E293B" }}>{reqDetails.type}</div>
+                                                         </div>
+                                                         {reqDetails.type === "Food Category" && (
+                                                             <div>
+                                                                 <strong style={{ color: "#475569" }}>Parent Category:</strong>
+                                                                 <div style={{ fontWeight: "600", color: "#1E293B" }}>{reqDetails.parentName}</div>
+                                                             </div>
+                                                         )}
+                                                     </div>
+
+                                                     {categoryCreatedMsg && (
+                                                         <div style={{ color: "#065F46", backgroundColor: "#D1FAE5", padding: "8px", borderRadius: "6px", marginBottom: "10px", fontWeight: "600" }}>
+                                                             {categoryCreatedMsg}
+                                                         </div>
+                                                     )}
+
+                                                     {categoryErrorMsg && (
+                                                         <div style={{ color: "#991B1B", backgroundColor: "#FEE2E2", padding: "8px", borderRadius: "6px", marginBottom: "10px", fontWeight: "600" }}>
+                                                             {categoryErrorMsg}
+                                                         </div>
+                                                     )}
+
+                                                     <button
+                                                         type="button"
+                                                         onClick={() => handleCreateCategoryFromTicket(reqDetails)}
+                                                         disabled={creatingCategory || !!categoryCreatedMsg}
+                                                         style={{
+                                                             width: "100%",
+                                                             padding: "10px",
+                                                             backgroundColor: categoryCreatedMsg ? "#10B981" : "var(--primary, #10B981)",
+                                                             color: "white",
+                                                             border: "none",
+                                                             borderRadius: "6px",
+                                                             fontWeight: "700",
+                                                             cursor: categoryCreatedMsg ? "default" : "pointer",
+                                                             fontSize: "0.75rem",
+                                                             transition: "background 0.2s"
+                                                         }}
+                                                     >
+                                                         {creatingCategory ? "Adding Category..." : categoryCreatedMsg ? "Added successfully" : `Add "${reqDetails.name}" Category`}
+                                                     </button>
+                                                 </div>
+                                             </div>
+                                         );
+                                     })()}
                                     <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
                                         ORDER & REFUND PANEL
                                     </h4>
