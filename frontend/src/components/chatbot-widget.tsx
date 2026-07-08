@@ -761,10 +761,11 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "To manage your food menu items, kitchen settings, or room stay listings, please navigate to the respective tabs in your Seller Dashboard:\n- 'Manage Menu': Update availability/prices/add items.\n- 'Manage Rooms': Add rooms, check bookings.\n\nIf you are facing errors or need assistance, raise a support ticket below:",
+                    text: "To manage your food menu items, kitchen settings, or room stay listings, please navigate to the respective tabs in your Seller Dashboard:\n- 'Manage Menu': Update availability/prices/add items.\n- 'Manage Rooms': Add rooms, check bookings.\n\nIf you want to request a new item/room category or need general support, select an option below:",
                     timestamp: new Date(),
                     options: [
                         { label: "🎟️ Raise ticket for Listings support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Menu/Room listing assistance request", desc: "I need help with configuring my menu items or room stay details." }) },
+                        { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\nParent Category ID: [Enter Parent Category ID]\nParent Category Name: [Enter Parent Category Name]\n\nDetails: Please add more description here..." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
                 }]);
@@ -899,10 +900,11 @@ export default function ChatbotWidget() {
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
-                else if (normalizedText.includes("menu") || normalizedText.includes("listing") || normalizedText.includes("food") || normalizedText.includes("room") || normalizedText.includes("dish") || normalizedText.includes("price") || normalizedText.includes("add") || normalizedText.includes("modify") || normalizedText.includes("create")) {
-                    replyText = "To manage your products:\n- **Food Menu**: Go to the 'Manage Menu' section of your Seller Dashboard to add food items, set prices, and update availability.\n- **Room Stays**: Go to the 'Manage Rooms' section to add room types, set prices, and check bookings.\n\nNeed help configuration listings?";
+                else if (normalizedText.includes("menu") || normalizedText.includes("listing") || normalizedText.includes("food") || normalizedText.includes("room") || normalizedText.includes("dish") || normalizedText.includes("price") || normalizedText.includes("add") || normalizedText.includes("modify") || normalizedText.includes("create") || normalizedText.includes("category")) {
+                    replyText = "To manage your products:\n- **Food Menu**: Go to the 'Manage Menu' section of your Seller Dashboard to add food items, set prices, and update availability.\n- **Room Stays**: Go to the 'Manage Rooms' section to add room types, set prices, and check bookings.\n\nIf the category you need is not listed, you can request a new item/room category or raise a listing ticket:";
                     generatedOptions = [
                         { label: "🎟️ Raise listing ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Listing configuration support", desc: "I need help configuring my kitchen food menu or room booking listings." }) },
+                        { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\nParent Category ID: [Enter Parent Category ID]\nParent Category Name: [Enter Parent Category Name]\n\nDetails: Please add more description here..." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
@@ -1318,6 +1320,9 @@ export default function ChatbotWidget() {
                                                         <option value="ROOM">Room Stay</option>
                                                         <option value="PAYMENT">Payment & Refund</option>
                                                         <option value="OTHER">Other Query</option>
+                                                        {session?.user?.role === "SELLER" && (
+                                                            <option value="NEW_CATEGORY_REQUEST">Request New Item Category</option>
+                                                        )}
                                                     </select>
                                                 </div>
                                                 <div>
