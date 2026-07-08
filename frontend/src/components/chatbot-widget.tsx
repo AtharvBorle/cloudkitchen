@@ -43,7 +43,6 @@ export default function ChatbotWidget() {
     // Category Request states for chatbot widget
     const [reqCategoryType, setReqCategoryType] = useState("FOOD"); // "FOOD" or "ROOM"
     const [reqCategoryName, setReqCategoryName] = useState("");
-    const [reqParentCategoryName, setReqParentCategoryName] = useState("");
 
     // Draggable chatbot widget states
     const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -798,7 +797,6 @@ export default function ChatbotWidget() {
                 if (category === "NEW_CATEGORY_REQUEST") {
                     setReqCategoryType("FOOD");
                     setReqCategoryName("");
-                    setReqParentCategoryName("");
                 }
 
                 setMessages(prev => [...prev, {
@@ -821,7 +819,6 @@ export default function ChatbotWidget() {
                 setTicketDesc("");
                 setReqCategoryType("FOOD");
                 setReqCategoryName("");
-                setReqParentCategoryName("");
 
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
@@ -1034,15 +1031,10 @@ export default function ChatbotWidget() {
                 alert("Please enter the requested category name.");
                 return;
             }
-            if (reqCategoryType === "FOOD" && !reqParentCategoryName.trim()) {
-                alert("Please enter a parent business category.");
-                return;
-            }
             finalTitle = `Request Category: ${reqCategoryName.trim()} (${reqCategoryType})`;
             finalDescription = `--- Category Request Metadata ---
 Request Type: ${reqCategoryType === "FOOD" ? "Food Category" : "Room Category"}
 Requested Name: ${reqCategoryName.trim()}
-Parent Category Name: ${reqCategoryType === "FOOD" ? reqParentCategoryName.trim() : ""}
 
 Details: Category request submitted via chatbot assistant.`;
         } else {
@@ -1069,7 +1061,6 @@ Details: Category request submitted via chatbot assistant.`;
                 setTicketTitle("");
                 setTicketDesc("");
                 setReqCategoryName("");
-                setReqParentCategoryName("");
                 
                 // Clear active forms and show ticket creation success message
                 setMessages(prev => {
@@ -1387,19 +1378,7 @@ Details: Category request submitted via chatbot assistant.`;
                                                                 required
                                                             />
                                                         </div>
-                                                        {reqCategoryType === "FOOD" && (
-                                                            <div>
-                                                                <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>PARENT BUSINESS CATEGORY NAME</label>
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="e.g. Homely Food, Fast Food..."
-                                                                    value={reqParentCategoryName}
-                                                                    onChange={(e) => setReqParentCategoryName(e.target.value)}
-                                                                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
-                                                                    required
-                                                                />
-                                                            </div>
-                                                        )}
+
                                                     </>
                                                 ) : (
                                                     <>

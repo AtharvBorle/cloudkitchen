@@ -32,7 +32,6 @@ export default function UserSupportPage() {
     // Category Request States
     const [reqCategoryType, setReqCategoryType] = useState("FOOD"); // "FOOD" or "ROOM"
     const [reqCategoryName, setReqCategoryName] = useState("");
-    const [reqParentCategoryName, setReqParentCategoryName] = useState("");
 
     useEffect(() => {
         setCurrentPage(1);
@@ -94,16 +93,11 @@ export default function UserSupportPage() {
                 alert("Please enter the requested category name.");
                 return;
             }
-            if (reqCategoryType === "FOOD" && !reqParentCategoryName.trim()) {
-                alert("Please enter a parent business category.");
-                return;
-            }
             
             finalTitle = `Request Category: ${reqCategoryName.trim()} (${reqCategoryType})`;
             finalDescription = `--- Category Request Metadata ---
 Request Type: ${reqCategoryType === "FOOD" ? "Food Category" : "Room Category"}
 Requested Name: ${reqCategoryName.trim()}
-Parent Category Name: ${reqCategoryType === "FOOD" ? reqParentCategoryName.trim() : ""}
 
 Details: Category request submitted via dashboard form.`;
         } else {
@@ -566,19 +560,7 @@ Details: Category request submitted via dashboard form.`;
                                         />
                                     </div>
 
-                                    {reqCategoryType === "FOOD" && (
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>PARENT BUSINESS CATEGORY NAME</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Homely Food, Fast Food, Sweets..."
-                                                value={reqParentCategoryName}
-                                                onChange={(e) => setReqParentCategoryName(e.target.value)}
-                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
-                                                required
-                                            />
-                                        </div>
-                                    )}
+
                                 </>
                             ) : (
                                 <div>
