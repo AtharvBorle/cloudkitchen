@@ -103,9 +103,9 @@ export default function UserSupportPage() {
             finalDescription = `--- Category Request Metadata ---
 Request Type: ${reqCategoryType === "FOOD" ? "Food Category" : "Room Category"}
 Requested Name: ${reqCategoryName.trim()}
-Parent Category Name: ${reqParentCategoryName.trim()}
+Parent Category Name: ${reqCategoryType === "FOOD" ? reqParentCategoryName.trim() : ""}
 
-Details: ${newDescription.trim()}`;
+Details: Category request submitted via dashboard form.`;
         } else {
             if (!newTitle.trim() || !newDescription.trim()) return;
             if (newTitle.trim().length < 5) {
@@ -114,7 +114,7 @@ Details: ${newDescription.trim()}`;
             }
         }
 
-        if (finalDescription.length < 10) {
+        if (newCategory !== "NEW_CATEGORY_REQUEST" && finalDescription.length < 10) {
             alert("Ticket description/details must be at least 10 characters long.");
             return;
         }
@@ -594,17 +594,19 @@ Details: ${newDescription.trim()}`;
                                 </div>
                             )}
 
-                            <div>
-                                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>DESCRIPTION</label>
-                                <textarea
-                                    placeholder="Describe your issue in detail..."
-                                    rows={4}
-                                    value={newDescription}
-                                    onChange={(e) => setNewDescription(e.target.value)}
-                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem", resize: "none" }}
-                                    required
-                                />
-                            </div>
+                            {newCategory !== "NEW_CATEGORY_REQUEST" && (
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>DESCRIPTION</label>
+                                    <textarea
+                                        placeholder="Describe your issue in detail..."
+                                        rows={4}
+                                        value={newDescription}
+                                        onChange={(e) => setNewDescription(e.target.value)}
+                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem", resize: "none" }}
+                                        required
+                                    />
+                                </div>
+                            )}
 
                             <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
                                 <button
