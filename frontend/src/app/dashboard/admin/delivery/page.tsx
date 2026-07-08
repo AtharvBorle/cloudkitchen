@@ -49,6 +49,11 @@ export default function AdminDeliveryPage() {
     const handleAdjustBalance = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedDp) return;
+        const val = parseFloat(adjAmount);
+        if (isNaN(val) || val <= 1) {
+            alert("Adjustment amount must be greater than ₹1");
+            return;
+        }
         setLoading(true);
         try {
             const res = await fetchApi(`/api/seller/delivery/${selectedDp.id}/adjust`, {

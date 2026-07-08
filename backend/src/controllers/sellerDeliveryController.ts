@@ -265,8 +265,8 @@ export const collectDeliveryCash = async (req: Request, deliveryPersonId: string
     const { amount } = await req.json();
     const collectAmount = parseFloat(amount);
 
-    if (isNaN(collectAmount) || collectAmount <= 0) {
-        throw new ApiError("Invalid collection amount", 400);
+    if (isNaN(collectAmount) || collectAmount <= 1) {
+        throw new ApiError("Collection amount must be greater than ₹1", 400);
     }
 
     if (collectAmount > deliveryPerson.outstandingBalance) {
@@ -321,8 +321,8 @@ export const adjustDeliveryBalance = async (req: Request, deliveryPersonId: stri
     const { amount, type, description } = await req.json(); // type: "INCREMENT" or "DECREMENT"
     const adjAmount = parseFloat(amount);
 
-    if (isNaN(adjAmount) || adjAmount <= 0) {
-        throw new ApiError("Invalid adjustment amount", 400);
+    if (isNaN(adjAmount) || adjAmount <= 1) {
+        throw new ApiError("Adjustment amount must be greater than ₹1", 400);
     }
 
     const deliveryPerson = await db.deliveryPerson.findUnique({
