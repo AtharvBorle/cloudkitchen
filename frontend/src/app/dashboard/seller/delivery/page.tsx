@@ -326,12 +326,6 @@ export default function DeliveryPersonsPage() {
                                                 Collect Cash
                                             </button>
                                         )}
-                                        <button
-                                            onClick={() => openAdjustModal(dp)}
-                                            style={{ backgroundColor: '#F7FAFC', color: '#4A5568', border: '1px solid #E2E8F0', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                                        >
-                                            Adjust
-                                        </button>
                                     </div>
                                 </div>
                                 <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-start' }}>
@@ -495,69 +489,7 @@ export default function DeliveryPersonsPage() {
                 </div>
             )}
 
-            {/* Adjust Balance Modal */}
-            {adjustModalOpen && selectedDp && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                    <div style={{ backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '400px', padding: '30px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>Adjust Wallet Balance</h2>
-                            <button onClick={() => setAdjustModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                                <X size={24} color="#A0AEC0" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleAdjustBalance}>
-                            <p style={{ color: '#718096', fontSize: '0.9rem', marginBottom: '15px' }}>
-                                Manually adjust outstanding balance for <strong>{selectedDp.name}</strong>.
-                            </p>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', fontWeight: '500' }}>Adjustment Action</label>
-                                <select
-                                    value={adjType} onChange={e => setAdjType(e.target.value as any)}
-                                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '1rem' }}
-                                >
-                                    <option value="DECREMENT">Decrement (Reduce Balance)</option>
-                                    <option value="INCREMENT">Increment (Increase Balance)</option>
-                                </select>
-                            </div>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', fontWeight: '500' }}>Amount</label>
-                                <div style={{ position: 'relative' }}>
-                                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#718096', fontWeight: 'bold' }}>₹</span>
-                                    <input
-                                        type="number" step="0.01" min="0.01" value={adjAmount} onChange={e => setAdjAmount(e.target.value)} required
-                                        style={{ width: '100%', padding: '12px 12px 12px 30px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '1.1rem', fontWeight: 'bold' }}
-                                    />
-                                </div>
-                            </div>
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', fontWeight: '500' }}>Description / Reason</label>
-                                <input
-                                    type="text" value={adjDesc} onChange={e => setAdjDesc(e.target.value)} required
-                                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '1rem' }}
-                                    placeholder="e.g. Settle cash mismatch correction"
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button
-                                    type="button" onClick={() => setAdjustModalOpen(false)}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: 'white', cursor: 'pointer', fontWeight: '600' }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit" disabled={loading}
-                                    style={{
-                                        flex: 1, padding: '12px', borderRadius: '8px', border: 'none',
-                                        backgroundColor: '#F16F68', color: 'white', cursor: 'pointer', fontWeight: '600'
-                                    }}
-                                >
-                                    {loading ? 'Adjusting...' : 'Apply Adjustment'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+
 
             {/* Transaction History Modal */}
             {historyModalOpen && selectedDp && (
