@@ -1,7 +1,7 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
-import { Phone, Mail, User, ShieldCheck, X } from "lucide-react";
+import { Phone, Mail, User, ShieldCheck, X, Download } from "lucide-react";
 
 export default function AdminDeliveryPage() {
     const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
@@ -87,6 +87,58 @@ export default function AdminDeliveryPage() {
         } finally {
             setLoadingTx(false);
         }
+    };
+
+    const downloadCSV = () => {
+        if (!transactions || transactions.length === 0) return;
+        
+        // CSV headers
+        const headers = ["Date", "Time", "Transaction ID", "Type", "Amount (INR)", "Description", "Order ID", "Status"];
+        
+        // Map transactions to rows
+        const rows = transactions.map((tx: any) => {
+            const date = new Date(tx.createdAt).toLocaleDateString();
+            const time = new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            let typeLabel = tx.type;
+            if (tx.type === 'COD_COLLECTION') typeLabel = 'Credited (COD Collect)';
+            else if (tx.type === 'SETTLEMENT') typeLabel = 'Debited (Settlement)';
+            else if (tx.type === 'ADJUSTMENT') typeLabel = 'Adjustment';
+
+            return [
+                date,
+                time,
+                tx.id,
+                typeLabel,
+                tx.amount,
+                tx.description || "",
+                tx.orderId || "",
+                tx.status
+            ];
+        });
+        
+        // Construct CSV content
+        const csvContent = [
+            headers.join(","),
+            ...rows.map((row: any[]) => 
+                row.map(value => {
+                    const stringVal = String(value).replace(/"/g, '""');
+                    return stringVal.includes(",") || stringVal.includes("\n") || stringVal.includes('"') 
+                        ? `"${stringVal}"` 
+                        : stringVal;
+                }).join(",")
+            )
+        ].join("\n");
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Transactions_${selectedDp.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -322,7 +374,17 @@ export default function AdminDeliveryPage() {
                             )}
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                            {transactions.length > 0 ? (
+                                <button
+                                    onClick={downloadCSV}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px', border: '1px solid #3182CE', backgroundColor: 'white', color: '#3182CE', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s' }}
+                                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#EBF8FF'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
+                                >
+                                    <Download size={18} /> Export CSV
+                                </button>
+                            ) : <div />}
                             <button
                                 onClick={() => setHistoryModalOpen(false)}
                                 style={{ padding: '10px 24px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: '#F7FAFC', cursor: 'pointer', fontWeight: '600' }}
