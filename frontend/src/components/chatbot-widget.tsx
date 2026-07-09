@@ -323,8 +323,8 @@ export default function ChatbotWidget() {
         };
     }, [status, session]);
 
-    // Hide chatbot on Superadmin and Admin dashboard pages
-    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin")) {
+    // Hide chatbot on Superadmin, Admin, and Support dashboard pages
+    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard/support")) {
         return null;
     }
 
