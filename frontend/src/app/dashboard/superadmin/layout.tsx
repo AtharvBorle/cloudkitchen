@@ -3,7 +3,7 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function SuperadminLayout({
     children,
@@ -13,6 +13,8 @@ export default function SuperadminLayout({
     const { data: session, status } = useSession();
     const router = useRouter();
     const pathname = usePathname();
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const toggleSidebar = () => setIsCollapsed(prev => !prev);
 
     useEffect(() => {
         if (status === "loading") return;
@@ -43,7 +45,15 @@ export default function SuperadminLayout({
     return (
         <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--background)" }}>
             {/* Sidebar */}
-            <aside style={{ width: "260px", backgroundColor: "var(--surface)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
+            <aside style={{ 
+                width: isCollapsed ? "0px" : "260px", 
+                overflow: "hidden",
+                transition: "width 0.2s ease-in-out, border-right 0.2s ease-in-out",
+                backgroundColor: "var(--surface)", 
+                borderRight: isCollapsed ? "none" : "1px solid var(--border)", 
+                display: "flex", 
+                flexDirection: "column" 
+            }}>
                 <div style={{ padding: "var(--spacing-6)", borderBottom: "1px solid var(--border)" }}>
                     <h2 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--primary)" }}>Cloud Kitchen</h2>
                     <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px" }}>Superadmin</span>
@@ -140,8 +150,31 @@ export default function SuperadminLayout({
             </aside>
 
             {/* Main Content Area */}
-            <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <header style={{ height: "64px", backgroundColor: "var(--surface)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 var(--spacing-6)" }}>
+            <main style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+                <header style={{ height: "64px", backgroundColor: "var(--surface)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 var(--spacing-6)", gap: "16px" }}>
+                    <button 
+                        onClick={toggleSidebar}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "6px",
+                            color: "var(--text-main)",
+                            backgroundColor: "rgba(0,0,0,0.05)",
+                            transition: "background-color 0.2s"
+                        }}
+                        title="Toggle Sidebar"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
                     <h1 style={{ fontSize: "1.125rem", fontWeight: "600" }}>System Control Panel</h1>
                 </header>
                 <div style={{ padding: "var(--spacing-6)", flex: 1, overflowY: "auto" }}>

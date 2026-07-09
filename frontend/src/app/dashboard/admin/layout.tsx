@@ -4,12 +4,14 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag, Bike } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function adminLayout({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
     const router = useRouter();
     const pathname = usePathname();
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const toggleSidebar = () => setIsCollapsed(prev => !prev);
 
     useEffect(() => {
         if (status === "loading") return;
@@ -45,15 +47,17 @@ export default function adminLayout({ children }: { children: React.ReactNode })
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
-            {/* Sidebar */}
+                        {/* Sidebar */}
             <aside style={{
-                width: "280px",
+                width: isCollapsed ? "0px" : "280px",
+                overflow: "hidden",
+                transition: "width 0.2s ease-in-out, border-right 0.2s ease-in-out",
                 backgroundColor: "var(--surface)",
-                borderRight: "1px solid var(--surface-border)",
+                borderRight: isCollapsed ? "none" : "1px solid var(--surface-border)",
                 display: "flex",
                 flexDirection: "column",
-                boxShadow: "2px 0 10px rgba(0,0,0,0.02)"
-            }}>
+                boxShadow: isCollapsed ? "none" : "2px 0 10px rgba(0,0,0,0.02)"
+            }}>${"\n"}
                 <div style={{
                     padding: "1.5rem 1.5rem",
                     borderBottom: "1px solid var(--surface-border)",
@@ -141,7 +145,7 @@ export default function adminLayout({ children }: { children: React.ReactNode })
                 </div>
             </aside>
 
-            {/* Main Content Area */}
+                        {/* Main Content Area */}
             <main style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
                 <header style={{
                     height: "70px",
@@ -150,9 +154,31 @@ export default function adminLayout({ children }: { children: React.ReactNode })
                     display: "flex",
                     alignItems: "center",
                     padding: "0 2rem",
+                    gap: "16px",
                     boxShadow: "0 2px 10px rgba(0,0,0,0.01)",
                     zIndex: 10
                 }}>
+                    <button 
+                        onClick={toggleSidebar}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(0,0,0,0.05)"
+                        }}
+                        title="Toggle Sidebar"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
                     <h1 style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text-main)" }}>Overview</h1>
                 </header>
                 <div style={{ padding: "2rem", flex: 1, overflowY: "auto" }}>

@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { fetchApi, uploadWithProgress } from "@/lib/fetch-api";
 import CameraCaptureModal from "@/app/components/CameraCaptureModal";
 
-export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?: boolean; onClose?: () => void }) {
+export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { isMobileOpen?: boolean; onClose?: () => void; isCollapsed?: boolean }) {
     const pathname = usePathname();
     const [isMobile, setIsMobile] = useState(false);
     const [statusData, setStatusData] = useState<any>(null);
@@ -394,8 +394,18 @@ export default function SellerSidebar({ isMobileOpen, onClose }: { isMobileOpen?
                 }}>
                     {sidebarContent}
                 </div>
-            ) : (
-                <aside style={{ width: '250px', backgroundColor: '#1A1C23', color: 'white', display: 'flex', flexDirection: 'column', minHeight: '100vh', flexShrink: 0 }}>
+                        ) : (
+                <aside style={{ 
+                    width: isCollapsed ? '0px' : '250px', 
+                    overflow: 'hidden',
+                    transition: 'width 0.2s ease-in-out',
+                    backgroundColor: '#1A1C23', 
+                    color: 'white', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    minHeight: '100vh', 
+                    flexShrink: 0 
+                }}>
                     {sidebarContent}
                 </aside>
             )}

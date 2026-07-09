@@ -1,11 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SellerSidebar from "@/components/seller-sidebar";
 import { Menu, ChefHat } from "lucide-react";
 
 export default function SellerLayoutClient({ children }: { children: React.ReactNode }) {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkScreen = () => setIsMobile(window.innerWidth <= 768);
+        checkScreen();
+        window.addEventListener("resize", checkScreen);
+        return () => window.removeEventListener("resize", checkScreen);
+    }, []);
+
+    const toggleSidebar = () => {
+        setIsCollapsed(prev => !prev);
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#F0F2F5', fontFamily: "var(--font-sans)" }}>
@@ -21,11 +34,47 @@ export default function SellerLayoutClient({ children }: { children: React.React
                 </button>
             </header>
 
-            <div style={{ display: 'flex', flex: 1 }}>
-                <SellerSidebar isMobileOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} />
+            {!isMobile && (
+                <header style={{
+                    height: "70px",
+                    backgroundColor: "white",
+                    borderBottom: "1px solid #E2E8F0",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0 30px",
+                    gap: "16px",
+                    zIndex: 10
+                }}>
+                    <button
+                        onClick={toggleSidebar}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "6px",
+                            backgroundColor: "rgba(0,0,0,0.05)"
+                        }}
+                        title="Toggle Sidebar"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1A1C23' }}>Seller Panel</span>
+                </header>
+            )}
+
+            <div style={{ display: 'flex', flex: 1, height: isMobile ? 'auto' : 'calc(100vh - 70px)', overflow: 'hidden' }}>
+                <SellerSidebar isMobileOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} isCollapsed={isCollapsed} />
 
                 {/* Main Content Area */}
-                <main className="dashboard-main" style={{ flex: 1, padding: '30px', overflowX: 'hidden' }}>
+                <main className="dashboard-main" style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
                     {children}
                 </main>
             </div>
