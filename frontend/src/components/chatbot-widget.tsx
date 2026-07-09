@@ -31,6 +31,7 @@ export default function ChatbotWidget() {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
+    const [history, setHistory] = useState<Message[][]>([]);
     const [inputText, setInputText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
 
@@ -216,6 +217,7 @@ export default function ChatbotWidget() {
 
     // Initial greeting on mount / reset
     const loadGreeting = () => {
+        setHistory([]);
         const isSeller = session?.user?.role === "SELLER";
         const isDelivery = session?.user?.role === "DELIVERY";
         if (isSeller) {
@@ -270,6 +272,13 @@ export default function ChatbotWidget() {
     useEffect(() => {
         loadGreeting();
     }, [status, session?.user?.role]);
+
+    const handleGoBack = () => {
+        if (history.length === 0) return;
+        const previousState = history[history.length - 1];
+        setMessages(previousState);
+        setHistory(prev => prev.slice(0, prev.length - 1));
+    };
 
     useEffect(() => {
         const handleOpenChatbot = () => {
@@ -337,6 +346,8 @@ export default function ChatbotWidget() {
     };
 
     const handleSelectOption = async (optionType: string, payload?: any) => {
+        // Save current messages to history before making choice
+        setHistory(prev => [...prev, messages]);
         // Append User selection message
         let userText = "";
         switch (optionType) {
@@ -1018,6 +1029,8 @@ export default function ChatbotWidget() {
 
     const handleTicketSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Save current messages to history before submitting ticket
+        setHistory(prev => [...prev, messages]);
         if (status !== "authenticated") {
             alert("Please log in to raise a support ticket.");
             return;
@@ -1239,6 +1252,32 @@ Details: Category request submitted via chatbot assistant.`;
                         }}
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            {history.length > 0 && (
+                                <button
+                                    onClick={handleGoBack}
+                                    style={{
+                                        background: "none",
+                                        border: "none",
+                                        color: "white",
+                                        opacity: 0.8,
+                                        cursor: "pointer",
+                                        padding: "4px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: "4px",
+                                        transition: "transform 0.2s"
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.15)"}
+                                    onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                                    title="Go back"
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                                        <polyline points="12 19 5 12 12 5"></polyline>
+                                    </svg>
+                                </button>
+                            )}
                             <div style={{
                                 width: "40px",
                                 height: "40px",
