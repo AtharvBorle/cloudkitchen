@@ -95,6 +95,11 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
                 <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "4px" }}>
                     {label} {required && " *"}
                 </label>
+                {cameraModeName === "fssai" && (
+                    <div style={{ fontSize: "0.75rem", color: "#ef4444", marginBottom: "6px", fontWeight: "600" }}>
+                        ⚠️ Do not include any watermarks, overlays, or geotags on the document copy.
+                    </div>
+                )}
                 {!file ? (
                     <div style={{ display: "flex", gap: "8px" }}>
                         <label style={{ flex: 1, padding: "8px", backgroundColor: "#f8fafc", color: "#475569", borderRadius: "8px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600", textAlign: "center", border: "1px dashed #cbd5e1" }}>
@@ -821,6 +826,7 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
                 <CameraCaptureModal
                     onCapture={handleCameraCapture}
                     onClose={() => setCameraMode(null)}
+                    skipWatermark={cameraMode === 'fssai'}
                 />
             )}
         </>

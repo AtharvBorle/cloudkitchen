@@ -478,6 +478,20 @@ export default function SellerRegisterPage() {
                     {step === 3 && (
                         <div className="animate-fade-in">
 
+                             {/* Alert message about watermarks / geotagging */}
+                             <div style={{
+                                 backgroundColor: "#FFF5F5",
+                                 border: "1px solid #FEB2B2",
+                                 color: "#C53030",
+                                 padding: "15px",
+                                 borderRadius: "8px",
+                                 fontSize: "0.85rem",
+                                 marginBottom: "20px",
+                                 lineHeight: "1.4"
+                             }}>
+                                 <strong>⚠️ Document Requirements:</strong> Please ensure that uploaded legal/official documents (Aadhaar Card, PAN Card, Bank Passbook, and FSSAI Certificate) <strong>do not contain any watermarks, digital overlays, geotagging stamps, or timestamps</strong>. Photos of these documents taken using the camera will automatically disable location/time watermarks to keep the document fully readable.
+                             </div>
+
                              {/* ID Proof Selection */}
                              <div className="input-group" style={{ marginBottom: "20px" }}>
                                 <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: 'bold', marginBottom: '10px', color: '#1e293b', textAlign: 'center' }}>Select ID Proof Type</label>
@@ -1029,7 +1043,13 @@ export default function SellerRegisterPage() {
                     `}</style>
                 </div>
             )}
-            {cameraMode && <CameraCaptureModal onCapture={handleCameraCapture} onClose={() => setCameraMode(null)} />}
+            {cameraMode && (
+                <CameraCaptureModal 
+                    onCapture={handleCameraCapture} 
+                    onClose={() => setCameraMode(null)} 
+                    skipWatermark={['adhaarFront', 'adhaarBack', 'pan', 'fssai', 'lightBill', 'passbook'].includes(cameraMode)}
+                />
+            )}
         </div>
     );
 }

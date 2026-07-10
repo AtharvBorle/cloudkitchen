@@ -220,6 +220,19 @@ export default function RevisionPage() {
 
             <form onSubmit={handleSubmit} style={{ backgroundColor: "white", padding: "2.5rem", borderRadius: "16px", boxShadow: "0 4px 20px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
+                {/* Alert message about watermarks / geotagging */}
+                <div style={{
+                    backgroundColor: "#FFF5F5",
+                    border: "1px solid #FEB2B2",
+                    color: "#C53030",
+                    padding: "15px",
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                    lineHeight: "1.4"
+                }}>
+                    <strong>⚠️ Document Requirements:</strong> Please ensure that uploaded legal/official documents (Aadhaar Card, PAN Card, Bank Passbook, and FSSAI Certificate) <strong>do not contain any watermarks, digital overlays, geotagging stamps, or timestamps</strong>. Photos of these documents taken using the camera will automatically disable location/time watermarks to keep the document fully readable.
+                </div>
+
                 {needsAadhaar && (
                     <>
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "15px" }}>
@@ -757,7 +770,13 @@ export default function RevisionPage() {
                     </div>
                 </div>
             )}
-            {cameraMode && <CameraCaptureModal onCapture={handleCameraCapture} onClose={() => setCameraMode(null)} />}
+            {cameraMode && (
+                <CameraCaptureModal 
+                    onCapture={handleCameraCapture} 
+                    onClose={() => setCameraMode(null)} 
+                    skipWatermark={['adhaarFront', 'adhaarBack', 'pan', 'fssai', 'lightBill', 'passbook'].includes(cameraMode)}
+                />
+            )}
         </div>
     );
 }
