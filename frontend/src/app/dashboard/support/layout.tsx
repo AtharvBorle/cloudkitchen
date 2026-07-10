@@ -56,7 +56,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
                 display: "flex",
                 flexDirection: "column",
                 boxShadow: isCollapsed ? "none" : "2px 0 10px rgba(0,0,0,0.05)"
-            }}>${"\n"}
+            }}>
                 <div style={{
                     padding: "1.5rem 1.5rem",
                     borderBottom: "1px solid #334155",

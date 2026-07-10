@@ -38,7 +38,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
                 color: 'white', 
                 display: 'flex', 
                 flexDirection: 'column' 
-            }}>${"\n"}
+            }}>
                 <div style={{ padding: '30px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ backgroundColor: '#F16F68', padding: '8px', borderRadius: '8px' }}>
                         <Bike size={24} color="white" />
