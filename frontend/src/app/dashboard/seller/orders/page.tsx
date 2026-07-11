@@ -3,7 +3,113 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
-import { ArrowLeft, User, Phone, CheckCircle, Package, Truck, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, User, Phone, CheckCircle, Package, Truck, Clock, MapPin, Check, ShieldCheck } from "lucide-react";
+import { useRef } from "react";
+
+const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuccess: () => void, text?: string }) => {
+    const [isSwiped, setIsSwiped] = useState(false);
+    const [dragX, setDragX] = useState(0);
+    const trackRef = useRef<HTMLDivElement>(null);
+    const thumbRef = useRef<HTMLDivElement>(null);
+    const hasTriggeredRef = useRef(false);
+
+    const handleDrag = (clientX: number) => {
+        if (isSwiped || hasTriggeredRef.current || !trackRef.current || !thumbRef.current) return;
+
+        const trackRect = trackRef.current.getBoundingClientRect();
+        const thumbRect = thumbRef.current.getBoundingClientRect();
+        const maxDrag = trackRect.width - thumbRect.width - 8; // 8px padding
+
+        // Calculate new drag position relative to the track
+        let newX = clientX - trackRect.left - (thumbRect.width / 2);
+
+        if (newX < 0) newX = 0;
+        if (newX > maxDrag) {
+            newX = maxDrag;
+            hasTriggeredRef.current = true;
+            setIsSwiped(true);
+            onSwipeSuccess();
+        }
+
+        setDragX(newX);
+    };
+
+    return (
+        <div
+            ref={trackRef}
+            style={{
+                position: 'relative',
+                height: '46px',
+                backgroundColor: isSwiped ? '#48BB78' : '#EDF2F7',
+                borderRadius: '23px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background-color 0.3s',
+                overflow: 'hidden',
+                minWidth: '240px'
+            }}
+        >
+            <span style={{ color: isSwiped ? 'white' : '#A0AEC0', fontWeight: 'bold', zIndex: 1, pointerEvents: 'none', transition: 'opacity 0.2s', opacity: dragX > 50 ? 0 : 1, fontSize: '0.8rem' }}>
+                {text}
+            </span>
+            {isSwiped && (
+                <span style={{ color: 'white', fontWeight: 'bold', zIndex: 1, pointerEvents: 'none', position: 'absolute', fontSize: '0.8rem' }}>
+                    Delivered!
+                </span>
+            )}
+
+            <div
+                ref={thumbRef}
+                onMouseDown={(e) => {
+                    e.preventDefault();
+                    const onMouseMove = (moveEvent: MouseEvent) => handleDrag(moveEvent.clientX);
+                    const onMouseUp = () => {
+                        window.removeEventListener('mousemove', onMouseMove);
+                        window.removeEventListener('mouseup', onMouseUp);
+                        if (!hasTriggeredRef.current) {
+                            setDragX(0);
+                        }
+                    };
+                    window.addEventListener('mousemove', onMouseMove);
+                    window.addEventListener('mouseup', onMouseUp);
+                }}
+                onTouchStart={(e) => {
+                    const onTouchMove = (moveEvent: TouchEvent) => handleDrag(moveEvent.touches[0].clientX);
+                    const onTouchEnd = () => {
+                        window.removeEventListener('touchmove', onTouchMove);
+                        window.removeEventListener('touchend', onTouchEnd);
+                        if (!hasTriggeredRef.current) {
+                            setDragX(0);
+                        }
+                    };
+                    window.addEventListener('touchmove', onTouchMove, { passive: false });
+                    window.addEventListener('touchend', onTouchEnd);
+                }}
+                style={{
+                    position: 'absolute',
+                    left: '4px',
+                    top: '4px',
+                    height: '38px',
+                    width: '38px',
+                    backgroundColor: 'white',
+                    borderRadius: '50%',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: `translateX(${dragX}px)`,
+                    transition: isSwiped ? 'none' : dragX === 0 ? 'transform 0.3s ease-out' : 'none',
+                    zIndex: 2,
+                    cursor: 'grab'
+                }}
+            >
+                {isSwiped ? <Check color="#48BB78" size={18} /> : <ShieldCheck color="#A0AEC0" size={18} />}
+            </div>
+        </div>
+    );
+};
 
 export default function SellerOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -121,9 +227,12 @@ export default function SellerOrdersPage() {
         }
 
         if (order.status === "PREPARING" || order.status === "OUT_FOR_DELIVERY") {
+            const isCOD = order.paymentMethod === "COD";
+            const showSlider = order.status === "OUT_FOR_DELIVERY" && isCOD;
+
             return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end', width: '100%' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', width: '100%' }}>
                         <div style={{ position: 'relative' }}>
                             <select
                                 value={order.deliveryPersonId || ""}
@@ -140,15 +249,24 @@ export default function SellerOrdersPage() {
                                 ))}
                             </select>
                         </div>
-                        <button
-                            onClick={() => updateOrderStatus(order.id, order.status === "PREPARING" ? "OUT_FOR_DELIVERY" : "DELIVERED", order.status === "OUT_FOR_DELIVERY")}
-                            className="btn btn-teal" style={{ width: 'auto', padding: '10px 20px', fontSize: '0.9rem', fontWeight: 'bold' }}
-                            disabled={loadingAction === order.id}
-                        >
-                            {loadingAction === order.id ? "Wait..." : (order.status === "PREPARING" ? "Start Delivery" : "Mark Delivered")}
-                        </button>
+                        {showSlider ? (
+                            <div style={{ marginTop: '4px' }}>
+                                <SwipeAction
+                                    onSwipeSuccess={() => updateOrderStatus(order.id, "DELIVERED", true)}
+                                    text="Swipe to collect cash & deliver"
+                                />
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => updateOrderStatus(order.id, order.status === "PREPARING" ? "OUT_FOR_DELIVERY" : "DELIVERED", order.status === "OUT_FOR_DELIVERY")}
+                                className="btn btn-teal" style={{ width: 'auto', padding: '10px 20px', fontSize: '0.9rem', fontWeight: 'bold' }}
+                                disabled={loadingAction === order.id}
+                            >
+                                {loadingAction === order.id ? "Wait..." : (order.status === "PREPARING" ? "Start Delivery" : "Mark Delivered")}
+                            </button>
+                        )}
                     </div>
-                    {order.status === "OUT_FOR_DELIVERY" && (
+                    {order.status === "OUT_FOR_DELIVERY" && !showSlider && (
                         <button
                             onClick={() => setSelectedOrderForQR(order)}
                             className="btn btn-coral" style={{ width: 'auto', padding: '10px 20px', fontSize: '0.9rem', opacity: order.isPaid ? 0.5 : 1, fontWeight: 'bold' }}
@@ -284,7 +402,18 @@ export default function SellerOrdersPage() {
                                             <span style={{ fontSize: '0.8rem', color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ORDER ID</span>
                                             <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1A1C23' }}>#{mockOrderNumber} <span style={{ fontSize: '0.9rem', color: '#94A3B8', fontWeight: '400' }}>({order.id.slice(0, 8)})</span></h3>
                                         </div>
-                                        {getStatusBadge(order.status)}
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            {order.paymentMethod === "ONLINE" ? (
+                                                <span style={{ fontSize: '0.8rem', backgroundColor: '#EBF8FF', color: '#2B6CB0', padding: '4px 12px', borderRadius: '20px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                                    Prepaid
+                                                </span>
+                                            ) : (
+                                                <span style={{ fontSize: '0.8rem', backgroundColor: '#FEFCBF', color: '#975A16', padding: '4px 12px', borderRadius: '20px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                                    COD
+                                                </span>
+                                            )}
+                                            {getStatusBadge(order.status)}
+                                        </div>
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px' }}>
