@@ -1038,6 +1038,7 @@ export function UserHeader() {
                                     <HouseMapPicker
                                         latitude={addressForm.latitude}
                                         longitude={addressForm.longitude}
+                                        pincode={addressForm.pincode}
                                         onChange={(lat, lng, pin) => {
                                             setAddressForm(prev => ({
                                                 ...prev,

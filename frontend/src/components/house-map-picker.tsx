@@ -5,14 +5,16 @@ import { useEffect, useRef, useState } from "react";
 interface HouseMapPickerProps {
     latitude: number | null;
     longitude: number | null;
+    pincode?: string;
     onChange: (lat: number, lng: number, pincode?: string) => void;
 }
 
-export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPickerProps) {
+export function HouseMapPicker({ latitude, longitude, pincode, onChange }: HouseMapPickerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
     const [mapLoaded, setMapLoaded] = useState(false);
+    const lastMapSetPincodeRef = useRef("");
 
     useEffect(() => {
         // Load Leaflet dynamically
@@ -59,6 +61,7 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
                 } catch (e) {
                     console.error("Reverse geocoding error in HouseMapPicker:", e);
                 }
+                lastMapSetPincodeRef.current = detectedPincode;
                 onChange(newLat, newLng, detectedPincode);
             };
 
@@ -115,6 +118,40 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
             }
         }
     }, [latitude, longitude]);
+
+    // Update map/marker position based on typed/updated pincode (India-focused)
+    useEffect(() => {
+        if (!pincode || pincode.length !== 6) return;
+        if (pincode === lastMapSetPincodeRef.current) return;
+
+        const geocodePincode = async () => {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${pincode}&country=India`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lng = parseFloat(data[0].lon);
+                        
+                        if (mapRef.current) {
+                            mapRef.current.setView([lat, lng], 15);
+                        }
+                        if (markerRef.current) {
+                            markerRef.current.setLatLng([lat, lng]);
+                        }
+                        
+                        lastMapSetPincodeRef.current = pincode;
+                        onChange(lat, lng, pincode);
+                    }
+                }
+            } catch (e) {
+                console.error("Geocoding pincode error in HouseMapPicker:", e);
+            }
+        };
+
+        const timer = setTimeout(geocodePincode, 800);
+        return () => clearTimeout(timer);
+    }, [pincode]);
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
