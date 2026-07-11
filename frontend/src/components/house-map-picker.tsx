@@ -2,19 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 
+interface AddressDetails {
+    pincode?: string;
+    street?: string;
+    landmark?: string;
+    houseNumber?: string;
+}
+
 interface HouseMapPickerProps {
     latitude: number | null;
     longitude: number | null;
-    pincode?: string;
-    onChange: (lat: number, lng: number, pincode?: string) => void;
+    onChange: (lat: number, lng: number, details?: AddressDetails) => void;
 }
 
-export function HouseMapPicker({ latitude, longitude, pincode, onChange }: HouseMapPickerProps) {
+export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPickerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
     const [mapLoaded, setMapLoaded] = useState(false);
-    const lastMapSetPincodeRef = useRef("");
 
     useEffect(() => {
         // Load Leaflet dynamically
@@ -46,24 +51,33 @@ export function HouseMapPicker({ latitude, longitude, pincode, onChange }: House
             const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
             markerRef.current = marker;
 
-            if (latitude === null || longitude === null) {
-                onChange(initialLat, initialLng);
-            }
-
             const updateCoords = async (newLat: number, newLng: number) => {
-                let detectedPincode = "";
                 try {
                     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`);
                     if (res.ok) {
                         const data = await res.json();
-                        detectedPincode = data.address?.postcode || "";
+                        const address = data.address || {};
+                        
+                        // Extract address parts intelligently
+                        const pincode = address.postcode || "";
+                        const street = address.road || address.suburb || address.neighbourhood || address.city_district || "";
+                        const landmark = address.amenity || address.shop || address.commercial || address.retail || address.suburb || "";
+                        const houseNumber = address.house_number || address.building || "";
+                        
+                        onChange(newLat, newLng, { pincode, street, landmark, houseNumber });
+                    } else {
+                        onChange(newLat, newLng);
                     }
                 } catch (e) {
                     console.error("Reverse geocoding error in HouseMapPicker:", e);
+                    onChange(newLat, newLng);
                 }
-                lastMapSetPincodeRef.current = detectedPincode;
-                onChange(newLat, newLng, detectedPincode);
             };
+
+            // Trigger initial geocoding if we are using the fallback/gps location
+            if (latitude === null || longitude === null) {
+                updateCoords(initialLat, initialLng);
+            }
 
             marker.on("dragend", () => {
                 const pos = marker.getLatLng();
@@ -105,7 +119,7 @@ export function HouseMapPicker({ latitude, longitude, pincode, onChange }: House
         };
     }, []);
 
-    // Update marker position if coordinates change externally
+    // Update marker position if coordinates change externally (e.g. during form initialization or selection)
     useEffect(() => {
         if (mapRef.current && markerRef.current && latitude && longitude) {
             const L = (window as any).L;
@@ -119,44 +133,10 @@ export function HouseMapPicker({ latitude, longitude, pincode, onChange }: House
         }
     }, [latitude, longitude]);
 
-    // Update map/marker position based on typed/updated pincode (India-focused)
-    useEffect(() => {
-        if (!pincode || pincode.length !== 6) return;
-        if (pincode === lastMapSetPincodeRef.current) return;
-
-        const geocodePincode = async () => {
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${pincode}&country=India`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.length > 0) {
-                        const lat = parseFloat(data[0].lat);
-                        const lng = parseFloat(data[0].lon);
-                        
-                        if (mapRef.current) {
-                            mapRef.current.setView([lat, lng], 15);
-                        }
-                        if (markerRef.current) {
-                            markerRef.current.setLatLng([lat, lng]);
-                        }
-                        
-                        lastMapSetPincodeRef.current = pincode;
-                        onChange(lat, lng, pincode);
-                    }
-                }
-            } catch (e) {
-                console.error("Geocoding pincode error in HouseMapPicker:", e);
-            }
-        };
-
-        const timer = setTimeout(geocodePincode, 800);
-        return () => clearTimeout(timer);
-    }, [pincode]);
-
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
             <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "2px", fontWeight: "bold" }}>
-                Approx. House Location Pin *
+                1. Select House Location on Map *
             </label>
             <div
                 ref={mapContainerRef}

@@ -216,6 +216,23 @@ export default function UserProfilePage() {
                             <h3 style={{ fontWeight: 'bold', marginBottom: '15px' }}>{editingAddressId ? 'Edit Address' : 'Add New Address'}</h3>
                             <form onSubmit={handleSaveAddress}>
                                 <div style={{ marginBottom: '15px' }}>
+                                    <HouseMapPicker
+                                        latitude={addressForm.latitude}
+                                        longitude={addressForm.longitude}
+                                        onChange={(lat, lng, details) => {
+                                            setAddressForm(prev => ({
+                                                ...prev,
+                                                latitude: lat,
+                                                longitude: lng,
+                                                pincode: details?.pincode ? details.pincode.replace(/\D/g, '').slice(0, 6) : prev.pincode,
+                                                street: details?.street || prev.street,
+                                                landmark: details?.landmark || prev.landmark,
+                                                houseNumber: details?.houseNumber || prev.houseNumber
+                                            }));
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: '15px' }}>
                                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px' }}>Address Type</label>
                                     <div style={{ display: 'flex', gap: '15px' }}>
                                         {['Home', 'Work', 'Other'].map(type => (
@@ -263,21 +280,6 @@ export default function UserProfilePage() {
                                         value={addressForm.pincode}
                                         onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                                         className="input-field"
-                                    />
-                                </div>
-                                <div style={{ marginBottom: '15px' }}>
-                                    <HouseMapPicker
-                                        latitude={addressForm.latitude}
-                                        longitude={addressForm.longitude}
-                                        pincode={addressForm.pincode}
-                                        onChange={(lat, lng, pin) => {
-                                            setAddressForm(prev => ({
-                                                ...prev,
-                                                latitude: lat,
-                                                longitude: lng,
-                                                pincode: pin ? pin.replace(/\D/g, '').slice(0, 6) : prev.pincode
-                                            }));
-                                        }}
                                     />
                                 </div>
                                 {!editingAddressId && profile.addresses?.length > 0 && (
