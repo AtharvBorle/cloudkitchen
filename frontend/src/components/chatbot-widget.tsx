@@ -399,7 +399,7 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/delivery/orders");
                     const data = await res.json();
-                    const orders = (data.orders || []).slice(0, 5); // top 5 recent orders
+                    const orders = (data.orders || []).slice(0, 4); // top 4 recent orders
 
                     if (orders.length === 0) {
                         setMessages(prev => [...prev, {
@@ -481,7 +481,7 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/user/orders");
                     const data = await res.json();
-                    const orders = (data.data || data || []).slice(0, 5); // top 5 recent orders
+                    const orders = (data.data || data || []).slice(0, 4); // top 4 recent orders
 
                     if (orders.length === 0) {
                         setMessages(prev => [...prev, {
@@ -537,7 +537,7 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/seller/orders");
                     const data = await res.json();
-                    const orders = (data.orders || data.data?.orders || data.data || data || []).slice(0, 5); // top 5 recent orders
+                    const orders = (data.orders || data.data?.orders || data.data || data || []).slice(0, 4); // top 4 recent orders
 
                     if (orders.length === 0) {
                         setMessages(prev => [...prev, {
@@ -665,7 +665,7 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/user/bookings");
                     const data = await res.json();
-                    const bookings = (data.data || data || []).slice(0, 5); // top 5 recent bookings
+                    const bookings = (data.data || data || []).slice(0, 4); // top 4 recent bookings
 
                     if (bookings.length === 0) {
                         setMessages(prev => [...prev, {
