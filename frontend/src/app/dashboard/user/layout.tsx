@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { LocationProvider, useLocation } from "@/components/location-provider";
+import { HouseMapPicker } from "@/components/house-map-picker";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -303,7 +304,9 @@ export function UserHeader() {
         houseNumber: "",
         street: "",
         landmark: "",
-        pincode: ""
+        pincode: "",
+        latitude: null as number | null,
+        longitude: null as number | null
     });
     const [isSavingAddress, setIsSavingAddress] = useState(false);
 
@@ -481,6 +484,10 @@ export function UserHeader() {
             alert("Please fill in all required fields");
             return;
         }
+        if (addressForm.latitude === null || addressForm.longitude === null) {
+            alert("Approximate location pin of the house is compulsory. Please select it on the map.");
+            return;
+        }
         setIsSavingAddress(true);
         try {
             const res = await fetchApi("/api/user/addresses", {
@@ -498,7 +505,7 @@ export function UserHeader() {
             }
             if (res.ok) {
                 await refreshAddress();
-                setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "" });
+                setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", latitude: null, longitude: null });
                 setShowAddForm(false);
                 setIsAddressModalOpen(false);
             } else {
@@ -1024,6 +1031,21 @@ export function UserHeader() {
                                         onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '') })}
                                         style={{ width: '100%', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.9rem' }}
                                         placeholder="6-digit Pincode"
+                                    />
+                                </div>
+
+                                <div>
+                                    <HouseMapPicker
+                                        latitude={addressForm.latitude}
+                                        longitude={addressForm.longitude}
+                                        onChange={(lat, lng, pin) => {
+                                            setAddressForm(prev => ({
+                                                ...prev,
+                                                latitude: lat,
+                                                longitude: lng,
+                                                pincode: pin ? pin.replace(/\D/g, '').slice(0, 6) : prev.pincode
+                                            }));
+                                        }}
                                     />
                                 </div>
 

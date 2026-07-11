@@ -5,6 +5,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import { User, Phone, MapPin, Plus, Star, Edit, Trash2 } from "lucide-react";
 import { useLocation } from "@/components/location-provider";
+import { HouseMapPicker } from "@/components/house-map-picker";
 
 export default function UserProfilePage() {
     const [profile, setProfile] = useState<any>(null);
@@ -15,7 +16,16 @@ export default function UserProfilePage() {
 
     const [showAddressForm, setShowAddressForm] = useState(false);
     const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
-    const [addressForm, setAddressForm] = useState({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", isDefault: false });
+    const [addressForm, setAddressForm] = useState({
+        type: "Home",
+        houseNumber: "",
+        street: "",
+        landmark: "",
+        pincode: "",
+        latitude: null as number | null,
+        longitude: null as number | null,
+        isDefault: false
+    });
 
     useEffect(() => {
         fetchProfile();
@@ -69,6 +79,10 @@ export default function UserProfilePage() {
             alert("Pincode must be exactly 6 digits.");
             return;
         }
+        if (addressForm.latitude === null || addressForm.longitude === null) {
+            alert("Approximate location pin of the house is compulsory. Please select it on the map.");
+            return;
+        }
         try {
             const method = editingAddressId ? "PUT" : "POST";
             const url = editingAddressId ? `/api/user/addresses/${editingAddressId}` : "/api/user/addresses";
@@ -82,7 +96,7 @@ export default function UserProfilePage() {
             if (res.ok) {
                 setShowAddressForm(false);
                 setEditingAddressId(null);
-                setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", isDefault: false });
+                setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", latitude: null, longitude: null, isDefault: false });
                 await fetchProfile();
                 await refreshAddress();
             } else {
@@ -124,7 +138,16 @@ export default function UserProfilePage() {
     };
 
     const openEditAddress = (address: any) => {
-        setAddressForm({ type: address.type, houseNumber: address.houseNumber, street: address.street, landmark: address.landmark || "", pincode: address.pincode, isDefault: address.isDefault });
+        setAddressForm({
+            type: address.type,
+            houseNumber: address.houseNumber,
+            street: address.street,
+            landmark: address.landmark || "",
+            pincode: address.pincode,
+            latitude: address.latitude ? parseFloat(address.latitude) : null,
+            longitude: address.longitude ? parseFloat(address.longitude) : null,
+            isDefault: address.isDefault
+        });
         setEditingAddressId(address.id);
         setShowAddressForm(true);
     };
@@ -182,7 +205,7 @@ export default function UserProfilePage() {
                             <MapPin size={24} color="var(--primary)" /> Saved Addresses
                         </h2>
                         {!showAddressForm && (
-                            <button onClick={() => { setEditingAddressId(null); setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", isDefault: false }); setShowAddressForm(true); }} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px' }}>
+                            <button onClick={() => { setEditingAddressId(null); setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", latitude: null, longitude: null, isDefault: false }); setShowAddressForm(true); }} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px' }}>
                                 <Plus size={18} /> Add New
                             </button>
                         )}
@@ -240,6 +263,20 @@ export default function UserProfilePage() {
                                         value={addressForm.pincode}
                                         onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                                         className="input-field"
+                                    />
+                                </div>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <HouseMapPicker
+                                        latitude={addressForm.latitude}
+                                        longitude={addressForm.longitude}
+                                        onChange={(lat, lng, pin) => {
+                                            setAddressForm(prev => ({
+                                                ...prev,
+                                                latitude: lat,
+                                                longitude: lng,
+                                                pincode: pin ? pin.replace(/\D/g, '').slice(0, 6) : prev.pincode
+                                            }));
+                                        }}
                                     />
                                 </div>
                                 {!editingAddressId && profile.addresses?.length > 0 && (

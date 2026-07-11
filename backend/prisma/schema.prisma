@@ -306,6 +306,8 @@ model Address {
   street      String
   landmark    String?
   pincode     String
+  latitude    Float?
+  longitude   Float?
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
 }

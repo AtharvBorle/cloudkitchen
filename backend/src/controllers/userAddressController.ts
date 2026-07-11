@@ -8,10 +8,14 @@ export const createAddress = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { type, houseNumber, street, landmark, pincode, isDefault } = await req.json();
+    const { type, houseNumber, street, landmark, pincode, latitude, longitude, isDefault } = await req.json();
 
     if (!type || !houseNumber || !street || !pincode) {
         throw new ApiError("Type, House Number, Street, and Pincode are required", 400);
+    }
+
+    if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
+        throw new ApiError("Approximate location pin of the house is compulsory. Please pick a location on the map.", 400);
     }
 
     const addressCount = await db.address.count({
@@ -34,6 +38,8 @@ export const createAddress = async (req: Request) => {
                     street,
                     landmark,
                     pincode,
+                    latitude: parseFloat(latitude),
+                    longitude: parseFloat(longitude),
                     isDefault: true
                 }
             }),
@@ -52,6 +58,8 @@ export const createAddress = async (req: Request) => {
                 street,
                 landmark,
                 pincode,
+                latitude: parseFloat(latitude),
+                longitude: parseFloat(longitude),
                 isDefault: false
             }
         });
@@ -65,7 +73,7 @@ export const updateAddress = async (req: Request, id: string) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { type, houseNumber, street, landmark, pincode } = await req.json();
+    const { type, houseNumber, street, landmark, pincode, latitude, longitude } = await req.json();
 
     const existingAddress = await db.address.findUnique({
         where: { id }
@@ -75,9 +83,21 @@ export const updateAddress = async (req: Request, id: string) => {
         throw new ApiError("Address not found or forbidden", 403);
     }
 
+    if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
+        throw new ApiError("Approximate location pin of the house is compulsory. Please pick a location on the map.", 400);
+    }
+
     const updatedAddress = await db.address.update({
         where: { id },
-        data: { type, houseNumber, street, landmark, pincode }
+        data: {
+            type,
+            houseNumber,
+            street,
+            landmark,
+            pincode,
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude)
+        }
     });
 
     return { address: updatedAddress };
