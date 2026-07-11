@@ -245,7 +245,6 @@ export default function ChatbotWidget() {
                     options: [
                         { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
                         { label: "💰 Wallet & Earnings", action: () => handleSelectOption("delivery_wallet") },
-                        { label: "⚙️ Duty & Profile Status", action: () => handleSelectOption("delivery_duty") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ]
                 }
@@ -301,7 +300,6 @@ export default function ChatbotWidget() {
                     supportOptions = [
                         { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
                         { label: "💰 Wallet, Cash Owed & Earnings", action: () => handleSelectOption("delivery_wallet") },
-                        { label: "⚙️ Shift Duty / Profile Status", action: () => handleSelectOption("delivery_duty") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ];
                 } else {
@@ -868,7 +866,6 @@ export default function ChatbotWidget() {
                     generatedOptions = [
                         { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
                         { label: "💰 Wallet & Earnings", action: () => handleSelectOption("delivery_wallet") },
-                        { label: "⚙️ Duty & Profile Status", action: () => handleSelectOption("delivery_duty") },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
@@ -885,14 +882,6 @@ export default function ChatbotWidget() {
                     generatedOptions = [
                         { label: "💰 View Wallet Options", action: () => handleSelectOption("delivery_wallet") },
                         { label: "🎟️ Settle balance ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Wallet Balance Discrepancy", desc: "I have a discrepancy in my outstanding balance or settlement history." }) },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ];
-                }
-                else if (normalizedText.includes("duty") || normalizedText.includes("shift") || normalizedText.includes("profile") || normalizedText.includes("timing") || normalizedText.includes("status") || normalizedText.includes("offline") || normalizedText.includes("online")) {
-                    replyText = "To toggle your duty status (online/offline) or edit your phone number/email, please visit the **My Profile** tab in your Delivery Dashboard.\n\nNeed manual shift assistance?";
-                    generatedOptions = [
-                        { label: "⚙️ View Duty Options", action: () => handleSelectOption("delivery_duty") },
-                        { label: "🎟️ Duty assistance ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Shift Duty Assistance", desc: "I need manual assistance with configuring my duty status or profile settings." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
