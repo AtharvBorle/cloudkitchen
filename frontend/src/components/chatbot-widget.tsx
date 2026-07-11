@@ -57,6 +57,36 @@ export default function ChatbotWidget() {
         moved: false
     });
 
+    const toggleOpen = (open: boolean) => {
+        if (open) {
+            setPosition(prev => {
+                if (!prev) return null;
+                const openWidth = Math.min(400, window.innerWidth * 0.9);
+                const openHeight = Math.min(600, window.innerHeight - 100);
+                const dx = openWidth - 60;
+                const dy = openHeight - 60;
+                return {
+                    x: Math.max(0, prev.x - dx),
+                    y: Math.max(0, prev.y - dy)
+                };
+            });
+            setIsOpen(true);
+        } else {
+            setPosition(prev => {
+                if (!prev) return null;
+                const openWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : Math.min(400, window.innerWidth * 0.9);
+                const openHeight = containerRef.current ? containerRef.current.getBoundingClientRect().height : Math.min(600, window.innerHeight - 100);
+                const dx = openWidth - 60;
+                const dy = openHeight - 60;
+                return {
+                    x: prev.x + dx,
+                    y: prev.y + dy
+                };
+            });
+            setIsOpen(false);
+        }
+    };
+
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement | HTMLButtonElement>) => {
         const target = e.target as HTMLElement;
         if (target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
@@ -281,7 +311,7 @@ export default function ChatbotWidget() {
 
     useEffect(() => {
         const handleOpenChatbot = () => {
-            setIsOpen(true);
+            toggleOpen(true);
             setMessages(prev => {
                 if (prev.length > 0 && prev[prev.length - 1].text.includes("resolve your issue here first")) {
                     return prev;
@@ -1126,7 +1156,7 @@ Details: Category request submitted via chatbot assistant.`;
                         key={index}
                         href={linkUrl}
                         style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline" }}
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => toggleOpen(false)}
                     >
                         {linkText}
                     </Link>
@@ -1171,7 +1201,7 @@ Details: Category request submitted via chatbot assistant.`;
                             e.preventDefault();
                             return;
                         }
-                        setIsOpen(true);
+                        toggleOpen(true);
                     }}
                     style={{
                         width: "60px",
@@ -1287,7 +1317,7 @@ Details: Category request submitted via chatbot assistant.`;
                             </div>
                         </div>
                         <button
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => toggleOpen(false)}
                             style={{
                                 background: "none",
                                 border: "none",
@@ -1480,7 +1510,7 @@ Details: Category request submitted via chatbot assistant.`;
                                                 <Link
                                                     href={session?.user.role === "SELLER" ? "/dashboard/seller/support" : session?.user.role === "DELIVERY" ? "/dashboard/delivery" : "/dashboard/user/support"}
                                                     style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline", fontSize: "0.8rem", display: "inline-flex", alignItems: "center" }}
-                                                    onClick={() => setIsOpen(false)}
+                                                    onClick={() => toggleOpen(false)}
                                                 >
                                                     View Ticket Status <ChevronRight size={14} />
                                                 </Link>
