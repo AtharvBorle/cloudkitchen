@@ -322,9 +322,15 @@ export default function SellerOrdersPage() {
                                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                                         <Truck size={18} color="#94A3B8" />
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                            <span style={{ color: '#475569', fontSize: '0.9rem' }}>{order.deliveryAddress}</span>
+                                                            <span style={{ color: '#475569', fontSize: '0.9rem' }}>{order.deliveryAddress?.split(" | Loc:")[0]}</span>
                                                             <a
-                                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`}
+                                                                href={(() => {
+                                                                    const locMatch = order.deliveryAddress?.match(/Loc:\s*(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                                                                    if (locMatch) {
+                                                                        return `https://www.google.com/maps/dir/?api=1&destination=${locMatch[1]},${locMatch[2]}`;
+                                                                    }
+                                                                    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.deliveryAddress || '')}`;
+                                                                })()}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 style={{

@@ -669,7 +669,13 @@ function CheckoutContent() {
 
                 // Get full address line based on selection
                 const selectedAddress = addresses.find((a: any) => a.id === addressId);
-                const finalAddressText = selectedAddress ? `[${selectedAddress.type}] ${selectedAddress.houseNumber}, ${selectedAddress.street}${selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ''}, ${selectedAddress.pincode}` : "";
+                let finalAddressText = "";
+                if (selectedAddress) {
+                    finalAddressText = `[${selectedAddress.type}] ${selectedAddress.houseNumber}, ${selectedAddress.street}${selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ''}, ${selectedAddress.pincode}`;
+                    if (selectedAddress.latitude !== undefined && selectedAddress.latitude !== null && selectedAddress.longitude !== undefined && selectedAddress.longitude !== null) {
+                        finalAddressText += ` | Loc: ${selectedAddress.latitude},${selectedAddress.longitude}`;
+                    }
+                }
 
                 const baseTotal = isRoomBooking
                     ? Math.max(roomDetails.price * (bookingDates.end && bookingDates.start ? Math.ceil((new Date(bookingDates.end).getTime() - new Date(bookingDates.start).getTime()) / (1000 * 60 * 60 * 24)) : 1), roomDetails.price)

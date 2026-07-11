@@ -627,7 +627,7 @@ export default function ChatbotWidget() {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
                         sender: "bot",
-                        text: `Assigned Order #${order.id.slice(0, 8)} details:\n- Total Price: ₹${order.totalAmount}\n- Status: ${order.status}\n- Address: ${order.deliveryAddress}\n\nWhat is the nature of your concern?`,
+                        text: `Assigned Order #${order.id.slice(0, 8)} details:\n- Total Price: ₹${order.totalAmount}\n- Status: ${order.status}\n- Address: ${order.deliveryAddress ? order.deliveryAddress.split(" | Loc:")[0] : ""}\n\nWhat is the nature of your concern?`,
                         timestamp: new Date(),
                         options: [
                             { label: "📍 Customer address incorrect / unreachable", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "📍 Unreachable customer / bad address", issueType: "ADDRESS_ISSUE" }) },

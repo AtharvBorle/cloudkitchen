@@ -438,9 +438,15 @@ export default function DeliveryDashboard() {
                                                 <span style={{ fontWeight: '600' }}>Delivery Address</span>
                                             </div>
                                             <p style={{ color: '#718096', fontSize: '0.95rem', marginLeft: '26px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <span>{order.deliveryAddress}</span>
+                                                <span>{order.deliveryAddress?.split(" | Loc:")[0]}</span>
                                                 <a
-                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`}
+                                                    href={(() => {
+                                                        const locMatch = order.deliveryAddress?.match(/Loc:\s*(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                                                        if (locMatch) {
+                                                            return `https://www.google.com/maps/dir/?api=1&destination=${locMatch[1]},${locMatch[2]}`;
+                                                        }
+                                                        return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.deliveryAddress || '')}`;
+                                                    })()}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     style={{
@@ -550,10 +556,16 @@ export default function DeliveryDashboard() {
                                                 </div>
                                                 <p style={{ fontSize: '0.9rem', color: '#718096', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                     <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                        <MapPin size={14} /> {order.deliveryAddress}
+                                                        <MapPin size={14} /> {order.deliveryAddress?.split(" | Loc:")[0]}
                                                     </span>
                                                     <a
-                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`}
+                                                        href={(() => {
+                                                            const locMatch = order.deliveryAddress?.match(/Loc:\s*(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                                                            if (locMatch) {
+                                                                    return `https://www.google.com/maps/dir/?api=1&destination=${locMatch[1]},${locMatch[2]}`;
+                                                            }
+                                                            return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.deliveryAddress || '')}`;
+                                                        })()}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{

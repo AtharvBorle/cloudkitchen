@@ -217,7 +217,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                             </span>
                             <span style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
                                 <MapPin size={14} color="#94A3B8" style={{ marginTop: '2px', flexShrink: 0 }} /> 
-                                <span>{order.deliveryAddress}</span>
+                                <span>{order.deliveryAddress?.split(" | Loc:")[0]}</span>
                             </span>
                         </div>
                     </div>
