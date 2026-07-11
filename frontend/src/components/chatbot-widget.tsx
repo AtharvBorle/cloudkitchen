@@ -1384,10 +1384,10 @@ Details: Category request submitted via chatbot assistant.`;
                                                         onChange={(e) => setTicketCategory(e.target.value)}
                                                         style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
                                                     >
-                                                        <option value="FOOD">Food Delivery</option>
-                                                        <option value="ROOM">Room Stay</option>
-                                                        <option value="PAYMENT">Payment & Refund</option>
-                                                        <option value="OTHER">Other Query</option>
+                                                        <option value="FOOD">{session?.user?.role === "DELIVERY" ? "Delivery / Order Issue" : "Food Delivery"}</option>
+                                                        {session?.user?.role !== "DELIVERY" && <option value="ROOM">Room Stay</option>}
+                                                        <option value="PAYMENT">{session?.user?.role === "DELIVERY" ? "COD / Wallet / Payment" : "Payment & Refund"}</option>
+                                                        <option value="OTHER">{session?.user?.role === "DELIVERY" ? "Other Delivery Query" : "Other Query"}</option>
                                                         {session?.user?.role === "SELLER" && (
                                                             <option value="NEW_CATEGORY_REQUEST">Request New Item Category</option>
                                                         )}
@@ -1403,7 +1403,7 @@ Details: Category request submitted via chatbot assistant.`;
                                                                 style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
                                                             >
                                                                 <option value="FOOD">Food Category</option>
-                                                                <option value="ROOM">Room Category</option>
+                                                                {session?.user?.role !== "DELIVERY" && <option value="ROOM">Room Category</option>}
                                                             </select>
                                                         </div>
                                                         <div>
