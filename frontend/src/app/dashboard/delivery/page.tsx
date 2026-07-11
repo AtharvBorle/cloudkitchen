@@ -437,7 +437,31 @@ export default function DeliveryDashboard() {
                                                 <MapPin size={18} color="#F16F68" />
                                                 <span style={{ fontWeight: '600' }}>Delivery Address</span>
                                             </div>
-                                            <p style={{ color: '#718096', fontSize: '0.95rem', marginLeft: '26px' }}>{order.deliveryAddress}</p>
+                                            <p style={{ color: '#718096', fontSize: '0.95rem', marginLeft: '26px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <span>{order.deliveryAddress}</span>
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        fontSize: '0.75rem',
+                                                        color: '#3182CE',
+                                                        textDecoration: 'none',
+                                                        fontWeight: 'bold',
+                                                        backgroundColor: '#EBF8FF',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid #BEE3F8',
+                                                        width: 'fit-content',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <MapPin size={12} /> Open Map
+                                                </a>
+                                            </p>
                                         </div>
                                         <div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4A5568', marginBottom: '8px' }}>
@@ -524,8 +548,31 @@ export default function DeliveryDashboard() {
                                                         {new Date(order.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
-                                                <p style={{ fontSize: '0.9rem', color: '#718096', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                    <MapPin size={14} /> {order.deliveryAddress}
+                                                <p style={{ fontSize: '0.9rem', color: '#718096', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        <MapPin size={14} /> {order.deliveryAddress}
+                                                    </span>
+                                                    <a
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            fontSize: '0.7rem',
+                                                            color: '#3182CE',
+                                                            textDecoration: 'none',
+                                                            fontWeight: 'bold',
+                                                            backgroundColor: '#EBF8FF',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid #BEE3F8',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        Open Map
+                                                    </a>
                                                 </p>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>

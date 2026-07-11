@@ -3,7 +3,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
-import { ArrowLeft, User, Phone, CheckCircle, Package, Truck, Clock } from "lucide-react";
+import { ArrowLeft, User, Phone, CheckCircle, Package, Truck, Clock, MapPin } from "lucide-react";
 
 export default function SellerOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -321,7 +321,31 @@ export default function SellerOrdersPage() {
                                                     </div>
                                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                                         <Truck size={18} color="#94A3B8" />
-                                                        <span style={{ color: '#475569', fontSize: '0.9rem' }}>{order.deliveryAddress}</span>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <span style={{ color: '#475569', fontSize: '0.9rem' }}>{order.deliveryAddress}</span>
+                                                            <a
+                                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    fontSize: '0.75rem',
+                                                                    color: '#3182CE',
+                                                                    textDecoration: 'none',
+                                                                    fontWeight: 'bold',
+                                                                    backgroundColor: '#EBF8FF',
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '6px',
+                                                                    border: '1px solid #BEE3F8',
+                                                                    width: 'fit-content',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                <MapPin size={12} /> Open Map
+                                                             </a>
+                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
