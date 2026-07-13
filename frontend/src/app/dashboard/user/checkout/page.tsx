@@ -8,6 +8,31 @@ import Script from "next/script";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
 
+const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+        if ((window as any).Razorpay) {
+            resolve(true);
+            return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.id = "razorpay-checkout-script";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
+
+const unloadRazorpayScript = () => {
+    const script = document.getElementById("razorpay-checkout-script");
+    if (script) {
+        script.remove();
+    }
+    if ((window as any).Razorpay) {
+        delete (window as any).Razorpay;
+    }
+};
+
 const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
 };
@@ -707,6 +732,13 @@ function CheckoutContent() {
 
                 if (res.ok) {
                     if (paymentMethod === "ONLINE" && data.razorpayOrder) {
+                        const scriptLoaded = await loadRazorpayScript();
+                        if (!scriptLoaded) {
+                            setError("Failed to load Razorpay SDK. Please check your internet connection.");
+                            setIsSubmitting(false);
+                            return;
+                        }
+
                         const options = {
                             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_SBd0GNxh5TYLm3",
                             amount: data.razorpayOrder.amount,
@@ -715,6 +747,7 @@ function CheckoutContent() {
                             description: "Order Payment",
                             order_id: data.razorpayOrder.id,
                             handler: async function (response: any) {
+                                unloadRazorpayScript();
                                 try {
                                     const verifyRes = await fetchApi("/api/user/orders/verify", {
                                         method: "POST",
@@ -744,6 +777,11 @@ function CheckoutContent() {
                             },
                             theme: {
                                 color: "#16a34a"
+                            },
+                            modal: {
+                                ondismiss: function() {
+                                    unloadRazorpayScript();
+                                }
                             }
                         };
                         const rzp = new (window as any).Razorpay(options);
@@ -790,7 +828,6 @@ function CheckoutContent() {
 
     return (
         <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <Script src="https://checkout.razorpay.com/v1/checkout.js" />
             {/* Left Column - Checkout Form */}
             <div style={{ flex: '1 1 60%', minWidth: '320px', backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: 'var(--shadow-card)' }}>
                 <h1 style={{ fontSize: "1.8rem", fontWeight: "bold", marginBottom: "25px", borderBottom: "1px solid #EEE", paddingBottom: "15px" }}>

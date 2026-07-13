@@ -4,6 +4,31 @@ import { useState, useEffect, useRef } from "react";
 import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet, Download } from "lucide-react";
 import Script from "next/script";
 
+const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+        if ((window as any).Razorpay) {
+            resolve(true);
+            return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.id = "razorpay-checkout-script";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
+
+const unloadRazorpayScript = () => {
+    const script = document.getElementById("razorpay-checkout-script");
+    if (script) {
+        script.remove();
+    }
+    if ((window as any).Razorpay) {
+        delete (window as any).Razorpay;
+    }
+};
+
 // Swipe Action Component
 const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuccess: () => void, text?: string }) => {
     const [isSwiped, setIsSwiped] = useState(false);
@@ -246,6 +271,12 @@ export default function DeliveryDashboard() {
             const data = await res.json();
             const rzpOrder = data;
 
+            const scriptLoaded = await loadRazorpayScript();
+            if (!scriptLoaded) {
+                alert("Failed to load Razorpay SDK. Please check your internet connection.");
+                return;
+            }
+
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_SBd0GNxh5TYLm3",
                 amount: rzpOrder.amount,
@@ -254,6 +285,7 @@ export default function DeliveryDashboard() {
                 description: "Cash on Delivery Collection",
                 order_id: rzpOrder.id,
                 handler: async function (response: any) {
+                    unloadRazorpayScript();
                     try {
                         const verifyRes = await fetchApi(`/api/delivery/orders/${orderId}/pay`, {
                             method: "POST",
@@ -278,6 +310,11 @@ export default function DeliveryDashboard() {
                 },
                 theme: {
                     color: "#48BB78"
+                },
+                modal: {
+                    ondismiss: function() {
+                        unloadRazorpayScript();
+                    }
                 }
             };
             const rzp = new (window as any).Razorpay(options);
@@ -310,7 +347,6 @@ export default function DeliveryDashboard() {
 
     return (
         <div>
-            <Script src="https://checkout.razorpay.com/v1/checkout.js" />
             <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
                     <h1 style={{ fontSize: '2.2rem', fontWeight: '900', color: '#1A1C23', marginBottom: '8px' }}>Delivery Hub</h1>

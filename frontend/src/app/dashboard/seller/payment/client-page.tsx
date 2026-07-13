@@ -6,6 +6,31 @@ import Link from "next/link";
 import { CheckCircle2, ShieldCheck, Zap } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
+const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+        if ((window as any).Razorpay) {
+            resolve(true);
+            return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.id = "razorpay-checkout-script";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
+
+const unloadRazorpayScript = () => {
+    const script = document.getElementById("razorpay-checkout-script");
+    if (script) {
+        script.remove();
+    }
+    if ((window as any).Razorpay) {
+        delete (window as any).Razorpay;
+    }
+};
+
 export default function SellerPaymentClient({ plans, statusData }: { plans: any[]; statusData: any }) {
     const searchParams = useSearchParams();
     const queryPlanId = searchParams.get("planId");
@@ -70,6 +95,13 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
             // Using the amount from the order creation response since it factors in coupons safely on the backend
             const finalAmount = orderData.amount;
 
+            const scriptLoaded = await loadRazorpayScript();
+            if (!scriptLoaded) {
+                alert("Failed to load Razorpay SDK. Please check your internet connection.");
+                setIsLoading(false);
+                return;
+            }
+
             const options = {
                 key: orderData.key,
                 amount: finalAmount * 100,
@@ -78,6 +110,7 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
                 description: "Monthly Vendor Subscription",
                 order_id: orderData.orderId,
                 handler: async function (response: any) {
+                    unloadRazorpayScript();
                     const verifyRes = await fetchApi("/api/seller/subscription/verify", {
                         method: "POST",
                         headers: {
@@ -102,11 +135,17 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
                 theme: {
                     color: "#F16F68",
                 },
+                modal: {
+                    ondismiss: function() {
+                        unloadRazorpayScript();
+                    }
+                }
             };
 
             const rzp = new (window as any).Razorpay(options);
             rzp.on("payment.failed", function (response: any) {
                 alert("Payment cancelled or failed");
+                unloadRazorpayScript();
             });
             rzp.open();
 
@@ -120,8 +159,6 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "#f8fafc", padding: "1.25rem" }}>
-            <Script src="https://checkout.razorpay.com/v1/checkout.js" />
-
             <div style={{ backgroundColor: "white", padding: "2rem 1.25rem", borderRadius: "24px", boxShadow: "0 20px 50px rgba(0,0,0,0.06)", maxWidth: "500px", width: "100%", border: "1px solid #e2e8f0" }}>
 
                 <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "1.5rem" }}>

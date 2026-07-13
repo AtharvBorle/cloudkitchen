@@ -8,6 +8,31 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import Script from "next/script";
 
+const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+        if ((window as any).Razorpay) {
+            resolve(true);
+            return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.id = "razorpay-checkout-script";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
+
+const unloadRazorpayScript = () => {
+    const script = document.getElementById("razorpay-checkout-script");
+    if (script) {
+        script.remove();
+    }
+    if ((window as any).Razorpay) {
+        delete (window as any).Razorpay;
+    }
+};
+
 export default function UserBookingsPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -63,6 +88,12 @@ export default function UserBookingsPage() {
 
             const data = await res.json();
             const razorpayOrder = data.razorpayOrder;
+
+            const scriptLoaded = await loadRazorpayScript();
+            if (!scriptLoaded) {
+                alert("Failed to load Razorpay SDK. Please check your internet connection.");
+                return;
+            }
             
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_SBd0GNxh5TYLm3",
@@ -72,6 +103,7 @@ export default function UserBookingsPage() {
                 description: `Room Booking Payment - ${booking.room.title}`,
                 order_id: razorpayOrder.id,
                 handler: async function (response: any) {
+                    unloadRazorpayScript();
                     try {
                         const verifyRes = await fetchApi(`/api/user/bookings/${booking.id}/verify`, {
                             method: "POST",
@@ -99,6 +131,11 @@ export default function UserBookingsPage() {
                 },
                 theme: {
                     color: "#16a34a"
+                },
+                modal: {
+                    ondismiss: function() {
+                        unloadRazorpayScript();
+                    }
                 }
             };
             const rzp = new (window as any).Razorpay(options);
@@ -233,8 +270,6 @@ export default function UserBookingsPage() {
                                         </div>
                                     </div>
                                     <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
-                                        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
-                                        
                                         <div style={{ fontSize: "0.85rem", margin: "5px 0", padding: "10px", borderRadius: "8px", backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                                                 <span style={{ color: "#64748B" }}>Payment Method:</span>
