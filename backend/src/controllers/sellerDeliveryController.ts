@@ -61,6 +61,11 @@ export const createSellerDeliveryPerson = async (req: Request) => {
         throw new ApiError("Name, phone, email, and password are required", 400);
     }
 
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone)) {
+        throw new ApiError("Phone number must be exactly 10 digits", 400);
+    }
+
     const normalizedEmail = email.toLowerCase();
 
     // Check if user already exists
@@ -136,6 +141,13 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
     }
 
     const { name, phone, isActive } = await req.json();
+
+    if (phone) {
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(phone)) {
+            throw new ApiError("Phone number must be exactly 10 digits", 400);
+        }
+    }
 
     const existing = await db.deliveryPerson.findFirst({
         where: { id, sellerId: sellerProfile.id }

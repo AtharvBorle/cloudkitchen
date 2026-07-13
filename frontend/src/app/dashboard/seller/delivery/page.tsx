@@ -195,6 +195,13 @@ export default function DeliveryPersonsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        const phoneRegex = /^[0-9]{10}$/;
+        if (!phoneRegex.test(phone.trim())) {
+            alert("Phone number must be exactly 10 digits (e.g. 9876543210).");
+            return;
+        }
+
         setLoading(true);
 
         const method = editingId ? "PUT" : "POST";
