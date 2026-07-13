@@ -21,16 +21,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
     });
 };
 
-const unloadRazorpayScript = () => {
-    const script = document.getElementById("razorpay-checkout-script");
-    if (script) {
-        script.remove();
-    }
-    if ((window as any).Razorpay) {
-        delete (window as any).Razorpay;
-    }
-};
-
 export default function SellerPaymentClient({ plans, statusData }: { plans: any[]; statusData: any }) {
     const searchParams = useSearchParams();
     const queryPlanId = searchParams.get("planId");
@@ -110,7 +100,6 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
                 description: "Monthly Vendor Subscription",
                 order_id: orderData.orderId,
                 handler: async function (response: any) {
-                    unloadRazorpayScript();
                     const verifyRes = await fetchApi("/api/seller/subscription/verify", {
                         method: "POST",
                         headers: {
@@ -134,18 +123,12 @@ export default function SellerPaymentClient({ plans, statusData }: { plans: any[
                 },
                 theme: {
                     color: "#F16F68",
-                },
-                modal: {
-                    ondismiss: function() {
-                        unloadRazorpayScript();
-                    }
                 }
             };
 
             const rzp = new (window as any).Razorpay(options);
             rzp.on("payment.failed", function (response: any) {
                 alert("Payment cancelled or failed");
-                unloadRazorpayScript();
             });
             rzp.open();
 

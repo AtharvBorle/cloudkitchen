@@ -23,16 +23,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
     });
 };
 
-const unloadRazorpayScript = () => {
-    const script = document.getElementById("razorpay-checkout-script");
-    if (script) {
-        script.remove();
-    }
-    if ((window as any).Razorpay) {
-        delete (window as any).Razorpay;
-    }
-};
-
 export default function UserBookingsPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -103,7 +93,6 @@ export default function UserBookingsPage() {
                 description: `Room Booking Payment - ${booking.room.title}`,
                 order_id: razorpayOrder.id,
                 handler: async function (response: any) {
-                    unloadRazorpayScript();
                     try {
                         const verifyRes = await fetchApi(`/api/user/bookings/${booking.id}/verify`, {
                             method: "POST",
@@ -131,11 +120,6 @@ export default function UserBookingsPage() {
                 },
                 theme: {
                     color: "#16a34a"
-                },
-                modal: {
-                    ondismiss: function() {
-                        unloadRazorpayScript();
-                    }
                 }
             };
             const rzp = new (window as any).Razorpay(options);

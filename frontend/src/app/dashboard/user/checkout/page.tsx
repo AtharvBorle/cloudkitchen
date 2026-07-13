@@ -23,16 +23,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
     });
 };
 
-const unloadRazorpayScript = () => {
-    const script = document.getElementById("razorpay-checkout-script");
-    if (script) {
-        script.remove();
-    }
-    if ((window as any).Razorpay) {
-        delete (window as any).Razorpay;
-    }
-};
-
 const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
 };
@@ -747,7 +737,6 @@ function CheckoutContent() {
                             description: "Order Payment",
                             order_id: data.razorpayOrder.id,
                             handler: async function (response: any) {
-                                unloadRazorpayScript();
                                 try {
                                     const verifyRes = await fetchApi("/api/user/orders/verify", {
                                         method: "POST",
@@ -777,11 +766,6 @@ function CheckoutContent() {
                             },
                             theme: {
                                 color: "#16a34a"
-                            },
-                            modal: {
-                                ondismiss: function() {
-                                    unloadRazorpayScript();
-                                }
                             }
                         };
                         const rzp = new (window as any).Razorpay(options);

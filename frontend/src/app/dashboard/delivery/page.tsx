@@ -19,16 +19,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
     });
 };
 
-const unloadRazorpayScript = () => {
-    const script = document.getElementById("razorpay-checkout-script");
-    if (script) {
-        script.remove();
-    }
-    if ((window as any).Razorpay) {
-        delete (window as any).Razorpay;
-    }
-};
-
 // Swipe Action Component
 const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuccess: () => void, text?: string }) => {
     const [isSwiped, setIsSwiped] = useState(false);
@@ -285,7 +275,6 @@ export default function DeliveryDashboard() {
                 description: "Cash on Delivery Collection",
                 order_id: rzpOrder.id,
                 handler: async function (response: any) {
-                    unloadRazorpayScript();
                     try {
                         const verifyRes = await fetchApi(`/api/delivery/orders/${orderId}/pay`, {
                             method: "POST",
@@ -310,11 +299,6 @@ export default function DeliveryDashboard() {
                 },
                 theme: {
                     color: "#48BB78"
-                },
-                modal: {
-                    ondismiss: function() {
-                        unloadRazorpayScript();
-                    }
                 }
             };
             const rzp = new (window as any).Razorpay(options);
