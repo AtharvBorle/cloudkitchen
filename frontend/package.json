@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "lucide-react": "^0.575.0",
+    "neo-cloud-room-monorepo": "file:..",
     "next": "^16.2.9",
     "next-auth": "^5.0.0-beta.30",
     "qrcode.react": "^4.2.0",

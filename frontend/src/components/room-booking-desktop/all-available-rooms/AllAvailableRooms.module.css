@@ -1,0 +1,199 @@
+.sectionContainer {
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.heading {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 24px 0;
+  letter-spacing: -0.02em;
+}
+
+/* ================= 3-COLUMN ROOM CARDS GRID ================= */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.roomCard {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-sizing: border-box;
+}
+
+.roomCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+/* Top Room Image */
+.imageWrapper {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  background-color: #f1f5f9;
+}
+
+.roomImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.roomCard:hover .roomImg {
+  transform: scale(1.03);
+}
+
+/* Card Body Content */
+.cardBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  gap: 14px;
+}
+
+.mainInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ratingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #dcfce7;
+  color: #16a34a;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.locationRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Amenity / Feature Tags */
+.tagsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  background-color: #f1f5f9;
+  color: #64748b;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.cardDivider {
+  height: 1px;
+  background-color: #f1f5f9;
+  width: 100%;
+  margin: 2px 0;
+}
+
+/* Bottom Price & Booking Action Row */
+.bottomRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.priceBox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.startingLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.priceAmount {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #ea580c;
+  line-height: 1;
+}
+
+/* Book Now Button with exact #C63A22 */
+.bookBtn {
+  background-color: #c63a22;
+  color: #ffffff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(198, 58, 34, 0.28);
+  flex-shrink: 0;
+}
+
+.bookBtn:hover {
+  background-color: #aa2e19;
+  box-shadow: 0 6px 18px rgba(198, 58, 34, 0.38);
+  transform: translateY(-1px);
+}
+
+.bookBtn:active {
+  transform: translateY(0);
+}

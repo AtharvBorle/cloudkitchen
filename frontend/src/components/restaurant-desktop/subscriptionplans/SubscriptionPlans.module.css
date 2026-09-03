@@ -1,0 +1,206 @@
+.plansContainer {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  padding: 28px 32px;
+  box-sizing: border-box;
+  margin-bottom: 28px;
+}
+
+.sectionHeader {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+/* ================= 3-COLUMN CARDS GRID ================= */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.planCard {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.planCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  border-color: #fdba74;
+}
+
+/* Active Highlighted Card State */
+.activeCard {
+  border: 2px solid #ea580c;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 35%);
+  box-shadow: 0 10px 30px rgba(234, 88, 12, 0.14);
+  transform: translateY(-4px);
+}
+
+.activeCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 34px rgba(234, 88, 12, 0.18);
+  border-color: #ea580c;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.planName {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.bestValueBadge {
+  background: #ea580c;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3);
+}
+
+.planSubtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+  margin: 0 0 16px 0;
+  min-height: 20px;
+}
+
+/* Pricing Row */
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.priceAmount {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #ea580c;
+  line-height: 1;
+}
+
+.pricePeriod {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.cardDivider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin-bottom: 20px;
+  width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.activeDivider {
+  background-color: #fed7aa;
+}
+
+/* Features List */
+.featuresList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #334155;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.featureIcon {
+  color: #ea580c;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ================= BUTTONS ================= */
+.outlineBtn {
+  width: 100%;
+  background: #ffffff;
+  color: #ea580c;
+  border: 1.5px solid #ea580c;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: center;
+  font-family: inherit;
+}
+
+.outlineBtn:hover {
+  background: #fff7ed;
+  border-color: #c2410c;
+  color: #c2410c;
+}
+
+.filledBtn {
+  width: 100%;
+  background: #ea580c;
+  color: #ffffff;
+  border: 1.5px solid #ea580c;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: center;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
+}
+
+.filledBtn:hover {
+  background: #c2410c;
+  border-color: #c2410c;
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.35);
+}

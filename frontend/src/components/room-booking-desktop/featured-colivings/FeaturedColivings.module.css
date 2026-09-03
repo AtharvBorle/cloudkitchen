@@ -1,0 +1,172 @@
+.sectionContainer {
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.02em;
+}
+
+/* ================= 2-COLUMN CARDS GRID ================= */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.colivingCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-sizing: border-box;
+}
+
+.colivingCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Room Image at the Top */
+.imageWrapper {
+  width: 100%;
+  height: 250px;
+  position: relative;
+  overflow: hidden;
+  background-color: #f1f5f9;
+}
+
+.roomImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Card Content Below Image */
+.cardBody {
+  padding: 20px 24px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+/* Top Row: Title + Location (Left) | STARTING FROM + Price (Right) */
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.titleLocation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.locationText {
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+/* Price Details with #F97316 */
+.priceBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.startingLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.priceAmount {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f97316;
+  line-height: 1;
+}
+
+/* Bottom Row: Amenity Pills (Left) | Book Room Button (Right) */
+.bottomRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.tagsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  background-color: #fff7ed;
+  color: #f97316;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Action Button: Aligned on bottom right with #F97316 */
+.bookBtn {
+  background-color: #f97316;
+  color: #ffffff;
+  border: none;
+  padding: 10px 26px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+  flex-shrink: 0;
+}
+
+.bookBtn:hover {
+  background-color: #ea580c;
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35);
+  transform: translateY(-1px);
+}
+
+.bookBtn:active {
+  transform: translateY(0);
+}
