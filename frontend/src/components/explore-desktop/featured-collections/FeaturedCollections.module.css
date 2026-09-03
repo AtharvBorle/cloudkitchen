@@ -1,0 +1,238 @@
+.sectionContainer {
+  width: 100%;
+  margin-bottom: 56px;
+}
+
+/* ================= HEADER ROW ================= */
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.heading {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subheading {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.seeAllLink {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ea580c;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  user-select: none;
+}
+
+.seeAllLink:hover {
+  color: #c2410c;
+  text-decoration: underline;
+}
+
+/* ================= 4-COLUMN x 2-ROW GRID ================= */
+.collectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+
+.collectionCard {
+  position: relative;
+  height: 380px;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+  user-select: none;
+  background-color: #0f172a;
+}
+
+.collectionCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+/* Food Background Image */
+.cardBgImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+  z-index: 1;
+}
+
+.collectionCard:hover .cardBgImage {
+  transform: scale(1.05);
+}
+
+/* Vignette Gradients (Top & Bottom dark overlays) */
+.gradientOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.72) 0%,
+    rgba(15, 23, 42, 0.15) 25%,
+    rgba(15, 23, 42, 0.05) 50%,
+    rgba(15, 23, 42, 0.65) 72%,
+    rgba(15, 23, 42, 0.95) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Top Badge & Play Button */
+.topRow {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 3;
+}
+
+/* Author Pill Format */
+.authorPill {
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(10px);
+  padding: 4px 14px 4px 4px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  max-width: 165px;
+}
+
+.authorAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background-color: #ea580c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.authorName {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+.playBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: #0f172a;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.collectionCard:hover .playBtn {
+  transform: scale(1.1);
+  background: #ffffff;
+}
+
+.playIcon {
+  margin-left: 2px;
+}
+
+/* Bottom Title & Views */
+.bottomArea {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 3;
+}
+
+.cardTitle {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.35;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.viewsCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 500;
+}

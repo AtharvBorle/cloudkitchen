@@ -1,0 +1,149 @@
+.footerWrapper {
+  width: 100%;
+  background-color: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  margin-top: auto;
+}
+
+.footerContainer {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 48px 32px 32px 32px;
+  box-sizing: border-box;
+}
+
+/* ================= TOP SECTION ================= */
+.topSection {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1.2fr;
+  gap: 48px;
+  margin-bottom: 40px;
+}
+
+/* Brand Column */
+.brandColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.logoIconBox {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background-color: #ea580c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(234, 88, 12, 0.25);
+}
+
+.brandName {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.brandDesc {
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 320px;
+}
+
+/* Links Columns */
+.linksColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.columnHeading {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
+}
+
+.linksList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footerLink {
+  color: #64748b;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.footerLink:hover {
+  color: #ea580c;
+}
+
+.contactItem {
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+/* ================= DIVIDER ================= */
+.divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+/* ================= BOTTOM SECTION ================= */
+.bottomSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.copyrightText {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.socialIcons {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.socialBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.socialBtn:hover {
+  color: #ea580c;
+  transform: translateY(-2px);
+}

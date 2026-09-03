@@ -1,0 +1,132 @@
+.sectionContainer {
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.heading {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.02em;
+}
+
+/* ================= 8-AVATARS ROW GRID ================= */
+.reelsRow {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.reelItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  user-select: none;
+  min-width: 0;
+}
+
+/* Circular Ring Avatar */
+.avatarRing {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 2.5px solid #ea580c;
+  padding: 3px;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
+}
+
+.reelItem:hover .avatarRing {
+  transform: scale(1.06);
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.28);
+}
+
+.imageInner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background-color: #f1f5f9;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Center Play Button Overlay */
+.playOverlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.reelItem:hover .playOverlay {
+  background-color: rgba(234, 88, 12, 0.85);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.playIcon {
+  margin-left: 2px;
+}
+
+/* Text Below Avatar */
+.reelMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+  gap: 2px;
+}
+
+.reelName {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reelSubtitle {
+  font-size: 0.74rem;
+  color: #64748b;
+  font-weight: 500;
+  margin: 0;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,146 @@
+.sectionContainer {
+  width: 100%;
+  margin-bottom: 56px;
+}
+
+.heading {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.subheading {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 24px 0;
+  font-weight: 500;
+}
+
+/* ================= 4-COLUMN x 2-ROW GRID ================= */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.momentCard {
+  height: 126px;
+  border-radius: 20px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  user-select: none;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.momentCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Top Badge */
+.topRow {
+  display: flex;
+  align-items: flex-start;
+}
+
+.pillBadge {
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 9999px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+/* Bottom Row with 3D Food Icon & Title */
+.bottomRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconWrapper {
+  width: 46px;
+  height: 46px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.foodIconImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+  transition: transform 0.25s ease;
+}
+
+.momentCard:hover .foodIconImg {
+  transform: scale(1.08);
+}
+
+.cardTitle {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+/* Specific Card Backgrounds */
+.bgBreakfast {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.bgLunch {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+.bgDinner {
+  background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%);
+}
+
+.bgSnacks {
+  background: linear-gradient(135deg, #fdf2f8 0%, #fbcfe8 50%, #f472b6 100%);
+}
+
+.bgLateNight {
+  background: #23225c;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.bgLateNight .cardTitle {
+  color: #ffffff;
+}
+
+.bgLateNight .pillBadge {
+  background: #ffffff;
+  color: #23225c;
+}
+
+.bgDrinks {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+}
+
+.bgDesserts {
+  background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
+}
+
+.bgHealthy {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
