@@ -35,7 +35,7 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
     } else {
       const params = new URLSearchParams();
       if (searchQuery.trim()) params.set("query", searchQuery.trim());
-      router.push(`/explore/food?${params.toString()}`);
+      router.push(`/explore-desktop?${params.toString()}`);
     }
   };
 
@@ -43,7 +43,7 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
     setActiveTag(tag.id);
     const params = new URLSearchParams();
     params.set("query", tag.label);
-    router.push(`/explore/food?${params.toString()}`);
+    router.push(`/explore-desktop?${params.toString()}`);
   };
 
   return (

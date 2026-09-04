@@ -20,7 +20,7 @@ const OFFERS: OfferCardData[] = [
     title: "Burger Bash",
     code: "Use code: BURGER25",
     imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=burger",
+    link: "/explore-desktop?query=burger",
   },
   {
     id: "offer-2",
@@ -28,7 +28,7 @@ const OFFERS: OfferCardData[] = [
     title: "Pizza Party",
     code: "Use code: PIZZA30",
     imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=pizza",
+    link: "/explore-desktop?query=pizza",
   },
   {
     id: "offer-3",
@@ -36,7 +36,7 @@ const OFFERS: OfferCardData[] = [
     title: "Noodle Fest",
     code: "Use code: NOODLE20",
     imageUrl: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=noodles",
+    link: "/explore-desktop?query=noodles",
   },
   {
     id: "offer-4",
@@ -44,7 +44,7 @@ const OFFERS: OfferCardData[] = [
     title: "Pizza Party",
     code: "Use code: PIZZA30",
     imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=pizza",
+    link: "/explore-desktop?query=pizza",
   },
 ];
 
@@ -56,7 +56,7 @@ interface PopularOrdersProps {
 
 export default function PopularOrders({
   title = "Today's Special Offers",
-  seeAllLink = "/explore/food?offers=true",
+  seeAllLink = "/explore-desktop?offers=true",
   offers = OFFERS,
 }: PopularOrdersProps) {
   return (

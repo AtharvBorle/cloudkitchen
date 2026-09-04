@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo Cloud Room - UI Screen-Level User Flows</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+@page {
+    size: A4;
+    margin: 20mm 15mm 20mm 15mm;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.6;
+    font-size: 13px;
+    background-color: #ffffff;
+    padding: 0;
+    margin: 0;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 8px;
+    margin-top: 20px;
+    margin-bottom: 16px;
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e3a8a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 6px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    page-break-after: avoid;
+}
+
+h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2563eb;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+}
+
+h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+ul, ol {
+    margin-top: 0;
+    margin-bottom: 12px;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 4px;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 24px 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12px;
+    page-break-inside: avoid;
+}
+
+th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+}
+
+td {
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+tr:nth-child(even) td {
+    background-color: #f8fafc;
+}
+
+code {
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11.5px;
+    background-color: #f1f5f9;
+    color: #0f766e;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+pre {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    page-break-inside: avoid;
+}
+
+pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+blockquote {
+    border-left: 4px solid #3b82f6;
+    background-color: #eff6ff;
+    color: #1e40af;
+    margin: 12px 0;
+    padding: 10px 16px;
+    border-radius: 0 6px 6px 0;
+}
+
+.mermaid {
+    display: flex;
+    justify-content: center;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    page-break-inside: avoid;
+}
+
+@media print {
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    pre, table, .mermaid {
+        page-break-inside: avoid;
+    }
+}
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: 'neutral',
+                securityLevel: 'loose',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                sequence: { useMaxWidth: true, showSequenceNumbers: true }
+            });
+        });
+    </script>
+</head>
+<body>
+<h1 id="neo-cloud-room-uiux-screen-level-user-flow-component-specification">Neo Cloud Room - UI/UX Screen-Level User Flow &amp; Component Specification</h1>
+<hr />
+<h2 id="1-document-overview-ui-architecture-guidelines">1. Document Overview &amp; UI Architecture Guidelines</h2>
+<p>This document provides a comprehensive, screen-by-screen specification of user flows, navigation hierarchies, page components, forms, modals, actions, and state transitions for the <strong>Neo Cloud Room (CloudKitchen)</strong> platform. It serves as the authoritative blueprint for the UI/UX and Frontend Engineering teams.</p>
+<h3 id="system-user-roles-covered">System User Roles Covered</h3>
+<ol>
+<li><strong>Unauthenticated / Public Visitors</strong></li>
+<li><strong>User / Customer</strong> (<code>USER</code>)</li>
+<li><strong>Seller / Vendor</strong> (<code>SELLER</code> - Cloud Kitchen, Mess, Bakery, Room Host)</li>
+<li><strong>Delivery Person / Rider Fleet</strong> (<code>DELIVERY</code>)</li>
+<li><strong>Support Staff</strong> (<code>SUPPORT</code> - Customer Support &amp; Refund Audit Operations)</li>
+<li><strong>Field Agent / Branch Administrator</strong> (<code>AGENT</code>)</li>
+<li><strong>SuperAdmin</strong> (<code>SUPERADMIN</code> - Master Platform Administrator)</li>
+</ol>
+<hr />
+<h2 id="2-global-ui-layouts-shared-modal-specifications">2. Global UI Layouts &amp; Shared Modal Specifications</h2>
+<pre class="mermaid">
+graph TD
+    Root[Root Layout / Provider]
+    Root --> TopBar[Global Header & Nav]
+    Root --> MainView[Page View Router]
+    Root --> OverlayDrawers[Global Slide-Over Drawers & Modals]
+
+    TopBar --> LocationPicker[Pincode & Geocoding Location Provider]
+    TopBar --> AuthDropdown[User Profile & Role Selector]
+    TopBar --> CartTrigger[Cart Drawer Badge]
+
+    OverlayDrawers --> CartDrawer[Shopping Cart Slide-Over]
+    OverlayDrawers --> AddrModal[Saved Address Manager Modal]
+    OverlayDrawers --> ChatbotWidget[AI Support Chatbot Floating Launcher]
+</pre>
+
+<h3 id="shared-global-ui-components">Shared Global UI Components</h3>
+<ul>
+<li><strong>Location Provider Header (<code>location-provider.tsx</code>)</strong>: Displays current selected pincode and city; triggers the Address Selector / Geocoding Map Modal.</li>
+<li><strong>Cart Slide-Over Drawer (<code>cart-buttons.tsx</code>)</strong>: Displays cart items, quantity counters (<code>+</code> / <code>-</code>), seller store info, subtotal, and proceeds to Checkout.</li>
+<li><strong>Store Status Banner (<code>store-status-toggle.tsx</code>)</strong>: Header component allowing sellers to toggle store Online/Offline state (<code>isOnline</code>).</li>
+<li><strong>Subscription Gate Banner (<code>subscription-gate.tsx</code>)</strong>: Sticky warning banner displayed to vendors when their subscription is inactive or expiring within 3 days.</li>
+<li><strong>Popup Promotional Banner Overlay (<code>PopupBannerDisplay.tsx</code>)</strong>: Renders promotional popup banners triggered on homepage/store view.</li>
+<li><strong>Chatbot Floating Widget (<code>chatbot-widget.tsx</code>)</strong>: Persistent floating action button on public/customer views launching the AI assistant drawer.</li>
+</ul>
+<hr />
+<h2 id="3-public-unauthenticated-user-screen-flows">3. Public &amp; Unauthenticated User Screen Flows</h2>
+<pre class="mermaid">
+graph LR
+    Home["1. Homepage (/)"] --> ExploreFood["2. Explore Food (/explore/food)"]
+    Home --> ExploreRooms["3. Explore Rooms (/explore/rooms)"]
+    Home --> ExploreFurniture["4. Explore Furniture (/explore/furniture)"]
+    Home --> StoreFront["5. Public Shop (/shop/[trackingId])"]
+    Home --> AuthPortal["6. Auth Login/Register Portals (/auth/...)"]
+
+    ExploreFood --> StoreFront
+    ExploreRooms --> StoreFront
+    StoreFront --> CartDrawer["Shopping Cart Drawer"]
+    CartDrawer --> LoginCheck{"Logged In?"}
+    LoginCheck -- No --> AuthPortal
+    LoginCheck -- Yes --> Checkout["User Checkout (/dashboard/user/checkout)"]
+</pre>
+
+<h3 id="31-screen-homepage">3.1 Screen: Homepage (<code>/</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Global Navigation Header (Logo, Location Selector, Search Bar, Category Links, Cart Trigger, Login Dropdown).</li>
+<li>Dynamic Promotional Carousel / Banner Section (<code>PopupBannerDisplay.tsx</code>).</li>
+<li>Service Category Selector Cards: Food Kitchens, Mess Services, Bakery, Property Rooms, Furniture.</li>
+<li>Pincode-Filtered Store Grid: Cards displaying Store Banner, Business Name, Rating Badge, Distance/Locality, Food Type Tag (<code>VEG</code> / <code>BOTH</code>), and Open/Closed status.</li>
+<li><strong>User Actions</strong>:</li>
+<li>Click Location Header -&gt; Opens Location Map/Pincode Modal.</li>
+<li>Click Category Card -&gt; Navigates to <code>/explore/[category]</code>.</li>
+<li>Click Vendor Store Card -&gt; Navigates to <code>/shop/[trackingId]</code>.</li>
+</ul>
+<h3 id="32-screen-catalog-exploration-pages">3.2 Screen: Catalog Exploration Pages</h3>
+<ul>
+<li><strong>Routes</strong>:</li>
+<li><code>/explore/food</code>: Food items grid with Veg/Non-Veg toggle, category tags, price slider, and operating hours status.</li>
+<li><code>/explore/rooms</code>: Property listings grid with capacity filter, nightly price filter, and date picker.</li>
+<li><code>/explore/furniture</code>: Furniture items gallery with "Inquire Details" button opening a direct store query modal.</li>
+</ul>
+<h3 id="33-screen-public-vendor-shop-page-shoptrackingid">3.3 Screen: Public Vendor Shop Page (<code>/shop/[trackingId]</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/shop/[trackingId]/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Vendor Cover Banner, Business Logo, Store Name, Verification Badge, Food Type Tag, Rating Summary, Full Locality Address, UPI ID badge.</li>
+<li>Operational Hours Card (Displays daily schedule and current Open/Closed status).</li>
+<li>Tab Bar: <code>Food Menu</code> | <code>Room Listings</code> | <code>Reviews &amp; Ratings</code>.</li>
+<li>Food Menu Grid: Dish Card with Dish Image, Name, Category, Price, Veg/Non-Veg icon, Operational Time Tag, Stock Quantity indicator, and <code>+ ADD TO CART</code> button.</li>
+<li><strong>User Actions</strong>:</li>
+<li>Click <code>+ ADD TO CART</code> -&gt; Increments item count in Cart Drawer.</li>
+<li>Click Item Card -&gt; Opens Dish Detail Modal.</li>
+</ul>
+<h3 id="34-screen-authentication-registration-portal-routes">3.4 Screen: Authentication &amp; Registration Portal Routes</h3>
+<ul>
+<li><strong>Routes</strong>:</li>
+<li><code>/auth/login</code>: Customer login form (Email, Password, Remember Me, Submit, Google OAuth, Link to Register).</li>
+<li><code>/auth/login/seller</code>: Vendor login form.</li>
+<li><code>/auth/login/admin</code>: Admin, Agent, Superadmin, and Support Staff login portal.</li>
+<li><code>/auth/login/delivery</code>: Delivery Rider login form.</li>
+<li><code>/auth/register</code>: Onboarding role selection page ("Register as Customer" vs "Register as Vendor").</li>
+<li><code>/auth/register/user</code>: Customer registration form (Name, Email, Phone, City, Pincode, Password).</li>
+<li><code>/auth/register/page</code>: Multi-Step Vendor Registration Wizard:<ul>
+<li><strong>Step 1: Account Info</strong>: Owner Name, Email, Phone, Password, Seller Role.</li>
+<li><strong>Step 2: Business Info</strong>: Business Name, Seller Type (Homely Food, Mess, Bakery), Category (<code>FOOD</code>, <code>PROPERTY</code>, <code>BOTH</code>), Food Type (<code>VEG</code>, <code>BOTH</code>), Address Flat, Locality, Landmark, City, Pincode.</li>
+<li><strong>Step 3: Identity &amp; Legal Proofs</strong>: Upload inputs for Adhaar Front File, Adhaar Back File, FSSAI License File, Electricity/Light Bill, Bank Passbook.</li>
+<li><strong>Step 4: Store Photo Galleries</strong>: Upload inputs for Kitchen Images (Max 3), Cuisine Images (Max 3), Room Images (Max 3).</li>
+<li><strong>Step 5: Confirmation</strong>: Summary display + Submission button -&gt; Generates unique Store Tracking ID (e.g. <code>SHOP-X7K2P9</code>) and routes to PENDING status screen.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="4-user-customer-screen-flows-dashboarduser">4. User / Customer Screen Flows (<code>/dashboard/user/...</code>)</h2>
+<pre class="mermaid">
+graph TD
+    UserDash["Customer Dashboard (/dashboard/user)"] --> CartCheckout["Checkout (/dashboard/user/checkout)"]
+    UserDash --> OrderHistory["Order History (/dashboard/user/orders)"]
+    UserDash --> RoomBookings["Room Bookings (/dashboard/user/bookings)"]
+    UserDash --> SupportCenter["Support Tickets (/dashboard/support/tickets)"]
+
+    OrderHistory --> OrderDetailModal["Order Details & Invoice Modal"]
+    OrderHistory --> ReviewModal["Submit Review & Item Ratings Modal"]
+    OrderHistory --> CancelAction["Cancel Pending Order"]
+    CancelAction --> AutoRefund["Auto-Generate Refund Request"]
+
+    RoomBookings --> BookingModal["Create Booking Modal"]
+    BookingModal --> PayBooking["Pay Confirmed Booking (Razorpay / COD)"]
+</pre>
+
+<h3 id="41-screen-customer-overview-dashboard-dashboarduser">4.1 Screen: Customer Overview Dashboard (<code>/dashboard/user</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/user/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Welcome Banner with User Name and Current Location Pincode.</li>
+<li>Stat Cards: Active Orders, Upcoming Bookings, Saved Addresses count.</li>
+<li>Recent Orders Widget: Card view of recent 3 orders with status badges (<code>PENDING</code>, <code>PREPARING</code>, <code>OUT_FOR_DELIVERY</code>, <code>DELIVERED</code>).</li>
+</ul>
+<h3 id="42-screen-food-order-checkout-page-dashboardusercheckout">4.2 Screen: Food Order Checkout Page (<code>/dashboard/user/checkout</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/user/checkout/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Delivery Address Selector: Cards for saved addresses (Home/Work/Other) with pincode and default badge; "+ Add New Address" button opening Geocoding Map Modal (<code>house-map-picker.tsx</code>).</li>
+<li>Order Items Summary: List of cart items with quantity controls, unit price, item subtotal, and stock availability badge.</li>
+<li>Promotional Coupon Box: Input field for discount code + <code>APPLY</code> button. Displays applied discount amount and eligibility error messages (e.g., minimum cart value required).</li>
+<li>Operational &amp; Pincode Checks Banner: Warns if any item is closed or undeliverable to the selected address.</li>
+<li>Payment Method Selector: Radio options for <code>Cash on Delivery (COD)</code> vs <code>Online Payment (Razorpay)</code>.</li>
+<li>Order Financial Breakdown: Items Subtotal, Taxes &amp; Delivery Fee, Coupon Discount, Total Amount.</li>
+<li><code>PLACE ORDER</code> Action Button.</li>
+<li><strong>State Transitions</strong>:</li>
+<li>If <code>Online Payment</code> -&gt; Triggers Razorpay payment modal -&gt; On success, calls <code>/api/user/orders/verify</code> -&gt; Redirects to Order Details page.</li>
+<li>If <code>COD</code> -&gt; Creates order directly -&gt; Redirects to Order History page.</li>
+</ul>
+<h3 id="43-screen-order-history-invoice-page-dashboarduserorders">4.3 Screen: Order History &amp; Invoice Page (<code>/dashboard/user/orders</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/user/orders/page.tsx</code> &amp; <code>/invoice/order/[id]/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Filter Tabs: <code>All Orders</code> | <code>Active</code> | <code>Completed</code> | <code>Cancelled</code>.</li>
+<li>Order Card List: Order ID (Short Hash), Store Name, Date/Time, Items Summary, Total Amount, Payment Status Badge (<code>PAID</code> vs <code>UNPAID</code>), Order Status Badge (<code>PENDING</code>, <code>PREPARING</code>, <code>OUT_FOR_DELIVERY</code>, <code>DELIVERED</code>, <code>CANCELLED</code>).</li>
+<li>Action Buttons on Cards:<ul>
+<li><code>View Details</code> -&gt; Opens Order Details Slide-Over (Assigned rider info, delivery address, itemized breakdown).</li>
+<li><code>Download Invoice</code> -&gt; Navigates to printable HTML Tax Invoice (<code>/invoice/order/[id]</code>).</li>
+<li><code>Cancel Order</code> -&gt; Available only when status is <code>PENDING</code>. Confirms cancellation, restores inventory, and auto-queues refund if prepaid.</li>
+<li><code>Write Review</code> -&gt; Available when status is <code>DELIVERED</code>. Opens Review &amp; Item Rating Modal.</li>
+</ul>
+</li>
+<li><strong>Review &amp; Item Rating Modal</strong>:</li>
+<li>Overall Order Rating: 1 to 5 Star selector + Written Feedback Textarea.</li>
+<li>Dish-Specific Ratings: List of ordered food items, each with 1 to 5 Star selector and item comment field.</li>
+</ul>
+<h3 id="44-screen-property-room-bookings-dashboarduserbookings">4.4 Screen: Property Room Bookings (<code>/dashboard/user/bookings</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/user/bookings/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Bookings List: Property Name, Room Title, Check-in Date, Check-out Date, Total Nightly Amount, Booking Status (<code>PENDING</code>, <code>CONFIRMED</code>, <code>CANCELLED</code>), Payment Status.</li>
+<li>Action Buttons:<ul>
+<li><code>Pay Now</code> -&gt; Enabled when status is <code>CONFIRMED</code> and <code>isPaid == false</code>. Launches Razorpay Checkout or confirms COD payment.</li>
+<li><code>Request Cancellation</code> -&gt; Cancels pending/confirmed booking and submits refund request if paid.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="5-seller-vendor-screen-flows-dashboardseller">5. Seller / Vendor Screen Flows (<code>/dashboard/seller/...</code>)</h2>
+<pre class="mermaid">
+graph TD
+    SellerLayout["Seller App Layout (Sidebar + Topbar)"] --> Overview["Overview Dashboard (/dashboard/seller)"]
+    SellerLayout --> Orders["Order Processing (/dashboard/seller/orders)"]
+    SellerLayout --> Inventory["Menu & Stock (/dashboard/seller/menu)"]
+    SellerLayout --> Rooms["Property Rooms (/dashboard/seller/rooms)"]
+    SellerLayout --> Fleet["Delivery Fleet (/dashboard/seller/delivery)"]
+    SellerLayout --> Subscriptions["Subscription Payment (/dashboard/seller/payment)"]
+    SellerLayout --> Revision["Revision Resubmission (/dashboard/seller/revision)"]
+
+    Orders --> AssignRiderModal["Assign Rider Modal"]
+    Inventory --> AddItemModal["Add/Edit Food Item Modal"]
+    Fleet --> CreateRiderModal["Create Delivery Rider Modal"]
+    Fleet --> CashCollectModal["Collect Driver Cash Settlement Modal"]
+    Subscriptions --> RazorpaySub["Razorpay Subscription Payment"]
+</pre>
+
+<h3 id="51-screen-seller-dashboard-overview-dashboardseller">5.1 Screen: Seller Dashboard Overview (<code>/dashboard/seller</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/seller/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Top Bar: Store Status Toggle (<code>store-status-toggle.tsx</code>), Subscription Gate Warning Banner (<code>subscription-gate.tsx</code>).</li>
+<li>Stat Widgets: Today's Revenue, Total Orders Completed, Active Subscriptions Expiry Date, Delivery Riders Active Count.</li>
+<li>Live Order Queue Widget: Real-time incoming orders list with sound notification alert.</li>
+</ul>
+<h3 id="52-screen-revision-resubmission-page-dashboardsellerrevision">5.2 Screen: Revision Resubmission Page (<code>/dashboard/seller/revision</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/seller/revision/page.tsx</code></li>
+<li><strong>Condition</strong>: Automatically activated when vendor <code>verificationStatus == REVISION</code>.</li>
+<li><strong>UI Elements</strong>:</li>
+<li>Alert Banner displaying Administrator Revision Notes (<code>verificationNote</code>).</li>
+<li>Resubmission Form: File inputs for resubmitting updated Adhaar Front/Back, FSSAI License, Electricity Bill, Bank Passbook, Kitchen, Cuisine, or Room photos.</li>
+<li><code>RESUBMIT FOR VERIFICATION</code> Action Button -&gt; Resets status to <code>PENDING</code> for re-auditing.</li>
+</ul>
+<h3 id="53-screen-order-management-rider-assignment-dashboardsellerorders">5.3 Screen: Order Management &amp; Rider Assignment (<code>/dashboard/seller/orders</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/seller/orders/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Tabbed Order Board: <code>Pending</code> | <code>Preparing</code> | <code>Out for Delivery</code> | <code>Completed</code> | <code>Cancelled</code>.</li>
+<li>Order Processing Card: Order ID, Customer Name, Phone, Items List, Delivery Address, Total Amount, Payment Badge (<code>COD</code> vs <code>ONLINE</code>).</li>
+<li>Status Action Buttons:<ul>
+<li><code>Accept &amp; Start Preparing</code> -&gt; Changes status <code>PENDING</code> -&gt; <code>PREPARING</code>.</li>
+<li><code>Assign Rider &amp; Dispatch</code> -&gt; Opens Assign Rider Modal. Selects rider from active delivery fleet -&gt; Updates status to <code>OUT_FOR_DELIVERY</code>.</li>
+<li><code>Mark Delivered</code> -&gt; Used for direct store delivery -&gt; Updates status to <code>DELIVERED</code>.</li>
+</ul>
+</li>
+</ul>
+<h3 id="54-screen-menu-food-inventory-management-dashboardsellermenu-dashboardsellerinventory">5.4 Screen: Menu &amp; Food Inventory Management (<code>/dashboard/seller/menu</code>, <code>/dashboard/seller/inventory</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/seller/menu/page.tsx</code> &amp; <code>/dashboard/seller/inventory/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Food Category Tabs &amp; Add New Item Button.</li>
+<li>Food Item Grid: Image, Name, Price, Veg/Non-Veg Tag, Stock Counter Badge (-1 for infinite, or numeric counter), Availability Toggle Switch.</li>
+<li><strong>Add / Edit Food Item Modal</strong>:<ul>
+<li>Item Name, Description, Price, Food Type (<code>VEG</code> / <code>NON_VEG</code>).</li>
+<li>Stock Quantity (-1 for unlimited, or numeric value).</li>
+<li>Category &amp; Sub-category selectors.</li>
+<li>Delivery Pincodes Input (Comma-separated pincodes).</li>
+<li>Operational Hours Editor: Weekly schedule grid (Mon-Sun) with <code>isOpen</code> checkboxes and <code>openTime</code> / <code>closeTime</code> time pickers.</li>
+</ul>
+</li>
+<li><strong>Served Pincodes Manager Modal</strong>: Add or delete pincodes served by the kitchen.</li>
+</ul>
+<h3 id="55-screen-property-room-management-dashboardsellerrooms">5.5 Screen: Property &amp; Room Management (<code>/dashboard/seller/rooms</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/seller/rooms/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Room Listings Grid: Room Photo Carousel, Title, Nightly Price, Capacity, Availability Toggle.</li>
+<li><strong>Add / Edit Room Modal</strong>: Title, Description, Capacity, Nightly Price, Multi-photo upload inputs, Availability toggle.</li>
+<li>Room Bookings Tab: List incoming booking requests (<code>PENDING</code>), <code>CONFIRM BOOKING</code> button, <code>CANCEL BOOKING</code> button.</li>
+</ul>
+<h3 id="56-screen-delivery-fleet-cod-settlement-dashboardsellerdelivery">5.6 Screen: Delivery Fleet &amp; COD Settlement (<code>/dashboard/seller/delivery</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/seller/delivery/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Delivery Drivers Table: Driver Name, 10-digit Phone, Email, Outstanding COD Cash Balance badge, Status (<code>ACTIVE</code> / <code>INACTIVE</code>).</li>
+<li><strong>Create Delivery Person Modal</strong>: Form fields for Name, 10-digit Phone (validated regex <code>^[0-9]{10}$</code>), Email, Password, City, Pincode.</li>
+<li><strong>Collect Cash Settlement Modal</strong>: Selects rider, displays current <code>outstandingBalance</code>, input field for cash collected (must be &gt; ₹1 and &lt;= outstanding balance), <code>SUBMIT SETTLEMENT</code> button -&gt; Logs <code>SETTLEMENT</code> transaction and decrements driver balance.</li>
+<li>Driver Transaction History Modal: Displays ledger of rider's <code>COD_COLLECTION</code> (+), <code>SETTLEMENT</code> (-), and <code>ADJUSTMENT</code> (+/-) transactions.</li>
+</ul>
+<h3 id="57-screen-subscription-plans-payment-dashboardsellerpayment">5.7 Screen: Subscription Plans &amp; Payment (<code>/dashboard/seller/payment</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/seller/payment/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Current Active Subscription Card: Plan Name, Category (<code>FOOD</code>/<code>PROPERTY</code>/<code>BOTH</code>), Expiry Date, Days Remaining.</li>
+<li>Plan Selector Cards: Monthly/Yearly Plans with feature checkmarks and prices.</li>
+<li>Subscription Coupon Code Input + <code>APPLY COUPON</code> button.</li>
+<li>Final Discounted Price Calculation display + <code>PAY WITH RAZORPAY</code> button.</li>
+<li><strong>State Transition</strong>: Upon successful Razorpay payment verification, plan validity stacks from current expiration date and unlocks store operations.</li>
+</ul>
+<hr />
+<h2 id="6-support-staff-screen-flows-dashboardsupport">6. Support Staff Screen Flows (<code>/dashboard/support/...</code>)</h2>
+<pre class="mermaid">
+graph TD
+    SupportDash["Support Dashboard (/dashboard/support)"] --> TicketCenter["Ticket Center (/dashboard/support/tickets)"]
+    SupportDash --> RefundCenter["Refund Processing (/dashboard/support/refunds)"]
+
+    TicketCenter --> ChatDrawer["Live Threaded Chat Drawer"]
+    ChatDrawer --> TicketStatusUpdate["Update Status (Resolved/Closed)"]
+
+    RefundCenter --> RefundActionModal["Approve/Reject Refund Modal"]
+</pre>
+
+<h3 id="61-screen-support-ticket-resolution-center-dashboardsupporttickets">6.1 Screen: Support Ticket Resolution Center (<code>/dashboard/support/tickets</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/support/tickets/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Category Filter Tabs: <code>All</code> | <code>Food</code> | <code>Room</code> | <code>Payment</code> | <code>Other</code>.</li>
+<li>Status Filter Tabs: <code>OPEN</code> | <code>IN_PROGRESS</code> | <code>RESOLVED</code> | <code>CLOSED</code>.</li>
+<li>Ticket List Table: Ticket ID, Customer Name, User Role, Issue Title, Category Badge, Last Updated Timestamp, Status Badge.</li>
+<li><strong>Threaded Live Chat Drawer</strong>:<ul>
+<li>Header: Ticket ID, Title, User Info, Status Dropdown.</li>
+<li>Chat History Stream: Scrollable message list with timestamped bubbles (User messages vs Support Staff replies).</li>
+<li>Reply Composer: Textarea + <code>SEND REPLY</code> button.</li>
+<li><code>MARK RESOLVED</code> / <code>CLOSE TICKET</code> Action Buttons.</li>
+</ul>
+</li>
+</ul>
+<h3 id="62-screen-refund-audit-financial-fulfillment-dashboardsupportrefunds">6.2 Screen: Refund Audit &amp; Financial Fulfillment (<code>/dashboard/support/refunds</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/support/refunds/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Refund Requests Table: Refund ID, User Name &amp; Email, Order / Booking ID, Requested Amount (₹), Reason, Status (<code>PENDING</code>, <code>APPROVED</code>, <code>REJECTED</code>), Date.</li>
+<li><strong>Refund Action Modal</strong>:<ul>
+<li>Displays Order/Booking details and proof of payment.</li>
+<li>Input Field: Bank Transaction Reference ID (<code>transactionId</code>).</li>
+<li>Input Field: Administrative Notes (<code>adminNote</code>).</li>
+<li>Action Buttons: <code>APPROVE REFUND</code> (Updates refund status <code>APPROVED</code>, sets order <code>isPaid = false</code> or booking <code>status = CANCELLED</code>) vs <code>REJECT REFUND</code> (Updates refund status <code>REJECTED</code>).</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="7-field-agent-admin-screen-flows-dashboardadmin">7. Field Agent / Admin Screen Flows (<code>/dashboard/admin/...</code>)</h2>
+<pre class="mermaid">
+graph TD
+    AgentDash["Agent Dashboard (/dashboard/admin)"] --> RegAudit["Seller Registrations (/dashboard/admin/registrations)"]
+    AgentDash --> BannerMgmt["Pop-up Banners (/dashboard/admin/banners)"]
+    AgentDash --> FleetAdjust["Delivery Fleet Adjustments (/dashboard/admin/delivery)"]
+
+    RegAudit --> DocAuditModal["Document Audit & Action Modal"]
+    DocAuditModal --> ApproveVendor["Approve Vendor"]
+    DocAuditModal --> RevisionVendor["Request Revision + Note"]
+</pre>
+
+<h3 id="71-screen-seller-document-verification-audit-dashboardadminregistrations">7.1 Screen: Seller Document Verification &amp; Audit (<code>/dashboard/admin/registrations</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/admin/registrations/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Pending Vendors List: Business Name, Owner Name, Contact Phone, City, Tracking ID, Category (<code>FOOD</code>/<code>PROPERTY</code>/<code>BOTH</code>), Verification Status.</li>
+<li><strong>Document Inspection Modal</strong>:<ul>
+<li>Tabbed Gallery: <code>Adhaar Front/Back</code> | <code>FSSAI License</code> | <code>Electricity Bill</code> | <code>Passbook</code> | <code>Kitchen Photos</code> | <code>Room Photos</code>.</li>
+<li>Verification Feedback Textarea (<code>verificationNote</code>).</li>
+<li>Action Buttons:</li>
+<li><code>APPROVE SELLER</code>: Sets <code>verificationStatus = APPROVED</code> and category verification status to <code>APPROVED</code>.</li>
+<li><code>REQUEST REVISION</code>: Requires feedback note entry; sets <code>verificationStatus = REVISION</code>.</li>
+<li><code>REJECT SELLER</code>: Sets <code>verificationStatus = REJECTED</code>.</li>
+</ul>
+</li>
+</ul>
+<h3 id="72-screen-delivery-driver-wallet-adjustments-dashboardadmindelivery">7.2 Screen: Delivery Driver Wallet Adjustments (<code>/dashboard/admin/delivery</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/admin/delivery/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Drivers Wallet Overview Table: Rider Name, Phone, Employing Seller Name, Current Outstanding Balance (₹).</li>
+<li><strong>Balance Adjustment Modal</strong>:<ul>
+<li>Adjustment Type Selector: <code>INCREMENT</code> (Increase cash owed) vs <code>DECREMENT</code> (Decrease cash owed).</li>
+<li>Amount Input field (₹).</li>
+<li>Reason Description Textarea (<code>description</code>).</li>
+<li><code>SUBMIT ADJUSTMENT</code> Button -&gt; Creates <code>ADJUSTMENT</code> delivery transaction and updates rider balance.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="8-superadmin-screen-flows-dashboardsuperadmin">8. SuperAdmin Screen Flows (<code>/dashboard/superadmin/...</code>)</h2>
+<pre class="mermaid">
+graph TD
+    SADash["SuperAdmin Master Dashboard (/dashboard/superadmin)"] --> Approvals["Consolidated Approvals (/dashboard/superadmin/approvals)"]
+    SADash --> Vendors["Vendor Governance (/dashboard/superadmin/sellers)"]
+    SADash --> SubPlans["Subscription Plans (/dashboard/superadmin/subscriptions)"]
+    SADash --> Taxonomies["Categories & Subcategories (/dashboard/superadmin/categories)"]
+    SADash --> StaffMgmt["Admin & Support Staff (/dashboard/superadmin/admins)"]
+    SADash --> AuditLogs["System Audit Logs (/dashboard/superadmin/page.tsx)"]
+</pre>
+
+<h3 id="81-screen-master-system-dashboard-dashboardsuperadmin">8.1 Screen: Master System Dashboard (<code>/dashboard/superadmin</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/superadmin/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Platform System Metrics: Gross Revenue, Total Active Sellers, Total Customers, Active Subscriptions Revenue, System Audit Log Feed.</li>
+</ul>
+<h3 id="82-screen-consolidated-approvals-engine-dashboardsuperadminapprovals">8.2 Screen: Consolidated Approvals Engine (<code>/dashboard/superadmin/approvals</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/superadmin/approvals/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Tabs: <code>Pending Pop-up Banners</code> | <code>Pending Store Coupons</code>.</li>
+<li>Item Inspection Cards: Title, Banner Image preview / Coupon Discount details, Seller Name, Created Date.</li>
+<li>Action Buttons: <code>APPROVE</code> | <code>REJECT</code> | <code>REQUEST REVISION</code> (with admin note).</li>
+</ul>
+<h3 id="83-screen-subscription-plans-coupons-manager-dashboardsuperadminsubscriptions">8.3 Screen: Subscription Plans &amp; Coupons Manager (<code>/dashboard/superadmin/subscriptions</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/superadmin/subscriptions/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Active Plans Table &amp; Active Subscription Coupons Table.</li>
+<li><strong>Create / Edit Plan Modal</strong>: Plan Name, Monthly Price, Duration (Months), Category (<code>FOOD</code>/<code>PROPERTY</code>/<code>BOTH</code>), Features JSON editor.</li>
+<li><strong>Create / Edit Subscription Coupon Modal</strong>: Code, Discount %, Discount Amount, Target Plan, Max Usages cap, Expiry Date.</li>
+</ul>
+<h3 id="84-screen-food-categories-taxonomy-editor-dashboardsuperadmincategories">8.4 Screen: Food Categories &amp; Taxonomy Editor (<code>/dashboard/superadmin/categories</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/superadmin/categories/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Top Categories Table &amp; Food Sub-Categories Tree View.</li>
+<li><strong>Create Category Modal</strong>: Category Name, Type (<code>FOOD</code> vs <code>ROOM</code>).</li>
+<li><strong>Create Food Sub-Category Modal</strong>: Sub-category Name, Parent Category select, Image Upload.</li>
+</ul>
+<h3 id="85-screen-staff-agent-account-management-dashboardsuperadminadmins">8.5 Screen: Staff &amp; Agent Account Management (<code>/dashboard/superadmin/admins</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/superadmin/admins/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Administrative Accounts Table: Staff Name, Email, Role (<code>AGENT</code> vs <code>SUPPORT</code>), Assigned Sellers count, Active status.</li>
+<li><strong>Create Admin / Support Staff Modal</strong>:<ul>
+<li>Form Fields: Name, Email, Password, Role Dropdown (<code>AGENT</code> vs <code>SUPPORT</code>).</li>
+<li>Agent Permission Checkboxes: <code>Can Manage Offers</code>, <code>Can Manage Banners</code>.</li>
+<li><code>CREATE ACCOUNT</code> Action Button.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="9-delivery-rider-screen-flows-dashboarddelivery">9. Delivery Rider Screen Flows (<code>/dashboard/delivery/...</code>)</h2>
+<pre class="mermaid">
+graph TD
+    RiderDash["Rider Dashboard (/dashboard/delivery)"] --> AssignedOrders["Assigned Orders Stream"]
+    RiderDash --> WalletHistory["Cash Wallet & Profile (/dashboard/delivery/profile)"]
+
+    AssignedOrders --> StatusOut["Mark OUT_FOR_DELIVERY"]
+    AssignedOrders --> StatusDelivered["Mark DELIVERED (Collect COD Cash)"]
+    AssignedOrders --> QRPayment["Doorstep QR Payment Modal"]
+</pre>
+
+<h3 id="91-screen-delivery-rider-dashboard-orders-stream-dashboarddelivery">9.1 Screen: Delivery Rider Dashboard &amp; Orders Stream (<code>/dashboard/delivery</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/delivery/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Header: Rider Name, Employing Seller Name, Outstanding COD Cash Balance (₹).</li>
+<li>Assigned Orders Cards: Order ID, Customer Name, Contact Phone, Delivery Address, Items List, Payment Method (<code>COD</code> vs <code>ONLINE</code>), Total Amount.</li>
+<li>Action Buttons:<ul>
+<li><code>Start Delivery</code> -&gt; Updates order status to <code>OUT_FOR_DELIVERY</code>.</li>
+<li><code>Mark Delivered (Collect COD Cash)</code> -&gt; Triggers confirmation modal -&gt; Sets status to <code>DELIVERED</code>, marks <code>isPaid = true</code>, increments rider <code>outstandingBalance</code> by total amount, and creates <code>COD_COLLECTION</code> transaction.</li>
+<li><code>Doorstep Online QR</code> -&gt; Generates Razorpay QR code for customer to scan and pay at doorstep.</li>
+</ul>
+</li>
+</ul>
+<h3 id="92-screen-rider-cash-wallet-profile-dashboarddeliveryprofile">9.2 Screen: Rider Cash Wallet &amp; Profile (<code>/dashboard/delivery/profile</code>)</h3>
+<ul>
+<li><strong>Route</strong>: <code>src/app/dashboard/delivery/profile/page.tsx</code></li>
+<li><strong>UI Elements</strong>:</li>
+<li>Outstanding Balance Indicator (Displays physical cash owed to employing seller).</li>
+<li>Cash Transaction History Ledger Table: Date, Transaction Type (<code>COD_COLLECTION</code> [+], <code>SETTLEMENT</code> [-], <code>ADJUSTMENT</code> [+/-]), Order ID, Amount, Description.</li>
+<li>Profile Form: Edit Phone Number, City, Pincode.</li>
+</ul>
+<hr />
+<h2 id="10-complete-screen-route-mapping-table">10. Complete Screen Route Mapping Table</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Role</th>
+<th style="text-align: left;">Screen Name</th>
+<th style="text-align: left;">Route Path</th>
+<th style="text-align: left;">Primary Actions &amp; State Transitions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Public</strong></td>
+<td style="text-align: left;">Homepage</td>
+<td style="text-align: left;"><code>/</code></td>
+<td style="text-align: left;">Explore categories, filter stores by pincode, view popup banners.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Public</strong></td>
+<td style="text-align: left;">Vendor Shop Page</td>
+<td style="text-align: left;"><code>/shop/[trackingId]</code></td>
+<td style="text-align: left;">View store menu/rooms, add items to cart drawer, check open hours.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Auth</strong></td>
+<td style="text-align: left;">Customer Register</td>
+<td style="text-align: left;"><code>/auth/register/user</code></td>
+<td style="text-align: left;">Register new customer account.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Auth</strong></td>
+<td style="text-align: left;">Vendor Register Wizard</td>
+<td style="text-align: left;"><code>/auth/register/page</code></td>
+<td style="text-align: left;">5-step vendor registration with document &amp; photo uploads.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>User</strong></td>
+<td style="text-align: left;">Customer Dashboard</td>
+<td style="text-align: left;"><code>/dashboard/user</code></td>
+<td style="text-align: left;">View active orders summary, bookings count, saved addresses.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>User</strong></td>
+<td style="text-align: left;">Food Checkout</td>
+<td style="text-align: left;"><code>/dashboard/user/checkout</code></td>
+<td style="text-align: left;">Select delivery address, validate coupon, choose COD/Razorpay.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>User</strong></td>
+<td style="text-align: left;">Order History &amp; Invoice</td>
+<td style="text-align: left;"><code>/dashboard/user/orders</code></td>
+<td style="text-align: left;">View order status, download invoice, cancel pending order, submit review.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>User</strong></td>
+<td style="text-align: left;">Room Bookings</td>
+<td style="text-align: left;"><code>/dashboard/user/bookings</code></td>
+<td style="text-align: left;">Request room dates, track approval, pay confirmed booking.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Seller Overview</td>
+<td style="text-align: left;"><code>/dashboard/seller</code></td>
+<td style="text-align: left;">Revenue analytics, store Online/Offline toggle, live order stream.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Profile Revision</td>
+<td style="text-align: left;"><code>/dashboard/seller/revision</code></td>
+<td style="text-align: left;">Resubmit corrected documents when profile is in <code>REVISION</code> state.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Order Processing</td>
+<td style="text-align: left;"><code>/dashboard/seller/orders</code></td>
+<td style="text-align: left;">Accept orders, start preparing, assign delivery rider, dispatch.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Menu &amp; Inventory</td>
+<td style="text-align: left;"><code>/dashboard/seller/menu</code></td>
+<td style="text-align: left;">Add/edit dishes, operational hours schedule, stock counters, pincodes.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Fleet &amp; COD Settlement</td>
+<td style="text-align: left;"><code>/dashboard/seller/delivery</code></td>
+<td style="text-align: left;">Create riders, collect cash settlements, inspect driver wallet ledger.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Subscriptions</td>
+<td style="text-align: left;"><code>/dashboard/seller/payment</code></td>
+<td style="text-align: left;">Select plan, apply subscription coupon, complete Razorpay payment.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Support</strong></td>
+<td style="text-align: left;">Ticket Center</td>
+<td style="text-align: left;"><code>/dashboard/support/tickets</code></td>
+<td style="text-align: left;">View all user/vendor tickets, live threaded chat, update ticket status.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Support</strong></td>
+<td style="text-align: left;">Refund Audit</td>
+<td style="text-align: left;"><code>/dashboard/support/refunds</code></td>
+<td style="text-align: left;">Audit refund claims, enter bank reference ID, approve or reject refunds.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Agent</strong></td>
+<td style="text-align: left;">Vendor Verification</td>
+<td style="text-align: left;"><code>/dashboard/admin/registrations</code></td>
+<td style="text-align: left;">Audit vendor docs/photos, approve vendor, request revision with notes.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Agent</strong></td>
+<td style="text-align: left;">Fleet Adjustments</td>
+<td style="text-align: left;"><code>/dashboard/admin/delivery</code></td>
+<td style="text-align: left;">Adjust rider outstanding balances (<code>INCREMENT</code>/<code>DECREMENT</code>).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Super</strong></td>
+<td style="text-align: left;">Approvals Engine</td>
+<td style="text-align: left;"><code>/dashboard/superadmin/approvals</code></td>
+<td style="text-align: left;">Consolidated audit for seller coupons and global popup banners.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Super</strong></td>
+<td style="text-align: left;">Subscription Plans</td>
+<td style="text-align: left;"><code>/dashboard/superadmin/subscriptions</code></td>
+<td style="text-align: left;">Create/edit subscription plans and subscription discount coupons.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Super</strong></td>
+<td style="text-align: left;">Staff Governance</td>
+<td style="text-align: left;"><code>/dashboard/superadmin/admins</code></td>
+<td style="text-align: left;">Create Agent and Support Staff accounts with granular permissions.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Rider</strong></td>
+<td style="text-align: left;">Rider Dashboard</td>
+<td style="text-align: left;"><code>/dashboard/delivery</code></td>
+<td style="text-align: left;">View assigned orders, mark out for delivery, mark delivered (collect COD).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Rider</strong></td>
+<td style="text-align: left;">Wallet Ledger</td>
+<td style="text-align: left;"><code>/dashboard/delivery/profile</code></td>
+<td style="text-align: left;">View outstanding cash balance, track cash settlements &amp; adjustments.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>UI/UX Screen-Level User Flow Specification compiled for the </em><em>Neo Cloud Room</em><em> Design &amp; Development Team.</em></p>
+</body>
+</html>

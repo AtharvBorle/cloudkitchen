@@ -22,7 +22,7 @@ export default function PromoRow({
   code = "FOOD30",
   description = "Kickstart your meal plan with premium ingredients and fast delivery. Use code FOOD30 at checkout.",
   buttonText = "Order Now",
-  buttonLink = "/explore/food",
+  buttonLink = "/explore-desktop",
   badgeText = "Hurry - ends soon",
   imageSrc = "/images/promo-img1.png",
 }: PromoRowProps) {

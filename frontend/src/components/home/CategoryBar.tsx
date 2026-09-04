@@ -12,14 +12,14 @@ export interface CategoryItem {
 }
 
 const CATEGORIES: CategoryItem[] = [
-  { id: "food", name: "Food", icon: "🍔", route: "/explore/food" },
-  { id: "mess", name: "Mess", icon: "🧺", route: "/explore/food?category=mess" },
-  { id: "bakery", name: "Bakery", icon: "🥐", route: "/explore/food?category=bakery" },
-  { id: "home-meals", name: "Home Meals", icon: "🍲", route: "/explore/food?category=homemeals" },
-  { id: "healthy", name: "Healthy", icon: "🥗", route: "/explore/food?category=healthy" },
-  { id: "snacks", name: "Snacks", icon: "🍿", route: "/explore/food?category=snacks" },
-  { id: "desserts", name: "Desserts", icon: "🍰", route: "/explore/food?category=desserts" },
-  { id: "drink", name: "Drink", icon: "🍹", route: "/explore/food?category=drinks" },
+  { id: "food", name: "Food", icon: "🍔", route: "/explore-desktop" },
+  { id: "mess", name: "Mess", icon: "🧺", route: "/explore-desktop?category=mess" },
+  { id: "bakery", name: "Bakery", icon: "🥐", route: "/explore-desktop?category=bakery" },
+  { id: "home-meals", name: "Home Meals", icon: "🍲", route: "/explore-desktop?category=homemeals" },
+  { id: "healthy", name: "Healthy", icon: "🥗", route: "/explore-desktop?category=healthy" },
+  { id: "snacks", name: "Snacks", icon: "🍿", route: "/explore-desktop?category=snacks" },
+  { id: "desserts", name: "Desserts", icon: "🍰", route: "/explore-desktop?category=desserts" },
+  { id: "drink", name: "Drink", icon: "🍹", route: "/explore-desktop?category=drinks" },
   { id: "rooms", name: "Rooms", icon: "🛏️", route: "/explore/rooms" },
 ];
 

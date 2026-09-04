@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo Cloud Room - System Analysis & Workflow Document</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+@page {
+    size: A4;
+    margin: 20mm 15mm 20mm 15mm;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.6;
+    font-size: 13px;
+    background-color: #ffffff;
+    padding: 0;
+    margin: 0;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 8px;
+    margin-top: 20px;
+    margin-bottom: 16px;
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e3a8a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 6px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    page-break-after: avoid;
+}
+
+h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2563eb;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+}
+
+h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+ul, ol {
+    margin-top: 0;
+    margin-bottom: 12px;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 4px;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 24px 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12px;
+    page-break-inside: avoid;
+}
+
+th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+}
+
+td {
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+tr:nth-child(even) td {
+    background-color: #f8fafc;
+}
+
+code {
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11.5px;
+    background-color: #f1f5f9;
+    color: #0f766e;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+pre {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    page-break-inside: avoid;
+}
+
+pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+blockquote {
+    border-left: 4px solid #3b82f6;
+    background-color: #eff6ff;
+    color: #1e40af;
+    margin: 12px 0;
+    padding: 10px 16px;
+    border-radius: 0 6px 6px 0;
+}
+
+.mermaid {
+    display: flex;
+    justify-content: center;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    page-break-inside: avoid;
+}
+
+.page-break {
+    page-break-before: always;
+}
+
+@media print {
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    h2 {
+        page-break-before: auto;
+    }
+    pre, table, .mermaid {
+        page-break-inside: avoid;
+    }
+}
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: 'neutral',
+                securityLevel: 'loose',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                sequence: { useMaxWidth: true, showSequenceNumbers: true }
+            });
+        });
+    </script>
+</head>
+<body>
+<h1 id="neo-cloud-room-cloudkitchen-platform-comprehensive-system-analysis-workflow-architecture-document">Neo Cloud Room (CloudKitchen Platform) - Comprehensive System Analysis &amp; Workflow Architecture Document</h1>
+<hr />
+<h2 id="1-executive-summary-project-architecture">1. Executive Summary &amp; Project Architecture</h2>
+<p><strong>Neo Cloud Room</strong> (also known as <em>CloudKitchen</em>) is a multi-role, multi-vendor, enterprise-grade digital platform designed to handle two primary service domains:<br />
+1. <strong>Food &amp; Culinary Services</strong>: Cloud Kitchens, Mess Providers, and Bakeries delivering fresh meals to local customers based on pincodes and real-time menu availability.<br />
+2. <strong>Property &amp; Room Rental Services</strong>: Short-term and long-term room listings, capacity management, booking requests, date-conflict validation, and payment settlement.<br />
+3. <strong>Furniture Exploration &amp; Direct Store Inquiries</strong>: Showcasing catalog items with query routing.</p>
+<h3 id="core-technology-stack">Core Technology Stack</h3>
+<ul>
+<li><strong>Frontend</strong>: Next.js 15+ (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons, Modern Responsive UI.</li>
+<li><strong>Backend API</strong>: Next.js API Routes (<code>/api/...</code>), Node.js, TypeScript, NextAuth.js / JWT Auth.</li>
+<li><strong>Database &amp; ORM</strong>: PostgreSQL database managed via Prisma ORM (<code>prisma/schema.prisma</code>).</li>
+<li><strong>Payment Processing</strong>: Razorpay Integration (HMAC-SHA256 signature verification for Online payments, COD workflow with rider cash collection).</li>
+<li><strong>File Storage</strong>: Local &amp; Cloud multipart form upload handler (<code>lib/upload.ts</code>) for document verification (Adhaar, FSSAI, Light Bill, Passbook) and media assets (Kitchen, Cuisine, Room photos, Banners).</li>
+<li><strong>Location &amp; Routing</strong>: Geocoding engine and pincode-matching delivery verification.</li>
+</ul>
+<hr />
+<h2 id="2-master-system-enums-data-states">2. Master System Enums &amp; Data States</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Domain</th>
+<th style="text-align: left;">Enum / Field Name</th>
+<th style="text-align: left;">Allowed Values / States</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>System Roles</strong></td>
+<td style="text-align: left;"><code>User.role</code></td>
+<td style="text-align: left;"><code>SUPERADMIN</code>, <code>AGENT</code>, <code>SUPPORT</code>, <code>SELLER</code>, <code>USER</code>, <code>DELIVERY</code></td>
+<td style="text-align: left;">Defines access control permissions and available dashboards.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller Business Category</strong></td>
+<td style="text-align: left;"><code>SellerProfile.businessCategory</code></td>
+<td style="text-align: left;"><code>FOOD</code>, <code>PROPERTY</code>, <code>BOTH</code></td>
+<td style="text-align: left;">Determines whether the store operates as a Cloud Kitchen/Mess, Room Host, or Both.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller Food Type</strong></td>
+<td style="text-align: left;"><code>SellerProfile.foodType</code></td>
+<td style="text-align: left;"><code>VEG</code>, <code>BOTH</code></td>
+<td style="text-align: left;">Defines dietary compliance for food offerings.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller Verification</strong></td>
+<td style="text-align: left;"><code>verificationStatus</code><br><code>foodVerificationStatus</code><br><code>propertyVerificationStatus</code></td>
+<td style="text-align: left;"><code>PENDING</code>, <code>APPROVED</code>, <code>REJECTED</code>, <code>REVISION</code>, <code>NONE</code></td>
+<td style="text-align: left;">Lifecycle state of vendor document verification and audit resubmission.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Order Status</strong></td>
+<td style="text-align: left;"><code>Order.status</code></td>
+<td style="text-align: left;"><code>PENDING</code>, <code>PREPARING</code>, <code>OUT_FOR_DELIVERY</code>, <code>DELIVERED</code>, <code>CANCELLED</code></td>
+<td style="text-align: left;">Order progression state from placement to delivery.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Payment Method</strong></td>
+<td style="text-align: left;"><code>paymentMethod</code></td>
+<td style="text-align: left;"><code>ONLINE</code>, <code>COD</code>, <code>QR</code></td>
+<td style="text-align: left;">Payment channel chosen by customer or rider.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Booking Status</strong></td>
+<td style="text-align: left;"><code>Booking.status</code></td>
+<td style="text-align: left;"><code>PENDING</code>, <code>CONFIRMED</code>, <code>CANCELLED</code></td>
+<td style="text-align: left;">Progression state of property room bookings.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Subscription Status</strong></td>
+<td style="text-align: left;"><code>Subscription.status</code></td>
+<td style="text-align: left;"><code>ACTIVE</code>, <code>EXPIRED</code>, <code>INACTIVE</code></td>
+<td style="text-align: left;">Vendor subscription state allowing store operational status.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Coupon Status</strong></td>
+<td style="text-align: left;"><code>approvalStatus</code></td>
+<td style="text-align: left;"><code>PENDING_APPROVAL</code>, <code>APPROVED</code>, <code>REJECTED</code>, <code>REVISION</code></td>
+<td style="text-align: left;">Approval pipeline for seller-created discount coupons and popup banners.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Support Ticket Status</strong></td>
+<td style="text-align: left;"><code>Ticket.status</code></td>
+<td style="text-align: left;"><code>OPEN</code>, <code>IN_PROGRESS</code>, <code>RESOLVED</code>, <code>CLOSED</code></td>
+<td style="text-align: left;">Progression of customer support tickets.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Refund Request Status</strong></td>
+<td style="text-align: left;"><code>Refund.status</code></td>
+<td style="text-align: left;"><code>PENDING</code>, <code>APPROVED</code>, <code>REJECTED</code></td>
+<td style="text-align: left;">Status of money refund resubmissions.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Delivery Transactions</strong></td>
+<td style="text-align: left;"><code>DeliveryTransaction.type</code></td>
+<td style="text-align: left;"><code>COD_COLLECTION</code>, <code>SETTLEMENT</code>, <code>ADJUSTMENT</code></td>
+<td style="text-align: left;">Delivery wallet ledger types tracking cash movement between driver and seller.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-detailed-role-based-features-flow-breakdown">3. Detailed Role-Based Features &amp; Flow Breakdown</h2>
+<pre class="mermaid">
+graph TD
+    UserRole[User Roles in Neo Cloud Room]
+    UserRole --> SuperAdmin[1. SUPERADMIN]
+    UserRole --> Agent[2. AGENT / ADMIN]
+    UserRole --> SupportRole[3. SUPPORT STAFF]
+    UserRole --> Seller[4. SELLER / VENDOR]
+    UserRole --> UserCust[5. USER / CUSTOMER]
+    UserRole --> DeliveryBoy[6. DELIVERY PERSON]
+
+    SuperAdmin -->|Full Platform Control| SA_Features[Global Settings, Approval Pipeline, Categories, Subscription Plans, Admin/Support Management, Refunds & Audit Logs]
+    Agent -->|Regional Management| AG_Features[Assigned Sellers, Document Auditing, Offer/Banner Review, Wallet Adjustment]
+    SupportRole -->|Dispute & Ticket Resolution| SP_Features[Live Ticket Messaging, Refund Audit & Fulfillment, Order Cancellation Override, User Activity Audit]
+    Seller -->|Store Operations| SE_Features[Registration & Reapply, Subscription Purchase, Menu/Room Setup, Order Processing, Rider Fleet Management]
+    UserCust -->|Ordering & Bookings| US_Features[Location Setup, Food Cart & Checkout, Room Booking, Live Order Tracking, Support & Reviews]
+    DeliveryBoy -->|Doorstep Delivery| DE_Features[Assigned Orders, Delivery Status Update, COD Cash Collection & Seller Cash Settlement]
+</pre>
+
+<h3 id="31-superadmin-master-platform-administrator">3.1 SUPERADMIN (Master Platform Administrator)</h3>
+<ul>
+<li><strong>Global Governance</strong>: Complete access to all backend resources and administrative dashboard controls.</li>
+<li><strong>Verification &amp; Approval Engine</strong>:</li>
+<li>Reviews and audits initial seller registrations, document attachments (Adhaar, FSSAI, Light Bill, Passbook), resubmissions, and category application expansions.</li>
+<li>Approves, rejects, or flags resubmissions with administrative notes (<code>adminNote</code>).</li>
+<li>Audits pending seller-requested coupons and pop-up promotional banners (<code>PENDING_APPROVAL</code> -&gt; <code>APPROVED</code> / <code>REJECTED</code>).</li>
+<li><strong>Category &amp; Taxonomy Management</strong>:</li>
+<li>Creates and manages top-level platform categories (<code>FOOD</code> vs <code>ROOM</code>).</li>
+<li>Creates, edits, and organizes <code>FoodCategory</code> and <code>FoodSubCategory</code> with image upload handling.</li>
+<li><strong>Subscription Plan &amp; Coupon Creation</strong>:</li>
+<li>Configures vendor subscription plans (<code>SubscriptionPlan</code>) with parameters: <code>name</code>, <code>price</code>, <code>durationMonths</code>, <code>category</code> (<code>FOOD</code>, <code>PROPERTY</code>, <code>BOTH</code>), and JSON feature lists.</li>
+<li>Creates global or plan-specific <code>SubscriptionCoupon</code> codes with percentage or flat discounts, expiry dates, and maximum usage caps.</li>
+<li><strong>Financial &amp; Refund Management</strong>:</li>
+<li>Inspects refund resubmissions (<code>Refund</code>) for paid orders and room bookings.</li>
+<li>Approves refunds (triggering status update <code>isPaid = false</code> on orders or <code>status = CANCELLED</code> on bookings) or rejects requests with transaction references.</li>
+<li>Monitors system-wide audit logs (<code>AuditLog</code>) capturing administrative actions.</li>
+<li><strong>User, Agent &amp; Support Personnel Governance</strong>:</li>
+<li>Creates and manages field Agents (<code>AGENT</code>) and Customer Support Staff (<code>SUPPORT</code>) accounts.</li>
+<li>Promotes or demotes user accounts, inspects user activity logs, and toggles user active status.</li>
+</ul>
+<hr />
+<h3 id="32-agent-admin-field-branch-administrator">3.2 AGENT / ADMIN (Field / Branch Administrator)</h3>
+<ul>
+<li><strong>Assigned Seller Management</strong>:</li>
+<li>Directly manages a subset of assigned seller profiles (<code>assignedSellers</code>).</li>
+<li>Verifies submitted identity cards and regulatory proofs for newly onboarding vendors in their region.</li>
+<li><strong>Promotions &amp; Banner Operations</strong>:</li>
+<li>Creates and updates store-level and global pop-up banners.</li>
+<li>If an Agent creates a global banner, it is queued as <code>PENDING_APPROVAL</code> for Superadmin authorization; store-level banners created by agents are auto-approved (<code>APPROVED</code>).</li>
+<li><strong>Fleet Wallet Adjustments</strong>:</li>
+<li>Adjusts delivery driver outstanding COD balances (<code>INCREMENT</code> or <code>DECREMENT</code>) with detailed reason logs (<code>ADJUSTMENT</code> transactions).</li>
+</ul>
+<hr />
+<h3 id="33-support-staff-customer-support-refund-operations-administrator">3.3 SUPPORT STAFF (Customer Support &amp; Refund Operations Administrator)</h3>
+<ul>
+<li><strong>Dedicated Administrative Role</strong>:</li>
+<li>Created by Superadmin (<code>role = SUPPORT</code>) to manage customer support operations, user dispute resolution, and payment refunds via <code>/auth/login/admin</code>.</li>
+<li><strong>Support Ticket Resolution &amp; Live Messaging</strong>:</li>
+<li>Access to dedicated support ticket dashboard (<code>/dashboard/support/tickets</code>).</li>
+<li>Queries all system-wide support tickets across customers and vendors (<code>listTickets</code>).</li>
+<li>Real-time threaded ticket messaging with users (<code>sendTicketMessage</code>), appending staff responses.</li>
+<li>Ticket lifecycle control: Updates ticket status (<code>OPEN</code> -&gt; <code>IN_PROGRESS</code> -&gt; <code>RESOLVED</code> / <code>CLOSED</code>).</li>
+<li>Ability to create support tickets on behalf of users when handling call/chat inquiries.</li>
+<li><strong>Refund Request Audit &amp; Money Fulfillment</strong>:</li>
+<li>Access to refund processing portal (<code>/dashboard/support/refunds</code>).</li>
+<li>Audits pending refund requests (<code>Refund</code>) for paid orders and room bookings across the platform.</li>
+<li>Authorizes refunds (<code>APPROVED</code>) or rejects invalid claims (<code>REJECTED</code>) with bank transaction references (<code>transactionId</code>) and internal administrative notes (<code>adminNote</code>).</li>
+<li>Executing a refund approval automatically updates order payment state (<code>isPaid = false</code>) or cancels room bookings (<code>status = CANCELLED</code>).</li>
+<li><strong>Order Inspection &amp; Cancellation Override</strong>:</li>
+<li>Full access to inspect details of any order (<code>getOrderDetails</code>).</li>
+<li>Administrative authority to cancel problematic or disputed orders (<code>cancelOrder</code>), bypassing customer self-cancel constraints and automatically queueing refund requests if the order was prepaid.</li>
+<li><strong>User Activity Audit</strong>:</li>
+<li>Inspects registered user list (<code>/api/superadmin/users</code>) and monitors individual user activity logs (<code>/api/superadmin/users/[id]/activity</code>).</li>
+<li><strong>Category &amp; Taxonomy Read/Write Access</strong>:</li>
+<li>Views and updates food categories and subcategories to assist vendors with menu categorization disputes.</li>
+</ul>
+<hr />
+<h3 id="34-seller-vendor-cloud-kitchen-mess-bakery-room-host">3.4 SELLER / VENDOR (Cloud Kitchen, Mess, Bakery, Room Host)</h3>
+<ul>
+<li><strong>Multi-Step Onboarding &amp; Document Verification Flow</strong>:</li>
+<li>Registers business profile with business name, seller type (Homely Food, Mess, Bakery), location details (flat, locality, landmark, city, pincode), food classification (<code>VEG</code> / <code>BOTH</code>), and business category (<code>FOOD</code>, <code>PROPERTY</code>, <code>BOTH</code>).</li>
+<li>Uploads required legal proofs: Adhaar Card (front &amp; back), FSSAI License, Electricity/Light Bill, Bank Passbook, along with Kitchen, Cuisine, and Room photos.</li>
+<li>Receives a unique store tracking ID (e.g., <code>SHOP-X7K2P9</code>).</li>
+<li><strong>Reapply / Revision Resubmission Workflow</strong>:</li>
+<li>If Superadmin/Agent flags profile status as <code>REVISION</code> with feedback notes (<code>verificationNote</code>), seller dashboard enters Revision Mode.</li>
+<li>Seller resubmits updated/corrected documents and resends verification request, which resets status to <code>PENDING</code> for re-auditing.</li>
+<li><strong>Category Expansion Application Flow</strong>:</li>
+<li>Existing approved food sellers can apply to add <code>PROPERTY</code> offerings (and vice versa) via <code>/api/seller/category-application</code>.</li>
+<li>Seller submits category-specific proof files (e.g., room photos for property expansion, FSSAI for food expansion). Verification status updates to <code>PENDING</code> for that category.</li>
+<li><strong>Subscription Management &amp; Activation</strong>:</li>
+<li>Stores require an active <code>Subscription</code> matching their operational domain (<code>FOOD</code> or <code>PROPERTY</code>) to open for orders/bookings.</li>
+<li>Seller selects plan, applies discount coupons (<code>SubscriptionCoupon</code>), and completes Razorpay payment.</li>
+<li>Stacking logic: Renewing an existing active plan automatically extends the <code>validUntil</code> expiry date from the current expiration date.</li>
+<li><strong>Store &amp; Inventory Controls</strong>:</li>
+<li>Toggles store Online/Offline state (<code>isOnline</code>).</li>
+<li>Sets day-wise detailed operational hours (<code>operationalHours</code> JSON schema containing <code>isOpen</code>, <code>openTime</code>, <code>closeTime</code> for Mon-Sun).</li>
+<li>Manages served pincodes (<code>ServedPincode</code>).</li>
+<li>Adds/edits food items: Name, description, price, food type (<code>VEG</code>/<code>NON_VEG</code>), categories, stock quantity (-1 for infinite, or numeric counter with auto-decrement), and item-specific delivery pincodes.</li>
+<li>Adds/edits room listings: Title, capacity, night price, description, images, and availability status.</li>
+<li><strong>Order Fulfillment &amp; Delivery Fleet Operations</strong>:</li>
+<li>Real-time order dashboard tracking statuses: <code>PENDING</code> -&gt; <code>PREPARING</code> -&gt; <code>OUT_FOR_DELIVERY</code> -&gt; <code>DELIVERED</code>.</li>
+<li>Creates dedicated delivery personnel accounts (<code>DeliveryPerson</code>) with 10-digit phone verification and login credentials.</li>
+<li>Assigns delivery riders to specific orders (automatically updates order state to <code>OUT_FOR_DELIVERY</code>).</li>
+<li>Manages COD cash collections: Accepts cash collected by delivery riders, records <code>SETTLEMENT</code> transactions, and decrements rider's <code>outstandingBalance</code>.</li>
+<li><strong>Promotions &amp; Reviews</strong>:</li>
+<li>Requests custom discount coupons and store pop-up banners (submitted for Admin/Superadmin approval).</li>
+<li>Views order reviews and item-level customer ratings.</li>
+</ul>
+<hr />
+<h3 id="35-user-customer">3.5 USER / CUSTOMER</h3>
+<ul>
+<li><strong>Profile &amp; Saved Address Management</strong>:</li>
+<li>Creates customer account, manages contact information.</li>
+<li>Saves multiple delivery addresses (<code>Address</code>) labeled Home, Work, or Other with pincodes and latitude/longitude geocoding. Sets default delivery address.</li>
+<li><strong>Multi-Service Catalog Exploration</strong>:</li>
+<li>Explores nearby food items, mess plans, bakeries, and rooms based on selected delivery pincode.</li>
+<li>Live system validations prevent selecting offline stores, non-delivering pincodes, or items outside operational store hours.</li>
+<li>Explores available furniture catalog and submits direct inquiries via <code>/api/furniture/query</code>.</li>
+<li><strong>Checkout, Coupon Redemption &amp; Order Placement</strong>:</li>
+<li>Cart engine validates stock availability, seller subscription validity, store open hours, and pincode matching.</li>
+<li>Validates coupons against rule engines: minimum cart value (<code>minimumCartValue</code>), max usage per user (<code>maxUsagesPerUser</code>), global max users (<code>maxUsers</code>), and store category compatibility.</li>
+<li>Selects payment mode: Online Payment (Razorpay checkout) or Cash on Delivery (COD).</li>
+<li><strong>Real-Time Order &amp; Booking Tracking</strong>:</li>
+<li>Tracks order progress (<code>PENDING</code>, <code>PREPARING</code>, <code>OUT_FOR_DELIVERY</code>, <code>DELIVERED</code>).</li>
+<li>Views printable tax invoices (<code>/invoice/order/[id]</code>).</li>
+<li><strong>Property Room Booking Flow</strong>:</li>
+<li>Selects check-in (<code>startDate</code>) and check-out (<code>endDate</code>) dates.</li>
+<li>System checks for overlapping confirmed/pending bookings for the chosen room.</li>
+<li>Submits booking request (<code>PENDING</code>). Once host confirms, customer completes Online or COD payment.</li>
+<li><strong>Support, Tickets &amp; Refunds</strong>:</li>
+<li>Files support tickets (<code>Ticket</code>) categorized under <code>FOOD</code>, <code>ROOM</code>, <code>PAYMENT</code>, or <code>OTHER</code>.</li>
+<li>Participates in live threaded ticket chat with support staff.</li>
+<li>Requests order or booking cancellations (if order is <code>PENDING</code>) and submits refund claims for paid cancelled orders.</li>
+<li><strong>Ratings &amp; Reviews</strong>:</li>
+<li>Submits overall 1 to 5-star order reviews with optional text comments.</li>
+<li>Submits granular item-level star ratings (<code>ItemRating</code>) for each food item included in the delivered order.</li>
+</ul>
+<hr />
+<h3 id="36-delivery-person-rider-fleet">3.6 DELIVERY PERSON (Rider Fleet)</h3>
+<ul>
+<li><strong>Account Access</strong>: Logins using credentials created by their employing Seller.</li>
+<li><strong>Delivery Management Dashboard</strong>:</li>
+<li>Views orders assigned to them by the seller (<code>deliveryPersonId</code>).</li>
+<li>Updates order status: <code>OUT_FOR_DELIVERY</code> -&gt; <code>DELIVERED</code>.</li>
+<li><strong>Payment &amp; Wallet Mechanics</strong>:</li>
+<li>For Cash on Delivery (COD) orders: Upon marking an order as <code>DELIVERED</code>, the system automatically creates a <code>COD_COLLECTION</code> transaction and increments the rider's <code>outstandingBalance</code> by the order total amount.</li>
+<li>For Doorstep Online Payments: Can generate a doorstep Razorpay payment QR code for the customer to scan and pay. Upon successful verification, order is marked <code>isPaid = true</code> and <code>DELIVERED</code>.</li>
+<li><strong>Cash Settlement</strong>: Handovers collected cash to the seller, who logs a <code>SETTLEMENT</code> action to clear the driver's outstanding wallet balance.</li>
+</ul>
+<hr />
+<h2 id="4-end-to-end-core-workflows-sequence-diagrams-step-by-step">4. End-to-End Core Workflows (Sequence Diagrams &amp; Step-by-Step)</h2>
+<h3 id="workflow-1-registration-verification-reapply-revision-flow">Workflow 1: Registration, Verification &amp; Reapply / Revision Flow</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Seller as "Seller / Vendor"
+    participant API as "Backend API (/api/auth/register)"
+    participant DB as "PostgreSQL Database"
+    participant Admin as "Superadmin / Agent"
+
+    Seller->>API: 1. Submit Registration Form and Verification Docs
+    API->>DB: 2. Create User and SellerProfile with PENDING status
+    API-->>Seller: 3. Return Success and Tracking ID
+
+    Admin->>API: 4. Fetch Pending Registrations
+    API->>DB: 5. Query Seller Profiles in PENDING status
+    Admin->>API: 6. Audit Docs and Submit Action
+
+    alt Status: APPROVED
+        API->>DB: Set verificationStatus to APPROVED
+        API-->>Seller: Dashboard unlocked
+    else Status: REVISION
+        API->>DB: Set verificationStatus to REVISION with verificationNote
+        API-->>Seller: Dashboard locked in Revision State with notes
+        Seller->>API: 7. Resubmit corrected files via revision API
+        API->>DB: 8. Update files and reset status to PENDING
+        API-->>Admin: Re-queued in Pending Approvals list
+    end
+</pre>
+
+<hr />
+<h3 id="workflow-2-seller-subscription-plan-renewal-stacking">Workflow 2: Seller Subscription &amp; Plan Renewal Stacking</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Seller as "Seller / Vendor"
+    participant API as "Backend API (/api/seller/subscription)"
+    participant RZP as "Razorpay Gateway"
+    participant DB as "PostgreSQL Database"
+
+    Seller->>API: 1. Select Subscription Plan and Coupon Code
+    API->>DB: 2. Validate Plan and Coupon applicability
+    API->>RZP: 3. Create Razorpay Order after discount
+    RZP-->>Seller: 4. Open Razorpay Checkout Modal
+    Seller->>RZP: 5. Complete Payment
+    RZP-->>Seller: 6. Return Payment ID and Signature
+    Seller->>API: 7. Post Verification Request
+    API->>API: 8. Verify HMAC-SHA256 Signature
+    API->>DB: 9. Calculate stacked validUntil date and fetch active sub
+    API->>DB: 10. Create Subscription record ACTIVE and increment coupon usage
+    API-->>Seller: 11. Subscription Active
+</pre>
+
+<hr />
+<h3 id="workflow-3-customer-food-ordering-real-time-stock-validation-flow">Workflow 3: Customer Food Ordering &amp; Real-Time Stock Validation Flow</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Customer as "Customer"
+    participant API as "Backend API (/api/user/orders)"
+    participant DB as "PostgreSQL Database"
+    participant RZP as "Razorpay Gateway"
+    actor Seller as "Seller / Kitchen"
+
+    Customer->>API: 1. POST /api/user/orders with cart items and address
+    API->>DB: 2. Check Seller Online Status and Active Subscription
+    API->>DB: 3. Validate Cart Items availability, hours and pincode
+    API->>DB: 4. Check FoodItem stock quantity
+    API->>DB: 5. Validate Coupon rules and limits
+
+    alt Payment Method: COD
+        API->>DB: 6a. Decrement FoodItem stock and Create Order with PENDING status
+        API-->>Customer: 7a. Order Placed Successfully
+    else Payment Method: ONLINE
+        API->>RZP: 6b. Initiate Razorpay Order in Paise
+        API->>DB: 7b. Decrement stock and Create Order with Razorpay Order ID
+        API-->>Customer: 8b. Return Razorpay Order Details
+        Customer->>RZP: 9b. Complete Payment
+        Customer->>API: 10b. POST /api/user/orders/verify with payment signature
+        API->>DB: 11b. Verify HMAC Signature and set isPaid to true
+    end
+
+    API-->>Seller: 12. Order Appears in Seller Dashboard
+</pre>
+
+<hr />
+<h3 id="workflow-4-delivery-assignment-doorstep-cod-collection-seller-cash-settlement">Workflow 4: Delivery Assignment, Doorstep COD Collection &amp; Seller Cash Settlement</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Seller as "Seller / Vendor"
+    participant API as "Backend API"
+    participant DB as "PostgreSQL Database"
+    actor Rider as "Delivery Person"
+    actor Customer as "Customer"
+
+    Seller->>API: 1. Assign Delivery Rider to Order
+    API->>DB: 2. Set order deliveryPersonId and status OUT_FOR_DELIVERY
+    Rider->>API: 3. View Assigned Orders on Delivery Dashboard
+    Rider->>Customer: 4. Deliver Food at Customer Address
+
+    alt Payment Method: COD
+        Rider->>Customer: 5a. Collect Cash Amount from Customer
+        Rider->>API: 6a. Update Status to DELIVERED
+        API->>DB: 7a. Set order status DELIVERED and isPaid true
+        API->>DB: 8a. Increment Rider outstandingBalance
+        API->>DB: 9a. Create DeliveryTransaction for COD COLLECTION
+    end
+
+    Rider->>Seller: 10. Hand over physical cash to Seller
+    Seller->>API: 11. POST /api/seller/delivery/collect with cash amount
+    API->>DB: 12. Decrement Rider outstandingBalance
+    API->>DB: 13. Create DeliveryTransaction for SETTLEMENT
+</pre>
+
+<hr />
+<h3 id="workflow-5-property-room-search-booking-date-overlap-check-settlement-flow">Workflow 5: Property Room Search, Booking, Date Overlap Check &amp; Settlement Flow</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Customer as "Customer"
+    participant API as "Backend API (/api/user/bookings)"
+    participant DB as "PostgreSQL Database"
+    actor Host as "Property Host"
+
+    Customer->>API: 1. POST /api/user/bookings with date range
+    API->>DB: 2. Verify Room Availability and Seller Property Subscription
+    API->>DB: 3. Check for overlapping CONFIRMED or PENDING bookings
+
+    alt Overlap Detected
+        API-->>Customer: 4a. Return Error: These dates are already booked
+    else Dates Clear
+        API->>DB: 4b. Create Booking with PENDING status
+        API-->>Customer: 5b. Booking Requested Successfully
+    end
+
+    Host->>API: 6. Review Booking Request and set status CONFIRMED
+    Customer->>API: 7. Pay for Confirmed Booking via Razorpay or COD
+    API->>DB: 8. Update booking isPaid to true
+</pre>
+
+<hr />
+<h3 id="workflow-6-support-ticket-lifecycle-live-threaded-chat-flow">Workflow 6: Support Ticket Lifecycle &amp; Live Threaded Chat Flow</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as "Customer / Vendor"
+    participant API as "Backend API (/api/tickets)"
+    participant DB as "PostgreSQL Database"
+    actor Support as "Support Staff / Superadmin"
+
+    User->>API: 1. POST /api/tickets with issue details and category
+    API->>DB: 2. Create Ticket with OPEN status and initial message
+    API-->>User: 3. Ticket Created with Ticket ID
+
+    Support->>API: 4. View Open Support Tickets Dashboard
+    Support->>API: 5. POST message reply to ticket
+    API->>DB: 6. Save TicketMessage and update ticket updatedAt timestamp
+
+    User->>API: 7. View Thread and Reply
+    Support->>API: 8. Update Ticket Status to RESOLVED or CLOSED
+    API->>DB: 9. Update ticket status
+</pre>
+
+<hr />
+<h3 id="workflow-7-order-booking-cancellation-refund-approval-flow">Workflow 7: Order / Booking Cancellation &amp; Refund Approval Flow</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as "Customer / Support Admin"
+    participant API as "Backend API (/api/user/orders/cancel)"
+    participant DB as "PostgreSQL Database"
+    actor SupportAdmin as "Support Staff / Superadmin"
+
+    User->>API: 1. Cancel Pending Order or Booking
+    API->>DB: 2. Validate PENDING state and set status to CANCELLED
+    API->>DB: 3. Restore FoodItem inventory stock if limited
+
+    opt Order was Prepaid
+        API->>DB: 4. Automatically create Refund record with PENDING status
+        SupportAdmin->>API: 5. View Pending Refund Requests Dashboard
+        SupportAdmin->>API: 6. Submit Refund Action APPROVE or REJECT
+        alt Action: APPROVED
+            API->>DB: 7a. Set refund status APPROVED and update order or booking
+            API-->>User: 8a. Refund Approved and Processed
+        else Action: REJECTED
+            API->>DB: 7b. Set refund status REJECTED with adminNote
+        end
+    end
+</pre>
+
+<hr />
+<h3 id="workflow-8-detailed-review-item-level-rating-submission">Workflow 8: Detailed Review &amp; Item-Level Rating Submission</h3>
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Customer as "Customer"
+    participant API as "Backend API (/api/user/orders/review)"
+    participant DB as "PostgreSQL Database"
+    actor Seller as "Seller / Vendor"
+
+    Customer->>API: 1. POST order review with star rating and item ratings
+    API->>DB: 2. Check Order Status is DELIVERED
+    API->>DB: 3. Ensure no existing Review record exists
+    API->>DB: 4. DB Transaction: Create Review record
+    API->>DB: 5. DB Transaction: Create item ratings for each food item
+    API-->>Customer: 6. Review Submitted Successfully
+    Seller->>API: 7. View Ratings and Feedback in Seller Dashboard
+</pre>
+
+<hr />
+<h2 id="5-complete-database-models-field-reference">5. Complete Database Models &amp; Field Reference</h2>
+<pre class="mermaid">
+erDiagram
+    User ||--o| SellerProfile : "has"
+    User ||--o| AgentProfile : "has"
+    User ||--o| DeliveryPerson : "has"
+    User ||--o{ Order : "places"
+    User ||--o{ Booking : "makes"
+    User ||--o{ Address : "owns"
+    User ||--o{ Ticket : "opens"
+    User ||--o{ Review : "writes"
+    User ||--o{ Refund : "requests"
+
+    SellerProfile ||--o{ FoodItem : "offers"
+    SellerProfile ||--o{ Room : "hosts"
+    SellerProfile ||--o{ Order : "receives"
+    SellerProfile ||--o{ DeliveryPerson : "employs"
+    SellerProfile ||--o{ Subscription : "holds"
+    SellerProfile ||--o{ ServedPincode : "serves"
+
+    FoodCategory ||--o{ FoodSubCategory : "contains"
+    FoodCategory ||--o{ FoodItem : "groups"
+    FoodSubCategory ||--o{ FoodItem : "subgroups"
+
+    Order ||--o| Review : "has"
+    Order ||--o| Refund : "has"
+    Order ||--o{ DeliveryTransaction : "generates"
+    DeliveryPerson ||--o{ Order : "delivers"
+    DeliveryPerson ||--o{ DeliveryTransaction : "accumulates"
+
+    Room ||--o{ Booking : "booked_in"
+    Booking ||--o| Refund : "has"
+
+    SubscriptionPlan ||--o{ Subscription : "defines"
+    SubscriptionPlan ||--o{ SubscriptionCoupon : "discounted_by"
+
+    Ticket ||--o{ TicketMessage : "contains"
+    Review ||--o{ ItemRating : "breaks_down"
+</pre>
+
+<h3 id="core-schema-entity-summary">Core Schema Entity Summary</h3>
+<ol>
+<li><strong>User</strong>: Central identity model storing credentials (<code>passwordHash</code>), system role (<code>SUPERADMIN</code>, <code>AGENT</code>, <code>SUPPORT</code>, <code>SELLER</code>, <code>USER</code>, <code>DELIVERY</code>), contact details (<code>name</code>, <code>email</code>, <code>phone</code>, <code>city</code>, <code>pincode</code>), and active status (<code>isActive</code>).</li>
+<li><strong>SellerProfile</strong>: Business metadata for vendors storing type (Homely Food, Mess, Bakery), business name, flat/area/landmark address, JSON arrays of kitchen/cuisine/room photos, legal document URLs (Adhaar, FSSAI, Light Bill, Passbook), global verification state (<code>verificationStatus</code>, <code>verificationNote</code>), domain specific statuses (<code>foodVerificationStatus</code>, <code>propertyVerificationStatus</code>), tracking ID (<code>trackingId</code>), online toggle (<code>isOnline</code>), UPI ID, and assigned field Agent reference (<code>agentId</code>).</li>
+<li><strong>ServedPincode</strong>: Unique mapping of pincodes served by each seller.</li>
+<li><strong>AgentProfile</strong>: Field admin permissions (<code>canManageOffers</code>, <code>canManageBanners</code>) and relation to assigned sellers.</li>
+<li><strong>Category / FoodCategory / FoodSubCategory</strong>: Hierarchical menu taxonomies organizing food items and property types.</li>
+<li><strong>FoodItem</strong>: Individual dish schema storing name, description, price, food type (<code>VEG</code>/<code>NON_VEG</code>), image URL, available days, stock quantity (-1 for unlimited), operational hours JSON object, delivery pincodes string, and categories.</li>
+<li><strong>Room</strong>: Property accommodation listing storing title, description, capacity, night price, photos array, and availability boolean (<code>isAvailable</code>).</li>
+<li><strong>Order</strong>: Food purchase schema storing user ID, seller ID, assigned delivery person ID, JSON serialized items array, status (<code>PENDING</code>, <code>PREPARING</code>, <code>OUT_FOR_DELIVERY</code>, <code>DELIVERED</code>, <code>CANCELLED</code>), delivery address, customer phone, payment method (<code>ONLINE</code>, <code>COD</code>, <code>QR</code>), total amount, paid flag (<code>isPaid</code>), applied coupon ID, Razorpay order/payment IDs.</li>
+<li><strong>Booking</strong>: Room rental transaction storing room ID, user ID, start/end dates, status (<code>PENDING</code>, <code>CONFIRMED</code>, <code>CANCELLED</code>), payment method, total amount, paid flag, and Razorpay references.</li>
+<li><strong>SubscriptionPlan &amp; Subscription</strong>: Vendor monetization models defining monthly price, category (<code>FOOD</code>, <code>PROPERTY</code>, <code>BOTH</code>), features list, validity start/end timestamps, Razorpay transaction links, and applied subscription coupon.</li>
+<li><strong>SubscriptionCoupon &amp; Coupon</strong>: Store and platform promotion engine storing discount percentage or flat amount, maximum usage limits, current usage counts, minimum cart value thresholds, and approval states.</li>
+<li><strong>Address</strong>: Customer delivery address book storing house number, street, landmark, pincode, latitude, longitude, and default marker (<code>isDefault</code>).</li>
+<li><strong>PopupBanner</strong>: Promotional banner schema storing image URL, redirect URL, targeted seller store ID (or global), and approval status (<code>approvalStatus</code>).</li>
+<li><strong>DeliveryPerson</strong>: Delivery driver profile storing assigned seller ID, contact info, active status, and live COD cash balance (<code>outstandingBalance</code>).</li>
+<li><strong>DeliveryTransaction</strong>: Wallet ledger tracking rider cash activity (<code>COD_COLLECTION</code>, <code>SETTLEMENT</code>, <code>ADJUSTMENT</code>) with amount and descriptions.</li>
+<li><strong>Review &amp; ItemRating</strong>: Customer feedback schemas capturing overall order star ratings (1-5), written comments, and granular item-level star ratings.</li>
+<li><strong>Ticket &amp; TicketMessage</strong>: Support ticketing engine storing ticket title, description, category, status (<code>OPEN</code>, <code>IN_PROGRESS</code>, <code>RESOLVED</code>, <code>CLOSED</code>), and threaded chat messages.</li>
+<li><strong>Refund</strong>: Financial refund tracking schema for paid orders or bookings storing requested amount, cancellation reason, status (<code>PENDING</code>, <code>APPROVED</code>, <code>REJECTED</code>), and administrative notes.</li>
+<li><strong>AuditLog</strong>: Security audit logging table recording administrative actions (<code>action</code>, <code>performedBy</code>, <code>details</code>, <code>timestamp</code>).</li>
+<li><strong>SystemSettings</strong>: Key-value pair configuration table for platform-wide settings.</li>
+</ol>
+<hr />
+<h2 id="6-summary-system-features-checklist">6. Summary &amp; System Features Checklist</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature Category</th>
+<th style="text-align: left;">Capabilities Included in Platform</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Authentication &amp; Security</strong></td>
+<td style="text-align: left;">Multi-role JWT &amp; NextAuth authentication, Password hashing with bcrypt, HMAC-SHA256 Razorpay payment signature validation, Role-based API route protection.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Vendor Onboarding</strong></td>
+<td style="text-align: left;">Multi-document upload (Adhaar, FSSAI, Light Bill, Passbook), Multi-photo store galleries, Tracking ID generation, Administrative audit review with resubmission notes (<code>REVISION</code> state).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Vendor Reapply &amp; Expansion</strong></td>
+<td style="text-align: left;">Document resubmission pipeline for rejected/revision profiles, Category expansion application (<code>FOOD</code> -&gt; <code>PROPERTY</code> &amp; vice versa) without re-registering.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Monetization &amp; Subscriptions</strong></td>
+<td style="text-align: left;">Category-based subscription plans (Food vs Property), Stacking validity renewals, Subscription coupon discounts, Automatic store lock upon subscription expiry.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Food Engine &amp; Inventory</strong></td>
+<td style="text-align: left;">Stock quantity tracking with auto-decrement on order and auto-restore on cancellation, Day-wise operational hours validation (IST timezone), Pincode delivery matching.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Property &amp; Room Bookings</strong></td>
+<td style="text-align: left;">Calendar date range selection, Automated date overlap validation against existing bookings, Two-stage approval (Host Confirmation -&gt; Payment).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Promotions &amp; Offers</strong></td>
+<td style="text-align: left;">Store-level vs Global coupons, Minimum cart value rules, Max per-user and max global redemption limits, Store pop-up banners with Superadmin approval workflow.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Delivery &amp; COD Wallet</strong></td>
+<td style="text-align: left;">Seller-managed rider fleet creation, Automated rider COD balance increment upon delivery, Cash settlement collection logging (<code>SETTLEMENT</code>), Administrative balance adjustments (<code>ADJUSTMENT</code>).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Customer Support &amp; Refunds</strong></td>
+<td style="text-align: left;">Support ticket creation across categories, Live threaded chat messages, Support staff order cancellation overrides, Automated refund creation &amp; fulfillment (<code>APPROVED</code>/<code>REJECTED</code>).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ratings &amp; Quality Control</strong></td>
+<td style="text-align: left;">Overall 1-5 star order reviews, Granular item-by-item star ratings (<code>ItemRating</code>), Seller review dashboard.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Documentation compiled and generated for the </em><em>Neo Cloud Room / CloudKitchen</em><em> codebase.</em></p>
+</body>
+</html>

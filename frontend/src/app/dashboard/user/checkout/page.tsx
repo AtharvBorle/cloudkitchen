@@ -791,7 +791,7 @@ function CheckoutContent() {
             <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '15px' }}>Your Cart is Empty</h2>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Looks like you haven't added any delicious food yet!</p>
-                <button onClick={() => router.push(session ? "/dashboard/user/food" : "/explore/food")} className="btn btn-primary">Browse Menus</button>
+                <button onClick={() => router.push(session ? "/dashboard/user/food" : "/explore-desktop")} className="btn btn-primary">Browse Menus</button>
             </div>
         );
     }

@@ -516,7 +516,7 @@ export function ExploreHeader() {
 
     const navLinks = [
         { href: "/", label: "Home", exact: true },
-        { href: "/explore/food", label: "Order Food" },
+        { href: "/explore-desktop", label: "Order Food" },
         { href: "/explore/rooms", label: "Book a Room" },
     ];
 
