@@ -85,7 +85,7 @@
   background-color: #fff8eb;
   border-radius: 14px;
   padding: 16px 20px;
-  border: 1px solid #fde68a;
+  border: none;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -100,7 +100,7 @@
 .subPlanName {
   font-size: 0.98rem;
   font-weight: 800;
-  color: #ea580c;
+  color: #f97316;
   margin: 0;
 }
 

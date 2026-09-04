@@ -25,7 +25,9 @@ export const SubscriptionBenefits: React.FC<SubscriptionBenefitsProps> = ({
       <div className={styles.benefitsList}>
         {benefits.map((benefit, index) => (
           <div key={index} className={styles.benefitRow}>
-            <CheckCircle2 size={18} className={styles.checkIcon} />
+            <div className={styles.checkBadge}>
+              <CheckCircle2 size={16} strokeWidth={2.4} className={styles.checkIcon} />
+            </div>
             <span className={styles.benefitText}>{benefit}</span>
           </div>
         ))}
@@ -33,3 +35,4 @@ export const SubscriptionBenefits: React.FC<SubscriptionBenefitsProps> = ({
     </div>
   );
 };
+

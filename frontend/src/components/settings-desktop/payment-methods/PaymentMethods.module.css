@@ -107,7 +107,7 @@
 
 .upiBadge {
   background-color: #fff7ed;
-  color: #ea580c;
+  color: #f97316;
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -192,7 +192,7 @@
 
 .metaValue {
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #0f172a;
   margin: 0;
 }
