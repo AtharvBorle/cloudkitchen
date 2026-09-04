@@ -80,7 +80,7 @@
 }
 
 .locationContainer:hover {
-  color: #a3281c;
+  color: #f97316;
 }
 
 .locationIcon {
@@ -89,23 +89,23 @@
 }
 
 .locationContainer:hover .locationIcon {
-  color: #a3281c;
+  color: #f97316;
 }
 
 /* ================= CENTER SECTION ================= */
 .centerSection {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 36px;
 }
 
 .navItem {
   position: relative;
   font-size: 0.95rem;
   font-weight: 500;
-  color: #374151;
+  color: #475569;
   text-decoration: none;
-  padding: 8px 2px;
+  padding: 8px 4px;
   cursor: pointer;
   background: transparent;
   border: none;
@@ -119,39 +119,39 @@
 .navItem::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: #a3281c;
-  transform: scaleX(0);
-  transform-origin: left;
+  bottom: -2px;
+  left: 50%;
+  width: 22px;
+  height: 3.5px;
+  background-color: #f97316;
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: center;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 2px;
+  border-radius: 9999px;
 }
 
 .navItem:hover {
-  color: #a3281c;
+  color: #f97316;
 }
 
 .navItem:hover::after {
-  transform: scaleX(1);
+  transform: translateX(-50%) scaleX(1);
 }
 
 .navItem.active {
-  color: #a3281c;
-  font-weight: 600;
+  color: #f97316;
+  font-weight: 700;
 }
 
 .navItem.active::after {
-  transform: scaleX(1);
+  transform: translateX(-50%) scaleX(1);
 }
 
 /* ================= RIGHT SECTION ================= */
 .rightSection {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 20px;
 }
 
 /* Veg Only Toggle */
@@ -167,7 +167,7 @@
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: #374151;
+  color: #22c55e;
   text-transform: uppercase;
 }
 
@@ -203,50 +203,53 @@
   transform: translateX(18px);
 }
 
-/* Language Selector */
+/* Language Selector Pill */
 .langSelector {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: #374151;
+  gap: 6px;
+  background-color: #fff7ed;
+  color: #f97316;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: transparent;
-  border: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
   font-family: inherit;
+  border: none;
 }
 
 .langSelector:hover {
-  background-color: #f3f4f6;
-  color: #a3281c;
+  background-color: #ffedd5;
+  transform: translateY(-1px);
 }
 
 .langText {
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
-/* Cart Icon Button */
+/* Cart / Bag Icon Button */
 .cartButton {
   position: relative;
-  background: transparent;
+  background-color: #fff7ed;
+  color: #f97316;
   border: none;
-  color: #374151;
   cursor: pointer;
-  padding: 6px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .cartButton:hover {
-  background-color: #f3f4f6;
-  color: #a3281c;
+  background-color: #ffedd5;
+  transform: scale(1.05);
 }
 
 .cartBadge {
@@ -269,8 +272,8 @@
 
 /* Profile Avatar */
 .profileAvatar {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
   border: 1.5px solid #d1d5db;
@@ -283,8 +286,8 @@
 }
 
 .profileAvatar:hover {
-  border-color: #a3281c;
-  box-shadow: 0 0 0 2px rgba(163, 40, 28, 0.15);
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
 }
 
 .avatarIcon {

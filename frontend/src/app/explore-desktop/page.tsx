@@ -11,7 +11,7 @@ import { Footer } from "@/components/explore-desktop/footer";
 
 export default function ExploreDesktopPage() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#fdfbf7", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
       {/* 1. Shared Navbar with Explore Active */}
       <Navbar initialActiveItem="Explore" />
 

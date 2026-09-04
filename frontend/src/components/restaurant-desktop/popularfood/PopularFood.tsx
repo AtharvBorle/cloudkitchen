@@ -204,7 +204,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                     {item.title}
                   </h3>
                   <span className={styles.ratingBadge}>
-                    <Star size={11} fill="#16a34a" color="#16a34a" />
+                    <Star size={13} strokeWidth={2.4} color="#16a34a" fill="none" />
                     <span>{item.rating}</span>
                   </span>
                 </div>

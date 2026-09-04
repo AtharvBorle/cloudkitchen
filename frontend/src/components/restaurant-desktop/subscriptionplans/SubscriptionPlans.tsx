@@ -137,12 +137,13 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   }`}
                 />
 
-                {/* Features List */}
+                  {/* Features List */}
                 <ul className={styles.featuresList}>
                   {plan.features.map((feature, idx) => (
                     <li key={idx} className={styles.featureItem}>
                       <CheckCircle2
-                        size={18}
+                        size={20}
+                        strokeWidth={2.4}
                         className={styles.featureIcon}
                       />
                       <span>{feature}</span>

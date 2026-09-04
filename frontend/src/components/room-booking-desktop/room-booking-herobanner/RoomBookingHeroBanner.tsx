@@ -34,7 +34,7 @@ export const RoomBookingHeroBanner: React.FC<RoomBookingHeroBannerProps> = ({
       {/* 2. Gradient Overlay for readability */}
       <div className={styles.gradientOverlay} />
 
-      {/* 3. Left Text Content */}
+      {/* 3. Left Text Content (Single Line Matching Reference) */}
       <div className={styles.leftContent}>
         <span className={styles.tagline}>{tagline}</span>
         <h1 className={styles.heading}>{heading}</h1>

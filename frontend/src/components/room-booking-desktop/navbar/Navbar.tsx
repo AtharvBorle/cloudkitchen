@@ -1,15 +1,16 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Globe, ShoppingCart, User } from "lucide-react";
+import { ChevronDown, Globe, ShoppingBag, User } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
 import styles from "./Navbar.module.css";
-import logoImg from "@/components/navbar/logo-nav.png";
+import logoImg from "./logo-nav.png";
+import profilePic from "./Rectangle.jpg";
 
 export interface NavbarProps {
   initialActiveItem?: "Food" | "Mess/Tiffin" | "Rooms" | "Settings" | string;
@@ -24,7 +25,7 @@ const NAV_ITEM_ROUTES: Record<string, string> = {
   Food: "/explore-desktop",
   "Mess/Tiffin": "/explore-desktop?category=mess",
   Rooms: "/room-booking",
-  Settings: "/dashboard/user/profile",
+  Settings: "/settings-desktop",
 };
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { data: session } = useSession();
 
   const [activeItem, setActiveItem] = useState<string>(initialActiveItem);
-  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(false);
+  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(true);
 
   const isVegOnly = controlledVegOnly !== undefined ? controlledVegOnly : internalVegOnly;
 
@@ -78,11 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const handleProfileClick = () => {
-    if (session) {
-      router.push("/dashboard/user");
-    } else {
-      router.push("/auth/login/user");
-    }
+    router.push("/settings-desktop");
   };
 
   const handleCartClick = () => {
@@ -113,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </Link>
 
-        {/* 2. CENTER SECTION */}
+        {/* 2. CENTER SECTION (Food, Mess/Tiffin, Rooms, Settings) */}
         <nav className={styles.centerSection} aria-label="Room Booking Desktop Navigation">
           {navItems.map((item) => (
             <button
@@ -160,25 +157,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Language Selector */}
+          {/* Language Selector Pill with Globe, EN, Chevron in #F97316 */}
           <button
             type="button"
             className={styles.langSelector}
             title="Select Language"
             aria-label="Language: English"
           >
-            <Globe size={18} />
+            <Globe size={20} strokeWidth={2.2} />
             <span className={styles.langText}>EN</span>
+            <ChevronDown size={16} strokeWidth={2.8} />
           </button>
 
-          {/* Cart Icon */}
+          {/* Food Delivery Bag / Cart Icon in #F97316 */}
           <button
             type="button"
             className={styles.cartButton}
             onClick={handleCartClick}
-            aria-label={`Shopping Cart (${totalCartCount} items)`}
+            aria-label={`Shopping Bag (${totalCartCount} items)`}
           >
-            <ShoppingCart size={21} />
+            <ShoppingBag size={22} strokeWidth={2.2} />
             {totalCartCount > 0 && (
               <span className={styles.cartBadge}>{totalCartCount}</span>
             )}
@@ -191,7 +189,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={handleProfileClick}
             aria-label="User Profile"
           >
-            <User size={20} className={styles.avatarIcon} />
+            <Image
+              src={profilePic}
+              alt="User Avatar"
+              width={38}
+              height={38}
+              style={{ objectFit: "cover", width: "100%", height: "100%" }}
+            />
           </button>
         </div>
       </div>

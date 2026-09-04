@@ -1,0 +1,171 @@
+.sectionWrapper {
+  margin-bottom: 28px;
+}
+
+.sectionHeading {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 16px 0;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.cardContainer {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1.5px solid #eef2f6;
+  padding: 24px 28px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cardContainer:hover {
+  border-color: #fed7aa;
+}
+
+.cardSelected {
+  border-color: #f97316;
+  box-shadow: 0 4px 20px rgba(249, 115, 22, 0.08);
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardInfoLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.visaBadge {
+  background-color: #1e1b4b;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.75rem;
+  padding: 7px 14px;
+  border-radius: 8px;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcBadge {
+  background-color: #ea580c;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.75rem;
+  padding: 7px 14px;
+  border-radius: 8px;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 3px 0;
+}
+
+.cardNumber {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.radioOuter {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.radioSelected {
+  border-color: #f97316;
+}
+
+.radioInner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #f97316;
+}
+
+.bottomRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.cardDetailsGroup {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.detailCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.detailValue {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.editBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #fff7ed;
+  border: 1px solid #ffedd5;
+  color: #f97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editBtn:hover {
+  background-color: #ffedd5;
+  transform: scale(1.08);
+}
+
+.pencilIcon {
+  color: #f97316;
+}

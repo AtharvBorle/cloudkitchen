@@ -1,0 +1,97 @@
+.sectionWrapper {
+  margin-bottom: 28px;
+}
+
+.sectionHeading {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 16px 0;
+}
+
+.cardContainer {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #eef2f6;
+  padding: 8px 28px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.upiList {
+  display: flex;
+  flex-direction: column;
+}
+
+.upiRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.upiRow:last-child {
+  border-bottom: none;
+}
+
+.leftInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.iconContainer {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: #fff7ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ffedd5;
+  flex-shrink: 0;
+}
+
+.icon {
+  color: #f97316;
+}
+
+.upiTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 3px 0;
+}
+
+.upiSubtitle {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.deleteBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #fee2e2;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.deleteBtn:hover {
+  background-color: #fecaca;
+  transform: scale(1.08);
+}
+
+.trashIcon {
+  color: #ef4444;
+}

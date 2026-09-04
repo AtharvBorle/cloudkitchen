@@ -10,6 +10,7 @@ import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
+import profilePic from "./Rectangle.jpg";
 
 export const DEFAULT_NAV_ITEMS = [
   "Home",
@@ -26,8 +27,8 @@ export const NAV_ITEM_ROUTES: Record<string, string> = {
   Rooms: "/room-booking",
   Furniture: "/explore/furniture",
   "Mess/Tiffin": "/explore-desktop",
-  Orders: "/dashboard/user",
-  Settings: "/dashboard/user/profile",
+  Orders: "/orders-desktop",
+  Settings: "/settings-desktop",
 };
 
 export interface NavbarProps {
@@ -58,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLocationClick,
 }) => {
   const router = useRouter();
-  const pathname = usePathname() || "";
+  const pathname = usePathname();
   const { cartItems } = useCart();
   const { defaultAddress } = useLocation();
   const { data: session } = useSession();
@@ -79,6 +80,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
     if (pathname.startsWith("/explore/furniture")) {
       return "Furniture";
+    }
+    if (pathname.startsWith("/orders-desktop") || pathname.startsWith("/order-history") || pathname.startsWith("/dashboard/user/orders")) {
+      return "Orders";
+    }
+    if (pathname.startsWith("/settings-desktop") || pathname.startsWith("/my-subscriptions") || pathname.startsWith("/notifications-desktop") || pathname.startsWith("/payment-methods-desktop") || pathname.startsWith("/delivery-addresses-desktop")) {
+      return "Settings";
     }
     if (pathname.startsWith("/dashboard")) {
       return "Orders";
@@ -268,7 +275,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
             title={session?.user ? (session.user.name || "User Profile") : "Sign In"}
           >
-            <User size={20} className={styles.avatarIcon} />
+            <Image
+              src={profilePic}
+              alt="Rahul Sharma"
+              width={38}
+              height={38}
+              style={{ objectFit: "cover", width: "100%", height: "100%" }}
+            />
           </button>
 
           {/* Mobile Menu Toggle Button */}

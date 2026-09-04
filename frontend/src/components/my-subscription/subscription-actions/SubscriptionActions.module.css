@@ -1,0 +1,47 @@
+.actionsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.cancelBtn {
+  background: #ffffff;
+  border: 1.5px solid #f87171;
+  color: #ef4444;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 13px 30px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.cancelBtn:hover {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  transform: translateY(-1px);
+}
+
+.changePlanBtn {
+  background: #f97316;
+  border: 1.5px solid #f97316;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 13px 32px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.25);
+}
+
+.changePlanBtn:hover {
+  background-color: #ea580c;
+  border-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.35);
+}
