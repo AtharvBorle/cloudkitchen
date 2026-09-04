@@ -12,6 +12,7 @@ import lateNightIcon from "./icon-latenight.png";
 import drinksIcon from "./icon-drinks.png";
 import dessertsIcon from "./icon-desserts.png";
 import healthyIcon from "./icon-healthy.png";
+import { useRouter } from "next/navigation";
 
 export interface MealMomentItem {
   id: string;
@@ -19,6 +20,7 @@ export interface MealMomentItem {
   title: string;
   icon: StaticImageData | string;
   bgClass: string;
+  kitchenId?: string;
 }
 
 const DEFAULT_MOMENTS: MealMomentItem[] = [
@@ -28,6 +30,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Breakfast",
     icon: breakfastIcon,
     bgClass: styles.bgBreakfast,
+    kitchenId: "baker-delight",
   },
   {
     id: "moment-2",
@@ -35,6 +38,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Lunch",
     icon: lunchIcon,
     bgClass: styles.bgLunch,
+    kitchenId: "7-12-kitchen",
   },
   {
     id: "moment-3",
@@ -42,6 +46,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Dinner",
     icon: dinnerIcon,
     bgClass: styles.bgDinner,
+    kitchenId: "chef-arjun",
   },
   {
     id: "moment-4",
@@ -49,6 +54,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Snacks",
     icon: snacksIcon,
     bgClass: styles.bgSnacks,
+    kitchenId: "street-food-specials",
   },
   {
     id: "moment-5",
@@ -56,6 +62,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Late Night",
     icon: lateNightIcon,
     bgClass: styles.bgLateNight,
+    kitchenId: "pizza-palace",
   },
   {
     id: "moment-6",
@@ -63,6 +70,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Drinks",
     icon: drinksIcon,
     bgClass: styles.bgDrinks,
+    kitchenId: "dessert-bar",
   },
   {
     id: "moment-7",
@@ -70,6 +78,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Desserts",
     icon: dessertsIcon,
     bgClass: styles.bgDesserts,
+    kitchenId: "baker-delight",
   },
   {
     id: "moment-8",
@@ -77,6 +86,7 @@ const DEFAULT_MOMENTS: MealMomentItem[] = [
     title: "Super Healthy",
     icon: healthyIcon,
     bgClass: styles.bgHealthy,
+    kitchenId: "fresh-salads",
   },
 ];
 
@@ -93,9 +103,13 @@ export const WhatsOnYourMind: React.FC<WhatsOnYourMindProps> = ({
   moments = DEFAULT_MOMENTS,
   onMomentClick,
 }) => {
+  const router = useRouter();
+
   const handleCardClick = (moment: MealMomentItem) => {
     if (onMomentClick) {
       onMomentClick(moment);
+    } else {
+      router.push(`/restaurant/${moment.kitchenId || "7-12-kitchen"}`);
     }
   };
 

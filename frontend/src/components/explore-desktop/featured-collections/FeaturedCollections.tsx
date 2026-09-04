@@ -17,6 +17,8 @@ import moltenLavaCakeImg from "./collection-molten-lava-cake.jpg";
 import chefArjunAvatar from "./chef-arjun-avatar.jpg";
 import chefYukiAvatar from "./chef-yuki-avatar.jpg";
 
+import { useRouter } from "next/navigation";
+
 export interface CollectionCardItem {
   id: string;
   author: string;
@@ -24,6 +26,7 @@ export interface CollectionCardItem {
   title: string;
   views: string;
   image: StaticImageData | string;
+  kitchenId?: string;
 }
 
 const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
@@ -34,6 +37,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Making butter chicken from scratch 🍗",
     views: "12.4k views",
     image: butterChickenImg,
+    kitchenId: "chef-arjun",
   },
   {
     id: "col-2",
@@ -42,6 +46,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Perfect tonkotsu ramen at home 🍜",
     views: "18.2k views",
     image: tonkotsuRamenImg,
+    kitchenId: "wok-station",
   },
   {
     id: "col-3",
@@ -49,6 +54,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Wood-fired Margherita in 90 seconds 🍕",
     views: "8.9k views",
     image: woodfirePizzaImg,
+    kitchenId: "pizza-lab",
   },
   {
     id: "col-4",
@@ -56,6 +62,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Authentic Thai green curry secrets 🌿",
     views: "15.7k views",
     image: thaiCurryImg,
+    kitchenId: "wok-station",
   },
   {
     id: "col-5",
@@ -63,6 +70,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Fluffiest pancakes you'll ever make 🥞",
     views: "22.1k views",
     image: fluffyPancakesImg,
+    kitchenId: "baker-delight",
   },
   {
     id: "col-6",
@@ -70,6 +78,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Street-style carne asada tacos 🌮",
     views: "9.6k views",
     image: carneAsadaTacosImg,
+    kitchenId: "taco-cloud",
   },
   {
     id: "col-7",
@@ -77,6 +86,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Crispy skin salmon done right 🐟",
     views: "14.3k views",
     image: crispySalmonImg,
+    kitchenId: "fresh-salads",
   },
   {
     id: "col-8",
@@ -84,6 +94,7 @@ const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
     title: "Molten chocolate lava cake tutorial 🍫",
     views: "31.5k views",
     image: moltenLavaCakeImg,
+    kitchenId: "baker-delight",
   },
 ];
 
@@ -104,9 +115,13 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
   onCardClick,
   onSeeAllClick,
 }) => {
+  const router = useRouter();
+
   const handleItemClick = (item: CollectionCardItem) => {
     if (onCardClick) {
       onCardClick(item);
+    } else {
+      router.push(`/restaurant/${item.kitchenId || item.id}`);
     }
   };
 

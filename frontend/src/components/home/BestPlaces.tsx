@@ -20,7 +20,7 @@ const POPULAR_DISHES: DishItem[] = [
     rating: 4.8,
     time: "25-35 min",
     imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop?query=pizza",
+    link: "/restaurant/pizza-palace",
   },
   {
     id: "dish-2",
@@ -28,7 +28,7 @@ const POPULAR_DISHES: DishItem[] = [
     rating: 4.7,
     time: "20-30 min",
     imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop?query=biryani",
+    link: "/restaurant/spice-biryani",
   },
   {
     id: "dish-3",
@@ -36,7 +36,7 @@ const POPULAR_DISHES: DishItem[] = [
     rating: 4.9,
     time: "30-40 min",
     imageUrl: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop?query=sushi",
+    link: "/restaurant/sushi-bar",
   },
   {
     id: "dish-4",
@@ -44,7 +44,7 @@ const POPULAR_DISHES: DishItem[] = [
     rating: 4.6,
     time: "15-25 min",
     imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop?query=bakery",
+    link: "/restaurant/baker-delight",
   },
 ];
 
