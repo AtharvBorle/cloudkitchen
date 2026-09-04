@@ -77,7 +77,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
 
   return (
     <div className={styles.container}>
-      {/* 1. Home / Desktop Navbar with Explore Active */}
+      {/* 1. Shared Desktop Navbar with Settings (matching Home navbar) */}
       <Navbar initialActiveItem="Explore" />
 
       <main className={styles.mainContent}>
