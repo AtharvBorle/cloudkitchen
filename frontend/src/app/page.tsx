@@ -1,167 +1,169 @@
 "use client";
 
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X } from 'lucide-react';
+import React, { useState } from "react";
+import Link from "next/link";
+import { Menu, X } from "lucide-react";
+import {
+  HeroSection,
+  CategoryBar,
+  PromoRow,
+  FilterRow,
+  Properties,
+  PopularOrders,
+  BestPlaces,
+  DashboardBody,
+} from "@/app/components/homeComponents";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 
 export default function Home() {
-  redirect('/explore/food');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll logic for mobile feature cards
-  useEffect(() => {
-    const handleAutoScroll = () => {
-      if (window.innerWidth <= 768 && scrollRef.current) {
-        const container = scrollRef.current;
-        const cardWidth = 310; // 280px min-width + 30px gap based on CSS
-        const maxScroll = container.scrollWidth - container.clientWidth;
-
-        if (container.scrollLeft >= maxScroll - 10) { // -10 for rounding errors
-          // Reset to beginning
-          container.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          // Scroll to next card
-          container.scrollTo({ left: container.scrollLeft + cardWidth, behavior: 'smooth' });
-        }
-      }
-    };
-
-    // Auto-scroll every 3.5 seconds
-    const intervalId = setInterval(handleAutoScroll, 3500);
-
-    return () => clearInterval(intervalId);
-  }, []);
+  const [selectedCategory, setSelectedCategory] = useState("food");
+  const [selectedFilter, setSelectedFilter] = useState("fastest");
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <PopupBannerDisplay />
 
-      {/* Navbar exactly like the screenshot */}
+      {/* Header / Navbar */}
       <header className="navbar">
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="navbar-brand">
+        <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="navbar-brand" style={{ fontWeight: "800", color: "#FF5500", fontSize: "1.4rem" }}>
             Neo Cloud Kitchen
           </div>
 
           {/* Desktop Nav */}
-          <nav className="navbar-links desktop-only">
-            <Link href="/">Home</Link>
-            <Link href="/user">Login</Link>
-            <Link href="/auth/register/user">Sign Up</Link>
-            <Link href="/auth/register" className="btn-nav-seller">Become a Seller</Link>
+          <nav className="navbar-links desktop-only" style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+            <Link href="/" style={{ color: "#18181B", fontWeight: "600" }}>Home</Link>
+            <Link href="/explore/food" style={{ color: "#4B5563", fontWeight: "500" }}>Food</Link>
+            <Link href="/explore/rooms" style={{ color: "#4B5563", fontWeight: "500" }}>Rooms</Link>
+            <Link href="/explore/furniture" style={{ color: "#4B5563", fontWeight: "500" }}>Furniture</Link>
+            <Link href="/user" style={{ color: "#4B5563", fontWeight: "500" }}>Login</Link>
+            <Link href="/auth/register/user" style={{ color: "#4B5563", fontWeight: "500" }}>Sign Up</Link>
+            <Link
+              href="/auth/register"
+              style={{
+                backgroundColor: "#FF5500",
+                color: "#FFFFFF",
+                padding: "8px 18px",
+                borderRadius: "8px",
+                fontWeight: "600",
+                textDecoration: "none",
+              }}
+            >
+              Become a Seller
+            </Link>
           </nav>
 
           {/* Mobile Toggle */}
-          <button className="mobile-only" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ color: "var(--primary)" }}>
+          <button
+            className="mobile-only"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            style={{ color: "#FF5500", background: "none", border: "none", cursor: "pointer" }}
+          >
             {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
 
-        {/* Mobile Nav */}
+        {/* Mobile Nav Drawer */}
         <div
-          className={`mobile-nav-menu-backdrop ${isMenuOpen ? 'open' : ''}`}
+          className={`mobile-nav-menu-backdrop ${isMenuOpen ? "open" : ""}`}
           onClick={() => setIsMenuOpen(false)}
-        ></div>
-        <div className={`mobile-nav-menu ${isMenuOpen ? 'open' : ''}`}>
+        />
+        <div className={`mobile-nav-menu ${isMenuOpen ? "open" : ""}`}>
           <Link href="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
+          <Link href="/explore/food" onClick={() => setIsMenuOpen(false)}>Food</Link>
+          <Link href="/explore/rooms" onClick={() => setIsMenuOpen(false)}>Rooms</Link>
+          <Link href="/explore/furniture" onClick={() => setIsMenuOpen(false)}>Furniture</Link>
           <Link href="/user" onClick={() => setIsMenuOpen(false)}>Login</Link>
           <Link href="/auth/register/user" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
-          <Link href="/auth/register" className="btn-nav-seller" style={{ textAlign: 'center', marginTop: '10px' }} onClick={() => setIsMenuOpen(false)}>Become a Seller</Link>
+          <Link
+            href="/auth/register"
+            style={{
+              backgroundColor: "#FF5500",
+              color: "#FFFFFF",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              textAlign: "center",
+              marginTop: "10px",
+              fontWeight: "600",
+            }}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Become a Seller
+          </Link>
         </div>
       </header>
 
-      {/* Hero Section with 4 Unique Background Images */}
+      {/* Main Content */}
       <main style={{ flex: 1 }}>
-        <div className="hero-section">
-          {/* Background Grid */}
-          <div className="hero-bg-grid">
-            <div style={{ backgroundImage: 'url("/images/hero-1.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-            <div style={{ backgroundImage: 'url("/images/hero-2.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-            <div style={{ backgroundImage: 'url("/images/hero-3.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-            <div style={{ backgroundImage: 'url("/images/hero-4.png")', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-          </div>
+        {/* 1. Hero Section */}
+        <HeroSection />
 
-          {/* Dark Overlay with subtle shift for readability */}
-          <div className="hero-overlay"></div>
+        {/* 2. Category Bar */}
+        <CategoryBar
+          activeCategoryId={selectedCategory}
+          onSelectCategory={(id) => setSelectedCategory(id)}
+        />
 
-          {/* Glassmorphism Content Container */}
-          <div className="hero-glass-container">
-            <h1 className="hero-title">
-              Taste of Home, <br /><span style={{ color: 'var(--coral)' }}>Away from Home</span>
-            </h1>
-            <p className="hero-subtitle">
-              Discover authentic homely food and comfortable rooms in your city.
-            </p>
+        {/* 3. Promo Banner Row */}
+        <PromoRow />
 
-            <div className="hero-actions">
-              <Link href="/explore/food" className="btn btn-coral">
-                Order Food
-              </Link>
-              <Link href="/explore/rooms" className="btn btn-teal">
-                Book a Room
-              </Link>
-              <Link href="/explore/furniture" className="btn btn-amber">
-                Rent Furniture
-              </Link>
-            </div>
-          </div>
-        </div>
+        {/* 4. Filter Row */}
+        <FilterRow
+          activeFilterId={selectedFilter}
+          onFilterChange={(id) => setSelectedFilter(id)}
+        />
 
-        {/* Why Choose Us with Feature Images */}
-        <div style={{ backgroundColor: '#FAFAFA', padding: '100px 20px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '60px' }}>
+        {/* 5. Properties / Best Places Nearby */}
+        <Properties />
+
+        {/* 6. Popular Orders / Today's Special Offers */}
+        <PopularOrders />
+
+        {/* 7. Best Places / Popular Dishes */}
+        <BestPlaces />
+
+        {/* 8. Dashboard Body / Top Rated */}
+        <DashboardBody />
+
+        {/* Features / Why Choose Us Section */}
+        <div style={{ backgroundColor: "#FAFAFA", padding: "80px 20px", textAlign: "center" }}>
+          <h2 style={{ fontSize: "2.2rem", fontWeight: "800", color: "#18181B", marginBottom: "48px" }}>
             Why Choose Us?
           </h2>
-          <div className="features-grid" ref={scrollRef}>
-            <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: 'var(--shadow-card)', overflow: 'hidden', transition: 'transform 0.3s ease' }} className="hover-lift">
-              <div style={{ height: '200px', overflow: 'hidden' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/authentic.png" alt="Authentic Taste" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div className="features-grid">
+            <div style={{ backgroundColor: "white", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.05)", overflow: "hidden" }} className="hover-lift">
+              <div style={{ height: "180px", overflow: "hidden" }}>
+                <img src="/images/authentic.png" alt="Authentic Taste" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
-              <div style={{ padding: '30px' }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '15px', color: 'var(--text-main)' }}>Authentic Taste</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: '1.6' }}>
+              <div style={{ padding: "24px" }}>
+                <h3 style={{ fontSize: "1.3rem", fontWeight: "700", marginBottom: "10px", color: "#18181B" }}>Authentic Taste</h3>
+                <p style={{ color: "#64748B", fontSize: "0.95rem", lineHeight: "1.6" }}>
                   Food prepared by verified home chefs with love, hygiene, and traditional recipes.
                 </p>
               </div>
             </div>
-            <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: 'var(--shadow-card)', overflow: 'hidden', transition: 'transform 0.3s ease' }} className="hover-lift">
-              <div style={{ height: '200px', overflow: 'hidden' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/verified.png" alt="Verified Sellers" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+            <div style={{ backgroundColor: "white", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.05)", overflow: "hidden" }} className="hover-lift">
+              <div style={{ height: "180px", overflow: "hidden" }}>
+                <img src="/images/verified.png" alt="Verified Sellers" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
-              <div style={{ padding: '30px' }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '15px', color: 'var(--text-main)' }}>Verified Sellers</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: '1.6' }}>
+              <div style={{ padding: "24px" }}>
+                <h3 style={{ fontSize: "1.3rem", fontWeight: "700", marginBottom: "10px", color: "#18181B" }}>Verified Sellers</h3>
+                <p style={{ color: "#64748B", fontSize: "0.95rem", lineHeight: "1.6" }}>
                   All our sellers and rooms are physically verified by our local agents for your safety.
                 </p>
               </div>
             </div>
-            <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: 'var(--shadow-card)', overflow: 'hidden', transition: 'transform 0.3s ease' }} className="hover-lift">
-              <div style={{ height: '200px', overflow: 'hidden' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/furniture_rental_feature.png" alt="Premium Furniture" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <div style={{ padding: '30px' }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '15px', color: 'var(--text-main)' }}>Premium Furniture</h3>
-                <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                  Rent high-quality furniture to make your stay feel like a real home instantly.
-                </p>
-              </div>
-            </div>
 
-            <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: 'var(--shadow-card)', overflow: 'hidden', transition: 'transform 0.3s ease' }} className="hover-lift">
-              <div style={{ height: '200px', overflow: 'hidden' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/secure.png" alt="Secure Payments" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ backgroundColor: "white", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.05)", overflow: "hidden" }} className="hover-lift">
+              <div style={{ height: "180px", overflow: "hidden" }}>
+                <img src="/images/furniture_rental_feature.png" alt="Premium Furniture" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
-              <div style={{ padding: '30px' }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '15px', color: 'var(--text-main)' }}>Secure Payments</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: '1.6' }}>
-                  Multiple payment options with end-to-end encryption for your peace of mind.
+              <div style={{ padding: "24px" }}>
+                <h3 style={{ fontSize: "1.3rem", fontWeight: "700", marginBottom: "10px", color: "#18181B" }}>Premium Furniture</h3>
+                <p style={{ color: "#64748B", fontSize: "0.95rem", lineHeight: "1.6" }}>
+                  Rent high-quality furniture to make your stay feel like a real home instantly.
                 </p>
               </div>
             </div>
@@ -169,21 +171,15 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Global style for animations and hover effects */}
       <style jsx global>{`
-          @keyframes heroEntrance {
-            from { opacity: 0; transform: scale(1.05) translateY(20px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-          }
-          .hover-lift {
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          }
-          .hover-lift:hover {
-            transform: translateY(-12px);
-            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.2) !important;
-          }
+        .hover-lift {
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .hover-lift:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+        }
       `}</style>
-
     </div>
   );
 }
