@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronDown, Globe, ShoppingBag, User } from "lucide-react";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
+import profilePic from "./Rectangle.jpg";
 
 export const DEFAULT_NAV_ITEMS = [
   "Home",
@@ -170,7 +171,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={onProfileClick}
             aria-label="User Profile"
           >
-            <User size={20} className={styles.avatarIcon} />
+            <Image
+              src={profilePic}
+              alt="Rahul Sharma"
+              width={38}
+              height={38}
+              style={{ objectFit: "cover", width: "100%", height: "100%" }}
+            />
           </button>
         </div>
       </div>

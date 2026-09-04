@@ -1,0 +1,117 @@
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tabsGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tabBtn {
+  border-radius: 9999px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  outline: none;
+}
+
+.tabActive {
+  background-color: #f97316;
+  color: #ffffff;
+  border: 1.5px solid #f97316;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+
+.tabActive:hover {
+  background-color: #ea580c;
+  border-color: #ea580c;
+}
+
+.tabInactive {
+  background-color: #ffffff;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+}
+
+.tabInactive:hover {
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.datePickerContainer {
+  position: relative;
+}
+
+.datePickerBtn {
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.datePickerBtn:hover {
+  border-color: #cbd5e1;
+}
+
+.calendarIcon {
+  color: #475569;
+}
+
+.dateText {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.chevronIcon {
+  color: #475569;
+  transition: transform 0.2s ease;
+}
+
+.chevronRotated {
+  transform: rotate(180deg);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  padding: 8px;
+  min-width: 220px;
+  z-index: 50;
+}
+
+.dropdownOption {
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dropdownOption:hover {
+  background-color: #fff7ed;
+  color: #f97316;
+}

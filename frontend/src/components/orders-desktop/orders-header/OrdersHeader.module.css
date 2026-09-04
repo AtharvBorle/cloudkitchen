@@ -1,0 +1,57 @@
+.headerContainer {
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 0 0 18px 0;
+  letter-spacing: -0.025em;
+  font-family: inherit;
+}
+
+.filtersRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  padding: 8px 22px;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid #ffffff;
+  background-color: #ffffff;
+  color: #475569;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  outline: none;
+}
+
+.filterBtn:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+.activeFilterBtn {
+  background-color: #f97316;
+  border-color: #f97316;
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(249, 115, 22, 0.3);
+}
+
+.activeFilterBtn:hover {
+  background-color: #ea580c;
+  border-color: #ea580c;
+  color: #ffffff;
+}

@@ -173,7 +173,7 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
               </div>
 
               <div className={styles.playBtn} aria-label="Play video">
-                <Play size={13} fill="#0f172a" color="#0f172a" className={styles.playIcon} />
+                <Play size={16} strokeWidth={2.5} fill="none" color="#0f172a" className={styles.playIcon} />
               </div>
             </div>
 

@@ -1,0 +1,19 @@
+.headerContainer {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.025em;
+  font-family: inherit;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}

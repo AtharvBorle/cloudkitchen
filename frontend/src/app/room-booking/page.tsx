@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Navbar } from "@/components/navbar";
+import { Navbar } from "@/components/room-booking-desktop/navbar";
 import { RoomBookingHeroBanner } from "@/components/room-booking-desktop/room-booking-herobanner";
 import { RoomSearchFilter } from "@/components/room-booking-desktop/room-search-filter";
 import { FeaturedColivings } from "@/components/room-booking-desktop/featured-colivings";
@@ -9,8 +9,8 @@ import { AllAvailableRooms } from "@/components/room-booking-desktop/all-availab
 
 export default function RoomBookingPage() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", display: "flex", flexDirection: "column" }}>
-      {/* 1. Shared Navbar with Rooms Active */}
+    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
+      {/* 1. Room Booking Dedicated Navbar (Food, Mess/Tiffin, Rooms, Settings) */}
       <Navbar initialActiveItem="Rooms" />
 
       <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "24px 32px 64px 32px", boxSizing: "border-box" }}>

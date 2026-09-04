@@ -49,15 +49,15 @@
 }
 
 .tabBtnActive {
-  background-color: #ea580c;
-  border-color: #ea580c;
+  background-color: #f97316;
+  border-color: #f97316;
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
 }
 
 .tabBtnActive:hover {
-  background-color: #c2410c;
-  border-color: #c2410c;
+  background-color: #ea580c;
+  border-color: #ea580c;
   color: #ffffff;
 }
 
@@ -134,14 +134,15 @@
 .ratingBadge {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   background-color: #dcfce7;
-  color: #15803d;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
+  color: #16a34a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 8px;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .foodDescription {
@@ -166,17 +167,20 @@
 .priceText {
   font-size: 1.15rem;
   font-weight: 800;
-  color: #ea580c;
+  color: #f97316;
   line-height: 1;
 }
 
 .addBtn {
-  background-color: #ffffff;
-  border: 1.5px solid #ea580c;
-  color: #ea580c;
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 5px 16px;
+  width: 79px;
+  height: 36px;
+  box-sizing: border-box;
+  background-color: #fff3e3;
+  border: 1.5px solid #f97316;
+  color: #f97316;
+  font-size: 0.92rem;
+  font-weight: 800;
+  padding: 0;
   border-radius: 9999px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -185,13 +189,15 @@
   align-items: center;
   justify-content: center;
   outline: none;
+  line-height: 1;
 }
 
 .addBtn:hover {
-  background-color: #fff7ed;
-  border-color: #c2410c;
-  color: #c2410c;
-  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.2);
+  background-color: #ffedd5;
+  border-color: #ea580c;
+  color: #ea580c;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+  transform: scale(1.02);
 }
 
 .addBtn:active {
