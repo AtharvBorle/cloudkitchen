@@ -77,11 +77,8 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
 
   return (
     <div className={styles.container}>
-      {/* 1. Shared Desktop Navbar with Food Active */}
-      <Navbar
-        navItems={["Food", "Mess/Tiffin", "Rooms", "Settings"]}
-        initialActiveItem="Food"
-      />
+      {/* 1. Home / Desktop Navbar with Explore Active */}
+      <Navbar initialActiveItem="Explore" />
 
       <main className={styles.mainContent}>
         {/* 2. Dynamic Food Hero Banner Component */}

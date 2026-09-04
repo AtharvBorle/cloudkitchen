@@ -72,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const getActiveItemFromPath = (): string => {
     if (controlledActiveItem !== undefined) return controlledActiveItem;
     if (pathname === "/") return "Home";
-    if (pathname.startsWith("/explore-desktop")) {
+    if (pathname.startsWith("/explore-desktop") || pathname.startsWith("/restaurant")) {
       return navItems.includes("Food") ? "Food" : "Explore";
     }
     if (pathname.startsWith("/room-booking")) {
