@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
 import { Providers } from '@/components/Providers';
+import { LocationProvider } from '@/components/location-provider';
 import ChatbotWidget from '@/components/chatbot-widget';
 import './globals.css';
 
@@ -26,10 +27,12 @@ export default function RootLayout({
     <html lang="en" className={poppins.variable}>
       <body className={`${inter.className} ${poppins.className}`}>
         <Providers>
-          <CartProvider>
-            <main>{children}</main>
-            <ChatbotWidget />
-          </CartProvider>
+          <LocationProvider>
+            <CartProvider>
+              <main>{children}</main>
+              <ChatbotWidget />
+            </CartProvider>
+          </LocationProvider>
         </Providers>
       </body>
     </html>

@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import Navbar from "@/components/navbar";
 import {
   HeroSection,
   CategoryBar,
@@ -12,90 +11,43 @@ import {
   PopularOrders,
   BestPlaces,
   DashboardBody,
-} from "@/app/components/homeComponents";
+} from "@/components/home";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 
 export default function Home() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("food");
   const [selectedFilter, setSelectedFilter] = useState("fastest");
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+    <div
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        background: "linear-gradient(180deg, #FFF3E3 0%, #FFFBF7 35%, #FFFFFF 100%)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        overflowX: "hidden",
+      }}
+    >
       <PopupBannerDisplay />
 
-      {/* Header / Navbar */}
-      <header className="navbar">
-        <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div className="navbar-brand" style={{ fontWeight: "800", color: "#FF5500", fontSize: "1.4rem" }}>
-            Neo Cloud Kitchen
-          </div>
+      {/* 0. Top Navbar */}
+      <Navbar />
 
-          {/* Desktop Nav */}
-          <nav className="navbar-links desktop-only" style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-            <Link href="/" style={{ color: "#18181B", fontWeight: "600" }}>Home</Link>
-            <Link href="/explore/food" style={{ color: "#4B5563", fontWeight: "500" }}>Food</Link>
-            <Link href="/explore/rooms" style={{ color: "#4B5563", fontWeight: "500" }}>Rooms</Link>
-            <Link href="/explore/furniture" style={{ color: "#4B5563", fontWeight: "500" }}>Furniture</Link>
-            <Link href="/user" style={{ color: "#4B5563", fontWeight: "500" }}>Login</Link>
-            <Link href="/auth/register/user" style={{ color: "#4B5563", fontWeight: "500" }}>Sign Up</Link>
-            <Link
-              href="/auth/register"
-              style={{
-                backgroundColor: "#FF5500",
-                color: "#FFFFFF",
-                padding: "8px 18px",
-                borderRadius: "8px",
-                fontWeight: "600",
-                textDecoration: "none",
-              }}
-            >
-              Become a Seller
-            </Link>
-          </nav>
-
-          {/* Mobile Toggle */}
-          <button
-            className="mobile-only"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            style={{ color: "#FF5500", background: "none", border: "none", cursor: "pointer" }}
-          >
-            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
-        </div>
-
-        {/* Mobile Nav Drawer */}
-        <div
-          className={`mobile-nav-menu-backdrop ${isMenuOpen ? "open" : ""}`}
-          onClick={() => setIsMenuOpen(false)}
-        />
-        <div className={`mobile-nav-menu ${isMenuOpen ? "open" : ""}`}>
-          <Link href="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
-          <Link href="/explore/food" onClick={() => setIsMenuOpen(false)}>Food</Link>
-          <Link href="/explore/rooms" onClick={() => setIsMenuOpen(false)}>Rooms</Link>
-          <Link href="/explore/furniture" onClick={() => setIsMenuOpen(false)}>Furniture</Link>
-          <Link href="/user" onClick={() => setIsMenuOpen(false)}>Login</Link>
-          <Link href="/auth/register/user" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
-          <Link
-            href="/auth/register"
-            style={{
-              backgroundColor: "#FF5500",
-              color: "#FFFFFF",
-              padding: "10px 16px",
-              borderRadius: "8px",
-              textAlign: "center",
-              marginTop: "10px",
-              fontWeight: "600",
-            }}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Become a Seller
-          </Link>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main style={{ flex: 1 }}>
+      {/* Main Canvas Container */}
+      <main
+        style={{
+          width: "1440px",
+          maxWidth: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: "40px",
+          padding: "40px 80px",
+          boxSizing: "border-box",
+        }}
+        className="home-page-canvas"
+      >
         {/* 1. Hero Section */}
         <HeroSection />
 
@@ -127,7 +79,7 @@ export default function Home() {
         <DashboardBody />
 
         {/* Features / Why Choose Us Section */}
-        <div style={{ backgroundColor: "#FAFAFA", padding: "80px 20px", textAlign: "center" }}>
+        <div style={{ backgroundColor: "#FAFAFA", padding: "60px 20px", borderRadius: "24px", textAlign: "center", marginTop: "10px" }}>
           <h2 style={{ fontSize: "2.2rem", fontWeight: "800", color: "#18181B", marginBottom: "48px" }}>
             Why Choose Us?
           </h2>
@@ -171,6 +123,20 @@ export default function Home() {
         </div>
       </main>
 
+      <style jsx>{`
+        @media (max-width: 1024px) {
+          .home-page-canvas {
+            padding: 32px 24px !important;
+            gap: 32px !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .home-page-canvas {
+            padding: 24px 16px !important;
+            gap: 24px !important;
+          }
+        }
+      `}</style>
       <style jsx global>{`
         .hover-lift {
           transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);

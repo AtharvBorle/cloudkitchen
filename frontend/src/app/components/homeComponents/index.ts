@@ -1,8 +1,10 @@
-export { default as HeroSection } from "./HeroSection";
-export { default as CategoryBar } from "./CategoryBar";
-export { default as PromoRow } from "./PromoRow";
-export { default as FilterRow } from "./FilterRow";
-export { default as Properties } from "./Properties";
-export { default as PopularOrders } from "./PopularOrders";
-export { default as BestPlaces } from "./BestPlaces";
-export { default as DashboardBody } from "./DashboardBody";
+export * from "@/components/home";
+export { default as HeroSection } from "@/components/home/HeroSection";
+export { default as CategoryBar } from "@/components/home/CategoryBar";
+export { default as PromoRow } from "@/components/home/PromoRow";
+export { default as FilterRow } from "@/components/home/FilterRow";
+export { default as Properties } from "@/components/home/Properties";
+export { default as PopularOrders } from "@/components/home/PopularOrders";
+export { default as BestPlaces } from "@/components/home/BestPlaces";
+export { default as DashboardBody } from "@/components/home/DashboardBody";
+
