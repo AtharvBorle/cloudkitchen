@@ -386,13 +386,17 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
       {/* HeroRight Image Column */}
       <div
         style={{
-          flex: "1 1 520px",
+          flex: "1 1 500px",
           maxWidth: "560px",
+          height: "100%",
+          maxHeight: "368px",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           position: "relative",
           zIndex: 1,
+          paddingRight: "24px",
+          boxSizing: "border-box",
         }}
         className="hero-right-column"
       >
@@ -400,8 +404,9 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: "520px",
-            height: "440px",
+            maxWidth: "480px",
+            height: "100%",
+            maxHeight: "360px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -410,15 +415,16 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           <Image
             src="/HeroRight.png"
             alt="Delicious Meals at Your Doorstep"
-            width={520}
-            height={440}
+            width={480}
+            height={360}
             priority
             style={{
-              width: "100%",
-              height: "auto",
-              maxHeight: "440px",
+              width: "auto",
+              height: "100%",
+              maxHeight: "360px",
+              maxWidth: "100%",
               objectFit: "contain",
-              filter: "drop-shadow(0 15px 35px rgba(0,0,0,0.06))",
+              filter: "drop-shadow(0 12px 28px rgba(0,0,0,0.06))",
             }}
           />
         </div>

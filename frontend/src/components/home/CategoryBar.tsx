@@ -1,26 +1,28 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import Image from "next/image";
+import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export interface CategoryItem {
   id: string;
   name: string;
-  icon: string; // Emoji / SVG / Image representation
+  image: string;
+  emoji: string;
   route: string;
 }
 
 const CATEGORIES: CategoryItem[] = [
-  { id: "food", name: "Food", icon: "🍔", route: "/explore-desktop" },
-  { id: "mess", name: "Mess", icon: "🧺", route: "/explore-desktop?category=mess" },
-  { id: "bakery", name: "Bakery", icon: "🥐", route: "/explore-desktop?category=bakery" },
-  { id: "home-meals", name: "Home Meals", icon: "🍲", route: "/explore-desktop?category=homemeals" },
-  { id: "healthy", name: "Healthy", icon: "🥗", route: "/explore-desktop?category=healthy" },
-  { id: "snacks", name: "Snacks", icon: "🍿", route: "/explore-desktop?category=snacks" },
-  { id: "desserts", name: "Desserts", icon: "🍰", route: "/explore-desktop?category=desserts" },
-  { id: "drink", name: "Drink", icon: "🍹", route: "/explore-desktop?category=drinks" },
-  { id: "rooms", name: "Rooms", icon: "🛏️", route: "/room-booking" },
+  { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore-desktop" },
+  { id: "mess", name: "Mess", image: "/images/categories/cat-mess.png", emoji: "🧺", route: "/explore-desktop?category=mess" },
+  { id: "bakery", name: "Bakery", image: "/images/categories/cat-backery.png", emoji: "🥐", route: "/explore-desktop?category=bakery" },
+  { id: "home-meals", name: "Home Meals", image: "/images/categories/cat-homemeals.png", emoji: "🍲", route: "/explore-desktop?category=homemeals" },
+  { id: "healthy", name: "Healthy", image: "/images/categories/cat-healthy.png", emoji: "🥗", route: "/explore-desktop?category=healthy" },
+  { id: "snacks", name: "Snacks", image: "/images/categories/cat-snacks.png", emoji: "🍿", route: "/explore-desktop?category=snacks" },
+  { id: "desserts", name: "Desserts", image: "/images/categories/cat-deserts.png", emoji: "🍰", route: "/explore-desktop?category=desserts" },
+  { id: "drink", name: "Drink", image: "/images/categories/cat-drink.png", emoji: "🍹", route: "/explore-desktop?category=drinks" },
+  { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/room-booking" },
 ];
 
 interface CategoryBarProps {
@@ -59,17 +61,20 @@ export default function CategoryBar({
         background: "transparent",
         padding: "0",
       }}
+      className="category-scroll"
     >
       <div
         style={{
-          maxWidth: "1280px",
           width: "100%",
+          maxWidth: "1280px",
           minHeight: "99px",
           margin: "0 auto",
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0",
+          paddingRight: "12px",
+          paddingLeft: "0",
           position: "relative",
           boxSizing: "border-box",
           gap: "12px",
@@ -83,10 +88,10 @@ export default function CategoryBar({
             alignItems: "center",
             justifyContent: "space-between",
             flex: 1,
-            gap: "24px",
+            gap: "16px",
             overflowX: "auto",
             scrollBehavior: "smooth",
-            padding: "8px 4px",
+            padding: "4px 2px",
             scrollbarWidth: "none",
             msOverflowStyle: "none",
           }}
@@ -105,72 +110,66 @@ export default function CategoryBar({
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  minWidth: isSelected ? "88px" : "78px",
-                  height: "88px",
-                  padding: isSelected ? "8px 12px" : "6px 8px",
-                  borderRadius: isSelected ? "20px" : "16px",
-                  backgroundColor: isSelected ? "#F6C792" : "transparent",
+                  width: "92px",
+                  minWidth: "92px",
+                  height: "99px",
+                  padding: "10px 12px",
+                  borderRadius: "16px",
+                  backgroundColor: isSelected ? "#F5C58B" : "transparent",
                   border: "none",
                   cursor: "pointer",
                   transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
                   flexShrink: 0,
+                  gap: "6px",
+                  boxSizing: "border-box",
                   boxShadow: isSelected
-                    ? "0 8px 20px rgba(246, 199, 146, 0.45)"
+                    ? "0 6px 16px rgba(245, 197, 139, 0.45)"
                     : "none",
                 }}
-                className={`category-item-btn ${isSelected ? "selected" : ""}`}
+                className={`tab-home category-item-btn ${isSelected ? "selected" : ""}`}
               >
-                {/* 3D Icon Graphic Render */}
+                {/* 3D Graphic Icon */}
                 <div
                   style={{
-                    height: "44px",
+                    width: "48px",
+                    height: "46px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "2rem",
-                    filter: "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.08))",
-                    transform: isSelected ? "scale(1.05)" : "scale(1)",
+                    position: "relative",
+                    transform: isSelected ? "scale(1.06)" : "scale(1)",
                     transition: "transform 0.2s ease",
                   }}
                 >
-                  {cat.id === "food" && (
-                    <span style={{ fontSize: "2rem" }}>🍔</span>
-                  )}
-                  {cat.id === "mess" && (
-                    <span style={{ fontSize: "2rem" }}>🧺</span>
-                  )}
-                  {cat.id === "bakery" && (
-                    <span style={{ fontSize: "2rem" }}>🥐</span>
-                  )}
-                  {cat.id === "home-meals" && (
-                    <span style={{ fontSize: "2rem" }}>🍲</span>
-                  )}
-                  {cat.id === "healthy" && (
-                    <span style={{ fontSize: "2rem" }}>🥗</span>
-                  )}
-                  {cat.id === "snacks" && (
-                    <span style={{ fontSize: "2rem" }}>🍿</span>
-                  )}
-                  {cat.id === "desserts" && (
-                    <span style={{ fontSize: "2rem" }}>🍰</span>
-                  )}
-                  {cat.id === "drink" && (
-                    <span style={{ fontSize: "2rem" }}>🍹</span>
-                  )}
-                  {cat.id === "rooms" && (
-                    <span style={{ fontSize: "2rem" }}>🛏️</span>
-                  )}
+                  <Image
+                    src={cat.image}
+                    alt={cat.name}
+                    width={48}
+                    height={46}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      filter: "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.08))",
+                    }}
+                    onError={(e) => {
+                      // Fallback to emoji if image cannot be loaded
+                      const target = e.currentTarget;
+                      target.style.display = "none";
+                    }}
+                  />
                 </div>
 
                 {/* Category Label */}
                 <span
                   style={{
-                    marginTop: "6px",
-                    fontSize: "0.85rem",
+                    fontSize: "13px",
                     fontWeight: isSelected ? "700" : "600",
-                    color: isSelected ? "#FFFFFF" : "#18181B",
+                    color: isSelected ? "#FFFFFF" : "#2E3A59",
                     whiteSpace: "nowrap",
                     letterSpacing: "0.2px",
+                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                    lineHeight: "1.2",
                   }}
                 >
                   {cat.name}
@@ -196,7 +195,7 @@ export default function CategoryBar({
             justifyContent: "center",
             border: "none",
             cursor: "pointer",
-            boxShadow: "0 6px 16px rgba(255, 85, 0, 0.3)",
+            boxShadow: "0 6px 16px rgba(255, 85, 0, 0.35)",
             transition: "all 0.2s ease",
             marginLeft: "8px",
             flexShrink: 0,
@@ -213,15 +212,15 @@ export default function CategoryBar({
           display: none;
         }
         .category-item-btn:not(.selected):hover {
-          background-color: rgba(246, 199, 146, 0.2);
-          transform: translateY(-2px);
+          background-color: rgba(245, 197, 139, 0.18);
+          transform: translateY(-3px);
         }
         .category-scroll-arrow:hover {
-          background-color: "#E64D00";
-          transform: scale(1.06);
+          background-color: #E64D00;
+          transform: scale(1.08);
         }
         .category-scroll-arrow:active {
-          transform: scale(0.96);
+          transform: scale(0.95);
         }
       `}</style>
     </div>

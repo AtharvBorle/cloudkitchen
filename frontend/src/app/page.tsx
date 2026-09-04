@@ -5,7 +5,7 @@ import Navbar from "@/components/navbar";
 import {
   HeroSection,
   CategoryBar,
-  PromoRow,
+  PromoRow2,
   FilterRow,
   Properties,
   PopularOrders,
@@ -57,8 +57,8 @@ export default function Home() {
           onSelectCategory={(id) => setSelectedCategory(id)}
         />
 
-        {/* 3. Promo Banner Row */}
-        <PromoRow />
+        {/* 3. Promo Banner Row (New Full-Width Single Banner) */}
+        <PromoRow2 />
 
         {/* 4. Filter Row */}
         <FilterRow
