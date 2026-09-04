@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import styles from "./LoginForm.module.css";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Check } from "lucide-react";
 
@@ -16,15 +17,63 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onCreateAccount,
   onForgotPassword,
 }) => {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCreateAccount = () => {
+    if (onCreateAccount) {
+      onCreateAccount();
+    } else {
+      router.push("/auth/register");
+    }
+  };
+
+  const handleForgotPassword = () => {
+    if (onForgotPassword) {
+      onForgotPassword();
+    } else {
+      router.push("/auth/forgot-password");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (onSubmit) {
       onSubmit(e);
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+        loginType: "USER",
+      });
+
+      if (res?.error) {
+        if (res.error === "USER_NOT_FOUND" || res.error.includes("USER_NOT_FOUND")) {
+          setError("Account not found. Please register.");
+        } else if (res.error === "INVALID_PASSWORD" || res.error.includes("INVALID_PASSWORD")) {
+          setError("Incorrect password.");
+        } else {
+          setError("Invalid email or password.");
+        }
+      } else {
+        router.push("/");
+      }
+    } catch (err) {
+      router.push("/");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -38,7 +87,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="button"
             className={styles.createAccountBtn}
-            onClick={onCreateAccount}
+            onClick={handleCreateAccount}
           >
             Create Account
           </button>
@@ -50,6 +99,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <p className={styles.cardSubheading}>
             Sign in to continue ordering delicious meals.
           </p>
+
+          {error && <div className={styles.errorMessage}>{error}</div>}
 
           <form onSubmit={handleSubmit} className={styles.form}>
             {/* Email Field */}
@@ -124,15 +175,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <button
                 type="button"
                 className={styles.forgotBtn}
-                onClick={onForgotPassword}
+                onClick={handleForgotPassword}
               >
                 Forgot Password?
               </button>
             </div>
 
             {/* Sign In Button */}
-            <button type="submit" className={styles.signInBtn}>
-              <span>Sign In</span>
+            <button type="submit" className={styles.signInBtn} disabled={isLoading}>
+              <span>{isLoading ? "Signing In..." : "Sign In"}</span>
               <ArrowRight size={18} strokeWidth={2.4} />
             </button>
           </form>

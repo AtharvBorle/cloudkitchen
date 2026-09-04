@@ -83,6 +83,18 @@
   line-height: 1.4;
 }
 
+.errorMessage {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 500;
+}
+
 /* Form */
 .form {
   display: flex;
