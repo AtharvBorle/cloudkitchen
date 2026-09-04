@@ -63,8 +63,8 @@ export default function BestPlaces({
     <section
       style={{
         width: "100%",
-        backgroundColor: "#FFFFFF",
-        padding: "24px 16px 48px 16px",
+        background: "transparent",
+        padding: "0",
       }}
     >
       <div

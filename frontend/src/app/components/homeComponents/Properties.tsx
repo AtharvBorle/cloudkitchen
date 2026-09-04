@@ -159,13 +159,13 @@ export default function Properties() {
     <section
       style={{
         width: "100%",
-        backgroundColor: "#FFFFFF",
-        padding: "32px 16px 64px 16px",
+        background: "transparent",
+        padding: "0",
       }}
     >
       <div
         style={{
-          maxWidth: "1283px",
+          maxWidth: "1280px",
           width: "100%",
           minHeight: "843px",
           margin: "0 auto",

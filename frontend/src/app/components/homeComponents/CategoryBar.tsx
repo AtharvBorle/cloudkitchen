@@ -12,15 +12,15 @@ export interface CategoryItem {
 }
 
 const CATEGORIES: CategoryItem[] = [
-  { id: "food", name: "Food", icon: "🍔🍟", route: "/explore/food" },
-  { id: "mess", name: "Mess", icon: "🧺🥦", route: "/explore/food?category=mess" },
-  { id: "backery", name: "Backery", icon: "🥐🥖", route: "/explore/food?category=bakery" },
-  { id: "home-meals", name: "Home Meals", icon: "🍲🥕", route: "/explore/food?category=homemeals" },
-  { id: "healthy", name: "Healthy", icon: "🥗🥑", route: "/explore/food?category=healthy" },
-  { id: "snacks", name: "Snacks", icon: "🍿🥨", route: "/explore/food?category=snacks" },
-  { id: "deserts", name: "Deserts", icon: "🍰🧁", route: "/explore/food?category=desserts" },
-  { id: "drink", name: "Drink", icon: "🍹🥤", route: "/explore/food?category=drinks" },
-  { id: "rooms", name: "Rooms", icon: "🛏️🏠", route: "/explore/rooms" },
+  { id: "food", name: "Food", icon: "🍔", route: "/explore/food" },
+  { id: "mess", name: "Mess", icon: "🧺", route: "/explore/food?category=mess" },
+  { id: "bakery", name: "Bakery", icon: "🥐", route: "/explore/food?category=bakery" },
+  { id: "home-meals", name: "Home Meals", icon: "🍲", route: "/explore/food?category=homemeals" },
+  { id: "healthy", name: "Healthy", icon: "🥗", route: "/explore/food?category=healthy" },
+  { id: "snacks", name: "Snacks", icon: "🍿", route: "/explore/food?category=snacks" },
+  { id: "desserts", name: "Desserts", icon: "🍰", route: "/explore/food?category=desserts" },
+  { id: "drink", name: "Drink", icon: "🍹", route: "/explore/food?category=drinks" },
+  { id: "rooms", name: "Rooms", icon: "🛏️", route: "/explore/rooms" },
 ];
 
 interface CategoryBarProps {
@@ -56,8 +56,8 @@ export default function CategoryBar({
     <div
       style={{
         width: "100%",
-        backgroundColor: "#FFF9F4",
-        padding: "16px 0",
+        background: "transparent",
+        padding: "0",
       }}
     >
       <div
@@ -69,8 +69,7 @@ export default function CategoryBar({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingRight: "12px",
-          paddingLeft: "16px",
+          padding: "0",
           position: "relative",
           boxSizing: "border-box",
           gap: "12px",

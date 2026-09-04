@@ -32,8 +32,8 @@ export default function PromoRow({
     <section
       style={{
         width: "100%",
-        padding: "24px 16px",
-        backgroundColor: "#FFFFFF",
+        padding: "0",
+        background: "transparent",
       }}
     >
       <div

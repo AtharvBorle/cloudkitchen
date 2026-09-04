@@ -93,8 +93,8 @@ export default function DashboardBody({
     <section
       style={{
         width: "100%",
-        backgroundColor: "#FFFFFF",
-        padding: "40px 80px",
+        background: "transparent",
+        padding: "0",
         boxSizing: "border-box",
       }}
       className="dashboard-body-wrapper"

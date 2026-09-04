@@ -40,8 +40,8 @@ export default function FilterRow({
     <section
       style={{
         width: "100%",
-        padding: "12px 16px",
-        backgroundColor: "#FFFFFF",
+        padding: "0",
+        background: "transparent",
       }}
     >
       <div
