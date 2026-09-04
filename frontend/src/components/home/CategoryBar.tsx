@@ -20,7 +20,7 @@ const CATEGORIES: CategoryItem[] = [
   { id: "snacks", name: "Snacks", icon: "🍿", route: "/explore-desktop?category=snacks" },
   { id: "desserts", name: "Desserts", icon: "🍰", route: "/explore-desktop?category=desserts" },
   { id: "drink", name: "Drink", icon: "🍹", route: "/explore-desktop?category=drinks" },
-  { id: "rooms", name: "Rooms", icon: "🛏️", route: "/explore/rooms" },
+  { id: "rooms", name: "Rooms", icon: "🛏️", route: "/room-booking" },
 ];
 
 interface CategoryBarProps {

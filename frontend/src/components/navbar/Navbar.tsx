@@ -23,7 +23,7 @@ export const NAV_ITEM_ROUTES: Record<string, string> = {
   Home: "/",
   Explore: "/explore-desktop",
   Food: "/explore-desktop",
-  Rooms: "/explore/rooms",
+  Rooms: "/room-booking",
   Furniture: "/explore/furniture",
   "Mess/Tiffin": "/explore-desktop",
   Orders: "/dashboard/user",
@@ -74,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (pathname.startsWith("/explore-desktop")) {
       return navItems.includes("Food") ? "Food" : "Explore";
     }
-    if (pathname.startsWith("/explore/rooms") || pathname.startsWith("/room-booking")) {
+    if (pathname.startsWith("/room-booking")) {
       return "Rooms";
     }
     if (pathname.startsWith("/explore/furniture")) {

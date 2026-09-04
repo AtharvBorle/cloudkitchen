@@ -50,7 +50,7 @@ graph TD
 ```mermaid
 graph LR
     Home["1. Homepage (/)"] --> ExploreFood["2. Explore Food (/explore-desktop)"]
-    Home --> ExploreRooms["3. Explore Rooms (/explore/rooms)"]
+    Home --> ExploreRooms["3. Explore Rooms (/room-booking)"]
     Home --> ExploreFurniture["4. Explore Furniture (/explore/furniture)"]
     Home --> StoreFront["5. Public Shop (/shop/[trackingId])"]
     Home --> AuthPortal["6. Auth Login/Register Portals (/auth/...)"]
@@ -78,7 +78,7 @@ graph LR
 ### 3.2 Screen: Catalog Exploration Pages
 - **Routes**:
   - `/explore-desktop`: Food items grid with Veg/Non-Veg toggle, category tags, price slider, and operating hours status.
-  - `/explore/rooms`: Property listings grid with capacity filter, nightly price filter, and date picker.
+  - `/room-booking`: Property listings grid with capacity filter, nightly price filter, and date picker.
   - `/explore/furniture`: Furniture items gallery with "Inquire Details" button opening a direct store query modal.
 
 ### 3.3 Screen: Public Vendor Shop Page (`/shop/[trackingId]`)
