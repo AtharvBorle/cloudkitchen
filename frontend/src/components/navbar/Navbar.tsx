@@ -15,20 +15,20 @@ import profilePic from "./Rectangle.jpg";
 export const DEFAULT_NAV_ITEMS = [
   "Home",
   "Explore",
-  "Rooms",
-  "Furniture",
   "Orders",
+  "Rooms",
+  "Settings",
 ] as const;
 
 export const NAV_ITEM_ROUTES: Record<string, string> = {
   Home: "/",
   Explore: "/explore-desktop",
   Food: "/explore-desktop",
+  Orders: "/orders-desktop",
   Rooms: "/room-booking",
+  Settings: "/settings-desktop",
   Furniture: "/explore/furniture",
   "Mess/Tiffin": "/explore-desktop",
-  Orders: "/orders-desktop",
-  Settings: "/settings-desktop",
 };
 
 export interface NavbarProps {
@@ -84,7 +84,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (pathname.startsWith("/orders-desktop") || pathname.startsWith("/order-history") || pathname.startsWith("/dashboard/user/orders")) {
       return "Orders";
     }
-    if (pathname.startsWith("/settings-desktop") || pathname.startsWith("/my-subscriptions") || pathname.startsWith("/notifications-desktop") || pathname.startsWith("/payment-methods-desktop") || pathname.startsWith("/delivery-addresses-desktop")) {
+    if (
+      pathname.startsWith("/settings-desktop") ||
+      pathname.startsWith("/my-subscription") ||
+      pathname.startsWith("/notifications-desktop") ||
+      pathname.startsWith("/payment-methods-desktop") ||
+      pathname.startsWith("/delivery-addresses-desktop")
+    ) {
       return "Settings";
     }
     if (pathname.startsWith("/dashboard")) {
@@ -147,10 +153,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       } else if (role === "ADMIN" || role === "SUPERADMIN") {
         router.push("/dashboard/admin");
       } else {
-        router.push("/dashboard/user");
+        router.push("/settings-desktop");
       }
     } else {
-      router.push("/user");
+      router.push("/settings-desktop");
     }
   };
 
