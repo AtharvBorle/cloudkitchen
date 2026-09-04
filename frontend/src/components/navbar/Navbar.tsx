@@ -2,37 +2,69 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { ChevronDown, Globe, ShoppingCart, User } from "lucide-react";
+import { ChevronDown, Globe, ShoppingBag, User } from "lucide-react";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
 
+export const DEFAULT_NAV_ITEMS = [
+  "Home",
+  "Explore",
+  "Orders",
+  "Rooms",
+  "Settings",
+] as const;
+
 export interface NavbarProps {
-  initialActiveItem?: "Home" | "Explore" | "Orders" | "Rooms" | "Settings";
+  navItems?: readonly string[];
+  activeItem?: string;
+  initialActiveItem?: string;
   onNavItemClick?: (item: string) => void;
   location?: string;
   cartCount?: number;
+  isVegOnly?: boolean;
+  onVegToggle?: (isVeg: boolean) => void;
+  onCartClick?: () => void;
+  onProfileClick?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  navItems = DEFAULT_NAV_ITEMS,
+  activeItem: controlledActiveItem,
   initialActiveItem = "Home",
   onNavItemClick,
   location = "Kothrud, Pune",
   cartCount = 0,
+  isVegOnly: controlledVegOnly,
+  onVegToggle,
+  onCartClick,
+  onProfileClick,
 }) => {
-  const [activeItem, setActiveItem] = useState<string>(initialActiveItem);
-  const [isVegOnly, setIsVegOnly] = useState<boolean>(true);
+  const [internalActiveItem, setInternalActiveItem] = useState<string>(
+    initialActiveItem
+  );
+  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(true);
 
-  const navItems = ["Home", "Explore", "Orders", "Rooms", "Settings"] as const;
+  const currentActiveItem =
+    controlledActiveItem !== undefined
+      ? controlledActiveItem
+      : internalActiveItem;
+
+  const currentVegOnly =
+    controlledVegOnly !== undefined ? controlledVegOnly : internalVegOnly;
 
   const handleNavClick = (item: string) => {
-    setActiveItem(item);
+    setInternalActiveItem(item);
     if (onNavItemClick) {
       onNavItemClick(item);
     }
   };
 
   const toggleVegOnly = () => {
-    setIsVegOnly((prev: boolean) => !prev);
+    const nextState = !currentVegOnly;
+    setInternalVegOnly(nextState);
+    if (onVegToggle) {
+      onVegToggle(nextState);
+    }
   };
 
   return (
@@ -61,19 +93,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* 2. CENTER SECTION */}
         <nav className={styles.centerSection} aria-label="Desktop Navigation">
-          {navItems.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={`${styles.navItem} ${
-                activeItem === item ? styles.active : ""
-              }`}
-              onClick={() => handleNavClick(item)}
-              aria-current={activeItem === item ? "page" : undefined}
-            >
-              {item}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const isActive = currentActiveItem === item;
+            return (
+              <button
+                key={item}
+                type="button"
+                className={`${styles.navItem} ${
+                  isActive ? styles.active : ""
+                }`}
+                onClick={() => handleNavClick(item)}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {item}
+              </button>
+            );
+          })}
         </nav>
 
         {/* 3. RIGHT SECTION */}
@@ -83,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={styles.vegToggleWrapper}
             onClick={toggleVegOnly}
             role="switch"
-            aria-checked={isVegOnly}
+            aria-checked={currentVegOnly}
             tabIndex={0}
             onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -95,41 +130,44 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className={styles.vegLabel}>VEG ONLY</span>
             <div
               className={`${styles.toggleTrack} ${
-                isVegOnly ? styles.toggleTrackActive : ""
+                currentVegOnly ? styles.toggleTrackActive : ""
               }`}
             >
               <div
                 className={`${styles.toggleThumb} ${
-                  isVegOnly ? styles.toggleThumbActive : ""
+                  currentVegOnly ? styles.toggleThumbActive : ""
                 }`}
               />
             </div>
           </div>
 
-          {/* Language Selector */}
+          {/* Language Selector Pill with Globe, EN, Chevron in #F97316 */}
           <button
             type="button"
             className={styles.langSelector}
             title="Select Language"
             aria-label="Language: English"
           >
-            <Globe size={18} />
+            <Globe size={20} strokeWidth={2.2} />
             <span className={styles.langText}>EN</span>
+            <ChevronDown size={16} strokeWidth={2.8} />
           </button>
 
-          {/* Cart Icon */}
+          {/* Food Delivery Bag / Cart Icon in #F97316 */}
           <button
             type="button"
             className={styles.cartButton}
-            aria-label={`Shopping Cart (${cartCount} items)`}
+            onClick={onCartClick}
+            aria-label={`Shopping Bag (${cartCount} items)`}
           >
-            <ShoppingCart size={21} />
+            <ShoppingBag size={22} strokeWidth={2.2} />
           </button>
 
           {/* Profile Avatar */}
           <button
             type="button"
             className={styles.profileAvatar}
+            onClick={onProfileClick}
             aria-label="User Profile"
           >
             <User size={20} className={styles.avatarIcon} />

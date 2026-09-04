@@ -122,8 +122,8 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 2px;
-  background-color: #a3281c;
+  height: 2.5px;
+  background-color: #f97316;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
@@ -131,7 +131,7 @@
 }
 
 .navItem:hover {
-  color: #a3281c;
+  color: #f97316;
 }
 
 .navItem:hover::after {
@@ -139,7 +139,7 @@
 }
 
 .navItem.active {
-  color: #a3281c;
+  color: #f97316;
   font-weight: 600;
 }
 
@@ -167,7 +167,7 @@
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: #374151;
+  color: #22c55e;
   text-transform: uppercase;
 }
 
@@ -203,48 +203,53 @@
   transform: translateX(18px);
 }
 
-/* Language Selector */
+/* Language Selector Pill */
 .langSelector {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: #374151;
+  gap: 6px;
+  background-color: #fff7ed;
+  color: #f97316;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
   font-family: inherit;
+  border: none;
 }
 
 .langSelector:hover {
-  background-color: #f3f4f6;
-  color: #a3281c;
+  background-color: #ffedd5;
+  transform: translateY(-1px);
 }
 
 .langText {
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
-/* Cart Icon Button */
+/* Cart / Bag Icon Button */
 .cartButton {
   position: relative;
-  background: transparent;
+  background-color: #fff7ed;
+  color: #f97316;
   border: none;
-  color: #374151;
   cursor: pointer;
-  padding: 6px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .cartButton:hover {
-  background-color: #f3f4f6;
-  color: #a3281c;
+  background-color: #ffedd5;
+  transform: scale(1.05);
 }
 
 /* Profile Avatar */

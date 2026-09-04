@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Navbar } from "@/components/explore-desktop/navbar";
+import { Navbar } from "@/components/navbar";
 import { ExploreHeroBanner } from "@/components/explore-desktop/explore-herobanner";
 import { CloudKitchenReels } from "@/components/explore-desktop/cloudkitchen-reels";
 import { FeaturedCollections } from "@/components/explore-desktop/featured-collections";
@@ -12,8 +12,8 @@ import { Footer } from "@/components/explore-desktop/footer";
 export default function ExploreDesktopPage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#fdfbf7", display: "flex", flexDirection: "column" }}>
-      {/* 1. Explore Desktop Navbar */}
-      <Navbar />
+      {/* 1. Shared Navbar with Explore Active */}
+      <Navbar initialActiveItem="Explore" />
 
       <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "28px 32px 64px 32px", boxSizing: "border-box", flex: 1 }}>
         {/* 2. Explore Hero Banner */}

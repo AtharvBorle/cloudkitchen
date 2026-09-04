@@ -1,4 +1,3 @@
-export * from "./navbar";
 export * from "./explore-herobanner";
 export * from "./cloudkitchen-reels";
 export * from "./featured-collections";
