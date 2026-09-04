@@ -21,7 +21,7 @@ export const LoginHero: React.FC<LoginHeroProps> = ({
     <div className={styles.heroContainer}>
       {/* Background Cover Image */}
       <Image
-        src="/images/login-image1.jpg"
+        src="/images/login-page-image3.png"
         alt="Delicious meal spread"
         fill
         priority
