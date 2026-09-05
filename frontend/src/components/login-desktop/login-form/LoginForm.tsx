@@ -29,7 +29,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     if (onCreateAccount) {
       onCreateAccount();
     } else {
-      router.push("/auth/register");
+      router.push("/signup");
     }
   };
 

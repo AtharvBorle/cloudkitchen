@@ -26,7 +26,15 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
   const [activeTag, setActiveTag] = useState("pizza");
   const [isLocationOpen, setIsLocationOpen] = useState(false);
 
-  const locations = ["Kothrud, Pune", "Baner, Pune", "Viman Nagar, Pune", "Wakad, Pune", "Hadapsar, Pune"];
+  const locations = [
+    "Kothrud, Pune",
+    "Baner, Pune",
+    "Viman Nagar, Pune",
+    "Wakad, Pune",
+    "Hadapsar, Pune",
+    "Aundh, Pune",
+    "Kalyani Nagar, Pune",
+  ];
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -34,7 +42,7 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
       onSearch(searchQuery, selectedLocation);
     } else {
       const params = new URLSearchParams();
-      if (searchQuery.trim()) params.set("query", searchQuery.trim());
+      if (selectedLocation) params.set("location", selectedLocation);
       router.push(`/explore-desktop?${params.toString()}`);
     }
   };
@@ -51,12 +59,10 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
       style={{
         width: "100%",
         maxWidth: "1280px",
-        height: "480px",
-        background: "linear-gradient(135deg, #FFF5EC 0%, #FFF9F4 50%, #FFF5E9 100%)",
-        paddingTop: "56px",
-        paddingBottom: "56px",
-        paddingLeft: "0",
-        paddingRight: "0",
+        minHeight: "480px",
+        background: "linear-gradient(135deg, #FFF6EE 0%, #FFF9F4 50%, #FFF5EB 100%)",
+        backgroundColor: "#FFF6EE",
+        padding: "52px 56px",
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
@@ -64,53 +70,50 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
         boxSizing: "border-box",
         position: "relative",
         overflow: "hidden",
-        borderRadius: "24px",
+        borderRadius: "28px",
+        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}
       className="hero-section-container"
     >
-      {/* HeroLeft (560px x 356px) */}
+      {/* HeroLeft (Text, Search Bar & Quick Tags) */}
       <div
         style={{
-          width: "560px",
-          minWidth: "560px",
-          minHeight: "356px",
+          width: "100%",
+          maxWidth: "580px",
           display: "flex",
           flexDirection: "column",
-          gap: "20px",
+          gap: "22px",
           zIndex: 2,
           boxSizing: "border-box",
-          paddingLeft: "24px",
         }}
         className="hero-left-column"
       >
-        {/* Eyebrow / Tag: (122px hug * 18px hug, gap 8px) */}
+        {/* Eyebrow / Tag: "— GOOD FOOD" */}
         <div
           style={{
-            width: "fit-content",
-            maxWidth: "122px",
-            height: "18px",
             display: "flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "10px",
+            width: "fit-content",
           }}
         >
           <div
             style={{
-              width: "20px",
-              height: "2px",
-              backgroundColor: "#FF5500",
-              borderRadius: "1px",
+              width: "28px",
+              height: "2.5px",
+              backgroundColor: "#FF6B00",
+              borderRadius: "2px",
             }}
           />
           <span
             style={{
-              color: "#FF5500",
+              color: "#FF6B00",
               fontSize: "13px",
               fontWeight: "700",
-              letterSpacing: "1.2px",
+              letterSpacing: "1.5px",
               textTransform: "uppercase",
               fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              lineHeight: "18px",
+              lineHeight: 1,
               whiteSpace: "nowrap",
             }}
           >
@@ -118,79 +121,81 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           </span>
         </div>
 
-        {/* Heading: (560px fill * 124px hug, flow vertical, gap 4px) */}
+        {/* Heading: "Delicious Meals, At Your Doorstep" */}
         <div
           style={{
-            width: "100%",
-            maxWidth: "560px",
-            minHeight: "124px",
             display: "flex",
             flexDirection: "column",
-            gap: "4px",
+            gap: "2px",
             margin: 0,
           }}
         >
           <h1
             style={{
-              fontSize: "48px",
+              fontSize: "52px",
               fontWeight: "800",
-              lineHeight: "58px",
-              color: "#18181B",
+              lineHeight: "1.15",
+              color: "#0F172A",
               letterSpacing: "-0.5px",
               margin: 0,
               fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
             }}
+            className="hero-title-dark"
           >
             Delicious Meals,
           </h1>
           <h1
             style={{
-              fontSize: "48px",
+              fontSize: "52px",
               fontWeight: "800",
-              lineHeight: "58px",
-              color: "#FF5500",
+              lineHeight: "1.15",
+              color: "#FF6B00",
               letterSpacing: "-0.5px",
               margin: 0,
               fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
             }}
+            className="hero-title-orange"
           >
             At Your Doorstep
           </h1>
         </div>
 
-        {/* Subtitle: width 440px, height 50px, Poppins 400 15px line-height 165% #64748B */}
+        {/* Subtitle */}
         <p
           style={{
-            width: "440px",
-            maxWidth: "100%",
-            minHeight: "50px",
+            fontSize: "16px",
             fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-            fontWeight: 400,
-            fontStyle: "normal",
-            fontSize: "15px",
-            lineHeight: "165%",
-            letterSpacing: "0px",
+            fontWeight: "400",
+            lineHeight: "1.6",
             color: "#64748B",
             margin: 0,
+            maxWidth: "480px",
           }}
         >
           From local favorites to global cuisines, discover food that makes you happy.
         </p>
 
-        {/* Search Pill Bar */}
+        {/* Search Pill Bar Container */}
         <form
           onSubmit={handleSearchSubmit}
           style={{
             backgroundColor: "#FFFFFF",
-            borderRadius: "9999px",
-            padding: "5px 6px 5px 18px",
+            borderRadius: "27px",
+            height: "54px",
+            padding: "0 0 0 18px",
             display: "flex",
             alignItems: "center",
-            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02)",
+            boxShadow:
+              "0 10px 30px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02)",
             border: "1px solid #F1F5F9",
             position: "relative",
-            margin: 0,
+            margin: "4px 0 0 0",
+            maxWidth: "540px",
+            width: "100%",
+            boxSizing: "border-box",
+            overflow: "hidden",
           }}
+          className="hero-search-form"
         >
           {/* Search Input */}
           <div
@@ -200,9 +205,10 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
               flex: "1 1 auto",
               gap: "10px",
               minWidth: "160px",
+              height: "100%",
             }}
           >
-            <Search size={18} color="#94A3B8" />
+            <Search size={19} color="#94A3B8" />
             <input
               type="text"
               placeholder="Search for restaurants, dishes..."
@@ -212,10 +218,13 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
                 border: "none",
                 outline: "none",
                 width: "100%",
-                fontSize: "0.92rem",
-                color: "#1E293B",
+                height: "100%",
+                fontSize: "14.5px",
+                color: "#0F172A",
                 backgroundColor: "transparent",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
               }}
+              className="hero-search-input"
             />
           </div>
 
@@ -223,9 +232,9 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           <div
             style={{
               width: "1px",
-              height: "24px",
+              height: "26px",
               backgroundColor: "#E2E8F0",
-              margin: "0 10px",
+              margin: "0 12px",
             }}
             className="hero-search-divider"
           />
@@ -237,20 +246,22 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
               display: "flex",
               alignItems: "center",
               gap: "6px",
-              padding: "6px 8px",
+              padding: "0 10px 0 0",
+              height: "100%",
               cursor: "pointer",
               userSelect: "none",
             }}
             className="hero-location-picker"
             onClick={() => setIsLocationOpen(!isLocationOpen)}
           >
-            <MapPin size={16} color="#FF5500" />
+            <MapPin size={17} color="#FF6B00" />
             <span
               style={{
-                fontSize: "0.88rem",
+                fontSize: "14px",
                 fontWeight: "600",
-                color: "#1E293B",
+                color: "#0F172A",
                 whiteSpace: "nowrap",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
               }}
             >
               {selectedLocation}
@@ -262,14 +273,14 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
               <div
                 style={{
                   position: "absolute",
-                  top: "calc(100% + 14px)",
+                  top: "calc(100% + 8px)",
                   right: 0,
                   backgroundColor: "#FFFFFF",
-                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
-                  borderRadius: "12px",
+                  boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                  borderRadius: "14px",
                   padding: "8px 0",
-                  minWidth: "170px",
-                  zIndex: 20,
+                  minWidth: "190px",
+                  zIndex: 25,
                   border: "1px solid #E2E8F0",
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -282,19 +293,23 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
                       setIsLocationOpen(false);
                     }}
                     style={{
-                      padding: "8px 16px",
-                      fontSize: "0.88rem",
-                      color: selectedLocation === loc ? "#FF5500" : "#334155",
+                      padding: "9px 18px",
+                      fontSize: "13.5px",
+                      color: selectedLocation === loc ? "#FF6B00" : "#334155",
                       fontWeight: selectedLocation === loc ? "600" : "400",
-                      backgroundColor: selectedLocation === loc ? "#FFF7ED" : "transparent",
+                      backgroundColor:
+                        selectedLocation === loc ? "#FFF3EB" : "transparent",
                       cursor: "pointer",
+                      fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                      transition: "all 0.15s ease",
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.backgroundColor = "#FFF7ED";
+                      (e.currentTarget as HTMLElement).style.backgroundColor =
+                        "#FFF3EB";
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLElement).style.backgroundColor =
-                        selectedLocation === loc ? "#FFF7ED" : "transparent";
+                        selectedLocation === loc ? "#FFF3EB" : "transparent";
                     }}
                   >
                     {loc}
@@ -304,41 +319,48 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
             )}
           </div>
 
-          {/* Search Submit Button */}
+          {/* Search Submit Button (Exact Figma Spec: Width 103px, Height 54px, Right Radius 27px, #FF6B00) */}
           <button
             type="submit"
             style={{
-              backgroundColor: "#FF5500",
+              width: "103px",
+              minWidth: "103px",
+              height: "54px",
+              backgroundColor: "#FF6B00",
               color: "#FFFFFF",
-              fontWeight: "600",
-              fontSize: "0.92rem",
-              padding: "10px 24px",
-              borderRadius: "9999px",
+              fontWeight: "700",
+              fontSize: "15px",
               border: "none",
+              borderTopRightRadius: "27px",
+              borderBottomRightRadius: "27px",
+              borderTopLeftRadius: "0px",
+              borderBottomLeftRadius: "0px",
               cursor: "pointer",
-              marginLeft: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               transition: "all 0.2s ease",
-              boxShadow: "0 4px 12px rgba(255, 85, 0, 0.25)",
+              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+              whiteSpace: "nowrap",
+              padding: 0,
+              margin: 0,
             }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "#E64D00";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "#FF5500";
-            }}
+            className="hero-search-submit-btn"
           >
             Search
           </button>
         </form>
 
-        {/* Quick Tags / Chips */}
+        {/* Quick Filter Tags / Chips */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "8px",
             flexWrap: "wrap",
+            marginTop: "2px",
           }}
+          className="hero-tags-wrapper"
         >
           {QUICK_TAGS.map((tag) => {
             const isSelected = activeTag === tag.id;
@@ -351,31 +373,21 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  padding: "5px 12px",
+                  padding: "6px 14px",
                   borderRadius: "9999px",
-                  fontSize: "0.82rem",
+                  fontSize: "13px",
                   fontWeight: isSelected ? "600" : "500",
                   cursor: "pointer",
                   transition: "all 0.2s ease",
-                  backgroundColor: isSelected ? "#FFF0E6" : "#FFFFFF",
-                  border: isSelected ? "1px solid #FED7AA" : "1px solid #E2E8F0",
-                  color: isSelected ? "#D9531E" : "#475569",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                  backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
+                  border: isSelected ? "1px solid #FFD8C2" : "1px solid #E2E8F0",
+                  color: isSelected ? "#FF6B00" : "#475569",
+                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
+                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                 }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    (e.currentTarget as HTMLElement).style.borderColor = "#CBD5E1";
-                    (e.currentTarget as HTMLElement).style.backgroundColor = "#F8FAFC";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    (e.currentTarget as HTMLElement).style.borderColor = "#E2E8F0";
-                    (e.currentTarget as HTMLElement).style.backgroundColor = "#FFFFFF";
-                  }
-                }}
+                className="hero-tag-btn"
               >
-                <span style={{ fontSize: "0.9rem" }}>{tag.emoji}</span>
+                <span style={{ fontSize: "14px" }}>{tag.emoji}</span>
                 <span>{tag.label}</span>
               </button>
             );
@@ -383,19 +395,18 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
         </div>
       </div>
 
-      {/* HeroRight Image Column */}
+      {/* HeroRight Graphic Column (Illustrated food bowl with floating badges) */}
       <div
         style={{
           flex: "1 1 500px",
-          maxWidth: "560px",
+          maxWidth: "540px",
           height: "100%",
-          maxHeight: "368px",
+          minHeight: "380px",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           position: "relative",
           zIndex: 1,
-          paddingRight: "24px",
           boxSizing: "border-box",
         }}
         className="hero-right-column"
@@ -404,9 +415,9 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: "480px",
+            maxWidth: "500px",
             height: "100%",
-            maxHeight: "360px",
+            minHeight: "380px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -415,45 +426,82 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           <Image
             src="/HeroRight.png"
             alt="Delicious Meals at Your Doorstep"
-            width={480}
-            height={360}
+            width={520}
+            height={390}
             priority
             style={{
               width: "auto",
-              height: "100%",
-              maxHeight: "360px",
+              height: "auto",
+              maxHeight: "390px",
               maxWidth: "100%",
               objectFit: "contain",
-              filter: "drop-shadow(0 12px 28px rgba(0,0,0,0.06))",
+              filter: "drop-shadow(0 14px 32px rgba(0,0,0,0.06))",
             }}
           />
         </div>
       </div>
 
       <style jsx>{`
-        @media (max-width: 992px) {
+        .hero-search-submit-btn:hover {
+          background-color: #E65F00 !important;
+        }
+        .hero-tag-btn:hover {
+          border-color: #FFD8C2 !important;
+          color: #FF6B00 !important;
+          background-color: #FFF8F3 !important;
+          transform: translateY(-1px);
+        }
+        @media (max-width: 1024px) {
           .hero-section-container {
             flex-direction: column !important;
-            height: auto !important;
-            padding-top: 32px !important;
-            padding-bottom: 32px !important;
+            min-height: auto !important;
+            padding: 40px 28px !important;
             text-align: center;
           }
           .hero-left-column {
             width: 100% !important;
-            min-width: 100% !important;
-            padding-left: 0 !important;
+            max-width: 100% !important;
             align-items: center;
+          }
+          .hero-title-dark,
+          .hero-title-orange {
+            font-size: 38px !important;
+            line-height: 1.2 !important;
+          }
+          .hero-tags-wrapper {
+            justify-content: center;
           }
           .hero-right-column {
             width: 100% !important;
             max-width: 440px !important;
+            min-height: 300px !important;
+            margin-top: 24px;
           }
         }
         @media (max-width: 640px) {
-          .hero-search-divider,
-          .hero-location-picker {
+          .hero-search-form {
+            flex-direction: column;
+            border-radius: 20px !important;
+            height: auto !important;
+            padding: 14px !important;
+            gap: 12px;
+          }
+          .hero-search-divider {
             display: none !important;
+          }
+          .hero-location-picker {
+            width: 100%;
+            justify-content: center;
+            padding: 0;
+          }
+          .hero-search-submit-btn {
+            width: 100% !important;
+            height: 46px !important;
+            border-radius: 12px !important;
+          }
+          .hero-title-dark,
+          .hero-title-orange {
+            font-size: 30px !important;
           }
         }
       `}</style>
