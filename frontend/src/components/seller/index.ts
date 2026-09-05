@@ -13,4 +13,26 @@ export type { MainCanvasProps, SellerProfileData } from "./seller-profile/MainCa
 export { default as Profile, default as SellerProfile } from "./seller-profile/Profile";
 export type { SellerProfileProps } from "./seller-profile/Profile";
 
+// Delivery components
+export { default as RiderCanvas } from "./delivery/manage_rider/RiderCanvas";
+export type {
+  RiderCanvasProps,
+  RiderSummaryMetric,
+  RiderWalletRecord,
+} from "./delivery/manage_rider/RiderCanvas";
+
+export { default as RiderCanvasDas } from "./delivery/manage_rider/RiderCanvasDas";
+export type { RiderCanvasDasProps } from "./delivery/manage_rider/RiderCanvasDas";
+
+export { default as RiderSettlements } from "./delivery/rider_settlement/RiderSettlements";
+export type {
+  RiderSettlementsProps,
+  RiderProfileInfo,
+  CashCollectionBalanceInfo,
+  LedgerEntry,
+} from "./delivery/rider_settlement/RiderSettlements";
+
+export { default as RiderSettlementDas } from "./delivery/rider_settlement/RiderSettlementDas";
+export type { RiderSettlementDasProps } from "./delivery/rider_settlement/RiderSettlementDas";
+
 export { default } from "./seller-profile/Profile";

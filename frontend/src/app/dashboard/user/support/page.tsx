@@ -128,7 +128,6 @@ Details: Category request submitted via dashboard form.`;
                 setNewTitle("");
                 setNewDescription("");
                 setReqCategoryName("");
-                setReqParentCategoryName("");
                 setIsCreateModalOpen(false);
                 await fetchTickets(true); // reload and select the raised ticket
             } else {
@@ -539,7 +538,6 @@ Details: Category request submitted via dashboard form.`;
                                             value={reqCategoryType}
                                             onChange={(e) => {
                                                 setReqCategoryType(e.target.value);
-                                                setReqParentCategoryId("");
                                             }}
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", fontSize: "0.9rem" }}
                                         >
