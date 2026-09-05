@@ -102,7 +102,7 @@ export default function BestPlaces({
           <Link
             href={seeAllLink}
             style={{
-              color: "#FF5500",
+              color: "#FF6B00",
               fontSize: "0.95rem",
               fontWeight: "700",
               textDecoration: "none",

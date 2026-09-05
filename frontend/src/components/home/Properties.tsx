@@ -231,7 +231,7 @@ export default function Properties() {
               type="button"
               onClick={handleClearAll}
               style={{
-                color: "#F97316",
+                color: "#FF6B00",
                 fontSize: "14px",
                 fontWeight: "600",
                 background: "none",
@@ -242,10 +242,10 @@ export default function Properties() {
                 transition: "color 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "#EA580C";
+                (e.currentTarget as HTMLElement).style.color = "#E65F00";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "#F97316";
+                (e.currentTarget as HTMLElement).style.color = "#FF6B00";
               }}
             >
               Clear All
@@ -288,9 +288,9 @@ export default function Properties() {
                           height: "18px",
                           borderRadius: "5px",
                           border: isChecked
-                            ? "1.5px solid #F97316"
+                            ? "1.5px solid #FF6B00"
                             : "1.5px solid #94A3B8",
-                          backgroundColor: isChecked ? "#F97316" : "#FFFFFF",
+                          backgroundColor: isChecked ? "#FF6B00" : "#FFFFFF",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -364,9 +364,9 @@ export default function Properties() {
                           height: "18px",
                           borderRadius: "5px",
                           border: isChecked
-                            ? "1.5px solid #F97316"
+                            ? "1.5px solid #FF6B00"
                             : "1.5px solid #94A3B8",
-                          backgroundColor: isChecked ? "#F97316" : "#FFFFFF",
+                          backgroundColor: isChecked ? "#FF6B00" : "#FFFFFF",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -431,10 +431,10 @@ export default function Properties() {
                       height: "38px",
                       borderRadius: "8px",
                       border: isSelected
-                        ? "1.5px solid #F97316"
+                        ? "1.5px solid #FF6B00"
                         : "1px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#FFF7ED" : "#FFFFFF",
-                      color: isSelected ? "#F97316" : "#334155",
+                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
+                      color: isSelected ? "#FF6B00" : "#334155",
                       fontWeight: isSelected ? "700" : "600",
                       fontSize: "14px",
                       cursor: "pointer",

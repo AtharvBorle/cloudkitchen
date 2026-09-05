@@ -102,7 +102,7 @@ export default function PopularOrders({
           <Link
             href={seeAllLink}
             style={{
-              color: "#FF5500",
+              color: "#FF6B00",
               fontSize: "0.95rem",
               fontWeight: "700",
               textDecoration: "none",
@@ -152,7 +152,7 @@ export default function PopularOrders({
                 <div
                   style={{
                     backgroundColor: "#FFFFFF",
-                    color: "#FF5500",
+                    color: "#FF6B00",
                     fontSize: "0.78rem",
                     fontWeight: "800",
                     padding: "4px 12px",
@@ -219,7 +219,7 @@ export default function PopularOrders({
                 href={offer.link}
                 style={{
                   marginTop: "auto",
-                  backgroundColor: "#FF5500",
+                  backgroundColor: "#FF6B00",
                   color: "#FFFFFF",
                   fontSize: "0.92rem",
                   fontWeight: "700",
@@ -227,7 +227,7 @@ export default function PopularOrders({
                   borderRadius: "12px",
                   textAlign: "center",
                   textDecoration: "none",
-                  boxShadow: "0 4px 12px rgba(255, 85, 0, 0.25)",
+                  boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
                   transition: "all 0.2s ease",
                   display: "block",
                 }}
@@ -249,7 +249,7 @@ export default function PopularOrders({
           transform: scale(1.05);
         }
         .offer-order-btn:hover {
-          background-color: #E64D00 !important;
+          background-color: #E65F00 !important;
         }
         @media (max-width: 1024px) {
           .offers-grid-layout {

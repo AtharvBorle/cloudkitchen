@@ -29,3 +29,42 @@ export type { SellerProfileProps } from "./seller-profile/Profile";
 // 3. Seller Delivery & Rider Management (Pravin)
 // ==========================================
 export * from "./delivery";
+
+// Delivery individual component named exports
+export { default as RiderCanvas } from "./delivery/manage_rider/RiderCanvas";
+export type {
+  RiderCanvasProps,
+  RiderSummaryMetric,
+  RiderWalletRecord,
+} from "./delivery/manage_rider/RiderCanvas";
+
+export { default as RiderCanvasDas } from "./delivery/manage_rider/RiderCanvasDas";
+export type { RiderCanvasDasProps } from "./delivery/manage_rider/RiderCanvasDas";
+
+export { default as RiderSettlements } from "./delivery/rider_settlement/RiderSettlements";
+export type {
+  RiderSettlementsProps,
+  RiderProfileInfo,
+  CashCollectionBalanceInfo,
+  LedgerEntry,
+} from "./delivery/rider_settlement/RiderSettlements";
+
+export { default as RiderSettlementDas } from "./delivery/rider_settlement/RiderSettlementDas";
+export type { RiderSettlementDasProps } from "./delivery/rider_settlement/RiderSettlementDas";
+
+// ==========================================
+// 4. Seller Booking & Reservations (Pravin)
+// ==========================================
+export * from "./booking";
+
+export { default as BookingCanvas } from "./booking/BookingCanvas";
+export type {
+  BookingCanvasProps,
+  BookingRecord,
+  BookingFilterTab,
+} from "./booking/BookingCanvas";
+
+export { default as BookingCanvasDas } from "./booking/BookingCanvasDas";
+export type { BookingCanvasDasProps } from "./booking/BookingCanvasDas";
+
+export { default } from "./seller-profile/Profile";

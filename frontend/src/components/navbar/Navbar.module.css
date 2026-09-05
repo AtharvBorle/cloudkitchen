@@ -121,9 +121,9 @@
   position: absolute;
   bottom: -2px;
   left: 50%;
-  width: 22px;
-  height: 3.5px;
-  background-color: #f97316;
+  width: 24px;
+  height: 3px;
+  background-color: #ff6b00;
   transform: translateX(-50%) scaleX(0);
   transform-origin: center;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
@@ -131,7 +131,7 @@
 }
 
 .navItem:hover {
-  color: #f97316;
+  color: #ff6b00;
 }
 
 .navItem:hover::after {
@@ -139,7 +139,7 @@
 }
 
 .navItem.active {
-  color: #f97316;
+  color: #ff6b00;
   font-weight: 700;
 }
 
@@ -185,7 +185,7 @@
 }
 
 .toggleTrackActive {
-  background-color: #f97316;
+  background-color: #ff6b00;
 }
 
 .toggleThumb {
@@ -209,7 +209,7 @@
   align-items: center;
   gap: 6px;
   background-color: #fff7ed;
-  color: #f97316;
+  color: #ff6b00;
   cursor: pointer;
   padding: 8px 16px;
   border-radius: 9999px;
@@ -234,7 +234,7 @@
 .cartButton {
   position: relative;
   background-color: #fff7ed;
-  color: #f97316;
+  color: #ff6b00;
   border: none;
   cursor: pointer;
   width: 44px;
@@ -375,7 +375,7 @@
 
   .mobileNavItem:hover,
   .mobileNavItem.active {
-    color: #f97316;
+    color: #ff6b00;
     background-color: #fff7ed;
   }
 }

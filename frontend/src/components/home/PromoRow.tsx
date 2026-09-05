@@ -188,7 +188,7 @@ export default function PromoRow({ promos = DEFAULT_PROMOS }: PromoRowProps) {
                     borderRadius: "99px",
                     padding: "10px 22px",
                     backgroundColor: "#FFFFFF",
-                    color: "#F97316",
+                    color: "#FF6B00",
                     fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                     fontWeight: 600,
                     fontSize: "14.5px",
@@ -259,7 +259,7 @@ export default function PromoRow({ promos = DEFAULT_PROMOS }: PromoRowProps) {
                   width: "18px",
                   height: "6px",
                   borderRadius: "3px",
-                  backgroundColor: "#F97316",
+                  backgroundColor: "#FF6B00",
                   transition: "all 0.3s ease",
                 }}
               />
