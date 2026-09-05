@@ -35,4 +35,15 @@ export type {
 export { default as RiderSettlementDas } from "./delivery/rider_settlement/RiderSettlementDas";
 export type { RiderSettlementDasProps } from "./delivery/rider_settlement/RiderSettlementDas";
 
+// Booking components
+export { default as BookingCanvas } from "./booking/BookingCanvas";
+export type {
+  BookingCanvasProps,
+  BookingRecord,
+  BookingFilterTab,
+} from "./booking/BookingCanvas";
+
+export { default as BookingCanvasDas } from "./booking/BookingCanvasDas";
+export type { BookingCanvasDasProps } from "./booking/BookingCanvasDas";
+
 export { default } from "./seller-profile/Profile";

@@ -77,8 +77,8 @@ export default function FilterRow({
                 height: "37px",
                 padding: "8px 16px",
                 borderRadius: "16px",
-                border: isActive ? "1px solid #FF5500" : "1px solid #E2E8F0",
-                backgroundColor: isActive ? "#FF5500" : "#FFFFFF",
+                border: isActive ? "1px solid #FF6B00" : "1px solid #E2E8F0",
+                backgroundColor: isActive ? "#FF6B00" : "#FFFFFF",
                 color: isActive ? "#FFFFFF" : "#334155",
                 fontSize: "0.88rem",
                 fontWeight: isActive ? "700" : "500",
@@ -86,7 +86,7 @@ export default function FilterRow({
                 gap: "6px",
                 whiteSpace: "nowrap",
                 transition: "all 0.2s ease",
-                boxShadow: isActive ? "0 2px 8px rgba(255, 85, 0, 0.25)" : "none",
+                boxShadow: isActive ? "0 2px 8px rgba(255, 107, 0, 0.25)" : "none",
                 flexShrink: 0,
               }}
               className="filter-btn"

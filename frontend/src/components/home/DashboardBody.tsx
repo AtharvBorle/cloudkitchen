@@ -133,7 +133,7 @@ export default function DashboardBody({
           <Link
             href={seeAllLink}
             style={{
-              color: "#FF5500",
+              color: "#FF6B00",
               fontSize: "0.95rem",
               fontWeight: "700",
               textDecoration: "none",
@@ -278,14 +278,14 @@ export default function DashboardBody({
               <Link
                 href={item.link || "/explore/food"}
                 style={{
-                  backgroundColor: "#FF5500",
+                  backgroundColor: "#FF6B00",
                   color: "#FFFFFF",
                   fontSize: "0.88rem",
                   fontWeight: "700",
                   padding: "8px 24px",
                   borderRadius: "9999px",
                   textDecoration: "none",
-                  boxShadow: "0 3px 10px rgba(255, 85, 0, 0.25)",
+                  boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
                   transition: "all 0.2s ease",
                   whiteSpace: "nowrap",
                   flexShrink: 0,
@@ -306,7 +306,7 @@ export default function DashboardBody({
           transform: translateY(-2px);
         }
         .top-rated-order-btn:hover {
-          background-color: #E64D00;
+          background-color: #E65F00;
           transform: scale(1.03);
         }
         @media (max-width: 1024px) {
