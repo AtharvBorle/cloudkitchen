@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useSession, signOut } from "next-auth/react";
 import {
   Settings,
   Calendar,
@@ -33,6 +34,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   onLogout,
 }) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [currentTab, setCurrentTab] = useState<string>(activeTabId);
 
   const handleTabClick = (tabId: string) => {
@@ -56,23 +58,50 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     }
   };
 
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    } else {
+      signOut({ callbackUrl: "/login" });
+    }
+  };
+
   return (
     <aside className={styles.sidebarContainer} aria-label="Settings Sidebar">
       <div className={styles.sidebarCard}>
         {/* 1. User Profile Section */}
         <div className={styles.userSection}>
           <div className={styles.avatarWrapper}>
-            <Image
-              src={rahulAvatar}
-              alt="Rahul Sharma"
-              fill
-              sizes="56px"
-              className={styles.avatarImg}
-            />
+            {session?.user?.name ? (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  backgroundColor: "#FF5500",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: "20px",
+                }}
+              >
+                {session.user.name.trim().charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <Image
+                src={rahulAvatar}
+                alt="User Profile"
+                fill
+                sizes="56px"
+                className={styles.avatarImg}
+              />
+            )}
           </div>
           <div className={styles.userInfo}>
-            <h3 className={styles.userName}>Rahul Sharma</h3>
-            <p className={styles.userPhone}>+91 98765 43210</p>
+            <h3 className={styles.userName}>{session?.user?.name || "Rahul Sharma"}</h3>
+            <p className={styles.userPhone}>{session?.user?.email || "+91 98765 43210"}</p>
             <button type="button" className={styles.editProfileLink}>
               <span>Edit Profile</span>
               <Pencil size={11} strokeWidth={2.5} />
@@ -243,7 +272,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         <button
           type="button"
           className={styles.logoutBtn}
-          onClick={onLogout}
+          onClick={handleLogout}
           aria-label="Log Out"
         >
           <LogOut size={18} strokeWidth={2.4} />

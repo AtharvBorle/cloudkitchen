@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 
@@ -53,19 +54,34 @@ export default function SignUpRightComponent({
 
     setLoading(true);
     try {
+      const cleanEmail = email.trim().toLowerCase();
       const res = await fetchApi("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: fullName.trim(),
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           password,
           role: "USER",
         }),
       });
 
       if (res.ok) {
-        router.push(onSuccessRedirect);
+        // Automatically sign in the user
+        const signInRes = await signIn("credentials", {
+          redirect: false,
+          email: cleanEmail,
+          password,
+          loginType: "USER",
+        });
+
+        if (signInRes?.ok || !signInRes?.error) {
+          const params = new URLSearchParams(window.location.search);
+          const callbackUrl = params.get("callbackUrl") || onSuccessRedirect;
+          window.location.href = callbackUrl;
+        } else {
+          router.push(`${signInUrl}?registered=true`);
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.message || "Registration failed. Please try again.");

@@ -194,7 +194,7 @@ export const registerUser = async (req: Request) => {
         }
 
         return {
-            user: { id: user.id, email: user.email, role: user.role }
+            user: { id: user.id, email: user.email, name: user.name, role: user.role }
         };
     } catch (dbError: any) {
         console.error("Database registration error:", dbError);

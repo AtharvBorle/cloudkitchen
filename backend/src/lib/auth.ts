@@ -127,7 +127,8 @@ export const authConfig: NextAuthConfig = {
             const allowedOrigins = [
                 "https://cloudkitchen-rose.vercel.app",
                 "http://localhost:3000",
-                "http://localhost:3001"
+                "http://localhost:3001",
+                "http://localhost:5000"
             ];
             try {
                 const targetOrigin = new URL(url).origin;

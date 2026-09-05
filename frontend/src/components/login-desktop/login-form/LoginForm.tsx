@@ -24,12 +24,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successNotice, setSuccessNotice] = useState("");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("registered") === "true") {
+        setSuccessNotice("Account created successfully! Please sign in to continue.");
+      }
+    }
+  }, []);
 
   const handleCreateAccount = () => {
     if (onCreateAccount) {
       onCreateAccount();
     } else {
-      router.push("/signup");
+      const params = new URLSearchParams(window.location.search);
+      const callbackUrl = params.get("callbackUrl");
+      router.push(callbackUrl ? `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/signup");
     }
   };
 
@@ -48,30 +60,40 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       return;
     }
 
+    if (!email.trim() || !password) {
+      setError("Please provide both email and password.");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
+    setSuccessNotice("");
 
     try {
       const res = await signIn("credentials", {
         redirect: false,
-        email,
+        email: email.trim().toLowerCase(),
         password,
         loginType: "USER",
       });
 
       if (res?.error) {
         if (res.error === "USER_NOT_FOUND" || res.error.includes("USER_NOT_FOUND")) {
-          setError("Account not found. Please register.");
+          setError("Account not found. Please create an account first.");
         } else if (res.error === "INVALID_PASSWORD" || res.error.includes("INVALID_PASSWORD")) {
-          setError("Incorrect password.");
+          setError("Incorrect password. Please try again.");
+        } else if (res.error.includes("ROLE_MISMATCH")) {
+          setError("Access denied. Business accounts must use their specific portal.");
         } else {
           setError("Invalid email or password.");
         }
       } else {
-        router.push("/");
+        const params = new URLSearchParams(window.location.search);
+        const callbackUrl = params.get("callbackUrl") || "/";
+        window.location.href = callbackUrl;
       }
     } catch (err) {
-      router.push("/");
+      window.location.href = "/";
     } finally {
       setIsLoading(false);
     }
@@ -101,6 +123,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </p>
 
           {error && <div className={styles.errorMessage}>{error}</div>}
+          {successNotice && (
+            <div
+              style={{
+                backgroundColor: "#F0FDF4",
+                border: "1px solid #86EFAC",
+                color: "#166534",
+                padding: "10px 14px",
+                borderRadius: "10px",
+                fontSize: "13px",
+                fontWeight: 500,
+                marginBottom: "12px",
+              }}
+            >
+              {successNotice}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className={styles.form}>
             {/* Email Field */}

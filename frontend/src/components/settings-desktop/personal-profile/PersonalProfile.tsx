@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useSession } from "next-auth/react";
 import { User, Pencil } from "lucide-react";
 import styles from "./PersonalProfile.module.css";
 
@@ -14,13 +15,16 @@ export interface PersonalProfileProps {
 }
 
 export const PersonalProfile: React.FC<PersonalProfileProps> = ({
-  fullName = "Rahul Sharma",
-  email = "rahul.sharma@lumen.com",
+  fullName: customFullName,
+  email: customEmail,
   phone = "+91 98765 43210",
   dob = "15 / 08 / 1995",
   gender = "Male",
   onEdit,
 }) => {
+  const { data: session } = useSession();
+  const fullName = customFullName || session?.user?.name || "Rahul Sharma";
+  const email = customEmail || session?.user?.email || "rahul.sharma@lumen.com";
   return (
     <div className={styles.cardContainer}>
       {/* Header */}

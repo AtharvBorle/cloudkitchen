@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Image from "next/image";
@@ -79,7 +79,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const handleProfileClick = () => {
-    router.push("/settings-desktop");
+    if (session?.user) {
+      router.push("/settings-desktop");
+    } else {
+      router.push("/login?callbackUrl=/room-booking");
+    }
   };
 
   const handleCartClick = () => {
@@ -187,15 +191,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             className={styles.profileAvatar}
             onClick={handleProfileClick}
-            aria-label="User Profile"
+            aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
+            title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
           >
-            <Image
-              src={profilePic}
-              alt="User Avatar"
-              width={38}
-              height={38}
-              style={{ objectFit: "cover", width: "100%", height: "100%" }}
-            />
+            {session?.user?.name ? (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  backgroundColor: "#FF5500",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: "15px",
+                  userSelect: "none",
+                }}
+              >
+                {session.user.name.trim().charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <Image
+                src={profilePic}
+                alt="Sign In"
+                width={38}
+                height={38}
+                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+              />
+            )}
           </button>
         </div>
       </div>
