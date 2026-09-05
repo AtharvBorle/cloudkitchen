@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image, { StaticImageData } from "next/image";
 import { usePathname } from "next/navigation";
+import navLogoImg from "@/components/navbar/logo-nav.png";
 import {
   LayoutGrid,
   ShoppingBag,
@@ -38,7 +39,7 @@ export interface SellerSidebarProps {
   isMobileOpen?: boolean;
   onClose?: () => void;
   activeItemId?: string;
-  logoSrc?: string;
+  logoSrc?: string | StaticImageData;
   roleTagText?: string;
 }
 
@@ -46,7 +47,7 @@ export default function SellerSidebar({
   isMobileOpen = false,
   onClose,
   activeItemId,
-  logoSrc = "/images/seller-logo.png",
+  logoSrc = navLogoImg,
   roleTagText = "OWNER ROLE",
 }: SellerSidebarProps) {
   const pathname = usePathname();
@@ -141,25 +142,51 @@ export default function SellerSidebar({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                height: "32px",
-                width: "100%",
+                gap: "10px",
                 textDecoration: "none",
+                userSelect: "none",
               }}
             >
-              <Image
-                src={logoSrc}
-                alt="Seller Brand Logo"
-                width={192}
-                height={32}
+              <div
                 style={{
-                  height: "32px",
-                  width: "auto",
-                  maxWidth: "192px",
-                  objectFit: "contain",
-                  objectPosition: "left",
+                  width: "38px",
+                  height: "38px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#ffffff",
+                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
+                  flexShrink: 0,
                 }}
-                priority
-              />
+              >
+                <Image
+                  src={logoSrc}
+                  alt="Neo Cloud Bites Logo"
+                  width={38}
+                  height={38}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                  priority
+                />
+              </div>
+              <span
+                style={{
+                  fontSize: "13.5px",
+                  fontWeight: 800,
+                  color: "#0F172A",
+                  letterSpacing: "-0.01em",
+                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                NEO CLOUD
+              </span>
             </Link>
 
             {/* Mobile close button */}
