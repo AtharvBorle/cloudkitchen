@@ -1,0 +1,149 @@
+﻿.cardContainer {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.04);
+  padding: 40px 48px 36px 48px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto 48px auto;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.iconCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #ffedd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px auto;
+}
+
+.checkIcon {
+  width: 28px;
+  height: 28px;
+  color: #f97316;
+  stroke-width: 2.5;
+}
+
+.title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.015em;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 26px 0;
+  line-height: 1.5;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Info Summary Box */
+.infoBox {
+  background-color: #f8fafc;
+  border-radius: 12px;
+  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.infoRowDivider {
+  height: 1px;
+  width: 100%;
+  background-color: #e2e8f0;
+}
+
+.infoLabel {
+  font-size: 0.88rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.trackingBadge {
+  background-color: #e2e8f0;
+  color: #0f172a;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.statusBadge {
+  background-color: #fef9c3;
+  color: #d97706;
+  border: 1px solid #fde047;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.evaluationNote {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+  max-width: 500px;
+  margin: 0 auto 28px auto;
+}
+
+.evaluationNote strong {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.trackButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background-color: #f97316;
+  color: #ffffff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+  box-sizing: border-box;
+}
+
+.trackButton:hover {
+  background-color: #ea580c;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+  transform: translateY(-1px);
+}
+
+.trackButton:active {
+  transform: translateY(0);
+}
+
+.btnArrow {
+  width: 16px;
+  height: 16px;
+}
