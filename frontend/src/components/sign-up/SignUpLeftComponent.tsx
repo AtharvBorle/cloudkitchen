@@ -13,6 +13,7 @@ export interface SignUpLeftComponentProps {
   testimonialRole?: string;
   avatarSrc?: string;
   bgImageSrc?: string;
+  logoSrc?: string;
 }
 
 export default function SignUpLeftComponent({
@@ -24,25 +25,27 @@ export default function SignUpLeftComponent({
   testimonialRole = "Health & Fitness Coach",
   avatarSrc = "/images/auth/coach-avatar.png",
   bgImageSrc = "/images/auth/signup-bg.jpg",
+  logoSrc = "/images/auth/neo-cloud-logo.png",
 }: SignUpLeftComponentProps) {
   return (
     <div
       style={{
         position: "relative",
         width: "100%",
-        minHeight: "100%",
+        maxWidth: "680px",
+        minHeight: "900px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        padding: "48px 56px",
+        padding: "64px",
         overflow: "hidden",
         boxSizing: "border-box",
         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}
       className="signup-left-container"
     >
-      {/* Background Image with Dark Contrast Overlay */}
+      {/* Background Image */}
       <div
         style={{
           position: "absolute",
@@ -58,13 +61,13 @@ export default function SignUpLeftComponent({
           alt="Premium healthy meal salad bowl"
           fill
           priority
-          sizes="(max-width: 1024px) 100vw, 50vw"
+          sizes="(max-width: 1024px) 100vw, 680px"
           style={{
             objectFit: "cover",
-            objectPosition: "center 70%",
+            objectPosition: "center",
           }}
         />
-        {/* Dark Translucent Gradient Overlay for optimal readability */}
+        {/* Background Overlay (#1A1A2E73) */}
         <div
           style={{
             position: "absolute",
@@ -72,20 +75,19 @@ export default function SignUpLeftComponent({
             left: 0,
             width: "100%",
             height: "100%",
-            background:
-              "linear-gradient(180deg, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.58) 45%, rgba(15, 23, 42, 0.82) 100%)",
+            backgroundColor: "rgba(26, 26, 46, 0.45)",
           }}
         />
       </div>
 
-      {/* Top Header: Logo + Brand Name */}
+      {/* 1. Top Logo Section (Width: ~256px, Height: 66px, Gap: 12px) */}
       <div
         style={{
           position: "relative",
           zIndex: 2,
           display: "flex",
           alignItems: "center",
-          gap: "12px",
+          height: "66px",
         }}
       >
         <Link
@@ -95,40 +97,40 @@ export default function SignUpLeftComponent({
             alignItems: "center",
             gap: "12px",
             textDecoration: "none",
+            height: "100%",
           }}
         >
-          {/* Circular Badge Icon */}
+          {/* Logo Graphic Image */}
           <div
             style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "50%",
-              backgroundColor: "#E11D48",
-              backgroundImage: "linear-gradient(135deg, #FF5500 0%, #DC2626 100%)",
+              position: "relative",
+              width: "56px",
+              height: "56px",
+              minWidth: "56px",
               display: "flex",
-              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 14px rgba(225, 29, 72, 0.35)",
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "12px",
-              lineHeight: 1,
-              textAlign: "center",
             }}
           >
-            <span style={{ fontSize: "10px", opacity: 0.9 }}>Neo</span>
-            <span style={{ fontSize: "11px", fontWeight: 900 }}>Cloud</span>
+            <Image
+              src={logoSrc}
+              alt="Neo Cloud Bites Logo"
+              width={56}
+              height={56}
+              style={{ objectFit: "contain" }}
+              priority
+            />
           </div>
 
           <span
             style={{
               color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "18px",
+              fontWeight: 700,
+              fontSize: "22px",
               letterSpacing: "0.5px",
               textTransform: "uppercase",
               fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+              whiteSpace: "nowrap",
             }}
           >
             {logoText}
@@ -136,7 +138,7 @@ export default function SignUpLeftComponent({
         </Link>
       </div>
 
-      {/* Middle Content: Heading + Subtitle + Testimonial Card */}
+      {/* 2. Hero Content Section (Width: 552px, Gap: 24px) */}
       <div
         style={{
           position: "relative",
@@ -144,21 +146,23 @@ export default function SignUpLeftComponent({
           display: "flex",
           flexDirection: "column",
           gap: "24px",
-          maxWidth: "540px",
-          margin: "48px 0",
+          width: "100%",
+          maxWidth: "552px",
+          margin: "32px 0",
         }}
       >
         {/* Main Headline */}
         <h1
           style={{
-            fontSize: "44px",
-            fontWeight: 800,
-            lineHeight: "1.16",
-            letterSpacing: "-0.5px",
+            width: "100%",
+            maxWidth: "552px",
+            fontSize: "48px",
+            fontWeight: 600,
+            lineHeight: "56px",
+            letterSpacing: "0%",
             color: "#FFFFFF",
             margin: 0,
             fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-            textShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
           }}
         >
           {heading}
@@ -167,10 +171,14 @@ export default function SignUpLeftComponent({
         {/* Subtitle */}
         <p
           style={{
-            fontSize: "16px",
+            width: "100%",
+            maxWidth: "552px",
+            fontSize: "18px",
             fontWeight: 400,
-            lineHeight: "1.6",
-            color: "rgba(255, 255, 255, 0.9)",
+            lineHeight: "28px",
+            letterSpacing: "0%",
+            color: "#FFF9F5",
+            opacity: 0.9,
             margin: 0,
             fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
           }}
@@ -178,20 +186,21 @@ export default function SignUpLeftComponent({
           {subtitle}
         </p>
 
-        {/* Frosted Testimonial Card */}
+        {/* Frosted Testimonial Card (Width: 552px, Height: 104px, Padding: 20px, Gap: 16px, Blur: 12px) */}
         <div
           style={{
-            backgroundColor: "rgba(15, 23, 42, 0.55)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            border: "1px solid rgba(255, 255, 255, 0.14)",
+            width: "100%",
+            maxWidth: "552px",
+            minHeight: "104px",
+            backgroundColor: "#00000040",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
             borderRadius: "20px",
-            padding: "18px 22px",
+            padding: "20px",
             display: "flex",
             alignItems: "center",
             gap: "16px",
-            marginTop: "8px",
-            boxShadow: "0 12px 32px rgba(0, 0, 0, 0.3)",
+            boxSizing: "border-box",
           }}
           className="signup-testimonial-card"
         >
@@ -199,12 +208,12 @@ export default function SignUpLeftComponent({
           <div
             style={{
               position: "relative",
-              width: "52px",
-              height: "52px",
-              minWidth: "52px",
+              width: "56px",
+              height: "56px",
+              minWidth: "56px",
               borderRadius: "50%",
               overflow: "hidden",
-              border: "2px solid rgba(255, 255, 255, 0.8)",
+              border: "2px solid rgba(255, 255, 255, 0.85)",
               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
             }}
           >
@@ -212,7 +221,7 @@ export default function SignUpLeftComponent({
               src={avatarSrc}
               alt={testimonialAuthor}
               fill
-              sizes="52px"
+              sizes="56px"
               style={{ objectFit: "cover" }}
             />
           </div>
@@ -223,14 +232,18 @@ export default function SignUpLeftComponent({
               display: "flex",
               flexDirection: "column",
               gap: "6px",
+              maxWidth: "448px",
             }}
           >
             <p
               style={{
-                fontSize: "13.5px",
-                fontWeight: 400,
+                width: "100%",
+                maxWidth: "448px",
+                fontSize: "14px",
+                fontWeight: 500,
                 fontStyle: "italic",
-                lineHeight: "1.48",
+                lineHeight: "1.4",
+                letterSpacing: "0%",
                 color: "#FFFFFF",
                 margin: 0,
                 fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
@@ -240,8 +253,10 @@ export default function SignUpLeftComponent({
             </p>
             <div
               style={{
-                fontSize: "12.5px",
-                fontWeight: 700,
+                fontSize: "12px",
+                fontWeight: 600,
+                lineHeight: "100%",
+                letterSpacing: "0%",
                 color: "#F97316",
                 fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
               }}
@@ -252,14 +267,18 @@ export default function SignUpLeftComponent({
         </div>
       </div>
 
-      {/* Bottom Footer: Copyright */}
+      {/* 3. Bottom Footer (Width: 275px, Height: 20px, Font: 13px, Color: #FFFFFF80) */}
       <div
         style={{
           position: "relative",
           zIndex: 2,
-          fontSize: "12.5px",
-          color: "rgba(255, 255, 255, 0.55)",
+          maxWidth: "275px",
+          height: "20px",
+          fontSize: "13px",
           fontWeight: 400,
+          lineHeight: "100%",
+          letterSpacing: "0%",
+          color: "rgba(255, 255, 255, 0.5)",
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
         }}
       >
@@ -267,13 +286,19 @@ export default function SignUpLeftComponent({
       </div>
 
       <style jsx>{`
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
           .signup-left-container {
-            padding: 36px 24px !important;
+            padding: 40px 24px !important;
             min-height: 520px !important;
+            max-width: 100% !important;
           }
           h1 {
-            font-size: 32px !important;
+            font-size: 34px !important;
+            line-height: 42px !important;
+          }
+          p {
+            font-size: 16px !important;
+            line-height: 24px !important;
           }
         }
       `}</style>

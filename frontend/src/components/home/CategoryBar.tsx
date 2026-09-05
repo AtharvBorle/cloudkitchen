@@ -67,7 +67,7 @@ export default function CategoryBar({
         style={{
           width: "100%",
           maxWidth: "1280px",
-          minHeight: "99px",
+          minHeight: "112px",
           margin: "0 auto",
           display: "flex",
           flexDirection: "row",
@@ -91,7 +91,7 @@ export default function CategoryBar({
             gap: "16px",
             overflowX: "auto",
             scrollBehavior: "smooth",
-            padding: "4px 2px",
+            padding: "8px 4px",
             scrollbarWidth: "none",
             msOverflowStyle: "none",
           }}
@@ -110,11 +110,11 @@ export default function CategoryBar({
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: "92px",
-                  minWidth: "92px",
-                  height: "99px",
+                  width: "98px",
+                  minWidth: "98px",
+                  minHeight: "108px",
                   padding: "10px 12px",
-                  borderRadius: "16px",
+                  borderRadius: "18px",
                   backgroundColor: isSelected ? "#F5C58B" : "transparent",
                   border: "none",
                   cursor: "pointer",
@@ -128,29 +128,31 @@ export default function CategoryBar({
                 }}
                 className={`tab-home category-item-btn ${isSelected ? "selected" : ""}`}
               >
-                {/* 3D Graphic Icon */}
+                {/* 3D Graphic Icon (Width: 60px, Height: 60px, Shadow: 0px 4px 11.9px 0px #00000040) */}
                 <div
                   style={{
-                    width: "48px",
-                    height: "46px",
+                    width: "60px",
+                    height: "60px",
+                    minWidth: "60px",
+                    minHeight: "60px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     position: "relative",
-                    transform: isSelected ? "scale(1.06)" : "scale(1)",
+                    transform: isSelected ? "scale(1.05)" : "scale(1)",
                     transition: "transform 0.2s ease",
                   }}
                 >
                   <Image
                     src={cat.image}
                     alt={cat.name}
-                    width={48}
-                    height={46}
+                    width={60}
+                    height={60}
                     style={{
-                      width: "100%",
-                      height: "100%",
+                      width: "60px",
+                      height: "60px",
                       objectFit: "contain",
-                      filter: "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.08))",
+                      filter: "drop-shadow(0px 4px 11.9px rgba(0, 0, 0, 0.25))",
                     }}
                     onError={(e) => {
                       // Fallback to emoji if image cannot be loaded
@@ -163,7 +165,7 @@ export default function CategoryBar({
                 {/* Category Label */}
                 <span
                   style={{
-                    fontSize: "13px",
+                    fontSize: "13.5px",
                     fontWeight: isSelected ? "700" : "600",
                     color: isSelected ? "#FFFFFF" : "#2E3A59",
                     whiteSpace: "nowrap",
@@ -188,14 +190,14 @@ export default function CategoryBar({
             height: "44px",
             minWidth: "44px",
             borderRadius: "50%",
-            backgroundColor: "#FF5500",
+            backgroundColor: "#FF6B00",
             color: "#FFFFFF",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             border: "none",
             cursor: "pointer",
-            boxShadow: "0 6px 16px rgba(255, 85, 0, 0.35)",
+            boxShadow: "0 6px 16px rgba(255, 107, 0, 0.35)",
             transition: "all 0.2s ease",
             marginLeft: "8px",
             flexShrink: 0,
@@ -216,7 +218,7 @@ export default function CategoryBar({
           transform: translateY(-3px);
         }
         .category-scroll-arrow:hover {
-          background-color: #E64D00;
+          background-color: #E65F00;
           transform: scale(1.08);
         }
         .category-scroll-arrow:active {
