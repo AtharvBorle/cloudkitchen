@@ -1,0 +1,199 @@
+﻿"use client";
+
+import React from "react";
+import { Search, Bell } from "lucide-react";
+import styles from "./SellerNavbar.module.css";
+
+export interface SellerNavbarProps {
+  title?: string;
+  userName?: string;
+  userRole?: string;
+  userInitials?: string;
+  onSearch?: (query: string) => void;
+}
+
+export const SellerNavbar: React.FC<SellerNavbarProps> = ({
+  title = "Neo Cloud Room Onboarding",
+  userName = "John Doe",
+  userRole = "Owner Account",
+  userInitials = "JD",
+  onSearch,
+}) => {
+  return (
+    <nav
+      className={styles.navbar}
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        height: 72,
+        minHeight: 72,
+        backgroundColor: "#ffffff",
+        borderBottom: "1px solid #e2e8f0",
+        padding: "0 32px 0 28px",
+        boxSizing: "border-box",
+        width: "100%",
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+      }}
+      aria-label="Top Navigation Bar"
+    >
+      {/* 1. Left Side: Spacing + Title */}
+      <div
+        className={styles.leftSection}
+        style={{ display: "flex", alignItems: "center", flexShrink: 0 }}
+      >
+        <h1
+          className={styles.pageTitle}
+          style={{
+            fontSize: "1.15rem",
+            fontWeight: 700,
+            color: "#0f172a",
+            margin: 0,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {title}
+        </h1>
+      </div>
+
+      {/* 2. Right Side: Search -> Bell -> Avatar Circle -> Name & Designation */}
+      <div
+        className={styles.rightSection}
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 16,
+          flexShrink: 0,
+        }}
+      >
+        {/* Search Bar */}
+        <div
+          className={styles.searchWrapper}
+          style={{ position: "relative", display: "flex", alignItems: "center" }}
+        >
+          <Search
+            className={styles.searchIcon}
+            style={{
+              position: "absolute",
+              left: 12,
+              width: 16,
+              height: 16,
+              color: "#94a3b8",
+              pointerEvents: "none",
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Search properties..."
+            className={styles.searchInput}
+            style={{
+              height: 40,
+              width: 240,
+              padding: "0 14px 0 38px",
+              borderRadius: 8,
+              border: "1px solid #e2e8f0",
+              backgroundColor: "#f8fafc",
+              fontSize: "0.88rem",
+              color: "#1e293b",
+              outline: "none",
+            }}
+            onChange={(e) => onSearch?.(e.target.value)}
+          />
+        </div>
+
+        {/* Bell Notification Icon */}
+        <button
+          type="button"
+          className={styles.notificationBtn}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            border: "1px solid #e2e8f0",
+            backgroundColor: "#f8fafc",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#64748b",
+            cursor: "pointer",
+            flexShrink: 0,
+            padding: 0,
+          }}
+          aria-label="Notifications"
+        >
+          <Bell className={styles.bellIcon} style={{ width: 18, height: 18 }} />
+        </button>
+
+        {/* Profile Circle + Name & Designation */}
+        <div
+          className={styles.profileSection}
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            className={styles.avatar}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              backgroundColor: "#ea580c",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {userInitials}
+          </div>
+          <div
+            className={styles.profileInfo}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span
+              className={styles.userName}
+              style={{
+                fontSize: "0.88rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                lineHeight: 1.2,
+              }}
+            >
+              {userName}
+            </span>
+            <span
+              className={styles.userRole}
+              style={{
+                fontSize: "0.74rem",
+                color: "#94a3b8",
+                lineHeight: 1.2,
+                fontWeight: 500,
+              }}
+            >
+              {userRole}
+            </span>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default SellerNavbar;
