@@ -29,7 +29,7 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "menu", label: "Menu", icon: BookOpen, href: "/dashboard/seller/menu" },
   { id: "rooms", label: "Rooms", icon: Home, href: "/dashboard/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/dashboard/seller/bookings" },
-  { id: "delivery", label: "Delivery", icon: Truck, href: "/dashboard/seller/delivery" },
+  { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/riderMng" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/dashboard/seller/payment" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
 ];
@@ -55,6 +55,9 @@ export default function SellerSidebar({
   const isItemActive = (item: NavItem) => {
     if (activeItemId) {
       return activeItemId === item.id;
+    }
+    if (item.id === "delivery") {
+      return pathname?.startsWith("/seller/riderMng") || pathname?.startsWith("/dashboard/seller/delivery");
     }
     if (item.id === "profile") {
       return pathname?.startsWith("/seller/profile") || pathname?.startsWith("/dashboard/seller/profile");

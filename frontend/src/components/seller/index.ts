@@ -24,3 +24,8 @@ export type { MainCanvasProps, SellerProfileData } from "./seller-profile/MainCa
 
 export { default as Profile, default as SellerProfile } from "./seller-profile/Profile";
 export type { SellerProfileProps } from "./seller-profile/Profile";
+
+// ==========================================
+// 3. Seller Delivery & Rider Management (Pravin)
+// ==========================================
+export * from "./delivery";

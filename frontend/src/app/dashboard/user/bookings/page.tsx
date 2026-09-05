@@ -116,7 +116,7 @@ export default function UserBookingsPage() {
                     }
                 },
                 prefill: {
-                    contact: session?.user?.phone || ""
+                    contact: (session?.user as any)?.phone || ""
                 },
                 theme: {
                     color: "#16a34a"
