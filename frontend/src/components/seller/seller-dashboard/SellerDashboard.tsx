@@ -1,0 +1,290 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import ConsoleSidebar from "../sidebar/Sidebar";
+import Topbar from "../nav/Topbar";
+import {
+  ShoppingBag,
+  Truck,
+  Calendar,
+  CreditCard,
+  AlertTriangle,
+  ArrowRight,
+} from "lucide-react";
+import styles from "./SellerDashboard.module.css";
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  customer: string;
+  roomNo: string;
+  items: string;
+  total: string;
+  status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
+}
+
+const DEFAULT_ORDERS: OrderItem[] = [
+  {
+    id: "1",
+    orderId: "#NCR-8291",
+    customer: "Aditya Sharma",
+    roomNo: "Room 102",
+    items: "1x Butter Chicken, 2x Butter Naan",
+    total: "₹480",
+    status: "Preparing",
+  },
+  {
+    id: "2",
+    orderId: "#NCR-8290",
+    customer: "Sneha Patel",
+    roomNo: "Room 304",
+    items: "1x Margherita Pizza, 1x Coke",
+    total: "₹350",
+    status: "Pending",
+  },
+  {
+    id: "3",
+    orderId: "#NCR-8289",
+    customer: "Rohit Verma",
+    roomNo: "Room 211",
+    items: "1x Veg Biryani, 1x Raita",
+    total: "₹290",
+    status: "Out for Delivery",
+  },
+  {
+    id: "4",
+    orderId: "#NCR-8288",
+    customer: "Priya Nair",
+    roomNo: "Room 105",
+    items: "2x Paneer Tikka, 1x Garlic Naan",
+    total: "₹520",
+    status: "Completed",
+  },
+  {
+    id: "5",
+    orderId: "#NCR-8287",
+    customer: "Karan Johar",
+    roomNo: "Room 401",
+    items: "1x Hakka Noodles, 1x Chilli Chicken",
+    total: "₹440",
+    status: "Cancelled",
+  },
+];
+
+export interface SellerDashboardProps {
+  ownerName?: string;
+  partnerRole?: string;
+  avatarInitials?: string;
+  orders?: OrderItem[];
+  onSearch?: (query: string) => void;
+  onNotificationClick?: () => void;
+  onSyncDevices?: () => void;
+  onRenewPlan?: () => void;
+}
+
+export const SellerDashboard: React.FC<SellerDashboardProps> = ({
+  ownerName = "John Doe",
+  partnerRole = "Neo Cloud Partner",
+  avatarInitials = "JD",
+  orders = DEFAULT_ORDERS,
+  onSearch,
+  onNotificationClick,
+  onSyncDevices,
+  onRenewPlan,
+}) => {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const getStatusBadgeClass = (status: OrderItem["status"]) => {
+    switch (status) {
+      case "Preparing":
+        return styles.statusPreparing;
+      case "Pending":
+        return styles.statusPending;
+      case "Out for Delivery":
+        return styles.statusOutForDelivery;
+      case "Completed":
+        return styles.statusCompleted;
+      case "Cancelled":
+        return styles.statusCancelled;
+      default:
+        return styles.statusPending;
+    }
+  };
+
+  return (
+    <div className={styles.dashboardContainer}>
+      {/* 1. Left Sidebar Component with active Dashboard tab */}
+      <ConsoleSidebar
+        activeItemId="dashboard"
+        isMobileOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
+      />
+
+      {/* 2. Right Content Section */}
+      <div className={styles.rightSection}>
+        {/* Top Navbar */}
+        <Topbar
+          title="Owner Operations Console"
+          ownerName={ownerName}
+          partnerRole={partnerRole}
+          avatarInitials={avatarInitials}
+          onSearch={onSearch}
+          onNotificationClick={onNotificationClick}
+          onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
+        />
+
+        {/* Main Canvas Area */}
+        <main className={styles.mainContent}>
+          {/* Header Row: Title & Subtitle + Sync Devices Button */}
+          <div className={styles.headerRow}>
+            <div className={styles.headerGroup}>
+              <h1 className={styles.title}>Operations Dashboard</h1>
+              <p className={styles.subtitle}>
+                Real-time tracking of Neo Cloud Room revenue and food delivery metrics.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={styles.syncBtn}
+              onClick={onSyncDevices}
+            >
+              Sync Devices
+            </button>
+          </div>
+
+          {/* 4-Stat Cards Row */}
+          <div className={styles.statsGrid}>
+            {/* Card 1: Revenue Today */}
+            <div className={styles.statCard}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardLabel}>Revenue Today</span>
+                <div className={styles.iconBadge}>
+                  <ShoppingBag size={18} strokeWidth={2.4} />
+                </div>
+              </div>
+              <h2 className={styles.cardValue}>₹24,500</h2>
+              <div className={styles.cardFooter}>
+                <span className={styles.badgeOrange}>+14.2%</span>
+                <span className={styles.footerMuted}>from yesterday</span>
+              </div>
+            </div>
+
+            {/* Card 2: Orders Today */}
+            <div className={styles.statCard}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardLabel}>Orders Today</span>
+                <div className={styles.iconBadge}>
+                  <Truck size={18} strokeWidth={2.4} />
+                </div>
+              </div>
+              <h2 className={styles.cardValue}>18</h2>
+              <div className={styles.cardFooter}>
+                <span className={styles.badgeOrange}>+8.3%</span>
+                <span className={styles.footerMuted}>vs average</span>
+              </div>
+            </div>
+
+            {/* Card 3: Pending Bookings */}
+            <div className={styles.statCard}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardLabel}>Pending Bookings</span>
+                <div className={styles.iconBadge}>
+                  <Calendar size={18} strokeWidth={2.4} />
+                </div>
+              </div>
+              <h2 className={styles.cardValue}>4 Rooms</h2>
+              <div className={styles.cardFooter}>
+                <span className={styles.badgeOrange}>Active</span>
+                <span className={styles.footerMuted}>room occupancy high</span>
+              </div>
+            </div>
+
+            {/* Card 4: COD Outstanding */}
+            <div className={styles.statCard}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardLabel}>COD Outstanding</span>
+                <div className={styles.iconBadge}>
+                  <CreditCard size={18} strokeWidth={2.4} />
+                </div>
+              </div>
+              <h2 className={styles.cardValue}>₹8,200</h2>
+              <div className={styles.cardFooter}>
+                <span className={styles.badgeOrange}>₹1,200 collected</span>
+                <span className={styles.footerMuted}>cash collection</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Subscription Warning Banner */}
+          <div className={styles.warningBanner}>
+            <div className={styles.warningLeft}>
+              <AlertTriangle className={styles.warningIcon} size={22} strokeWidth={2.2} />
+              <div className={styles.warningTextGroup}>
+                <h3 className={styles.warningTitle}>Subscription Renewing Soon!</h3>
+                <p className={styles.warningDescription}>
+                  Your Neo Partner Gold Plan expires in 4 days. Renew today to avoid interruption in automatic room assignment & delivery dispatcher.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={styles.renewBtn}
+              onClick={onRenewPlan}
+            >
+              Renew Plan
+            </button>
+          </div>
+
+          {/* 4. Recent Food & Room Orders Table Card */}
+          <div className={styles.tableCard}>
+            <div className={styles.tableHeader}>
+              <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
+              <Link href="/dashboard/seller/orders" className={styles.viewAllLink}>
+                <span>View All Orders</span>
+                <ArrowRight size={16} strokeWidth={2.4} />
+              </Link>
+            </div>
+
+            <div className={styles.tableContainer}>
+              <table className={styles.ordersTable}>
+                <thead>
+                  <tr>
+                    <th>ORDER ID</th>
+                    <th>CUSTOMER</th>
+                    <th>ROOM NO</th>
+                    <th>ITEMS</th>
+                    <th>TOTAL</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td className={styles.orderIdText}>{order.orderId}</td>
+                      <td className={styles.customerText}>{order.customer}</td>
+                      <td className={styles.roomNoText}>{order.roomNo}</td>
+                      <td className={styles.itemsText}>{order.items}</td>
+                      <td className={styles.totalPriceText}>{order.total}</td>
+                      <td>
+                        <span
+                          className={`${styles.statusBadge} ${getStatusBadgeClass(
+                            order.status
+                          )}`}
+                        >
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default SellerDashboard;

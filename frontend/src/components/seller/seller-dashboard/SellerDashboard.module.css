@@ -1,0 +1,399 @@
+.dashboardContainer {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #F8FAFC;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  box-sizing: border-box;
+}
+
+.rightSection {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #F8FAFC;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 32px 36px 48px 36px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Header Row */
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.headerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.92rem;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Sync Devices Button */
+.syncBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #F97316;
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.syncBtn:hover {
+  background-color: #EA580C;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+  transform: translateY(-1px);
+}
+
+.syncBtn:active {
+  transform: translateY(0);
+}
+
+/* 4-Column Stat Cards Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  width: 100%;
+}
+
+.statCard {
+  background-color: #FFFFFF;
+  border: 1px solid #F1F5F9;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.statCard:hover {
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0;
+}
+
+.iconBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: #FFF1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F97316;
+}
+
+.cardValue {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.badgeOrange {
+  font-weight: 700;
+  color: #F97316;
+}
+
+.footerMuted {
+  color: #64748B;
+  font-weight: 400;
+}
+
+@media (max-width: 1200px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+  .headerRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* 3. Subscription Warning Banner */
+.warningBanner {
+  background-color: #FEF9C3;
+  border: 1.5px solid #FDE047;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.warningLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.warningIcon {
+  color: #D97706;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.warningTextGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.warningTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #854D0E;
+  margin: 0;
+}
+
+.warningDescription {
+  font-size: 0.84rem;
+  color: #A16207;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.renewBtn {
+  background-color: #C2410C;
+  color: #FFFFFF;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.renewBtn:hover {
+  background-color: #9A3412;
+  box-shadow: 0 2px 8px rgba(194, 65, 12, 0.35);
+}
+
+/* 4. Recent Food & Room Orders Table Card */
+.tableCard {
+  background-color: #FFFFFF;
+  border: 1px solid #F1F5F9;
+  border-radius: 16px;
+  padding: 24px 28px;
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tableHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tableTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.viewAllLink {
+  color: #F97316;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s ease;
+}
+
+.viewAllLink:hover {
+  color: #EA580C;
+  text-decoration: underline;
+}
+
+/* Table */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ordersTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.ordersTable th {
+  padding: 12px 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1.5px solid #F1F5F9;
+}
+
+.ordersTable th:first-child {
+  padding-left: 0;
+}
+
+.ordersTable th:last-child {
+  padding-right: 0;
+  text-align: right;
+}
+
+.ordersTable td {
+  padding: 16px 16px;
+  border-bottom: 1px solid #F8FAFC;
+  color: #334155;
+  font-weight: 500;
+}
+
+.ordersTable td:first-child {
+  padding-left: 0;
+}
+
+.ordersTable td:last-child {
+  padding-right: 0;
+  text-align: right;
+}
+
+.ordersTable tr:last-child td {
+  border-bottom: none;
+}
+
+/* Row Specific Elements */
+.orderIdText {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.customerText {
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.roomNoText {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.itemsText {
+  color: #475569;
+}
+
+.totalPriceText {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+/* Status Badges */
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.statusPreparing {
+  background-color: #FFF7ED;
+  color: #EA580C;
+}
+
+.statusPending {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.statusOutForDelivery {
+  background-color: #EFF6FF;
+  color: #3B82F6;
+}
+
+.statusCompleted {
+  background-color: #FFF1E8;
+  color: #EA580C;
+}
+
+.statusCancelled {
+  background-color: #FEE2E2;
+  color: #DC2626;
+}
