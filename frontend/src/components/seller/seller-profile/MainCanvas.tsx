@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Topbar, { TopbarProps } from "./Topbar";
+import Topbar, { TopbarProps } from "../nav/Topbar";
 
 export interface SellerProfileData {
   ownerName: string;

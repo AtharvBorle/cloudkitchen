@@ -1,13 +1,16 @@
-export { default as SellerSidebar, SELLER_NAV_ITEMS } from "./Sidebar";
-export type { SellerSidebarProps, NavItem } from "./Sidebar";
+// Navigation components
+export { default as Topbar, default as SellerTopbar } from "./nav/Topbar";
+export type { TopbarProps } from "./nav/Topbar";
 
-export { default as Topbar, default as SellerTopbar } from "./Topbar";
-export type { TopbarProps } from "./Topbar";
+// Sidebar components
+export { default as SellerSidebar, default as Sidebar, SELLER_NAV_ITEMS } from "./sidebar/Sidebar";
+export type { SellerSidebarProps, NavItem } from "./sidebar/Sidebar";
 
-export { default as MainCanvas } from "./MainCanvas";
-export type { MainCanvasProps, SellerProfileData } from "./MainCanvas";
+// Profile and Main Canvas components
+export { default as MainCanvas } from "./seller-profile/MainCanvas";
+export type { MainCanvasProps, SellerProfileData } from "./seller-profile/MainCanvas";
 
-export { default as Profile, default as SellerProfile } from "./Profile";
-export type { SellerProfileProps } from "./Profile";
+export { default as Profile, default as SellerProfile } from "./seller-profile/Profile";
+export type { SellerProfileProps } from "./seller-profile/Profile";
 
-export { default } from "./Profile";
+export { default } from "./seller-profile/Profile";

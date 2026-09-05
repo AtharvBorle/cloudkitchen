@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import SellerSidebar from "./Sidebar";
-import Topbar from "./Topbar";
+import SellerSidebar from "../sidebar/Sidebar";
+import Topbar from "../nav/Topbar";
 import MainCanvas, { SellerProfileData } from "./MainCanvas";
 
 export interface SellerProfileProps {
