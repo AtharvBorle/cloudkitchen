@@ -25,9 +25,9 @@ export interface NavItem {
 }
 
 export const SELLER_NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/dashboard/seller" },
-  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/dashboard/seller/orders" },
-  { id: "menu", label: "Menu", icon: BookOpen, href: "/dashboard/seller/menu" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
+  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
+  { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
   { id: "rooms", label: "Rooms", icon: Home, href: "/dashboard/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/riderMng" },
@@ -57,6 +57,28 @@ export default function SellerSidebar({
     if (activeItemId) {
       return activeItemId === item.id;
     }
+    if (item.id === "dashboard") {
+      return (
+        pathname?.startsWith("/seller/dashboard") ||
+        pathname === "/dashboard/seller" ||
+        pathname === "/dashboard/seller/"
+      );
+    }
+    if (item.id === "orders") {
+      return (
+        pathname?.startsWith("/seller/orders") ||
+        pathname?.startsWith("/seller/order-default") ||
+        pathname?.startsWith("/dashboard/seller/orders")
+      );
+    }
+    if (item.id === "menu") {
+      return (
+        pathname?.startsWith("/seller/menu") ||
+        pathname?.startsWith("/seller/edit-menu") ||
+        pathname?.startsWith("/dashboard/seller/menu") ||
+        pathname?.startsWith("/dashboard/seller/edit-menu")
+      );
+    }
     if (item.id === "bookings") {
       return (
         pathname?.startsWith("/seller/booking") ||
@@ -68,9 +90,6 @@ export default function SellerSidebar({
     }
     if (item.id === "profile") {
       return pathname?.startsWith("/seller/profile") || pathname?.startsWith("/dashboard/seller/profile");
-    }
-    if (item.href === "/dashboard/seller") {
-      return pathname === "/dashboard/seller";
     }
     return Boolean(pathname?.startsWith(item.href));
   };
