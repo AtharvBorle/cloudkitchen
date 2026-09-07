@@ -211,13 +211,12 @@ export default function SubscriptionEditCanvas({
     <div
       style={{
         width: "100%",
-        maxWidth: "1200px",
-        minHeight: "1807px",
+        maxWidth: "1320px",
         backgroundColor: "#F7F8FB",
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        padding: "32px",
+        padding: "32px 24px",
         boxSizing: "border-box",
         fontFamily: "var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         margin: "0 auto",
@@ -249,12 +248,10 @@ export default function SubscriptionEditCanvas({
         </div>
       )}
 
-      {/* header-row (width: 1136, height: 70, gap: 4px) */}
+      {/* header-row */}
       <div
         style={{
           width: "100%",
-          maxWidth: "1136px",
-          minHeight: "70px",
           display: "flex",
           flexDirection: "column",
           gap: "4px",
@@ -336,28 +333,23 @@ export default function SubscriptionEditCanvas({
         </p>
       </div>
 
-      {/* columns-group (width: 1136, height: 1556, gap: 24px) */}
+      {/* columns-group */}
       <div
         style={{
           width: "100%",
-          maxWidth: "1136px",
-          minHeight: "1556px",
           display: "flex",
           flexDirection: "row",
           gap: "24px",
           alignItems: "flex-start",
           boxSizing: "border-box",
-          flexWrap: "wrap",
         }}
         className="columns-group"
       >
-        {/* form-column (width: 752, height: 1556, gap: 20px) */}
+        {/* form-column (Left side) */}
         <div
           style={{
-            width: "752px",
-            maxWidth: "752px",
-            flex: "1 1 752px",
-            minHeight: "1556px",
+            flex: "1 1 0%",
+            minWidth: 0,
             display: "flex",
             flexDirection: "column",
             gap: "20px",
@@ -1275,16 +1267,20 @@ export default function SubscriptionEditCanvas({
           </div>
         </div>
 
-        {/* summary-column (width: 360, height: 445, gap: 20px) */}
+        {/* summary-column (Right side - pinned top right) */}
         <div
           style={{
-            width: "360px",
-            maxWidth: "360px",
-            flex: "0 0 360px",
+            width: "340px",
+            minWidth: "340px",
+            maxWidth: "340px",
+            flex: "0 0 340px",
             display: "flex",
             flexDirection: "column",
             gap: "20px",
             boxSizing: "border-box",
+            position: "sticky",
+            top: "24px",
+            alignSelf: "flex-start",
           }}
           className="summary-column"
         >
@@ -1530,6 +1526,21 @@ export default function SubscriptionEditCanvas({
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @media (max-width: 1024px) {
+          .columns-group {
+            flex-direction: column !important;
+          }
+          .summary-column {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
+            flex: 1 1 100% !important;
+            position: static !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
