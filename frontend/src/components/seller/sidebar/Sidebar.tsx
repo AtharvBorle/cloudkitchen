@@ -161,8 +161,11 @@ export default function SellerSidebar({
           width: sidebarWidth,
           minWidth: sidebarWidth,
           maxWidth: sidebarWidth,
-          height: "100%",
-          minHeight: "100vh",
+          height: "100vh",
+          maxHeight: "100vh",
+          position: "sticky",
+          top: 0,
+          alignSelf: "flex-start",
           backgroundColor: "#FFFFFF",
           borderRight: "1px solid #F1F5F9",
           padding: isEffectiveCollapsed ? "24px 10px" : "24px 16px",
@@ -173,7 +176,8 @@ export default function SellerSidebar({
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
           zIndex: 999,
           transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease",
-          position: "relative",
+          overflowY: "auto",
+          overflowX: "hidden",
         }}
         className={`seller-sidebar ${isMobileOpen ? "open" : ""} ${isEffectiveCollapsed ? "collapsed" : "expanded"}`}
       >
@@ -492,6 +496,17 @@ export default function SellerSidebar({
         .footer-toggle-btn:hover {
           background-color: #F8FAFC !important;
           color: #0F172A !important;
+        }
+        .seller-sidebar {
+          scrollbar-width: thin;
+          scrollbar-color: #E2E8F0 transparent;
+        }
+        .seller-sidebar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .seller-sidebar::-webkit-scrollbar-thumb {
+          background-color: #E2E8F0;
+          border-radius: 4px;
         }
         .nav-item:hover:not(.active) {
           background-color: #F8FAFC !important;

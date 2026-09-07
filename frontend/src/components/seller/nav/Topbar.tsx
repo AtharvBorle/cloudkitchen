@@ -44,7 +44,9 @@ export default function Topbar({
         justifyContent: "space-between",
         padding: "0 32px",
         boxSizing: "border-box",
-        zIndex: 10,
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}
       className="seller-topbar"
