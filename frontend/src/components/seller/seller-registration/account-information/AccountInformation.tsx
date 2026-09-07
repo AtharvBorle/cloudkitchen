@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
-import { Mail, Phone, Lock, ChevronDown, ArrowRight } from "lucide-react";
+import { ChevronDown, ArrowRight, Eye, EyeOff } from "lucide-react";
 import styles from "./AccountInformation.module.css";
 
 export interface AccountStepData {
@@ -23,13 +23,14 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
   initialData,
   onContinue,
 }) => {
-  const [formData, setFormData] = useState<AccountStepData>({
+  const [formData, setFormData] = React.useState<AccountStepData>({
     ownerName: initialData?.ownerName || "",
     email: initialData?.email || "",
     phone: initialData?.phone || "",
     password: initialData?.password || "",
-    sellerRole: initialData?.sellerRole || "",
+    sellerRole: initialData?.sellerRole || "Owner",
   });
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -47,6 +48,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
 
   return (
     <div className={styles.cardContainer}>
+      {/* Desktop Header Group */}
       <div className={styles.headerGroup}>
         <h2 className={styles.title}>Owner Account Information</h2>
         <p className={styles.subtitle}>
@@ -55,10 +57,10 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* Owner Name */}
+        {/* Owner Full Name */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="ownerName">
-            Owner Name <span className={styles.required}>*</span>
+            Owner full name <span className={styles.required}>*</span>
           </label>
           <div className={styles.inputWrapper}>
             <input
@@ -66,10 +68,11 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
               name="ownerName"
               type="text"
               required
-              placeholder="e.g. John Doe"
+              placeholder="Rahul Sharma"
               value={formData.ownerName}
               onChange={handleChange}
               className={styles.input}
+              autoComplete="name"
             />
           </div>
         </div>
@@ -77,19 +80,19 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
         {/* Email Address */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="email">
-            Email Address <span className={styles.required}>*</span>
+            Email <span className={styles.required}>*</span>
           </label>
           <div className={styles.inputWrapper}>
-            <Mail className={styles.inputIcon} />
             <input
               id="email"
               name="email"
               type="email"
               required
-              placeholder="john.doe@example.com"
+              placeholder="rahul@neocloud.com"
               value={formData.email}
               onChange={handleChange}
-              className={`${styles.input} ${styles.inputWithIcon}`}
+              className={styles.input}
+              autoComplete="email"
             />
           </div>
         </div>
@@ -97,19 +100,19 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
         {/* Phone Number */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="phone">
-            Phone Number <span className={styles.required}>*</span>
+            Phone <span className={styles.required}>*</span>
           </label>
           <div className={styles.inputWrapper}>
-            <Phone className={styles.inputIcon} />
             <input
               id="phone"
               name="phone"
               type="tel"
               required
-              placeholder="+1 (555) 000-0000"
+              placeholder="+91 98765 43210"
               value={formData.phone}
               onChange={handleChange}
-              className={`${styles.input} ${styles.inputWithIcon}`}
+              className={styles.input}
+              autoComplete="tel"
             />
           </div>
         </div>
@@ -120,27 +123,35 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
             Password <span className={styles.required}>*</span>
           </label>
           <div className={styles.inputWrapper}>
-            <Lock className={styles.inputIcon} />
             <input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               required
               placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
-              className={`${styles.input} ${styles.inputWithIcon}`}
+              className={styles.input}
+              autoComplete="new-password"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className={styles.togglePasswordBtn}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
           <span className={styles.helperText}>
-            Must be at least 8 characters with letters & numbers.
+            Must be at least 8 characters
           </span>
         </div>
 
         {/* Seller Role */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="sellerRole">
-            Seller Role <span className={styles.required}>*</span>
+            Seller role <span className={styles.required}>*</span>
           </label>
           <div className={styles.selectWrapper}>
             <select
@@ -151,16 +162,14 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
               onChange={handleChange}
               className={styles.select}
             >
-              <option value="" disabled>
-                Select your role (Owner / Manager)
-              </option>
-              <option value="OWNER">Owner</option>
-              <option value="MANAGER">Manager</option>
-              <option value="PARTNER">Partner</option>
+              <option value="Owner">Owner</option>
+              <option value="Manager">Manager</option>
+              <option value="Partner">Partner</option>
             </select>
             <ChevronDown className={styles.chevronIcon} />
           </div>
         </div>
+
 
         {/* Continue Button */}
         <div className={styles.buttonWrapper}>

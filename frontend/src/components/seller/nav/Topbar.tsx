@@ -37,6 +37,10 @@ export default function Topbar({
         width: "100%",
         height: "64px",
         minHeight: "64px",
+        maxHeight: "64px",
+        flexShrink: 0,
+        position: "sticky",
+        top: 0,
         backgroundColor: "#FFFFFF",
         borderBottom: "1px solid #E2E8F0",
         display: "flex",
@@ -44,7 +48,7 @@ export default function Topbar({
         justifyContent: "space-between",
         padding: "0 32px",
         boxSizing: "border-box",
-        zIndex: 10,
+        zIndex: 40,
         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}
       className="seller-topbar"

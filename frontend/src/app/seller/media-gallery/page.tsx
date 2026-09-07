@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ export default function MediaGalleryPage() {
   const router = useRouter();
 
   const handleContinue = () => {
-    router.push("/seller/confirm-information");
+    router.push("/seller/confirm-registration");
   };
 
   const handleBack = () => {

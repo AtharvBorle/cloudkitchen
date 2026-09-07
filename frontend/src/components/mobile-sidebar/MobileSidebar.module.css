@@ -1,0 +1,284 @@
+/* 1. Backdrop Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.overlayOpen {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 2. Slide-out Drawer Container */
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(82vw, 320px);
+  height: 100vh;
+  height: 100dvh;
+  background-color: #ffffff;
+  z-index: 1000;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 6px 0 25px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.drawerOpen {
+  transform: translateX(0);
+}
+
+/* 3. Header */
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px 18px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.brandGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoCircle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.15);
+}
+
+.logoImg {
+  object-fit: contain;
+  width: 32px;
+  height: 32px;
+}
+
+.brandText {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f97316;
+  letter-spacing: -0.01em;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:active {
+  background-color: #e2e8f0;
+}
+
+/* 4. User Profile Card */
+.profileSection {
+  padding: 12px 18px 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.avatarWrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid #fed7aa;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15);
+}
+
+.avatarImg {
+  object-fit: cover;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.userName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.goldMemberBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2.5px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.25);
+  width: fit-content;
+}
+
+.starIcon {
+  width: 10px;
+  height: 10px;
+  fill: #ffffff;
+  color: #ffffff;
+}
+
+/* 5. Nav Items List */
+.navContainer {
+  flex: 1;
+  padding: 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: #334155;
+  transition: all 0.15s ease;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.navItem:active {
+  background-color: #f8fafc;
+}
+
+.navItemActive {
+  background-color: #fff4eb;
+  color: #ea580c;
+}
+
+.navItemActive .navItemLeft {
+  color: #ea580c;
+}
+
+.navItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.navIcon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.navItemActive .navIcon {
+  color: #ea580c;
+}
+
+.navChevron {
+  color: #94a3b8;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.navItemActive .navChevron {
+  color: #ea580c;
+}
+
+.newBadge {
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+/* 6. Footer Section */
+.drawerFooter {
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px)) 18px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: #ffffff;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 0.15s ease;
+  font-family: inherit;
+}
+
+.logoutBtn:hover {
+  color: #dc2626;
+}
+
+.logoutIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.footerMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.footerBrand {
+  color: #f97316;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}

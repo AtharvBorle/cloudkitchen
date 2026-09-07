@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,11 +11,11 @@ import {
 export default function BusinessInformationPage() {
   const router = useRouter();
   const [businessData, setBusinessData] = useState<BusinessInformationData>({
-    businessName: "",
-    sellerType: "",
-    categories: ["Cloud Kitchen", "Guest Rooms"],
-    foodType: "",
-    address: "",
+    businessName: "Neo Kitchens",
+    sellerType: "FOOD",
+    categories: ["North Indian", "Biryani"],
+    foodType: "BOTH",
+    address: "12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102",
   });
 
   const handleContinue = (data: BusinessInformationData) => {

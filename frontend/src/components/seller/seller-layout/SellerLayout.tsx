@@ -1,6 +1,7 @@
 "use client";
-
 import React from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { SellerSidebar } from "../seller-sidebar";
 import { SellerNavbar } from "../seller-navbar";
 import { SellerStepper } from "../seller-stepper";
@@ -10,99 +11,126 @@ export interface SellerLayoutProps {
   children: React.ReactNode;
   activeSidebarItem?: "registration" | "verification";
   pageTitle?: string;
+  mobileTitle?: string;
+  hideMobileHeader?: boolean;
   userName?: string;
   userRole?: string;
   userInitials?: string;
-  currentStep?: number; // Optional: when provided, renders stepper in the exact same spot on all pages
+  currentStep?: number;
+  totalSteps?: number;
+  onBack?: () => void;
+  backHref?: string;
 }
+
+const STEP_TITLES: Record<number, string> = {
+  1: "Create account",
+  2: "Business",
+  3: "Documents",
+  4: "Photos",
+  5: "Review & submit",
+};
 
 export const SellerLayout: React.FC<SellerLayoutProps> = ({
   children,
   activeSidebarItem = "registration",
   pageTitle = "Neo Cloud Room Onboarding",
+  mobileTitle,
+  hideMobileHeader = false,
   userName = "John Doe",
   userRole = "Owner Account",
   userInitials = "JD",
   currentStep,
+  totalSteps = 5,
+  onBack,
+  backHref,
 }) => {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (backHref) {
+      router.push(backHref);
+    } else if (currentStep && currentStep > 1) {
+      router.back();
+    } else {
+      router.push("/seller/registration");
+    }
+  };
+
+  const resolvedMobileTitle =
+    mobileTitle || (currentStep ? STEP_TITLES[currentStep] || pageTitle : pageTitle);
+
   return (
-    <div
-      className={styles.layoutContainer}
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "stretch",
-        minHeight: "100vh",
-        width: "100%",
-        backgroundColor: "#f8fafc",
-        margin: 0,
-        padding: 0,
-        boxSizing: "border-box",
-      }}
-    >
-      {/* 1. LEFT SIDEBAR (Sticky full height) */}
-      <div
-        className={styles.sidebarColumn}
-        style={{
-          width: 260,
-          minWidth: 260,
-          maxWidth: 260,
-          flexShrink: 0,
-          backgroundColor: "#ffffff",
-          borderRight: "1px solid #e2e8f0",
-          minHeight: "100vh",
-        }}
-      >
+    <div className={styles.layoutContainer}>
+      {/* 1. LEFTSIDEBAR (Desktop only) */}
+      <div className={styles.sidebarColumn}>
         <SellerSidebar activeItem={activeSidebarItem} />
       </div>
 
       {/* 2. RIGHT MAIN CONTENT COLUMN */}
-      <div
-        className={styles.mainColumn}
-        style={{
-          flex: "1 1 0%",
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          minHeight: "100vh",
-          backgroundColor: "#f8fafc",
-        }}
-      >
-        {/* Top Navbar */}
-        <SellerNavbar
-          title={pageTitle}
-          userName={userName}
-          userRole={userRole}
-          userInitials={userInitials}
-        />
+      <div className={styles.mainColumn}>
+        {/* Top Navbar (Desktop only) */}
+        <div className={styles.desktopNavbar}>
+          <SellerNavbar
+            title={pageTitle}
+            userName={userName}
+            userRole={userRole}
+            userInitials={userInitials}
+          />
+        </div>
+
+
+        {/* Mobile Top Header (Mobile only) */}
+        {!hideMobileHeader && (
+          <header className={styles.mobileTopBar}>
+            <button
+              type="button"
+              onClick={handleBack}
+              className={styles.mobileBackBtn}
+              aria-label="Go back"
+            >
+              <ChevronLeft size={22} strokeWidth={2.4} />
+            </button>
+            <h1 className={styles.mobilePageTitle}>{resolvedMobileTitle}</h1>
+          </header>
+        )}
+
 
         {/* Unified Centered Main Content Area */}
-        <main
-          className={styles.pageContent}
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            width: "100%",
-            padding: "48px 32px 48px 32px",
-            boxSizing: "border-box",
-          }}
-        >
-          {/* Centered 700px Content Frame */}
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 700,
-              display: "flex",
-              flexDirection: "column",
-              boxSizing: "border-box",
-            }}
-          >
-            {/* Automatic Stepper (Locks exact vertical & horizontal position across all steps) */}
+        <main className={styles.pageContent}>
+          <div className={styles.contentInnerFrame}>
+            {/* Desktop Stepper (Desktop only) */}
             {currentStep !== undefined && (
-              <SellerStepper currentStep={currentStep} />
+              <div className={styles.desktopStepperWrapper}>
+                <SellerStepper currentStep={currentStep} />
+              </div>
             )}
+
+
+            {/* Mobile Dots Stepper (Mobile only) */}
+            {currentStep !== undefined && (
+              <div className={styles.mobileDotsStepper} aria-label={`Step ${currentStep} of ${totalSteps}`}>
+                {Array.from({ length: totalSteps }).map((_, index) => {
+                  const stepNum = index + 1;
+                  const isActive = stepNum === currentStep;
+                  const isCompleted = stepNum < currentStep;
+                  return (
+                    <span
+                      key={stepNum}
+                      className={
+                        isActive
+                          ? styles.dotActive
+                          : isCompleted
+                          ? styles.dotCompleted
+                          : styles.dotInactive
+                      }
+                    />
+                  );
+                })}
+              </div>
+            )}
+
 
             {/* Form Step Content */}
             {children}

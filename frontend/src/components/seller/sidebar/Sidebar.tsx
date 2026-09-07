@@ -29,7 +29,7 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
   { id: "rooms", label: "Rooms", icon: Home, href: "/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/dashboard/seller/bookings" },
-  { id: "delivery", label: "Delivery", icon: Truck, href: "/dashboard/seller/delivery" },
+  { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/create-subscription-plan" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
 ];
@@ -59,6 +59,9 @@ export default function SellerSidebar({
     if (item.id === "profile") {
       return pathname?.startsWith("/seller/profile") || pathname?.startsWith("/dashboard/seller/profile");
     }
+    if (item.id === "delivery") {
+      return pathname?.startsWith("/seller/delivery") || pathname?.startsWith("/seller/create-subscription-plan") || pathname?.startsWith("/dashboard/seller/delivery");
+    }
     if (item.href === "/dashboard/seller") {
       return pathname === "/dashboard/seller";
     }
@@ -82,14 +85,18 @@ export default function SellerSidebar({
         />
       )}
 
-      {/* Main Sidebar Container (Width: 240px, Height: 100% / 1024px, Padding: 24px, Gap: 32px, Background: #FFFFFF) */}
+      {/* Main Sidebar Container (Width: 240px, Height: 100vh, Padding: 24px, Gap: 32px, Background: #FFFFFF) */}
       <aside
         style={{
           width: "240px",
           minWidth: "240px",
           maxWidth: "240px",
-          height: "100%",
-          minHeight: "100vh",
+          height: "100vh",
+          maxHeight: "100vh",
+          overflowY: "auto",
+          flexShrink: 0,
+          position: "sticky",
+          top: 0,
           backgroundColor: "#FFFFFF",
           borderRight: "1px solid #F1F5F9",
           padding: "24px",
@@ -98,7 +105,7 @@ export default function SellerSidebar({
           gap: "32px",
           boxSizing: "border-box",
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-          zIndex: 999,
+          zIndex: 50,
           transition: "transform 0.3s ease",
         }}
         className={`seller-sidebar ${isMobileOpen ? "open" : ""}`}

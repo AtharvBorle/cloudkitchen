@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import {
@@ -14,6 +14,7 @@ export default function RegistrationSubmittedPage() {
       userName="John Doe"
       userRole="Owner Account"
       userInitials="JD"
+      hideMobileHeader={true}
     >
       {/* Registration Submitted Information Box (Navbar & Sidebar only) */}
       <RegistrationSubmitted trackingId="REG-2026-8942" />

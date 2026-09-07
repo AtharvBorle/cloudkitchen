@@ -1,1 +1,1 @@
-﻿export { default } from "../account-information/page";
+export { default } from "../account-information/page";

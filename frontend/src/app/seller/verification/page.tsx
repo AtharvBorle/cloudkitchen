@@ -6,8 +6,13 @@ import { VerificationStatus } from "@/components/seller/verification-status";
 
 export default function VerificationPage() {
   return (
-    <SellerLayout activeSidebarItem="verification">
-      <VerificationStatus trackingId="NCR-2024-0847" />
+    <SellerLayout
+      activeSidebarItem="verification"
+      pageTitle="Verification"
+      mobileTitle="Verification"
+      backHref="/seller/registration-submitted"
+    >
+      <VerificationStatus trackingId="NCR-2026-0847" />
     </SellerLayout>
   );
 }

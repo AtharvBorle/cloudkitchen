@@ -6,26 +6,27 @@ import { RoomBookingHeroBanner } from "@/components/room-booking-desktop/room-bo
 import { RoomSearchFilter } from "@/components/room-booking-desktop/room-search-filter";
 import { FeaturedColivings } from "@/components/room-booking-desktop/featured-colivings";
 import { AllAvailableRooms } from "@/components/room-booking-desktop/all-available-rooms";
+import { RoomBookingMobileView } from "@/components/room-booking-desktop/room-booking-mobile";
+import styles from "./page.module.css";
 
 export default function RoomBookingPage() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
-      {/* 1. Room Booking Dedicated Navbar (Food, Mess/Tiffin, Rooms, Settings) */}
-      <Navbar initialActiveItem="Rooms" />
+    <div className={styles.pageContainer}>
+      {/* 1. Desktop & Tablet View (>768px) */}
+      <div className={styles.desktopOnly}>
+        <Navbar initialActiveItem="Rooms" />
+        <main className={styles.desktopMain}>
+          <RoomBookingHeroBanner />
+          <RoomSearchFilter />
+          <FeaturedColivings />
+          <AllAvailableRooms />
+        </main>
+      </div>
 
-      <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "24px 32px 64px 32px", boxSizing: "border-box" }}>
-        {/* 2. Room Booking Hero Banner */}
-        <RoomBookingHeroBanner />
-
-        {/* 3. Room Search Filter */}
-        <RoomSearchFilter />
-
-        {/* 4. Featured Premium Co-livings */}
-        <FeaturedColivings />
-
-        {/* 5. All Available Rooms */}
-        <AllAvailableRooms />
-      </main>
+      {/* 2. Mobile View (<=768px) matching native mobile design (No bottom navigation bar) */}
+      <div className={styles.mobileOnly}>
+        <RoomBookingMobileView />
+      </div>
     </div>
   );
 }

@@ -1,17 +1,15 @@
-import type { Metadata } from 'next';
-import { Inter, Poppins } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
 import { CartProvider } from '@/context/CartContext';
 import { Providers } from '@/components/Providers';
 import { LocationProvider } from '@/components/location-provider';
 import ChatbotWidget from '@/components/chatbot-widget';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-poppins',
-});
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   title: 'Cloud Kitchen & Homely Food with Room Booking',
@@ -24,8 +22,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={poppins.variable}>
-      <body className={`${inter.className} ${poppins.className}`}>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body>
         <Providers>
           <LocationProvider>
             <CartProvider>

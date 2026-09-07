@@ -1,0 +1,40 @@
+.pageContainer {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.desktopOnly {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #FFF4E6;
+  width: 100%;
+}
+
+.mobileOnly {
+  display: none;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+.desktopMain {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 32px 64px 32px;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .desktopOnly {
+    display: none !important;
+  }
+
+  .mobileOnly {
+    display: block !important;
+  }
+}
