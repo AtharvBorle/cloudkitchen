@@ -46,4 +46,29 @@ export type {
 export { default as BookingCanvasDas } from "./booking/BookingCanvasDas";
 export type { BookingCanvasDasProps } from "./booking/BookingCanvasDas";
 
+// Subscription components
+export { default as SubscriptionEditCanvas } from "./subscription/SubscriptionEditCanvas";
+export type {
+  SubscriptionEditCanvasProps,
+  SubscriptionPlanData,
+  PlanFeatureItem,
+  MealTimingItem,
+  PlanMetrics,
+  PlanMetadata,
+} from "./subscription/SubscriptionEditCanvas";
+
+export { default as SubscriptionEditCanvasDas } from "./subscription/SubscriptionEditCanvasDas";
+export type { SubscriptionEditCanvasDasProps } from "./subscription/SubscriptionEditCanvasDas";
+
+// Room components
+export { default as RoomConfigCanvas } from "./rooms/RoomConfigCanvas";
+export type {
+  RoomConfigCanvasProps,
+  RoomConfigData,
+  AmenityItem,
+} from "./rooms/RoomConfigCanvas";
+
+export { default as RoomConfigCanvasDas } from "./rooms/RoomConfigCanvasDas";
+export type { RoomConfigCanvasDasProps } from "./rooms/RoomConfigCanvasDas";
+
 export { default } from "./seller-profile/Profile";

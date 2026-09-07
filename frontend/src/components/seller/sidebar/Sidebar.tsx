@@ -57,6 +57,12 @@ export default function SellerSidebar({
     if (activeItemId) {
       return activeItemId === item.id;
     }
+    if (item.id === "rooms") {
+      return (
+        pathname?.startsWith("/seller/rooms") ||
+        pathname?.startsWith("/dashboard/seller/rooms")
+      );
+    }
     if (item.id === "bookings") {
       return (
         pathname?.startsWith("/seller/booking") ||
@@ -68,6 +74,12 @@ export default function SellerSidebar({
     }
     if (item.id === "profile") {
       return pathname?.startsWith("/seller/profile") || pathname?.startsWith("/dashboard/seller/profile");
+    }
+    if (item.id === "subscription") {
+      return (
+        pathname?.startsWith("/seller/subscription") ||
+        pathname?.startsWith("/dashboard/seller/payment")
+      );
     }
     if (item.href === "/dashboard/seller") {
       return pathname === "/dashboard/seller";
@@ -113,26 +125,23 @@ export default function SellerSidebar({
         }}
         className={`seller-sidebar ${isMobileOpen ? "open" : ""}`}
       >
-        {/* Brand Wrapper (Width: 192px, Height: 65px, Gap: 12px) */}
+        {/* Brand Wrapper (Width: 192px, Gap: 10px, display: flex, alignItems: center) */}
         <div
           style={{
             width: "192px",
             maxWidth: "100%",
             display: "flex",
-            flexDirection: "column",
-            gap: "12px",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "10px",
           }}
           className="brand-wrapper"
         >
-          {/* Logo Row (Width: 192px, Height: 32px) */}
+          {/* Logo Row */}
           <div
             style={{
-              width: "192px",
-              maxWidth: "100%",
-              height: "32px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
               gap: "8px",
             }}
             className="logo"
@@ -142,15 +151,14 @@ export default function SellerSidebar({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "10px",
                 textDecoration: "none",
                 userSelect: "none",
               }}
             >
               <div
                 style={{
-                  width: "38px",
-                  height: "38px",
+                  width: "36px",
+                  height: "36px",
                   borderRadius: "50%",
                   overflow: "hidden",
                   display: "flex",
@@ -164,8 +172,8 @@ export default function SellerSidebar({
                 <Image
                   src={logoSrc}
                   alt="Neo Cloud Bites Logo"
-                  width={38}
-                  height={38}
+                  width={36}
+                  height={36}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -175,18 +183,6 @@ export default function SellerSidebar({
                   priority
                 />
               </div>
-              <span
-                style={{
-                  fontSize: "13.5px",
-                  fontWeight: 800,
-                  color: "#0F172A",
-                  letterSpacing: "-0.01em",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                NEO CLOUD
-              </span>
             </Link>
 
             {/* Mobile close button */}
@@ -210,13 +206,9 @@ export default function SellerSidebar({
             )}
           </div>
 
-          {/* Role Tag (Width: 89px, Height: 21px, Radius: 6px, Padding: 4px 8px, Background: #FFF1E8) */}
+          {/* Role Tag (Radius: 6px, Padding: 4px 8px, Background: #FFF1E8) */}
           <div
             style={{
-              width: "89px",
-              minWidth: "89px",
-              maxWidth: "89px",
-              height: "21px",
               backgroundColor: "#FFF1E8",
               borderRadius: "6px",
               padding: "4px 8px",
@@ -229,7 +221,7 @@ export default function SellerSidebar({
           >
             <span
               style={{
-                fontSize: "11px",
+                fontSize: "10.5px",
                 fontWeight: 700,
                 color: "#F97316",
                 letterSpacing: "0.5px",
