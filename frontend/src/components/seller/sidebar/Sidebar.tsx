@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
 import { usePathname } from "next/navigation";
@@ -15,12 +15,16 @@ import {
   CreditCard,
   UserCircle,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export interface NavItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
+  icon: React.ComponentType<{ size?: number; color?: string; className?: string; style?: React.CSSProperties }>;
   href: string;
 }
 
@@ -41,6 +45,10 @@ export interface SellerSidebarProps {
   activeItemId?: string;
   logoSrc?: string | StaticImageData;
   roleTagText?: string;
+  isCollapsed?: boolean;
+  defaultCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+  showCollapseToggle?: boolean;
 }
 
 export default function SellerSidebar({
@@ -49,8 +57,24 @@ export default function SellerSidebar({
   activeItemId,
   logoSrc = navLogoImg,
   roleTagText = "OWNER ROLE",
+  isCollapsed,
+  defaultCollapsed = false,
+  onToggleCollapse,
+  showCollapseToggle = true,
 }: SellerSidebarProps) {
   const pathname = usePathname();
+  const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
+
+  // Controlled or uncontrolled collapse state
+  const isEffectiveCollapsed = isCollapsed !== undefined ? isCollapsed : internalCollapsed;
+
+  const handleToggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed((prev) => !prev);
+    }
+  };
 
   // Helper to determine if a nav item is currently active
   const isItemActive = (item: NavItem) => {
@@ -79,6 +103,12 @@ export default function SellerSidebar({
         pathname?.startsWith("/dashboard/seller/edit-menu")
       );
     }
+    if (item.id === "rooms") {
+      return (
+        pathname?.startsWith("/seller/rooms") ||
+        pathname?.startsWith("/dashboard/seller/rooms")
+      );
+    }
     if (item.id === "bookings") {
       return (
         pathname?.startsWith("/seller/booking") ||
@@ -86,13 +116,27 @@ export default function SellerSidebar({
       );
     }
     if (item.id === "delivery") {
-      return pathname?.startsWith("/seller/riderMng") || pathname?.startsWith("/dashboard/seller/delivery");
+      return (
+        pathname?.startsWith("/seller/riderMng") ||
+        pathname?.startsWith("/dashboard/seller/delivery")
+      );
+    }
+    if (item.id === "subscription") {
+      return (
+        pathname?.startsWith("/dashboard/seller/payment") ||
+        pathname?.startsWith("/seller/subscription")
+      );
     }
     if (item.id === "profile") {
-      return pathname?.startsWith("/seller/profile") || pathname?.startsWith("/dashboard/seller/profile");
+      return (
+        pathname?.startsWith("/seller/profile") ||
+        pathname?.startsWith("/dashboard/seller/profile")
+      );
     }
     return Boolean(pathname?.startsWith(item.href));
   };
+
+  const sidebarWidth = isEffectiveCollapsed ? "76px" : "240px";
 
   return (
     <>
@@ -111,47 +155,47 @@ export default function SellerSidebar({
         />
       )}
 
-      {/* Main Sidebar Container (Width: 240px, Height: 100% / 1024px, Padding: 24px, Gap: 32px, Background: #FFFFFF) */}
+      {/* Main Sidebar Container */}
       <aside
         style={{
-          width: "240px",
-          minWidth: "240px",
-          maxWidth: "240px",
+          width: sidebarWidth,
+          minWidth: sidebarWidth,
+          maxWidth: sidebarWidth,
           height: "100%",
           minHeight: "100vh",
           backgroundColor: "#FFFFFF",
           borderRight: "1px solid #F1F5F9",
-          padding: "24px",
+          padding: isEffectiveCollapsed ? "24px 10px" : "24px 16px",
           display: "flex",
           flexDirection: "column",
-          gap: "32px",
+          gap: isEffectiveCollapsed ? "24px" : "28px",
           boxSizing: "border-box",
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
           zIndex: 999,
-          transition: "transform 0.3s ease",
+          transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease",
+          position: "relative",
         }}
-        className={`seller-sidebar ${isMobileOpen ? "open" : ""}`}
+        className={`seller-sidebar ${isMobileOpen ? "open" : ""} ${isEffectiveCollapsed ? "collapsed" : "expanded"}`}
       >
-        {/* Brand Wrapper (Width: 192px, Height: 65px, Gap: 12px) */}
+        {/* Brand Header Section */}
         <div
           style={{
-            width: "192px",
-            maxWidth: "100%",
+            width: "100%",
             display: "flex",
             flexDirection: "column",
-            gap: "12px",
+            gap: "10px",
+            alignItems: isEffectiveCollapsed ? "center" : "stretch",
           }}
           className="brand-wrapper"
         >
-          {/* Logo Row (Width: 192px, Height: 32px) */}
+          {/* Logo Row */}
           <div
             style={{
-              width: "192px",
-              maxWidth: "100%",
-              height: "32px",
+              width: "100%",
+              height: "38px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: isEffectiveCollapsed ? "center" : "space-between",
               gap: "8px",
             }}
             className="logo"
@@ -161,15 +205,17 @@ export default function SellerSidebar({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "10px",
+                gap: "9px",
                 textDecoration: "none",
                 userSelect: "none",
+                overflow: "hidden",
               }}
+              title="Neo Cloud Bites Seller Dashboard"
             >
               <div
                 style={{
-                  width: "38px",
-                  height: "38px",
+                  width: "36px",
+                  height: "36px",
                   borderRadius: "50%",
                   overflow: "hidden",
                   display: "flex",
@@ -183,8 +229,8 @@ export default function SellerSidebar({
                 <Image
                   src={logoSrc}
                   alt="Neo Cloud Bites Logo"
-                  width={38}
-                  height={38}
+                  width={36}
+                  height={36}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -194,21 +240,53 @@ export default function SellerSidebar({
                   priority
                 />
               </div>
-              <span
-                style={{
-                  fontSize: "13.5px",
-                  fontWeight: 800,
-                  color: "#0F172A",
-                  letterSpacing: "-0.01em",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                NEO CLOUD
-              </span>
+
+              {!isEffectiveCollapsed && (
+                <span
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    color: "#0F172A",
+                    letterSpacing: "-0.01em",
+                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                    whiteSpace: "nowrap",
+                    opacity: 1,
+                    transition: "opacity 0.2s ease",
+                  }}
+                  className="brand-title"
+                >
+                  NEO CLOUD BITES
+                </span>
+              )}
             </Link>
 
-            {/* Mobile close button */}
+            {/* Desktop Collapse / Expand Button in Header */}
+            {!isEffectiveCollapsed && showCollapseToggle && (
+              <button
+                type="button"
+                onClick={handleToggleCollapse}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  color: "#64748B",
+                  padding: "5px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.18s ease",
+                  backgroundColor: "#F8FAFC",
+                }}
+                className="desktop-collapse-btn"
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+              >
+                <PanelLeftClose size={17} />
+              </button>
+            )}
+
+            {/* Mobile Close Button */}
             {onClose && (
               <button
                 type="button"
@@ -229,48 +307,75 @@ export default function SellerSidebar({
             )}
           </div>
 
-          {/* Role Tag (Width: 89px, Height: 21px, Radius: 6px, Padding: 4px 8px, Background: #FFF1E8) */}
-          <div
-            style={{
-              width: "89px",
-              minWidth: "89px",
-              maxWidth: "89px",
-              height: "21px",
-              backgroundColor: "#FFF1E8",
-              borderRadius: "6px",
-              padding: "4px 8px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxSizing: "border-box",
-            }}
-            className="role-tag"
-          >
-            <span
+          {/* Role Tag (Expanded mode) */}
+          {!isEffectiveCollapsed && (
+            <div
               style={{
-                fontSize: "11px",
-                fontWeight: 700,
-                color: "#F97316",
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                lineHeight: 1,
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                whiteSpace: "nowrap",
+                alignSelf: "flex-start",
+                backgroundColor: "#FFF1E8",
+                borderRadius: "6px",
+                padding: "3px 8px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
+                marginTop: "2px",
               }}
+              className="role-tag"
             >
-              {roleTagText}
-            </span>
-          </div>
+              <span
+                style={{
+                  fontSize: "10.5px",
+                  fontWeight: 700,
+                  color: "#F97316",
+                  letterSpacing: "0.5px",
+                  textTransform: "uppercase",
+                  lineHeight: 1.2,
+                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {roleTagText}
+              </span>
+            </div>
+          )}
+
+          {/* Compact Toggle Button when Collapsed */}
+          {isEffectiveCollapsed && showCollapseToggle && (
+            <button
+              type="button"
+              onClick={handleToggleCollapse}
+              style={{
+                marginTop: "6px",
+                width: "34px",
+                height: "34px",
+                background: "#F8FAFC",
+                border: "1px solid #E2E8F0",
+                borderRadius: "8px",
+                cursor: "pointer",
+                color: "#64748B",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.18s ease",
+              }}
+              className="desktop-expand-btn"
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
+            >
+              <PanelLeftOpen size={17} />
+            </button>
+          )}
         </div>
 
-        {/* Navigation List (Width: 192px, Gap: 4px) */}
+        {/* Navigation List */}
         <nav
           style={{
-            width: "192px",
-            maxWidth: "100%",
+            width: "100%",
             display: "flex",
             flexDirection: "column",
-            gap: "4px",
+            gap: "5px",
+            flex: 1,
           }}
           className="nav-list"
           aria-label="Seller Navigation"
@@ -284,15 +389,16 @@ export default function SellerSidebar({
                 key={item.id}
                 href={item.href}
                 onClick={onClose}
+                title={item.label}
                 style={{
-                  width: "192px",
-                  maxWidth: "100%",
+                  width: "100%",
                   height: "42px",
                   borderRadius: "8px",
-                  padding: "10px 16px",
+                  padding: isEffectiveCollapsed ? "0" : "10px 14px",
                   display: "flex",
                   alignItems: "center",
-                  gap: "12px",
+                  justifyContent: isEffectiveCollapsed ? "center" : "flex-start",
+                  gap: isEffectiveCollapsed ? "0" : "12px",
                   textDecoration: "none",
                   boxSizing: "border-box",
                   backgroundColor: active ? "#FFF1E8" : "transparent",
@@ -303,28 +409,90 @@ export default function SellerSidebar({
                   transition: "all 0.18s ease",
                   fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                   position: "relative",
+                  overflow: "hidden",
                 }}
                 className={`nav-item ${active ? "active" : ""}`}
               >
                 <IconComponent
-                  size={19}
+                  size={isEffectiveCollapsed ? 20 : 19}
                   color={active ? "#F97316" : "#64748B"}
+                  style={{ flexShrink: 0 }}
                 />
-                <span
-                  style={{
-                    lineHeight: 1,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {item.label}
-                </span>
+                {!isEffectiveCollapsed && (
+                  <span
+                    style={{
+                      lineHeight: 1,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    className="nav-label"
+                  >
+                    {item.label}
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
+
+        {/* Footer Collapse / Expand Bar (Optional Quick Toggle) */}
+        {showCollapseToggle && (
+          <div
+            style={{
+              paddingTop: "12px",
+              borderTop: "1px solid #F1F5F9",
+              display: "flex",
+              justifyContent: isEffectiveCollapsed ? "center" : "flex-end",
+              alignItems: "center",
+              width: "100%",
+            }}
+            className="sidebar-footer"
+          >
+            <button
+              type="button"
+              onClick={handleToggleCollapse}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "#94A3B8",
+                fontSize: "12px",
+                fontWeight: 600,
+                padding: "6px 8px",
+                borderRadius: "6px",
+                transition: "all 0.18s ease",
+              }}
+              className="footer-toggle-btn"
+              title={isEffectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isEffectiveCollapsed ? (
+                <ChevronRight size={16} />
+              ) : (
+                <>
+                  <ChevronLeft size={16} />
+                  <span>Collapse</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </aside>
 
       <style jsx>{`
+        .desktop-collapse-btn:hover,
+        .desktop-expand-btn:hover {
+          background-color: #E2E8F0 !important;
+          color: #0F172A !important;
+          border-color: #CBD5E1 !important;
+        }
+        .footer-toggle-btn:hover {
+          background-color: #F8FAFC !important;
+          color: #0F172A !important;
+        }
         .nav-item:hover:not(.active) {
           background-color: #F8FAFC !important;
           color: #0F172A !important;
@@ -337,6 +505,10 @@ export default function SellerSidebar({
             position: fixed !important;
             top: 0;
             left: 0;
+            width: 240px !important;
+            min-width: 240px !important;
+            max-width: 240px !important;
+            padding: 24px 16px !important;
             transform: translateX(-100%);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
           }
@@ -345,6 +517,22 @@ export default function SellerSidebar({
           }
           .sidebar-close-btn {
             display: flex !important;
+          }
+          .desktop-collapse-btn,
+          .desktop-expand-btn,
+          .sidebar-footer {
+            display: none !important;
+          }
+          .brand-title,
+          .role-tag,
+          .nav-label {
+            display: inline-block !important;
+            opacity: 1 !important;
+          }
+          .nav-item {
+            justify-content: flex-start !important;
+            padding: 10px 14px !important;
+            gap: 12px !important;
           }
         }
       `}</style>
