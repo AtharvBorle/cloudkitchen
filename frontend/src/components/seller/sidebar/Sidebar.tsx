@@ -32,10 +32,10 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
   { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
   { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
-  { id: "rooms", label: "Rooms", icon: Home, href: "/dashboard/seller/rooms" },
+  { id: "rooms", label: "Rooms", icon: Home, href: "/seller/rooms/config" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/riderMng" },
-  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/dashboard/seller/payment" },
+  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
 ];
 
@@ -123,8 +123,8 @@ export default function SellerSidebar({
     }
     if (item.id === "subscription") {
       return (
-        pathname?.startsWith("/dashboard/seller/payment") ||
-        pathname?.startsWith("/seller/subscription")
+        pathname?.startsWith("/seller/subscription") ||
+        pathname?.startsWith("/dashboard/seller/payment")
       );
     }
     if (item.id === "profile") {
