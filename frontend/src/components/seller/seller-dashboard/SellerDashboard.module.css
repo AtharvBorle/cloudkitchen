@@ -41,7 +41,7 @@
 
 .title {
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #0F172A;
   margin: 0;
   letter-spacing: -0.02em;
@@ -66,7 +66,7 @@
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
@@ -137,7 +137,7 @@
 
 .cardValue {
   font-size: 1.85rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #0F172A;
   margin: 0;
   letter-spacing: -0.02em;
@@ -153,7 +153,7 @@
 }
 
 .badgeOrange {
-  font-weight: 700;
+  font-weight: 500;
   color: #F97316;
 }
 
@@ -211,7 +211,7 @@
 
 .warningTitle {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #854D0E;
   margin: 0;
 }
@@ -230,7 +230,7 @@
   padding: 9px 20px;
   border-radius: 8px;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
@@ -264,7 +264,7 @@
 
 .tableTitle {
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
   margin: 0;
   letter-spacing: -0.01em;
@@ -273,7 +273,7 @@
 .viewAllLink {
   color: #F97316;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -302,7 +302,7 @@
 .ordersTable th {
   padding: 12px 16px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #94A3B8;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -340,7 +340,7 @@
 
 /* Row Specific Elements */
 .orderIdText {
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
 }
 
@@ -359,7 +359,7 @@
 }
 
 .totalPriceText {
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
 }
 

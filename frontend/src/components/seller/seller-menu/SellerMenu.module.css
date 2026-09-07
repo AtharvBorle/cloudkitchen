@@ -41,7 +41,7 @@
 
 .title {
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #0F172A;
   margin: 0;
   letter-spacing: -0.02em;
@@ -67,7 +67,7 @@
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
@@ -114,7 +114,7 @@
 
 .opLabel {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
   margin: 0;
 }
@@ -161,14 +161,14 @@
 
 .statusTextOrange {
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #F97316;
   letter-spacing: 0.02em;
 }
 
 .statusTextMuted {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #94A3B8;
   letter-spacing: 0.02em;
 }
@@ -187,7 +187,7 @@
 
 .opMetaHeader {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #94A3B8;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -285,7 +285,7 @@
   background-color: #FFF1E8;
   border: 1px solid #FDBA74;
   color: #EA580C;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 @media (max-width: 900px) {
@@ -330,7 +330,7 @@
 .dishTable th {
   padding: 18px 16px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #94A3B8;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -411,7 +411,7 @@
 }
 
 .dishNameText {
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
   font-size: 0.92rem;
 }
@@ -422,7 +422,7 @@
 }
 
 .priceText {
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
   font-size: 0.95rem;
 }
@@ -433,7 +433,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.04em;
 }
 
@@ -483,12 +483,12 @@
 
 /* Stock Quantity */
 .stockQtyText {
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
 }
 
 .stockQtyLow {
-  font-weight: 700;
+  font-weight: 500;
   color: #DC2626;
 }
 

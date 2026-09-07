@@ -72,7 +72,7 @@
 
 .pageTitle {
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #0F172A;
   margin: 0;
   letter-spacing: -0.01em;
@@ -113,7 +113,7 @@
 
 .sectionTitle {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #0F172A;
   margin: 0;
 }
@@ -135,7 +135,7 @@
 
 .fieldLabel {
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #1E293B;
   margin: 0;
 }
@@ -318,7 +318,7 @@
 
 .itemInStockLabel {
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #EA580C;
 }
 
@@ -330,7 +330,7 @@
   border-radius: 6px;
   text-align: center;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #0F172A;
   outline: none;
 }
@@ -402,7 +402,7 @@
 
 .subSectionTitle {
   font-size: 0.84rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #1E293B;
   margin: 0;
 }
@@ -472,7 +472,7 @@
   border: 1px dashed #FDBA74;
   color: #EA580C;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -578,7 +578,7 @@
 
 .uploadTitle {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #EA580C;
 }
 
@@ -598,7 +598,7 @@
 
 .cancelBtn {
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #64748B;
   text-decoration: none;
   padding: 10px 18px;
@@ -618,7 +618,7 @@
   padding: 12px 32px;
   border-radius: 8px;
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);

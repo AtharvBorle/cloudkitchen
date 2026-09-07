@@ -24,13 +24,13 @@ export interface NavItem {
 }
 
 export const SELLER_NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/dashboard/seller" },
-  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/dashboard/seller/orders" },
-  { id: "menu", label: "Menu", icon: BookOpen, href: "/dashboard/seller/menu" },
-  { id: "rooms", label: "Rooms", icon: Home, href: "/dashboard/seller/rooms" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
+  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
+  { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
+  { id: "rooms", label: "Rooms", icon: Home, href: "/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/dashboard/seller/bookings" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/dashboard/seller/delivery" },
-  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/dashboard/seller/payment" },
+  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/create-subscription-plan" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
 ];
 

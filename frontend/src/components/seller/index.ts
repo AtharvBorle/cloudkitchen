@@ -40,3 +40,11 @@ export type { SellerMenuProps } from "./seller-menu/SellerMenu";
 export { default as EditMenu } from "./edit-menu/EditMenu";
 export type { EditMenuProps } from "./edit-menu/EditMenu";
 
+export { default as SellerRooms } from "./seller-rooms/SellerRooms";
+export type { SellerRoomsProps } from "./seller-rooms/SellerRooms";
+
+export { default as CreateSubscriptionPlan } from "./create-subscription-plan/CreateSubscriptionPlan";
+export type { CreateSubscriptionPlanProps } from "./create-subscription-plan/CreateSubscriptionPlan";
+
+
+
