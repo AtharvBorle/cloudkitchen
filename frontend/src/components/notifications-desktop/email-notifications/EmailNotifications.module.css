@@ -108,3 +108,39 @@
 .toggleActive .toggleThumb {
   transform: translateX(20px);
 }
+
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 18px 16px;
+    border-radius: 18px;
+    margin-bottom: 16px;
+  }
+
+  .sectionHeading {
+    margin-bottom: 14px;
+    font-size: 0.8rem;
+  }
+
+  .optionRow {
+    padding: 12px 0;
+    gap: 12px;
+  }
+
+  .leftInfo {
+    gap: 12px;
+  }
+
+  .iconContainer {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .optionTitle {
+    font-size: 0.96rem;
+  }
+
+  .optionSubtitle {
+    font-size: 0.78rem;
+  }
+}
