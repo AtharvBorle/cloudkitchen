@@ -21,8 +21,10 @@ import {
   Shield,
   Check,
   ChevronRight,
+  Menu,
 } from "lucide-react";
 import styles from "./RestaurantMobileView.module.css";
+import { MobileSidebar } from "@/components/mobile-sidebar";
 import heroPhoto from "../foodherobanner/FoodHeroPhoto.jpg";
 import chefProfileImg from "../foodherobanner/chef-anjali-profile.png";
 import img1 from "../popularfood/pizza-margherita-classic.jpg";
@@ -52,6 +54,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   onAddItem,
 }) => {
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("premium");
   const [showAllPlans, setShowAllPlans] = useState<boolean>(true);
@@ -359,6 +362,13 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
   return (
     <div className={styles.mobileContainer}>
+      {/* Slide-out Mobile Sidebar Drawer for Website Navigation */}
+      <MobileSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        activeItem="Explore"
+      />
+
       {/* 1. Hero Food Spread Cover Image */}
       <div className={styles.heroWrapper}>
         <Image
@@ -371,16 +381,26 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         />
         <div className={styles.heroOverlay} />
 
-        {/* Floating Top Header Buttons */}
+        {/* Floating Top Header Buttons matching the website header */}
         <header className={styles.floatingHeader}>
-          <button
-            type="button"
-            className={styles.iconCircleBtn}
-            onClick={() => router.back()}
-            aria-label="Back"
-          >
-            <ChevronLeft size={20} strokeWidth={2.5} />
-          </button>
+          <div className={styles.floatingLeftBtns}>
+            <button
+              type="button"
+              className={styles.iconCircleBtn}
+              onClick={() => router.back()}
+              aria-label="Back"
+            >
+              <ChevronLeft size={20} strokeWidth={2.5} />
+            </button>
+            <button
+              type="button"
+              className={styles.iconCircleBtn}
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <Menu size={19} strokeWidth={2.4} />
+            </button>
+          </div>
 
           <div className={styles.floatingRightBtns}>
             <button
