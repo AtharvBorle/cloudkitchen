@@ -99,7 +99,12 @@ export const CloudKitchenReels: React.FC<CloudKitchenReelsProps> = ({
     if (onReelClick) {
       onReelClick(reel);
     } else {
-      router.push(`/restaurant/${reel.kitchenId || reel.id}`);
+      const target = reel.kitchenId || reel.id;
+      if (target.startsWith("SHOP-") || target.startsWith("shop-")) {
+        router.push(`/shop/${target}`);
+      } else {
+        router.push(`/restaurant/${target}`);
+      }
     }
   };
 

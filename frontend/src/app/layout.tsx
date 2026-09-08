@@ -30,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={poppins.variable}>
-      <body className={`${inter.className} ${poppins.className}`}>
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+      <body className={`${inter.className} ${poppins.className}`} suppressHydrationWarning>
         <Providers>
           <LocationProvider>
             <CartProvider>

@@ -21,6 +21,7 @@ export interface MealMomentItem {
   icon: StaticImageData | string;
   bgClass: string;
   kitchenId?: string;
+  categoryQuery?: string;
 }
 
 const DEFAULT_MOMENTS: MealMomentItem[] = [
@@ -108,8 +109,15 @@ export const WhatsOnYourMind: React.FC<WhatsOnYourMindProps> = ({
   const handleCardClick = (moment: MealMomentItem) => {
     if (onMomentClick) {
       onMomentClick(moment);
+    } else if (moment.categoryQuery) {
+      router.push(`/explore-desktop?category=${encodeURIComponent(moment.categoryQuery.toLowerCase())}`);
     } else {
-      router.push(`/restaurant/${moment.kitchenId || "7-12-kitchen"}`);
+      const target = moment.kitchenId || "7-12-kitchen";
+      if (target.startsWith("SHOP-") || target.startsWith("shop-")) {
+        router.push(`/shop/${target}`);
+      } else {
+        router.push(`/restaurant/${target}`);
+      }
     }
   };
 

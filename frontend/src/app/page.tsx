@@ -32,10 +32,19 @@ export default function Home() {
     }));
   }, [homeData.categories]);
 
-  // Dynamic Kitchens / Places with fallback
+  // Dynamic Kitchens / Places with fallback (and category filtering)
   const dynamicPlaces = useMemo(() => {
     if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
-    return homeData.kitchens.map((k) => ({
+    let list = homeData.kitchens;
+    if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
+      const catLower = selectedCategory.toLowerCase();
+      const filtered = list.filter((k) =>
+        k.category?.toLowerCase().includes(catLower) ||
+        k.foodType?.toLowerCase().includes(catLower)
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+    return list.map((k) => ({
       id: k.id,
       name: k.name,
       rating: k.rating,
@@ -46,12 +55,21 @@ export default function Home() {
       trackingId: k.trackingId,
       locality: k.locality,
     }));
-  }, [homeData.kitchens]);
+  }, [homeData.kitchens, selectedCategory]);
 
   // Dynamic Offers for PopularOrders with fallback
   const dynamicOffers = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    return homeData.foodItems.slice(0, 4).map((f, idx) => ({
+    let list = homeData.foodItems;
+    if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
+      const catLower = selectedCategory.toLowerCase();
+      const filtered = list.filter((f) =>
+        f.categoryName?.toLowerCase().includes(catLower) ||
+        f.name.toLowerCase().includes(catLower)
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+    return list.slice(0, 4).map((f, idx) => ({
       id: f.id,
       discount: idx % 2 === 0 ? "25% OFF" : "30% OFF",
       title: f.name,
@@ -59,12 +77,21 @@ export default function Home() {
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
     }));
-  }, [homeData.foodItems]);
+  }, [homeData.foodItems, selectedCategory]);
 
   // Dynamic Dishes for BestPlaces with fallback
   const dynamicDishes = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    return homeData.foodItems.slice(0, 4).map((f) => ({
+    let list = homeData.foodItems;
+    if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
+      const catLower = selectedCategory.toLowerCase();
+      const filtered = list.filter((f) =>
+        f.categoryName?.toLowerCase().includes(catLower) ||
+        f.name.toLowerCase().includes(catLower)
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+    return list.slice(0, 4).map((f) => ({
       id: f.id,
       name: f.name,
       rating: f.rating || 4.8,
@@ -72,12 +99,21 @@ export default function Home() {
       imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
     }));
-  }, [homeData.foodItems]);
+  }, [homeData.foodItems, selectedCategory]);
 
   // Dynamic Top Rated Items for DashboardBody with fallback
   const dynamicTopRated = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    return homeData.foodItems.slice(0, 6).map((f) => ({
+    let list = homeData.foodItems;
+    if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
+      const catLower = selectedCategory.toLowerCase();
+      const filtered = list.filter((f) =>
+        f.categoryName?.toLowerCase().includes(catLower) ||
+        f.name.toLowerCase().includes(catLower)
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+    return list.slice(0, 6).map((f) => ({
       id: f.id,
       name: f.name,
       rating: f.rating || 4.9,
@@ -87,7 +123,7 @@ export default function Home() {
       imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
     }));
-  }, [homeData.foodItems]);
+  }, [homeData.foodItems, selectedCategory]);
 
   // Dynamic Promo Banner with fallback
   const promoProps = useMemo(() => {

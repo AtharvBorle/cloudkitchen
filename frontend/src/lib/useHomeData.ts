@@ -116,26 +116,59 @@ export function useHomeData(): HomeDataState {
 
         if (!isMounted) return;
 
+        const CATEGORY_IMAGE_MAP: Record<string, string> = {
+          food: "/images/categories/cat-food.png",
+          mess: "/images/categories/cat-mess.png",
+          bakery: "/images/categories/cat-backery.png",
+          "home meals": "/images/categories/cat-homemeals.png",
+          homemeals: "/images/categories/cat-homemeals.png",
+          healthy: "/images/categories/cat-healthy.png",
+          snacks: "/images/categories/cat-snacks.png",
+          desserts: "/images/categories/cat-deserts.png",
+          dessert: "/images/categories/cat-deserts.png",
+          drink: "/images/categories/cat-drink.png",
+          drinks: "/images/categories/cat-drink.png",
+          rooms: "/images/categories/cat-rooms.png",
+        };
+
         const dbCategories: DynamicCategory[] = [];
+        
+        // 1. Food is always first
+        dbCategories.push({
+          id: "food",
+          name: "Food",
+          image: "/images/categories/cat-food.png",
+          emoji: "🍔",
+          route: "/explore-desktop",
+        });
+
         if (exploreRes?.foodCategories && Array.isArray(exploreRes.foodCategories)) {
           exploreRes.foodCategories.forEach((fc: any) => {
-            dbCategories.push({
-              id: fc.id,
-              name: fc.name,
-              image: fc.imageUrl || '/images/categories/cat-food.png',
-              emoji: '🍽️',
-              route: '/explore-desktop?category=' + encodeURIComponent(fc.name.toLowerCase()),
-            });
+            const lower = (fc.name || "").toLowerCase().trim();
+            if (lower && lower !== "food" && lower !== "rooms") {
+              const mappedImage = CATEGORY_IMAGE_MAP[lower] || fc.imageUrl || "/images/categories/cat-food.png";
+              dbCategories.push({
+                id: fc.id || lower,
+                name: fc.name,
+                image: mappedImage,
+                emoji: "🍽️",
+                route: "/explore-desktop?category=" + encodeURIComponent(lower),
+              });
+            }
           });
         } else if (categoriesRes?.categories && Array.isArray(categoriesRes.categories)) {
           categoriesRes.categories.forEach((cat: any) => {
-            dbCategories.push({
-              id: cat.id,
-              name: cat.name,
-              image: '/images/categories/cat-food.png',
-              emoji: '🍲',
-              route: '/explore-desktop?category=' + encodeURIComponent(cat.name.toLowerCase()),
-            });
+            const lower = (cat.name || "").toLowerCase().trim();
+            if (lower && lower !== "food" && lower !== "rooms") {
+              const mappedImage = CATEGORY_IMAGE_MAP[lower] || "/images/categories/cat-food.png";
+              dbCategories.push({
+                id: cat.id || lower,
+                name: cat.name,
+                image: mappedImage,
+                emoji: "🍲",
+                route: "/explore-desktop?category=" + encodeURIComponent(lower),
+              });
+            }
           });
         }
         setCategories(dbCategories);

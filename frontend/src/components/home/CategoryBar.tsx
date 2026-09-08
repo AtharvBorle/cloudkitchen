@@ -43,14 +43,22 @@ export default function CategoryBar({
   // Use dynamic items if provided and not empty, otherwise fallback to CATEGORIES
   const displayCategories: CategoryItem[] = React.useMemo(() => {
     if (items && items.length > 0) {
+      const hasFood = items.some((c) => c.id === "food" || c.name.toLowerCase() === "food");
       const hasRooms = items.some((c) => c.id === "rooms" || c.name.toLowerCase() === "rooms");
+      let list = [...items];
+      if (!hasFood) {
+        list = [
+          { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore-desktop" },
+          ...list,
+        ];
+      }
       if (!hasRooms) {
-        return [
-          ...items,
+        list = [
+          ...list,
           { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/room-booking" }
         ];
       }
-      return items;
+      return list;
     }
     return CATEGORIES;
   }, [items]);
@@ -64,6 +72,10 @@ export default function CategoryBar({
 
   const handleItemClick = (cat: CategoryItem) => {
     setSelectedId(cat.id);
+    if (cat.id === "rooms" || cat.name.toLowerCase() === "rooms") {
+      router.push("/room-booking");
+      return;
+    }
     if (onSelectCategory) {
       onSelectCategory(cat.id);
     } else {

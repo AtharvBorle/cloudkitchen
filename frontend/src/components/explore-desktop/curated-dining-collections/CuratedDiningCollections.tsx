@@ -114,7 +114,12 @@ export const CuratedDiningCollections: React.FC<CuratedDiningCollectionsProps> =
     if (onCardClick) {
       onCardClick(item);
     } else {
-      router.push(`/restaurant/${item.kitchenId || item.id}`);
+      const target = item.kitchenId || item.id;
+      if (target.startsWith("SHOP-") || target.startsWith("shop-")) {
+        router.push(`/shop/${target}`);
+      } else {
+        router.push(`/restaurant/${target}`);
+      }
     }
   };
 
