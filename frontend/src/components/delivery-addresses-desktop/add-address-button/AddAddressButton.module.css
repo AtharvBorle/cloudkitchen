@@ -30,3 +30,18 @@
 .plusIcon {
   color: #ffffff;
 }
+
+@media (max-width: 768px) {
+  .buttonWrapper {
+    justify-content: stretch;
+    margin-top: 14px;
+  }
+
+  .addButton {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 20px;
+    font-size: 0.95rem;
+    border-radius: 14px;
+  }
+}

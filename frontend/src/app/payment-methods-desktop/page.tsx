@@ -9,22 +9,28 @@ import { UpiIds } from "@/components/payment-methods-desktop/upi-ids";
 import { OtherPaymentMethods } from "@/components/payment-methods-desktop/other-payment-methods";
 import { AddPaymentButton } from "@/components/payment-methods-desktop/add-payment-button";
 
+import styles from "./PaymentMethodsPage.module.css";
+
 export default function PaymentMethodsDesktopPage() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
+    <div className={styles.pageWrapper}>
       {/* 1. Shared Desktop Navbar with Settings Active */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Settings"
-      />
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Settings"
+        />
+      </div>
 
-      <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "32px 32px 64px 32px", boxSizing: "border-box", flex: 1 }}>
-        <div style={{ display: "flex", gap: "32px", alignItems: "flex-start" }}>
+      <main className={styles.mainContainer}>
+        <div className={styles.layoutRow}>
           {/* Left Column: Shared Profile Sidebar with Payment Methods Active */}
-          <SettingsSidebar activeTabId="payment-methods" />
+          <div className={styles.sidebarWrapper}>
+            <SettingsSidebar activeTabId="payment-methods" />
+          </div>
 
           {/* Right Column: Payment Methods Content Sections */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className={styles.contentWrapper}>
             {/* 2. Payment Methods Header */}
             <PaymentHeader />
 
