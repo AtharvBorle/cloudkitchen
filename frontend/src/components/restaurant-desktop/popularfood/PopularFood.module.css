@@ -211,3 +211,52 @@
 .addBtn:active {
   transform: scale(0.96);
 }
+
+/* ================= STEPPER (- 1 +) CONTROLS ================= */
+.stepperContainer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border: 1.5px solid #ea580c;
+  border-radius: 9999px;
+  overflow: hidden;
+  height: 32px;
+  min-width: 96px;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.15);
+  box-sizing: border-box;
+}
+
+.stepperBtn {
+  background: transparent;
+  border: none;
+  color: #ea580c;
+  width: 30px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  padding: 0;
+  outline: none;
+}
+
+.stepperBtn:hover {
+  background-color: #ea580c;
+  color: #ffffff;
+}
+
+.stepperBtn:active {
+  transform: scale(0.92);
+}
+
+.stepperCount {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #ea580c;
+  min-width: 24px;
+  text-align: center;
+  user-select: none;
+}
+

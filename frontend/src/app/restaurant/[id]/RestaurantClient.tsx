@@ -94,6 +94,10 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     });
   };
 
+  const handleDecreaseItem = (itemId: string) => {
+    decreaseQuantity(itemId);
+  };
+
   const displayedItems = isVegOnly
     ? kitchenData.items.filter((item) => item.isVeg !== false)
     : kitchenData.items;
@@ -128,6 +132,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             defaultActiveCategory={kitchenData.defaultActiveCategory}
             items={displayedItems}
             onAddItem={handleAddItem}
+            onDecreaseItem={handleDecreaseItem}
           />
         </main>
       </div>
@@ -139,6 +144,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           isVegOnly={isVegOnly}
           onVegToggle={(veg) => setIsVegOnly(veg)}
           onAddItem={handleAddItem}
+          onDecreaseItem={handleDecreaseItem}
         />
       </div>
     </div>
