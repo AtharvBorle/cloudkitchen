@@ -94,10 +94,13 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   const handleBackClick = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
       router.push("/seller/res/menu");
     }
   };
+
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

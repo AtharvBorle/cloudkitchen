@@ -33,9 +33,10 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
   { id: "rooms", label: "Rooms Config", icon: Home, href: "/seller/res/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/res/booking" },
   { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/res/delivery" },
-  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
-  { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/profile" },
+  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/res/subscription" },
+  { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/res/profile" },
 ];
+
 
 export interface ResponsiveNavMenuProps {
   isOpen: boolean;
@@ -134,16 +135,21 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
     }
     if (item.id === "subscription") {
       return (
+        pathname === "/seller/res/subscription" ||
+        pathname?.startsWith("/seller/res/subscription") ||
         pathname?.startsWith("/dashboard/seller/payment") ||
         pathname?.startsWith("/seller/subscription")
       );
     }
     if (item.id === "profile") {
       return (
+        pathname === "/seller/res/profile" ||
+        pathname?.startsWith("/seller/res/profile") ||
         pathname?.startsWith("/seller/profile") ||
         pathname?.startsWith("/dashboard/seller/profile")
       );
     }
+
     return Boolean(pathname?.startsWith(item.href));
   };
 

@@ -20,4 +20,6 @@ export type { ManageSubscriptionCanvasDasProps } from "./ManageSubscriptionCanva
 export { default as CreateSubscriptionPlan } from "../create-subscription-plan/CreateSubscriptionPlan";
 export type { CreateSubscriptionPlanProps, PlanFeature } from "../create-subscription-plan/CreateSubscriptionPlan";
 
+export * from "./responsive";
+
 export { default } from "./ManageSubscriptionCanvasDas";

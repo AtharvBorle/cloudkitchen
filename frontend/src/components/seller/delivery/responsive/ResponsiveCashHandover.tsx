@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Check } from "lucide-react";
+import { ChevronLeft, Check, CheckCircle2, AlertTriangle } from "lucide-react";
 import styles from "./ResponsiveCashHandover.module.css";
 
 export interface CashOrderLine {
@@ -28,20 +28,20 @@ const DEFAULT_ORDERS: CashOrderLine[] = [
     id: "1",
     orderNumber: "#1234",
     customerName: "Priya Mehta",
-    amount: "\u20B9850",
+    amount: "₹850",
   },
   {
     id: "2",
     orderNumber: "#1235",
     customerName: "Rahul Verma",
-    amount: "\u20B9850",
+    amount: "₹850",
   },
 ];
 
 export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
   riderName = "Rahul Kumar",
   riderInitials = "RK",
-  totalCash = "\u20B91,700",
+  totalCash = "₹1,700",
   ordersCount = 3,
   orders = DEFAULT_ORDERS,
   onConfirmReceipt,
@@ -50,12 +50,23 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
 }) => {
   const router = useRouter();
   const [isChecked, setIsChecked] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
 
   const handleBack = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
-      router.push("/seller/res/delivery");
+      router.push("/seller/res/delivery/riders");
     }
   };
 
@@ -64,7 +75,10 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     if (onConfirmReceipt) {
       onConfirmReceipt();
     } else {
-      router.push("/seller/res/delivery");
+      showToast(`Receipt of ${totalCash} confirmed successfully!`);
+      setTimeout(() => {
+        router.push("/seller/res/delivery");
+      }, 1000);
     }
   };
 
@@ -72,13 +86,13 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     if (onReportDiscrepancy) {
       onReportDiscrepancy();
     } else {
-      router.push("/dashboard/support");
+      setIsReporting(true);
     }
   };
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 390px Mobile View Container */}
+      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header Bar */}
         <header className={styles.topBar}>
@@ -89,7 +103,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
             aria-label="Back"
             title="Back"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
 
           <h1 className={styles.headerTitle}>Cash Handover</h1>
@@ -115,13 +129,15 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
           </section>
 
           {/* Orders Breakdown */}
-          <section>
+          <section className={styles.breakdownSection}>
             <h4 className={styles.sectionLabel}>ORDERS BREAKDOWN</h4>
             <div className={styles.breakdownList}>
               {orders.map((order) => (
                 <div key={order.id} className={styles.breakdownRow}>
                   <span className={styles.orderText}>
-                    {order.orderNumber} · {order.customerName}
+                    <strong className={styles.orderNum}>{order.orderNumber}</strong>
+                    <span className={styles.orderDot}>•</span>
+                    <span className={styles.orderCust}>{order.customerName}</span>
                   </span>
                   <span className={styles.orderAmount}>{order.amount}</span>
                 </div>
@@ -147,7 +163,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
                 !isChecked ? styles.checkboxBoxUnchecked : ""
               }`}
             >
-              {isChecked && <Check size={14} strokeWidth={3} />}
+              {isChecked && <Check size={14} strokeWidth={3.2} />}
             </div>
             <span className={styles.checkboxLabel}>
               I confirm I have received {totalCash} in cash
@@ -173,6 +189,54 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
             Report discrepancy
           </button>
         </main>
+
+        {/* Report Discrepancy Modal */}
+        {isReporting && (
+          <div
+            className={styles.modalOverlay}
+            onClick={() => setIsReporting(false)}
+          >
+            <div
+              className={styles.modalCard}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.modalHeader}>
+                <AlertTriangle size={24} color="#EF4444" />
+                <h3 className={styles.modalTitle}>Report Discrepancy</h3>
+              </div>
+              <p className={styles.modalText}>
+                Are you noticing a mismatch in cash collected vs expected amount for {riderName}?
+              </p>
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.modalCancelBtn}
+                  onClick={() => setIsReporting(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.modalReportBtn}
+                  onClick={() => {
+                    setIsReporting(false);
+                    showToast("Discrepancy reported to operations desk.");
+                  }}
+                >
+                  Submit Report
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className={styles.toastNotification}>
+            <CheckCircle2 size={18} color="#10B981" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, Trash2, Edit2, Plus } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, Trash2, Edit2, Plus, ChevronLeft } from "lucide-react";
+
 
 export interface PlanFeatureItem {
   id: string;
@@ -271,7 +273,20 @@ export default function SubscriptionEditCanvas({
             fontWeight: 500,
           }}
         >
-          <span>Subscriptions</span>
+          <Link
+            href="/seller/res/subscription"
+            style={{
+              color: "#334155",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              fontWeight: 600,
+            }}
+          >
+            <ChevronLeft size={15} />
+            <span>Subscriptions</span>
+          </Link>
           <span style={{ color: "#94A3B8" }}>&gt;</span>
           <span>Plans</span>
           <span style={{ color: "#94A3B8" }}>&gt;</span>
@@ -279,6 +294,7 @@ export default function SubscriptionEditCanvas({
             Edit Plan #{formData.metadata.planId}
           </span>
         </div>
+
 
         {/* Title + Badge Row */}
         <div

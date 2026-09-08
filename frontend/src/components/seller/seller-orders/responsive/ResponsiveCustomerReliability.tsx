@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Search, Star, Calendar } from "lucide-react";
+import { ChevronLeft, Search, Star, Calendar, CheckCircle2 } from "lucide-react";
 import styles from "./ResponsiveCustomerReliability.module.css";
 
 export interface CustomerReliabilityMetrics {
@@ -35,7 +35,7 @@ const DEFAULT_METRICS: CustomerReliabilityMetrics = {
   cancelled: 2,
   noShows: 0,
   completionRate: "94%",
-  avgOrderValue: "\u20B9780",
+  avgOrderValue: "₹780",
   rating: "4.8",
   customerSince: "Sep 2024",
 };
@@ -48,76 +48,99 @@ export const ResponsiveCustomerReliability: React.FC<
   customerName = "Priya Mehta",
   paymentType = "Prepaid",
   itemCount = 3,
-  orderTotal = "\u20B9850",
+  orderTotal = "₹850",
   metrics = DEFAULT_METRICS,
   onAccept,
   onDecline,
   onBack,
 }) => {
   const router = useRouter();
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
 
   const handleBack = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
       router.push("/seller/res/orders");
     }
   };
 
   const handleAcceptClick = () => {
+    showToast(`Order ${orderId} accepted!`);
     if (onAccept) {
       onAccept();
     } else {
-      router.push("/seller/res/orders/assign-rider");
+      setTimeout(() => {
+        router.push("/seller/res/orders/assign-rider");
+      }, 800);
     }
   };
 
   const handleDeclineClick = () => {
+    showToast(`Order ${orderId} declined.`);
     if (onDecline) {
       onDecline();
     } else {
-      router.push("/seller/res/orders");
+      setTimeout(() => {
+        router.push("/seller/res/orders");
+      }, 800);
     }
   };
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 390px Mobile View Container */}
+      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
-        {/* Background Orders Layer */}
+        {/* Background Orders Screen */}
         <div className={styles.backgroundScreen}>
           <header className={styles.topBar}>
             <button
               type="button"
+              className={styles.backButton}
               onClick={handleBack}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              aria-label="Back"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={22} strokeWidth={2.5} />
             </button>
             <h1 className={styles.pageTitle}>Orders</h1>
-            <Search size={20} color="#64748B" />
+            <div className={styles.searchButton}>
+              <Search size={20} color="#0F172A" />
+            </div>
           </header>
 
           <div className={styles.filterTabs}>
             <span className={`${styles.tabPill} ${styles.tabPillActive}`}>
-              New · 2
+              New • 2
             </span>
             <span className={styles.tabPill}>Preparing</span>
             <span className={styles.tabPill}>Out</span>
           </div>
 
           <div className={styles.orderCardBack}>
-            <div>
-              <div className={styles.orderIdText}>
-                {orderId} · {timeAgo}
+            <div className={styles.cardBackLeft}>
+              <div className={styles.cardBackMeta}>
+                {orderId} • {timeAgo}
               </div>
-              <div className={styles.customerName}>{customerName}</div>
-              <div className={styles.orderSubtitle}>
-                {itemCount} items · {orderTotal}
+              <div className={styles.cardBackName}>{customerName}</div>
+              <div className={styles.cardBackDetails}>
+                {itemCount} items • {orderTotal}
               </div>
             </div>
+            <ChevronLeft size={20} className={styles.cardBackChevron} />
           </div>
         </div>
+
+        {/* Modal Backdrop Layer */}
+        <div className={styles.sheetBackdrop} onClick={handleBack} />
 
         {/* Bottom Sheet / Reliability Card */}
         <section className={styles.bottomSheet}>
@@ -127,22 +150,22 @@ export const ResponsiveCustomerReliability: React.FC<
           <div className={styles.orderMetaRow}>
             <div className={styles.orderMetaLeft}>
               <span className={styles.orderIdText}>
-                {orderId} · {timeAgo}
+                {orderId} • {timeAgo}
               </span>
               <h2 className={styles.customerName}>{customerName}</h2>
               <p className={styles.orderSubtitle}>
-                {itemCount} items · {orderTotal}
+                {itemCount} items • {orderTotal}
               </p>
             </div>
 
             <span className={styles.prepaidBadge}>{paymentType}</span>
           </div>
 
-          {/* Customer Reliability Header */}
+          {/* Customer Reliability Section */}
           <div className={styles.reliabilityHeader}>
             <h3 className={styles.reliabilityTitle}>Customer Reliability</h3>
             <div className={styles.ratingBadge}>
-              <Star size={16} className={styles.starIcon} />
+              <Star size={16} className={styles.starIcon} fill="#F97316" color="#F97316" />
               <span>{metrics.rating}</span>
             </div>
           </div>
@@ -186,7 +209,7 @@ export const ResponsiveCustomerReliability: React.FC<
 
           {/* Customer Since */}
           <div className={styles.customerSince}>
-            <Calendar size={14} />
+            <Calendar size={14} color="#64748B" />
             <span>Customer since {metrics.customerSince}</span>
           </div>
 
@@ -209,6 +232,14 @@ export const ResponsiveCustomerReliability: React.FC<
             </button>
           </div>
         </section>
+
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className={styles.toastNotification}>
+            <CheckCircle2 size={18} color="#10B981" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     </div>
   );

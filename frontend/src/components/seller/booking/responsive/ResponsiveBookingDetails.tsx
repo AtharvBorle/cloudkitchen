@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -69,10 +69,13 @@ export const ResponsiveBookingDetails: React.FC<
   const handleBackClick = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
       router.push("/seller/res/booking");
     }
   };
+
 
   const handleConfirm = () => {
     if (onConfirm) {

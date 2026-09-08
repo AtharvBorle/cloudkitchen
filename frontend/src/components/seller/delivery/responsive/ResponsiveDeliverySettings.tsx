@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, CheckCircle2 } from "lucide-react";
 import styles from "./ResponsiveDeliverySettings.module.css";
 
 export interface DeliverySettingsData {
@@ -24,10 +24,10 @@ export interface ResponsiveDeliverySettingsProps {
 const DEFAULT_SETTINGS: DeliverySettingsData = {
   enableDelivery: true,
   deliveryRadiusKm: 5,
-  deliveryFee: "\u20B940",
+  deliveryFee: "₹40",
   enableFreeDelivery: true,
-  freeDeliveryMinOrder: "\u20B9500",
-  riderCommission: "\u20B920 per delivery",
+  freeDeliveryMinOrder: "₹500",
+  riderCommission: "₹20 per delivery",
   enableCod: true,
 };
 
@@ -35,6 +35,7 @@ export const ResponsiveDeliverySettings: React.FC<
   ResponsiveDeliverySettingsProps
 > = ({ initialSettings = DEFAULT_SETTINGS, onSave, onBack }) => {
   const router = useRouter();
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [enableDelivery, setEnableDelivery] = useState(
     initialSettings.enableDelivery ?? true
@@ -43,22 +44,31 @@ export const ResponsiveDeliverySettings: React.FC<
     initialSettings.deliveryRadiusKm ?? 5
   );
   const [deliveryFee, setDeliveryFee] = useState(
-    initialSettings.deliveryFee ?? "\u20B940"
+    initialSettings.deliveryFee ?? "₹40"
   );
   const [enableFreeDelivery, setEnableFreeDelivery] = useState(
     initialSettings.enableFreeDelivery ?? true
   );
   const [freeDeliveryMinOrder, setFreeDeliveryMinOrder] = useState(
-    initialSettings.freeDeliveryMinOrder ?? "\u20B9500"
+    initialSettings.freeDeliveryMinOrder ?? "₹500"
   );
   const [riderCommission, setRiderCommission] = useState(
-    initialSettings.riderCommission ?? "\u20B920 per delivery"
+    initialSettings.riderCommission ?? "₹20 per delivery"
   );
   const [enableCod, setEnableCod] = useState(initialSettings.enableCod ?? true);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
 
   const handleBack = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
       router.push("/seller/res/delivery");
     }
@@ -79,13 +89,16 @@ export const ResponsiveDeliverySettings: React.FC<
     if (onSave) {
       onSave(data);
     } else {
-      router.push("/seller/res/delivery");
+      showToast("Delivery settings saved successfully!");
+      setTimeout(() => {
+        router.push("/seller/res/delivery");
+      }, 900);
     }
   };
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 390px Mobile View Container */}
+      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header Bar */}
         <header className={styles.topBar}>
@@ -96,7 +109,7 @@ export const ResponsiveDeliverySettings: React.FC<
             aria-label="Back"
             title="Back"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
 
           <h1 className={styles.headerTitle}>Delivery Settings</h1>
@@ -154,7 +167,7 @@ export const ResponsiveDeliverySettings: React.FC<
           {/* 4. Free Delivery Card */}
           <div className={styles.settingCard}>
             <div className={styles.cardHeaderRow}>
-              <span className={styles.settingTitle}>FREE DELIVERY</span>
+              <span className={styles.settingTitleUpper}>FREE DELIVERY</span>
               <button
                 type="button"
                 role="switch"
@@ -195,7 +208,7 @@ export const ResponsiveDeliverySettings: React.FC<
           {/* 6. COD Settings Card */}
           <div className={styles.settingCard}>
             <div className={styles.cardHeaderRow}>
-              <span className={styles.settingTitle}>COD SETTINGS</span>
+              <span className={styles.settingTitleUpper}>COD SETTINGS</span>
               <button
                 type="button"
                 role="switch"
@@ -219,6 +232,14 @@ export const ResponsiveDeliverySettings: React.FC<
             Save Settings
           </button>
         </form>
+
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className={styles.toastNotification}>
+            <CheckCircle2 size={18} color="#10B981" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     </div>
   );
