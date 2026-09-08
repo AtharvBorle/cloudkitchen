@@ -42,6 +42,7 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
       onSearch(searchQuery, selectedLocation);
     } else {
       const params = new URLSearchParams();
+      if (searchQuery.trim()) params.set("query", searchQuery.trim());
       if (selectedLocation) params.set("location", selectedLocation);
       router.push(`/explore-desktop?${params.toString()}`);
     }

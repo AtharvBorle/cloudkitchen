@@ -57,8 +57,10 @@ interface BestPlacesProps {
 export default function BestPlaces({
   title = "Popular Dishes",
   seeAllLink = "/explore-desktop",
-  dishes = POPULAR_DISHES,
+  dishes,
 }: BestPlacesProps) {
+  const displayDishes = dishes && dishes.length > 0 ? dishes : POPULAR_DISHES;
+
   return (
     <section
       style={{
@@ -123,7 +125,7 @@ export default function BestPlaces({
           }}
           className="popular-dishes-grid"
         >
-          {dishes.map((dish) => (
+          {displayDishes.map((dish) => (
             <Link
               key={dish.id}
               href={dish.link || "/explore-desktop"}

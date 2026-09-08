@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Navbar from "@/components/navbar";
 import {
   HeroSection,
@@ -13,10 +13,94 @@ import {
   DashboardBody,
 } from "@/components/home";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
+import { useHomeData } from "@/lib/useHomeData";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
   const [selectedFilter, setSelectedFilter] = useState("fastest");
+  const homeData = useHomeData();
+
+  // Dynamic Categories with fallback
+  const categoryItems = useMemo(() => {
+    if (!homeData.categories || homeData.categories.length === 0) return undefined;
+    return homeData.categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      image: c.image || "/images/categories/cat-food.png",
+      emoji: c.emoji || "🍽️",
+      route: c.route,
+    }));
+  }, [homeData.categories]);
+
+  // Dynamic Kitchens / Places with fallback
+  const dynamicPlaces = useMemo(() => {
+    if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
+    return homeData.kitchens.map((k) => ({
+      id: k.id,
+      name: k.name,
+      rating: k.rating,
+      time: k.time,
+      imageUrl: k.imageUrl,
+      category: k.category,
+      kitchenId: k.trackingId || k.id,
+      trackingId: k.trackingId,
+      locality: k.locality,
+    }));
+  }, [homeData.kitchens]);
+
+  // Dynamic Offers for PopularOrders with fallback
+  const dynamicOffers = useMemo(() => {
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    return homeData.foodItems.slice(0, 4).map((f, idx) => ({
+      id: f.id,
+      discount: idx % 2 === 0 ? "25% OFF" : "30% OFF",
+      title: f.name,
+      code: `Use code: FOOD${idx + 1}0`,
+      imageUrl: f.imageUrl || "/images/places/place-biryani.png",
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
+    }));
+  }, [homeData.foodItems]);
+
+  // Dynamic Dishes for BestPlaces with fallback
+  const dynamicDishes = useMemo(() => {
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    return homeData.foodItems.slice(0, 4).map((f) => ({
+      id: f.id,
+      name: f.name,
+      rating: f.rating || 4.8,
+      time: f.deliveryTime || "20-30 min",
+      imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
+    }));
+  }, [homeData.foodItems]);
+
+  // Dynamic Top Rated Items for DashboardBody with fallback
+  const dynamicTopRated = useMemo(() => {
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    return homeData.foodItems.slice(0, 6).map((f) => ({
+      id: f.id,
+      name: f.name,
+      rating: f.rating || 4.9,
+      category: f.categoryName || (f.itemType === "VEG" ? "Pure Veg" : "Non-Veg Special"),
+      price: f.price || 199,
+      time: f.deliveryTime || "20-30 min",
+      imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
+    }));
+  }, [homeData.foodItems]);
+
+  // Dynamic Promo Banner with fallback
+  const promoProps = useMemo(() => {
+    if (homeData.coupons && homeData.coupons.length > 0) {
+      const cp = homeData.coupons[0];
+      return {
+        code: cp.code,
+        titleHighlight: cp.discountPercentage ? `${cp.discountPercentage}% OFF` : `FLAT ₹${cp.discountAmount} OFF`,
+        description: cp.description || "Kickstart your meal plan with premium ingredients & fast delivery.",
+      };
+    }
+    return {};
+  }, [homeData.coupons]);
 
   return (
     <div
@@ -55,10 +139,11 @@ export default function Home() {
         <CategoryBar
           activeCategoryId={selectedCategory}
           onSelectCategory={(id) => setSelectedCategory(id)}
+          items={categoryItems}
         />
 
         {/* 3. Promo Banner Row (New Full-Width Single Banner) */}
-        <PromoRow2 />
+        <PromoRow2 {...promoProps} />
 
         {/* 4. Filter Row */}
         <FilterRow
@@ -67,16 +152,16 @@ export default function Home() {
         />
 
         {/* 5. Properties / Best Places Nearby */}
-        <Properties />
+        <Properties places={dynamicPlaces} />
 
         {/* 6. Popular Orders / Today's Special Offers */}
-        <PopularOrders />
+        <PopularOrders offers={dynamicOffers} />
 
         {/* 7. Best Places / Popular Dishes */}
-        <BestPlaces />
+        <BestPlaces dishes={dynamicDishes} />
 
         {/* 8. Dashboard Body / Top Rated */}
-        <DashboardBody />
+        <DashboardBody items={dynamicTopRated} />
       </main>
 
       <style jsx>{`

@@ -28,15 +28,32 @@ const CATEGORIES: CategoryItem[] = [
 interface CategoryBarProps {
   activeCategoryId?: string;
   onSelectCategory?: (id: string) => void;
+  items?: CategoryItem[];
 }
 
 export default function CategoryBar({
   activeCategoryId = "food",
   onSelectCategory,
+  items,
 }: CategoryBarProps) {
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string>(activeCategoryId);
+
+  // Use dynamic items if provided and not empty, otherwise fallback to CATEGORIES
+  const displayCategories: CategoryItem[] = React.useMemo(() => {
+    if (items && items.length > 0) {
+      const hasRooms = items.some((c) => c.id === "rooms" || c.name.toLowerCase() === "rooms");
+      if (!hasRooms) {
+        return [
+          ...items,
+          { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/room-booking" }
+        ];
+      }
+      return items;
+    }
+    return CATEGORIES;
+  }, [items]);
 
   const handleScroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
@@ -97,7 +114,7 @@ export default function CategoryBar({
           }}
           className="hide-scrollbar"
         >
-          {CATEGORIES.map((cat) => {
+          {displayCategories.map((cat) => {
             const isSelected = selectedId === cat.id;
 
             return (

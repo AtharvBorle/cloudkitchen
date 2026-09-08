@@ -87,8 +87,10 @@ interface DashboardBodyProps {
 export default function DashboardBody({
   title = "Top Rated",
   seeAllLink = "/explore-desktop?sort=top_rated",
-  items = TOP_RATED_ITEMS,
+  items,
 }: DashboardBodyProps) {
+  const displayItems = items && items.length > 0 ? items : TOP_RATED_ITEMS;
+
   return (
     <section
       style={{
@@ -154,7 +156,7 @@ export default function DashboardBody({
           }}
           className="top-rated-grid"
         >
-          {items.map((item) => (
+          {displayItems.map((item) => (
             <div
               key={item.id}
               style={{

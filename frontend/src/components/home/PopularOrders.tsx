@@ -57,8 +57,10 @@ interface PopularOrdersProps {
 export default function PopularOrders({
   title = "Today's Special Offers",
   seeAllLink = "/explore-desktop?offers=true",
-  offers = OFFERS,
+  offers,
 }: PopularOrdersProps) {
+  const displayOffers = offers && offers.length > 0 ? offers : OFFERS;
+
   return (
     <section
       style={{
@@ -123,7 +125,7 @@ export default function PopularOrders({
           }}
           className="offers-grid-layout"
         >
-          {offers.map((offer) => (
+          {displayOffers.map((offer) => (
             <div
               key={offer.id}
               style={{

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Star, Check } from "lucide-react";
 import Link from "next/link";
 
-interface PlaceCardData {
+export interface PlaceCardData {
   id: string;
   name: string;
   rating: number;
@@ -13,9 +13,11 @@ interface PlaceCardData {
   imageUrl: string;
   category: string;
   kitchenId?: string;
+  trackingId?: string;
+  locality?: string;
 }
 
-const SAMPLE_PLACES: PlaceCardData[] = [
+export const SAMPLE_PLACES: PlaceCardData[] = [
   // Row 1
   {
     id: "1",
@@ -139,7 +141,11 @@ const DIETARY = [
   { id: "halal", label: "Halal Certified", count: 11, defaultChecked: false },
 ];
 
-export default function Properties() {
+interface PropertiesProps {
+  places?: PlaceCardData[];
+}
+
+export default function Properties({ places }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([
     "italian",
     "american",
@@ -147,6 +153,8 @@ export default function Properties() {
   ]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [priceTier, setPriceTier] = useState<string>("$");
+
+  const displayPlaces = places && places.length > 0 ? places : SAMPLE_PLACES;
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -489,9 +497,9 @@ export default function Properties() {
             }}
             className="places-grid-layout PlacesGrid"
           >
-            {SAMPLE_PLACES.map((place) => (
+            {displayPlaces.map((place) => (
               <Link
-                href={`/restaurant/${place.kitchenId || "7-12-kitchen"}`}
+                href={place.trackingId ? `/shop/${place.trackingId}` : `/restaurant/${place.kitchenId || "7-12-kitchen"}`}
                 key={place.id}
                 style={{
                   width: "100%",
