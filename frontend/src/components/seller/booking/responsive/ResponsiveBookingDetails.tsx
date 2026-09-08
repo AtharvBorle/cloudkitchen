@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Phone, Bed, Calendar } from "lucide-react";
+import { ChevronLeft, Phone, Bed, Calendar, CheckCircle2, XCircle } from "lucide-react";
 import styles from "./ResponsiveBookingDetails.module.css";
 
 export type BookingProgressStep =
@@ -50,11 +50,11 @@ export const ResponsiveBookingDetails: React.FC<
   roomCapacity = "Sleeps 4 Guests",
   dateRange = "Aug 28 – Sep 1",
   stayDuration = "4 Nights Stay",
-  ratePerNight = "\u20B92,500",
+  ratePerNight = "₹2,500",
   nightsCount = 4,
-  roomChargeTotal = "\u20B910,000",
-  serviceFee = "\u20B9500",
-  totalAmount = "\u20B910,500",
+  roomChargeTotal = "₹10,000",
+  serviceFee = "₹500",
+  totalAmount = "₹10,500",
   initialStatus = "Requested",
   onBack,
   onConfirm,
@@ -65,6 +65,14 @@ export const ResponsiveBookingDetails: React.FC<
   const [currentStatus, setCurrentStatus] =
     useState<BookingProgressStep>(initialStatus);
   const [isDeclined, setIsDeclined] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
 
   const handleBackClick = () => {
     if (onBack) {
@@ -76,12 +84,20 @@ export const ResponsiveBookingDetails: React.FC<
     }
   };
 
-
   const handleConfirm = () => {
     if (onConfirm) {
       onConfirm();
     } else {
-      setCurrentStatus("Confirmed");
+      if (currentStatus === "Requested") {
+        setCurrentStatus("Confirmed");
+        showToast(`Booking #${bookingId} Confirmed successfully!`);
+      } else if (currentStatus === "Confirmed") {
+        setCurrentStatus("Paid");
+        showToast(`Booking #${bookingId} marked as Paid!`);
+      } else if (currentStatus === "Paid") {
+        setCurrentStatus("Completed");
+        showToast(`Booking #${bookingId} marked as Completed!`);
+      }
     }
   };
 
@@ -90,6 +106,7 @@ export const ResponsiveBookingDetails: React.FC<
       onDecline();
     } else {
       setIsDeclined(true);
+      showToast(`Booking #${bookingId} Declined.`);
     }
   };
 
@@ -97,7 +114,7 @@ export const ResponsiveBookingDetails: React.FC<
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 390px Mobile View Container */}
+      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header */}
         <header className={styles.topBar}>
@@ -108,7 +125,7 @@ export const ResponsiveBookingDetails: React.FC<
             aria-label="Back to Bookings"
             title="Back"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
 
           <h1 className={styles.headerTitle}>Booking #{bookingId}</h1>
@@ -147,7 +164,7 @@ export const ResponsiveBookingDetails: React.FC<
           {/* 2. Room Information Card */}
           <section className={`${styles.card} ${styles.infoCard}`}>
             <div className={styles.iconBadge}>
-              <Bed size={22} />
+              <Bed size={20} />
             </div>
             <div className={styles.infoDetails}>
               <h3 className={styles.infoTitle}>{roomName}</h3>
@@ -158,7 +175,7 @@ export const ResponsiveBookingDetails: React.FC<
           {/* 3. Date & Duration Card */}
           <section className={`${styles.card} ${styles.infoCard}`}>
             <div className={styles.iconBadge}>
-              <Calendar size={22} />
+              <Calendar size={20} />
             </div>
             <div className={styles.infoDetails}>
               <h3 className={styles.infoTitle}>{dateRange}</h3>
@@ -190,7 +207,7 @@ export const ResponsiveBookingDetails: React.FC<
             </div>
           </section>
 
-          {/* 5. Booking Progress Timeline */}
+          {/* 5. Booking Progress Timeline Card */}
           <section className={`${styles.card} ${styles.progressCard}`}>
             <span className={styles.sectionLabel}>BOOKING PROGRESS</span>
 
@@ -224,53 +241,54 @@ export const ResponsiveBookingDetails: React.FC<
               })}
             </div>
           </section>
-        </main>
 
-        {/* Bottom Actions */}
-        <footer className={styles.bottomActions}>
-          {!isDeclined ? (
-            <>
-              <button
-                type="button"
-                className={styles.confirmBtn}
-                onClick={handleConfirm}
-              >
-                {currentStatus === "Requested"
-                  ? "Confirm Booking"
-                  : currentStatus === "Confirmed"
-                  ? "Mark as Paid"
-                  : currentStatus === "Paid"
-                  ? "Mark Completed"
-                  : "Booking Completed"}
-              </button>
-
-              {currentStatus === "Requested" && (
+          {/* 6. Bottom Action Buttons */}
+          <div className={styles.bottomActions}>
+            {!isDeclined ? (
+              <>
                 <button
                   type="button"
-                  className={styles.declineBtn}
-                  onClick={handleDecline}
+                  className={styles.confirmBtn}
+                  onClick={handleConfirm}
                 >
-                  Decline
+                  {currentStatus === "Requested"
+                    ? "Confirm Booking"
+                    : currentStatus === "Confirmed"
+                    ? "Mark as Paid"
+                    : currentStatus === "Paid"
+                    ? "Mark Completed"
+                    : "Booking Completed ✓"}
                 </button>
-              )}
-            </>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                color: "#EF4444",
-                fontWeight: 700,
-                padding: "12px",
-              }}
-            >
-              Booking Declined
-            </div>
-          )}
-        </footer>
+
+                {currentStatus === "Requested" && (
+                  <button
+                    type="button"
+                    className={styles.declineBtn}
+                    onClick={handleDecline}
+                  >
+                    Decline
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className={styles.declinedNotice}>
+                <XCircle size={18} color="#EF4444" />
+                <span>Booking Declined</span>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className={styles.toastNotification}>
+            <CheckCircle2 size={18} color="#10B981" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default ResponsiveBookingDetails;
-

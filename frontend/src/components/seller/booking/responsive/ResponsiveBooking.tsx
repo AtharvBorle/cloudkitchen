@@ -29,51 +29,51 @@ export interface ResponsiveBookingProps {
 
 const DEFAULT_BOOKINGS: ResponsiveBookingItem[] = [
   {
-    id: "b1",
+    id: "B-2047",
     guestName: "Aarav Mehta",
     roomName: "Deluxe Suite",
     dateRange: "Aug 28 - Sep 1",
-    amount: "\u20B918,500",
+    amount: "₹10,500",
     status: "Requested",
   },
   {
-    id: "b2",
+    id: "B-2048",
     guestName: "Sneha Reddy",
     roomName: "Superior Room",
     dateRange: "Sep 03 - Sep 05",
-    amount: "\u20B99,200",
+    amount: "₹9,200",
     status: "Requested",
   },
   {
-    id: "b3",
+    id: "B-2049",
     guestName: "Dev Bajwa",
     roomName: "Executive Suite",
     dateRange: "Sep 12 - Sep 15",
-    amount: "\u20B924,000",
+    amount: "₹24,000",
     status: "Requested",
   },
   {
-    id: "b4",
+    id: "B-2050",
     guestName: "Vikram Malhotra",
     roomName: "Presidential Suite",
     dateRange: "Sep 18 - Sep 22",
-    amount: "\u20B935,000",
+    amount: "₹35,000",
     status: "Confirmed",
   },
   {
-    id: "b5",
+    id: "B-2051",
     guestName: "Ananya Deshmukh",
     roomName: "Deluxe Suite",
     dateRange: "Sep 25 - Sep 28",
-    amount: "\u20B916,500",
+    amount: "₹16,500",
     status: "Confirmed",
   },
   {
-    id: "b6",
+    id: "B-2052",
     guestName: "Kabir Singhania",
     roomName: "Ocean View Studio",
     dateRange: "Oct 01 - Oct 04",
-    amount: "\u20B921,000",
+    amount: "₹21,000",
     status: "Paid",
   },
 ];
@@ -98,7 +98,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
     if (onViewDetails) {
       onViewDetails(booking);
     } else {
-      router.push("/seller/res/booking/details");
+      router.push(`/seller/res/booking/details?bookingId=${encodeURIComponent(booking.id)}`);
     }
   };
 
