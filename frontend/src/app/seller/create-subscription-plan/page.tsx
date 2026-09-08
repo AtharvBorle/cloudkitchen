@@ -6,6 +6,6 @@ export const metadata: Metadata = {
   description: "Create and publish a new meal subscription plan tier with custom inclusions and schedules.",
 };
 
-export default function SellerSubscriptionAddPage() {
+export default function SellerCreateSubscriptionPlanPage() {
   return <CreateSubscriptionPlan />;
 }

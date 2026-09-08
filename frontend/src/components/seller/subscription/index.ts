@@ -17,4 +17,7 @@ export type { PlanItem } from "./ManageSubscriptionCanvas";
 export { default as ManageSubscriptionCanvasDas } from "./ManageSubscriptionCanvasDas";
 export type { ManageSubscriptionCanvasDasProps } from "./ManageSubscriptionCanvasDas";
 
+export { default as CreateSubscriptionPlan } from "../create-subscription-plan/CreateSubscriptionPlan";
+export type { CreateSubscriptionPlanProps, PlanFeature } from "../create-subscription-plan/CreateSubscriptionPlan";
+
 export { default } from "./ManageSubscriptionCanvasDas";

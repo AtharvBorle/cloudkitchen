@@ -194,6 +194,9 @@ export type {
 export { default as SubscriptionEditCanvasDas } from "./subscription/SubscriptionEditCanvasDas";
 export type { SubscriptionEditCanvasDasProps } from "./subscription/SubscriptionEditCanvasDas";
 
+export { default as CreateSubscriptionPlan, default as SellerCreateSubscriptionPlan } from "./create-subscription-plan/CreateSubscriptionPlan";
+export type { CreateSubscriptionPlanProps, PlanFeature } from "./create-subscription-plan/CreateSubscriptionPlan";
+
 // Room components
 export { default as RoomConfigCanvas } from "./rooms/RoomConfigCanvas";
 export type {
