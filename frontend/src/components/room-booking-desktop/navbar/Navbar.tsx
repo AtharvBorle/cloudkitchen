@@ -87,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const handleCartClick = () => {
-    router.push("/dashboard/user/checkout");
+    router.push("/user/cart");
   };
 
   return (

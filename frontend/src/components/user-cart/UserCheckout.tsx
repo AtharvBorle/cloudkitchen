@@ -171,7 +171,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     } else {
       showToast("Redirecting to Secure Checkout...");
       setTimeout(() => {
-        router.push("/dashboard/user/checkout");
+        router.push("/user/checkout");
       }, 800);
     }
   };

@@ -74,6 +74,12 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       hasBadge: false,
     },
     {
+      label: "Cart",
+      href: "/user/cart",
+      icon: <ShoppingBag className={styles.navIcon} size={19} />,
+      hasBadge: false,
+    },
+    {
       label: "Rooms",
       href: "/room-booking",
       icon: <Tag className={styles.navIcon} size={19} />,

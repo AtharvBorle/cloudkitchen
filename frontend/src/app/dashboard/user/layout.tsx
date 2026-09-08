@@ -620,7 +620,7 @@ export function UserHeader() {
             </div>
 
             <div className="desktop-only" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                <button onClick={() => router.push("/dashboard/user/checkout")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
+                <button onClick={() => router.push("/user/cart")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
                     <ShoppingCart size={18} /> Cart ({totalCount})
                 </button>
                 {session ? (
@@ -671,7 +671,7 @@ export function UserHeader() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "auto", paddingTop: "20px", borderTop: "1px solid var(--surface-border)" }}>
-                    <button onClick={() => { setIsMenuOpen(false); router.push("/dashboard/user/checkout"); }} className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontWeight: "bold" }}>
+                    <button onClick={() => { setIsMenuOpen(false); router.push("/user/cart"); }} className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontWeight: "bold" }}>
                         <ShoppingCart size={18} /> Cart ({totalCount})
                     </button>
                     {session ? (

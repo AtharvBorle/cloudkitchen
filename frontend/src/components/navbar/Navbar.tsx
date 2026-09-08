@@ -139,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (onCartClick) {
       onCartClick();
     } else {
-      router.push("/dashboard/user/checkout");
+      router.push("/user/cart");
     }
   };
 

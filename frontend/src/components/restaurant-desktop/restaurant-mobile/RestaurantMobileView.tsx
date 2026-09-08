@@ -535,7 +535,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                         className={styles.planSubscribeBtn}
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push("/dashboard/user/checkout");
+                          router.push("/user/checkout");
                         }}
                       >
                         Subscribe Now
@@ -676,9 +676,9 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           <button
             type="button"
             className={styles.cartPayBtn}
-            onClick={() => router.push("/dashboard/user/checkout")}
+            onClick={() => router.push("/user/cart")}
           >
-            <span>Pay ₹{totalCartPrice || 547}</span>
+            <span>View Cart • ₹{totalCartPrice.toFixed(2)}</span>
             <ChevronRight size={16} />
           </button>
         </div>
