@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
 import { usePathname } from "next/navigation";
@@ -15,19 +15,24 @@ import {
   CreditCard,
   UserCircle,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import styles from "./ConsoleSidebar.module.css";
 
 export interface NavItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
+  icon: React.ComponentType<{ size?: number; color?: string; className?: string; style?: React.CSSProperties }>;
   href: string;
 }
 
 export const SELLER_NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/dashboard/seller" },
-  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/dashboard/seller/orders" },
-  { id: "menu", label: "Menu", icon: BookOpen, href: "/dashboard/seller/menu" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
+  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
+  { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
   { id: "rooms", label: "Rooms", icon: Home, href: "/dashboard/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/riderMng" },
@@ -41,6 +46,10 @@ export interface SellerSidebarProps {
   activeItemId?: string;
   logoSrc?: string | StaticImageData;
   roleTagText?: string;
+  isCollapsed?: boolean;
+  defaultCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+  showCollapseToggle?: boolean;
 }
 
 export default function SellerSidebar({
@@ -49,13 +58,51 @@ export default function SellerSidebar({
   activeItemId,
   logoSrc = navLogoImg,
   roleTagText = "OWNER ROLE",
+  isCollapsed,
+  defaultCollapsed = false,
+  onToggleCollapse,
+  showCollapseToggle = true,
 }: SellerSidebarProps) {
   const pathname = usePathname();
+  const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
+
+  // Controlled or uncontrolled collapse state
+  const isEffectiveCollapsed = isCollapsed !== undefined ? isCollapsed : internalCollapsed;
+
+  const handleToggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed((prev) => !prev);
+    }
+  };
 
   // Helper to determine if a nav item is currently active
   const isItemActive = (item: NavItem) => {
     if (activeItemId) {
       return activeItemId === item.id;
+    }
+    if (item.id === "dashboard") {
+      return (
+        pathname?.startsWith("/seller/dashboard") ||
+        pathname === "/dashboard/seller" ||
+        pathname === "/dashboard/seller/"
+      );
+    }
+    if (item.id === "orders") {
+      return (
+        pathname?.startsWith("/seller/orders") ||
+        pathname?.startsWith("/seller/order-default") ||
+        pathname?.startsWith("/dashboard/seller/orders")
+      );
+    }
+    if (item.id === "menu") {
+      return (
+        pathname?.startsWith("/seller/menu") ||
+        pathname?.startsWith("/seller/edit-menu") ||
+        pathname?.startsWith("/dashboard/seller/menu") ||
+        pathname?.startsWith("/dashboard/seller/edit-menu")
+      );
     }
     if (item.id === "rooms") {
       return (
@@ -70,105 +117,74 @@ export default function SellerSidebar({
       );
     }
     if (item.id === "delivery") {
-      return pathname?.startsWith("/seller/riderMng") || pathname?.startsWith("/dashboard/seller/delivery");
-    }
-    if (item.id === "profile") {
-      return pathname?.startsWith("/seller/profile") || pathname?.startsWith("/dashboard/seller/profile");
+      return (
+        pathname?.startsWith("/seller/riderMng") ||
+        pathname?.startsWith("/dashboard/seller/delivery")
+      );
     }
     if (item.id === "subscription") {
       return (
-        pathname?.startsWith("/seller/subscription") ||
-        pathname?.startsWith("/dashboard/seller/payment")
+        pathname?.startsWith("/dashboard/seller/payment") ||
+        pathname?.startsWith("/seller/subscription")
       );
     }
-    if (item.href === "/dashboard/seller") {
-      return pathname === "/dashboard/seller";
+    if (item.id === "profile") {
+      return (
+        pathname?.startsWith("/seller/profile") ||
+        pathname?.startsWith("/dashboard/seller/profile")
+      );
     }
     return Boolean(pathname?.startsWith(item.href));
   };
 
+  const sidebarWidth = isEffectiveCollapsed ? "76px" : "240px";
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
-      {isMobileOpen && (
-        <div
-          onClick={onClose}
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.45)",
-            backdropFilter: "blur(4px)",
-            zIndex: 998,
-          }}
-          className="mobile-backdrop"
-        />
-      )}
+      <div
+        onClick={onClose}
+        className={`${styles.backdrop} ${isMobileOpen ? styles.open : ""}`}
+        aria-hidden={!isMobileOpen}
+      />
 
-      {/* Main Sidebar Container (Width: 240px, Height: 100% / 1024px, Padding: 24px, Gap: 32px, Background: #FFFFFF) */}
+      {/* Main Sidebar Container */}
       <aside
         style={{
-          width: "240px",
-          minWidth: "240px",
-          maxWidth: "240px",
-          height: "100%",
-          minHeight: "100vh",
-          backgroundColor: "#FFFFFF",
-          borderRight: "1px solid #F1F5F9",
-          padding: "24px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "32px",
-          boxSizing: "border-box",
-          fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-          zIndex: 999,
-          transition: "transform 0.3s ease",
+          width: sidebarWidth,
+          minWidth: sidebarWidth,
+          maxWidth: sidebarWidth,
+          padding: isEffectiveCollapsed ? "24px 10px" : "24px 16px",
+          gap: isEffectiveCollapsed ? "24px" : "28px",
         }}
-        className={`seller-sidebar ${isMobileOpen ? "open" : ""}`}
+        className={`${styles.sellerSidebar} ${isMobileOpen ? styles.open : ""} ${
+          isEffectiveCollapsed ? styles.collapsed : styles.expanded
+        }`}
+        aria-label="Seller Operations Navigation"
       >
-        {/* Brand Wrapper (Width: 192px, Gap: 10px, display: flex, alignItems: center) */}
+        {/* Brand Header Section */}
         <div
           style={{
-            width: "192px",
-            maxWidth: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "10px",
+            alignItems: isEffectiveCollapsed ? "center" : "stretch",
           }}
-          className="brand-wrapper"
+          className={styles.brandWrapper}
         >
           {/* Logo Row */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
+              justifyContent: isEffectiveCollapsed ? "center" : "space-between",
             }}
-            className="logo"
+            className={styles.logoRow}
           >
             <Link
               href="/dashboard/seller"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                textDecoration: "none",
-                userSelect: "none",
+              className={styles.logoLink}
+              title="Neo Cloud Bites Seller Dashboard"
+              onClick={() => {
+                if (onClose) onClose();
               }}
             >
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#ffffff",
-                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
-                  flexShrink: 0,
-                }}
-              >
+              <div className={styles.logoImgWrapper}>
                 <Image
                   src={logoSrc}
                   alt="Neo Cloud Bites Logo"
@@ -183,71 +199,60 @@ export default function SellerSidebar({
                   priority
                 />
               </div>
+
+              {!isEffectiveCollapsed && (
+                <span className={styles.brandTitle}>NEO CLOUD BITES</span>
+              )}
             </Link>
 
-            {/* Mobile close button */}
+            {/* Desktop Collapse / Expand Button in Header */}
+            {!isEffectiveCollapsed && showCollapseToggle && (
+              <button
+                type="button"
+                onClick={handleToggleCollapse}
+                className={styles.desktopCollapseBtn}
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+              >
+                <PanelLeftClose size={17} />
+              </button>
+            )}
+
+            {/* Mobile Close Button */}
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#64748B",
-                  padding: "4px",
-                  display: "none",
-                }}
-                className="sidebar-close-btn"
+                className={styles.sidebarCloseBtn}
                 aria-label="Close sidebar"
+                title="Close"
               >
                 <X size={20} />
               </button>
             )}
           </div>
 
-          {/* Role Tag (Radius: 6px, Padding: 4px 8px, Background: #FFF1E8) */}
-          <div
-            style={{
-              backgroundColor: "#FFF1E8",
-              borderRadius: "6px",
-              padding: "4px 8px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxSizing: "border-box",
-            }}
-            className="role-tag"
-          >
-            <span
-              style={{
-                fontSize: "10.5px",
-                fontWeight: 700,
-                color: "#F97316",
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                lineHeight: 1,
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                whiteSpace: "nowrap",
-              }}
+          {/* Role Tag (Expanded mode) */}
+          {!isEffectiveCollapsed && (
+            <div className={styles.roleTag}>{roleTagText}</div>
+          )}
+
+          {/* Compact Toggle Button when Collapsed */}
+          {isEffectiveCollapsed && showCollapseToggle && (
+            <button
+              type="button"
+              onClick={handleToggleCollapse}
+              className={styles.desktopExpandBtn}
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
             >
-              {roleTagText}
-            </span>
-          </div>
+              <PanelLeftOpen size={17} />
+            </button>
+          )}
         </div>
 
-        {/* Navigation List (Width: 192px, Gap: 4px) */}
-        <nav
-          style={{
-            width: "192px",
-            maxWidth: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-          }}
-          className="nav-list"
-          aria-label="Seller Navigation"
-        >
+        {/* Navigation List */}
+        <nav className={styles.navList} aria-label="Seller Navigation">
           {SELLER_NAV_ITEMS.map((item) => {
             const active = isItemActive(item);
             const IconComponent = item.icon;
@@ -257,70 +262,54 @@ export default function SellerSidebar({
                 key={item.id}
                 href={item.href}
                 onClick={onClose}
+                title={item.label}
                 style={{
-                  width: "192px",
-                  maxWidth: "100%",
-                  height: "42px",
-                  borderRadius: "8px",
-                  padding: "10px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  textDecoration: "none",
-                  boxSizing: "border-box",
-                  backgroundColor: active ? "#FFF1E8" : "transparent",
-                  borderLeft: active ? "3px solid #F97316" : "3px solid transparent",
-                  color: active ? "#F97316" : "#64748B",
-                  fontWeight: active ? 600 : 500,
-                  fontSize: "14px",
-                  transition: "all 0.18s ease",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  position: "relative",
+                  padding: isEffectiveCollapsed ? "0" : "10px 14px",
+                  justifyContent: isEffectiveCollapsed ? "center" : "flex-start",
+                  gap: isEffectiveCollapsed ? "0" : "12px",
                 }}
-                className={`nav-item ${active ? "active" : ""}`}
+                className={`${styles.navItem} ${active ? styles.active : ""}`}
               >
                 <IconComponent
-                  size={19}
+                  size={isEffectiveCollapsed ? 20 : 19}
                   color={active ? "#F97316" : "#64748B"}
+                  style={{ flexShrink: 0 }}
                 />
-                <span
-                  style={{
-                    lineHeight: 1,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {item.label}
-                </span>
+                {!isEffectiveCollapsed && (
+                  <span className={styles.navLabel}>{item.label}</span>
+                )}
               </Link>
             );
           })}
         </nav>
-      </aside>
 
-      <style jsx>{`
-        .nav-item:hover:not(.active) {
-          background-color: #F8FAFC !important;
-          color: #0F172A !important;
-        }
-        .nav-item:hover:not(.active) :global(svg) {
-          color: #0F172A !important;
-        }
-        @media (max-width: 768px) {
-          .seller-sidebar {
-            position: fixed !important;
-            top: 0;
-            left: 0;
-            transform: translateX(-100%);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-          }
-          .seller-sidebar.open {
-            transform: translateX(0);
-          }
-          .sidebar-close-btn {
-            display: flex !important;
-          }
-        }
-      `}</style>
+        {/* Footer Collapse / Expand Bar (Optional Quick Toggle) */}
+        {showCollapseToggle && (
+          <div
+            style={{
+              justifyContent: isEffectiveCollapsed ? "center" : "flex-end",
+            }}
+            className={styles.sidebarFooter}
+          >
+            <button
+              type="button"
+              onClick={handleToggleCollapse}
+              className={styles.footerToggleBtn}
+              title={isEffectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isEffectiveCollapsed ? (
+                <ChevronRight size={16} />
+              ) : (
+                <>
+                  <ChevronLeft size={16} />
+                  <span>Collapse</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </aside>
     </>
   );
 }
+

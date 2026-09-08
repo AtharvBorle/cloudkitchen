@@ -15,7 +15,7 @@ export interface TopRatedItem {
   link?: string;
 }
 
-const DEFAULT_TOP_RATED: TopRatedItem[] = [
+const TOP_RATED_ITEMS: TopRatedItem[] = [
   {
     id: "tr-1",
     name: "Green Leaf Salad",
@@ -24,7 +24,7 @@ const DEFAULT_TOP_RATED: TopRatedItem[] = [
     price: 199,
     time: "20-30 min",
     imageUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=salad",
+    link: "/restaurant/fresh-salads",
   },
   {
     id: "tr-2",
@@ -34,7 +34,7 @@ const DEFAULT_TOP_RATED: TopRatedItem[] = [
     price: 249,
     time: "25-35 min",
     imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=burger",
+    link: "/restaurant/burger-bistro",
   },
   {
     id: "tr-3",
@@ -44,7 +44,7 @@ const DEFAULT_TOP_RATED: TopRatedItem[] = [
     price: 199,
     time: "20-30 min",
     imageUrl: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=salad",
+    link: "/restaurant/fresh-salads",
   },
   {
     id: "tr-4",
@@ -54,7 +54,7 @@ const DEFAULT_TOP_RATED: TopRatedItem[] = [
     price: 249,
     time: "25-35 min",
     imageUrl: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=burger",
+    link: "/restaurant/burger-bistro",
   },
   {
     id: "tr-5",
@@ -64,7 +64,7 @@ const DEFAULT_TOP_RATED: TopRatedItem[] = [
     price: 199,
     time: "20-30 min",
     imageUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=salad",
+    link: "/restaurant/fresh-salads",
   },
   {
     id: "tr-6",
@@ -74,7 +74,7 @@ const DEFAULT_TOP_RATED: TopRatedItem[] = [
     price: 249,
     time: "25-35 min",
     imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
-    link: "/explore/food?query=burger",
+    link: "/restaurant/burger-bistro",
   },
 ];
 
@@ -86,8 +86,8 @@ interface DashboardBodyProps {
 
 export default function DashboardBody({
   title = "Top Rated",
-  seeAllLink = "/explore/food?sort=top_rated",
-  items = DEFAULT_TOP_RATED,
+  seeAllLink = "/explore-desktop?sort=top_rated",
+  items = TOP_RATED_ITEMS,
 }: DashboardBodyProps) {
   return (
     <section
@@ -276,7 +276,7 @@ export default function DashboardBody({
 
               {/* Right Column: Order Button */}
               <Link
-                href={item.link || "/explore/food"}
+                href={item.link || "/explore-desktop"}
                 style={{
                   backgroundColor: "#FF6B00",
                   color: "#FFFFFF",

@@ -1,0 +1,32 @@
+.buttonWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.addButton {
+  background-color: #f97316;
+  border: none;
+  border-radius: 9999px;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+}
+
+.addButton:hover {
+  background-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.38);
+}
+
+.plusIcon {
+  color: #ffffff;
+}

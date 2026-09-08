@@ -1,0 +1,538 @@
+.formContainer {
+  width: 54%;
+  height: 100vh;
+  max-height: 100vh;
+  background-color: #fff4e6;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 32px 56px 20px 56px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+/* 1. Top Bar */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 20px;
+}
+
+.newToText {
+  font-size: 0.88rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.createAccountBtn {
+  background: transparent;
+  border: 1.5px solid #f97316;
+  border-radius: 9999px;
+  color: #f97316;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 22px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.createAccountBtn:hover {
+  background-color: #fff1e6;
+  border-color: #ea580c;
+  color: #ea580c;
+}
+
+/* 2. Center Wrapper & Card */
+.centerWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: auto 0;
+  width: 100%;
+}
+
+.loginCard {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #f1f5f9;
+  padding: 36px 36px;
+  box-sizing: border-box;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+  width: 100%;
+  max-width: 440px;
+}
+
+.cardHeading {
+  font-size: 1.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
+}
+
+.cardSubheading {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 24px 0;
+  font-weight: 450;
+  line-height: 1.4;
+}
+
+.errorMessage {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.inputLabel {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 46px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.inputWrapper:focus-within {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.fieldIcon {
+  color: #94a3b8;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.textInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.92rem;
+  color: #0f172a;
+  width: 100%;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.textInput::placeholder {
+  color: #94a3b8;
+}
+
+.eyeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+
+.eyeBtn:hover {
+  color: #475569;
+}
+
+.eyeIcon {
+  color: inherit;
+}
+
+/* Options Row */
+.optionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hiddenCheckbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.customCheckbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid #cbd5e1;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.checkboxChecked {
+  background-color: #f97316;
+  border-color: #f97316;
+}
+
+.checkboxLabel {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.forgotBtn {
+  background: transparent;
+  border: none;
+  color: #f97316;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.2s ease;
+}
+
+.forgotBtn:hover {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
+/* Submit Button */
+.signInBtn {
+  background-color: #f97316;
+  border: none;
+  border-radius: 14px;
+  color: #ffffff;
+  font-size: 0.98rem;
+  font-weight: 700;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+  margin-top: 4px;
+}
+
+.signInBtn:hover {
+  background-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.38);
+}
+
+/* Form content wrapper with hidden overflow to contain slides */
+.formContentSlider {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* When switching to OTP (Swipe Left into view from right) */
+.slideLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideFromRight 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes slideFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* When switching to Password (Swipe Right into view from left) */
+.slideRight {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideFromLeft 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes slideFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Phone input with Send OTP button */
+.phoneInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 6px 0 12px;
+  height: 48px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  gap: 6px;
+}
+
+.phoneInputWrapper:focus-within {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.countryCode {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #475569;
+  border-right: 1.5px solid #e2e8f0;
+  padding-right: 8px;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.phoneTextInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px;
+}
+
+.sendOtpBtn {
+  background-color: #f97316;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+  margin-left: 4px;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
+  animation: activateBtn 0.35s ease-out;
+}
+
+@keyframes activateBtn {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
+  }
+}
+
+.sendOtpBtn:hover:not(:disabled) {
+  background-color: #ea580c;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.45);
+  transform: translateY(-1px);
+}
+
+.sendOtpBtn:disabled {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  animation: none;
+  opacity: 0.75;
+}
+
+/* 6-box OTP Input */
+.otpContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.otpDigitInput {
+  width: 52px;
+  height: 52px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background-color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.otpDigitInput:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14);
+  background-color: #fffaf5;
+}
+
+.otpDigitFilled {
+  border-color: #fdba74;
+  background-color: #fffaf5;
+}
+
+.otpTimerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.otpTimerText {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.resendBtn {
+  background: transparent;
+  border: none;
+  color: #f97316;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.2s ease;
+}
+
+.resendBtn:hover:not(:disabled) {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
+.resendBtn:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Or Divider */
+.orDivider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 14px 0;
+  width: 100%;
+}
+
+.orDivider::before,
+.orDivider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.orText {
+  padding: 0 12px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+/* Login with OTP / Password Button (Forgot password string style in #F97316) */
+.loginWithOtpWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.loginWithOtpBtn {
+  background: transparent;
+  border: none;
+  color: #f97316;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.2s ease;
+  text-align: center;
+}
+
+.loginWithOtpBtn:hover {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
+/* 3. Bottom Security Note */
+.securityNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 20px;
+}
+
+.securityIcon {
+  color: #94a3b8;
+}
+
+@media (max-width: 1024px) {
+  .formContainer {
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    padding: 36px 24px;
+  }
+}

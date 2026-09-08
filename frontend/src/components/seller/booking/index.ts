@@ -8,4 +8,6 @@ export type {
 export { default as BookingCanvasDas } from "./BookingCanvasDas";
 export type { BookingCanvasDasProps } from "./BookingCanvasDas";
 
+export * from "./responsive";
+
 export { default } from "./BookingCanvas";

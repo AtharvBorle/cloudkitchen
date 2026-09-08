@@ -1,0 +1,158 @@
+﻿.navbar {
+  height: 72px;
+  min-height: 72px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 32px 0 28px !important;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.leftSection {
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0;
+}
+
+.pageTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.rightSection {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 16px !important;
+  flex-shrink: 0;
+}
+
+.searchWrapper {
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.searchInput {
+  height: 40px;
+  width: 240px;
+  padding: 0 14px 0 38px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  font-size: 0.88rem;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  background-color: #ffffff;
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+}
+
+.searchInput::placeholder {
+  color: #94a3b8;
+}
+
+.notificationBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.notificationBtn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.bellIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.profileSection {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.profileSection:hover {
+  background-color: #f8fafc;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ea580c;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.profileInfo {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px;
+  white-space: nowrap;
+}
+
+.userName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.userRole {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  line-height: 1.2;
+  font-weight: 500;
+}

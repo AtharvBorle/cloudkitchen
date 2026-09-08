@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo Cloud Room - Seller & Delivery Partner UI/UX Specification</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+@page {
+    size: A4;
+    margin: 20mm 15mm 20mm 15mm;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.6;
+    font-size: 13px;
+    background-color: #ffffff;
+    padding: 0;
+    margin: 0;
+}
+
+h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 2px solid #0284c7;
+    padding-bottom: 8px;
+    margin-top: 20px;
+    margin-bottom: 16px;
+}
+
+h2 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #0369a1;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 6px;
+    margin-top: 26px;
+    margin-bottom: 12px;
+    page-break-after: avoid;
+}
+
+h3 {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #0284c7;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+}
+
+h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+ul, ol {
+    margin-top: 0;
+    margin-bottom: 12px;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 4px;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 24px 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 12px;
+    page-break-inside: avoid;
+}
+
+th {
+    background-color: #f0f9ff;
+    color: #0369a1;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #bae6fd;
+}
+
+td {
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+tr:nth-child(even) td {
+    background-color: #f8fafc;
+}
+
+code {
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11.5px;
+    background-color: #f1f5f9;
+    color: #0369a1;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+pre {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    page-break-inside: avoid;
+}
+
+blockquote {
+    border-left: 4px solid #0284c7;
+    background-color: #f0f9ff;
+    color: #0369a1;
+    margin: 12px 0;
+    padding: 10px 16px;
+    border-radius: 0 6px 6px 0;
+}
+
+.mermaid {
+    display: flex;
+    justify-content: center;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    page-break-inside: avoid;
+}
+
+@media print {
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    pre, table, .mermaid {
+        page-break-inside: avoid;
+    }
+}
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: 'neutral',
+                securityLevel: 'loose',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                sequence: { useMaxWidth: true, showSequenceNumbers: true }
+            });
+        });
+    </script>
+</head>
+<body>
+<h1 id="neo-cloud-room-seller-delivery-partner-uiux-design-specification">Neo Cloud Room - Seller &amp; Delivery Partner UI/UX Design Specification</h1>
+<hr />
+<h2 id="introduction-for-uiux-design-team">📌 Introduction for UI/UX Design Team</h2>
+<p>This document is a non-technical, design-focused guide detailing the <strong>Screen-by-Screen Layouts, Visual Components, Form Attributes, Action Buttons, and User Flows</strong> for two core platform roles:<br />
+1. <strong>Seller / Vendor</strong> (Cloud Kitchens, Mess Providers, Bakeries, Property Hosts)<br />
+2. <strong>Delivery Partner / Delivery Boy</strong> (Rider Fleet)</p>
+<p>Use this guide to build wireframes, visual mockups, Figma components, and UI screen flows.</p>
+<hr />
+<h1 id="section-1-seller-vendor-uiux-specification">SECTION 1: SELLER / VENDOR UI/UX SPECIFICATION</h1>
+<pre class="mermaid">
+graph TD
+    Registration["S1: Seller Registration Wizard"] --> RevisionCheck{"Status Approved?"}
+    RevisionCheck -- Flags Issues --> RevisionScreen["S2: Revision & Resubmissions"]
+    RevisionCheck -- Pending Audit --> PendingScreen["S3: Under Audit Lock Screen"]
+    RevisionCheck -- Approved --> Dashboard["S4: Seller Home Dashboard"]
+
+    Dashboard --> Orders["S10: Order Processing Board"]
+    Dashboard --> MenuInventory["S6: Menu & Stock Manager"]
+    Dashboard --> Rooms["S8: Room Listings Manager"]
+    Dashboard --> Fleet["S12: Delivery Fleet Manager"]
+    Dashboard --> Subscriptions["S16: Subscription Renewal"]
+    Dashboard --> Offers["S17: Offers & Banners"]
+
+    Orders --> AssignRider["S11: Assign Rider Modal"]
+    MenuInventory --> AddDish["S7: Add/Edit Dish Modal"]
+    Rooms --> AddRoom["S9: Add/Edit Room Modal"]
+    Fleet --> AddDriver["S13: Add Driver Modal"]
+    Fleet --> CashCollect["S14: Collect Cash Modal"]
+    Fleet --> WalletLedger["S15: Driver Ledger Modal"]
+</pre>
+
+<hr />
+<h2 id="1-onboarding-registration-screens">1. Onboarding &amp; Registration Screens</h2>
+<h3 id="screen-s1-seller-registration-wizard-multi-step-form">Screen S1: Seller Registration Wizard (Multi-Step Form)</h3>
+<ul>
+<li><strong>Purpose</strong>: New vendor onboarding and document submission.</li>
+<li><strong>Visual Design</strong>: Multi-step progress bar (Step 1 of 4 -&gt; Step 4 of 4).</li>
+<li><strong>UI Sections &amp; Attributes</strong>:</li>
+<li><strong>Step 1: Account Setup</strong><ul>
+<li>Owner Full Name (<code>Input Field</code>)</li>
+<li>Email Address (<code>Input Field</code>)</li>
+<li>Mobile Number (<code>Input Field with +91</code>)</li>
+<li>Password (<code>Password Input with Show/Hide toggle</code>)</li>
+</ul>
+</li>
+<li><strong>Step 2: Business &amp; Address Details</strong><ul>
+<li>Business / Kitchen Name (<code>Input Field</code>)</li>
+<li>Seller Category Selector (<code>Radio Cards</code>: Cloud Kitchen / Mess / Bakery)</li>
+<li>Business Domain (<code>Checkboxes</code>: Food Delivery / Property Rental / Both)</li>
+<li>Dietary Type (<code>Segmented Control</code>: Pure Veg / Veg &amp; Non-Veg)</li>
+<li>Flat / Shop No / Building (<code>Input Field</code>)</li>
+<li>Area / Locality (<code>Input Field</code>)</li>
+<li>Nearby Landmark (<code>Input Field, Optional</code>)</li>
+<li>City (<code>Input Field</code>)</li>
+<li>Pincode (<code>Input Field, 6-digits</code>)</li>
+</ul>
+</li>
+<li><strong>Step 3: Document Verification Uploads</strong><ul>
+<li>Adhaar Card Upload (<code>File Dropzone</code> - Front &amp; Back photos)</li>
+<li>FSSAI License Document (<code>File Dropzone</code> - PDF or Image)</li>
+<li>Electricity / Light Bill (<code>File Dropzone</code> - Recent proof of address)</li>
+<li>Bank Passbook / Cancelled Cheque (<code>File Dropzone</code> - For payout verification)</li>
+</ul>
+</li>
+<li><strong>Step 4: Media Gallery Uploads</strong><ul>
+<li>Kitchen Photos (<code>Multi-file Dropzone</code>, Max 3 images)</li>
+<li>Food / Cuisine Showcase Photos (<code>Multi-file Dropzone</code>, Max 3 images)</li>
+<li>Room / Property Photos (<code>Multi-file Dropzone</code>, Max 3 images)</li>
+</ul>
+</li>
+<li><strong>Step 5: Submission Confirmation Card</strong><ul>
+<li>Store Tracking ID Tag (e.g. <code>SHOP-X7K2P9</code> with Copy button)</li>
+<li>Status Badge: <code>PENDING AUDIT</code> (Yellow badge)</li>
+<li>Message: <em>"Your application has been submitted and is under verification by our team."</em></li>
+</ul>
+</li>
+</ul>
+<hr />
+<h3 id="screen-s2-revision-resubmission-screen">Screen S2: Revision &amp; Resubmission Screen</h3>
+<ul>
+<li><strong>Trigger</strong>: Displayed when Admin flags the application status as <code>REVISION</code>.</li>
+<li><strong>UI Elements &amp; Attributes</strong>:</li>
+<li><strong>Admin Feedback Alert Box</strong> (Red/Amber banner displaying specific revision notes, e.g., <em>"FSSAI document is blurry. Please upload a clear copy."</em>).</li>
+<li><strong>Resubmission Upload Controls</strong>: Highlighted file upload boxes corresponding only to the flagged documents.</li>
+<li><strong>Action Button</strong>: <code>RESUBMIT APPLICATION FOR AUDIT</code> (Primary CTA Button).</li>
+</ul>
+<hr />
+<h3 id="screen-s3-application-status-under-review-screen">Screen S3: Application Status / Under Review Screen</h3>
+<ul>
+<li><strong>Trigger</strong>: Vendor logs in while status is <code>PENDING</code>.</li>
+<li><strong>UI Elements</strong>:</li>
+<li>Lock Screen illustration with a clock icon.</li>
+<li>Status Badge: <code>UNDER VERIFICATION</code>.</li>
+<li>Application Summary Card: Store Tracking ID, Submitted Date, Business Name.</li>
+<li>"Contact Platform Support" button.</li>
+</ul>
+<hr />
+<h2 id="2-store-setup-daily-operation-screens">2. Store Setup &amp; Daily Operation Screens</h2>
+<h3 id="screen-s4-seller-home-dashboard">Screen S4: Seller Home Dashboard</h3>
+<ul>
+<li><strong>Top Header Bar</strong>:</li>
+<li>Store Logo &amp; Business Name.</li>
+<li><strong>Store Online / Offline Toggle Switch</strong> (<code>ON</code> = Accepting Orders / <code>OFF</code> = Store Closed).</li>
+<li>Subscription Status Badge (e.g., <code>ACTIVE - 24 Days Left</code>).</li>
+<li>Notification Bell Icon.</li>
+<li><strong>Metrics Summary Cards</strong>:</li>
+<li><strong>Today's Revenue</strong>: Amount in ₹ with percentage growth.</li>
+<li><strong>Today's Orders</strong>: Number of completed orders.</li>
+<li><strong>Pending Orders</strong>: Count of orders waiting for acceptance.</li>
+<li><strong>Active Delivery Boys</strong>: Rider fleet count.</li>
+<li><strong>Subscription Expiry Warning Banner</strong> (Appears if subscription expires in &lt;= 3 days, with a <code>RENEW NOW</code> button).</li>
+<li><strong>Live Incoming Orders Stream</strong>: Card feed of real-time incoming orders with an audio chime toggle.</li>
+</ul>
+<hr />
+<h3 id="screen-s5-operating-hours-delivery-pincodes-manager">Screen S5: Operating Hours &amp; Delivery Pincodes Manager</h3>
+<ul>
+<li><strong>Weekly Schedule Section</strong>:</li>
+<li>Day-by-Day Grid (Monday through Sunday).</li>
+<li>Per Day Controls: <code>Open/Closed Switch</code>, <code>Opening Time Picker</code> (HH:MM AM/PM), <code>Closing Time Picker</code> (HH:MM AM/PM).</li>
+<li><strong>Served Pincodes Section</strong>:</li>
+<li>List of active delivery pincodes displayed as removable chips (<code>411001 ✖</code>, <code>411002 ✖</code>).</li>
+<li><code>+ Add Delivery Pincode</code> Input Field + <code>Add</code> Button.</li>
+</ul>
+<hr />
+<h2 id="3-menu-food-inventory-management-screens">3. Menu &amp; Food Inventory Management Screens</h2>
+<h3 id="screen-s6-food-menu-stock-manager">Screen S6: Food Menu &amp; Stock Manager</h3>
+<ul>
+<li><strong>Header Controls</strong>:</li>
+<li>Search Bar (<code>Search dish by name...</code>).</li>
+<li>Category Filter Chips (<code>All</code>, <code>Thalis</code>, <code>Main Course</code>, <code>Snacks</code>, <code>Beverages</code>).</li>
+<li>Primary CTA Button: <code>+ ADD NEW DISH</code>.</li>
+<li><strong>Food Item Cards</strong>:</li>
+<li>Dish Image thumbnail.</li>
+<li>Dish Name &amp; Description.</li>
+<li>Price Tag (₹).</li>
+<li>Veg / Non-Veg Indicator Icon (Green dot for Veg / Red triangle for Non-Veg).</li>
+<li><strong>Stock Counter Tag</strong>: Displays <code>Unlimited (-1)</code> or current counter (e.g. <code>8 Left</code>).</li>
+<li><strong>Availability Toggle</strong>: <code>IN STOCK</code> (Green) / <code>OUT OF STOCK</code> (Gray).</li>
+<li>Action Menu (<code>Edit Item</code>, <code>Delete Item</code>).</li>
+</ul>
+<hr />
+<h3 id="screen-s7-add-edit-food-item-modal">Screen S7: Add / Edit Food Item Modal</h3>
+<ul>
+<li><strong>Form Inputs</strong>:</li>
+<li>Dish Name (<code>Text Input</code>)</li>
+<li>Dish Description (<code>Textarea</code>)</li>
+<li>Price (<code>Number Input in ₹</code>)</li>
+<li>Food Type (<code>Radio Buttons</code>: Veg / Non-Veg)</li>
+<li>Category (<code>Dropdown Select</code>)</li>
+<li>Sub-Category (<code>Dropdown Select</code>)</li>
+<li>Stock Counter (<code>Number Input</code>, enter <code>-1</code> for unlimited)</li>
+<li>Delivery Pincodes (<code>Tag Input</code> or comma-separated pincodes)</li>
+<li>Custom Dish Hours (<code>Checkbox</code>: "Custom hours for this dish", with Time Pickers)</li>
+<li>Dish Photo (<code>Single Image Upload Dropzone</code>)</li>
+<li><strong>Action Buttons</strong>: <code>SAVE DISH</code>, <code>CANCEL</code>, <code>DELETE DISH</code>.</li>
+</ul>
+<hr />
+<h2 id="4-property-room-management-screens">4. Property &amp; Room Management Screens</h2>
+<h3 id="screen-s8-room-listings-booking-manager">Screen S8: Room Listings &amp; Booking Manager</h3>
+<ul>
+<li><strong>Header</strong>: <code>+ ADD ROOM LISTING</code> Button.</li>
+<li><strong>Room Listing Cards</strong>:</li>
+<li>Room Photo Carousel.</li>
+<li>Room Title (e.g. <em>"Deluxe AC Room #101"</em>).</li>
+<li>Capacity Badge (e.g. <code>2 Guests</code>).</li>
+<li>Price per Night Tag (₹).</li>
+<li>Availability Toggle Switch (<code>AVAILABLE</code> / <code>BOOKED</code>).</li>
+<li><strong>Incoming Booking Requests Tab</strong>:</li>
+<li>Cards displaying Guest Name, Check-in Date, Check-out Date, Total Days, Total Nightly Amount, Status Badge (<code>PENDING</code>).</li>
+<li>Action Buttons: <code>CONFIRM BOOKING</code> (Green) | <code>DECLINE BOOKING</code> (Red).</li>
+</ul>
+<hr />
+<h3 id="screen-s9-add-edit-room-listing-modal">Screen S9: Add / Edit Room Listing Modal</h3>
+<ul>
+<li><strong>Form Inputs</strong>:</li>
+<li>Room Title (<code>Text Input</code>)</li>
+<li>Description &amp; Amenities (<code>Textarea</code>)</li>
+<li>Max Guest Capacity (<code>Number Selector</code>)</li>
+<li>Rate per Night (<code>Number Input in ₹</code>)</li>
+<li>Room Photos (<code>Multi-Image Upload Dropzone</code>, Max 5 photos)</li>
+<li>Availability Switch.</li>
+<li><strong>Action Buttons</strong>: <code>SAVE ROOM LISTING</code>, <code>CANCEL</code>.</li>
+</ul>
+<hr />
+<h2 id="5-order-processing-fleet-dispatch-screens">5. Order Processing &amp; Fleet Dispatch Screens</h2>
+<h3 id="screen-s10-order-management-board-tabbed-view">Screen S10: Order Management Board (Tabbed View)</h3>
+<ul>
+<li><strong>Tab Navigation</strong>: <code>New Orders</code> | <code>Preparing</code> | <code>Out for Delivery</code> | <code>Completed</code> | <code>Cancelled</code>.</li>
+<li><strong>Order Card Component Attributes</strong>:</li>
+<li>Order ID Tag (e.g. <code>#89A12B</code>)</li>
+<li>Customer Name &amp; One-Click Call Button</li>
+<li>Items List (Quantity x Item Name, e.g. <code>2x Veg Thali</code>, <code>1x Lassi</code>)</li>
+<li>Full Delivery Address &amp; Customer Pincode</li>
+<li>Total Amount Tag (₹)</li>
+<li>Payment Method Badge (<code>COD</code> in Orange / <code>ONLINE PAID</code> in Green)</li>
+<li>Order Timestamp</li>
+<li><strong>Contextual Action Buttons</strong>:</li>
+<li>On <em>New Orders</em> tab -&gt; <code>ACCEPT &amp; START PREPARING</code> Button.</li>
+<li>On <em>Preparing</em> tab -&gt; <code>ASSIGN DELIVERY RIDER</code> Button.</li>
+<li>On <em>Out for Delivery</em> tab -&gt; Displays Assigned Rider Name &amp; Phone.</li>
+<li>On <em>Completed</em> tab -&gt; <code>VIEW INVOICE</code> Button.</li>
+</ul>
+<hr />
+<h3 id="screen-s11-assign-delivery-rider-modal">Screen S11: Assign Delivery Rider Modal</h3>
+<ul>
+<li><strong>Rider Selector Dropdown</strong>: List of available store delivery boys showing Name, Phone, and Current Active Status.</li>
+<li><strong>Action Buttons</strong>: <code>DISPATCH ORDER WITH RIDER</code>, <code>CANCEL</code>.</li>
+</ul>
+<hr />
+<h2 id="6-delivery-fleet-cod-cash-settlement-screens">6. Delivery Fleet &amp; COD Cash Settlement Screens</h2>
+<h3 id="screen-s12-delivery-fleet-manager-page">Screen S12: Delivery Fleet Manager Page</h3>
+<ul>
+<li><strong>Header</strong>: <code>+ ADD DELIVERY BOY</code> Button, Total Cash Owed Counter (₹).</li>
+<li><strong>Delivery Driver Table</strong>:</li>
+<li>Driver Avatar / Profile Icon</li>
+<li>Driver Name</li>
+<li>Mobile Number (10 digits)</li>
+<li>Email Address</li>
+<li><strong>Cash Owed Badge</strong> (<code>outstandingBalance</code> in ₹, e.g. <code>₹1,450 Owed</code>)</li>
+<li>Driver Active Status Switch (<code>ACTIVE</code> / <code>INACTIVE</code>)</li>
+<li>Actions Column: <code>COLLECT CASH</code> Button | <code>VIEW LEDGER</code> Button.</li>
+</ul>
+<hr />
+<h3 id="screen-s13-add-delivery-boy-modal">Screen S13: Add Delivery Boy Modal</h3>
+<ul>
+<li><strong>Form Inputs</strong>:</li>
+<li>Driver Full Name (<code>Text Input</code>)</li>
+<li>Mobile Number (<code>10-Digit Number Input</code>)</li>
+<li>Email Address (<code>Text Input</code>)</li>
+<li>Login Password (<code>Password Input</code>)</li>
+<li>City (<code>Text Input</code>)</li>
+<li>Pincode (<code>Text Input</code>)</li>
+<li><strong>Action Buttons</strong>: <code>CREATE DRIVER ACCOUNT</code>, <code>CANCEL</code>.</li>
+</ul>
+<hr />
+<h3 id="screen-s14-collect-cash-settlement-modal">Screen S14: Collect Cash Settlement Modal</h3>
+<ul>
+<li><strong>Driver Info Header</strong>: Driver Name, Current Cash Owed (<code>₹1,450</code>).</li>
+<li><strong>Cash Collected Input Field</strong>: Enter cash amount handed over by driver (₹).</li>
+<li><strong>Validation</strong>: Amount must be &lt;= Outstanding Cash Owed.</li>
+<li><strong>Action Buttons</strong>: <code>RECORD CASH SETTLEMENT</code> (Primary CTA), <code>CANCEL</code>.</li>
+</ul>
+<hr />
+<h3 id="screen-s15-driver-wallet-ledger-modal">Screen S15: Driver Wallet Ledger Modal</h3>
+<ul>
+<li><strong>Driver Transaction History Table</strong>:</li>
+<li>Date &amp; Time</li>
+<li>Transaction Type Badge:<ul>
+<li><code>COD CASH COLLECTED</code> (Green Badge, <code>+₹450</code>)</li>
+<li><code>CASH HANDOVER TO SELLER</code> (Blue Badge, <code>-₹1,000</code>)</li>
+<li><code>ADMIN BALANCE ADJUSTMENT</code> (Purple Badge, <code>+ / - Amount</code>)</li>
+</ul>
+</li>
+<li>Associated Order ID</li>
+<li>Amount (₹)</li>
+<li>Description Notes.</li>
+</ul>
+<hr />
+<h2 id="7-subscription-plans-promotional-marketing">7. Subscription Plans &amp; Promotional Marketing</h2>
+<h3 id="screen-s16-subscription-plan-activation-renewal">Screen S16: Subscription Plan Activation &amp; Renewal</h3>
+<ul>
+<li><strong>Active Subscription Status Card</strong>: Plan Name, Category (<code>FOOD</code> / <code>PROPERTY</code> / <code>BOTH</code>), Expiration Date, Progress Bar showing days remaining.</li>
+<li><strong>Subscription Plan Selection Cards</strong>:</li>
+<li>Monthly &amp; Yearly Plans.</li>
+<li>Price Tag (₹).</li>
+<li>Feature Checklist (e.g. ✓ Unlimited Orders, ✓ Priority Listing, ✓ Fleet Management).</li>
+<li><strong>Subscription Coupon Input Box</strong>: Code Input Field + <code>APPLY</code> Button + Discount Summary.</li>
+<li><strong>CTA Button</strong>: <code>PAY &amp; RENEW VIA RAZORPAY</code>.</li>
+</ul>
+<hr />
+<h3 id="screen-s17-offers-promotional-banner-requests">Screen S17: Offers &amp; Promotional Banner Requests</h3>
+<ul>
+<li><strong>Request Store Discount Coupon Form</strong>:</li>
+<li>Coupon Code Name (e.g. <code>FLAT50</code>)</li>
+<li>Discount Type (<code>Percentage %</code> or <code>Flat Amount ₹</code>)</li>
+<li>Minimum Cart Value (₹)</li>
+<li>Max Usage Limit per Customer</li>
+<li>Expiry Date Picker</li>
+<li><code>SUBMIT COUPON FOR APPROVAL</code> Button.</li>
+<li><strong>Request Popup Banner Form</strong>:</li>
+<li>Banner Title</li>
+<li>Upload Banner Image (Dropzone)</li>
+<li>Target Redirect Link</li>
+<li><code>SUBMIT BANNER FOR APPROVAL</code> Button.</li>
+<li><strong>Approval Status Tracker</strong>: Displays pending approval state (<code>APPROVED</code> in Green / <code>PENDING APPROVAL</code> in Yellow / <code>REJECTED</code> in Red).</li>
+</ul>
+<hr />
+<h1 id="section-2-delivery-partner-delivery-boy-uiux-specification">SECTION 2: DELIVERY PARTNER / DELIVERY BOY UI/UX SPECIFICATION</h1>
+<pre class="mermaid">
+graph TD
+    RiderLogin["D1: Delivery Boy Login"] --> RiderDash["D2: Delivery Boy Home Dashboard"]
+    RiderDash --> TaskCard["D3: Assigned Delivery Task Card"]
+
+    TaskCard --> OutForDelivery["Step 1: Start Delivery"]
+    TaskCard --> MarkDelivered["Step 2: Mark Delivered & Collect Cash"]
+    TaskCard --> QRPayment["Step 3: Doorstep QR Payment Modal"]
+
+    MarkDelivered --> CashModal["D4: COD Cash Confirmation Modal"]
+    QRPayment --> QRModal["D5: Doorstep QR Modal"]
+
+    RiderDash --> WalletLedger["D6: Cash Wallet & Handover History"]
+    RiderDash --> Profile["D7: Profile & Shift Settings"]
+</pre>
+
+<hr />
+<h2 id="1-login-shift-setup-screens">1. Login &amp; Shift Setup Screens</h2>
+<h3 id="screen-d1-delivery-partner-login-screen">Screen D1: Delivery Partner Login Screen</h3>
+<ul>
+<li><strong>Header</strong>: Delivery Partner App Logo &amp; Title.</li>
+<li><strong>Form Inputs</strong>:</li>
+<li>Registered Mobile Number / Email (<code>Input Field</code>)</li>
+<li>Password (<code>Password Input</code>)</li>
+<li><strong>Action Button</strong>: <code>LOGIN TO SHIFT</code> (Primary Full-Width Button).</li>
+</ul>
+<hr />
+<h2 id="2-active-delivery-order-dispatch-screens">2. Active Delivery &amp; Order Dispatch Screens</h2>
+<h3 id="screen-d2-delivery-boy-home-dashboard">Screen D2: Delivery Boy Home Dashboard</h3>
+<ul>
+<li><strong>Top Header Bar</strong>:</li>
+<li>Rider Name &amp; Profile Avatar.</li>
+<li>Employing Store / Kitchen Name.</li>
+<li><strong>Outstanding Cash Owed Badge</strong>: Prominently displays cash collected owed to store (e.g. <code>Cash Owed: ₹1,250</code>).</li>
+<li><strong>Shift Stats Summary</strong>:</li>
+<li>Today's Deliveries Completed Count.</li>
+<li>Active Assigned Orders Count.</li>
+<li><strong>Assigned Orders Stream</strong>: List of delivery task cards assigned to the rider.</li>
+</ul>
+<hr />
+<h3 id="screen-d3-assigned-delivery-task-card-order-details">Screen D3: Assigned Delivery Task Card &amp; Order Details</h3>
+<ul>
+<li><strong>Card Component Attributes</strong>:</li>
+<li>Order ID Tag (e.g. <code>#89A12B</code>)</li>
+<li>Customer Full Name</li>
+<li><strong>One-Click Call Customer Button</strong> (Phone icon button)</li>
+<li><strong>Open Map Directions Button</strong> (Navigation icon button launching Google Maps)</li>
+<li>Complete Delivery Address &amp; Locality Pincode</li>
+<li>Items List Summary (e.g. <code>2x Veg Meal, 1x Butter Milk</code>)</li>
+<li>Payment Method Tag:<ul>
+<li><code>COD - COLLECT CASH: ₹450</code> (Highlighted Orange Badge)</li>
+<li><code>ONLINE PAID</code> (Green Badge)</li>
+</ul>
+</li>
+<li><strong>Sequential Action Buttons</strong>:</li>
+<li><strong>Step 1</strong>: <code>START DELIVERY (OUT FOR DELIVERY)</code> Button.</li>
+<li><strong>Step 2 (For COD)</strong>: <code>MARK DELIVERED &amp; COLLECT CASH</code> Button.</li>
+<li><strong>Step 2 (For Online Doorstep)</strong>: <code>DOORSTEP PAYMENT QR</code> Button.</li>
+</ul>
+<hr />
+<h3 id="screen-d4-doorstep-cod-cash-collection-modal">Screen D4: Doorstep COD Cash Collection Modal</h3>
+<ul>
+<li><strong>Visual Prompt</strong>: Big Cash Received Icon.</li>
+<li><strong>Amount Confirmation Header</strong>: <em>"Collect Cash Amount: ₹450 from Customer"</em>.</li>
+<li><strong>Confirmation Checkbox</strong>: <em>"I have collected physical cash from the customer."</em></li>
+<li><strong>Action Buttons</strong>: <code>CONFIRM CASH RECEIVED &amp; COMPLETE DELIVERY</code> (Green Primary Button), <code>CANCEL</code>.</li>
+<li><strong>System Outcome</strong>: Adds ₹450 to the rider's <code>outstandingBalance</code> badge and updates order status to <code>DELIVERED</code>.</li>
+</ul>
+<hr />
+<h3 id="screen-d5-doorstep-online-qr-payment-modal">Screen D5: Doorstep Online QR Payment Modal</h3>
+<ul>
+<li><strong>Visual Element</strong>: Dynamic Razorpay Payment QR Code displayed on phone screen for customer scanning.</li>
+<li><strong>Amount Header</strong>: <em>"Scan QR to Pay: ₹450"</em>.</li>
+<li><strong>Live Payment Status Indicator</strong>:</li>
+<li><em>"Waiting for customer payment..."</em> (Spinner) -&gt; <em>"Payment Confirmed!"</em> (Green Checkmark).</li>
+<li><strong>Action Button</strong>: <code>CLOSE &amp; COMPLETE DELIVERY</code>.</li>
+</ul>
+<hr />
+<h2 id="3-cash-wallet-ledger-screens">3. Cash Wallet &amp; Ledger Screens</h2>
+<h3 id="screen-d6-cash-wallet-handover-history-screen">Screen D6: Cash Wallet &amp; Handover History Screen</h3>
+<ul>
+<li><strong>Top Summary Card</strong>:</li>
+<li>Total Physical Cash Owed to Store (<code>outstandingBalance</code> in ₹).</li>
+<li>Instruction Box: <em>"Hand over collected cash to store manager. Manager will log a Cash Settlement to clear your balance."</em></li>
+<li><strong>Transaction History Feed</strong>:</li>
+<li>List of recent financial transactions:<ul>
+<li>🟢 <code>COD Cash Collected</code> | +₹450 | Order #89A1 | Date &amp; Time</li>
+<li>🔵 <code>Cash Handover to Store</code> | -₹1,000 | Settlement by Store Manager | Date &amp; Time</li>
+<li>🟣 <code>Admin Balance Adjustment</code> | +/- Amount | Date &amp; Time.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h3 id="screen-d7-rider-profile-shift-settings">Screen D7: Rider Profile &amp; Shift Settings</h3>
+<ul>
+<li><strong>Profile Info Card</strong>: Driver Name, Mobile Number, City, Pincode, Employing Seller Store Name.</li>
+<li><strong>App Version &amp; Help Support Link</strong>.</li>
+<li><strong>Action Button</strong>: <code>LOG OUT OF SHIFT</code> (Red Outline Button).</li>
+</ul>
+<hr />
+<h1 id="quick-reference-attributes-table-for-ui-designers">📊 Quick Reference Attributes Table for UI Designers</h1>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Role</th>
+<th style="text-align: left;">Screen Name</th>
+<th style="text-align: left;">Key Inputs &amp; Components</th>
+<th style="text-align: left;">Key Action Buttons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Registration Wizard</td>
+<td style="text-align: left;">4-step form, Adhaar/FSSAI/Light Bill/Passbook uploads, store photos.</td>
+<td style="text-align: left;"><code>SUBMIT APPLICATION</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Revision Screen</td>
+<td style="text-align: left;">Highlighted resubmission file boxes, Admin notes alert.</td>
+<td style="text-align: left;"><code>RESUBMIT FOR AUDIT</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Home Dashboard</td>
+<td style="text-align: left;">Online/Offline toggle, Subscription status badge, Revenue cards, Live order feed.</td>
+<td style="text-align: left;"><code>STORE ONLINE SWITCH</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Schedule &amp; Pincodes</td>
+<td style="text-align: left;">Weekly schedule (Mon-Sun) open/close pickers, Served pincodes tag list.</td>
+<td style="text-align: left;"><code>SAVE SCHEDULE</code>, <code>ADD PINCODE</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Menu Manager</td>
+<td style="text-align: left;">Food item cards, Stock counter tag, Availability switch, Veg/Non-Veg icons.</td>
+<td style="text-align: left;"><code>+ ADD NEW DISH</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Add/Edit Dish Modal</td>
+<td style="text-align: left;">Name, price, food type, stock (-1 for infinite), category, custom hours, photo.</td>
+<td style="text-align: left;"><code>SAVE DISH</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Order Board</td>
+<td style="text-align: left;">Kanban/Tabbed view (New, Preparing, Out for Delivery, Completed), COD/Paid badges.</td>
+<td style="text-align: left;"><code>ACCEPT</code>, <code>ASSIGN RIDER</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Fleet Manager</td>
+<td style="text-align: left;">Rider table, Phone (10-digits), Email, Cash owed badge (<code>outstandingBalance</code>).</td>
+<td style="text-align: left;"><code>+ ADD DELIVERY BOY</code>, <code>COLLECT CASH</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Cash Collect Modal</td>
+<td style="text-align: left;">Driver selector, Cash Owed header, Cash collected input field.</td>
+<td style="text-align: left;"><code>RECORD CASH SETTLEMENT</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seller</strong></td>
+<td style="text-align: left;">Subscriptions</td>
+<td style="text-align: left;">Plan cards, Features checklist, Coupon input box, Discount summary.</td>
+<td style="text-align: left;"><code>PAY VIA RAZORPAY</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Rider</strong></td>
+<td style="text-align: left;">Rider Dashboard</td>
+<td style="text-align: left;">Cash Owed badge header, Shift stats, Assigned delivery task cards.</td>
+<td style="text-align: left;"><code>START DELIVERY</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Rider</strong></td>
+<td style="text-align: left;">Task Card</td>
+<td style="text-align: left;">Order ID, Customer name, Call button, Map button, Items summary, COD badge.</td>
+<td style="text-align: left;"><code>COLLECT CASH &amp; MARK DELIVERED</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Rider</strong></td>
+<td style="text-align: left;">COD Cash Modal</td>
+<td style="text-align: left;">Cash amount header, Checkbox confirmation.</td>
+<td style="text-align: left;"><code>CONFIRM CASH RECEIVED</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Rider</strong></td>
+<td style="text-align: left;">Doorstep QR Modal</td>
+<td style="text-align: left;">Dynamic Razorpay QR code display, Real-time status spinner.</td>
+<td style="text-align: left;"><code>COMPLETE DELIVERY</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Rider</strong></td>
+<td style="text-align: left;">Cash Wallet</td>
+<td style="text-align: left;">Outstanding cash owed header, Transaction history feed (COD +, Handover -).</td>
+<td style="text-align: left;"><code>VIEW LEDGER</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>UI/UX Specification Document prepared for the </em><em>Neo Cloud Room</em><em> Design &amp; Wireframing Team.</em></p>
+</body>
+</html>

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import {
   User,
   Mail,
@@ -23,8 +24,8 @@ export interface SignUpRightComponentProps {
 }
 
 export default function SignUpRightComponent({
-  signInUrl = "/auth/login",
-  onSuccessRedirect = "/explore/food",
+  signInUrl = "/login",
+  onSuccessRedirect = "/explore-desktop",
 }: SignUpRightComponentProps) {
   const router = useRouter();
 
@@ -259,12 +260,13 @@ export default function SignUpRightComponent({
 
     setLoading(true);
     try {
+      const cleanEmail = email.trim().toLowerCase();
       const res = await fetchApi("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: fullName.trim(),
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           phone: phone.trim(),
           password,
           role: "USER",
@@ -272,7 +274,21 @@ export default function SignUpRightComponent({
       });
 
       if (res.ok) {
-        router.push(onSuccessRedirect);
+        // Automatically sign in the user
+        const signInRes = await signIn("credentials", {
+          redirect: false,
+          email: cleanEmail,
+          password,
+          loginType: "USER",
+        });
+
+        if (signInRes?.ok || !signInRes?.error) {
+          const params = new URLSearchParams(window.location.search);
+          const callbackUrl = params.get("callbackUrl") || onSuccessRedirect;
+          window.location.href = callbackUrl;
+        } else {
+          router.push(`${signInUrl}?registered=true`);
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.message || "Registration failed. Please try again.");

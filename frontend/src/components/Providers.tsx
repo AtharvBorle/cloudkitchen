@@ -30,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
     }, []);
 
     return (
-        <SessionProvider basePath={`${apiBaseUrl}/api/auth`} refetchOnWindowFocus={false}>
+        <SessionProvider basePath={apiBaseUrl ? `${apiBaseUrl.replace(/\/$/, "")}/api/auth` : "/api/auth"} refetchOnWindowFocus={false}>
             {children}
         </SessionProvider>
     );

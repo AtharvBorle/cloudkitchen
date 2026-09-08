@@ -1,0 +1,263 @@
+.ordersContainer {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #F8FAFC;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  box-sizing: border-box;
+}
+
+.rightSection {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #F8FAFC;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 32px 36px 48px 36px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header Group */
+.headerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.92rem;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Filters & Actions Control Bar */
+.controlBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Left Status Pill Segmented Bar */
+.statusPillGroup {
+  display: inline-flex;
+  align-items: center;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 4px 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  gap: 4px;
+}
+
+.statusPillBtn {
+  background: transparent;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.statusPillBtn:hover:not(.activePill) {
+  color: #0F172A;
+  background-color: #F8FAFC;
+}
+
+.activePill {
+  background-color: #F97316;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.28);
+}
+
+/* Right Dropdown Filter Pills */
+.rightFilters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.filterBtn:hover {
+  border-color: #CBD5E1;
+  background-color: #F8FAFC;
+}
+
+@media (max-width: 900px) {
+  .controlBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .statusPillGroup {
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Orders Table Card */
+.tableCard {
+  background-color: #FFFFFF;
+  border: 1px solid #F1F5F9;
+  border-radius: 16px;
+  padding: 12px 24px 20px 24px;
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ordersTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.ordersTable th {
+  padding: 18px 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1.5px solid #F1F5F9;
+}
+
+.ordersTable th:first-child {
+  padding-left: 8px;
+}
+
+.ordersTable td {
+  padding: 18px 16px;
+  border-bottom: 1px solid #F8FAFC;
+  color: #334155;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.ordersTable td:first-child {
+  padding-left: 8px;
+}
+
+.ordersTable tr:last-child td {
+  border-bottom: none;
+}
+
+.ordersTable tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.ordersTable tbody tr:hover {
+  background-color: #FAFAFC;
+}
+
+/* Specific Cell Text Styles */
+.orderIdText {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.customerText {
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.roomText {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.itemsText {
+  color: #475569;
+}
+
+.totalText {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.timeText {
+  color: #64748B;
+  font-size: 0.85rem;
+}
+
+/* Status Badges */
+.statusBadge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.statusPreparing {
+  background-color: #FFF7ED;
+  color: #EA580C;
+}
+
+.statusPending {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.statusOutForDelivery {
+  background-color: #EFF6FF;
+  color: #3B82F6;
+}
+
+.statusCompleted {
+  background-color: #FFF1E8;
+  color: #EA580C;
+}
+
+.statusCancelled {
+  background-color: #FEE2E2;
+  color: #DC2626;
+}

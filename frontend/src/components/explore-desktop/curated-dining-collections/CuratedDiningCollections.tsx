@@ -14,11 +14,14 @@ import mediterraneanMezzeImg from "./dining-mediterranean-mezze.jpg";
 import morningFavouritesImg from "./dining-morning-favourites.jpg";
 import steakhousePicksImg from "./dining-steakhouse-picks.jpg";
 
+import { useRouter } from "next/navigation";
+
 export interface DiningCollectionItem {
   id: string;
   badge: string;
   title: string;
   image: StaticImageData | string;
+  kitchenId?: string;
 }
 
 const DEFAULT_DINING_ITEMS: DiningCollectionItem[] = [
@@ -27,48 +30,56 @@ const DEFAULT_DINING_ITEMS: DiningCollectionItem[] = [
     badge: "Under ₹149",
     title: "Street Food Specials",
     image: streetFoodImg,
+    kitchenId: "street-food-specials",
   },
   {
     id: "dining-2",
     badge: "Under ₹199",
     title: "Comfort Food Classics",
     image: comfortFoodImg,
+    kitchenId: "7-12-kitchen",
   },
   {
     id: "dining-3",
     badge: "Healthy Picks",
     title: "Fresh Salads & Bowls",
     image: freshSaladsImg,
+    kitchenId: "fresh-salads",
   },
   {
     id: "dining-4",
     badge: "Fine Dining",
     title: "Premium Dining",
     image: fineDiningImg,
+    kitchenId: "pizza-palace",
   },
   {
     id: "dining-5",
     badge: "Top Rated",
     title: "Sushi & Sashimi",
     image: sushiSashimiImg,
+    kitchenId: "sushi-bar",
   },
   {
     id: "dining-6",
     badge: "Under ₹249",
     title: "Mediterranean Mezze",
     image: mediterraneanMezzeImg,
+    kitchenId: "mediterranean-mezze",
   },
   {
     id: "dining-7",
     badge: "Breakfast",
     title: "Morning Favourites",
     image: morningFavouritesImg,
+    kitchenId: "baker-delight",
   },
   {
     id: "dining-8",
     badge: "Premium",
     title: "Steakhouse Picks",
     image: steakhousePicksImg,
+    kitchenId: "chef-arjun",
   },
 ];
 
@@ -85,6 +96,7 @@ export const CuratedDiningCollections: React.FC<CuratedDiningCollectionsProps> =
   onCardClick,
   onWishlistToggle,
 }) => {
+  const router = useRouter();
   const [savedItems, setSavedItems] = useState<{ [id: string]: boolean }>({});
 
   const handleHeartClick = (e: React.MouseEvent, id: string) => {
@@ -101,6 +113,8 @@ export const CuratedDiningCollections: React.FC<CuratedDiningCollectionsProps> =
   const handleItemClick = (item: DiningCollectionItem) => {
     if (onCardClick) {
       onCardClick(item);
+    } else {
+      router.push(`/restaurant/${item.kitchenId || item.id}`);
     }
   };
 

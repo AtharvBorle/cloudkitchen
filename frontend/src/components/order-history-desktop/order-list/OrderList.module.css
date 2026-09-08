@@ -1,0 +1,198 @@
+.ordersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.orderCard {
+  background-color: #ffffff;
+  border-radius: 20px;
+  border: 1.5px solid #f1f5f9;
+  padding: 24px 28px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+/* 1. Header Row */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.restaurantGroup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.iconBox {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: #fff1e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bagIcon {
+  color: #f97316;
+}
+
+.restaurantInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.restaurantName {
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.orderMeta {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+  font-weight: 500;
+}
+
+.statusBadgeWrapper {
+  display: flex;
+  align-items: center;
+}
+
+.statusBadge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+  display: inline-block;
+}
+
+.statusDelivered {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.statusCancelled {
+  background-color: #fee2e2;
+  color: #f87171;
+}
+
+.statusInProgress {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+/* 2. Middle Body */
+.cardBody {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.itemsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.amountColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: right;
+}
+
+.sectionLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+}
+
+.itemsValue {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.amountValue {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f97316;
+  margin: 0;
+}
+
+/* 3. Footer Row */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 18px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.deliveryText {
+  font-size: 0.86rem;
+  color: #94a3b8;
+  margin: 0;
+  font-weight: 500;
+}
+
+.actionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.viewDetailsBtn {
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  color: #334155;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 9px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.viewDetailsBtn:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.reorderBtn {
+  background-color: #f97316;
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+
+.reorderBtn:hover {
+  background-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35);
+}

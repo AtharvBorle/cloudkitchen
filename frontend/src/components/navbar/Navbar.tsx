@@ -10,24 +10,25 @@ import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
+import profilePic from "./Rectangle.jpg";
 
 export const DEFAULT_NAV_ITEMS = [
   "Home",
   "Explore",
-  "Rooms",
-  "Furniture",
   "Orders",
+  "Rooms",
+  "Settings",
 ] as const;
 
 export const NAV_ITEM_ROUTES: Record<string, string> = {
   Home: "/",
-  Explore: "/explore/food",
-  Food: "/explore/food",
-  Rooms: "/explore/rooms",
+  Explore: "/explore-desktop",
+  Food: "/explore-desktop",
+  Orders: "/orders-desktop",
+  Rooms: "/room-booking",
+  Settings: "/settings-desktop",
   Furniture: "/explore/furniture",
-  "Mess/Tiffin": "/explore/food?category=Tiffin",
-  Orders: "/dashboard/user",
-  Settings: "/dashboard/user/profile",
+  "Mess/Tiffin": "/explore-desktop",
 };
 
 export interface NavbarProps {
@@ -58,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLocationClick,
 }) => {
   const router = useRouter();
-  const pathname = usePathname() || "";
+  const pathname = usePathname();
   const { cartItems } = useCart();
   const { defaultAddress } = useLocation();
   const { data: session } = useSession();
@@ -71,14 +72,26 @@ export const Navbar: React.FC<NavbarProps> = ({
   const getActiveItemFromPath = (): string => {
     if (controlledActiveItem !== undefined) return controlledActiveItem;
     if (pathname === "/") return "Home";
-    if (pathname.startsWith("/explore/food") || pathname.startsWith("/explore-desktop")) {
+    if (pathname.startsWith("/explore-desktop")) {
       return navItems.includes("Food") ? "Food" : "Explore";
     }
-    if (pathname.startsWith("/explore/rooms") || pathname.startsWith("/room-booking")) {
+    if (pathname.startsWith("/room-booking")) {
       return "Rooms";
     }
     if (pathname.startsWith("/explore/furniture")) {
       return "Furniture";
+    }
+    if (pathname.startsWith("/orders-desktop") || pathname.startsWith("/order-history") || pathname.startsWith("/dashboard/user/orders")) {
+      return "Orders";
+    }
+    if (
+      pathname.startsWith("/settings-desktop") ||
+      pathname.startsWith("/my-subscription") ||
+      pathname.startsWith("/notifications-desktop") ||
+      pathname.startsWith("/payment-methods-desktop") ||
+      pathname.startsWith("/delivery-addresses-desktop")
+    ) {
+      return "Settings";
     }
     if (pathname.startsWith("/dashboard")) {
       return "Orders";
@@ -140,10 +153,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       } else if (role === "ADMIN" || role === "SUPERADMIN") {
         router.push("/dashboard/admin");
       } else {
-        router.push("/dashboard/user");
+        router.push("/settings-desktop");
       }
     } else {
-      router.push("/user");
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/")}`);
     }
   };
 
@@ -266,9 +279,35 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={styles.profileAvatar}
             onClick={handleProfileClick}
             aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
-            title={session?.user ? (session.user.name || "User Profile") : "Sign In"}
+            title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
           >
-            <User size={20} className={styles.avatarIcon} />
+            {session?.user?.name ? (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  backgroundColor: "#FF5500",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: "15px",
+                  userSelect: "none",
+                }}
+              >
+                {session.user.name.trim().charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <Image
+                src={profilePic}
+                alt="Sign In"
+                width={38}
+                height={38}
+                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+              />
+            )}
           </button>
 
           {/* Mobile Menu Toggle Button */}
@@ -291,6 +330,52 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div className={styles.mobileDrawer}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", paddingBottom: "8px", borderBottom: "1px solid #F1F5F9" }}>
+              <span style={{ fontSize: "14px", fontWeight: 800, color: "#A3281C" }}>MENU</span>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  border: "1px solid #E2E8F0",
+                  backgroundColor: "#F8FAFC",
+                  color: "#64748B",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  touchAction: "manipulation",
+                }}
+                aria-label="Close menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Mobile Drawer Veg Only Toggle */}
+            <div
+              className={styles.drawerVegToggle}
+              style={{ display: "none" }}
+              onClick={toggleVegOnly}
+              role="switch"
+              aria-checked={currentVegOnly}
+            >
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#22C55E" }}>VEG ONLY</span>
+              <div
+                className={`${styles.toggleTrack} ${
+                  currentVegOnly ? styles.toggleTrackActive : ""
+                }`}
+              >
+                <div
+                  className={`${styles.toggleThumb} ${
+                    currentVegOnly ? styles.toggleThumbActive : ""
+                  }`}
+                />
+              </div>
+            </div>
+
             {navItems.map((item) => {
               const isActive = currentActiveItem === item;
               return (
@@ -314,6 +399,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   cursor: "pointer",
                   color: "#374151",
                   fontWeight: 600,
+                  touchAction: "manipulation",
                 }}
               >
                 <User size={20} color="#FF5500" />

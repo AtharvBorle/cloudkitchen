@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Search, Bell, Menu } from "lucide-react";
+import styles from "./Topbar.module.css";
 
 export interface TopbarProps {
   title?: string;
@@ -32,100 +33,37 @@ export default function Topbar({
   };
 
   return (
-    <header
-      style={{
-        width: "100%",
-        height: "64px",
-        minHeight: "64px",
-        backgroundColor: "#FFFFFF",
-        borderBottom: "1px solid #E2E8F0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 32px",
-        boxSizing: "border-box",
-        zIndex: 10,
-        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-      }}
-      className="seller-topbar"
-    >
+    <header className={styles.sellerTopbar}>
       {/* Left: Title + Mobile Menu Trigger */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div className={styles.leftSection}>
         {onMenuToggle && (
           <button
             type="button"
-            onClick={onMenuToggle}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "6px",
-              color: "#0F172A",
-              display: "none",
-              alignItems: "center",
-              justifyContent: "center",
+            onClick={(e) => {
+              e.stopPropagation();
+              onMenuToggle();
             }}
-            className="mobile-menu-trigger"
+            className={styles.mobileMenuTrigger}
             aria-label="Open sidebar navigation"
+            title="Open Menu"
           >
-            <Menu size={22} />
+            <Menu size={24} />
           </button>
         )}
-        <h2
-          style={{
-            fontSize: "17px",
-            fontWeight: 700,
-            color: "#0F172A",
-            margin: 0,
-            letterSpacing: "-0.2px",
-          }}
-        >
-          {title}
-        </h2>
+        <h2 className={styles.title}>{title}</h2>
       </div>
 
       {/* Right Controls: Search + Notification + User Pill */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-        }}
-      >
+      <div className={styles.rightControls}>
         {/* Search Bar */}
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            width: "250px",
-            height: "38px",
-            backgroundColor: "#F1F5F9",
-            borderRadius: "8px",
-            padding: "0 12px",
-            boxSizing: "border-box",
-          }}
-          className="topbar-search"
-        >
-          <Search
-            size={16}
-            color="#94A3B8"
-            style={{ marginRight: "8px", flexShrink: 0 }}
-          />
+        <div className={styles.searchWrapper}>
+          <Search size={16} className={styles.searchIcon} />
           <input
             type="text"
             placeholder={searchPlaceholder}
             value={searchQuery}
             onChange={handleSearchChange}
-            style={{
-              width: "100%",
-              border: "none",
-              outline: "none",
-              backgroundColor: "transparent",
-              fontSize: "13px",
-              color: "#0F172A",
-              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-            }}
+            className={styles.searchInput}
           />
         </div>
 
@@ -133,92 +71,23 @@ export default function Topbar({
         <button
           type="button"
           onClick={onNotificationClick}
-          style={{
-            width: "38px",
-            height: "38px",
-            borderRadius: "50%",
-            backgroundColor: "#F8FAFC",
-            border: "1px solid #E2E8F0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "#64748B",
-            transition: "all 0.15s ease",
-          }}
-          className="notification-btn"
+          className={styles.notificationBtn}
           title="Notifications"
           aria-label="Notifications"
         >
-          <Bell size={17} />
+          <Bell size={18} />
         </button>
 
         {/* User Profile Pill */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
-          <div
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
-              backgroundColor: "#FF5500",
-              color: "#FFFFFF",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 700,
-              fontSize: "13px",
-              letterSpacing: "0.5px",
-              boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
-            }}
-          >
-            {avatarInitials}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
-            <span
-              style={{
-                fontSize: "13.5px",
-                fontWeight: 700,
-                color: "#0F172A",
-              }}
-            >
-              {ownerName}
-            </span>
-            <span
-              style={{
-                fontSize: "11px",
-                color: "#94A3B8",
-                fontWeight: 400,
-              }}
-            >
-              {partnerRole}
-            </span>
+        <div className={styles.profilePill}>
+          <div className={styles.avatarCircle}>{avatarInitials}</div>
+          <div className={styles.profileInfo}>
+            <span className={styles.ownerName}>{ownerName}</span>
+            <span className={styles.partnerRole}>{partnerRole}</span>
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        .notification-btn:hover {
-          background-color: #F1F5F9 !important;
-          color: #0F172A !important;
-        }
-        @media (max-width: 900px) {
-          .seller-topbar {
-            padding: 0 20px !important;
-          }
-          .mobile-menu-trigger {
-            display: flex !important;
-          }
-          .topbar-search {
-            display: none !important;
-          }
-        }
-      `}</style>
     </header>
   );
 }
+

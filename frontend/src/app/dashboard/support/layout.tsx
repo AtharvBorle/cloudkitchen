@@ -17,7 +17,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
         if (status === "unauthenticated") {
             router.replace("/auth/login/admin");
         } else if (status === "authenticated" && session?.user?.role !== "SUPPORT" && session?.user?.role !== "SUPERADMIN") {
-            router.replace("/explore/food");
+            router.replace("/explore-desktop");
         }
     }, [status, session, router]);
 

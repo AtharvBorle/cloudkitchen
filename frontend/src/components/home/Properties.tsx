@@ -12,6 +12,7 @@ interface PlaceCardData {
   time: string;
   imageUrl: string;
   category: string;
+  kitchenId?: string;
 }
 
 const SAMPLE_PLACES: PlaceCardData[] = [
@@ -23,6 +24,7 @@ const SAMPLE_PLACES: PlaceCardData[] = [
     time: "25-35 min",
     imageUrl: "/images/places/place-pizza.png",
     category: "Italian",
+    kitchenId: "pizza-palace",
   },
   {
     id: "2",
@@ -31,6 +33,7 @@ const SAMPLE_PLACES: PlaceCardData[] = [
     time: "20-30 min",
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
+    kitchenId: "spice-biryani",
   },
   {
     id: "3",
@@ -39,6 +42,7 @@ const SAMPLE_PLACES: PlaceCardData[] = [
     time: "15-25 min",
     imageUrl: "/images/places/place-bakery.png",
     category: "Bakery",
+    kitchenId: "baker-delight",
   },
   {
     id: "4",
@@ -47,6 +51,7 @@ const SAMPLE_PLACES: PlaceCardData[] = [
     time: "20-30 min",
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
+    kitchenId: "spice-biryani",
   },
   // Row 2
   {
@@ -56,6 +61,7 @@ const SAMPLE_PLACES: PlaceCardData[] = [
     time: "25-35 min",
     imageUrl: "/images/places/place-pizza.png",
     category: "Italian",
+    kitchenId: "pizza-palace",
   },
   {
     id: "6",
@@ -64,6 +70,7 @@ const SAMPLE_PLACES: PlaceCardData[] = [
     time: "20-30 min",
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
+    kitchenId: "spice-biryani",
   },
   {
     id: "7",
@@ -483,7 +490,8 @@ export default function Properties() {
             className="places-grid-layout PlacesGrid"
           >
             {SAMPLE_PLACES.map((place) => (
-              <div
+              <Link
+                href={`/restaurant/${place.kitchenId || "7-12-kitchen"}`}
                 key={place.id}
                 style={{
                   width: "100%",
@@ -497,6 +505,8 @@ export default function Properties() {
                   flexDirection: "column",
                   cursor: "pointer",
                   transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                  textDecoration: "none",
+                  color: "inherit",
                   boxSizing: "border-box",
                 }}
                 className="place-card"
@@ -592,7 +602,7 @@ export default function Properties() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

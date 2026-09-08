@@ -360,8 +360,8 @@ export default function ChatbotWidget() {
         };
     }, [status, session]);
 
-    // Hide chatbot on Superadmin, Admin, and Support dashboard pages
-    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard/support")) {
+    // Hide chatbot on Superadmin, Admin, Support, and Seller Responsive pages
+    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard/support") || pathname?.startsWith("/seller/res")) {
         return null;
     }
 
@@ -990,7 +990,7 @@ export default function ChatbotWidget() {
                     ];
                 }
                 else if (normalizedText.includes("food") || normalizedText.includes("order") || normalizedText.includes("item") || normalizedText.includes("dish") || normalizedText.includes("delivery") || normalizedText.includes("menu") || normalizedText.includes("buy")) {
-                    replyText = "To order delicious food, browse our active cloud kitchens at our [Explore Food](/explore/food) page. You can add items to your cart, set your delivery address, and proceed to checkout.\n\nIf you want to track a recent order or report missing/incorrect food items, select below:";
+                    replyText = "To order delicious food, browse our active cloud kitchens at our [Explore Food](/explore-desktop) page. You can add items to your cart, set your delivery address, and proceed to checkout.\n\nIf you want to track a recent order or report missing/incorrect food items, select below:";
                     generatedOptions = [
                         { label: "📦 Select recent order", action: () => handleSelectOption("orders") },
                         { label: "🎟️ Raise order support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: "Food order assistance request", desc: "I need help with my food order delivery or quality." }) },
@@ -998,7 +998,7 @@ export default function ChatbotWidget() {
                     ];
                 }
                 else if (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay") || normalizedText.includes("hotel") || normalizedText.includes("check-in") || normalizedText.includes("checkin") || normalizedText.includes("check-out") || normalizedText.includes("checkout") || normalizedText.includes("time") || normalizedText.includes("date")) {
-                    replyText = "You can book comfortable stays on our [Explore Rooms](/explore/rooms) page. Note these rules:\n- **Check-in time**: 12:00 PM\n- **Check-out time**: 11:00 AM\n- **Overlapping dates**: Check-in on day X is allowed if the previous booking checkout was on day X at 11:00 AM.\n- **Calendar status**: Available dates are colored **green**, booked dates are **red**.\n\nTo view or manage bookings, select below:";
+                    replyText = "You can book comfortable stays on our [Book a Room](/room-booking) page. Note these rules:\n- **Check-in time**: 12:00 PM\n- **Check-out time**: 11:00 AM\n- **Overlapping dates**: Check-in on day X is allowed if the previous booking checkout was on day X at 11:00 AM.\n- **Calendar status**: Available dates are colored **green**, booked dates are **red**.\n\nTo view or manage bookings, select below:";
                     generatedOptions = [
                         { label: "🛌 View Stay Bookings", action: () => handleSelectOption("bookings") },
                         { label: "🎟️ Stay support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "ROOM", title: "Room stay assistance request", desc: "I have inquiries or issues with my room booking/dates." }) },

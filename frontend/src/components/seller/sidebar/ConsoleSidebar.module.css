@@ -1,0 +1,284 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9998;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  touch-action: none;
+}
+
+.backdrop.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.sellerSidebar {
+  height: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  border-right: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  z-index: 999;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.brandWrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.logoRow {
+  width: 100%;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+.logoImgWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.brandTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.desktopCollapseBtn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #64748b;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+  background-color: #f8fafc;
+}
+
+.desktopCollapseBtn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.sidebarCloseBtn {
+  display: none;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #64748b;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.sidebarCloseBtn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.roleTag {
+  align-self: flex-start;
+  background-color: #fff1e8;
+  border-radius: 6px;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #f97316;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.desktopExpandBtn {
+  margin-top: 6px;
+  width: 34px;
+  height: 34px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.desktopExpandBtn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.navList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.navItem {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  background-color: transparent;
+  border-left: 3px solid transparent;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.18s ease;
+  position: relative;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.navItem:hover:not(.active) {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.navItem.active {
+  background-color: #fff1e8;
+  border-left-color: #f97316;
+  color: #f97316;
+  font-weight: 700;
+}
+
+.navLabel {
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebarFooter {
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.footerToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+}
+
+.footerToggleBtn:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Mobile styles */
+@media (max-width: 1024px) {
+  .sellerSidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 85vw !important;
+    height: 100% !important;
+    padding: 20px 16px !important;
+    transform: translateX(-100%);
+    box-shadow: 6px 0 28px rgba(0, 0, 0, 0.16);
+    z-index: 9999;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .sellerSidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .sidebarCloseBtn {
+    display: flex;
+  }
+
+  .desktopCollapseBtn,
+  .desktopExpandBtn,
+  .sidebarFooter {
+    display: none !important;
+  }
+
+  .brandTitle,
+  .roleTag,
+  .navLabel {
+    display: inline-block !important;
+    opacity: 1 !important;
+  }
+
+  .navItem {
+    justify-content: flex-start !important;
+    padding: 10px 14px !important;
+    gap: 12px !important;
+  }
+}

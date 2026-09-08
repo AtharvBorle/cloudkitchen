@@ -37,10 +37,16 @@ export const ExploreHeroBanner: React.FC<ExploreHeroBannerProps> = ({
 
       {/* Hero Content */}
       <div className={styles.contentArea}>
+        {/* 1. Limited Offer Button (121px x 30px) */}
         <span className={styles.badge}>{badgeText}</span>
-        <h1 className={styles.heading}>{heading}</h1>
-        <p className={styles.description}>{description}</p>
 
+        {/* 2. Text and Description Box (580px x 156px) */}
+        <div className={styles.textBlock}>
+          <h1 className={styles.heading}>{heading}</h1>
+          <p className={styles.description}>{description}</p>
+        </div>
+
+        {/* 3. Watch Kitchen Streams Button (252px x 51px, Rectangle Type Border) */}
         <button
           type="button"
           className={styles.streamBtn}
@@ -48,7 +54,7 @@ export const ExploreHeroBanner: React.FC<ExploreHeroBannerProps> = ({
           aria-label={buttonText}
         >
           <span>{buttonText}</span>
-          <Play size={14} fill="#ffffff" color="#ffffff" className={styles.playIcon} />
+          <Play size={16} strokeWidth={2.4} fill="none" color="#ffffff" className={styles.playIcon} />
         </button>
       </div>
     </section>

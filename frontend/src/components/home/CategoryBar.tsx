@@ -14,15 +14,15 @@ export interface CategoryItem {
 }
 
 const CATEGORIES: CategoryItem[] = [
-  { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore/food" },
-  { id: "mess", name: "Mess", image: "/images/categories/cat-mess.png", emoji: "🧺", route: "/explore/food?category=mess" },
-  { id: "backery", name: "Backery", image: "/images/categories/cat-backery.png", emoji: "🥐", route: "/explore/food?category=bakery" },
-  { id: "home-meals", name: "Home Meals", image: "/images/categories/cat-homemeals.png", emoji: "🍲", route: "/explore/food?category=homemeals" },
-  { id: "healthy", name: "Healthy", image: "/images/categories/cat-healthy.png", emoji: "🥗", route: "/explore/food?category=healthy" },
-  { id: "snacks", name: "Snacks", image: "/images/categories/cat-snacks.png", emoji: "🍿", route: "/explore/food?category=snacks" },
-  { id: "deserts", name: "Deserts", image: "/images/categories/cat-deserts.png", emoji: "🍰", route: "/explore/food?category=desserts" },
-  { id: "drink", name: "Drink", image: "/images/categories/cat-drink.png", emoji: "🍹", route: "/explore/food?category=drinks" },
-  { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/explore/rooms" },
+  { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore-desktop" },
+  { id: "mess", name: "Mess", image: "/images/categories/cat-mess.png", emoji: "🧺", route: "/explore-desktop?category=mess" },
+  { id: "bakery", name: "Bakery", image: "/images/categories/cat-backery.png", emoji: "🥐", route: "/explore-desktop?category=bakery" },
+  { id: "home-meals", name: "Home Meals", image: "/images/categories/cat-homemeals.png", emoji: "🍲", route: "/explore-desktop?category=homemeals" },
+  { id: "healthy", name: "Healthy", image: "/images/categories/cat-healthy.png", emoji: "🥗", route: "/explore-desktop?category=healthy" },
+  { id: "snacks", name: "Snacks", image: "/images/categories/cat-snacks.png", emoji: "🍿", route: "/explore-desktop?category=snacks" },
+  { id: "desserts", name: "Desserts", image: "/images/categories/cat-deserts.png", emoji: "🍰", route: "/explore-desktop?category=desserts" },
+  { id: "drink", name: "Drink", image: "/images/categories/cat-drink.png", emoji: "🍹", route: "/explore-desktop?category=drinks" },
+  { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/room-booking" },
 ];
 
 interface CategoryBarProps {
