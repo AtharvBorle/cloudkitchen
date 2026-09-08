@@ -1,7 +1,9 @@
 .planContainer {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
   width: 100%;
+  overflow: hidden;
   background-color: #F8FAFC;
   font-family: var(--font-poppins), 'Poppins', sans-serif;
   box-sizing: border-box;
@@ -10,14 +12,18 @@
 .rightSection {
   flex: 1;
   min-width: 0;
+  height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  overflow: hidden;
   background-color: #F8FAFC;
 }
 
 .mainContent {
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 32px 36px 48px 36px;
   box-sizing: border-box;
   display: flex;
@@ -771,4 +777,38 @@
 
 .toggleThumbActive {
   transform: translateX(20px);
+}
+
+.deleteBtn,
+.customAddDeleteBtn,
+.mealDeleteBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #EF4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.deleteBtn:hover,
+.customAddDeleteBtn:hover,
+.mealDeleteBtn:hover {
+  background-color: #FEF2F2;
+  border-color: #FECACA;
+  color: #DC2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.12);
+}
+
+.deleteBtn:active,
+.customAddDeleteBtn:active,
+.mealDeleteBtn:active {
+  transform: translateY(0);
 }

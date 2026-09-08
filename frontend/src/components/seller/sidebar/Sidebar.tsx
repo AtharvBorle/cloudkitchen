@@ -14,6 +14,7 @@ import {
   Truck,
   CreditCard,
   UserCircle,
+  Headphones,
   X,
   PanelLeftClose,
   PanelLeftOpen,
@@ -33,10 +34,11 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
   { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
   { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
-  { id: "rooms", label: "Rooms", icon: Home, href: "/seller/rooms/config" },
+  { id: "rooms", label: "Rooms", icon: Home, href: "/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
-  { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/riderMng" },
+  { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
+  { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
 ];
 
@@ -123,6 +125,7 @@ export default function SellerSidebar({
     }
     if (item.id === "delivery") {
       return (
+        pathname?.startsWith("/seller/delivery") ||
         pathname?.startsWith("/seller/riderMng") ||
         pathname?.startsWith("/seller/res/delivery") ||
         pathname?.startsWith("/dashboard/seller/delivery")
@@ -131,12 +134,21 @@ export default function SellerSidebar({
     if (item.id === "subscription") {
       return (
         pathname?.startsWith("/seller/subscription") ||
+        pathname?.startsWith("/seller/create-subscription-plan") ||
+        pathname?.startsWith("/seller/res/subscription") ||
         pathname?.startsWith("/dashboard/seller/payment")
+      );
+    }
+    if (item.id === "support") {
+      return (
+        pathname?.startsWith("/seller/support") ||
+        pathname?.startsWith("/dashboard/seller/support")
       );
     }
     if (item.id === "profile") {
       return (
         pathname?.startsWith("/seller/profile") ||
+        pathname?.startsWith("/seller/res/profile") ||
         pathname?.startsWith("/dashboard/seller/profile")
       );
     }

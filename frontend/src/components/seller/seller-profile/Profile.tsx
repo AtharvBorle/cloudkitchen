@@ -45,8 +45,10 @@ export default function Profile({
     <div
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100vh",
         width: "100%",
+        overflow: "hidden",
         backgroundColor: "#F7F8FB",
         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}
@@ -66,7 +68,9 @@ export default function Profile({
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          minHeight: "100vh",
+          height: "100vh",
+          maxHeight: "100vh",
+          overflow: "hidden",
           backgroundColor: "#F7F8FB",
         }}
         className="seller-right-section"
@@ -81,15 +85,17 @@ export default function Profile({
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
 
-        {/* Main Canvas Component */}
-        <MainCanvas
-          formData={profileData}
-          headerTitle={headerTitle}
-          headerDescription={headerDescription}
-          onSave={onSave}
-          onLogout={onLogout}
-          onDataChange={handleDataChange}
-        />
+        {/* Main Canvas Component Scroll Area */}
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+          <MainCanvas
+            formData={profileData}
+            headerTitle={headerTitle}
+            headerDescription={headerDescription}
+            onSave={onSave}
+            onLogout={onLogout}
+            onDataChange={handleDataChange}
+          />
+        </div>
       </div>
     </div>
   );

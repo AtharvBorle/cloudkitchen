@@ -5,6 +5,7 @@ import { Navbar } from "@/components/navbar";
 import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
 import { SubscriptionPlans } from "@/components/restaurant-desktop/subscriptionplans";
 import { PopularFood } from "@/components/restaurant-desktop/popularfood";
+import { RestaurantMobileView } from "@/components/restaurant-desktop/restaurant-mobile";
 import { getKitchenById, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
 import { useCart } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
@@ -99,38 +100,48 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
 
   return (
     <div className={styles.container}>
-      {/* 1. Shared Desktop Navbar with Settings (matching Home navbar) */}
-      <Navbar initialActiveItem="Explore" />
+      {/* 1. DESKTOP / WEB ONLY VIEW */}
+      <div className={styles.desktopOnly}>
+        <Navbar initialActiveItem="Explore" />
 
-      <main className={styles.mainContent}>
-        {/* 2. Dynamic Food Hero Banner Component */}
-        <FoodHeroBanner
-          restaurantName={kitchenData.restaurantName}
-          location={kitchenData.location}
-          rating={kitchenData.rating}
-          reviewsCount={kitchenData.reviewsCount}
-          deliveryTime={kitchenData.deliveryTime}
-          deliveryFeeText={kitchenData.deliveryFeeText}
-          dietType={kitchenData.dietType}
-          offerText={kitchenData.offerText}
-          chefName={kitchenData.chefName}
-          chefDetails={kitchenData.chefDetails}
-          initialVegOnly={isVegOnly}
+        <main className={styles.mainContent}>
+          <FoodHeroBanner
+            restaurantName={kitchenData.restaurantName}
+            location={kitchenData.location}
+            rating={kitchenData.rating}
+            reviewsCount={kitchenData.reviewsCount}
+            deliveryTime={kitchenData.deliveryTime}
+            deliveryFeeText={kitchenData.deliveryFeeText}
+            dietType={kitchenData.dietType}
+            offerText={kitchenData.offerText}
+            chefName={kitchenData.chefName}
+            chefDetails={kitchenData.chefDetails}
+            initialVegOnly={isVegOnly}
+            onVegToggle={(veg) => setIsVegOnly(veg)}
+          />
+
+          <SubscriptionPlans />
+
+          <PopularFood
+            heading={`Popular at ${kitchenData.restaurantName}`}
+            categories={kitchenData.categories}
+            defaultActiveCategory={kitchenData.defaultActiveCategory}
+            items={displayedItems}
+            onAddItem={handleAddItem}
+          />
+        </main>
+      </div>
+
+      {/* 2. MOBILE / ANDROID RESPONSIVE VIEW */}
+      <div className={styles.mobileOnly}>
+        <RestaurantMobileView
+          kitchenData={kitchenData}
+          isVegOnly={isVegOnly}
           onVegToggle={(veg) => setIsVegOnly(veg)}
-        />
-
-        {/* 3. Weekly Subscription Plans Section */}
-        <SubscriptionPlans />
-
-        {/* 4. Popular Foods & Categories for this Restaurant */}
-        <PopularFood
-          heading={`Popular at ${kitchenData.restaurantName}`}
-          categories={kitchenData.categories}
-          defaultActiveCategory={kitchenData.defaultActiveCategory}
-          items={displayedItems}
           onAddItem={handleAddItem}
         />
-      </main>
+      </div>
     </div>
   );
 }
+

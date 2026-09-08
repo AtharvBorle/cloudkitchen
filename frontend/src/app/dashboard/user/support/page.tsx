@@ -245,7 +245,7 @@ Details: Category request submitted via dashboard form.`;
             </div>
 
             {/* Content Section */}
-            <div style={{ display: "grid", gridTemplateColumns: "350px 1fr", gap: "30px", minHeight: "500px" }}>
+            <div className="support-tickets-grid" style={{ minHeight: "500px" }}>
                 
                 {/* Left side: Tickets List */}
                 <div style={{ backgroundColor: "white", borderRadius: "16px", border: "1px solid #E2E8F0", padding: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
@@ -608,6 +608,20 @@ Details: Category request submitted via dashboard form.`;
                     </div>
                 </div>
             )}
+
+            <style jsx>{`
+                .support-tickets-grid {
+                    display: grid;
+                    grid-template-columns: 350px 1fr;
+                    gap: 30px;
+                }
+                @media (max-width: 900px) {
+                    .support-tickets-grid {
+                        grid-template-columns: 1fr !important;
+                        gap: 20px !important;
+                    }
+                }
+            `}</style>
 
         </div>
     );

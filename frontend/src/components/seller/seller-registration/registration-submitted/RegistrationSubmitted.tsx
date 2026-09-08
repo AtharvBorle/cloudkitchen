@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+import { Check } from "lucide-react";
 import styles from "./RegistrationSubmitted.module.css";
 
 export interface RegistrationSubmittedProps {
@@ -12,66 +12,49 @@ export interface RegistrationSubmittedProps {
 }
 
 export const RegistrationSubmitted: React.FC<RegistrationSubmittedProps> = ({
-  trackingId = "NCR-2024-0847",
-  statusText = "PENDING",
+  trackingId = "NCR-2026-0847",
+  statusText = "Pending",
   onTrackStatus,
 }) => {
   return (
-    <div
-      className={styles.cardContainer}
-      style={{
-        backgroundColor: "#ffffff",
-        borderRadius: 16,
-        border: "1px solid #f1f5f9",
-        boxShadow: "0 4px 25px -2px rgba(0, 0, 0, 0.04)",
-        padding: "40px 48px 36px 48px",
-        width: "100%",
-        maxWidth: 700,
-        margin: "0 auto 48px auto",
-        boxSizing: "border-box",
-        textAlign: "center",
-      }}
-    >
-      {/* 1. Top Icon Circle */}
-      <div className={styles.iconCircle}>
-        <Check className={styles.checkIcon} />
-      </div>
-
-      {/* 2. Main Heading & Subtitle */}
-      <h2 className={styles.title}>Registration Submitted!</h2>
-      <p className={styles.subtitle}>
-        Thank you for onboarding. Your application is now in queue and our
-        verification team is reviewing your documents.
-      </p>
-
-      {/* 3. Tracking ID & Status Box */}
-      <div className={styles.infoBox}>
-        <div className={styles.infoRow}>
-          <span className={styles.infoLabel}>Tracking ID</span>
-          <span className={styles.trackingBadge}>{trackingId}</span>
+    <div className={styles.container}>
+      {/* Centered Content Block */}
+      <div className={styles.contentBlock}>
+        {/* Large Check Circle */}
+        <div className={styles.checkCircle}>
+          <Check className={styles.checkIcon} size={36} strokeWidth={3} />
         </div>
-        <div className={styles.infoRowDivider} />
-        <div className={styles.infoRow}>
-          <span className={styles.infoLabel}>Current Status</span>
+
+        {/* Main Heading */}
+        <h1 className={styles.title}>Submitted!</h1>
+
+        {/* Tracking ID */}
+        <span className={styles.trackingLabel}>TRACKING ID</span>
+        <div className={styles.trackingBadge}>{trackingId}</div>
+
+        {/* Status Badge */}
+        <div>
           <span className={styles.statusBadge}>{statusText}</span>
         </div>
+
+        {/* Explanatory Message */}
+        <p className={styles.helperText}>
+          We&apos;ll review your application within 24–48 hours.
+          <br />
+          You&apos;ll receive a notification once approved.
+        </p>
       </div>
 
-      {/* 4. Evaluation Timeline Note */}
-      <p className={styles.evaluationNote}>
-        The evaluation process generally takes <strong>24 to 48 hours.</strong> We
-        will send you an email confirmation as soon as your status updates.
-      </p>
-
-      {/* 5. Track Verification Status Button */}
-      <Link
-        href="/seller/verification"
-        className={styles.trackButton}
-        onClick={onTrackStatus}
-      >
-        <span>Track Verification Status</span>
-        <ArrowRight className={styles.btnArrow} />
-      </Link>
+      {/* Action Button: Desktop Inline / Mobile Fixed Bottom */}
+      <div className={styles.actionWrapper}>
+        <Link
+          href="/seller/verification-status"
+          className={styles.trackButton}
+          onClick={onTrackStatus}
+        >
+          <span>Track verification</span>
+        </Link>
+      </div>
     </div>
   );
 };

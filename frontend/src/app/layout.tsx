@@ -8,20 +8,22 @@ import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 const poppins = Poppins({
+  weight: ['300', '400', '500', '600', '700', '800'],
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-poppins',
 });
-
-export const metadata: Metadata = {
-  title: 'Cloud Kitchen & Homely Food with Room Booking',
-  description: 'Premium platform for homemade food and local room bookings.',
-};
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#FFFFFF',
+};
+
+export const metadata: Metadata = {
+  title: 'Cloud Kitchen & Homely Food with Room Booking',
+  description: 'Premium platform for homemade food and local room bookings.',
 };
 
 export default function RootLayout({

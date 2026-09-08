@@ -1,21 +1,21 @@
-﻿.cardContainer {
+.cardContainer {
   background-color: #ffffff;
   border-radius: 16px;
   border: 1px solid #f1f5f9;
   box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.04);
-  padding: 40px 48px 36px 48px;
+  padding: 36px 44px;
   width: 100%;
   max-width: 700px;
-  margin: 0 auto 48px auto;
+  margin: 0 auto;
   box-sizing: border-box;
 }
 
-.headerGroup {
-  margin-bottom: 26px;
+.desktopHeaderGroup {
+  margin-bottom: 24px;
 }
 
 .title {
-  font-size: 1.45rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0 0 6px 0;
@@ -35,26 +35,17 @@
   gap: 20px;
 }
 
-.fieldGroup {
+/* ========================================================= */
+/* DESKTOP STYLES: Large Upload Dropzones                    */
+/* ========================================================= */
+.desktopDocSection {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 20px;
 }
 
-.label {
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.required {
-  color: #ef4444;
-  margin-left: 2px;
-}
-
-/* Upload Dropzone */
 .dropzone {
-  background-color: #f4f7fb;
+  background-color: #f8fafc;
   border: 1.5px dashed #cbd5e1;
   border-radius: 12px;
   padding: 24px 20px;
@@ -70,9 +61,17 @@
 }
 
 .dropzone:hover {
-  background-color: #eef4fc;
+  background-color: #f1f5f9;
   border-color: #f97316;
 }
+
+.dropzoneActive {
+  background-color: #fff7ed !important;
+  border-color: #f97316 !important;
+  border-style: solid !important;
+  transform: scale(1.01);
+}
+
 
 .dropzoneIcon {
   width: 28px;
@@ -83,9 +82,17 @@
 
 .dropzoneMainText {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #1e293b;
   margin: 0;
+}
+
+.dropzoneSelectedFile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #16a34a;
+  font-weight: 600;
 }
 
 .dropzoneSubText {
@@ -94,24 +101,6 @@
   margin: 0;
 }
 
-.hiddenFileInput {
-  display: none;
-}
-
-.uploadedFileBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #e2e8f0;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  color: #0f172a;
-  font-weight: 600;
-  margin-top: 4px;
-}
-
-/* Alert Box */
 .noticeBox {
   display: flex;
   align-items: center;
@@ -137,21 +126,139 @@
   line-height: 1.3;
 }
 
-/* Two Column Grid for Banking */
-.twoColGrid {
+/* ========================================================= */
+/* MOBILE STYLES: Hidden on Desktop                          */
+/* ========================================================= */
+.mobileDocSection {
+  display: none;
+}
+
+.mobileDocCard {
+  background-color: #f6f8fb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobileDocLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.iconSquircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #fff1e7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.docIcon {
+  width: 18px;
+  height: 18px;
+  color: #f97316;
+}
+
+.mobileDocInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mobileDocTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statusSelected {
+  font-size: 11px;
+  color: #16a34a;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statusMuted {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.mobileUploadBtn {
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.mobileUploadBtn:hover {
+  background-color: #ea580c;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+/* ========================================================= */
+/* BANKING DETAILS SECTION                                   */
+/* ========================================================= */
+.bankingSection {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.required {
+  color: #f97316;
+  margin-left: 2px;
+}
+
+.inputWrapper {
+  position: relative;
+  width: 100%;
+}
+
 .input {
   width: 100%;
-  height: 44px;
+  height: 46px;
   padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
   background-color: #ffffff;
-  font-size: 0.9rem;
+  font-size: 13.5px;
   color: #1e293b;
   box-sizing: border-box;
   outline: none;
@@ -167,7 +274,9 @@
   color: #94a3b8;
 }
 
-/* Bottom Action Row */
+/* ========================================================= */
+/* ACTION CONTROLS                                           */
+/* ========================================================= */
 .actionRow {
   display: flex;
   align-items: center;
@@ -184,8 +293,8 @@
   background-color: #ffffff;
   color: #334155;
   border: 1px solid #cbd5e1;
-  padding: 10px 22px;
-  border-radius: 8px;
+  padding: 11px 22px;
+  border-radius: 10px;
   font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
@@ -205,9 +314,9 @@
   background-color: #f97316;
   color: #ffffff;
   border: none;
-  padding: 10px 26px;
-  border-radius: 8px;
-  font-size: 0.92rem;
+  padding: 11px 28px;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -217,14 +326,84 @@
 .continueBtn:hover {
   background-color: #ea580c;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
-  transform: translateY(-1px);
-}
-
-.continueBtn:active {
-  transform: translateY(0);
 }
 
 .btnArrow {
   width: 16px;
   height: 16px;
+}
+
+/* ========================================================= */
+/* RESPONSIVE MOBILE OVERRIDES                               */
+/* ========================================================= */
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 16px 14px;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    margin-bottom: 90px;
+  }
+
+  .desktopHeaderGroup {
+    display: none !important;
+  }
+
+  .desktopDocSection {
+    display: none !important;
+  }
+
+  .mobileDocSection {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bankingSection {
+    display: flex !important;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .label {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .input {
+    height: 44px;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 0 12px;
+  }
+
+  .actionRow {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    padding: 12px 16px 18px 16px;
+    border-top: 1px solid #f1f5f9;
+    z-index: 50;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+    margin-top: 0;
+  }
+
+  .backBtn {
+    display: none;
+  }
+
+  .continueBtn {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  .btnArrow {
+    display: none;
+  }
 }

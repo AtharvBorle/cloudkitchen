@@ -1,7 +1,15 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef } from "react";
-import { UploadCloud, AlertCircle, ArrowRight } from "lucide-react";
+import {
+  FileText,
+  Shield,
+  Zap,
+  UploadCloud,
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+} from "lucide-react";
 import styles from "./LegalDocuments.module.css";
 
 export interface LegalDocumentsData {
@@ -27,21 +35,54 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     identityProofFile: initialData?.identityProofFile || "",
     fssaiLicenseFile: initialData?.fssaiLicenseFile || "",
     utilityBillFile: initialData?.utilityBillFile || "",
-    bankAccountNumber: initialData?.bankAccountNumber || "",
-    ifscCode: initialData?.ifscCode || "",
+    bankAccountNumber: initialData?.bankAccountNumber || "9876543210123",
+    ifscCode: initialData?.ifscCode || "HDFC0001234",
   });
+
+  const [dragActiveField, setDragActiveField] = useState<string | null>(null);
 
   const identityInputRef = useRef<HTMLInputElement>(null);
   const fssaiInputRef = useRef<HTMLInputElement>(null);
   const utilityInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (
-    field: keyof LegalDocumentsData,
+  const handleFileSelect = (
+    fileField: "identityProofFile" | "fssaiLicenseFile" | "utilityBillFile",
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData((prev) => ({ ...prev, [field]: file.name }));
+      setFormData((prev) => ({
+        ...prev,
+        [fileField]: file.name,
+      }));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, field: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActiveField(field);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActiveField(null);
+  };
+
+  const handleDrop = (
+    e: React.DragEvent,
+    field: "identityProofFile" | "fssaiLicenseFile" | "utilityBillFile"
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActiveField(null);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: file.name,
+      }));
     }
   };
 
@@ -57,177 +98,281 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     }
   };
 
+
   return (
-    <div
-      className={styles.cardContainer}
-      style={{
-        backgroundColor: "#ffffff",
-        borderRadius: 16,
-        border: "1px solid #f1f5f9",
-        boxShadow: "0 4px 25px -2px rgba(0, 0, 0, 0.04)",
-        padding: "40px 48px 36px 48px",
-        width: "100%",
-        maxWidth: 700,
-        margin: "0 auto 48px auto",
-        boxSizing: "border-box",
-      }}
-    >
-      {/* Header Group */}
-      <div className={styles.headerGroup} style={{ marginBottom: 26 }}>
-        <h2
-          className={styles.title}
-          style={{
-            fontSize: "1.45rem",
-            fontWeight: 700,
-            color: "#0f172a",
-            margin: "0 0 6px 0",
-            letterSpacing: "-0.015em",
-          }}
-        >
-          Legal Documents & Verification
-        </h2>
-        <p
-          className={styles.subtitle}
-          style={{
-            fontSize: "0.88rem",
-            color: "#64748b",
-            margin: 0,
-            lineHeight: 1.45,
-          }}
-        >
+    <div className={styles.cardContainer}>
+      {/* Desktop Header Group (Desktop only) */}
+      <div className={styles.desktopHeaderGroup}>
+        <h2 className={styles.title}>Legal Documents & Verification</h2>
+        <p className={styles.subtitle}>
           Upload valid certificates and configure payout banking parameters.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* 1. Identity Proof */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            Identity Proof (Passport / Driver's License) <span className={styles.required}>*</span>
-          </label>
-          <input
-            type="file"
-            ref={identityInputRef}
-            onChange={(e) => handleFileChange("identityProofFile", e)}
-            accept=".pdf,.png,.jpg,.jpeg"
-            className={styles.hiddenFileInput}
-          />
-          <div
-            className={styles.dropzone}
-            onClick={() => identityInputRef.current?.click()}
-          >
-            <UploadCloud className={styles.dropzoneIcon} />
-            <p className={styles.dropzoneMainText}>
-              {formData.identityProofFile
-                ? `Selected: ${formData.identityProofFile}`
-                : "Click to upload or drag & drop"}
-            </p>
-            <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+        {/* ========================================================= */}
+        {/* MOBILE VIEW: Compact Card List (All with Upload Button)  */}
+        {/* ========================================================= */}
+        <div className={styles.mobileDocSection}>
+          {/* 1. Identity proof (Aadhaar / PAN) */}
+          <div className={styles.mobileDocCard}>
+            <input
+              type="file"
+              ref={identityInputRef}
+              onChange={(e) => handleFileSelect("identityProofFile", e)}
+              accept=".pdf,.png,.jpg,.jpeg"
+              className={styles.hiddenFileInput}
+            />
+            <div className={styles.mobileDocLeft}>
+              <div className={styles.iconSquircle}>
+                <FileText className={styles.docIcon} />
+              </div>
+              <div className={styles.mobileDocInfo}>
+                <h3 className={styles.mobileDocTitle}>
+                  Identity proof (Aadhaar / PAN)
+                </h3>
+                <span
+                  className={
+                    formData.identityProofFile
+                      ? styles.statusSelected
+                      : styles.statusMuted
+                  }
+                >
+                  {formData.identityProofFile || "No file chosen"}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => identityInputRef.current?.click()}
+              className={styles.mobileUploadBtn}
+            >
+              Upload
+            </button>
+          </div>
+
+          {/* 2. FSSAI License */}
+          <div className={styles.mobileDocCard}>
+            <input
+              type="file"
+              ref={fssaiInputRef}
+              onChange={(e) => handleFileSelect("fssaiLicenseFile", e)}
+              accept=".pdf,.png,.jpg,.jpeg"
+              className={styles.hiddenFileInput}
+            />
+            <div className={styles.mobileDocLeft}>
+              <div className={styles.iconSquircle}>
+                <Shield className={styles.docIcon} />
+              </div>
+              <div className={styles.mobileDocInfo}>
+                <h3 className={styles.mobileDocTitle}>FSSAI License</h3>
+                <span
+                  className={
+                    formData.fssaiLicenseFile
+                      ? styles.statusSelected
+                      : styles.statusMuted
+                  }
+                >
+                  {formData.fssaiLicenseFile || "No file chosen"}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => fssaiInputRef.current?.click()}
+              className={styles.mobileUploadBtn}
+            >
+              Upload
+            </button>
+          </div>
+
+          {/* 3. Electricity bill */}
+          <div className={styles.mobileDocCard}>
+            <input
+              type="file"
+              ref={utilityInputRef}
+              onChange={(e) => handleFileSelect("utilityBillFile", e)}
+              accept=".pdf,.png,.jpg,.jpeg"
+              className={styles.hiddenFileInput}
+            />
+            <div className={styles.mobileDocLeft}>
+              <div className={styles.iconSquircle}>
+                <Zap className={styles.docIcon} />
+              </div>
+              <div className={styles.mobileDocInfo}>
+                <h3 className={styles.mobileDocTitle}>Electricity bill</h3>
+                <span
+                  className={
+                    formData.utilityBillFile
+                      ? styles.statusSelected
+                      : styles.statusMuted
+                  }
+                >
+                  {formData.utilityBillFile || "No file chosen"}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => utilityInputRef.current?.click()}
+              className={styles.mobileUploadBtn}
+            >
+              Upload
+            </button>
           </div>
         </div>
 
-        {/* 2. FSSAI License */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>FSSAI License</label>
-          <input
-            type="file"
-            ref={fssaiInputRef}
-            onChange={(e) => handleFileChange("fssaiLicenseFile", e)}
-            accept=".pdf,.png,.jpg,.jpeg"
-            className={styles.hiddenFileInput}
-          />
-          <div
-            className={styles.dropzone}
-            onClick={() => fssaiInputRef.current?.click()}
-          >
-            <UploadCloud className={styles.dropzoneIcon} />
-            <p className={styles.dropzoneMainText}>
-              {formData.fssaiLicenseFile
-                ? `Selected: ${formData.fssaiLicenseFile}`
-                : "Click to upload or drag & drop"}
-            </p>
-            <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+        {/* ========================================================= */}
+        {/* DESKTOP VIEW: Full Drag & Drop Large Upload Zones         */}
+        {/* ========================================================= */}
+        <div className={styles.desktopDocSection}>
+          {/* 1. Identity Proof */}
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>
+              Identity Proof (Passport / Driver&apos;s License / Aadhaar){" "}
+              <span className={styles.required}>*</span>
+            </label>
+            <div
+              className={`${styles.dropzone} ${
+                dragActiveField === "identityProofFile" ? styles.dropzoneActive : ""
+              }`}
+              onClick={() => identityInputRef.current?.click()}
+              onDragOver={(e) => handleDragOver(e, "identityProofFile")}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, "identityProofFile")}
+            >
+              <UploadCloud className={styles.dropzoneIcon} />
+              <p className={styles.dropzoneMainText}>
+                {formData.identityProofFile ? (
+                  <span className={styles.dropzoneSelectedFile}>
+                    <CheckCircle2 size={16} color="#16a34a" />
+                    Selected: {formData.identityProofFile}
+                  </span>
+                ) : (
+                  "Click to upload or drag & drop"
+                )}
+              </p>
+              <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+            </div>
           </div>
 
-          {/* Mandatory Notice */}
-          <div className={styles.noticeBox}>
-            <AlertCircle className={styles.noticeIcon} />
-            <span className={styles.noticeText}>
-              Mandatory for partners offering Food and Cloud Kitchen services.
-            </span>
+          {/* 2. FSSAI License */}
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>FSSAI License</label>
+            <div
+              className={`${styles.dropzone} ${
+                dragActiveField === "fssaiLicenseFile" ? styles.dropzoneActive : ""
+              }`}
+              onClick={() => fssaiInputRef.current?.click()}
+              onDragOver={(e) => handleDragOver(e, "fssaiLicenseFile")}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, "fssaiLicenseFile")}
+            >
+              <UploadCloud className={styles.dropzoneIcon} />
+              <p className={styles.dropzoneMainText}>
+                {formData.fssaiLicenseFile ? (
+                  <span className={styles.dropzoneSelectedFile}>
+                    <CheckCircle2 size={16} color="#16a34a" />
+                    Selected: {formData.fssaiLicenseFile}
+                  </span>
+                ) : (
+                  "Click to upload or drag & drop"
+                )}
+              </p>
+              <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+            </div>
+            <div className={styles.noticeBox}>
+              <AlertCircle className={styles.noticeIcon} />
+              <span className={styles.noticeText}>
+                Mandatory for partners offering Food and Cloud Kitchen services.
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Electricity Bill / Utility Statement */}
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>
+              Electricity Bill / Utility Statement{" "}
+              <span className={styles.required}>*</span>
+            </label>
+            <div
+              className={`${styles.dropzone} ${
+                dragActiveField === "utilityBillFile" ? styles.dropzoneActive : ""
+              }`}
+              onClick={() => utilityInputRef.current?.click()}
+              onDragOver={(e) => handleDragOver(e, "utilityBillFile")}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, "utilityBillFile")}
+            >
+              <UploadCloud className={styles.dropzoneIcon} />
+              <p className={styles.dropzoneMainText}>
+                {formData.utilityBillFile ? (
+                  <span className={styles.dropzoneSelectedFile}>
+                    <CheckCircle2 size={16} color="#16a34a" />
+                    Selected: {formData.utilityBillFile}
+                  </span>
+                ) : (
+                  "Click to upload or drag & drop"
+                )}
+              </p>
+              <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+            </div>
           </div>
         </div>
 
-        {/* 3. Electricity Bill / Utility Statement */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            Electricity Bill / Utility Statement <span className={styles.required}>*</span>
-          </label>
-          <input
-            type="file"
-            ref={utilityInputRef}
-            onChange={(e) => handleFileChange("utilityBillFile", e)}
-            accept=".pdf,.png,.jpg,.jpeg"
-            className={styles.hiddenFileInput}
-          />
-          <div
-            className={styles.dropzone}
-            onClick={() => utilityInputRef.current?.click()}
-          >
-            <UploadCloud className={styles.dropzoneIcon} />
-            <p className={styles.dropzoneMainText}>
-              {formData.utilityBillFile
-                ? `Selected: ${formData.utilityBillFile}`
-                : "Click to upload or drag & drop"}
-            </p>
-            <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
-          </div>
-        </div>
 
-        {/* 4. Bank Account & IFSC Code */}
-        <div className={styles.twoColGrid}>
+        {/* ========================================================= */}
+        {/* BANKING DETAILS (Adaptive Grid for Web / Stack for Mobile)*/}
+        {/* ========================================================= */}
+        <div className={styles.bankingSection}>
+          {/* Bank Account Number */}
           <div className={styles.fieldGroup}>
             <label className={styles.label} htmlFor="bankAccountNumber">
-              Bank Account Number <span className={styles.required}>*</span>
+              Bank account number <span className={styles.required}>*</span>
             </label>
-            <input
-              id="bankAccountNumber"
-              name="bankAccountNumber"
-              type="text"
-              required
-              placeholder="Enter account number"
-              value={formData.bankAccountNumber}
-              onChange={handleInputChange}
-              className={styles.input}
-            />
+            <div className={styles.inputWrapper}>
+              <input
+                id="bankAccountNumber"
+                name="bankAccountNumber"
+                type="text"
+                required
+                placeholder="9876543210123"
+                value={formData.bankAccountNumber}
+                onChange={handleInputChange}
+                className={styles.input}
+              />
+            </div>
           </div>
 
+          {/* IFSC Code */}
           <div className={styles.fieldGroup}>
             <label className={styles.label} htmlFor="ifscCode">
-              IFSC Code <span className={styles.required}>*</span>
+              IFSC code <span className={styles.required}>*</span>
             </label>
-            <input
-              id="ifscCode"
-              name="ifscCode"
-              type="text"
-              required
-              placeholder="e.g. NEOB0123456"
-              value={formData.ifscCode}
-              onChange={handleInputChange}
-              className={styles.input}
-              style={{ textTransform: "uppercase" }}
-            />
+            <div className={styles.inputWrapper}>
+              <input
+                id="ifscCode"
+                name="ifscCode"
+                type="text"
+                required
+                placeholder="HDFC0001234"
+                value={formData.ifscCode}
+                onChange={handleInputChange}
+                className={styles.input}
+                style={{ textTransform: "uppercase" }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* 5. Bottom Action Row */}
+        {/* ========================================================= */}
+        {/* ACTION ROW: Desktop Inline Buttons / Mobile Fixed Bottom  */}
+        {/* ========================================================= */}
         <div className={styles.actionRow}>
-          {onBack ? (
+          {onBack && (
             <button type="button" onClick={onBack} className={styles.backBtn}>
               Back
             </button>
-          ) : (
-            <div />
           )}
 
           <button type="submit" className={styles.continueBtn}>

@@ -250,6 +250,13 @@ export type {
   ResponsiveAmenity,
 } from "./rooms/responsive/ResponsiveRoomAdd";
 
+export { default as SellerRooms } from "./seller-rooms/SellerRooms";
+export type { SellerRoomsProps } from "./seller-rooms/SellerRooms";
+
+// Support components (Yash)
+export { default as SellerSupport } from "./seller-support/SellerSupport";
+export type { SellerSupportProps } from "./seller-support/SellerSupport";
+
 // Help, FAQ & Terms/Privacy components
 export { default as FAQ, default as ResponsiveFAQ, default as SellerFAQResponsive } from "./FAQ_TC/responsive/FAQ";
 export type { FAQProps, FAQItem } from "./FAQ_TC/responsive/FAQ";

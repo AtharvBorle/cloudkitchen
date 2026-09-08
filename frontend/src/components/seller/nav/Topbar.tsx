@@ -33,7 +33,7 @@ export default function Topbar({
   };
 
   return (
-    <header className={styles.sellerTopbar}>
+    <header className={`${styles.sellerTopbar} seller-topbar`}>
       {/* Left: Title + Mobile Menu Trigger */}
       <div className={styles.leftSection}>
         {onMenuToggle && (

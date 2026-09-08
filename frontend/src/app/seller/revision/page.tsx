@@ -9,11 +9,13 @@ export default function RevisionPage() {
     <SellerLayout
       activeSidebarItem="verification"
       pageTitle="Neo Cloud Room Onboarding"
+      mobileTitle="Correct & resubmit"
+      backHref="/seller/verification-status"
       userName="John Doe"
       userRole="Owner Account"
       userInitials="JD"
     >
-      <RevisionActionRequired trackingId="NCR-2024-0847" />
+      <RevisionActionRequired trackingId="NCR-2026-0847" />
     </SellerLayout>
   );
 }

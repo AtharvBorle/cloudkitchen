@@ -1,31 +1,31 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import styles from "./ConfirmRegistration.module.css";
 
 export interface ConfirmRegistrationData {
-  account: {
-    ownerName: string;
-    email: string;
-    phone: string;
-    sellerRole: string;
+  account?: {
+    ownerName?: string;
+    email?: string;
+    phone?: string;
+    sellerRole?: string;
   };
-  business: {
-    companyName: string;
-    businessType: string;
-    industryCategory: string;
-    headquartersAddress: string;
+  business?: {
+    name?: string;
+    type?: string;
+    cuisines?: string;
+    address?: string;
   };
-  legal: {
-    businessLicense: string;
-    fssaiCertificate: string;
-    taxClearanceCopy: string;
+  documents?: {
+    identityProof?: string;
+    fssaiLicense?: string;
+    electricityBill?: string;
   };
-  media: {
-    uploadedPhotos: string;
-    coverVideoHighlight: string;
+  media?: {
+    photosCount?: number;
+    previewThumbnails?: (string | null)[];
   };
 }
 
@@ -35,27 +35,27 @@ export interface ConfirmRegistrationProps {
   onBack?: () => void;
 }
 
-const DEFAULT_REVIEW_DATA: ConfirmRegistrationData = {
+const DEFAULT_REVIEW_DATA = {
   account: {
-    ownerName: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 000-0000",
+    ownerName: "Rahul Sharma",
+    email: "rahul@neocloud.com",
+    phone: "+91 98765 43210",
     sellerRole: "Owner",
   },
   business: {
-    companyName: "Neo Cloud Room Solutions LLC",
-    businessType: "Cloud Co-Working Operator",
-    industryCategory: "Real Estate & Shared Workspaces",
-    headquartersAddress: "451 Innovation Way, Suite 300, New York, NY 10001",
+    name: "Neo Kitchens",
+    type: "Food",
+    cuisines: "North Indian, Biryani",
+    address: "12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102",
   },
-  legal: {
-    businessLicense: "Business_License_2024.pdf",
-    fssaiCertificate: "FSSAI_Certificate_No_847.pdf",
-    taxClearanceCopy: "IRS_Tax_Form_W9.pdf",
+  documents: {
+    identityProof: "Identity Proof (Aadhaar/PAN)",
+    fssaiLicense: "FSSAI License",
+    electricityBill: "Electricity Bill",
   },
   media: {
-    uploadedPhotos: "5 files (Entrance, Lounge, Hot Desks, Boardroom, Tech Closet)",
-    coverVideoHighlight: "NeoCloudRoom_Walkthrough.mp4",
+    photosCount: 6,
+    previewThumbnails: [null, null, null],
   },
 };
 
@@ -64,175 +64,230 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   onSubmit,
   onBack,
 }) => {
-  const reviewData: ConfirmRegistrationData = {
-    account: { ...DEFAULT_REVIEW_DATA.account, ...data?.account },
-    business: { ...DEFAULT_REVIEW_DATA.business, ...data?.business },
-    legal: { ...DEFAULT_REVIEW_DATA.legal, ...data?.legal },
-    media: { ...DEFAULT_REVIEW_DATA.media, ...data?.media },
-  };
+  const account = { ...DEFAULT_REVIEW_DATA.account, ...data?.account };
+  const business = { ...DEFAULT_REVIEW_DATA.business, ...data?.business };
+  const documents = { ...DEFAULT_REVIEW_DATA.documents, ...data?.documents };
+  const media = { ...DEFAULT_REVIEW_DATA.media, ...data?.media };
 
   return (
-    <div
-      className={styles.cardContainer}
-      style={{
-        backgroundColor: "#ffffff",
-        borderRadius: 16,
-        border: "1px solid #f1f5f9",
-        boxShadow: "0 4px 25px -2px rgba(0, 0, 0, 0.04)",
-        padding: "40px 48px 36px 48px",
-        width: "100%",
-        maxWidth: 700,
-        margin: "0 auto 48px auto",
-        boxSizing: "border-box",
-      }}
-    >
-      {/* Header Group */}
-      <div className={styles.headerGroup} style={{ marginBottom: 26 }}>
-        <h2
-          className={styles.title}
-          style={{
-            fontSize: "1.45rem",
-            fontWeight: 700,
-            color: "#0f172a",
-            margin: "0 0 6px 0",
-            letterSpacing: "-0.015em",
-          }}
-        >
-          Review & Confirm Registration
-        </h2>
-        <p
-          className={styles.subtitle}
-          style={{
-            fontSize: "0.88rem",
-            color: "#64748b",
-            margin: 0,
-            lineHeight: 1.45,
-          }}
-        >
-          Please verify all entered credentials before submitting for review.
-        </p>
+    <div className={styles.containerWrapper}>
+      {/* ========================================================= */}
+      {/* MOBILE VIEW: Distinct 4 Cards Stack with Submit Button    */}
+      {/* ========================================================= */}
+      <div className={styles.mobileReviewStack}>
+        {/* Card 1: Account */}
+        <div className={styles.mobileCard}>
+          <div className={styles.cardHeader}>
+            <h3 className={styles.cardTitle}>Account</h3>
+            <Link href="/seller/account-information" className={styles.editLink}>
+              Edit
+            </Link>
+          </div>
+          <div className={styles.cardRows}>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Name</span>
+              <span className={styles.rowValue}>{account.ownerName}</span>
+            </div>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Email</span>
+              <span className={styles.rowValue}>{account.email}</span>
+            </div>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Phone</span>
+              <span className={styles.rowValue}>{account.phone}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Business */}
+        <div className={styles.mobileCard}>
+          <div className={styles.cardHeader}>
+            <h3 className={styles.cardTitle}>Business</h3>
+            <Link href="/seller/business-information" className={styles.editLink}>
+              Edit
+            </Link>
+          </div>
+          <div className={styles.cardRows}>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Name</span>
+              <span className={styles.rowValue}>{business.name}</span>
+            </div>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Type</span>
+              <span className={styles.rowValue}>{business.type}</span>
+            </div>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Cuisines</span>
+              <span className={styles.rowValue}>{business.cuisines}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Documents */}
+        <div className={styles.mobileCard}>
+          <div className={styles.cardHeader}>
+            <h3 className={styles.cardTitle}>Documents</h3>
+            <Link href="/seller/legal-documents" className={styles.editLink}>
+              Edit
+            </Link>
+          </div>
+          <div className={styles.docCheckList}>
+            <div className={styles.docCheckItem}>
+              <Check className={styles.checkIcon} size={15} strokeWidth={2.6} />
+              <span className={styles.docCheckText}>{documents.identityProof}</span>
+            </div>
+            <div className={styles.docCheckItem}>
+              <Check className={styles.checkIcon} size={15} strokeWidth={2.6} />
+              <span className={styles.docCheckText}>{documents.fssaiLicense}</span>
+            </div>
+            <div className={styles.docCheckItem}>
+              <Check className={styles.checkIcon} size={15} strokeWidth={2.6} />
+              <span className={styles.docCheckText}>{documents.electricityBill}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Media */}
+        <div className={styles.mobileCard}>
+          <div className={styles.cardHeader}>
+            <h3 className={styles.cardTitle}>Media</h3>
+            <Link href="/seller/media-gallery" className={styles.editLink}>
+              Edit
+            </Link>
+          </div>
+          <div className={styles.thumbnailsRow}>
+            <div className={styles.thumbPlaceholder} />
+            <div className={styles.thumbPlaceholder} />
+            <div className={styles.thumbPlaceholder} />
+            <div className={styles.thumbMoreSlot}>+3</div>
+          </div>
+        </div>
       </div>
 
-      <div className={styles.sectionsList}>
-        {/* 1. Account Details */}
-        <div className={styles.sectionBlock}>
-          <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>Account Details</h3>
-            <Link href="/seller/account-information" className={styles.editBtn}>
-              Edit
-            </Link>
+      {/* ========================================================= */}
+      {/* DESKTOP VIEW: Unified White Card with Review Sections     */}
+      {/* ========================================================= */}
+      <div className={styles.desktopCardContainer}>
+        <div className={styles.desktopHeaderGroup}>
+          <h2 className={styles.title}>Review & Confirm Registration</h2>
+          <p className={styles.subtitle}>
+            Please verify all entered credentials before submitting for review.
+          </p>
+        </div>
+
+        <div className={styles.desktopSectionsList}>
+          {/* 1. Account Details */}
+          <div className={styles.sectionBlock}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Account Details</h3>
+              <Link href="/seller/account-information" className={styles.editBtn}>
+                Edit
+              </Link>
+            </div>
+            <div className={styles.keyValueGrid}>
+              <div className={styles.row}>
+                <span className={styles.key}>Owner Name</span>
+                <span className={styles.value}>{account.ownerName}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Email Address</span>
+                <span className={styles.value}>{account.email}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Phone Number</span>
+                <span className={styles.value}>{account.phone}</span>
+              </div>
+            </div>
           </div>
-          <div className={styles.keyValueGrid}>
-            <div className={styles.row}>
-              <span className={styles.key}>Owner Name</span>
-              <span className={styles.value}>{reviewData.account.ownerName}</span>
+
+          {/* 2. Business Details */}
+          <div className={styles.sectionBlock}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Business Details</h3>
+              <Link href="/seller/business-information" className={styles.editBtn}>
+                Edit
+              </Link>
             </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Email Address</span>
-              <span className={styles.value}>{reviewData.account.email}</span>
+            <div className={styles.keyValueGrid}>
+              <div className={styles.row}>
+                <span className={styles.key}>Company Name</span>
+                <span className={styles.value}>{business.name}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Business Type</span>
+                <span className={styles.value}>{business.type}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Cuisines / Categories</span>
+                <span className={styles.value}>{business.cuisines}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Address</span>
+                <span className={styles.value}>{business.address}</span>
+              </div>
             </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Phone Number</span>
-              <span className={styles.value}>{reviewData.account.phone}</span>
+          </div>
+
+          {/* 3. Legal Documents */}
+          <div className={styles.sectionBlock}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Legal Documents</h3>
+              <Link href="/seller/legal-documents" className={styles.editBtn}>
+                Edit
+              </Link>
             </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Seller Role</span>
-              <span className={styles.value}>{reviewData.account.sellerRole}</span>
+            <div className={styles.keyValueGrid}>
+              <div className={styles.row}>
+                <span className={styles.key}>Identity Proof</span>
+                <span className={styles.value}>{documents.identityProof}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>FSSAI License</span>
+                <span className={styles.value}>{documents.fssaiLicense}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Electricity Bill</span>
+                <span className={styles.value}>{documents.electricityBill}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Media */}
+          <div className={styles.sectionBlock}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Media Assets</h3>
+              <Link href="/seller/media-gallery" className={styles.editBtn}>
+                Edit
+              </Link>
+            </div>
+            <div className={styles.thumbnailsRow}>
+              <div className={styles.thumbPlaceholder} />
+              <div className={styles.thumbPlaceholder} />
+              <div className={styles.thumbPlaceholder} />
+              <div className={styles.thumbMoreSlot}>+3</div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* 2. Business Details */}
-        <div className={styles.sectionBlock}>
-          <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>Business Details</h3>
-            <Link href="/seller/business-information" className={styles.editBtn}>
-              Edit
-            </Link>
-          </div>
-          <div className={styles.keyValueGrid}>
-            <div className={styles.row}>
-              <span className={styles.key}>Company Name</span>
-              <span className={styles.value}>{reviewData.business.companyName}</span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Business Type</span>
-              <span className={styles.value}>{reviewData.business.businessType}</span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Industry Category</span>
-              <span className={styles.value}>{reviewData.business.industryCategory}</span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Headquarters Address</span>
-              <span className={styles.value}>{reviewData.business.headquartersAddress}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Legal Documents */}
-        <div className={styles.sectionBlock}>
-          <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>Legal Documents</h3>
-            <Link href="/seller/legal-documents" className={styles.editBtn}>
-              Edit
-            </Link>
-          </div>
-          <div className={styles.keyValueGrid}>
-            <div className={styles.row}>
-              <span className={styles.key}>Business License</span>
-              <span className={styles.value}>{reviewData.legal.businessLicense}</span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.key}>FSSAI Certificate</span>
-              <span className={styles.value}>{reviewData.legal.fssaiCertificate}</span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Tax Clearance Copy</span>
-              <span className={styles.value}>{reviewData.legal.taxClearanceCopy}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Media */}
-        <div className={styles.sectionBlock}>
-          <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>Media</h3>
-            <Link href="/seller/media-gallery" className={styles.editBtn}>
-              Edit
-            </Link>
-          </div>
-          <div className={styles.keyValueGrid}>
-            <div className={styles.row}>
-              <span className={styles.key}>Uploaded Photos</span>
-              <span className={styles.value}>{reviewData.media.uploadedPhotos}</span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.key}>Cover Video Highlight</span>
-              <span className={styles.value}>{reviewData.media.coverVideoHighlight}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 5. Bottom Action Row */}
-        <div className={styles.actionRow}>
-          {onBack ? (
-            <button type="button" onClick={onBack} className={styles.backBtn}>
-              Back
-            </button>
-          ) : (
-            <div />
-          )}
-
-          <button
-            type="button"
-            onClick={onSubmit}
-            className={styles.submitBtn}
-          >
-            <span>Submit for Verification</span>
-            <ArrowRight className={styles.btnArrow} />
+      {/* ========================================================= */}
+      {/* ACTION CONTROLS: Desktop Inline / Mobile Fixed Bottom     */}
+      {/* ========================================================= */}
+      <div className={styles.actionRow}>
+        {onBack && (
+          <button type="button" onClick={onBack} className={styles.backBtn}>
+            Back
           </button>
-        </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onSubmit}
+          className={styles.submitBtn}
+        >
+          <span>Submit for verification</span>
+          <ArrowRight className={styles.btnArrow} />
+        </button>
       </div>
     </div>
   );

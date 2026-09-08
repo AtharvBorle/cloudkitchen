@@ -1,16 +1,17 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
-import { ChevronDown, X, Plus, MapPin, ArrowRight } from "lucide-react";
+import { ChevronDown, MapPin, ArrowRight, X } from "lucide-react";
 import styles from "./BusinessInformation.module.css";
 
 export interface BusinessInformationData {
   businessName: string;
-  sellerType: string;
+  sellerType: string; // 'FOOD' | 'PROPERTY' | 'BOTH'
   categories: string[];
-  foodType: string;
+  foodType: string; // 'BOTH' | 'PURE_VEG' | 'NON_VEG'
   address: string;
   locationCoordinates?: { lat: number; lng: number };
+  isLocationPinned?: boolean;
 }
 
 export interface BusinessInformationProps {
@@ -25,15 +26,24 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   onBack,
 }) => {
   const [formData, setFormData] = useState<BusinessInformationData>({
-    businessName: initialData?.businessName || "",
-    sellerType: initialData?.sellerType || "",
-    categories: initialData?.categories || ["Cloud Kitchen", "Guest Rooms"],
-    foodType: initialData?.foodType || "",
-    address: initialData?.address || "",
-    locationCoordinates: initialData?.locationCoordinates,
+    businessName: initialData?.businessName || "Neo Kitchens",
+    sellerType: initialData?.sellerType || "FOOD",
+    categories:
+      initialData?.categories && initialData.categories.length > 0
+        ? initialData.categories
+        : ["North Indian", "Biryani"],
+    foodType: initialData?.foodType || "BOTH",
+    address:
+      initialData?.address ||
+      "12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102",
+    locationCoordinates: initialData?.locationCoordinates || {
+      lat: 12.9121,
+      lng: 77.6446,
+    },
+    isLocationPinned: initialData?.isLocationPinned ?? true,
   });
 
-  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState("");
 
   const handleChange = (
@@ -43,22 +53,55 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const removeCategory = (categoryToRemove: string) => {
+  const handleSellerTypeSelect = (type: string) => {
+    setFormData((prev) => ({ ...prev, sellerType: type }));
+  };
+
+  const removeCategory = (catToRemove: string) => {
     setFormData((prev) => ({
       ...prev,
-      categories: prev.categories.filter((cat) => cat !== categoryToRemove),
+      categories: prev.categories.filter((cat) => cat !== catToRemove),
     }));
   };
 
-  const addCategory = (categoryToAdd: string) => {
-    const trimmed = categoryToAdd.trim();
+  const handleAddCategory = () => {
+    const trimmed = newCategoryInput.trim();
     if (trimmed && !formData.categories.includes(trimmed)) {
       setFormData((prev) => ({
         ...prev,
         categories: [...prev.categories, trimmed],
       }));
       setNewCategoryInput("");
-      setShowAddCategoryModal(false);
+      setShowAddCategory(false);
+    }
+  };
+
+  const togglePinLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setFormData((prev) => ({
+            ...prev,
+            isLocationPinned: true,
+            locationCoordinates: {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            },
+          }));
+        },
+        () => {
+          setFormData((prev) => ({
+            ...prev,
+            isLocationPinned: true,
+            locationCoordinates: { lat: 12.9121, lng: 77.6446 },
+          }));
+        }
+      );
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        isLocationPinned: !prev.isLocationPinned,
+      }));
     }
   };
 
@@ -71,7 +114,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
 
   return (
     <div className={styles.cardContainer}>
-      {/* Header */}
+      {/* Desktop Header */}
       <div className={styles.headerGroup}>
         <h2 className={styles.title}>Business Registration Details</h2>
         <p className={styles.subtitle}>
@@ -83,114 +126,105 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
         {/* 1. Business Name */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="businessName">
-            Business Name <span className={styles.required}>*</span>
+            Business name <span className={styles.required}>*</span>
           </label>
-          <input
-            id="businessName"
-            name="businessName"
-            type="text"
-            required
-            placeholder="e.g. Neo Cloud Kitchens & Rooms"
-            value={formData.businessName}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        </div>
-
-        {/* 2. Seller Type */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label} htmlFor="sellerType">
-            Seller Type <span className={styles.required}>*</span>
-          </label>
-          <div className={styles.selectWrapper}>
-            <select
-              id="sellerType"
-              name="sellerType"
+          <div className={styles.inputWrapper}>
+            <input
+              id="businessName"
+              name="businessName"
+              type="text"
               required
-              value={formData.sellerType}
+              placeholder="Neo Kitchens"
+              value={formData.businessName}
               onChange={handleChange}
-              className={styles.select}
-            >
-              <option value="" disabled>
-                Select type (Food / Property / Both)
-              </option>
-              <option value="FOOD">Food (Cloud Kitchen / Restaurant)</option>
-              <option value="PROPERTY">Property (Guest Rooms / Co-living)</option>
-              <option value="BOTH">Both (Food & Property)</option>
-            </select>
-            <ChevronDown className={styles.chevronIcon} />
+              className={styles.input}
+            />
           </div>
         </div>
 
-        {/* 3. Category */}
+        {/* 2. Seller Type (Segmented Tab Bar) */}
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            Category <span className={styles.required}>*</span>
+            Seller type <span className={styles.required}>*</span>
           </label>
-          <div className={styles.categoryPillsRow}>
+          <div className={styles.segmentedControl}>
+            <button
+              type="button"
+              className={`${styles.segmentBtn} ${
+                formData.sellerType === "FOOD" ? styles.segmentBtnActive : ""
+              }`}
+              onClick={() => handleSellerTypeSelect("FOOD")}
+            >
+              Food
+            </button>
+            <button
+              type="button"
+              className={`${styles.segmentBtn} ${
+                formData.sellerType === "PROPERTY" ? styles.segmentBtnActive : ""
+              }`}
+              onClick={() => handleSellerTypeSelect("PROPERTY")}
+            >
+              Property
+            </button>
+            <button
+              type="button"
+              className={`${styles.segmentBtn} ${
+                formData.sellerType === "BOTH" ? styles.segmentBtnActive : ""
+              }`}
+              onClick={() => handleSellerTypeSelect("BOTH")}
+            >
+              Both
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Category / Cuisine */}
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            Category / cuisine <span className={styles.required}>*</span>
+          </label>
+          <div className={styles.categoryContainer}>
             {formData.categories.map((category) => (
-              <button
-                type="button"
-                key={category}
-                className={styles.categoryPill}
-                onClick={() => removeCategory(category)}
-                title={`Remove ${category}`}
-              >
-                <span>{category}</span>
-                <X className={styles.removeIcon} />
-              </button>
+              <span key={category} className={styles.categoryPill}>
+                {category}
+                <button
+                  type="button"
+                  onClick={() => removeCategory(category)}
+                  className={styles.removeTagBtn}
+                  aria-label={`Remove ${category}`}
+                >
+                  <X size={12} strokeWidth={2.5} />
+                </button>
+              </span>
             ))}
 
-            {showAddCategoryModal ? (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            {showAddCategory ? (
+              <div className={styles.addCategoryInputWrapper}>
                 <input
                   type="text"
-                  placeholder="Category name"
+                  placeholder="Cuisine name"
                   value={newCategoryInput}
                   onChange={(e) => setNewCategoryInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      addCategory(newCategoryInput);
+                      handleAddCategory();
                     }
                   }}
                   autoFocus
-                  style={{
-                    height: 32,
-                    padding: "0 10px",
-                    borderRadius: 16,
-                    border: "1px solid #f97316",
-                    fontSize: "0.82rem",
-                    outline: "none",
-                  }}
+                  className={styles.addCategoryInput}
                 />
                 <button
                   type="button"
-                  onClick={() => addCategory(newCategoryInput)}
-                  style={{
-                    height: 32,
-                    padding: "0 10px",
-                    borderRadius: 16,
-                    backgroundColor: "#f97316",
-                    color: "#ffffff",
-                    border: "none",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  onClick={handleAddCategory}
+                  className={styles.addTagConfirmBtn}
                 >
                   Add
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAddCategoryModal(false)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#94a3b8",
-                    cursor: "pointer",
-                    fontSize: "0.85rem",
-                  }}
+                  onClick={() => setShowAddCategory(false)}
+                  className={styles.addTagCancelBtn}
                 >
                   ✕
                 </button>
@@ -198,11 +232,10 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
             ) : (
               <button
                 type="button"
-                className={styles.addCategoryBtn}
-                onClick={() => setShowAddCategoryModal(true)}
+                onClick={() => setShowAddCategory(true)}
+                className={styles.addMoreBtn}
               >
-                <Plus style={{ width: 14, height: 14 }} />
-                <span>Add category</span>
+                + Add more
               </button>
             )}
           </div>
@@ -211,20 +244,20 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
         {/* 4. Food Type */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="foodType">
-            Food Type
+            Food type <span className={styles.required}>*</span>
           </label>
           <div className={styles.selectWrapper}>
             <select
               id="foodType"
               name="foodType"
+              required
               value={formData.foodType}
               onChange={handleChange}
               className={styles.select}
             >
-              <option value="">Select preference (Veg / Non-Veg / Both)</option>
+              <option value="BOTH">Both (Veg & Non-veg)</option>
               <option value="PURE_VEG">Pure Veg</option>
-              <option value="NON_VEG">Non-Veg</option>
-              <option value="BOTH">Both (Veg & Non-Veg)</option>
+              <option value="NON_VEG">Non-veg</option>
             </select>
             <ChevronDown className={styles.chevronIcon} />
           </div>
@@ -240,9 +273,9 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
             name="address"
             required
             rows={2}
-            placeholder="Street address, Suite, City, State, ZIP code"
             value={formData.address}
             onChange={handleChange}
+            placeholder="12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102"
             className={styles.textarea}
           />
         </div>
@@ -250,51 +283,28 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
         {/* 6. Pin Location */}
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            Pin Location <span className={styles.required}>*</span>
+            Pin location
           </label>
           <div
             className={styles.pinLocationCard}
-            onClick={() => {
-              // Trigger geolocation or map picker
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      locationCoordinates: {
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                      },
-                    }));
-                  },
-                  () => {
-                    // default Pune coordinates
-                    setFormData((prev) => ({
-                      ...prev,
-                      locationCoordinates: { lat: 18.5204, lng: 73.8567 },
-                    }));
-                  }
-                );
-              }
-            }}
+            onClick={togglePinLocation}
+            role="button"
+            tabIndex={0}
           >
             <div className={styles.pinIconWrapper}>
               <MapPin className={styles.pinIcon} />
             </div>
-            <p className={styles.pinTitle}>
-              {formData.locationCoordinates
-                ? `Marker Set: [${formData.locationCoordinates.lat.toFixed(4)}, ${formData.locationCoordinates.lng.toFixed(4)}]`
-                : "Set location coordinate marker"}
-            </p>
-            <p className={styles.pinSubtitle}>
-              Drag map to adjust precision pin placement
-            </p>
+            <span className={styles.pinTitle}>
+              {formData.isLocationPinned
+                ? "Location pinned successfully"
+                : "Tap to pin current location"}
+            </span>
           </div>
         </div>
 
-        {/* 7. Bottom Action Row */}
+        {/* Action Row / Bottom Button */}
         <div className={styles.actionRow}>
-          {onBack ? (
+          {onBack && (
             <button
               type="button"
               onClick={onBack}
@@ -302,8 +312,6 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
             >
               Back
             </button>
-          ) : (
-            <div />
           )}
 
           <button type="submit" className={styles.continueBtn}>

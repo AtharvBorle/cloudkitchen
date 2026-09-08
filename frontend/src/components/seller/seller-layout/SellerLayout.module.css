@@ -1,10 +1,13 @@
 .layoutContainer {
   display: flex;
   flex-direction: row;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
   width: 100%;
+  overflow: hidden;
   background-color: #f8fafc;
   box-sizing: border-box;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .sidebarColumn {
@@ -14,8 +17,24 @@
   background-color: #ffffff;
   border-right: 1px solid #e2e8f0;
   height: 100vh;
-  position: sticky;
-  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 30;
+}
+
+.sidebarColumn::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebarColumn::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebarColumn::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 4px;
 }
 
 .mainColumn {
@@ -23,16 +42,191 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background-color: #f8fafc;
+}
+
+.desktopNavbar {
+  display: block;
+  width: 100%;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.mobileTopBar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  z-index: 30;
+  padding: 0 16px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.mobileBackBtn {
+  position: absolute;
+  left: 14px;
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobilePageTitle {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  letter-spacing: -0.2px;
+  line-height: 1.2 !important;
 }
 
 .pageContent {
   flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 48px 32px 48px 32px;
   box-sizing: border-box;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pageContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pageContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pageContent::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.pageContent::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.contentInnerFrame {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.desktopStepperWrapper {
+  display: block;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.mobileDotsStepper {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 0 20px 0;
+  flex-shrink: 0;
+}
+
+.dotActive {
+  width: 22px;
+  height: 6px;
+  background-color: #f97316;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.dotCompleted {
+  width: 6px;
+  height: 6px;
+  background-color: #f97316;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.dotInactive {
+  width: 6px;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+/* Tablet & Medium Screen Support (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebarColumn {
+    width: 220px;
+    min-width: 220px;
+  }
+
+  .pageContent {
+    padding: 32px 20px 40px 20px;
+  }
+
+  .contentInnerFrame {
+    max-width: 100%;
+  }
+}
+
+/* Mobile Overrides (<= 768px) */
+@media (max-width: 768px) {
+  .layoutContainer {
+    flex-direction: column;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    background-color: #f8fafc;
+  }
+
+  .sidebarColumn {
+    display: none !important;
+  }
+
+  .mainColumn {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  .desktopNavbar {
+    display: none !important;
+  }
+
+  .mobileTopBar {
+    display: flex !important;
+    position: relative;
+  }
+
+  .desktopStepperWrapper {
+    display: none !important;
+  }
+
+  .mobileDotsStepper {
+    display: flex !important;
+  }
+
+  .pageContent {
+    padding: 0 16px 36px 16px !important;
+  }
+
+  .contentInnerFrame {
+    max-width: 100% !important;
+  }
 }
