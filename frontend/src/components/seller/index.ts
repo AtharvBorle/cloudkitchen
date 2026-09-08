@@ -175,6 +175,12 @@ export type {
 } from "./booking/responsive/ResponsiveBookingDetails";
 
 // Subscription components
+export { default as ManageSubscriptionCanvas, default as SellerManageSubscription } from "./subscription/ManageSubscriptionCanvas";
+export type { PlanItem as SubscriptionPlanItem } from "./subscription/ManageSubscriptionCanvas";
+
+export { default as ManageSubscriptionCanvasDas, default as SellerManageSubscriptionDas } from "./subscription/ManageSubscriptionCanvasDas";
+export type { ManageSubscriptionCanvasDasProps } from "./subscription/ManageSubscriptionCanvasDas";
+
 export { default as SubscriptionEditCanvas } from "./subscription/SubscriptionEditCanvas";
 export type {
   SubscriptionEditCanvasProps,

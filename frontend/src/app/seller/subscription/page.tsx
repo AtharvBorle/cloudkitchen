@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import SubscriptionEditCanvasDas from "@/components/seller/subscription/SubscriptionEditCanvasDas";
+import ManageSubscriptionCanvasDas from "@/components/seller/subscription/ManageSubscriptionCanvasDas";
 
 export const metadata: Metadata = {
-  title: "Edit Subscription Plan | Neo Cloud Kitchen",
-  description: "Configure and manage subscription plan tiers, weekly inclusions, meal schedules, and pricing.",
+  title: "Manage Subscriptions | Neo Cloud Kitchen",
+  description:
+    "Manage active meal subscription packages, active subscriber accounts, revenue streams, and plan tiers.",
 };
 
 export default function SellerSubscriptionPage() {
-  return <SubscriptionEditCanvasDas />;
+  return <ManageSubscriptionCanvasDas />;
 }
