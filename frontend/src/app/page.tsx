@@ -6,7 +6,6 @@ import {
   HeroSection,
   CategoryBar,
   PromoRow2,
-  FilterRow,
   Properties,
   PopularOrders,
   BestPlaces,
@@ -17,7 +16,6 @@ import { useHomeData } from "@/lib/useHomeData";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
-  const [selectedFilter, setSelectedFilter] = useState("fastest");
   const homeData = useHomeData();
 
   // Dynamic Categories with fallback
@@ -181,13 +179,7 @@ export default function Home() {
         {/* 3. Promo Banner Row (Dynamic Full-Graphic Banner with Fallback) */}
         <PromoRow2 banners={homeData.promoBanners} {...promoProps} />
 
-        {/* 4. Filter Row */}
-        <FilterRow
-          activeFilterId={selectedFilter}
-          onFilterChange={(id) => setSelectedFilter(id)}
-        />
-
-        {/* 5. Properties / Best Places Nearby */}
+        {/* 4. Properties / Best Places Nearby */}
         <Properties places={dynamicPlaces} />
 
         {/* 6. Popular Orders / Today's Special Offers */}
