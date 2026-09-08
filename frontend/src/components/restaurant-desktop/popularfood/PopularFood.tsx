@@ -152,6 +152,15 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
     }
   };
 
+  const filteredItems =
+    activeCategory === "Popular" || activeCategory === "All"
+      ? items
+      : items.filter(
+          (it) => it.category?.toLowerCase() === activeCategory.toLowerCase()
+        );
+
+  const displayedList = filteredItems.length > 0 ? filteredItems : items;
+
   return (
     <section
       className={styles.sectionContainer}
@@ -183,7 +192,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
 
       {/* 3. 3-Column x 3-Row Food Card Grid */}
       <div className={styles.foodGrid} role="region" aria-label="Food Items Grid">
-        {items.map((item) => (
+        {displayedList.map((item) => (
           <article key={item.id} className={styles.foodCard}>
             {/* Square Food Image */}
             <div className={styles.imageWrapper}>
@@ -192,6 +201,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                 alt={item.title}
                 fill
                 sizes="110px"
+                unoptimized={typeof item.image === "string"}
                 className={styles.foodImg}
               />
             </div>
