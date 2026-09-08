@@ -1,0 +1,709 @@
+/* ResSellerProfile.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F4F6FA;
+  }
+}
+
+/* 390px Mobile View Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  background-color: #F4F6FA;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow-x: hidden;
+  padding-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    background-color: #F4F6FA;
+    padding-bottom: 24px;
+  }
+}
+
+/* Top Header Bar */
+.topBar {
+  width: 100%;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+  border-bottom: 1px solid #F1F5F9;
+  gap: 10px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.menuButton {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menuButton:hover {
+  background-color: #F1F5F9;
+  color: #F97316;
+  border-color: #CBD5E1;
+}
+
+.menuButton:active {
+  transform: scale(0.95);
+}
+
+.headerCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.headerTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.3px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.headerSubtitle {
+  font-size: 11.5px;
+  color: #64748B;
+  font-weight: 400;
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.backButton {
+  height: 36px;
+  padding: 0 12px 0 8px;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.backText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1;
+}
+
+.backButton:hover {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+.backButton:hover .backText {
+  color: #0F172A;
+}
+
+.backButton:active {
+  transform: scale(0.96);
+  background-color: #E2E8F0;
+}
+
+/* Content Area */
+.contentArea {
+  flex: 1;
+  padding: 14px 16px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Generic Card */
+.card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.sectionTag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #F97316;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+}
+
+.input {
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  padding: 0 12px;
+  font-size: 13.5px;
+  color: #0F172A;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.input::placeholder {
+  color: #94A3B8;
+  font-size: 13px;
+}
+
+.input:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 64px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #0F172A;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.textarea:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+/* Action Buttons inside Card 1 */
+.accountActionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.saveButton {
+  width: 100%;
+  height: 46px;
+  min-height: 46px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.saveButton:hover {
+  filter: brightness(1.05);
+}
+
+.saveButton:active {
+  transform: scale(0.98);
+}
+
+.logoutButton {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid #FCA5A5;
+  background-color: #FFFFFF;
+  color: #EF4444;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.logoutButton:hover {
+  background-color: #FEF2F2;
+  border-color: #EF4444;
+}
+
+.logoutButton:active {
+  transform: scale(0.98);
+  background-color: #FEE2E2;
+}
+
+/* 2. QR Code Section */
+.qrSubSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: center;
+}
+
+.qrSectionTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  align-self: flex-start;
+}
+
+.qrSubtext {
+  font-size: 11.5px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.qrBox {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.qrInstruction {
+  font-size: 11px;
+  color: #64748B;
+  margin: 0;
+}
+
+.qrBtnRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.shareBtn {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.shareBtn:hover {
+  filter: brightness(1.05);
+}
+
+.downloadBtn {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background-color: #1E293B;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.downloadBtn:hover {
+  background-color: #0F172A;
+}
+
+/* Payment QR */
+.paymentQrBox {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 6px auto;
+}
+
+/* Experiences Pills */
+.experiencesRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.experiencesLabel {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.experiencesPills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pillFood {
+  background-color: #FFF1E8;
+  color: #EA580C;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+.pillBookings {
+  background-color: #EEF2FF;
+  color: #4F46E5;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+/* 3. Subscription & Plan Card */
+.subHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.activeSubBadge {
+  background-color: #ECFDF5;
+  color: #10B981;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.subDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10B981;
+}
+
+/* Plan Group */
+.planGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 10px;
+}
+
+.planGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.planGroupTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #F97316;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.upgradeLink {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3B82F6;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.planGroupSubtitle {
+  font-size: 11px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Plan Item Box */
+.planItemBox {
+  background-color: #F8FAFC;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.planItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.planItemName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.editPlanLink {
+  font-size: 12px;
+  font-weight: 600;
+  color: #F97316;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.planItemDetailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+}
+
+.planItemDetailKey {
+  color: #64748B;
+}
+
+.planItemDetailVal {
+  color: #0F172A;
+  font-weight: 600;
+}
+
+.expiryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  padding: 2px 4px 0 4px;
+}
+
+.expiryKey {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.expiryValRed {
+  color: #EF4444;
+  font-weight: 700;
+}
+
+.expiryValBlue {
+  color: #3B82F6;
+  font-weight: 700;
+}
+
+.upgradePlanBtn {
+  width: 100%;
+  height: 46px;
+  min-height: 46px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #EF4444 0%, #E11D48 100%);
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  margin-top: 4px;
+}
+
+.upgradePlanBtn:hover {
+  filter: brightness(1.05);
+}
+
+.upgradePlanBtn:active {
+  transform: scale(0.98);
+}
+
+/* Toast Notification */
+.toastNotification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0F172A;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

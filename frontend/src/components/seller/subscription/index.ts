@@ -11,4 +11,7 @@ export type {
 export { default as SubscriptionEditCanvasDas } from "./SubscriptionEditCanvasDas";
 export type { SubscriptionEditCanvasDasProps } from "./SubscriptionEditCanvasDas";
 
+export * from "./responsive";
+
 export { default } from "./SubscriptionEditCanvas";
+

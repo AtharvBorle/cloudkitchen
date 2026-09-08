@@ -1,17 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import ResponsiveSellerOrdersDetails from "@/components/seller/seller-orders/responsive/ResponsiveSellerOrdersDetails";
 
-export default function ResponsiveSellerOrdersDetailsPage() {
+function DetailsContent() {
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId") || "#1234";
+
   return (
     <ResponsiveSellerOrdersDetails
-      orderId="#1234"
+      orderId={orderId}
       customerName="Priya Mehta"
-      customerRole="Customer"
-      customerInitials="PM"
       customerPhone="+919876543210"
       deliveryAddress="Flat 402, Building 5A, Horizon Heights, Powai, Mumbai - 400076"
+      riderName="Rahul Kumar"
+      riderInitials="RK"
+      riderPhone="+919876500101"
+      riderEta="Live ETA: ~12 min"
       items={[
         { id: "1", name: "Butter Chicken", qty: 2, price: "₹450" },
         { id: "2", name: "Naan", qty: 4, price: "₹120" },
@@ -21,7 +27,15 @@ export default function ResponsiveSellerOrdersDetailsPage() {
       deliveryFee="Free"
       total="₹850"
       paymentMethod="COD"
-      initialStatus="Pending"
+      initialStatus="Preparing"
     />
+  );
+}
+
+export default function ResponsiveSellerOrdersDetailsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20, textAlign: "center" }}>Loading Order Details...</div>}>
+      <DetailsContent />
+    </Suspense>
   );
 }

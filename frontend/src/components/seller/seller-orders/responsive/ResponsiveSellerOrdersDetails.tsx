@@ -1,9 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Phone, MapPin } from "lucide-react";
+import {
+  ChevronLeft,
+  Phone,
+  FileText,
+  CookingPot,
+  Bike,
+  Package,
+  CheckCircle2,
+} from "lucide-react";
 import styles from "./ResponsiveSellerOrdersDetails.module.css";
 
 export interface ResponsiveOrderItemLine {
@@ -13,15 +20,17 @@ export interface ResponsiveOrderItemLine {
   price: string;
 }
 
-export type OrderTimelineStep = "Pending" | "Preparing" | "Out for delivery" | "Delivered";
+export type OrderTimelineStep = "Order Placed" | "Preparing" | "On the way" | "Delivered";
 
 export interface ResponsiveSellerOrdersDetailsProps {
   orderId?: string;
   customerName?: string;
-  customerRole?: string;
-  customerInitials?: string;
   customerPhone?: string;
   deliveryAddress?: string;
+  riderName?: string;
+  riderInitials?: string;
+  riderPhone?: string;
+  riderEta?: string;
   items?: ResponsiveOrderItemLine[];
   subtotal?: string;
   deliveryFee?: string;
@@ -29,9 +38,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   paymentMethod?: string;
   initialStatus?: OrderTimelineStep;
   onBack?: () => void;
-  onAccept?: () => void;
-  onReject?: () => void;
-  onCallCustomer?: () => void;
+  onCallRider?: () => void;
 }
 
 const DEFAULT_ITEMS: ResponsiveOrderItemLine[] = [
@@ -40,68 +47,58 @@ const DEFAULT_ITEMS: ResponsiveOrderItemLine[] = [
   { id: "3", name: "Dal Makhani", qty: 1, price: "₹280" },
 ];
 
-const TIMELINE_STEPS: OrderTimelineStep[] = [
-  "Pending",
-  "Preparing",
-  "Out for delivery",
-  "Delivered",
-];
-
-export const ResponsiveSellerOrdersDetails: React.FC<ResponsiveSellerOrdersDetailsProps> = ({
+export const ResponsiveSellerOrdersDetails: React.FC<
+  ResponsiveSellerOrdersDetailsProps
+> = ({
   orderId = "#1234",
   customerName = "Priya Mehta",
-  customerRole = "Customer",
-  customerInitials = "PM",
   customerPhone = "+919876543210",
-  deliveryAddress = "Flat 402, Building 5A, Horizon Heights, Powai, Mumbai - 400076",
+  deliveryAddress = "Flat 402, Powai, Mumbai - 400076",
+  riderName = "Rahul Kumar",
+  riderInitials = "RK",
+  riderPhone = "+919876500101",
+  riderEta = "Live ETA: ~12 min",
   items = DEFAULT_ITEMS,
-  subtotal = "₹850",
-  deliveryFee = "Free",
   total = "₹850",
   paymentMethod = "COD",
-  initialStatus = "Pending",
+  initialStatus = "Preparing",
   onBack,
-  onAccept,
-  onReject,
-  onCallCustomer,
+  onCallRider,
 }) => {
   const router = useRouter();
   const [currentStatus, setCurrentStatus] = useState<OrderTimelineStep>(initialStatus);
-  const [isRejected, setIsRejected] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
 
   const handleBackClick = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
       router.push("/seller/res/orders");
     }
   };
 
-  const handleAccept = () => {
-    if (onAccept) {
-      onAccept();
+  const handleCallRider = () => {
+    if (onCallRider) {
+      onCallRider();
     } else {
-      setCurrentStatus("Preparing");
+      if (typeof window !== "undefined") {
+        window.location.href = `tel:${riderPhone}`;
+      }
     }
   };
-
-  const handleReject = () => {
-    if (onReject) {
-      onReject();
-    } else {
-      setIsRejected(true);
-    }
-  };
-
-  const getStepIndex = (status: OrderTimelineStep) => {
-    return TIMELINE_STEPS.indexOf(status);
-  };
-
-  const activeIndex = getStepIndex(currentStatus);
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 390px Mobile Frame with Specifications */}
+      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header */}
         <header className={styles.topBar}>
@@ -112,7 +109,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<ResponsiveSellerOrdersDetai
             aria-label="Back to Orders"
             title="Back"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
 
           <h1 className={styles.orderHeaderTitle}>Order {orderId}</h1>
@@ -122,150 +119,264 @@ export const ResponsiveSellerOrdersDetails: React.FC<ResponsiveSellerOrdersDetai
 
         {/* Scrollable Content */}
         <main className={styles.contentArea}>
-          {/* 1. Customer Card */}
-          <section className={`${styles.card} ${styles.customerCard}`}>
-            <div className={styles.customerLeft}>
-              <div className={styles.avatarCircle}>{customerInitials}</div>
-              <div className={styles.customerInfo}>
-                <h2 className={styles.customerName}>{customerName}</h2>
-                <p className={styles.customerTag}>{customerRole}</p>
+          {/* 1. Map Illustration View Card */}
+          <section className={styles.mapCard}>
+            <div className={styles.mapGraphicWrapper}>
+              <svg
+                width="100%"
+                height="100%"
+                viewBox="0 0 380 180"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={styles.mapSvg}
+              >
+                {/* Background Map Land */}
+                <rect width="380" height="180" rx="16" fill="#EEF2F6" />
+
+                {/* Building Blocks */}
+                <rect x="20" y="20" width="80" height="50" rx="6" fill="#E2E8F0" />
+                <rect x="110" y="20" width="100" height="40" rx="6" fill="#E2E8F0" />
+                <rect x="220" y="20" width="80" height="45" rx="6" fill="#E2E8F0" />
+                <rect x="25" y="80" width="90" height="70" rx="6" fill="#E2E8F0" />
+                <rect x="250" y="75" width="105" height="75" rx="6" fill="#E2E8F0" />
+
+                {/* Park Greenery Area */}
+                <path
+                  d="M130 65 C140 45, 230 40, 245 65 C260 90, 240 140, 210 145 C180 150, 140 135, 125 105 C115 85, 120 75, 130 65 Z"
+                  fill="#DCFCE7"
+                  stroke="#86EFAC"
+                  strokeWidth="1.5"
+                />
+
+                {/* Primary Roads */}
+                <path
+                  d="M0 75 L380 75 M115 0 L115 180 M240 0 L240 180 M0 150 L380 150"
+                  stroke="#FFFFFF"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                />
+
+                {/* Road Centerlines */}
+                <path
+                  d="M0 75 L380 75 M115 0 L115 180 M240 0 L240 180"
+                  stroke="#CBD5E1"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                />
+
+                {/* Compass Marker */}
+                <circle cx="345" cy="28" r="12" fill="#FFFFFF" opacity="0.9" />
+                <path d="M345 19 L348 28 L345 25 L342 28 Z" fill="#EF4444" />
+                <path d="M345 37 L348 28 L345 31 L342 28 Z" fill="#64748B" />
+
+                {/* Delivery Pin Ripple Pulse */}
+                <circle cx="190" cy="85" r="22" fill="#F97316" fillOpacity="0.15" />
+                <circle cx="190" cy="85" r="16" fill="#F97316" fillOpacity="0.25" />
+
+                {/* Delivery Pin Circle & Icon */}
+                <circle cx="190" cy="85" r="14" fill="#FFFFFF" stroke="#F97316" strokeWidth="2.5" />
+                <path
+                  d="M190 78 C186.7 78 184 80.7 184 84 C184 88.5 190 94 190 94 C190 94 196 88.5 196 84 C196 80.7 193.3 78 190 78 Z M190 86 C188.9 86 188 85.1 188 84 C188 82.9 188.9 82 190 82 C191.1 82 192 82.9 192 84 C192 85.1 191.1 86 190 86 Z"
+                  fill="#EA580C"
+                />
+              </svg>
+            </div>
+          </section>
+
+          {/* 2. Stepper Progress Bar */}
+          <section className={styles.stepperCard}>
+            <div className={styles.stepperRow}>
+              {/* Step 1: Order Placed */}
+              <div className={styles.stepCol}>
+                <div className={`${styles.stepCircle} ${styles.stepCircleActive}`}>
+                  <FileText size={16} />
+                </div>
+                <span className={`${styles.stepLabel} ${styles.stepLabelActive}`}>
+                  Order Placed
+                </span>
+              </div>
+
+              {/* Dotted Line 1-2 */}
+              <div className={`${styles.dottedLine} ${styles.dottedLineActive}`} />
+
+              {/* Step 2: Preparing */}
+              <div className={styles.stepCol}>
+                <div
+                  className={`${styles.stepCircle} ${
+                    currentStatus === "Preparing" ||
+                    currentStatus === "On the way" ||
+                    currentStatus === "Delivered"
+                      ? styles.stepCircleActive
+                      : styles.stepCircleInactive
+                  }`}
+                >
+                  <CookingPot size={16} />
+                </div>
+                <span
+                  className={`${styles.stepLabel} ${
+                    currentStatus === "Preparing" ||
+                    currentStatus === "On the way" ||
+                    currentStatus === "Delivered"
+                      ? styles.stepLabelActive
+                      : styles.stepLabelInactive
+                  }`}
+                >
+                  Preparing
+                </span>
+              </div>
+
+              {/* Dotted Line 2-3 */}
+              <div
+                className={`${styles.dottedLine} ${
+                  currentStatus === "On the way" || currentStatus === "Delivered"
+                    ? styles.dottedLineActive
+                    : styles.dottedLineInactive
+                }`}
+              />
+
+              {/* Step 3: On the way */}
+              <div className={styles.stepCol}>
+                <div
+                  className={`${styles.stepCircle} ${
+                    currentStatus === "On the way" || currentStatus === "Delivered"
+                      ? styles.stepCircleActive
+                      : styles.stepCircleInactive
+                  }`}
+                >
+                  <Bike size={16} />
+                </div>
+                <span
+                  className={`${styles.stepLabel} ${
+                    currentStatus === "On the way" || currentStatus === "Delivered"
+                      ? styles.stepLabelActive
+                      : styles.stepLabelInactive
+                  }`}
+                >
+                  On the way
+                </span>
+              </div>
+
+              {/* Dotted Line 3-4 */}
+              <div
+                className={`${styles.dottedLine} ${
+                  currentStatus === "Delivered"
+                    ? styles.dottedLineActive
+                    : styles.dottedLineInactive
+                }`}
+              />
+
+              {/* Step 4: Delivered */}
+              <div className={styles.stepCol}>
+                <div
+                  className={`${styles.stepCircle} ${
+                    currentStatus === "Delivered"
+                      ? styles.stepCircleActive
+                      : styles.stepCircleInactive
+                  }`}
+                >
+                  <Package size={16} />
+                </div>
+                <span
+                  className={`${styles.stepLabel} ${
+                    currentStatus === "Delivered"
+                      ? styles.stepLabelActive
+                      : styles.stepLabelInactive
+                  }`}
+                >
+                  Delivered
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Rider Quick Status Card */}
+          <section className={styles.riderCard}>
+            <div className={styles.riderLeft}>
+              <div className={styles.avatarCircle}>{riderInitials}</div>
+              <div className={styles.riderInfo}>
+                <h3 className={styles.riderName}>{riderName}</h3>
+                <p className={styles.riderEta}>{riderEta}</p>
               </div>
             </div>
 
             <a
-              href={`tel:${customerPhone}`}
-              className={styles.callButton}
+              href={`tel:${riderPhone}`}
+              className={styles.riderCallBtn}
               onClick={(e) => {
-                if (onCallCustomer) {
+                if (onCallRider) {
                   e.preventDefault();
-                  onCallCustomer();
+                  onCallRider();
                 }
               }}
-              aria-label={`Call ${customerName}`}
-              title="Call Customer"
+              aria-label={`Call ${riderName}`}
             >
               <Phone size={18} />
             </a>
           </section>
 
-          {/* 2. Delivery Address Card */}
-          <section className={`${styles.card} ${styles.addressCard}`}>
-            <div className={styles.addressIconWrapper}>
-              <MapPin size={18} />
-            </div>
-            <div className={styles.addressContent}>
-              <span className={styles.sectionLabel}>DELIVERY ADDRESS</span>
+          {/* 4. Delivery To & Item Details Card */}
+          <section className={styles.detailsCard}>
+            <div className={styles.deliveryToHeader}>
+              <span className={styles.sectionLabelUpper}>DELIVERY TO</span>
+              <h3 className={styles.customerName}>{customerName}</h3>
               <p className={styles.addressText}>{deliveryAddress}</p>
             </div>
-          </section>
 
-          {/* 3. Items Ordered Card */}
-          <section className={`${styles.card} ${styles.itemsCard}`}>
-            <span className={styles.sectionLabel}>ITEMS ORDERED</span>
+            <div className={styles.cardDivider} />
 
+            {/* Items List */}
             <div className={styles.itemsList}>
               {items.map((item) => (
                 <div key={item.id} className={styles.itemRow}>
-                  <div className={styles.itemLeft}>
-                    <span className={styles.itemName}>{item.name}</span>
-                    <span className={styles.itemMultiply}>×</span>
-                    <span className={styles.itemQty}>{item.qty}</span>
-                  </div>
+                  <span className={styles.itemTitle}>
+                    {item.name} <strong className={styles.itemMultiply}>×{item.qty}</strong>
+                  </span>
                   <span className={styles.itemPrice}>{item.price}</span>
                 </div>
               ))}
             </div>
 
-            <div className={styles.divider} />
+            <div className={styles.cardDivider} />
 
-            {/* Bill Breakdown */}
-            <div className={styles.billBreakdown}>
-              <div className={styles.billRow}>
-                <span className={styles.billLabel}>Subtotal</span>
-                <span className={styles.billValue}>{subtotal}</span>
-              </div>
-              <div className={styles.billRow}>
-                <span className={styles.billLabel}>Delivery fee</span>
-                <span className={styles.freeDelivery}>{deliveryFee}</span>
-              </div>
-              <div className={styles.totalRow}>
+            {/* Total Row */}
+            <div className={styles.totalRow}>
+              <div className={styles.totalLeft}>
                 <span className={styles.totalLabel}>Total</span>
-                <span className={styles.totalValue}>{total}</span>
+                <span className={styles.paymentBadge}>{paymentMethod}</span>
               </div>
-            </div>
-
-            <div className={styles.divider} />
-
-            {/* Payment Method */}
-            <div className={styles.paymentRow}>
-              <span className={styles.paymentLabel}>Payment Method</span>
-              <span className={styles.codBadge}>{paymentMethod}</span>
+              <span className={styles.totalPrice}>{total}</span>
             </div>
           </section>
 
-          {/* 4. Status Timeline Card */}
-          <section className={`${styles.card} ${styles.timelineCard}`}>
-            <span className={styles.sectionLabel}>STATUS TIMELINE</span>
+          {/* 5. Bottom Action Buttons */}
+          <div className={styles.bottomActions}>
+            <button
+              type="button"
+              className={styles.callRiderButton}
+              onClick={handleCallRider}
+            >
+              Call Rider
+            </button>
 
-            <div className={styles.timelineList}>
-              {TIMELINE_STEPS.map((step, index) => {
-                const isActive = index <= activeIndex;
-                const isCurrent = index === activeIndex;
-                const isLast = index === TIMELINE_STEPS.length - 1;
-
-                return (
-                  <div key={step} className={styles.timelineStep}>
-                    <div className={styles.indicatorWrapper}>
-                      <div className={isActive ? styles.dotActive : styles.dotInactive} />
-                      {!isLast && <div className={styles.connectingLine} />}
-                    </div>
-                    <p
-                      className={
-                        isCurrent ? styles.stepTitleActive : styles.stepTitleInactive
-                      }
-                    >
-                      {step}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+            <button
+              type="button"
+              className={styles.assignRiderButton}
+              onClick={() =>
+                router.push(`/seller/res/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
+              }
+            >
+              Assign / Reassign Rider →
+            </button>
+          </div>
         </main>
 
-        {/* Bottom Actions: Accept order / Reject order */}
-        <footer className={styles.bottomActions}>
-          {!isRejected ? (
-            <>
-              <button
-                type="button"
-                className={styles.acceptButton}
-                onClick={handleAccept}
-              >
-                {currentStatus === "Pending"
-                  ? "Accept order"
-                  : currentStatus === "Preparing"
-                  ? "Mark Ready for Delivery"
-                  : currentStatus === "Out for delivery"
-                  ? "Mark as Delivered"
-                  : "Order Completed"}
-              </button>
-              {currentStatus === "Pending" && (
-                <button
-                  type="button"
-                  className={styles.rejectButton}
-                  onClick={handleReject}
-                >
-                  Reject order
-                </button>
-              )}
-            </>
-          ) : (
-            <div style={{ textAlign: "center", color: "#EF4444", fontWeight: 700, padding: "10px" }}>
-              Order Rejected
-            </div>
-          )}
-        </footer>
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className={styles.toastNotification}>
+            <CheckCircle2 size={18} color="#10B981" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     </div>
   );

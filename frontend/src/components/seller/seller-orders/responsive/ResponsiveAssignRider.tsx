@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Copy } from "lucide-react";
 import styles from "./ResponsiveAssignRider.module.css";
 
 export interface AvailableRiderItem {
@@ -33,7 +33,7 @@ const DEFAULT_RIDERS: AvailableRiderItem[] = [
 export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
   orderId = "#1234",
   itemCount = 3,
-  orderTotal = "\u20B9850",
+  orderTotal = "₹850",
   deliveryArea = "Powai",
   riders = DEFAULT_RIDERS,
   onAssign,
@@ -43,23 +43,34 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
   const router = useRouter();
   const [assignedRiderId, setAssignedRiderId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
 
   const handleBack = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
-      router.push("/seller/res/orders");
+      router.push("/seller/res/orders/details");
     }
   };
 
-  const handleAssignClick = (riderId: string) => {
-    setAssignedRiderId(riderId);
+  const handleAssignClick = (rider: AvailableRiderItem) => {
+    setAssignedRiderId(rider.id);
+    showToast(`${rider.name} assigned to Order ${orderId}!`);
     if (onAssign) {
-      onAssign(riderId);
+      onAssign(rider.id);
     } else {
       setTimeout(() => {
-        router.push("/seller/res/orders");
-      }, 600);
+        router.push("/seller/res/orders/details");
+      }, 900);
     }
   };
 
@@ -73,13 +84,14 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
         );
       }
       setCopied(true);
+      showToast("Pickup link copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 390px Mobile View Container */}
+      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header Bar */}
         <header className={styles.topBar}>
@@ -90,7 +102,7 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
             aria-label="Back"
             title="Back"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} strokeWidth={2.5} />
           </button>
 
           <h1 className={styles.headerTitle}>Assign Rider</h1>
@@ -104,12 +116,12 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
           <section className={styles.orderSummaryBox}>
             <h2 className={styles.orderHeading}>Order {orderId}</h2>
             <p className={styles.orderDetailsText}>
-              {itemCount} items · {orderTotal} · {deliveryArea}
+              {itemCount} items • {orderTotal} • {deliveryArea}
             </p>
           </section>
 
           {/* Available Riders List */}
-          <section>
+          <section className={styles.ridersSection}>
             <h3 className={styles.sectionLabel}>AVAILABLE RIDERS</h3>
 
             <div className={styles.ridersList}>
@@ -130,7 +142,7 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
                       className={`${styles.assignButton} ${
                         isAssigned ? styles.assignButtonAssigned : ""
                       }`}
-                      onClick={() => handleAssignClick(rider.id)}
+                      onClick={() => handleAssignClick(rider)}
                     >
                       {isAssigned ? "Assigned ✓" : "Assign"}
                     </button>
@@ -141,7 +153,7 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
           </section>
 
           {/* Share Pickup Link Section */}
-          <section>
+          <section className={styles.shareSection}>
             <h3 className={styles.sectionLabel}>OR SHARE PICKUP LINK</h3>
 
             <button
@@ -149,10 +161,19 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
               className={styles.copyLinkButton}
               onClick={handleCopyLink}
             >
-              {copied ? "Link Copied! ✓" : "Copy Share Link"}
+              <Copy size={16} />
+              <span>{copied ? "Link Copied! ✓" : "Copy Share Link"}</span>
             </button>
           </section>
         </main>
+
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className={styles.toastNotification}>
+            <CheckCircle2 size={18} color="#10B981" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     </div>
   );

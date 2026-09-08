@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu as MenuIcon, ChevronRight } from "lucide-react";
+import { Menu as MenuIcon, ChevronRight, Settings } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveDelivery.module.css";
 
@@ -67,7 +67,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
     if (onSelectRider) {
       onSelectRider(rider);
     } else {
-      router.push("/seller/riderMng/settlements");
+      router.push("/seller/res/delivery/handover");
     }
   };
 
@@ -82,7 +82,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
         onSyncDevices={onSyncDevices}
       />
 
-      {/* 390px Mobile View Container */}
+      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header Bar with Hamburger Icon */}
         <header className={styles.topBar}>
@@ -101,20 +101,46 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
 
           <h1 className={styles.pageTitle}>Delivery &amp; COD</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/delivery/settings")}
+            aria-label="Delivery Settings"
+            title="Delivery Settings"
+          >
+            <Settings size={20} />
+          </button>
         </header>
 
         {/* Content Area */}
         <main className={styles.contentArea}>
           {/* Total Outstanding Card */}
-          <section className={styles.totalCard}>
-            <span className={styles.totalLabel}>Total Outstanding</span>
+          <section
+            className={styles.totalCard}
+            onClick={() => router.push("/seller/res/delivery/riders")}
+            role="button"
+            tabIndex={0}
+            style={{ cursor: "pointer" }}
+          >
+            <div className={styles.totalCardHeader}>
+              <span className={styles.totalLabel}>Total Outstanding</span>
+              <span className={styles.viewRidersLink}>Manage Riders →</span>
+            </div>
             <span className={styles.totalAmount}>{totalOutstanding}</span>
           </section>
 
           {/* Riders List Section */}
           <section className={styles.ridersSection}>
-            <h2 className={styles.sectionLabel}>RIDERS</h2>
+            <div className={styles.sectionHeaderRow}>
+              <h2 className={styles.sectionLabel}>RIDERS</h2>
+              <button
+                type="button"
+                className={styles.sectionActionBtn}
+                onClick={() => router.push("/seller/res/delivery/riders")}
+              >
+                View All Riders
+              </button>
+            </div>
 
             {riders.length > 0 ? (
               <div className={styles.ridersList}>

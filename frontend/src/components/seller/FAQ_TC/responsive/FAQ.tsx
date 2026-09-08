@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -69,10 +69,13 @@ export const FAQ: React.FC<FAQProps> = ({
   const handleBackClick = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
       router.push("/seller/res/dashboard");
     }
   };
+
 
   const handleToggle = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));

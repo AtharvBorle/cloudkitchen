@@ -7,7 +7,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #0F172A;
   box-sizing: border-box;
   padding: 16px 0;
@@ -19,17 +19,17 @@
     padding: 0;
     margin: 0;
     width: 100%;
-    background-color: #F5F6F8;
+    background-color: #F4F6FA;
   }
 }
 
-/* 390px Mobile Frame */
+/* 420px Mobile Frame */
 .mobileContainer {
   width: 100%;
-  max-width: 390px;
-  min-height: 874px;
-  background-color: #F5F6F8;
-  border-radius: 16px;
+  max-width: 420px;
+  min-height: 100vh;
+  background-color: #F4F6FA;
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -54,32 +54,52 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  filter: blur(1px) brightness(0.95);
-  pointer-events: none;
+  opacity: 0.6;
   user-select: none;
 }
 
 .topBar {
-  height: 56px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
   background-color: #FFFFFF;
-  border-bottom: 1px solid #EEF0F4;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.backButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .pageTitle {
-  font-size: 17.5px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: #0F172A;
   margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.searchButton {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .filterTabs {
   display: flex;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 8px 18px;
 }
 
 .tabPill {
@@ -96,39 +116,81 @@
   background: #C2410C;
   color: #FFFFFF;
   border-color: #C2410C;
+  font-weight: 700;
 }
 
 .orderCardBack {
-  margin: 0 16px;
+  margin: 0 18px;
   background: #FFFFFF;
   border: 1.5px solid #F97316;
   border-radius: 16px;
-  padding: 14px;
+  padding: 16px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.08);
+}
+
+.cardBackLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cardBackMeta {
+  font-size: 12px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.cardBackName {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.cardBackDetails {
+  font-size: 13px;
+  color: #0F172A;
+  font-weight: 600;
+}
+
+.cardBackChevron {
+  color: #94A3B8;
+  transform: rotate(180deg);
+}
+
+/* Modal Backdrop */
+.sheetBackdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(2px);
+  z-index: 5;
 }
 
 /* Bottom Sheet / Modal View */
 .bottomSheet {
   margin-top: auto;
   background-color: #FFFFFF;
-  border-radius: 24px 24px 0 0;
-  padding: 12px 20px 24px 20px;
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 28px 28px 0 0;
+  padding: 14px 20px 28px 20px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.16);
   display: flex;
   flex-direction: column;
   gap: 14px;
   box-sizing: border-box;
   z-index: 10;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dragHandle {
-  width: 40px;
-  height: 4px;
+  width: 44px;
+  height: 5px;
   background-color: #E2E8F0;
   border-radius: 9999px;
   align-self: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 /* Header Inside Bottom Sheet */
@@ -145,13 +207,13 @@
 }
 
 .orderIdText {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
   color: #64748B;
 }
 
 .customerName {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
   color: #0F172A;
   margin: 0;
@@ -170,7 +232,7 @@
   color: #EA580C;
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 8px;
 }
 
@@ -179,28 +241,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .reliabilityTitle {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
   color: #0F172A;
   margin: 0;
+  letter-spacing: -0.2px;
 }
 
 .ratingBadge {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 800;
   color: #0F172A;
 }
 
 .starIcon {
   color: #F97316;
-  fill: #F97316;
 }
 
 /* 2x3 Metric Grid */
@@ -212,8 +274,9 @@
 
 .metricCard {
   background-color: #F8FAFC;
-  border-radius: 12px;
-  padding: 10px 12px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -223,14 +286,15 @@
   font-size: 10.5px;
   font-weight: 700;
   color: #64748B;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
 .metricValue {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 800;
   color: #0F172A;
+  letter-spacing: -0.2px;
 }
 
 .metricGreen {
@@ -246,7 +310,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 12.5px;
   color: #64748B;
   font-weight: 500;
   margin-top: 2px;
@@ -257,15 +321,15 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .acceptButton {
   width: 100%;
-  height: 48px;
-  background-color: #F97316;
+  height: 50px;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #FFFFFF;
   font-size: 15px;
   font-weight: 700;
@@ -273,10 +337,12 @@
   box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
   transition: all 0.15s ease;
   font-family: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .acceptButton:hover {
-  background-color: #EA580C;
+  filter: brightness(1.05);
 }
 
 .acceptButton:active {
@@ -288,13 +354,15 @@
   height: 48px;
   background-color: #FFFFFF;
   border: 1.5px solid #E2E8F0;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #0F172A;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .declineButton:hover {
@@ -304,5 +372,37 @@
 
 .declineButton:active {
   transform: scale(0.98);
+}
+
+/* Toast Notification */
+.toastNotification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0F172A;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 

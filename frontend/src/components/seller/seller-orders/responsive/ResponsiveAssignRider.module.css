@@ -7,7 +7,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #0F172A;
   box-sizing: border-box;
   padding: 16px 0;
@@ -19,23 +19,24 @@
     padding: 0;
     margin: 0;
     width: 100%;
-    background-color: #F5F6F8;
+    background-color: #F4F6FA;
   }
 }
 
-/* 390px Mobile View Container */
+/* 420px Mobile View Container */
 .mobileContainer {
   width: 100%;
-  max-width: 390px;
-  min-height: 874px;
-  background-color: #F5F6F8;
-  border-radius: 16px;
+  max-width: 420px;
+  min-height: 100vh;
+  background-color: #F4F6FA;
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   position: relative;
   box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
+  overflow-x: hidden;
+  padding-bottom: 24px;
 }
 
 @media (max-width: 768px) {
@@ -51,13 +52,12 @@
 /* Top Header Bar */
 .topBar {
   width: 100%;
-  height: 56px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
   background-color: #FFFFFF;
-  border-bottom: 1px solid #EEF0F4;
+  border-bottom: 1px solid #F1F5F9;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -65,13 +65,11 @@
 }
 
 .backButton {
-  min-width: 44px;
-  min-height: 44px;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
   color: #0F172A;
   display: flex;
   align-items: center;
@@ -85,6 +83,7 @@
 
 .backButton:hover {
   background-color: #F1F5F9;
+  border-color: #CBD5E1;
 }
 
 .backButton:active {
@@ -92,22 +91,24 @@
 }
 
 .headerTitle {
-  font-size: 17.5px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: #0F172A;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
   margin: 0;
+  flex: 1;
+  text-align: center;
+  margin-right: 38px; /* Balance left back button */
 }
 
 .headerPlaceholder {
-  width: 38px;
-  height: 38px;
+  display: none;
 }
 
 /* Content Area */
 .contentArea {
   flex: 1;
-  padding: 18px 16px 32px 16px;
+  padding: 18px 18px 28px 18px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -119,13 +120,15 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-left: 2px;
 }
 
 .orderHeading {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   color: #0F172A;
   margin: 0;
+  letter-spacing: -0.3px;
 }
 
 .orderDetailsText {
@@ -136,13 +139,25 @@
 }
 
 /* Section Labels */
+.ridersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shareSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .sectionLabel {
   font-size: 11.5px;
   font-weight: 700;
   color: #64748B;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  margin: 6px 0 0 0;
+  margin: 4px 0 0 2px;
 }
 
 /* Riders List */
@@ -156,19 +171,26 @@
   background-color: #FFFFFF;
   border-radius: 16px;
   padding: 14px 16px;
-  border: 1px solid #EEF0F4;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.riderCard:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .riderLeft {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .avatarCircle {
@@ -177,7 +199,7 @@
   border-radius: 50%;
   background-color: #FFEDD5;
   color: #EA580C;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -189,6 +211,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .riderName {
@@ -196,6 +219,10 @@
   font-weight: 700;
   color: #0F172A;
   margin: 0;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .riderDistance {
@@ -206,20 +233,24 @@
 }
 
 .assignButton {
-  background-color: #F97316;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
   color: #FFFFFF;
   border: none;
-  border-radius: 10px;
-  padding: 8px 18px;
-  font-size: 14px;
+  border-radius: 12px;
+  padding: 9px 20px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
 
 .assignButton:hover {
-  background-color: #EA580C;
+  filter: brightness(1.05);
 }
 
 .assignButton:active {
@@ -227,7 +258,8 @@
 }
 
 .assignButtonAssigned {
-  background-color: #16A34A;
+  background: #16A34A;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
 }
 
 /* Share Pickup Link Button */
@@ -236,9 +268,9 @@
   height: 48px;
   background-color: #FFFFFF;
   border: 1.5px solid #E2E8F0;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #0F172A;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -246,7 +278,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   margin-top: 2px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .copyLinkButton:hover {
@@ -256,5 +292,37 @@
 
 .copyLinkButton:active {
   transform: scale(0.98);
+}
+
+/* Toast Notification */
+.toastNotification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0F172A;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 

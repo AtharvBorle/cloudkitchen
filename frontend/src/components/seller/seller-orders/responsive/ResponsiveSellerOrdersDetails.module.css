@@ -17,20 +17,19 @@
     padding: 0;
     margin: 0;
     width: 100%;
-    background-color: #F5F6F8;
+    background-color: #F4F6FA;
   }
 }
 
-/* Main Container */
+/* Main 420px Container */
 .mobileContainer {
   width: 100%;
-  max-width: 390px;
-  min-height: 874px;
-  background-color: #F5F6F8;
+  max-width: 420px;
+  min-height: 100vh;
+  background-color: #F4F6FA;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   box-sizing: border-box;
   position: relative;
   box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
@@ -40,10 +39,7 @@
 @media (max-width: 768px) {
   .mobileContainer {
     border-radius: 0;
-    max-width: 100%;
-    width: 100%;
     box-shadow: none;
-    min-height: 100vh;
   }
 }
 
@@ -78,7 +74,6 @@
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 0;
-  text-decoration: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -100,47 +95,152 @@
 }
 
 .headerPlaceholder {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
 }
 
 /* Main Scrollable Content Area */
 .contentArea {
   flex: 1;
-  padding: 14px 16px;
+  padding: 14px 16px 24px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
-/* Common Card Base Style */
-.card {
+/* 1. Map Illustration Card */
+.mapCard {
   background-color: #FFFFFF;
   border-radius: 16px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
-  border: 1px solid #EEF0F4;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
   box-sizing: border-box;
 }
 
-/* 1. Customer Card */
-.customerCard {
+.mapGraphicWrapper {
+  width: 100%;
+  height: 165px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #EEF2F6;
+  position: relative;
+}
+
+.mapSvg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 2. Stepper Card */
+.stepperCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 16px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+}
+
+.stepperRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  position: relative;
 }
 
-.customerLeft {
+.stepCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  min-width: 60px;
+}
+
+.stepCircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.stepCircleActive {
+  background-color: #F97316;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
+}
+
+.stepCircleInactive {
+  background-color: #F1F5F9;
+  color: #94A3B8;
+  border: 1px solid #E2E8F0;
+}
+
+.stepLabel {
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: -0.1px;
+}
+
+.stepLabelActive {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.stepLabelInactive {
+  font-weight: 500;
+  color: #94A3B8;
+}
+
+.dottedLine {
+  flex: 1;
+  height: 2px;
+  margin: 0 4px;
+  margin-bottom: 22px;
+  transition: all 0.2s ease;
+}
+
+.dottedLineActive {
+  border-top: 2px dashed #F97316;
+}
+
+.dottedLineInactive {
+  border-top: 2px dashed #CBD5E1;
+}
+
+/* 3. Rider Quick Status Card */
+.riderCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+}
+
+.riderLeft {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 .avatarCircle {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background-color: #FFF1E8;
   color: #F97316;
@@ -150,83 +250,77 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border: 1.5px solid #FFD8BE;
 }
 
-.customerInfo {
+.riderInfo {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.customerName {
-  font-size: 15.5px;
+.riderName {
+  font-size: 15px;
   font-weight: 700;
   color: #0F172A;
   margin: 0;
   letter-spacing: -0.2px;
 }
 
-.customerTag {
+.riderEta {
   font-size: 12.5px;
-  color: #94A3B8;
-  margin: 0;
+  color: #64748B;
   font-weight: 500;
+  margin: 0;
 }
 
-.callButton {
-  width: 40px;
-  height: 40px;
+.riderCallBtn {
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background-color: #FFF1E8;
-  color: #F97316;
+  background-color: #10B981;
+  color: #FFFFFF;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   text-decoration: none;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  touch-action: manipulation;
 }
 
-.callButton:hover {
-  background-color: #FFE4D6;
-  transform: scale(1.04);
+.riderCallBtn:hover {
+  background-color: #059669;
+  transform: scale(1.05);
 }
 
-.callButton:active {
-  transform: scale(0.96);
+.riderCallBtn:active {
+  transform: scale(0.95);
 }
 
-/* 2. Delivery Address Card */
-.addressCard {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-}
-
-.addressIconWrapper {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #FFF1E8;
-  color: #F97316;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.addressContent {
+/* 4. Details Card */
+.detailsCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  min-width: 0;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
 }
 
-.sectionLabel {
+.deliveryToHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionLabelUpper {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -235,20 +329,25 @@
   margin: 0;
 }
 
+.customerName {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
 .addressText {
   font-size: 13px;
   font-weight: 500;
-  color: #1E293B;
+  color: #475569;
   line-height: 1.45;
   margin: 0;
 }
 
-/* 3. Items Ordered Card */
-.itemsCard {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.cardDivider {
+  width: 100%;
+  height: 1px;
+  background-color: #F1F5F9;
 }
 
 .itemsList {
@@ -264,28 +363,16 @@
   font-size: 14px;
 }
 
-.itemLeft {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #0F172A;
-  font-weight: 600;
-}
-
-.itemName {
+.itemTitle {
   font-size: 14px;
-  font-weight: 700;
-  color: #0F172A;
+  font-weight: 600;
+  color: #1E293B;
 }
 
 .itemMultiply {
-  color: #94A3B8;
-  font-size: 12.5px;
-}
-
-.itemQty {
-  color: #0F172A;
   font-weight: 700;
+  color: #94A3B8;
+  margin-left: 4px;
 }
 
 .itemPrice {
@@ -294,173 +381,51 @@
   color: #0F172A;
 }
 
-.divider {
-  width: 100%;
-  height: 1px;
-  background-color: #F1F5F9;
-  margin: 2px 0;
-}
-
-/* Bill Breakdown */
-.billBreakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.billRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13.5px;
-}
-
-.billLabel {
-  color: #64748B;
-  font-weight: 500;
-}
-
-.billValue {
-  color: #0F172A;
-  font-weight: 600;
-}
-
-.freeDelivery {
-  color: #16A34A;
-  font-weight: 600;
-}
-
 .totalRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 2px;
+  padding-top: 2px;
+}
+
+.totalLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .totalLabel {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: #0F172A;
 }
 
-.totalValue {
-  font-size: 18px;
-  font-weight: 800;
-  color: #F97316;
-  letter-spacing: -0.3px;
-}
-
-/* Payment Method Row */
-.paymentRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13.5px;
-  padding-top: 2px;
-}
-
-.paymentLabel {
-  color: #64748B;
-  font-weight: 500;
-}
-
-.codBadge {
+.paymentBadge {
   background-color: #FFF1E8;
-  color: #F97316;
-  font-size: 11.5px;
+  color: #EA580C;
+  font-size: 11px;
   font-weight: 700;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 6px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }
 
-/* 4. Status Timeline Card */
-.timelineCard {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.totalPrice {
+  font-size: 17px;
+  font-weight: 800;
+  color: #EA580C;
+  letter-spacing: -0.2px;
 }
 
-.timelineList {
-  display: flex;
-  flex-direction: column;
-  padding-left: 4px;
-}
-
-.timelineStep {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  position: relative;
-  min-height: 38px;
-}
-
-.timelineStep:last-child {
-  min-height: auto;
-}
-
-.indicatorWrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 16px;
-}
-
-.dotActive {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #F97316;
-  border: 2px solid #FFF1E8;
-  box-shadow: 0 0 0 1px #F97316;
-  margin-top: 4px;
-}
-
-.dotInactive {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background-color: #E2E8F0;
-  margin-top: 4px;
-}
-
-.connectingLine {
-  width: 1.5px;
-  flex: 1;
-  background-color: #E2E8F0;
-  min-height: 24px;
-  margin-top: 2px;
-  margin-bottom: 2px;
-}
-
-.stepTitleActive {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #0F172A;
-  margin: 0;
-  padding-top: 0;
-}
-
-.stepTitleInactive {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #94A3B8;
-  margin: 0;
-  padding-top: 0;
-}
-
-/* Bottom Actions */
+/* 5. Bottom Action Buttons */
 .bottomActions {
-  padding: 14px 16px 20px 16px;
-  background-color: #F5F6F8;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-sizing: border-box;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-.acceptButton {
+.callRiderButton {
   width: 100%;
   height: 48px;
   border-radius: 14px;
@@ -475,39 +440,74 @@
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  box-shadow: 0 3px 10px rgba(249, 115, 22, 0.25);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+  touch-action: manipulation;
 }
 
-.acceptButton:hover {
+.callRiderButton:hover {
   background-color: #EA580C;
   transform: translateY(-1px);
 }
 
-.acceptButton:active {
+.callRiderButton:active {
   transform: scale(0.99);
 }
 
-.rejectButton {
+.assignRiderButton {
   width: 100%;
-  height: 38px;
-  border: none;
-  background: transparent;
-  color: #EF4444;
+  height: 46px;
+  border-radius: 14px;
+  border: 1.5px solid #F97316;
+  background-color: #FFFFFF;
+  color: #EA580C;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: inherit;
+  touch-action: manipulation;
 }
 
-.rejectButton:hover {
-  color: #DC2626;
-  text-decoration: underline;
+.assignRiderButton:hover {
+  background-color: #FFF7ED;
+  border-color: #EA580C;
 }
 
-.rejectButton:active {
-  transform: scale(0.98);
+.assignRiderButton:active {
+  transform: scale(0.99);
+}
+
+/* Toast Notification */
+.toastNotification {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1E293B;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }

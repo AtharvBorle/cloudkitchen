@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -75,10 +75,13 @@ export const TC: React.FC<TCProps> = ({
   const handleBackClick = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else {
       router.push("/seller/res/dashboard");
     }
   };
+
 
   const handleTabSelect = (tab: TCTab) => {
     setActiveTab(tab);

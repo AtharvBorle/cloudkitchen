@@ -327,8 +327,16 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                     <span className={styles.totalAmountText}>{order.totalAmount}</span>
                   </div>
 
-                  {/* Customer Stats: ⭐ 4.5 • 128 Delivered • 3 Cancelled */}
-                  <div className={styles.customerStatsRow}>
+                  {/* Customer Stats: ⭐ 4.5 • 128 Delivered • 3 Cancelled (Click to view Reliability Modal) */}
+                  <div
+                    className={styles.customerStatsRow}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push("/seller/res/orders/reliability");
+                    }}
+                    title="View Customer Reliability Score"
+                    style={{ cursor: "pointer" }}
+                  >
                     <div className={styles.ratingStat}>
                       <Star size={14} className={styles.starIcon} />
                       <span>{order.rating.toFixed(1)}</span>
