@@ -16,6 +16,7 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 import styles from "./UserCart.module.css";
 
 export interface UserCartItem {
@@ -94,9 +95,10 @@ export const UserCart: React.FC<UserCartProps> = ({
   onProceedToCheckout,
 }) => {
   const router = useRouter();
+  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, cartTotal } = useCart();
 
   // State Management
-  const [cartItems, setCartItems] = useState<UserCartItem[]>(initialItems);
+  const [localCartItems, setLocalCartItems] = useState<UserCartItem[]>(initialItems);
   const [isVegOnly, setIsVegOnly] = useState<boolean>(true);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("EN");
   const [promoCode, setPromoCode] = useState<string>("");
@@ -105,6 +107,18 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [currentAddress, setCurrentAddress] = useState<string>(defaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Active items derived from context if present
+  const cartItems: UserCartItem[] = contextCartItems.length > 0
+    ? contextCartItems.map((ci) => ({
+        id: ci.id,
+        name: ci.name,
+        description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
+        price: ci.price,
+        qty: ci.quantity,
+        image: "/images/places/place-pizza.png",
+      }))
+    : localCartItems;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -115,22 +129,43 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Quantity Handlers
   const handleQtyChange = (id: string, delta: number) => {
-    setCartItems((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === id) {
-            const newQty = item.qty + delta;
-            return newQty > 0 ? { ...item, qty: newQty } : item;
-          }
-          return item;
-        })
-        .filter((item) => item.qty > 0)
-    );
+    const existing = contextCartItems.find((ci) => ci.id === id);
+    if (existing) {
+      if (delta > 0) {
+        addToCart({
+          id: existing.id,
+          name: existing.name,
+          price: existing.price,
+          quantity: 1,
+          sellerId: existing.sellerId,
+          sellerName: existing.sellerName,
+        });
+      } else {
+        decreaseQuantity(id);
+      }
+    } else {
+      setLocalCartItems((prev) =>
+        prev
+          .map((item) => {
+            if (item.id === id) {
+              const newQty = item.qty + delta;
+              return newQty > 0 ? { ...item, qty: newQty } : item;
+            }
+            return item;
+          })
+          .filter((item) => item.qty > 0)
+      );
+    }
   };
 
   // Remove Item
   const handleRemoveItem = (id: string, name: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+    const existing = contextCartItems.find((ci) => ci.id === id);
+    if (existing) {
+      removeFromCart(id);
+    } else {
+      setLocalCartItems((prev) => prev.filter((item) => item.id !== id));
+    }
     showToast(`Removed "${name}" from cart`);
   };
 

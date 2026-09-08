@@ -17,6 +17,7 @@ import {
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 import styles from "./SecureCheckout.module.css";
 
 export interface CheckoutSummaryItem {
@@ -69,6 +70,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   onPlaceOrder,
 }) => {
   const router = useRouter();
+  const { cartItems, cartTotal, clearCart } = useCart();
 
   // Form States
   const [fullName, setFullName] = useState<string>(initialName);
@@ -99,12 +101,24 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }, 2800);
   };
 
+  // Active items derived from CartContext if present
+  const checkoutItems: CheckoutSummaryItem[] = cartItems.length > 0
+    ? cartItems.map((ci) => ({
+        id: ci.id,
+        name: ci.name,
+        variant: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
+        qty: ci.quantity,
+        price: ci.price * ci.quantity,
+        image: "/images/places/place-pizza.png",
+      }))
+    : items;
+
   // Pricing calculations
-  const subtotal = items.reduce((acc, item) => acc + item.price, 0); // 449 + 598 = 1047
-  const discountAmount = isPromoApplied ? Math.round((subtotal * 20) / 100) : 0; // 209
-  const deliveryFee = 49;
-  const taxesAndCharges = 38;
-  const grandTotal = subtotal - discountAmount + deliveryFee + taxesAndCharges; // 1047 - 209 + 49 + 38 = 925
+  const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
+  const discountAmount = isPromoApplied && subtotal > 0 ? Math.round((subtotal * 20) / 100) : 0;
+  const deliveryFee = subtotal > 0 ? 49 : 0;
+  const taxesAndCharges = subtotal > 0 ? 38 : 0;
+  const grandTotal = Math.max(0, subtotal - discountAmount + deliveryFee + taxesAndCharges);
 
   const handleApplyToggle = () => {
     if (isPromoApplied) {
@@ -130,6 +144,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       onPlaceOrder();
     } else {
       showToast(`Order Placed Successfully! Paid with ${paymentMethod === "UPI" ? "Pay Now / UPI" : "COD"}`);
+      clearCart();
       setTimeout(() => {
         router.push("/dashboard/user/orders");
       }, 1200);
