@@ -213,15 +213,13 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleStore}
-                  className={`${styles.toggleSwitch} ${
-                    isOpen ? styles.toggleSwitchActive : ""
-                  }`}
+                  className={`${styles.toggleSwitch} ${isOpen ? styles.toggleSwitchActive : ""
+                    }`}
                   aria-label="Toggle store status"
                 >
                   <span
-                    className={`${styles.toggleThumb} ${
-                      isOpen ? styles.toggleThumbActive : ""
-                    }`}
+                    className={`${styles.toggleThumb} ${isOpen ? styles.toggleThumbActive : ""
+                      }`}
                   />
                 </button>
                 <span
@@ -272,9 +270,8 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`${styles.categoryPill} ${
-                    selectedCategory === cat ? styles.activeCategoryPill : ""
-                  }`}
+                  className={`${styles.categoryPill} ${selectedCategory === cat ? styles.activeCategoryPill : ""
+                    }`}
                 >
                   {cat}
                 </button>
@@ -365,17 +362,15 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                           <button
                             type="button"
                             onClick={() => handleToggleDishStock(dish.id)}
-                            className={`${styles.miniToggle} ${
-                              dish.inStock
+                            className={`${styles.miniToggle} ${dish.inStock
                                 ? styles.miniToggleActive
                                 : styles.miniToggleInactive
-                            }`}
+                              }`}
                             aria-label={`Toggle stock for ${dish.name}`}
                           >
                             <span
-                              className={`${styles.miniThumb} ${
-                                dish.inStock ? styles.miniThumbActive : ""
-                              }`}
+                              className={`${styles.miniThumb} ${dish.inStock ? styles.miniThumbActive : ""
+                                }`}
                             />
                           </button>
                         </div>

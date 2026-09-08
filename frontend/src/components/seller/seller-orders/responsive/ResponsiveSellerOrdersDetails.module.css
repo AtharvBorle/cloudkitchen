@@ -1,0 +1,513 @@
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F5F6F8;
+  }
+}
+
+/* Main Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 390px;
+  min-height: 874px;
+  background-color: #F5F6F8;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
+
+/* Top Sticky Bar */
+.topBar {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #EEF0F4;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.backButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.backButton:hover {
+  background-color: #F1F5F9;
+}
+
+.backButton:active {
+  transform: scale(0.95);
+}
+
+.orderHeaderTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.headerPlaceholder {
+  width: 38px;
+  height: 38px;
+}
+
+/* Main Scrollable Content Area */
+.contentArea {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* Common Card Base Style */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  border: 1px solid #EEF0F4;
+  box-sizing: border-box;
+}
+
+/* 1. Customer Card */
+.customerCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.customerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatarCircle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  color: #F97316;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.customerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.customerName {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.customerTag {
+  font-size: 12.5px;
+  color: #94A3B8;
+  margin: 0;
+  font-weight: 500;
+}
+
+.callButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  color: #F97316;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.callButton:hover {
+  background-color: #FFE4D6;
+  transform: scale(1.04);
+}
+
+.callButton:active {
+  transform: scale(0.96);
+}
+
+/* 2. Delivery Address Card */
+.addressCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.addressIconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.addressContent {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.addressText {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* 3. Items Ordered Card */
+.itemsCard {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.itemLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0F172A;
+  font-weight: 600;
+}
+
+.itemName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.itemMultiply {
+  color: #94A3B8;
+  font-size: 12.5px;
+}
+
+.itemQty {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+.itemPrice {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: #F1F5F9;
+  margin: 2px 0;
+}
+
+/* Bill Breakdown */
+.billBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.billRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+}
+
+.billLabel {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.billValue {
+  color: #0F172A;
+  font-weight: 600;
+}
+
+.freeDelivery {
+  color: #16A34A;
+  font-weight: 600;
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.totalLabel {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.totalValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: #F97316;
+  letter-spacing: -0.3px;
+}
+
+/* Payment Method Row */
+.paymentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  padding-top: 2px;
+}
+
+.paymentLabel {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.codBadge {
+  background-color: #FFF1E8;
+  color: #F97316;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+
+/* 4. Status Timeline Card */
+.timelineCard {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  padding-left: 4px;
+}
+
+.timelineStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+  min-height: 38px;
+}
+
+.timelineStep:last-child {
+  min-height: auto;
+}
+
+.indicatorWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 16px;
+}
+
+.dotActive {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #F97316;
+  border: 2px solid #FFF1E8;
+  box-shadow: 0 0 0 1px #F97316;
+  margin-top: 4px;
+}
+
+.dotInactive {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #E2E8F0;
+  margin-top: 4px;
+}
+
+.connectingLine {
+  width: 1.5px;
+  flex: 1;
+  background-color: #E2E8F0;
+  min-height: 24px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.stepTitleActive {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  padding-top: 0;
+}
+
+.stepTitleInactive {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #94A3B8;
+  margin: 0;
+  padding-top: 0;
+}
+
+/* Bottom Actions */
+.bottomActions {
+  padding: 14px 16px 20px 16px;
+  background-color: #F5F6F8;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.acceptButton {
+  width: 100%;
+  height: 48px;
+  border-radius: 14px;
+  border: none;
+  background-color: #F97316;
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  box-shadow: 0 3px 10px rgba(249, 115, 22, 0.25);
+}
+
+.acceptButton:hover {
+  background-color: #EA580C;
+  transform: translateY(-1px);
+}
+
+.acceptButton:active {
+  transform: scale(0.99);
+}
+
+.rejectButton {
+  width: 100%;
+  height: 38px;
+  border: none;
+  background: transparent;
+  color: #EF4444;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.rejectButton:hover {
+  color: #DC2626;
+  text-decoration: underline;
+}
+
+.rejectButton:active {
+  transform: scale(0.98);
+}

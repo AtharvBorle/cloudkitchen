@@ -8,4 +8,6 @@ export type {
 export { default as RoomConfigCanvasDas } from "./RoomConfigCanvasDas";
 export type { RoomConfigCanvasDasProps } from "./RoomConfigCanvasDas";
 
+export * from "./responsive";
+
 export { default } from "./RoomConfigCanvas";

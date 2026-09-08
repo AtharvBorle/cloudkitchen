@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
 import { Providers } from '@/components/Providers';
@@ -16,6 +16,12 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: 'Cloud Kitchen & Homely Food with Room Booking',
   description: 'Premium platform for homemade food and local room bookings.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

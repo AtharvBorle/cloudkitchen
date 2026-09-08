@@ -330,6 +330,52 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div className={styles.mobileDrawer}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", paddingBottom: "8px", borderBottom: "1px solid #F1F5F9" }}>
+              <span style={{ fontSize: "14px", fontWeight: 800, color: "#A3281C" }}>MENU</span>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  border: "1px solid #E2E8F0",
+                  backgroundColor: "#F8FAFC",
+                  color: "#64748B",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  touchAction: "manipulation",
+                }}
+                aria-label="Close menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Mobile Drawer Veg Only Toggle */}
+            <div
+              className={styles.drawerVegToggle}
+              style={{ display: "none" }}
+              onClick={toggleVegOnly}
+              role="switch"
+              aria-checked={currentVegOnly}
+            >
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#22C55E" }}>VEG ONLY</span>
+              <div
+                className={`${styles.toggleTrack} ${
+                  currentVegOnly ? styles.toggleTrackActive : ""
+                }`}
+              >
+                <div
+                  className={`${styles.toggleThumb} ${
+                    currentVegOnly ? styles.toggleThumbActive : ""
+                  }`}
+                />
+              </div>
+            </div>
+
             {navItems.map((item) => {
               const isActive = currentActiveItem === item;
               return (
@@ -353,6 +399,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   cursor: "pointer",
                   color: "#374151",
                   fontWeight: 600,
+                  touchAction: "manipulation",
                 }}
               >
                 <User size={20} color="#FF5500" />

@@ -1,0 +1,311 @@
+/* ResponsiveCashHandover.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F5F6F8;
+  }
+}
+
+/* 390px Mobile View Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 390px;
+  min-height: 874px;
+  background-color: #F5F6F8;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
+
+/* Top Header Bar */
+.topBar {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #EEF0F4;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.backButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.backButton:hover {
+  background-color: #F1F5F9;
+}
+
+.backButton:active {
+  transform: scale(0.95);
+}
+
+.headerTitle {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.headerPlaceholder {
+  width: 38px;
+  height: 38px;
+}
+
+/* Content Area */
+.contentArea {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+/* Rider Info Card */
+.riderCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid #EEF0F4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatarCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #FFEDD5;
+  color: #EA580C;
+  font-size: 14.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.riderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.riderName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.riderSubtext {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Highlight Banner */
+.highlightBanner {
+  background-color: #FFF7ED;
+  border-radius: 16px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.amountTitle {
+  font-size: 32px;
+  font-weight: 800;
+  color: #F97316;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.ordersCountText {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #EA580C;
+  margin: 0;
+}
+
+/* Section Header */
+.sectionLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 2px 0 0 0;
+}
+
+/* Breakdown List */
+.breakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.breakdownRow {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid #EEF0F4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.orderText {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.orderAmount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+/* Confirmation Checkbox Card */
+.checkboxCard {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid #EEF0F4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkboxBox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background-color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.checkboxBoxUnchecked {
+  background-color: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+}
+
+.checkboxLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+/* Action Buttons */
+.confirmReceiptBtn {
+  width: 100%;
+  height: 50px;
+  background-color: #F97316;
+  border: none;
+  border-radius: 14px;
+  color: #FFFFFF;
+  font-size: 15.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+  transition: all 0.15s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.confirmReceiptBtn:hover {
+  background-color: #EA580C;
+}
+
+.confirmReceiptBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reportBtn {
+  background: transparent;
+  border: none;
+  color: #EF4444;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  align-self: center;
+  padding: 6px 12px;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.reportBtn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+

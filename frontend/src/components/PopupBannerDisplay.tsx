@@ -23,6 +23,7 @@ export default function PopupBannerDisplay({ sellerId }: { sellerId?: string }) 
                 if (sellerId) url += `?sellerId=${sellerId}`;
 
                 const res = await fetchApi(url);
+                if (!res.ok) return;
                 const data = await res.json();
 
                 if (res.ok && data.banners && data.banners.length > 0) {
@@ -73,26 +74,33 @@ export default function PopupBannerDisplay({ sellerId }: { sellerId?: string }) 
     const BannerContent = () => (
         <div style={{ position: "relative" }}>
             <button
-                onClick={(e) => { e.preventDefault(); handleClose(); }}
+                type="button"
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleClose();
+                }}
+                aria-label="Close banner"
                 style={{
                     position: "absolute",
-                    top: "-15px",
-                    right: "-15px",
-                    width: "30px",
-                    height: "30px",
+                    top: "10px",
+                    right: "10px",
+                    width: "44px",
+                    height: "44px",
                     borderRadius: "50%",
-                    backgroundColor: "white",
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
                     color: "#334155",
                     border: "1px solid #e2e8f0",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
-                    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-                    zIndex: 10
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                    zIndex: 20,
+                    touchAction: "manipulation"
                 }}
             >
-                <X size={16} />
+                <X size={20} />
             </button>
             <img
                 src={currentBanner.imageUrl}
@@ -101,33 +109,41 @@ export default function PopupBannerDisplay({ sellerId }: { sellerId?: string }) 
                     width: "100%",
                     maxHeight: "80vh",
                     objectFit: "contain",
-                    borderRadius: "12px"
+                    borderRadius: "12px",
+                    display: "block"
                 }}
             />
         </div>
     );
 
     return (
-        <div style={{
-            position: "fixed",
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.75)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: "20px",
-            animation: "fadeIn 0.3s ease-out",
-            backdropFilter: "blur(4px)"
-        }}>
-            <div style={{
-                position: "relative",
-                maxWidth: "600px",
-                width: "100%",
-                backgroundColor: "transparent",
-                borderRadius: "12px",
-                animation: "popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
-            }}>
+        <div 
+            onClick={handleClose}
+            style={{
+                position: "fixed",
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: "rgba(15, 23, 42, 0.75)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 9999,
+                padding: "20px",
+                animation: "fadeIn 0.3s ease-out",
+                backdropFilter: "blur(4px)",
+                touchAction: "manipulation"
+            }}
+        >
+            <div 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    position: "relative",
+                    maxWidth: "600px",
+                    width: "100%",
+                    backgroundColor: "transparent",
+                    borderRadius: "12px",
+                    animation: "popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+                }}
+            >
                 {currentBanner.redirectUrl ? (
                     <a href={currentBanner.redirectUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
                         <BannerContent />
