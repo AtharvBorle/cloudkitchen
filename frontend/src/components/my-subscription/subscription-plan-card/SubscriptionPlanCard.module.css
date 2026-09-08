@@ -96,3 +96,34 @@
   font-weight: 900;
   color: #f97316;
 }
+
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 18px 16px;
+    border-radius: 18px;
+    margin-bottom: 16px;
+  }
+
+  .topRow {
+    padding-bottom: 18px;
+  }
+
+  .planTitle {
+    font-size: 1.1rem;
+  }
+
+  .planSubtitle {
+    font-size: 0.8rem;
+  }
+
+  .activeBadge {
+    padding: 4px 12px;
+    font-size: 0.68rem;
+  }
+
+  .statsRow {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding-top: 16px;
+  }
+}

@@ -9,34 +9,39 @@ import { PauseSubscription } from "@/components/my-subscription/pause-subscripti
 import { DeliveryTimes } from "@/components/my-subscription/delivery-times";
 import { SubscriptionBenefits } from "@/components/my-subscription/subscription-benefits";
 import { SubscriptionActions } from "@/components/my-subscription/subscription-actions";
+import styles from "./MySubscriptionPage.module.css";
 
 export default function MySubscriptionPage() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
-      {/* 1. Shared Desktop Navbar with 'Settings' Active */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Settings"
-      />
+    <div className={styles.pageWrapper}>
+      {/* 1. Shared Desktop Navbar with 'Settings' Active (hidden on mobile <=768px) */}
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Settings"
+        />
+      </div>
 
-      <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "32px 32px 64px 32px", boxSizing: "border-box", flex: 1 }}>
-        <div style={{ display: "flex", gap: "32px", alignItems: "flex-start" }}>
-          {/* Left Column: Shared Profile Sidebar with 'My Subscriptions' Active */}
-          <SettingsSidebar activeTabId="my-subscriptions" />
+      <main className={styles.mainContainer}>
+        <div className={styles.layoutRow}>
+          {/* Left Column: Shared Profile Sidebar (hidden on mobile <=992px) */}
+          <div className={styles.sidebarWrapper}>
+            <SettingsSidebar activeTabId="my-subscriptions" />
+          </div>
 
           {/* Right Column: My Subscriptions Content Sections */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* 2. Page Header */}
+          <div className={styles.contentWrapper}>
+            {/* 2. Page Header with mobile hamburger */}
             <SubscriptionHeader />
 
-            {/* 3. Daily Meal Plan Card (Active status, Started On, Renewal Date, Plan Price) */}
+            {/* 3. Daily Meal Plan Card */}
             <SubscriptionPlanCard />
 
             {/* 4. Pause Subscription Section */}
             <PauseSubscription />
 
             {/* 5. Two-column grid: Daily Delivery Times & Subscription Benefits */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px" }}>
+            <div className={styles.detailsGrid}>
               <DeliveryTimes />
               <SubscriptionBenefits />
             </div>
