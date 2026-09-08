@@ -21,6 +21,35 @@
 }
 
 /* ================= LEFT SECTION ================= */
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobileHamburgerBtn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #1e293b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-right: 2px;
+}
+
+.mobileHamburgerBtn:hover {
+  background-color: #f8fafc;
+  color: #f97316;
+}
+
+.mobileHamburgerBtn:active {
+  transform: scale(0.95);
+}
+
 .leftSection {
   display: flex;
   align-items: center;
@@ -331,52 +360,60 @@
     display: none;
   }
 
-  .mobileMenuBtn {
+  .mobileHamburgerBtn {
     display: flex;
   }
+}
 
-  .mobileDrawerBackdrop {
-    display: block;
-    position: fixed;
-    top: 64px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4);
-    z-index: 99;
+@media (max-width: 640px) {
+  .navbarContainer {
+    padding: 0 12px;
+    height: 60px;
   }
 
-  .mobileDrawer {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 64px;
-    right: 0;
-    width: 280px;
-    bottom: 0;
-    background-color: #ffffff;
-    z-index: 100;
-    padding: 24px;
-    gap: 16px;
-    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
-    box-sizing: border-box;
-    overflow-y: auto;
+  .logoWrapper {
+    width: 44px;
+    height: 44px;
   }
 
-  .mobileNavItem {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: #374151;
-    text-decoration: none;
-    padding: 10px 12px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+  .brandTitle {
+    font-size: 0.92rem;
   }
 
-  .mobileNavItem:hover,
-  .mobileNavItem.active {
-    color: #f97316;
-    background-color: #fff7ed;
+  .locationContainer {
+    font-size: 0.72rem;
+  }
+
+  .rightSection {
+    gap: 10px;
+  }
+
+  .vegLabel {
+    font-size: 0.7rem;
+  }
+
+  .toggleTrack {
+    width: 34px;
+    height: 18px;
+  }
+
+  .toggleThumb {
+    width: 14px;
+    height: 14px;
+  }
+
+  .toggleThumbActive {
+    transform: translateX(16px);
+  }
+
+  .cartButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .profileAvatar {
+    width: 34px;
+    height: 34px;
   }
 }
 

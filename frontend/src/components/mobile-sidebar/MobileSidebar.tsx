@@ -23,7 +23,7 @@ import logoImg from "../room-booking-desktop/navbar/logo-nav.png";
 export interface MobileSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeItem?: "Home" | "Explore" | "My Orders" | "Rooms" | "Settings" | "Help & Support";
+  activeItem?: "Home" | "Explore" | "My Orders" | "Orders" | "Food" | "Rooms" | "Settings" | "Help & Support" | string;
   userName?: string;
   isGoldMember?: boolean;
 }
@@ -156,7 +156,10 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         {/* Navigation List */}
         <nav className={styles.navContainer}>
           {navLinks.map((item) => {
-            const isActive = activeItem === item.label;
+            const isActive =
+              activeItem === item.label ||
+              (activeItem === "Orders" && item.label === "My Orders") ||
+              (activeItem === "Food" && item.label === "Explore");
             return (
               <Link
                 key={item.label}
