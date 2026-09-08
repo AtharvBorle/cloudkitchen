@@ -178,8 +178,8 @@ export default function Home() {
           items={categoryItems}
         />
 
-        {/* 3. Promo Banner Row (New Full-Width Single Banner) */}
-        <PromoRow2 {...promoProps} />
+        {/* 3. Promo Banner Row (Dynamic Full-Graphic Banner with Fallback) */}
+        <PromoRow2 banners={homeData.promoBanners} {...promoProps} />
 
         {/* 4. Filter Row */}
         <FilterRow

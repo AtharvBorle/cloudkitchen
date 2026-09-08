@@ -325,6 +325,18 @@ model PopupBanner {
   updatedAt         DateTime @updatedAt
 }
 
+model HomePromoBanner {
+  id              String   @id @default(uuid())
+  title           String
+  desktopImageUrl String
+  mobileImageUrl  String?
+  redirectUrl     String?  @default("/explore-desktop")
+  isActive        Boolean  @default(true)
+  displayOrder    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 model DeliveryPerson {
   id                 String                @id @default(uuid())
   userId             String                @unique

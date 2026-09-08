@@ -56,6 +56,15 @@ export interface DynamicCoupon {
   minimumCartValue?: number | null;
 }
 
+export interface DynamicPromoBanner {
+  id: string;
+  title: string;
+  desktopImageUrl: string;
+  mobileImageUrl?: string | null;
+  redirectUrl?: string | null;
+  displayOrder: number;
+}
+
 export interface DynamicKitchen {
   id: string;
   name: string;
@@ -76,6 +85,7 @@ export interface HomeDataState {
   rooms: DynamicRoom[];
   kitchens: DynamicKitchen[];
   coupons: DynamicCoupon[];
+  promoBanners: DynamicPromoBanner[];
   isLoading: boolean;
   error: string | null;
 }
@@ -86,6 +96,7 @@ export function useHomeData(): HomeDataState {
   const [rooms, setRooms] = useState<DynamicRoom[]>([]);
   const [kitchens, setKitchens] = useState<DynamicKitchen[]>([]);
   const [coupons, setCoupons] = useState<DynamicCoupon[]>([]);
+  const [promoBanners, setPromoBanners] = useState<DynamicPromoBanner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,10 +119,15 @@ export function useHomeData(): HomeDataState {
           .then((res) => (res.ok ? res.json() : null))
           .catch(() => null);
 
-        const [exploreRes, categoriesRes, couponsRes] = await Promise.all([
+        const bannersPromise = fetchApi('/api/public/promo-banners')
+          .then((res) => (res.ok ? res.json() : null))
+          .catch(() => null);
+
+        const [exploreRes, categoriesRes, couponsRes, bannersRes] = await Promise.all([
           explorePromise,
           categoriesPromise,
           couponsPromise,
+          bannersPromise,
         ]);
 
         if (!isMounted) return;
@@ -268,6 +284,22 @@ export function useHomeData(): HomeDataState {
           });
         }
         setCoupons(rawCoupons);
+
+        const rawBanners: DynamicPromoBanner[] = [];
+        const fetchedBanners = bannersRes?.data?.banners || bannersRes?.banners;
+        if (Array.isArray(fetchedBanners)) {
+          fetchedBanners.forEach((b: any) => {
+            rawBanners.push({
+              id: b.id,
+              title: b.title,
+              desktopImageUrl: b.desktopImageUrl,
+              mobileImageUrl: b.mobileImageUrl,
+              redirectUrl: b.redirectUrl || '/explore-desktop',
+              displayOrder: b.displayOrder || 0,
+            });
+          });
+        }
+        setPromoBanners(rawBanners);
         setError(null);
       } catch (err: any) {
         if (isMounted) {
@@ -294,6 +326,7 @@ export function useHomeData(): HomeDataState {
     rooms,
     kitchens,
     coupons,
+    promoBanners,
     isLoading,
     error,
   };
