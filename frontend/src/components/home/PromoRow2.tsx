@@ -61,12 +61,12 @@ export default function PromoRow2({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Promo banner container: width 100%, maxWidth 1280px, height 324px, radius 22px */}
+        {/* Promo banner container: width 100%, maxWidth 1280px, responsive aspect ratio, radius 22px */}
         <div
           style={{
             width: "100%",
             maxWidth: "1280px",
-            height: "324px",
+            aspectRatio: "1280 / 324",
             margin: "0 auto",
             borderRadius: "22px",
             backgroundColor: "#FFEADB",
@@ -77,7 +77,7 @@ export default function PromoRow2({
             border: "1px solid rgba(254, 215, 170, 0.4)",
             cursor: "pointer",
           }}
-          className="promo-banner PromoRow2"
+          className={`promo-banner PromoRow2 ${currentBanner.mobileImageUrl ? "has-mobile-img" : ""}`}
         >
           <Link
             href={destinationLink}
@@ -164,14 +164,15 @@ export default function PromoRow2({
           }
           @media (max-width: 768px) {
             .PromoRow2 {
-              height: 220px !important;
               border-radius: 18px !important;
             }
           }
-          @media (max-width: 480px) {
+          @media (max-width: 640px) {
             .PromoRow2 {
-              height: 180px !important;
               border-radius: 16px !important;
+            }
+            .PromoRow2.has-mobile-img {
+              aspect-ratio: 640 / 320 !important;
             }
           }
         `}</style>
