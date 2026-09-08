@@ -1,7 +1,1 @@
-"use client";
-
-import UserSupportPage from "@/app/dashboard/user/support/page";
-
-export default function SellerSupportPage() {
-    return <UserSupportPage />;
-}
+export { default } from '@/app/seller/support/page';

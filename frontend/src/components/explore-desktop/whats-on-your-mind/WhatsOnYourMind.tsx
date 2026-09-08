@@ -21,6 +21,7 @@ export interface MealMomentItem {
   icon: StaticImageData | string;
   bgClass: string;
   kitchenId?: string;
+  hasWhiteBadge?: boolean;
 }
 
 const DEFAULT_MOMENTS: MealMomentItem[] = [
@@ -140,7 +141,7 @@ export const WhatsOnYourMind: React.FC<WhatsOnYourMindProps> = ({
                   src={moment.icon}
                   alt={moment.title}
                   fill
-                  sizes="42px"
+                  sizes="44px"
                   className={styles.foodIconImg}
                 />
               </div>

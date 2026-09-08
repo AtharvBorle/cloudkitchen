@@ -4,4 +4,5 @@ export * from "./room-search-filter";
 export * from "./featured-colivings";
 export * from "./all-available-rooms";
 export * from "./room-booking-mobile";
+export * from "./room-detail-desktop";
 

@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: [
+    "localhost",
+    "127.0.0.1",
+    "192.168.0.201",
+    "*.loca.lt",
+    "cold-dots-enjoy.loca.lt",
+    "192.168.0.*",
+  ],
   images: {
     unoptimized: true,
   },

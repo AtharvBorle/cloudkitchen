@@ -28,6 +28,7 @@
 .heroOverlay {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.45) 0%,
@@ -62,6 +63,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: transform 0.15s ease, background-color 0.15s ease;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .iconCircleBtn:active {
@@ -288,6 +291,23 @@
   width: 100%;
 }
 
+.flexiblePlansBanner {
+  background-color: #fff8f3;
+  border: 1px solid #fdba74;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 10.5px;
+  color: #7c2d12;
+  line-height: 1.4;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.flexiblePlansBanner strong {
+  font-weight: 700;
+  color: #9a3412;
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -328,18 +348,83 @@
   border-radius: 12px;
   padding: clamp(9px, 2.5vw, 12px) clamp(10px, 3vw, 14px);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
   box-sizing: border-box;
-  gap: 6px;
+  gap: 8px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .planAccordionActive {
-  background-color: #fff7ed;
-  border-color: #fdba74;
+  background-color: #ffffff;
+  border: 1.5px solid #f97316;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.1);
+}
+
+.planBestBadge {
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.planHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.planDetailsBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #fed7aa;
+}
+
+.planFeatureItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.planFeatureIcon {
+  color: #ea580c;
+  flex-shrink: 0;
+}
+
+.planSubscribeBtn {
+  width: 100%;
+  padding: 9px 0;
+  border-radius: 10px;
+  border: none;
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 6px;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.planSubscribeBtn:active {
+  background-color: #ea580c;
+  transform: scale(0.98);
 }
 
 .planLeft {
@@ -403,6 +488,8 @@
   margin-top: 2px;
   transition: background-color 0.15s ease;
   box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .seeMorePlansBtn:active {
@@ -439,6 +526,9 @@
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .catChipActive {
@@ -553,6 +643,9 @@
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .addBtn:active {
@@ -581,6 +674,8 @@
   gap: 2px;
   cursor: pointer;
   white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .stepperPill {
@@ -592,6 +687,7 @@
   border-radius: 8px;
   background-color: #fff7ed;
   border: 1px solid #fed7aa;
+  user-select: none;
 }
 
 .stepperBtn {
@@ -603,6 +699,8 @@
   align-items: center;
   justify-content: center;
   padding: 2px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .stepperVal {
@@ -614,20 +712,139 @@
 }
 
 .trashBtn {
-  width: 28px;
   height: 28px;
+  padding: 0 8px;
   border-radius: 8px;
   background-color: #fee2e2;
   border: none;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .trashBtn:active {
   background-color: #fecaca;
 }
+
+/* 6. Floating Cart & Checkout Bar */
+.floatingCartBar {
+  position: fixed;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 99;
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.cartIndicatorHandle {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 3px;
+  background-color: #f97316;
+  border-radius: 2px;
+}
+
+.cartLeftSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cartThumbnailsGroup {
+  display: flex;
+  align-items: center;
+}
+
+.cartMiniThumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  margin-left: -10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  background-color: #f1f5f9;
+}
+
+.cartMiniThumb:first-child {
+  margin-left: 0;
+}
+
+.cartTrolleyWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  margin-left: 4px;
+}
+
+.cartCountPill {
+  position: absolute;
+  top: -7px;
+  right: -8px;
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
+}
+
+.cartPayBtn {
+  background: linear-gradient(135deg, #ff6600 0%, #ea580c 100%);
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 3px 12px rgba(234, 88, 12, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cartPayBtn:active {
+  transform: scale(0.97);
+}
+
 

@@ -13,6 +13,7 @@ import {
   Truck,
   CreditCard,
   UserCircle,
+  Headphones,
   X,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/dashboard/seller/bookings" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/create-subscription-plan" },
+  { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
 ];
 
@@ -56,11 +58,17 @@ export default function SellerSidebar({
     if (activeItemId) {
       return activeItemId === item.id;
     }
+    if (item.id === "subscription") {
+      return pathname?.startsWith("/seller/create-subscription-plan") || pathname?.startsWith("/dashboard/seller/create-subscription-plan");
+    }
+    if (item.id === "support") {
+      return pathname?.startsWith("/dashboard/seller/support") || pathname?.startsWith("/seller/support");
+    }
     if (item.id === "profile") {
       return pathname?.startsWith("/seller/profile") || pathname?.startsWith("/dashboard/seller/profile");
     }
     if (item.id === "delivery") {
-      return pathname?.startsWith("/seller/delivery") || pathname?.startsWith("/seller/create-subscription-plan") || pathname?.startsWith("/dashboard/seller/delivery");
+      return pathname?.startsWith("/seller/delivery") || pathname?.startsWith("/dashboard/seller/delivery");
     }
     if (item.href === "/dashboard/seller") {
       return pathname === "/dashboard/seller";
@@ -284,7 +292,7 @@ export default function SellerSidebar({
         .nav-item:hover:not(.active) :global(svg) {
           color: #0F172A !important;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
           .seller-sidebar {
             position: fixed !important;
             top: 0;

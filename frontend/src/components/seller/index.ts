@@ -46,5 +46,5 @@ export type { SellerRoomsProps } from "./seller-rooms/SellerRooms";
 export { default as CreateSubscriptionPlan } from "./create-subscription-plan/CreateSubscriptionPlan";
 export type { CreateSubscriptionPlanProps } from "./create-subscription-plan/CreateSubscriptionPlan";
 
-
-
+export { default as SellerSupport } from "./seller-support/SellerSupport";
+export type { SellerSupportProps } from "./seller-support/SellerSupport";
