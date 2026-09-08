@@ -11,11 +11,13 @@ import styles from "./OrdersPage.module.css";
 export default function OrdersDesktopPage() {
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. Shared Desktop Navbar Component */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Orders"
-      />
+      {/* 1. Shared Desktop Navbar Component (hidden on mobile <=768px) */}
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Orders"
+        />
+      </div>
 
       <main className={styles.mainContent}>
         {/* 2. My Orders Header & Category Filters */}

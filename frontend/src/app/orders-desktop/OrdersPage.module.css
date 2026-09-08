@@ -1,8 +1,12 @@
-﻿.pageWrapper {
+.pageWrapper {
   min-height: 100vh;
   background-color: #FFF4E6;
   display: flex;
   flex-direction: column;
+}
+
+.desktopNavbar {
+  display: block;
 }
 
 .mainContent {
@@ -20,8 +24,16 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .desktopNavbar {
+    display: none;
+  }
+
+  .pageWrapper {
+    background-color: #ffffff;
+  }
+
   .mainContent {
-    padding: 16px 14px 40px 14px;
+    padding: 14px 16px clamp(24px, 6vw, 48px) 16px;
   }
 }

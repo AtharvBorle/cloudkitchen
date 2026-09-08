@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { Menu } from "lucide-react";
+import { MobileSidebar } from "@/components/mobile-sidebar";
 import styles from "./OrdersHeader.module.css";
 
 export const ORDER_CATEGORIES = [
@@ -14,6 +16,7 @@ export const ORDER_CATEGORIES = [
 
 export interface OrdersHeaderProps {
   title?: string;
+  subtitle?: string;
   categories?: readonly string[];
   defaultCategory?: string;
   onCategoryChange?: (category: string) => void;
@@ -21,11 +24,13 @@ export interface OrdersHeaderProps {
 
 export const OrdersHeader: React.FC<OrdersHeaderProps> = ({
   title = "My Orders",
+  subtitle = "Track and manage your orders",
   categories = ORDER_CATEGORIES,
   defaultCategory = "All",
   onCategoryChange,
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>(defaultCategory);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   const handleCategoryClick = (cat: string) => {
     setActiveCategory(cat);
@@ -36,7 +41,30 @@ export const OrdersHeader: React.FC<OrdersHeaderProps> = ({
 
   return (
     <div className={styles.headerContainer}>
-      <h1 className={styles.title}>{title}</h1>
+      {/* Slide-out Mobile Sidebar Drawer matching Image 2 */}
+      <MobileSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        activeItem="My Orders"
+      />
+
+      {/* Top Header Row matching Image 1 on mobile */}
+      <div className={styles.headerTopRow}>
+        <button
+          type="button"
+          className={styles.menuBtn}
+          aria-label="Open navigation menu"
+          onClick={() => setIsSidebarOpen(true)}
+        >
+          <Menu size={24} strokeWidth={2.2} />
+        </button>
+
+        <div className={styles.headerTitleCol}>
+          <h1 className={styles.title}>{title}</h1>
+          <p className={styles.subtitle}>{subtitle}</p>
+        </div>
+      </div>
+
       <div className={styles.filtersRow} role="tablist" aria-label="Order Categories">
         {categories.map((cat) => {
           const isActive = activeCategory === cat;
