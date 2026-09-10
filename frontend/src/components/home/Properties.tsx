@@ -146,15 +146,59 @@ interface PropertiesProps {
 }
 
 export default function Properties({ places }: PropertiesProps) {
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([
-    "italian",
-    "american",
-    "healthy",
-  ]);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [priceTier, setPriceTier] = useState<string>("$");
+  const [priceTier, setPriceTier] = useState<string | null>(null);
 
-  const displayPlaces = places && places.length > 0 ? places : SAMPLE_PLACES;
+  const basePlaces = places && places.length > 0 ? places : SAMPLE_PLACES;
+
+  // Compute dynamic cuisine counts
+  const dynamicCuisines = React.useMemo(() => {
+    return CUISINES.map((c) => {
+      const matchCount = basePlaces.filter((p) =>
+        p.category.toLowerCase().includes(c.id) ||
+        p.category.toLowerCase().includes(c.label.toLowerCase().split("/")[0].trim())
+      ).length;
+      return {
+        ...c,
+        count: matchCount > 0 ? matchCount : c.count,
+      };
+    });
+  }, [basePlaces]);
+
+  // Dynamically filter places
+  const filteredPlaces = React.useMemo(() => {
+    let list = basePlaces;
+
+    if (selectedCuisines.length > 0) {
+      list = list.filter((p) =>
+        selectedCuisines.some((c) =>
+          p.category.toLowerCase().includes(c)
+        )
+      );
+    }
+
+    if (selectedDietary.length > 0) {
+      if (selectedDietary.includes("veg")) {
+        list = list.filter((p) =>
+          p.category.toLowerCase().includes("veg") ||
+          !p.category.toLowerCase().includes("non-veg")
+        );
+      }
+      if (selectedDietary.includes("vegan")) {
+        list = list.filter((p) =>
+          p.category.toLowerCase().includes("vegan") ||
+          p.category.toLowerCase().includes("healthy")
+        );
+      }
+    }
+
+    return list;
+  }, [basePlaces, selectedCuisines, selectedDietary]);
+
+  // Fallback if filter result is empty
+  const isFallbackApplied = filteredPlaces.length === 0 && (selectedCuisines.length > 0 || selectedDietary.length > 0);
+  const displayPlaces = filteredPlaces.length > 0 ? filteredPlaces : basePlaces;
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -171,7 +215,7 @@ export default function Properties({ places }: PropertiesProps) {
   const handleClearAll = () => {
     setSelectedCuisines([]);
     setSelectedDietary([]);
-    setPriceTier("$");
+    setPriceTier(null);
   };
 
   return (
@@ -274,7 +318,7 @@ export default function Properties({ places }: PropertiesProps) {
               Cuisines
             </h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {CUISINES.map((item) => {
+              {dynamicCuisines.map((item) => {
                 const isChecked = selectedCuisines.includes(item.id);
                 return (
                   <div
@@ -473,18 +517,25 @@ export default function Properties({ places }: PropertiesProps) {
           className="properties2-column Properties2"
         >
           {/* Header Title: Best Places Nearby */}
-          <h2
-            style={{
-              fontSize: "24px",
-              fontWeight: "700",
-              color: "#0F172A",
-              margin: 0,
-              letterSpacing: "-0.3px",
-              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-            }}
-          >
-            Best Places Nearby
-          </h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+            <h2
+              style={{
+                fontSize: "24px",
+                fontWeight: "700",
+                color: "#0F172A",
+                margin: 0,
+                letterSpacing: "-0.3px",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+              }}
+            >
+              Best Places Nearby
+            </h2>
+            {isFallbackApplied && (
+              <span style={{ fontSize: "12.5px", color: "#EA580C", backgroundColor: "#FFF5ED", padding: "4px 10px", borderRadius: "8px", fontWeight: "600" }}>
+                No exact match for selected filters • Showing popular places
+              </span>
+            )}
+          </div>
 
           {/* PlacesGrid: 4 columns grid with 24px gap, ~250px hug cards */}
           <div

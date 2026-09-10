@@ -27,11 +27,16 @@ export const getPublicExploreData = unstable_cache(
                 user: {
                     select: { name: true, city: true, pincode: true, phone: true }
                 },
+                servedPincodes: true,
+                reviews: {
+                    select: { rating: true, comment: true }
+                },
                 foodItems: {
                     where: { isAvailable: true },
                     include: {
                         category: true,
-                        foodCategory: true
+                        foodCategory: true,
+                        itemRatings: true
                     }
                 },
                 rooms: {
@@ -50,6 +55,8 @@ export const getPublicExploreData = unstable_cache(
 
         const now = new Date();
 
+        const activeSellersList: any[] = [];
+
         const foodItems = sellers.flatMap(seller => {
             const hasActiveFoodSub = seller.subscriptions.some(sub => 
                 sub.status === "ACTIVE" && 
@@ -57,17 +64,56 @@ export const getPublicExploreData = unstable_cache(
                 (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
             );
             if (!hasActiveFoodSub) return [];
-            return seller.foodItems.map(item => ({
-                ...item,
-                sellerName: seller.businessName || seller.user.name,
-                sellerCity: seller.user.city,
-                sellerPincode: seller.user.pincode,
-                sellerLocality: seller.addressLocality,
-                sellerLandmark: seller.addressLandmark,
-                sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline,
-                sellerFoodType: seller.foodType
-            }));
+
+            const reviewsCount = seller.reviews.length;
+            const avgRating = reviewsCount > 0
+                ? Number((seller.reviews.reduce((acc, r) => acc + r.rating, 0) / reviewsCount).toFixed(1))
+                : 4.8;
+
+            let parsedKitchenImages: string[] = [];
+            try {
+                parsedKitchenImages = typeof seller.kitchenImages === "string" ? JSON.parse(seller.kitchenImages) : seller.kitchenImages;
+            } catch {
+                parsedKitchenImages = [];
+            }
+
+            activeSellersList.push({
+                id: seller.id,
+                name: seller.businessName || seller.user.name,
+                trackingId: seller.trackingId,
+                type: seller.type,
+                city: seller.user.city,
+                pincode: seller.user.pincode,
+                locality: seller.addressLocality,
+                landmark: seller.addressLandmark,
+                rating: avgRating,
+                reviewsCount,
+                imageUrl: parsedKitchenImages[0] || seller.bannerImageUrl || "/images/places/place-pizza.png",
+                isOnline: seller.isOnline,
+                foodType: seller.foodType,
+                servedPincodes: seller.servedPincodes.map(p => p.pincode),
+            });
+
+            return seller.foodItems.map(item => {
+                const itemRatingCount = item.itemRatings?.length || 0;
+                const itemAvgRating = itemRatingCount > 0
+                    ? Number((item.itemRatings.reduce((acc: number, r: any) => acc + r.rating, 0) / itemRatingCount).toFixed(1))
+                    : avgRating;
+
+                return {
+                    ...item,
+                    rating: itemAvgRating,
+                    sellerName: seller.businessName || seller.user.name,
+                    sellerCity: seller.user.city,
+                    sellerPincode: seller.user.pincode,
+                    sellerLocality: seller.addressLocality,
+                    sellerLandmark: seller.addressLandmark,
+                    sellerTrackingId: seller.trackingId,
+                    sellerIsOnline: seller.isOnline,
+                    sellerFoodType: seller.foodType,
+                    servedPincodes: seller.servedPincodes.map(p => p.pincode),
+                };
+            });
         });
 
         const availableRooms = sellers.flatMap(seller => {
@@ -89,7 +135,7 @@ export const getPublicExploreData = unstable_cache(
             }));
         });
 
-        return { foodItems, availableRooms, foodCategories };
+        return { foodItems, availableRooms, foodCategories, kitchens: activeSellersList };
     },
     ["public-explore-data"],
     { revalidate: 30, tags: ["explore"] }

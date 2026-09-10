@@ -6,16 +6,19 @@ import {
   HeroSection,
   CategoryBar,
   PromoRow2,
+  FilterRow,
   Properties,
   PopularOrders,
   BestPlaces,
   DashboardBody,
 } from "@/components/home";
+import type { ActiveHomeFilters } from "@/components/home/FilterRow";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useHomeData } from "@/lib/useHomeData";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
+  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({});
   const homeData = useHomeData();
 
   // Dynamic Categories with fallback
@@ -30,10 +33,26 @@ export default function Home() {
     }));
   }, [homeData.categories]);
 
-  // Dynamic Kitchens / Places with fallback (and category filtering)
+  // Extract available cuisines from DB categories & items
+  const availableCuisines = useMemo(() => {
+    const set = new Set<string>();
+    homeData.categories.forEach((c) => {
+      if (c.id !== "food" && c.id !== "rooms" && c.name) {
+        set.add(c.name);
+      }
+    });
+    homeData.foodItems.forEach((f) => {
+      if (f.categoryName) set.add(f.categoryName);
+    });
+    return Array.from(set);
+  }, [homeData.categories, homeData.foodItems]);
+
+  // Dynamic Kitchens / Places with fallback (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
     if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
     let list = homeData.kitchens;
+
+    // 1. Category Bar Filter
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
       const catLower = selectedCategory.toLowerCase();
       const filtered = list.filter((k) =>
@@ -42,6 +61,39 @@ export default function Home() {
       );
       if (filtered.length > 0) list = filtered;
     }
+
+    // 2. Dietary Filter
+    if (activeFilters.dietary === "veg") {
+      const filtered = list.filter((k) => k.foodType === "VEG" || k.category?.toLowerCase().includes("veg"));
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.dietary === "non_veg") {
+      const filtered = list.filter((k) => k.foodType !== "VEG");
+      if (filtered.length > 0) list = filtered;
+    }
+
+    // 3. Rating Filter (4.5+)
+    if (activeFilters.minRating) {
+      const filtered = list.filter((k) => (k.rating || 0) >= (activeFilters.minRating || 4.5));
+      if (filtered.length > 0) list = filtered;
+    }
+
+    // 4. Fastest Delivery Filter (<30 min)
+    if (activeFilters.fastest) {
+      const filtered = list.filter((k) => {
+        const num = parseInt(k.time) || 30;
+        return num <= 25 || k.time.includes("15") || k.time.includes("20");
+      });
+      if (filtered.length > 0) list = filtered;
+    }
+
+    // 5. Cuisines Filter
+    if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
+      const filtered = list.filter((k) =>
+        activeFilters.cuisines?.some((c) => k.category?.toLowerCase().includes(c.toLowerCase()))
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+
     return list.map((k) => ({
       id: k.id,
       name: k.name,
@@ -53,12 +105,13 @@ export default function Home() {
       trackingId: k.trackingId,
       locality: k.locality,
     }));
-  }, [homeData.kitchens, selectedCategory]);
+  }, [homeData.kitchens, selectedCategory, activeFilters]);
 
   // Dynamic Offers for PopularOrders with fallback
   const dynamicOffers = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
     let list = homeData.foodItems;
+
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
       const catLower = selectedCategory.toLowerCase();
       const filtered = list.filter((f) =>
@@ -67,6 +120,12 @@ export default function Home() {
       );
       if (filtered.length > 0) list = filtered;
     }
+
+    if (activeFilters.dietary === "veg") {
+      const filtered = list.filter((f) => f.itemType === "VEG");
+      if (filtered.length > 0) list = filtered;
+    }
+
     return list.slice(0, 4).map((f, idx) => ({
       id: f.id,
       discount: idx % 2 === 0 ? "25% OFF" : "30% OFF",
@@ -75,12 +134,13 @@ export default function Home() {
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
     }));
-  }, [homeData.foodItems, selectedCategory]);
+  }, [homeData.foodItems, selectedCategory, activeFilters]);
 
   // Dynamic Dishes for BestPlaces with fallback
   const dynamicDishes = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
     let list = homeData.foodItems;
+
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
       const catLower = selectedCategory.toLowerCase();
       const filtered = list.filter((f) =>
@@ -89,6 +149,24 @@ export default function Home() {
       );
       if (filtered.length > 0) list = filtered;
     }
+
+    if (activeFilters.dietary === "veg") {
+      const filtered = list.filter((f) => f.itemType === "VEG");
+      if (filtered.length > 0) list = filtered;
+    }
+
+    // Price tier filter
+    if (activeFilters.priceTier === "under-150") {
+      const filtered = list.filter((f) => f.price <= 150);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "150-300") {
+      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "300-plus") {
+      const filtered = list.filter((f) => f.price > 300);
+      if (filtered.length > 0) list = filtered;
+    }
+
     return list.slice(0, 4).map((f) => ({
       id: f.id,
       name: f.name,
@@ -97,12 +175,13 @@ export default function Home() {
       imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
     }));
-  }, [homeData.foodItems, selectedCategory]);
+  }, [homeData.foodItems, selectedCategory, activeFilters]);
 
   // Dynamic Top Rated Items for DashboardBody with fallback
   const dynamicTopRated = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
     let list = homeData.foodItems;
+
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
       const catLower = selectedCategory.toLowerCase();
       const filtered = list.filter((f) =>
@@ -111,6 +190,17 @@ export default function Home() {
       );
       if (filtered.length > 0) list = filtered;
     }
+
+    if (activeFilters.dietary === "veg") {
+      const filtered = list.filter((f) => f.itemType === "VEG");
+      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.minRating) {
+      const filtered = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
+      if (filtered.length > 0) list = filtered;
+    }
+
     return list.slice(0, 6).map((f) => ({
       id: f.id,
       name: f.name,
@@ -121,7 +211,7 @@ export default function Home() {
       imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
     }));
-  }, [homeData.foodItems, selectedCategory]);
+  }, [homeData.foodItems, selectedCategory, activeFilters]);
 
   // Dynamic Promo Banner with fallback
   const promoProps = useMemo(() => {
@@ -166,14 +256,21 @@ export default function Home() {
         }}
         className="home-page-canvas"
       >
-        {/* 1. Hero Section */}
-        <HeroSection />
+        {/* 1. Hero Section (Dynamic Search Autocomplete + Map Picker) */}
+        <HeroSection availableItems={homeData.foodItems} />
 
         {/* 2. Category Bar */}
         <CategoryBar
           activeCategoryId={selectedCategory}
           onSelectCategory={(id) => setSelectedCategory(id)}
           items={categoryItems}
+        />
+
+        {/* 2.5 Multi-dimensional Filter Row */}
+        <FilterRow
+          activeFilters={activeFilters}
+          onFilterChange={(newFilters) => setActiveFilters(newFilters)}
+          availableCuisines={availableCuisines}
         />
 
         {/* 3. Promo Banner Row (Dynamic Full-Graphic Banner with Fallback) */}
