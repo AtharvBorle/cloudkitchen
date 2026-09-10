@@ -103,6 +103,9 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
         activeItemId="subscription"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}

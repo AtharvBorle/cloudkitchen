@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   X,
@@ -15,15 +15,7 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
-  Calendar,
-  Bell,
-  CreditCard,
-  MapPin,
-  History,
-  FileText,
-  Shield,
   Star,
-  Pencil,
 } from "lucide-react";
 import styles from "./MobileSidebar.module.css";
 import userAvatar from "../settings-desktop/settings-sidebar/rahul-sharma-avatar.jpg";
@@ -37,39 +29,26 @@ export interface MobileSidebarProps {
     | "Explore"
     | "My Orders"
     | "Orders"
-    | "Food"
     | "Rooms"
     | "Settings"
-    | "General Overview"
-    | "My Subscriptions"
-    | "Notifications"
-    | "Payment Methods"
-    | "Delivery Addresses"
-    | "Order History"
-    | "Help & FAQ"
-    | "Terms & Conditions"
-    | "Privacy Policy"
-    | "Rate Our App"
     | "Help & Support"
     | string;
   userName?: string;
-  userPhone?: string;
   isGoldMember?: boolean;
 }
 
 export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   isOpen,
   onClose,
-  activeItem = "Rooms",
+  activeItem = "Home",
   userName: customUserName,
-  userPhone: customUserPhone,
-  isGoldMember = false,
+  isGoldMember = true,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
 
-  const userName = customUserName || session?.user?.name || "Rahul Sharma";
-  const userPhone = customUserPhone || (session?.user as any)?.phone || session?.user?.email || "+91 98765 43210";
+  const userName = customUserName || session?.user?.name || "Siddharth Sharma";
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -92,16 +71,16 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     }
   };
 
-  const mainNavLinks = [
+  const navLinks = [
     {
       label: "Home",
-      href: "/explore-desktop",
+      href: "/",
       icon: <Home className={styles.navIcon} size={18} />,
       hasBadge: false,
     },
     {
       label: "Explore",
-      href: "/restaurant",
+      href: "/explore-desktop",
       icon: <Search className={styles.navIcon} size={18} />,
       hasBadge: false,
     },
@@ -124,69 +103,25 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       hasBadge: true,
       badgeText: "NEW",
     },
-  ];
-
-  const generalSettingsLinks = [
     {
-      label: "General Overview",
+      label: "Settings",
       href: "/settings-desktop",
       icon: <Settings className={styles.navIcon} size={18} />,
+      hasBadge: false,
     },
     {
-      label: "My Subscriptions",
-      href: "/my-subscription",
-      icon: <Calendar className={styles.navIcon} size={18} />,
-    },
-    {
-      label: "Notifications",
-      href: "/notifications-desktop",
-      icon: <Bell className={styles.navIcon} size={18} />,
-    },
-    {
-      label: "Payment Methods",
-      href: "/payment-methods-desktop",
-      icon: <CreditCard className={styles.navIcon} size={18} />,
-    },
-    {
-      label: "Delivery Addresses",
-      href: "/delivery-addresses-desktop",
-      icon: <MapPin className={styles.navIcon} size={18} />,
-    },
-    {
-      label: "Order History",
-      href: "/order-history-desktop",
-      icon: <History className={styles.navIcon} size={18} />,
-    },
-  ];
-
-  const supportLegalLinks = [
-    {
-      label: "Help & FAQ",
+      label: "Help & Support",
       href: "/support",
       icon: <HelpCircle className={styles.navIcon} size={18} />,
-    },
-    {
-      label: "Terms & Conditions",
-      href: "/support",
-      icon: <FileText className={styles.navIcon} size={18} />,
-    },
-    {
-      label: "Privacy Policy",
-      href: "/support",
-      icon: <Shield className={styles.navIcon} size={18} />,
-    },
-    {
-      label: "Rate Our App",
-      href: "/support",
-      icon: <Star className={styles.navIcon} size={18} />,
+      hasBadge: false,
     },
   ];
 
-  const isLinkActive = (label: string) => {
-    if (activeItem === label) return true;
-    if (label === "General Overview" && activeItem === "Settings") return true;
-    if (label === "My Orders" && activeItem === "Orders") return true;
-    if (label === "Explore" && activeItem === "Food") return true;
+  const isLinkActive = (item: { label: string; href: string }) => {
+    if (item.href === "/" && (pathname === "/" || activeItem === "Home")) return true;
+    if (item.href !== "/" && pathname?.startsWith(item.href)) return true;
+    if (activeItem === item.label) return true;
+    if (item.label === "My Orders" && activeItem === "Orders") return true;
     return false;
   };
 
@@ -204,7 +139,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         className={`${styles.drawer} ${isOpen ? styles.drawerOpen : ""}`}
         aria-label="Navigation Drawer"
       >
-        {/* Header */}
+        {/* Header: Cloud Kitchen Logo + Brand Name + Close Button */}
         <div className={styles.drawerHeader}>
           <div className={styles.brandGroup}>
             <div className={styles.logoCircle}>
@@ -224,7 +159,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             onClick={onClose}
             aria-label="Close menu"
           >
-            <X size={18} strokeWidth={2.2} />
+            <X size={18} strokeWidth={2.4} />
           </button>
         </div>
 
@@ -240,24 +175,20 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           </div>
           <div className={styles.userInfo}>
             <h3 className={styles.userName}>{userName}</h3>
-            <p className={styles.userPhone}>{userPhone}</p>
-            <Link
-              href="/settings-desktop"
-              className={styles.editProfileLink}
-              onClick={onClose}
-            >
-              <span>Edit Profile</span>
-              <Pencil size={11} strokeWidth={2.5} />
-            </Link>
+            {isGoldMember && (
+              <div className={styles.goldBadge}>
+                <Star size={11} fill="#FFFFFF" color="#FFFFFF" />
+                <span>Gold Member</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Scrollable Navigation Sections */}
+        {/* Navigation Links */}
         <div className={styles.navContainer}>
-          {/* Main Navigation Group */}
           <div className={styles.navGroup}>
-            {mainNavLinks.map((item) => {
-              const isActive = isLinkActive(item.label);
+            {navLinks.map((item) => {
+              const isActive = isLinkActive(item);
               return (
                 <Link
                   key={item.label}
@@ -279,58 +210,19 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
               );
             })}
           </div>
-
-          {/* Group 1: General Settings */}
-          <div className={styles.navGroup}>
-            <span className={styles.groupLabel}>GENERAL SETTINGS</span>
-            {generalSettingsLinks.map((item) => {
-              const isActive = isLinkActive(item.label);
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
-                  onClick={onClose}
-                >
-                  <div className={styles.navItemLeft}>
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </div>
-                  <ChevronRight size={16} className={styles.navChevron} />
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Group 2: Support & Legal */}
-          <div className={styles.navGroup}>
-            <span className={styles.groupLabel}>SUPPORT & LEGAL</span>
-            {supportLegalLinks.map((item) => {
-              const isActive = isLinkActive(item.label);
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
-                  onClick={onClose}
-                >
-                  <div className={styles.navItemLeft}>
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </div>
-                  <ChevronRight size={16} className={styles.navChevron} />
-                </Link>
-              );
-            })}
-          </div>
         </div>
 
-        {/* Footer with Log Out matching Image */}
+        {/* Footer with Log Out & Version */}
         <div className={styles.drawerFooter}>
           <button className={styles.logoutBtn} onClick={handleLogout}>
             <LogOut className={styles.logoutIcon} size={18} strokeWidth={2.4} />
             <span>Log Out</span>
           </button>
+
+          <div className={styles.footerBrandRow}>
+            <span className={styles.versionText}>v2.4.1 (124040)</span>
+            <span className={styles.footerBrandText}>CLOUD KITCHEN</span>
+          </div>
         </div>
       </aside>
     </>
@@ -338,3 +230,4 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 };
 
 export default MobileSidebar;
+

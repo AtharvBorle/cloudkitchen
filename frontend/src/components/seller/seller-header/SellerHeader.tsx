@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import React from "react";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, Menu } from "lucide-react";
 import styles from "./SellerHeader.module.css";
 
 export interface SellerHeaderProps {
@@ -9,6 +9,7 @@ export interface SellerHeaderProps {
   userName?: string;
   userRole?: string;
   userInitials?: string;
+  onMenuToggle?: () => void;
 }
 
 export const SellerHeader: React.FC<SellerHeaderProps> = ({
@@ -16,11 +17,24 @@ export const SellerHeader: React.FC<SellerHeaderProps> = ({
   userName = "John Doe",
   userRole = "Owner Account",
   userInitials = "JD",
+  onMenuToggle,
 }) => {
   return (
     <header className={styles.header}>
-      {/* Left: Title */}
-      <h1 className={styles.pageTitle}>{title}</h1>
+      {/* Left: Menu toggle + Title */}
+      <div className={styles.leftSection}>
+        {onMenuToggle && (
+          <button
+            type="button"
+            className={styles.menuBtn}
+            onClick={onMenuToggle}
+            aria-label="Open sidebar"
+          >
+            <Menu size={22} strokeWidth={2.2} />
+          </button>
+        )}
+        <h1 className={styles.pageTitle}>{title}</h1>
+      </div>
 
       {/* Right: Search + Notifications + Profile */}
       <div className={styles.rightSection}>

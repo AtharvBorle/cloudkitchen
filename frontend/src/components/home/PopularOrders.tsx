@@ -16,6 +16,14 @@ export interface OfferCardData {
 const OFFERS: OfferCardData[] = [
   {
     id: "offer-1",
+    discount: "30% OFF",
+    title: "Biryani Bonanza",
+    code: "Use code: BIRYANI30",
+    imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
+    link: "/restaurant/spice-biryani",
+  },
+  {
+    id: "offer-2",
     discount: "25% OFF",
     title: "Burger Bash",
     code: "Use code: BURGER25",
@@ -23,7 +31,7 @@ const OFFERS: OfferCardData[] = [
     link: "/restaurant/burger-bistro",
   },
   {
-    id: "offer-2",
+    id: "offer-3",
     discount: "30% OFF",
     title: "Pizza Party",
     code: "Use code: PIZZA30",
@@ -31,20 +39,12 @@ const OFFERS: OfferCardData[] = [
     link: "/restaurant/pizza-palace",
   },
   {
-    id: "offer-3",
+    id: "offer-4",
     discount: "20% OFF",
     title: "Noodle Fest",
     code: "Use code: NOODLE20",
     imageUrl: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=500&auto=format&fit=crop&q=80",
     link: "/restaurant/wok-station",
-  },
-  {
-    id: "offer-4",
-    discount: "30% OFF",
-    title: "Pizza Party",
-    code: "Use code: PIZZA30",
-    imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/pizza-palace",
   },
 ];
 
@@ -255,12 +255,23 @@ export default function PopularOrders({
         }
         @media (max-width: 1024px) {
           .offers-grid-layout {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            display: flex !important;
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            gap: 14px !important;
+            padding-bottom: 6px !important;
+            scroll-snap-type: x mandatory;
           }
-        }
-        @media (max-width: 580px) {
-          .offers-grid-layout {
-            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+          .offers-grid-layout::-webkit-scrollbar {
+            display: none;
+          }
+          .offer-card {
+            flex: 0 0 200px !important;
+            width: 200px !important;
+            min-width: 200px !important;
+            scroll-snap-align: start;
           }
         }
       `}</style>

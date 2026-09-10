@@ -1,8 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { DynamicPromoBanner } from "@/lib/useHomeData";
+import styles from "./PromoRow2.module.css";
+
+export interface PromoSlide {
+  id: string;
+  titlePrefix: string;
+  highlight: string;
+  titleSuffix?: string;
+  code: string;
+  buttonText: string;
+  link: string;
+  imageSrc: string;
+  imageType: "scooter" | "food";
+}
 
 export interface PromoRow2Props {
   banners?: DynamicPromoBanner[];
@@ -11,11 +25,61 @@ export interface PromoRow2Props {
   titlePrefix?: string;
   titleHighlight?: string;
   titleSuffix?: string;
-  description?: string;
   code?: string;
+  description?: string;
   orderNowLink?: string;
   imageSrc?: string;
 }
+
+const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
+  {
+    id: "promo-1",
+    titlePrefix: "Save ",
+    highlight: "30% OFF",
+    titleSuffix: "First 2 Orders",
+    code: "FOOD30",
+    buttonText: "Order Now",
+    link: "/explore-desktop",
+    imageSrc: "/images/promo-scooter.png",
+    imageType: "scooter",
+  },
+  {
+    id: "promo-2",
+    titlePrefix: "Mess Special – Flat ",
+    highlight: "30% OFF",
+    titleSuffix: "on First Thali",
+    code: "THALI30",
+    buttonText: "Order Now",
+    link: "/explore-desktop?category=Mess/Tiffin",
+    imageSrc:
+      "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80",
+    imageType: "food",
+  },
+  {
+    id: "promo-3",
+    titlePrefix: "Fresh Bakes – Get ",
+    highlight: "25% OFF",
+    titleSuffix: "on Cakes",
+    code: "CAKE25",
+    buttonText: "Order Now",
+    link: "/explore-desktop?category=Bakery",
+    imageSrc:
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80",
+    imageType: "food",
+  },
+  {
+    id: "promo-4",
+    titlePrefix: "Homemade – Flat ",
+    highlight: "20% OFF",
+    titleSuffix: "on Order",
+    code: "HOME20",
+    buttonText: "Explore Now",
+    link: "/explore-desktop?category=Homemade",
+    imageSrc:
+      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80",
+    imageType: "food",
+  },
+];
 
 export default function PromoRow2({
   banners,
@@ -30,11 +94,13 @@ export default function PromoRow2({
 }: PromoRow2Props) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
 
   const hasDynamicBanners = banners && banners.length > 0;
   const bannerList = hasDynamicBanners ? banners : null;
 
-  // Auto rotate if multiple banners
+  // Auto rotate if multiple dynamic banners
   useEffect(() => {
     if (!bannerList || bannerList.length <= 1 || isHovered) return;
 
@@ -44,6 +110,39 @@ export default function PromoRow2({
 
     return () => clearInterval(timer);
   }, [bannerList, isHovered]);
+
+  // Auto-scroll default slides if no dynamic banners
+  useEffect(() => {
+    if (hasDynamicBanners || isHovered) return;
+
+    const timer = setInterval(() => {
+      setActiveIdx((prev) => (prev + 1) % DEFAULT_PROMO_SLIDES.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [hasDynamicBanners, isHovered]);
+
+  // Touch Swipe Handlers for Mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diff = touchStartX.current - touchEndX.current;
+    const totalCount = bannerList ? bannerList.length : DEFAULT_PROMO_SLIDES.length;
+    if (diff > 45) {
+      setActiveIdx((prev) => (prev + 1) % totalCount);
+    } else if (diff < -45) {
+      setActiveIdx((prev) => (prev === 0 ? totalCount - 1 : prev - 1));
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
 
   // If dynamic banners exist
   if (hasDynamicBanners && bannerList) {
@@ -60,8 +159,10 @@ export default function PromoRow2({
         className="promo-banner-wrapper"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {/* Promo banner container: width 100%, maxWidth 1280px, responsive aspect ratio, radius 22px */}
         <div
           style={{
             width: "100%",
@@ -89,7 +190,6 @@ export default function PromoRow2({
               textDecoration: "none",
             }}
           >
-            {/* Desktop Graphic Image (Default / md+) */}
             <picture style={{ display: "block", width: "100%", height: "100%" }}>
               {currentBanner.mobileImageUrl && (
                 <source
@@ -114,7 +214,6 @@ export default function PromoRow2({
             </picture>
           </Link>
 
-          {/* Carousel Pagination Dots if multiple banners */}
           {bannerList.length > 1 && (
             <div
               style={{
@@ -180,216 +279,80 @@ export default function PromoRow2({
     );
   }
 
-  // Fallback: When no dynamic banners are created yet, render the clean full graphic banner layout
-  return (
-    <section
-      style={{
-        width: "100%",
-        padding: "0",
-        background: "transparent",
-      }}
-      className="promo-banner-wrapper"
-    >
-      {/* Promo banner container: width 1280px, height 324px, radius 22px */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1280px",
-          height: "324px",
-          margin: "0 auto",
-          borderRadius: "22px",
-          backgroundColor: "#FFEADB",
-          position: "relative",
-          overflow: "hidden",
-          boxSizing: "border-box",
-          boxShadow: "0 10px 30px rgba(249, 115, 22, 0.05)",
-          border: "1px solid rgba(254, 215, 170, 0.4)",
-        }}
-        className="promo-banner PromoRow2"
-      >
-        <Link
-          href={orderNowLink}
-          style={{
-            display: "block",
-            width: "100%",
-            height: "100%",
-            position: "relative",
-            textDecoration: "none",
-          }}
-        >
-          {/* content-block-left: Left side content */}
-          <div
-            style={{
-              position: "absolute",
-              top: "38px",
-              left: "56px",
-              width: "600px",
-              maxWidth: "600px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-              zIndex: 2,
-              boxSizing: "border-box",
-            }}
-            className="content-block-left"
-          >
-            {/* Eyebrow Badge */}
-            <div
-              style={{
-                width: "fit-content",
-                backgroundColor: "#FFDFCE",
-                color: "#FF6B00",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                fontSize: "11.5px",
-                fontWeight: 800,
-                lineHeight: "100%",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              }}
-            >
-              {badge}
-            </div>
+  // Fallback slider
+  const currentSlide = DEFAULT_PROMO_SLIDES[activeIdx] || DEFAULT_PROMO_SLIDES[0];
 
-            {/* Heading */}
-            <h2
-              style={{
-                fontSize: "42px",
-                fontWeight: 800,
-                lineHeight: "1.15",
-                letterSpacing: "-0.5px",
-                margin: 0,
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                color: "#231F20",
-              }}
-            >
-              {titlePrefix} <span style={{ color: "#FF6B00" }}>{titleHighlight}</span> {titleSuffix}
-              <br />
-              Orders
+  return (
+    <section className={styles.promoWrapper}>
+      <div
+        className={styles.promoCard}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div key={currentSlide.id} className={styles.slideContent}>
+          <div className={styles.leftContent}>
+            <h2 className={styles.promoTitle}>
+              {currentSlide.titlePrefix}
+              <span className={styles.highlight}>{currentSlide.highlight}</span>
+              {currentSlide.titleSuffix && (
+                <>
+                  <br />
+                  {currentSlide.titleSuffix}
+                </>
+              )}
             </h2>
 
-            {/* Description */}
-            <p
-              style={{
-                fontSize: "14.5px",
-                fontWeight: 400,
-                lineHeight: "1.4",
-                color: "#785E54",
-                margin: "2px 0 6px 0",
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              }}
-            >
-              {description}
-            </p>
-
-            {/* Action Row */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "16px",
-                flexWrap: "wrap",
-                marginTop: "4px",
-              }}
-            >
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#FF6B00",
-                  color: "#FFFFFF",
-                  fontSize: "14.5px",
-                  fontWeight: 700,
-                  padding: "11px 26px",
-                  borderRadius: "10px",
-                  boxShadow: "0 4px 14px rgba(255, 107, 0, 0.35)",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                }}
-              >
-                Order Now
-              </span>
-
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #EAE1DB",
-                  borderRadius: "10px",
-                  padding: "9px 18px",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  color: "#785E54",
-                  fontWeight: 500,
-                }}
-              >
-                <span>USE CODE:</span>
-                <strong style={{ color: "#18181B", fontWeight: 700 }}>{code}</strong>
-              </div>
+            <div className={styles.codeText}>
+              Use code:{" "}
+              <span className={styles.codeVal}>{currentSlide.code}</span>
             </div>
+
+            <Link href={currentSlide.link} className={styles.orderBtn}>
+              {currentSlide.buttonText}
+            </Link>
           </div>
 
-          {/* Right Food Image Layer */}
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              width: "706px",
-              height: "324px",
-              zIndex: 1,
-              pointerEvents: "none",
-              boxSizing: "border-box",
-            }}
-            className="imagery-wrapper"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageSrc}
-              alt="Promotional Banner Food"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "right center",
-                display: "block",
-              }}
-            />
+          <div className={styles.graphicBox}>
+            {currentSlide.imageType === "scooter" ? (
+              <div className={styles.scooterBox}>
+                <Image
+                  src={currentSlide.imageSrc}
+                  alt="Delivery Rider"
+                  width={220}
+                  height={220}
+                  priority
+                  className={styles.scooterImg}
+                />
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={currentSlide.imageSrc}
+                alt={currentSlide.titlePrefix}
+                className={styles.foodImg}
+              />
+            )}
           </div>
-        </Link>
+        </div>
+
+        <div className={styles.dotsContainer}>
+          {DEFAULT_PROMO_SLIDES.map((slide, index) => {
+            const isActive = activeIdx === index;
+            return (
+              <button
+                key={slide.id}
+                type="button"
+                className={`${styles.dotBtn} ${
+                  isActive ? styles.dotActive : styles.dotInactive
+                }`}
+                onClick={() => setActiveIdx(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            );
+          })}
+        </div>
       </div>
-
-      <style jsx>{`
-        @media (max-width: 1200px) {
-          .PromoRow2 {
-            height: auto !important;
-            min-height: 324px !important;
-          }
-          .content-block-left {
-            position: relative !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 36px 28px !important;
-          }
-          .imagery-wrapper {
-            opacity: 0.25;
-            width: 100% !important;
-          }
-        }
-        @media (max-width: 640px) {
-          .content-block-left {
-            padding: 28px 18px !important;
-          }
-          .content-block-left h2 {
-            font-size: 28px !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }

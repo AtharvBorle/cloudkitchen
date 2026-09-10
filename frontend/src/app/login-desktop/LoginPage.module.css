@@ -1,0 +1,19 @@
+.pageContainer {
+  display: flex;
+  height: 100vh;
+  max-height: 100vh;
+  width: 100vw;
+  background-color: #FFF4E6;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .pageContainer {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    max-height: none;
+    overflow-y: auto;
+    width: 100%;
+  }
+}

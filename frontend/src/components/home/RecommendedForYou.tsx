@@ -2,65 +2,57 @@
 
 import React from "react";
 import Link from "next/link";
-import { Star } from "lucide-react";
 
-export interface DishItem {
+export interface RecommendedDish {
   id: string;
   name: string;
-  rating: number;
   time: string;
   imageUrl: string;
   link?: string;
 }
 
-const POPULAR_DISHES: DishItem[] = [
+const RECOMMENDED_DISHES: RecommendedDish[] = [
   {
-    id: "dish-1",
-    name: "Chicken Tikka Masala",
-    rating: 4.8,
-    time: "₹120 • 25 min",
-    imageUrl: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
+    id: "rec-1",
+    name: "Creamy Pasta",
+    time: "₹329 • 20 min",
+    imageUrl: "https://images.unsplash.com/photo-1621996346565-e3adc6d6d1b9?w=500&auto=format&fit=crop&q=80",
+    link: "/explore-desktop",
   },
   {
-    id: "dish-2",
-    name: "Veg Momos",
-    rating: 4.7,
-    time: "₹125 • 15 min",
-    imageUrl: "https://images.unsplash.com/photo-1625220194771-7ebdea0b70b9?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
+    id: "rec-2",
+    name: "Chicken Wings",
+    time: "₹119 • 20 min",
+    imageUrl: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=500&auto=format&fit=crop&q=80",
+    link: "/explore-desktop",
   },
   {
-    id: "dish-3",
-    name: "Garlic Butter Naan",
-    rating: 4.9,
-    time: "₹20 • 10 min",
-    imageUrl: "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
+    id: "rec-3",
+    name: "Iced Latte",
+    time: "₹135 • 10 min",
+    imageUrl: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=500&auto=format&fit=crop&q=80",
+    link: "/explore-desktop",
   },
   {
-    id: "dish-4",
-    name: "Chicken Biryani",
-    rating: 4.6,
-    time: "₹170 • 20 min",
-    imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
+    id: "rec-4",
+    name: "Chocolate Brownie",
+    time: "₹150 • 15 min",
+    imageUrl: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=500&auto=format&fit=crop&q=80",
+    link: "/explore-desktop",
   },
 ];
 
-interface BestPlacesProps {
+interface RecommendedForYouProps {
   title?: string;
   seeAllLink?: string;
-  dishes?: DishItem[];
+  items?: RecommendedDish[];
 }
 
-export default function BestPlaces({
-  title = "Popular Dishes",
+export default function RecommendedForYou({
+  title = "Recommended For You",
   seeAllLink = "/explore-desktop",
-  dishes,
-}: BestPlacesProps) {
-  const displayDishes = dishes && dishes.length > 0 ? dishes : POPULAR_DISHES;
-
+  items = RECOMMENDED_DISHES,
+}: RecommendedForYouProps) {
   return (
     <section
       style={{
@@ -104,7 +96,7 @@ export default function BestPlaces({
           <Link
             href={seeAllLink}
             style={{
-              color: "#FF6B00",
+              color: "#FF5500",
               fontSize: "0.95rem",
               fontWeight: "700",
               textDecoration: "none",
@@ -123,9 +115,9 @@ export default function BestPlaces({
             gap: "20px",
             width: "100%",
           }}
-          className="popular-dishes-grid"
+          className="rec-dishes-grid"
         >
-          {displayDishes.slice(0, 4).map((dish) => (
+          {items.slice(0, 4).map((dish) => (
             <Link
               key={dish.id}
               href={dish.link || "/explore-desktop"}
@@ -148,7 +140,7 @@ export default function BestPlaces({
                   cursor: "pointer",
                   transition: "transform 0.25s ease, box-shadow 0.25s ease",
                 }}
-                className="dish-card"
+                className="rec-card"
               >
                 {/* Card Image */}
                 <div
@@ -159,7 +151,7 @@ export default function BestPlaces({
                     overflow: "hidden",
                     backgroundColor: "#F8FAFC",
                   }}
-                  className="dish-img-box"
+                  className="rec-img-box"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -171,7 +163,7 @@ export default function BestPlaces({
                       objectFit: "cover",
                       transition: "transform 0.3s ease",
                     }}
-                    className="dish-card-img"
+                    className="rec-card-img"
                   />
                 </div>
 
@@ -194,7 +186,7 @@ export default function BestPlaces({
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
-                    className="dish-name"
+                    className="rec-dish-name"
                   >
                     {dish.name}
                   </h3>
@@ -217,28 +209,28 @@ export default function BestPlaces({
       </div>
 
       <style jsx>{`
-        .dish-card:hover {
+        .rec-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08) !important;
         }
-        .dish-card:hover .dish-card-img {
+        .rec-card:hover .rec-card-img {
           transform: scale(1.05);
         }
         @media (max-width: 1024px) {
-          .popular-dishes-grid {
+          .rec-dishes-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 14px !important;
           }
         }
         @media (max-width: 640px) {
-          .popular-dishes-grid {
+          .rec-dishes-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 12px !important;
           }
-          .dish-img-box {
+          .rec-img-box {
             height: 110px !important;
           }
-          .dish-name {
+          .rec-dish-name {
             font-size: 0.88rem !important;
           }
         }

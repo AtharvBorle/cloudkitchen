@@ -11,6 +11,8 @@ import {
   PopularOrders,
   BestPlaces,
   DashboardBody,
+  RecommendedForYou,
+  MobileBottomNav,
 } from "@/components/home";
 import type { ActiveHomeFilters } from "@/components/home/FilterRow";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
@@ -287,19 +289,30 @@ export default function Home() {
 
         {/* 8. Dashboard Body / Top Rated */}
         <DashboardBody items={dynamicTopRated} />
+
+        {/* 9. Recommended For You */}
+        <RecommendedForYou />
       </main>
+
+      {/* Mobile Fixed Bottom Navigation */}
+      <MobileBottomNav />
 
       <style jsx>{`
         @media (max-width: 1024px) {
           .home-page-canvas {
-            padding: 32px 24px !important;
-            gap: 32px !important;
+            padding: 24px 20px !important;
+            gap: 24px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .home-page-canvas {
+            padding-bottom: 80px !important;
           }
         }
         @media (max-width: 640px) {
           .home-page-canvas {
-            padding: 24px 16px !important;
-            gap: 24px !important;
+            padding: 16px 12px 85px 12px !important;
+            gap: 18px !important;
           }
         }
       `}</style>

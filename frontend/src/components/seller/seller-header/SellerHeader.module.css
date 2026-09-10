@@ -1,4 +1,4 @@
-﻿.header {
+.header {
   height: 72px;
   background-color: #ffffff;
   border-bottom: 1px solid #e2e8f0;
@@ -127,6 +127,23 @@
   gap: 1px;
 }
 
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menuBtn {
+  display: none;
+  background: none;
+  border: none;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  cursor: pointer;
+  padding: 0;
+}
+
 .userName {
   font-size: 0.9rem;
   font-weight: 700;
@@ -140,3 +157,19 @@
   line-height: 1.2;
   font-weight: 500;
 }
+
+@media (max-width: 900px) {
+  .header {
+    padding: 0 16px;
+  }
+  .menuBtn {
+    display: flex;
+  }
+  .searchWrapper {
+    display: none;
+  }
+  .pageTitle {
+    font-size: 1.05rem;
+  }
+}
+
