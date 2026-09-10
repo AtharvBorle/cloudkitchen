@@ -153,6 +153,23 @@ button {
   color: var(--secondary);
 }
 
+@media (max-width: 768px) {
+  .auth-wrapper {
+    padding: 16px 14px;
+  }
+
+  .auth-card {
+    padding: 24px 18px;
+    border-radius: var(--radius-md);
+  }
+
+  .auth-title {
+    font-size: 1.45rem;
+    margin-bottom: 20px;
+  }
+}
+
+
 /* Forms & Inputs */
 .input-group {
   margin-bottom: 20px;

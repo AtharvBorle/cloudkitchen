@@ -536,3 +536,35 @@
     padding: 36px 24px;
   }
 }
+
+@media (max-width: 768px) {
+  .formContainer {
+    padding: 24px 16px;
+  }
+
+  .loginCard {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+
+  .cardHeading {
+    font-size: 1.6rem;
+  }
+
+  .cardSubheading {
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+  }
+
+  .otpContainer {
+    gap: 6px;
+  }
+
+  .otpDigitInput {
+    width: 44px;
+    height: 46px;
+    font-size: 1.15rem;
+    border-radius: 10px;
+  }
+}
+

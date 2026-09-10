@@ -182,3 +182,35 @@
     font-size: 2.2rem;
   }
 }
+
+@media (max-width: 768px) {
+  .contentWrapper {
+    padding: 24px 20px;
+  }
+  .logoImg {
+    width: 44px;
+    height: 44px;
+  }
+  .brandTitle {
+    font-size: 1.1rem;
+  }
+  .heroHeading {
+    font-size: 1.65rem;
+    margin-bottom: 10px;
+  }
+  .heroSubtitle {
+    font-size: 0.88rem;
+    margin-bottom: 20px;
+  }
+  .testimonialCard {
+    padding: 12px 16px;
+    border-radius: 16px;
+  }
+  .quoteText {
+    font-size: 0.8rem;
+  }
+  .authorText {
+    font-size: 0.72rem;
+  }
+}
+
