@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Menu,
   Bell,
@@ -126,21 +127,35 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
 
       {/* Main Responsive Mobile View Container */}
       <div className={styles.mobileContainer}>
-        {/* Top Header with Hamburger and Notification */}
+        {/* Top Header with Hamburger, Logo and Notification */}
         <header className={styles.topBar}>
-          {/* Top-Left Hamburger Menu */}
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsNavMenuOpen(true);
-            }}
-            aria-label="Open Navigation Menu"
-            title="Menu"
-          >
-            <Menu size={24} />
-          </button>
+          {/* Top-Left Hamburger Menu + Logo */}
+          <div className={styles.headerLeftGroup}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsNavMenuOpen(true);
+              }}
+              aria-label="Open Navigation Menu"
+              title="Menu"
+            >
+              <Menu size={24} />
+            </button>
+            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+              <div className={styles.headerLogoWrapper}>
+                <Image
+                  src="/images/logo-nav.png"
+                  alt="Neo Cloud Bites"
+                  width={30}
+                  height={30}
+                  className={styles.headerLogoImg}
+                  priority
+                />
+              </div>
+            </Link>
+          </div>
 
           {/* Centered Page Title */}
           <h1 className={styles.pageTitle}>Dashboard</h1>

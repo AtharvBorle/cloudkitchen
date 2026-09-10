@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, Plus, Search, Minus, UtensilsCrossed } from "lucide-react";
@@ -172,18 +173,32 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
       <div className={styles.mobileContainer}>
         {/* Top Header Bar with Hamburger and Plus Icon */}
         <header className={styles.topBar}>
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsNavMenuOpen(true);
-            }}
-            aria-label="Open Navigation Menu"
-            title="Menu"
-          >
-            <MenuIcon size={24} />
-          </button>
+          <div className={styles.headerLeftGroup}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsNavMenuOpen(true);
+              }}
+              aria-label="Open Navigation Menu"
+              title="Menu"
+            >
+              <MenuIcon size={24} />
+            </button>
+            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+              <div className={styles.headerLogoWrapper}>
+                <Image
+                  src="/images/logo-nav.png"
+                  alt="Neo Cloud Bites"
+                  width={30}
+                  height={30}
+                  className={styles.headerLogoImg}
+                  priority
+                />
+              </div>
+            </Link>
+          </div>
 
           <h1 className={styles.pageTitle}>Menu</h1>
 

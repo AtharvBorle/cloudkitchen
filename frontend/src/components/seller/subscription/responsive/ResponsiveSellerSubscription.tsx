@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -219,7 +221,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
       <div className={styles.mobileContainer}>
         {/* Top Header Bar */}
         <header className={styles.topBar}>
-          {/* Top-Left Hamburger Menu Button */}
+          {/* Top-Left Hamburger Menu Button + Logo */}
           <div className={styles.headerLeft}>
             <button
               type="button"
@@ -233,6 +235,18 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             >
               <MenuIcon size={24} />
             </button>
+            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+              <div className={styles.headerLogoWrapper}>
+                <Image
+                  src="/images/logo-nav.png"
+                  alt="Neo Cloud Bites"
+                  width={30}
+                  height={30}
+                  className={styles.headerLogoImg}
+                  priority
+                />
+              </div>
+            </Link>
           </div>
 
           {/* Centered Title & Subtitle */}

@@ -210,13 +210,13 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             <div className={styles.logoCircle}>
               <Image
                 src={logoImg}
-                alt="Cloud Kitchen Logo"
+                alt="Neo Cloud Bites Logo"
                 width={32}
                 height={32}
                 className={styles.logoImg}
               />
             </div>
-            <span className={styles.brandText}>Cloud Kitchen</span>
+            <span className={styles.brandText}>Neo Cloud Bites</span>
           </div>
 
           <button

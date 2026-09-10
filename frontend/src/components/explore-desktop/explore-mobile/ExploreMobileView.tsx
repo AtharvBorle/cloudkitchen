@@ -316,13 +316,27 @@ export const ExploreMobileView: React.FC = () => {
 
       {/* 1. Header Bar */}
       <header className={styles.headerRow}>
-        <button
-          className={styles.menuBtn}
-          aria-label="Open navigation menu"
-          onClick={() => setIsSidebarOpen(true)}
-        >
-          <Menu size={24} strokeWidth={2.2} />
-        </button>
+        <div className={styles.headerLeftGroup}>
+          <button
+            className={styles.menuBtn}
+            aria-label="Open navigation menu"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu size={24} strokeWidth={2.2} />
+          </button>
+          <Link href="/" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <div className={styles.headerLogoWrapper}>
+              <Image
+                src="/images/logo-nav.png"
+                alt="Neo Cloud Bites"
+                width={30}
+                height={30}
+                className={styles.headerLogoImg}
+                priority
+              />
+            </div>
+          </Link>
+        </div>
 
         <div className={styles.headerTitleCol}>
           <h1 className={styles.title}>Explore</h1>
