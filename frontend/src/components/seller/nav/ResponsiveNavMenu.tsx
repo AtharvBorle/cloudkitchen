@@ -129,6 +129,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
       return (
         pathname === "/seller/res/delivery" ||
         pathname?.startsWith("/seller/res/delivery") ||
+        pathname?.startsWith("/seller/delivery") ||
         pathname?.startsWith("/seller/riderMng") ||
         pathname?.startsWith("/dashboard/seller/delivery")
       );

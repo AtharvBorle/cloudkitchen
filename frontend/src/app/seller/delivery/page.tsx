@@ -1,11 +1,11 @@
-﻿import type { Metadata } from 'next';
-import { CreateSubscriptionPlan } from '@/components/seller';
+import type { Metadata } from 'next';
+import { RiderCanvasDas } from '@/components/seller';
 
 export const metadata: Metadata = {
-  title: 'Delivery & Subscription Plan | Neo Cloud Kitchen',
-  description: 'Configure and manage delivery subscription plans and fulfillment schedules.',
+  title: 'Delivery & Rider Management | Neo Cloud Kitchen',
+  description: 'Audit outstanding cash collections and assign delivery routes to active riders.',
 };
 
-export default function SellerDeliverySubscriptionPage() {
-  return <CreateSubscriptionPlan />;
+export default function SellerDeliveryPage() {
+  return <RiderCanvasDas />;
 }
