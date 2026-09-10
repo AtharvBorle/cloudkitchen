@@ -121,7 +121,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
     if (onNotificationClick) {
       onNotificationClick();
     } else {
-      router.push("/seller/res/notifications");
+      router.push("/seller/notifications");
     }
   };
 

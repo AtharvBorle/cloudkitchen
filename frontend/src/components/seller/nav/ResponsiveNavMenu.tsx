@@ -37,7 +37,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
   { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
   { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/profile" },
-  { id: "notifications", label: "Notifications", icon: Bell, href: "/seller/res/notifications" },
+  { id: "notifications", label: "Notifications", icon: Bell, href: "/seller/notifications" },
   { id: "settings", label: "Settings", icon: Settings, href: "/seller/settings" },
 ];
 

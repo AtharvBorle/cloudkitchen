@@ -258,7 +258,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
               if (onNotificationClick) {
                 onNotificationClick();
               } else {
-                router.push("/seller/res/notifications");
+                router.push("/seller/notifications");
               }
             }}
             aria-label="Notifications"
