@@ -9,9 +9,23 @@ import {
   Eye,
   Heart,
   Menu,
+  ChevronDown,
+  Bell,
+  Globe,
+  Check,
 } from "lucide-react";
 import styles from "./ExploreMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
+import MobileBottomNav from "@/components/home/MobileBottomNav";
+import logoImg from "@/components/navbar/logo-nav.png";
+
+const LANG_OPTIONS = [
+  { id: "hi", label: "Hindi", code: "HI" },
+  { id: "mr", label: "Marathi", code: "MR" },
+  { id: "en", label: "English", code: "EN" },
+];
+
+import { ReelModal, ReelModalData } from "./ReelModal";
 
 // Creator & Story Avatars
 import chefArjunAvatar from "../featured-collections/chef-arjun-avatar.jpg";
@@ -174,23 +188,19 @@ const STORIES: StoryCreator[] = [
   },
 ];
 
-interface ReelItem {
-  id: string;
-  author: string;
-  authorAvatar: StaticImageData | string;
-  thumbnail: StaticImageData | string;
-  caption: string;
-  views: string;
-}
-
-const REELS: ReelItem[] = [
+const REELS: ReelModalData[] = [
   {
     id: "r1",
     author: "Chef Arjun",
     authorAvatar: chefArjunAvatar,
     thumbnail: butterChickenImg,
     caption: "Making butter chicken from scratch",
+    hashtags: "#homecooking #butterchicken",
+    partnerTitle: "Cloud Kitchen Partner",
+    likes: "2.4k",
     views: "12.4k views",
+    audioTitle: "Chef Arjun • Original Audio",
+    verified: true,
   },
   {
     id: "r2",
@@ -198,7 +208,12 @@ const REELS: ReelItem[] = [
     authorAvatar: chefYukiAvatar,
     thumbnail: woodfirePizzaImg,
     caption: "Fresh dough for our wood-fired pizzas 🍕",
+    hashtags: "#pizzalovers #woodfire",
+    partnerTitle: "Cloud Kitchen Partner",
+    likes: "1.8k",
     views: "8.9k views",
+    audioTitle: "Pizza Lab • Original Audio",
+    verified: true,
   },
   {
     id: "r3",
@@ -206,7 +221,12 @@ const REELS: ReelItem[] = [
     authorAvatar: chefArjunAvatar,
     thumbnail: reel1Img,
     caption: "Making butter chicken from scratch",
+    hashtags: "#homecooking #butterchicken",
+    partnerTitle: "Cloud Kitchen Partner",
+    likes: "2.4k",
     views: "12.4k views",
+    audioTitle: "Chef Arjun • Original Audio",
+    verified: true,
   },
   {
     id: "r4",
@@ -214,7 +234,12 @@ const REELS: ReelItem[] = [
     authorAvatar: chefYukiAvatar,
     thumbnail: reel2Img,
     caption: "Fresh dough for our wood-fired pizzas 🍕",
+    hashtags: "#pizzalovers #woodfire",
+    partnerTitle: "Cloud Kitchen Partner",
+    likes: "1.8k",
     views: "8.9k views",
+    audioTitle: "Pizza Lab • Original Audio",
+    verified: true,
   },
 ];
 
@@ -295,6 +320,9 @@ const SlidersIcon = () => (
 export const ExploreMobileView: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLang, setSelectedLang] = useState("en");
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+  const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({
     c1: false,
     c2: false,
@@ -303,6 +331,28 @@ export const ExploreMobileView: React.FC = () => {
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleLangSelect = (id: string) => {
+    setSelectedLang(id);
+    setIsLangDropdownOpen(false);
+  };
+
+  const getSelectedLangCode = () => {
+    const found = LANG_OPTIONS.find((l) => l.id === selectedLang);
+    return found ? found.code : "EN";
+  };
+
+  const handleNextReel = () => {
+    setActiveReelIndex((prev) =>
+      prev !== null && prev < REELS.length - 1 ? prev + 1 : 0
+    );
+  };
+
+  const handlePrevReel = () => {
+    setActiveReelIndex((prev) =>
+      prev !== null && prev > 0 ? prev - 1 : REELS.length - 1
+    );
   };
 
   return (
@@ -314,23 +364,100 @@ export const ExploreMobileView: React.FC = () => {
         activeItem="Explore"
       />
 
-      {/* 1. Header Bar */}
-      <header className={styles.headerRow}>
-        <button
-          className={styles.menuBtn}
-          aria-label="Open navigation menu"
-          onClick={() => setIsSidebarOpen(true)}
-        >
-          <Menu size={24} strokeWidth={2.2} />
-        </button>
+      {/* 1. Top Navigation Bar (Logo, Location, Bell, Lang) */}
+      <nav className={styles.topNavRow} aria-label="Explore Mobile Top Navigation">
+        <div className={styles.navLeftGroup}>
+          <button
+            className={styles.menuBtn}
+            aria-label="Open navigation menu"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu size={24} strokeWidth={2.2} />
+          </button>
 
-        <div className={styles.headerTitleCol}>
-          <h1 className={styles.title}>Explore</h1>
-          <p className={styles.subtitle}>Find your next favorite meal</p>
+          <Link href="/" className={styles.brandLink}>
+            <div className={styles.logoWrapper}>
+              <Image
+                src={logoImg}
+                alt="Cloud Kitchen Logo"
+                width={40}
+                height={40}
+                className={styles.logoImage}
+                priority
+              />
+            </div>
+            <div className={styles.brandInfo}>
+              <span className={styles.brandTitle}>Cloud Kitchen</span>
+              <div className={styles.locationContainer}>
+                <span>Kothrud, Pune</span>
+                <ChevronDown size={14} />
+              </div>
+            </div>
+          </Link>
         </div>
-      </header>
 
-      {/* 2. Search Bar */}
+        <div className={styles.navRightGroup}>
+          {/* Notification Bell Button */}
+          <button
+            type="button"
+            className={styles.bellBtn}
+            aria-label="Notifications"
+          >
+            <Bell size={20} strokeWidth={2} />
+          </button>
+
+          {/* Language Selector Pill with Dropdown */}
+          <div className={styles.langWrapper}>
+            <button
+              type="button"
+              className={styles.langBtn}
+              onClick={() => setIsLangDropdownOpen((prev) => !prev)}
+              aria-label={`Language: ${getSelectedLangCode()}`}
+              aria-expanded={isLangDropdownOpen}
+            >
+              <Globe size={20} strokeWidth={2.2} />
+            </button>
+
+            {isLangDropdownOpen && (
+              <>
+                <div
+                  className={styles.langBackdrop}
+                  onClick={() => setIsLangDropdownOpen(false)}
+                />
+                <div className={styles.langDropdown} role="menu">
+                  {LANG_OPTIONS.map((option) => {
+                    const isSelected = selectedLang === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`${styles.langItem} ${
+                          isSelected ? styles.langItemActive : ""
+                        }`}
+                        onClick={() => handleLangSelect(option.id)}
+                        role="menuitem"
+                      >
+                        <span className={styles.langLabel}>{option.label}</span>
+                        {isSelected && (
+                          <Check size={18} color="#16A34A" strokeWidth={2.8} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* 2. Explore Title Section */}
+      <div className={styles.exploreTitleSection}>
+        <h1 className={styles.title}>Explore</h1>
+        <p className={styles.subtitle}>Find your next favorite meal</p>
+      </div>
+
+      {/* 3. Search Bar (Full Width, No Veg Toggle) */}
       <div className={styles.searchWrapper}>
         <Search size={19} strokeWidth={2.2} className={styles.searchIcon} />
         <input
@@ -354,8 +481,20 @@ export const ExploreMobileView: React.FC = () => {
 
         {/* Stories Creators Row */}
         <div className={styles.storiesRow}>
-          {STORIES.map((story) => (
-            <div key={story.id} className={styles.storyItem}>
+          {STORIES.map((story, index) => (
+            <div
+              key={story.id}
+              className={styles.storyItem}
+              onClick={() => setActiveReelIndex(index % REELS.length)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  setActiveReelIndex(index % REELS.length);
+                }
+              }}
+              aria-label={`Watch story by ${story.name}`}
+            >
               <div className={styles.storyRing}>
                 <div className={styles.storyAvatarInner}>
                   {story.avatar ? (
@@ -377,8 +516,20 @@ export const ExploreMobileView: React.FC = () => {
 
         {/* 2x2 Reels Grid */}
         <div className={styles.reelsGrid}>
-          {REELS.map((reel) => (
-            <article key={reel.id} className={styles.reelCard}>
+          {REELS.map((reel, index) => (
+            <article
+              key={reel.id}
+              className={styles.reelCard}
+              onClick={() => setActiveReelIndex(index)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  setActiveReelIndex(index);
+                }
+              }}
+              aria-label={`Open reel: ${reel.caption}`}
+            >
               <Image
                 src={reel.thumbnail}
                 alt={reel.caption}
@@ -520,6 +671,18 @@ export const ExploreMobileView: React.FC = () => {
           ))}
         </div>
       </section>
+
+      {/* 6. Fixed Mobile Bottom Navigation */}
+      <MobileBottomNav />
+
+      {/* 7. Full-Screen Reels Modal */}
+      <ReelModal
+        isOpen={activeReelIndex !== null}
+        onClose={() => setActiveReelIndex(null)}
+        reel={activeReelIndex !== null ? REELS[activeReelIndex] : null}
+        onNext={handleNextReel}
+        onPrev={handlePrevReel}
+      />
     </div>
   );
 };

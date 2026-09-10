@@ -2,8 +2,9 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(3px);
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 999;
   opacity: 0;
   visibility: hidden;
@@ -21,14 +22,14 @@
   top: 0;
   bottom: 0;
   left: 0;
-  width: min(84vw, 320px);
+  width: min(82vw, 300px);
   height: 100vh;
   height: 100dvh;
   background-color: #ffffff;
   z-index: 1000;
   transform: translateX(-100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 6px 0 25px rgba(0, 0, 0, 0.12);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -45,7 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px 10px 18px;
+  padding: 16px 18px 12px 18px;
   border-bottom: 1px solid #f8fafc;
 }
 
@@ -56,26 +57,26 @@
 }
 
 .logoCircle {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.15);
+  border: 1px solid #fed7aa;
 }
 
 .logoImg {
   object-fit: contain;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
 }
 
 .brandText {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #f97316;
   letter-spacing: -0.01em;
@@ -85,8 +86,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #f1f5f9;
-  border: none;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,25 +97,25 @@
 }
 
 .closeBtn:active {
-  background-color: #e2e8f0;
+  background-color: #f1f5f9;
 }
 
-/* 4. User Profile Card matching uploaded screenshot */
+/* 4. User Profile Card */
 .profileSection {
-  padding: 12px 18px 14px 18px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid #f1f5f9;
+  gap: 14px;
+  border-bottom: 1px solid #f8fafc;
 }
 
 .avatarWrapper {
-  width: 52px;
-  height: 52px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   overflow: hidden;
   position: relative;
-  border: 2px solid #fed7aa;
+  border: 2.5px solid #f97316;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15);
 }
@@ -126,93 +127,72 @@
 .userInfo {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .userName {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.01em;
 }
 
-.userPhone {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0;
-  font-weight: 500;
-}
-
-.editProfileLink {
-  font-size: 12px;
-  color: #f97316;
-  font-weight: 700;
-  text-decoration: none;
+.goldBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-top: 2px;
-}
-
-.editProfileLink:hover {
-  text-decoration: underline;
+  gap: 5px;
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  width: fit-content;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.3);
 }
 
 /* 5. Nav Items List */
 .navContainer {
   flex: 1;
-  padding: 10px 14px;
+  padding: 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   overflow-y: auto;
 }
 
 .navGroup {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.groupLabel {
-  font-size: 10.5px;
-  font-weight: 800;
-  color: #94a3b8;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 6px 12px 4px 12px;
+  gap: 6px;
 }
 
 .navItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 12px;
+  padding: 11px 14px;
   border-radius: 12px;
   text-decoration: none;
   color: #334155;
   transition: all 0.15s ease;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
 }
 
-.navItem:active {
+.navItem:hover {
   background-color: #f8fafc;
+  color: #0f172a;
 }
 
 .navItemActive {
-  background-color: #fff4eb;
-  color: #ea580c;
-  font-weight: 800;
+  background-color: #fff3e3 !important;
+  color: #f97316 !important;
+  font-weight: 700 !important;
 }
 
 .navItemActive .navItemLeft {
-  color: #ea580c;
+  color: #f97316;
 }
 
 .navItemLeft {
@@ -230,7 +210,7 @@
 }
 
 .navItemActive .navIcon {
-  color: #ea580c;
+  color: #f97316;
 }
 
 .navChevron {
@@ -241,57 +221,71 @@
 }
 
 .navItemActive .navChevron {
-  color: #ea580c;
+  color: #f97316;
 }
 
 .newBadge {
   background-color: #f97316;
   color: #ffffff;
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 2px 7px;
+  border-radius: 9999px;
   letter-spacing: 0.04em;
 }
 
 /* 6. Footer Section */
 .drawerFooter {
-  padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)) 18px;
-  border-top: 1px solid #f1f5f9;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px)) 18px;
+  border-top: 1px solid #f8fafc;
   display: flex;
   flex-direction: column;
+  gap: 14px;
   background-color: #ffffff;
 }
 
 .logoutBtn {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  background: #ffffff;
-  border: 1.5px solid #f97316;
+  background: transparent;
+  border: none;
   color: #f97316;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
-  padding: 10px 0;
-  border-radius: 12px;
+  padding: 6px 0;
   transition: all 0.15s ease;
   font-family: inherit;
-  width: 100%;
+  width: fit-content;
 }
 
 .logoutBtn:hover {
-  background-color: #fff1e6;
-  border-color: #ea580c;
   color: #ea580c;
-}
-
-.logoutBtn:active {
-  transform: scale(0.98);
 }
 
 .logoutIcon {
   width: 18px;
   height: 18px;
 }
+
+.footerBrandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.versionText {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.footerBrandText {
+  font-size: 11px;
+  color: #f97316;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+

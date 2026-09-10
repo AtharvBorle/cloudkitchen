@@ -455,17 +455,19 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           .hero-section-container {
             flex-direction: column !important;
             min-height: auto !important;
-            padding: 40px 28px !important;
+            padding: 28px 18px !important;
             text-align: center;
+            gap: 16px !important;
           }
           .hero-left-column {
             width: 100% !important;
             max-width: 100% !important;
             align-items: center;
+            gap: 14px !important;
           }
           .hero-title-dark,
           .hero-title-orange {
-            font-size: 38px !important;
+            font-size: 34px !important;
             line-height: 1.2 !important;
           }
           .hero-tags-wrapper {
@@ -473,35 +475,28 @@ export default function HeroSection({ onSearch }: HeroSectionProps) {
           }
           .hero-right-column {
             width: 100% !important;
-            max-width: 440px !important;
-            min-height: 300px !important;
-            margin-top: 24px;
+            max-width: 320px !important;
+            min-height: auto !important;
+            height: auto !important;
+            margin: 0 auto !important;
+          }
+          .hero-right-column > div {
+            min-height: auto !important;
+            height: auto !important;
+          }
+          .hero-right-column img {
+            max-height: 240px !important;
+            width: auto !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .hero-section-container {
+            display: none !important;
           }
         }
         @media (max-width: 640px) {
-          .hero-search-form {
-            flex-direction: column;
-            border-radius: 20px !important;
-            height: auto !important;
-            padding: 14px !important;
-            gap: 12px;
-          }
-          .hero-search-divider {
+          .hero-section-container {
             display: none !important;
-          }
-          .hero-location-picker {
-            width: 100%;
-            justify-content: center;
-            padding: 0;
-          }
-          .hero-search-submit-btn {
-            width: 100% !important;
-            height: 46px !important;
-            border-radius: 12px !important;
-          }
-          .hero-title-dark,
-          .hero-title-orange {
-            font-size: 30px !important;
           }
         }
       `}</style>

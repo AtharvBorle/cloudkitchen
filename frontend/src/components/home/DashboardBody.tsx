@@ -317,6 +317,11 @@ export default function DashboardBody({
             grid-template-columns: 1fr !important;
           }
         }
+        @media (max-width: 768px) {
+          .top-rated-card:nth-child(n+3) {
+            display: none !important;
+          }
+        }
         @media (max-width: 640px) {
           .dashboard-body-wrapper {
             padding: 24px 16px !important;

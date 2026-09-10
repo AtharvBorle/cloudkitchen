@@ -1,320 +1,192 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import styles from "./PromoRow2.module.css";
 
-export interface PromoRow2Props {
-  badge?: string;
-  titlePrefix?: string;
-  titleHighlight?: string;
+export interface PromoSlide {
+  id: string;
+  titlePrefix: string;
+  highlight: string;
   titleSuffix?: string;
-  description?: string;
-  code?: string;
-  orderNowLink?: string;
-  imageSrc?: string;
+  code: string;
+  buttonText: string;
+  link: string;
+  imageSrc: string;
+  imageType: "scooter" | "food";
 }
 
-export default function PromoRow2({
-  badge = "LIMITED WELCOME OFFER",
-  titlePrefix = "Save",
-  titleHighlight = "30% OFF",
-  titleSuffix = "Your First 2 Orders",
-  description = "Kickstart your meal plan with premium ingredients & fast delivery. Use code FOOD30 at checkout.",
-  code = "FOOD30",
-  orderNowLink = "/explore/food",
-  imageSrc = "/images/promo-banner-food.png",
-}: PromoRow2Props) {
+const PROMO_SLIDES: PromoSlide[] = [
+  {
+    id: "promo-1",
+    titlePrefix: "Save ",
+    highlight: "30% OFF",
+    titleSuffix: "First 2 Orders",
+    code: "FOOD30",
+    buttonText: "Order Now",
+    link: "/explore-desktop",
+    imageSrc: "/images/promo-scooter.png",
+    imageType: "scooter",
+  },
+  {
+    id: "promo-2",
+    titlePrefix: "Mess Special – Flat ",
+    highlight: "30% OFF",
+    titleSuffix: "on First Thali",
+    code: "THALI30",
+    buttonText: "Order Now",
+    link: "/explore-desktop?category=Mess/Tiffin",
+    imageSrc:
+      "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80",
+    imageType: "food",
+  },
+  {
+    id: "promo-3",
+    titlePrefix: "Fresh Bakes – Get ",
+    highlight: "25% OFF",
+    titleSuffix: "on Cakes",
+    code: "CAKE25",
+    buttonText: "Order Now",
+    link: "/explore-desktop?category=Bakery",
+    imageSrc:
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80",
+    imageType: "food",
+  },
+  {
+    id: "promo-4",
+    titlePrefix: "Homemade – Flat ",
+    highlight: "20% OFF",
+    titleSuffix: "on Order",
+    code: "HOME20",
+    buttonText: "Explore Now",
+    link: "/explore-desktop?category=Homemade",
+    imageSrc:
+      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80",
+    imageType: "food",
+  },
+];
+
+export default function PromoRow2() {
+  const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  // Auto-scroll every 5 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % PROMO_SLIDES.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [currentSlideIndex]);
+
+  const goToSlide = (index: number) => {
+    setCurrentSlideIndex(index);
+  };
+
+  const currentSlide = PROMO_SLIDES[currentSlideIndex];
+
+  // Touch Swipe Handlers for Mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diff = touchStartX.current - touchEndX.current;
+    if (diff > 45) {
+      // Swiped left -> Next slide
+      setCurrentSlideIndex((prev) => (prev + 1) % PROMO_SLIDES.length);
+    } else if (diff < -45) {
+      // Swiped right -> Prev slide
+      setCurrentSlideIndex((prev) =>
+        prev === 0 ? PROMO_SLIDES.length - 1 : prev - 1
+      );
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
   return (
-    <section
-      style={{
-        width: "100%",
-        padding: "0",
-        background: "transparent",
-      }}
-      className="promo-banner-wrapper"
-    >
-      {/* PromoRow or promo-banner container: width 1280px, height 324px, radius 22px */}
+    <section className={styles.promoWrapper}>
       <div
-        style={{
-          width: "100%",
-          maxWidth: "1280px",
-          height: "324px",
-          margin: "0 auto",
-          borderRadius: "22px",
-          backgroundImage: "linear-gradient(90deg, #FFF7F4 0%, #FFE8DC 100%)",
-          backgroundColor: "#FFF7F4",
-          position: "relative",
-          overflow: "hidden",
-          boxSizing: "border-box",
-          border: "1px solid rgba(254, 215, 170, 0.4)",
-          boxShadow: "0 10px 30px rgba(249, 115, 22, 0.06)",
-        }}
-        className="promo-banner PromoRow2"
+        className={styles.promoCard}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {/* ambient-glow: width 350px, height 350px, left 649px, opacity 85%, layer blur 103.1px */}
-        <div
-          style={{
-            position: "absolute",
-            width: "350px",
-            height: "350px",
-            left: "649px",
-            top: "-13px",
-            backgroundColor: "#FFF0E9",
-            opacity: 0.85,
-            filter: "blur(103.1px)",
-            WebkitFilter: "blur(103.1px)",
-            borderRadius: "50%",
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-          className="ambient-glow"
-        />
+        {/* Animated Slide Content */}
+        <div key={currentSlide.id} className={styles.slideContent}>
+          {/* Left Text and CTA */}
+          <div className={styles.leftContent}>
+            <h2 className={styles.promoTitle}>
+              {currentSlide.titlePrefix}
+              <span className={styles.highlight}>{currentSlide.highlight}</span>
+              {currentSlide.titleSuffix && (
+                <>
+                  <br />
+                  {currentSlide.titleSuffix}
+                </>
+              )}
+            </h2>
 
-        {/* content-block-left: flow vertical, width fixed 680px, height hug 238px, top 43px, left 64px, gap 16px */}
-        <div
-          style={{
-            position: "absolute",
-            top: "43px",
-            left: "64px",
-            width: "680px",
-            maxWidth: "680px",
-            minHeight: "238px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-            zIndex: 2,
-            boxSizing: "border-box",
-          }}
-          className="content-block-left"
-        >
-          {/* Eyebrow Badge: LIMITED WELCOME OFFER */}
-          <div
-            style={{
-              width: "fit-content",
-              backgroundColor: "#FFEFE7",
-              color: "#FF5421",
-              padding: "4px 12px",
-              borderRadius: "6px",
-              fontSize: "12px",
-              fontWeight: 700,
-              lineHeight: "100%",
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              fontFamily: "var(--font-figtree), 'Figtree', var(--font-poppins), 'Poppins', sans-serif",
-            }}
-          >
-            {badge}
-          </div>
+            <div className={styles.codeText}>
+              Use code:{" "}
+              <span className={styles.codeVal}>{currentSlide.code}</span>
+            </div>
 
-          {/* Heading: Save 30% OFF Your First 2 Orders */}
-          <h2
-            style={{
-              fontSize: "44px",
-              fontWeight: 700,
-              lineHeight: "110%",
-              letterSpacing: "-1px",
-              margin: 0,
-              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              color: "#1F1610",
-            }}
-          >
-            {titlePrefix}{" "}
-            <span style={{ color: "#FF5421" }}>{titleHighlight}</span>{" "}
-            {titleSuffix}
-          </h2>
-
-          {/* Description */}
-          <p
-            style={{
-              width: "680px",
-              maxWidth: "100%",
-              minHeight: "23px",
-              fontSize: "15px",
-              fontWeight: 400,
-              lineHeight: "150%",
-              letterSpacing: "0%",
-              color: "#6B524A",
-              margin: 0,
-              fontFamily: "var(--font-figtree), 'Figtree', var(--font-poppins), 'Poppins', sans-serif",
-            }}
-          >
-            Kickstart your meal plan with premium ingredients &amp; fast delivery.
-          </p>
-
-          {/* Action Row: Order Now + USE CODE: FOOD30 + Hurry tag */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px",
-              flexWrap: "wrap",
-              marginTop: "6px",
-            }}
-          >
-            {/* Order Now Button */}
-            <Link
-              href={orderNowLink}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#FF5421",
-                color: "#FFFFFF",
-                fontSize: "15px",
-                fontWeight: 700,
-                padding: "12px 28px",
-                borderRadius: "12px",
-                textDecoration: "none",
-                boxShadow: "0 4px 14px rgba(255, 84, 33, 0.32)",
-                transition: "all 0.2s ease",
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                cursor: "pointer",
-              }}
-              className="promo2-order-btn"
-            >
-              Order Now
+            <Link href={currentSlide.link} className={styles.orderBtn}>
+              {currentSlide.buttonText}
             </Link>
+          </div>
 
-            {/* Code Chip */}
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                backgroundColor: "#FFFFFF",
-                border: "1px solid #E2E8F0",
-                borderRadius: "12px",
-                padding: "10px 18px",
-                fontSize: "13.5px",
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                color: "#6B524A",
-                fontWeight: 500,
-                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
-              }}
-            >
-              <span>USE CODE:</span>
-              <strong style={{ color: "#0F172A", fontWeight: 700 }}>{code}</strong>
-            </div>
-
-            {/* Hurry Timer Tag */}
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#FF5421",
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              }}
-            >
-              <Clock size={16} strokeWidth={2.4} color="#FF5421" />
-              <span>Hurry – ends soon</span>
-            </div>
+          {/* Right Image/Graphic Box */}
+          <div className={styles.graphicBox}>
+            {currentSlide.imageType === "scooter" ? (
+              <div className={styles.scooterBox}>
+                <Image
+                  src={currentSlide.imageSrc}
+                  alt="Delivery Rider"
+                  width={220}
+                  height={220}
+                  priority
+                  className={styles.scooterImg}
+                />
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={currentSlide.imageSrc}
+                alt={currentSlide.titlePrefix}
+                className={styles.foodImg}
+              />
+            )}
           </div>
         </div>
 
-        {/* imagery-wrapper: flow horizontal, width fixed 480px, height fixed 324px, left 800px */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            width: "480px",
-            height: "324px",
-            zIndex: 2,
-            overflow: "hidden",
-            boxSizing: "border-box",
-          }}
-          className="imagery-wrapper"
-        >
-          <Image
-            src={imageSrc}
-            alt="Fresh gourmet ingredients and pasta meal box"
-            fill
-            sizes="480px"
-            priority
-            style={{
-              objectFit: "cover",
-              objectPosition: "center left",
-            }}
-          />
-        </div>
-
-        {/* Pagination Dots at Bottom Center */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "14px",
-            left: "490px",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            zIndex: 3,
-          }}
-        >
-          <span
-            style={{
-              width: "16px",
-              height: "6px",
-              borderRadius: "3px",
-              backgroundColor: "#FF5500",
-              transition: "all 0.3s ease",
-            }}
-          />
-          <span
-            style={{
-              width: "6px",
-              height: "6px",
-              borderRadius: "50%",
-              backgroundColor: "#CBD5E1",
-            }}
-          />
-          <span
-            style={{
-              width: "6px",
-              height: "6px",
-              borderRadius: "50%",
-              backgroundColor: "#CBD5E1",
-            }}
-          />
+        {/* Carousel Pagination Dots */}
+        <div className={styles.dotsContainer}>
+          {PROMO_SLIDES.map((slide, index) => {
+            const isActive = currentSlideIndex === index;
+            return (
+              <button
+                key={slide.id}
+                type="button"
+                className={`${styles.dotBtn} ${
+                  isActive ? styles.dotActive : styles.dotInactive
+                }`}
+                onClick={() => goToSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            );
+          })}
         </div>
       </div>
-
-      <style jsx>{`
-        .promo2-order-btn:hover {
-          transform: translateY(-2px);
-          background-color: #E64D00 !important;
-          box-shadow: 0 6px 20px rgba(255, 85, 0, 0.36) !important;
-        }
-        @media (max-width: 1200px) {
-          .PromoRow2 {
-            height: auto !important;
-            min-height: 324px !important;
-          }
-          .content-block-left {
-            position: relative !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 36px 32px !important;
-          }
-          .imagery-wrapper {
-            display: none !important;
-          }
-        }
-        @media (max-width: 640px) {
-          .content-block-left {
-            padding: 28px 20px !important;
-          }
-          .content-block-left h2 {
-            font-size: 28px !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }

@@ -7,3 +7,5 @@ export { default as Properties } from "./Properties";
 export { default as PopularOrders } from "./PopularOrders";
 export { default as BestPlaces } from "./BestPlaces";
 export { default as DashboardBody } from "./DashboardBody";
+export { default as RecommendedForYou } from "./RecommendedForYou";
+export { default as MobileBottomNav } from "./MobileBottomNav";

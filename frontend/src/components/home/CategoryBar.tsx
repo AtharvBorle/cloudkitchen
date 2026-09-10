@@ -224,6 +224,19 @@ export default function CategoryBar({
         .category-scroll-arrow:active {
           transform: scale(0.95);
         }
+        @media (max-width: 768px) {
+          .category-scroll-arrow {
+            display: none !important;
+          }
+          .category-item-btn {
+            width: 72px !important;
+            min-width: 72px !important;
+            min-height: 90px !important;
+            padding: 8px 4px !important;
+            border-radius: 16px !important;
+            gap: 4px !important;
+          }
+        }
       `}</style>
     </div>
   );
