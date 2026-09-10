@@ -15,12 +15,16 @@ function BookingDetailsContent() {
   useEffect(() => {
     async function loadBooking() {
       try {
-        const res = await fetchApi<{ bookings: any[] }>("/api/seller/rooms/bookings");
-        if (res.data?.bookings) {
-          const found = res.data.bookings.find(
-            (b) => b.id === cleanId || b.id === rawId || `B-${b.id.slice(0, 4)}` === rawId
-          );
-          if (found) setBooking(found);
+        const res = await fetchApi("/api/seller/rooms/bookings");
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.data?.bookings || data.bookings || data.data || [];
+          if (Array.isArray(list)) {
+            const found = list.find(
+              (b: any) => b.id === cleanId || b.id === rawId || `B-${b.id.slice(0, 4)}` === rawId
+            );
+            if (found) setBooking(found);
+          }
         }
       } catch (err) {
         console.error("Failed to load booking details:", err);
@@ -32,7 +36,7 @@ function BookingDetailsContent() {
   const handleUpdateStatus = async (status: "CONFIRMED" | "CANCELLED") => {
     const targetId = booking?.id || cleanId;
     try {
-      await fetch("/api/seller/rooms/bookings", {
+      await fetchApi("/api/seller/rooms/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId: targetId, status }),

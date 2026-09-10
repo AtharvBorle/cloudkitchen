@@ -17,31 +17,41 @@ function AssignRiderContent() {
     async function loadData() {
       try {
         const [ordersRes, deliveryRes] = await Promise.all([
-          fetchApi<{ orders: any[] }>("/api/seller/orders"),
-          fetchApi<{ deliveryPersons: any[] }>("/api/seller/delivery"),
+          fetchApi("/api/seller/orders"),
+          fetchApi("/api/seller/delivery"),
         ]);
 
-        if (ordersRes.data?.orders) {
-          const found = ordersRes.data.orders.find(
-            (o) => o.id === cleanId || o.id === rawId || `#${o.id.slice(0, 6)}` === rawId
-          );
-          if (found) setOrder(found);
+        if (ordersRes.ok) {
+          const ordersData = await ordersRes.json();
+          const ordersList = ordersData.data?.orders || ordersData.orders || ordersData.data || [];
+          if (Array.isArray(ordersList)) {
+            const found = ordersList.find(
+              (o: any) => o.id === cleanId || o.id === rawId || `#${o.id.slice(0, 6)}` === rawId
+            );
+            if (found) setOrder(found);
+          }
         }
 
-        if (deliveryRes.data?.deliveryPersons && deliveryRes.data.deliveryPersons.length > 0) {
-          setRiders(
-            deliveryRes.data.deliveryPersons.map((dp: any, idx: number) => ({
-              id: dp.id,
-              name: dp.name,
-              initials: dp.name
-                ? dp.name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                : "RK",
-              distance: `${(idx + 1) * 1.2} km away`,
-            }))
-          );
+        if (deliveryRes.ok) {
+          const deliveryData = await deliveryRes.json();
+          const deliveryList = deliveryData.data?.deliveryPersons || deliveryData.deliveryPersons || deliveryData.data || [];
+          if (Array.isArray(deliveryList) && deliveryList.length > 0) {
+            setRiders(
+              deliveryList.map((dp: any, idx: number) => ({
+                id: dp.id,
+                name: dp.name,
+                initials: dp.name
+                  ? dp.name
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)
+                  : "RK",
+                distance: `${(idx + 1) * 1.2} km away`,
+              }))
+            );
+          }
         }
       } catch (err) {
         console.error("Failed to load riders or order details:", err);
@@ -53,7 +63,7 @@ function AssignRiderContent() {
   const handleAssign = async (riderId: string) => {
     const targetOrderId = order?.id || cleanId;
     try {
-      await fetch(`/api/seller/orders/${targetOrderId}/assign`, {
+      await fetchApi(`/api/seller/orders/${targetOrderId}/assign`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deliveryPersonId: riderId }),

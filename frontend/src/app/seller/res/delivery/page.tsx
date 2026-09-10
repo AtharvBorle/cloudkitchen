@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import ResponsiveDelivery, {
   ResponsiveRiderItem,
 } from "@/components/seller/delivery/responsive/ResponsiveDelivery";
 import { fetchApi } from "@/lib/fetch-api";
 
 export default function ResponsiveDeliveryPage() {
+  const router = useRouter();
   const [deliveryData, setDeliveryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,6 +70,7 @@ export default function ResponsiveDeliveryPage() {
       ownerName="Rahul Sharma"
       totalOutstanding={totalOutstandingStr}
       riders={mappedRiders}
+      onSelectRider={(rider) => router.push(`/seller/res/delivery/handover?riderId=${rider.id}`)}
     />
   );
 }

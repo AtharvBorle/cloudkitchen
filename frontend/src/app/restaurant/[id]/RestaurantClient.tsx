@@ -16,7 +16,7 @@ interface RestaurantClientProps {
 }
 
 export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
-  const { addToCart } = useCart();
+  const { addToCart, decreaseQuantity } = useCart();
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(false);
 

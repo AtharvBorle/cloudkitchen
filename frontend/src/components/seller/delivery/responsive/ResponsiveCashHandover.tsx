@@ -60,11 +60,13 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     }, 2500);
   };
 
-  const handleBack = () => {
+  const handleBack = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (onBack) {
       onBack();
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
     } else {
       router.push("/seller/res/delivery/riders");
     }
@@ -77,7 +79,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     } else {
       showToast(`Receipt of ${totalCash} confirmed successfully!`);
       setTimeout(() => {
-        router.push("/seller/res/delivery");
+        router.push("/seller/res/delivery/riders");
       }, 1000);
     }
   };
