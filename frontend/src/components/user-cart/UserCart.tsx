@@ -5,9 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ChevronDown,
-  Globe,
-  ShoppingBag,
   MapPin,
   Tag,
   ArrowRight,
@@ -16,6 +13,7 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
+import { Navbar } from "@/components/navbar";
 import styles from "./UserCart.module.css";
 
 export interface UserCartItem {
@@ -175,105 +173,8 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   return (
     <div className={styles.userCartWrapper}>
-      {/* =========================================================
-          1. NAVBAR (1440px x 106px)
-          ========================================================= */}
-      <header className={styles.navBarWrapper}>
-        <nav className={styles.navBar}>
-          {/* Brand Left */}
-          <Link href="/" className={styles.brandLeft} aria-label="Home">
-            <div className={styles.brandLogoBox}>
-              <Image
-                src="/images/logo-nav.png"
-                alt="Neo Cloud Bites Logo"
-                width={38}
-                height={38}
-                className={styles.brandLogoImg}
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none";
-                }}
-              />
-            </div>
-            <div className={styles.brandTextGroup}>
-              <span className={styles.brandTitle}>NEO CLOUD BITES</span>
-              <div className={styles.locationSelector} title="Change Location">
-                <span>{defaultLocation}</span>
-                <ChevronDown size={14} />
-              </div>
-            </div>
-          </Link>
-
-          {/* Controls Right */}
-          <div className={styles.controlsRight}>
-            {/* Veg Only Toggle */}
-            <div
-              className={styles.vegToggleWrapper}
-              onClick={() => setIsVegOnly((prev) => !prev)}
-              role="switch"
-              aria-checked={isVegOnly}
-              title="Toggle Veg Only items"
-            >
-              <span className={styles.vegLabel}>VEG ONLY</span>
-              <div
-                className={`${styles.toggleSwitch} ${
-                  isVegOnly ? styles.toggleSwitchActive : ""
-                }`}
-              >
-                <div
-                  className={`${styles.toggleCircle} ${
-                    isVegOnly ? styles.toggleCircleActive : ""
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Language Selector */}
-            <button
-              type="button"
-              className={styles.langPillButton}
-              onClick={() =>
-                setSelectedLanguage((prev) => (prev === "EN" ? "HI" : "EN"))
-              }
-              aria-label="Select Language"
-            >
-              <Globe size={16} />
-              <span>{selectedLanguage}</span>
-              <ChevronDown size={14} />
-            </button>
-
-            {/* Cart Bag Button */}
-            <button
-              type="button"
-              className={styles.cartIconBtn}
-              aria-label="View Shopping Cart"
-              onClick={() => showToast(`You have ${totalItemsCount} items in your cart`)}
-            >
-              <ShoppingBag size={20} />
-              {totalItemsCount > 0 && (
-                <span className={styles.cartBadge}>{totalItemsCount}</span>
-              )}
-            </button>
-
-            {/* User Profile Avatar */}
-            <div
-              className={styles.userAvatarWrapper}
-              onClick={() => router.push("/dashboard/user/profile")}
-              title="User Profile"
-            >
-              <Image
-                src="/images/auth/coach-avatar.png"
-                alt="User Profile"
-                width={44}
-                height={44}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none";
-                }}
-              />
-            </div>
-          </div>
-        </nav>
-      </header>
+      {/* Shared Desktop Navbar (matching Home page navbar) */}
+      <Navbar />
 
       {/* =========================================================
           2. CHECKOUT LAYOUT CONTAINER (1440px x 974px)

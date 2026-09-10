@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { LocationProvider, useLocation } from "@/components/location-provider";
 import { HouseMapPicker } from "@/components/house-map-picker";
+import { Navbar } from "@/components/navbar";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -1104,7 +1105,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         <LocationProvider>
             <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: "var(--background)" }}>
                 <PopupBannerDisplay />
-                <UserHeader />
+                {isCheckout ? <Navbar /> : <UserHeader />}
                 <main style={{ flex: 1, padding: "var(--spacing-8) var(--spacing-6)", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
                     {children}
                 </main>
