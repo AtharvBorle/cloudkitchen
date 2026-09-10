@@ -50,3 +50,14 @@
   font-weight: 500;
 }
 
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 18px 16px;
+    border-radius: 18px;
+  }
+
+  .benefitText {
+    font-size: 0.82rem;
+  }
+}
+

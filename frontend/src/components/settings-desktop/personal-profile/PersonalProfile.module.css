@@ -54,6 +54,7 @@
   gap: 6px;
   transition: all 0.2s ease;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .editBtn:hover {
@@ -88,4 +89,22 @@
   font-weight: 700;
   color: #0f172a;
   margin: 0;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+  }
+
+  .cardHeader {
+    margin-bottom: 16px;
+  }
+
+  .fieldsGrid {
+    grid-template-columns: 1fr;
+    row-gap: 14px;
+  }
 }

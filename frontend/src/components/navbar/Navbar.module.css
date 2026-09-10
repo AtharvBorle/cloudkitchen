@@ -21,6 +21,35 @@
 }
 
 /* ================= LEFT SECTION ================= */
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobileHamburgerBtn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #1e293b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-right: 2px;
+}
+
+.mobileHamburgerBtn:hover {
+  background-color: #f8fafc;
+  color: #f97316;
+}
+
+.mobileHamburgerBtn:active {
+  transform: scale(0.95);
+}
+
 .leftSection {
   display: flex;
   align-items: center;
@@ -335,62 +364,8 @@
     display: none;
   }
 
-  .mobileMenuBtn {
+  .mobileHamburgerBtn {
     display: flex;
-  }
-
-  .mobileDrawerBackdrop {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 9998;
-    touch-action: none;
-  }
-
-  .mobileDrawer {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 280px;
-    max-width: 85vw;
-    height: 100vh;
-    bottom: 0;
-    background-color: #ffffff;
-    z-index: 9999;
-    padding: 24px 20px;
-    gap: 12px;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
-    box-sizing: border-box;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
-  }
-
-  .mobileNavItem {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #374151;
-    text-decoration: none;
-    padding: 12px 14px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .mobileNavItem:hover,
-  .mobileNavItem.active {
-    color: #ff6b00;
-    background-color: #fff7ed;
   }
 }
 
@@ -401,12 +376,12 @@
   }
 
   .logoWrapper {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
   }
 
   .brandTitle {
-    font-size: 0.88rem;
+    font-size: 0.92rem;
   }
 
   .locationContainer {
@@ -414,22 +389,39 @@
   }
 
   .rightSection {
-    gap: 8px;
+    gap: 10px;
   }
 
   .vegToggleWrapper {
     display: none;
   }
 
-  .drawerVegToggle {
-    display: flex !important;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
-    background-color: #F8FAFC;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    cursor: pointer;
+  .vegLabel {
+    font-size: 0.7rem;
+  }
+
+  .toggleTrack {
+    width: 34px;
+    height: 18px;
+  }
+
+  .toggleThumb {
+    width: 14px;
+    height: 14px;
+  }
+
+  .toggleThumbActive {
+    transform: translateX(16px);
+  }
+
+  .cartButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .profileAvatar {
+    width: 34px;
+    height: 34px;
   }
 }
 

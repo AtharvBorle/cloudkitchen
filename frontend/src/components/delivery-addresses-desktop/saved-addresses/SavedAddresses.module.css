@@ -246,3 +246,45 @@
 .trashIcon {
   color: #f97316;
 }
+
+@media (max-width: 768px) {
+  .addressesGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .addressCard {
+    padding: 18px 18px 16px 18px;
+    border-radius: 18px;
+    gap: 14px;
+    min-height: auto;
+  }
+
+  .homeMapThumbnail,
+  .officeMapThumbnail {
+    width: 68px;
+    height: 62px;
+    border-radius: 10px;
+  }
+
+  .recipientName {
+    font-size: 0.96rem;
+  }
+
+  .recipientPhone {
+    font-size: 0.82rem;
+  }
+
+  .addressLines {
+    font-size: 0.8rem;
+  }
+
+  .bottomRow {
+    padding-top: 12px;
+  }
+
+  .setLocationBtn {
+    font-size: 0.82rem;
+  }
+}

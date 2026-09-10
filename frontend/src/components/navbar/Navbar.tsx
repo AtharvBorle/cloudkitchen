@@ -8,6 +8,7 @@ import { ChevronDown, Globe, ShoppingBag, User, Menu, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { MobileSidebar } from "@/components/mobile-sidebar";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
 import profilePic from "./Rectangle.jpg";
@@ -170,35 +171,46 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className={styles.navbarHeader}>
       <div className={styles.navbarContainer}>
         {/* 1. LEFT SECTION */}
-        <Link href="/" className={styles.leftSection}>
-          <div className={styles.logoWrapper}>
-            <Image
-              src={logoImg}
-              alt="Neo Cloud Bites Logo"
-              width={58}
-              height={58}
-              className={styles.logoImage}
-              priority
-            />
-          </div>
-          <div className={styles.brandInfo}>
-            <span className={styles.brandTitle}>NEO CLOUD BITES</span>
-            <div
-              className={styles.locationContainer}
-              title="Location"
-              onClick={(e) => {
-                if (onLocationClick) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleLocationClick();
-                }
-              }}
-            >
-              <span>{displayLocation}</span>
-              <ChevronDown size={14} className={styles.locationIcon} />
+        <div className={styles.leftGroup}>
+          <button
+            type="button"
+            className={styles.mobileHamburgerBtn}
+            onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Open Navigation Menu"
+          >
+            <Menu size={24} strokeWidth={2.2} />
+          </button>
+
+          <Link href="/" className={styles.leftSection}>
+            <div className={styles.logoWrapper}>
+              <Image
+                src={logoImg}
+                alt="Neo Cloud Bites Logo"
+                width={58}
+                height={58}
+                className={styles.logoImage}
+                priority
+              />
             </div>
-          </div>
-        </Link>
+            <div className={styles.brandInfo}>
+              <span className={styles.brandTitle}>NEO CLOUD BITES</span>
+              <div
+                className={styles.locationContainer}
+                title="Location"
+                onClick={(e) => {
+                  if (onLocationClick) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleLocationClick();
+                  }
+                }}
+              >
+                <span>{displayLocation}</span>
+                <ChevronDown size={14} className={styles.locationIcon} />
+              </div>
+            </div>
+          </Link>
+        </div>
 
         {/* 2. CENTER SECTION */}
         <nav className={styles.centerSection} aria-label="Desktop Navigation">
@@ -309,106 +321,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               />
             )}
           </button>
-
-          {/* Mobile Menu Toggle Button */}
-          <button
-            type="button"
-            className={styles.mobileMenuBtn}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle Navigation Menu"
-          >
-            {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
-          </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      {isMobileMenuOpen && (
-        <>
-          <div
-            className={styles.mobileDrawerBackdrop}
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-          <div className={styles.mobileDrawer}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", paddingBottom: "8px", borderBottom: "1px solid #F1F5F9" }}>
-              <span style={{ fontSize: "14px", fontWeight: 800, color: "#A3281C" }}>MENU</span>
-              <button
-                type="button"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
-                  border: "1px solid #E2E8F0",
-                  backgroundColor: "#F8FAFC",
-                  color: "#64748B",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  touchAction: "manipulation",
-                }}
-                aria-label="Close menu"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Mobile Drawer Veg Only Toggle */}
-            <div
-              className={styles.drawerVegToggle}
-              style={{ display: "none" }}
-              onClick={toggleVegOnly}
-              role="switch"
-              aria-checked={currentVegOnly}
-            >
-              <span style={{ fontSize: "13px", fontWeight: 700, color: "#22C55E" }}>VEG ONLY</span>
-              <div
-                className={`${styles.toggleTrack} ${
-                  currentVegOnly ? styles.toggleTrackActive : ""
-                }`}
-              >
-                <div
-                  className={`${styles.toggleThumb} ${
-                    currentVegOnly ? styles.toggleThumbActive : ""
-                  }`}
-                />
-              </div>
-            </div>
-
-            {navItems.map((item) => {
-              const isActive = currentActiveItem === item;
-              return (
-                <div
-                  key={item}
-                  className={`${styles.mobileNavItem} ${isActive ? styles.active : ""}`}
-                  onClick={() => handleNavClick(item)}
-                >
-                  {item}
-                </div>
-              );
-            })}
-            <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #E5E7EB" }}>
-              <div
-                onClick={handleProfileClick}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "10px 12px",
-                  cursor: "pointer",
-                  color: "#374151",
-                  fontWeight: 600,
-                  touchAction: "manipulation",
-                }}
-              >
-                <User size={20} color="#FF5500" />
-                <span>{session?.user ? (session.user.name || "My Account") : "Sign In"}</span>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Slide-out Mobile Sidebar Drawer */}
+      <MobileSidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        activeItem={
+          currentActiveItem === "Orders"
+            ? "My Orders"
+            : currentActiveItem
+        }
+        userName={session?.user?.name || "Siddharth Sharma"}
+      />
     </header>
   );
 };

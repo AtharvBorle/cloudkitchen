@@ -67,8 +67,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.iconCircleBtn:active {
-  transform: scale(0.92);
+.floatingLeftBtns {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 2vw, 10px);
 }
 
 .floatingRightBtns {

@@ -8,24 +8,29 @@ import { PersonalProfile } from "@/components/settings-desktop/personal-profile"
 import { ActiveSubscriptionsNotifications } from "@/components/settings-desktop/active-subscriptions-notifications";
 import { DeliveryAddresses } from "@/components/settings-desktop/delivery-addresses";
 import { PaymentMethods } from "@/components/settings-desktop/payment-methods";
+import styles from "./SettingsPage.module.css";
 
 export default function SettingsDesktopPage() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
-      {/* 1. Shared Desktop Navbar with 'Settings' Active */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Settings"
-      />
+    <div className={styles.pageWrapper}>
+      {/* 1. Shared Desktop Navbar with 'Settings' Active (hidden on mobile <=768px) */}
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Settings"
+        />
+      </div>
 
-      <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "32px 32px 64px 32px", boxSizing: "border-box", flex: 1 }}>
-        <div style={{ display: "flex", gap: "32px", alignItems: "flex-start" }}>
-          {/* Left Column: Modular Settings Sidebar */}
-          <SettingsSidebar />
+      <main className={styles.mainContainer}>
+        <div className={styles.layoutRow}>
+          {/* Left Column: Modular Settings Sidebar (hidden on mobile <=992px) */}
+          <div className={styles.sidebarWrapper}>
+            <SettingsSidebar />
+          </div>
 
           {/* Right Column: Modular Settings Content Sections */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* 2. General Settings Header */}
+          <div className={styles.contentWrapper}>
+            {/* 2. General Settings Header with mobile hamburger */}
             <SettingsHeader />
 
             {/* 3. Personal Profile Card */}

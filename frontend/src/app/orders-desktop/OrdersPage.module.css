@@ -1,0 +1,39 @@
+.pageWrapper {
+  min-height: 100vh;
+  background-color: #FFF4E6;
+  display: flex;
+  flex-direction: column;
+}
+
+.desktopNavbar {
+  display: block;
+}
+
+.mainContent {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 32px 64px 32px;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .mainContent {
+    padding: 24px 20px 48px 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktopNavbar {
+    display: none;
+  }
+
+  .pageWrapper {
+    background-color: #ffffff;
+  }
+
+  .mainContent {
+    padding: 14px 16px clamp(24px, 6vw, 48px) 16px;
+  }
+}

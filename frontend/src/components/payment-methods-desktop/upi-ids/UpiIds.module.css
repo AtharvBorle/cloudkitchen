@@ -95,3 +95,32 @@
 .trashIcon {
   color: #ef4444;
 }
+
+@media (max-width: 768px) {
+  .sectionHeading {
+    font-size: 0.78rem;
+    margin-bottom: 12px;
+  }
+
+  .cardContainer {
+    padding: 4px 18px;
+    border-radius: 20px;
+  }
+
+  .upiRow {
+    padding: 14px 0;
+  }
+
+  .iconContainer {
+    width: 38px;
+    height: 38px;
+  }
+
+  .upiTitle {
+    font-size: 0.94rem;
+  }
+
+  .upiSubtitle {
+    font-size: 0.82rem;
+  }
+}

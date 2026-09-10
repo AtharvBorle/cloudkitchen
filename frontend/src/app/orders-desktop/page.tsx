@@ -7,6 +7,8 @@ import { ActiveOrders, DynamicActiveFoodOrder, DynamicActiveBooking } from "@/co
 import { PastOrders, PastOrderItem } from "@/components/orders-desktop/past-orders";
 import { fetchApi } from "@/lib/fetch-api";
 
+import styles from "./OrdersPage.module.css";
+
 export default function OrdersDesktopPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -144,14 +146,16 @@ export default function OrdersDesktopPage() {
   }, [orders]);
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
-      {/* 1. Shared Desktop Navbar Component */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Orders"
-      />
+    <div className={styles.pageWrapper}>
+      {/* 1. Shared Desktop Navbar Component (hidden on mobile <=768px) */}
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Orders"
+        />
+      </div>
 
-      <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "32px 32px 64px 32px", boxSizing: "border-box", flex: 1 }}>
+      <main className={styles.mainContent}>
         {/* 2. My Orders Header & Category Filters */}
         <OrdersHeader />
 

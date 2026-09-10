@@ -96,3 +96,70 @@
   font-weight: 900;
   color: #f97316;
 }
+
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 18px 16px;
+    border-radius: 18px;
+    margin-bottom: 16px;
+  }
+
+  .topRow {
+    padding-bottom: 16px;
+  }
+
+  .planTitle {
+    font-size: 1.1rem;
+  }
+
+  .planSubtitle {
+    font-size: 0.8rem;
+  }
+
+  .activeBadge {
+    padding: 4px 12px;
+    font-size: 0.68rem;
+  }
+
+  .statsRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 16px;
+  }
+
+  .statLabel {
+    font-size: 0.65rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .statValue {
+    font-size: 0.86rem;
+    white-space: nowrap;
+  }
+
+  .priceValue {
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .statsRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .statLabel {
+    font-size: 0.58rem;
+  }
+
+  .statValue {
+    font-size: 0.78rem;
+  }
+
+  .priceValue {
+    font-size: 0.82rem;
+  }
+}

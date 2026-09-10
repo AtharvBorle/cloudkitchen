@@ -27,3 +27,12 @@
 .plusIcon {
   color: #ffffff;
 }
+
+@media (max-width: 768px) {
+  .addButton {
+    height: 48px;
+    font-size: 0.96rem;
+    border-radius: 14px;
+    margin-top: 20px;
+  }
+}

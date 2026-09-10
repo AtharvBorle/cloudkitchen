@@ -59,6 +59,7 @@
   transition: background-color 0.2s ease;
   padding: 2px;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .switchTrackActive {
@@ -139,6 +140,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
 .notifInfo {
@@ -159,4 +161,17 @@
   color: #64748b;
   font-weight: 500;
   margin: 0;
+}
+
+@media (max-width: 900px) {
+  .sectionContainer {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .summaryCard {
+    padding: 16px;
+    border-radius: 16px;
+  }
 }

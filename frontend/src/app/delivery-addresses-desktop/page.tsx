@@ -7,22 +7,28 @@ import { AddressesHeader } from "@/components/delivery-addresses-desktop/address
 import { SavedAddresses } from "@/components/delivery-addresses-desktop/saved-addresses";
 import { AddAddressButton } from "@/components/delivery-addresses-desktop/add-address-button";
 
+import styles from "./DeliveryAddressesPage.module.css";
+
 export default function DeliveryAddressesDesktopPage() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
+    <div className={styles.pageWrapper}>
       {/* 1. Shared Desktop Navbar with Settings Active */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Settings"
-      />
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Settings"
+        />
+      </div>
 
-      <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "32px 32px 64px 32px", boxSizing: "border-box", flex: 1 }}>
-        <div style={{ display: "flex", gap: "32px", alignItems: "flex-start" }}>
+      <main className={styles.mainContainer}>
+        <div className={styles.layoutRow}>
           {/* Left Column: Shared Profile Sidebar with Delivery Addresses Active */}
-          <SettingsSidebar activeTabId="delivery-addresses" />
+          <div className={styles.sidebarWrapper}>
+            <SettingsSidebar activeTabId="delivery-addresses" />
+          </div>
 
           {/* Right Column: Delivery Addresses Content Sections */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className={styles.contentWrapper}>
             {/* 2. Delivery Addresses Header */}
             <AddressesHeader />
 

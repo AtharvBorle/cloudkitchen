@@ -128,3 +128,34 @@
   color: #0f172a;
   transform: translateX(3px);
 }
+
+@media (max-width: 768px) {
+  .sectionHeading {
+    font-size: 0.78rem;
+    margin-bottom: 12px;
+  }
+
+  .cardContainer {
+    padding: 4px 18px;
+    border-radius: 20px;
+  }
+
+  .optionRow {
+    padding: 14px 0;
+  }
+
+  .greenIconContainer,
+  .blueIconContainer,
+  .yellowIconContainer {
+    width: 38px;
+    height: 38px;
+  }
+
+  .optionTitle {
+    font-size: 0.94rem;
+  }
+
+  .optionSubtitle {
+    font-size: 0.82rem;
+  }
+}

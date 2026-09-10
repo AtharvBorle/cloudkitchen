@@ -8,6 +8,8 @@ import { OrderFilters, OrderFilterTab } from "@/components/order-history-desktop
 import { OrderList, OrderItemData, SAMPLE_ORDERS } from "@/components/order-history-desktop/order-list";
 import { fetchApi } from "@/lib/fetch-api";
 
+import styles from "./OrderHistoryPage.module.css";
+
 export default function OrderHistoryDesktopPage() {
   const [activeTab, setActiveTab] = useState<OrderFilterTab>("all");
   const [liveOrders, setLiveOrders] = useState<OrderItemData[] | null>(null);
@@ -84,20 +86,24 @@ export default function OrderHistoryDesktopPage() {
   }, [ordersToFilter, activeTab]);
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", flexDirection: "column" }}>
+    <div className={styles.pageWrapper}>
       {/* 1. Shared Desktop Navbar with Settings Active */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Settings"
-      />
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Settings"
+        />
+      </div>
 
-      <main style={{ maxWidth: "1400px", width: "100%", margin: "0 auto", padding: "32px 32px 64px 32px", boxSizing: "border-box", flex: 1 }}>
-        <div style={{ display: "flex", gap: "32px", alignItems: "flex-start" }}>
+      <main className={styles.mainContainer}>
+        <div className={styles.layoutRow}>
           {/* Left Column: Shared Profile Sidebar with Order History Active */}
-          <SettingsSidebar activeTabId="order-history" />
+          <div className={styles.sidebarWrapper}>
+            <SettingsSidebar activeTabId="order-history" />
+          </div>
 
           {/* Right Column: Order History Content Sections */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className={styles.contentWrapper}>
             {/* 2. Order History Header */}
             <OrderHistoryHeader />
 
