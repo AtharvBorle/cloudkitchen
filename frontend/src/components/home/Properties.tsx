@@ -126,19 +126,28 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
 ];
 
 const CUISINES = [
-  { id: "italian", label: "Italian", count: 12, defaultChecked: true },
-  { id: "american", label: "American", count: 18, defaultChecked: true },
-  { id: "healthy", label: "Healthy / Bowls", count: 8, defaultChecked: true },
-  { id: "japanese", label: "Japanese", count: 6, defaultChecked: false },
-  { id: "indian", label: "Indian / Mughlai", count: 24, defaultChecked: false },
-  { id: "mexican", label: "Mexican", count: 10, defaultChecked: false },
+  { id: "biryani", label: "Biryani & Mughlai", count: 24 },
+  { id: "homemeals", label: "Homely Meals / Thali", count: 18 },
+  { id: "italian", label: "Pizzas & Italian", count: 16 },
+  { id: "healthy", label: "Healthy Bowls & Salads", count: 12 },
+  { id: "bakery", label: "Bakery & Desserts", count: 14 },
+  { id: "fastfood", label: "Burgers & Fast Food", count: 20 },
+  { id: "chinese", label: "Chinese & Asian", count: 10 },
+  { id: "south-indian", label: "South Indian", count: 8 },
 ];
 
 const DIETARY = [
-  { id: "veg", label: "Vegetarian", count: 15, defaultChecked: false },
-  { id: "vegan", label: "Vegan", count: 4, defaultChecked: false },
-  { id: "gluten-free", label: "Gluten-Free", count: 6, defaultChecked: false },
-  { id: "halal", label: "Halal Certified", count: 11, defaultChecked: false },
+  { id: "veg", label: "Pure Veg 🥦", count: 22 },
+  { id: "non-veg", label: "Non-Veg 🍗", count: 18 },
+  { id: "vegan", label: "Vegan (Plant-Based 🌱)", count: 6 },
+  { id: "jain", label: "Jain / Satvik 🌿", count: 8 },
+  { id: "halal", label: "Halal Certified ☪️", count: 12 },
+];
+
+const PRICE_TIERS = [
+  { id: "under-150", label: "₹", title: "Under ₹150 (Budget)" },
+  { id: "150-300", label: "₹₹", title: "₹150 – ₹300 (Standard)" },
+  { id: "300-plus", label: "₹₹₹", title: "₹300+ (Premium)" },
 ];
 
 interface PropertiesProps {
@@ -152,16 +161,44 @@ export default function Properties({ places }: PropertiesProps) {
 
   const basePlaces = places && places.length > 0 ? places : SAMPLE_PLACES;
 
-  // Compute dynamic cuisine counts
+  // Compute dynamic cuisine counts from available places
   const dynamicCuisines = React.useMemo(() => {
     return CUISINES.map((c) => {
-      const matchCount = basePlaces.filter((p) =>
-        p.category.toLowerCase().includes(c.id) ||
-        p.category.toLowerCase().includes(c.label.toLowerCase().split("/")[0].trim())
-      ).length;
+      const matchCount = basePlaces.filter((p) => {
+        const cat = p.category.toLowerCase();
+        const name = p.name.toLowerCase();
+        if (c.id === "biryani") return cat.includes("biryani") || cat.includes("mughlai") || cat.includes("indian") || name.includes("biryani");
+        if (c.id === "homemeals") return cat.includes("mess") || cat.includes("homemeal") || cat.includes("thali") || cat.includes("maharashtrian");
+        if (c.id === "italian") return cat.includes("italian") || cat.includes("pizza") || name.includes("pizza");
+        if (c.id === "healthy") return cat.includes("healthy") || cat.includes("salad") || cat.includes("organic") || cat.includes("bowl");
+        if (c.id === "bakery") return cat.includes("bakery") || cat.includes("cake") || cat.includes("dessert");
+        if (c.id === "fastfood") return cat.includes("burger") || cat.includes("snack") || cat.includes("fast food");
+        if (c.id === "chinese") return cat.includes("chinese") || cat.includes("noodle") || cat.includes("wok");
+        if (c.id === "south-indian") return cat.includes("south") || cat.includes("dosa");
+        return cat.includes(c.id);
+      }).length;
       return {
         ...c,
         count: matchCount > 0 ? matchCount : c.count,
+      };
+    });
+  }, [basePlaces]);
+
+  // Compute dynamic dietary counts
+  const dynamicDietary = React.useMemo(() => {
+    return DIETARY.map((d) => {
+      const matchCount = basePlaces.filter((p) => {
+        const cat = p.category.toLowerCase();
+        if (d.id === "veg") return cat.includes("veg") && !cat.includes("non-veg");
+        if (d.id === "non-veg") return cat.includes("non-veg") || cat.includes("biryani") || cat.includes("mughlai");
+        if (d.id === "vegan") return cat.includes("vegan") || cat.includes("organic");
+        if (d.id === "jain") return cat.includes("satvik") || cat.includes("jain") || cat.includes("pure veg");
+        if (d.id === "halal") return cat.includes("halal") || cat.includes("biryani");
+        return true;
+      }).length;
+      return {
+        ...d,
+        count: matchCount > 0 ? matchCount : d.count,
       };
     });
   }, [basePlaces]);
@@ -171,18 +208,34 @@ export default function Properties({ places }: PropertiesProps) {
     let list = basePlaces;
 
     if (selectedCuisines.length > 0) {
-      list = list.filter((p) =>
-        selectedCuisines.some((c) =>
-          p.category.toLowerCase().includes(c)
-        )
-      );
+      list = list.filter((p) => {
+        const cat = p.category.toLowerCase();
+        const name = p.name.toLowerCase();
+        return selectedCuisines.some((c) => {
+          if (c === "biryani") return cat.includes("biryani") || cat.includes("mughlai") || cat.includes("indian") || name.includes("biryani");
+          if (c === "homemeals") return cat.includes("mess") || cat.includes("homemeal") || cat.includes("thali") || cat.includes("maharashtrian");
+          if (c === "italian") return cat.includes("italian") || cat.includes("pizza") || name.includes("pizza");
+          if (c === "healthy") return cat.includes("healthy") || cat.includes("salad") || cat.includes("organic") || cat.includes("bowl");
+          if (c === "bakery") return cat.includes("bakery") || cat.includes("cake") || cat.includes("dessert");
+          if (c === "fastfood") return cat.includes("burger") || cat.includes("snack") || cat.includes("fast food");
+          if (c === "chinese") return cat.includes("chinese") || cat.includes("noodle") || cat.includes("wok");
+          if (c === "south-indian") return cat.includes("south") || cat.includes("dosa");
+          return cat.includes(c);
+        });
+      });
     }
 
     if (selectedDietary.length > 0) {
       if (selectedDietary.includes("veg")) {
         list = list.filter((p) =>
-          p.category.toLowerCase().includes("veg") ||
+          p.category.toLowerCase().includes("veg") &&
           !p.category.toLowerCase().includes("non-veg")
+        );
+      }
+      if (selectedDietary.includes("non-veg")) {
+        list = list.filter((p) =>
+          p.category.toLowerCase().includes("non-veg") ||
+          p.category.toLowerCase().includes("biryani")
         );
       }
       if (selectedDietary.includes("vegan")) {
@@ -395,7 +448,7 @@ export default function Properties({ places }: PropertiesProps) {
               Dietary Preferences
             </h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {DIETARY.map((item) => {
+              {dynamicDietary.map((item) => {
                 const isChecked = selectedDietary.includes(item.id);
                 return (
                   <div
@@ -457,7 +510,7 @@ export default function Properties({ places }: PropertiesProps) {
             </div>
           </div>
 
-          {/* Section 3: Price Range */}
+          {/* Section 3: Price Range (Indian Rupee Tiers) */}
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <h4
               style={{
@@ -471,13 +524,14 @@ export default function Properties({ places }: PropertiesProps) {
               Price Range
             </h4>
             <div style={{ display: "flex", gap: "10px" }}>
-              {["$", "$$", "$$$"].map((tier) => {
-                const isSelected = priceTier === tier;
+              {PRICE_TIERS.map((tier) => {
+                const isSelected = priceTier === tier.id;
                 return (
                   <button
-                    key={tier}
+                    key={tier.id}
                     type="button"
-                    onClick={() => setPriceTier(tier)}
+                    title={tier.title}
+                    onClick={() => setPriceTier(isSelected ? null : tier.id)}
                     style={{
                       flex: 1,
                       height: "38px",
@@ -487,14 +541,14 @@ export default function Properties({ places }: PropertiesProps) {
                         : "1px solid #E2E8F0",
                       backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
                       color: isSelected ? "#FF6B00" : "#334155",
-                      fontWeight: isSelected ? "700" : "600",
-                      fontSize: "14px",
+                      fontWeight: isSelected ? "800" : "600",
+                      fontSize: "15px",
                       cursor: "pointer",
                       transition: "all 0.15s ease",
                       fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                     }}
                   >
-                    {tier}
+                    {tier.label}
                   </button>
                 );
               })}
