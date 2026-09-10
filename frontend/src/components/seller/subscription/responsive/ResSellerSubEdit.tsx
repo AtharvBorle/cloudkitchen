@@ -13,6 +13,7 @@ import {
   X,
   CheckCircle2,
   AlertTriangle,
+  Bell,
 } from "lucide-react";
 import styles from "./ResSellerSubEdit.module.css";
 
@@ -228,13 +229,14 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             <button
               type="button"
               className={styles.moreButton}
-              onClick={() => setToastMessage("Plan options")}
-              aria-label="More options"
-              title="More options"
+              onClick={() => router.push("/seller/res/notifications")}
+              aria-label="Notifications"
+              title="Notifications"
             >
-              <MoreHorizontal size={20} />
+              <Bell size={18} />
             </button>
           </div>
+
 
           <p className={styles.headerSubtitle}>
             Update plan details, pricing, features, and policies.

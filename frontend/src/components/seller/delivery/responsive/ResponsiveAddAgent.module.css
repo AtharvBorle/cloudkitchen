@@ -100,10 +100,37 @@
   text-align: center;
 }
 
+.iconButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
 .headerPlaceholder {
   width: 38px;
   height: 38px;
 }
+
 
 /* Content Area */
 .contentArea {

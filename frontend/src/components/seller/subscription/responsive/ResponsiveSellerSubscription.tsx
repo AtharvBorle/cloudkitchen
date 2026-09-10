@@ -14,6 +14,7 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
+  Bell,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveSellerSubscription.module.css";
@@ -255,17 +256,17 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             <p className={styles.headerSubtitle}>your active plans &amp; meal deliveries</p>
           </div>
 
-          {/* Top-Right Back Button with Back text for UX */}
+          {/* Top-Right Notification Bell */}
           <div className={styles.headerRight}>
             <button
               type="button"
-              className={styles.backButton}
-              onClick={handleBackClick}
-              aria-label="Back to Dashboard"
-              title="Back"
+              className={styles.iconButton}
+              onClick={() => router.push("/seller/res/notifications")}
+              aria-label="Notifications"
+              title="Notifications"
             >
-              <ChevronLeft size={16} strokeWidth={2.5} />
-              <span className={styles.backText}>Back</span>
+              <Bell size={22} />
+              <span className={styles.notificationDot} />
             </button>
           </div>
         </header>

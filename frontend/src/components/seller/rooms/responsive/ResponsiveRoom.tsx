@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Menu as MenuIcon, Plus, User, ChevronRight } from "lucide-react";
+import { Menu as MenuIcon, Plus, User, ChevronRight, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveRoom.module.css";
 
@@ -142,15 +142,27 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
 
           <h1 className={styles.pageTitle}>Rooms</h1>
 
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={handleAddRoomClick}
-            aria-label="Add Room"
-            title="Add Room"
-          >
-            <Plus size={24} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => router.push("/seller/res/notifications")}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell size={22} />
+              <span className={styles.notificationDot} />
+            </button>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={handleAddRoomClick}
+              aria-label="Add Room"
+              title="Add Room"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
         </header>
 
         {/* Rooms List Content Area */}

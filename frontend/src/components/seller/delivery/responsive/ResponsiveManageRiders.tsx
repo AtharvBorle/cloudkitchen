@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, UserPlus, CheckCircle2, Copy, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, CheckCircle2, Copy, X, Bell } from "lucide-react";
 import styles from "./ResponsiveManageRiders.module.css";
 
 export interface ManagedRiderItem {
@@ -128,7 +128,15 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
 
           <h1 className={styles.headerTitle}>Manage Riders</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={20} />
+          </button>
         </header>
 
         {/* Content Area */}

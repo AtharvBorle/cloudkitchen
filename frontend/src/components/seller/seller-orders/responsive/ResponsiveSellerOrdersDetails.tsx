@@ -10,6 +10,7 @@ import {
   Bike,
   Package,
   CheckCircle2,
+  Bell,
 } from "lucide-react";
 import styles from "./ResponsiveSellerOrdersDetails.module.css";
 
@@ -114,7 +115,15 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
           <h1 className={styles.orderHeaderTitle}>Order {orderId}</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={22} />
+          </button>
         </header>
 
         {/* Scrollable Content */}

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
+import { ChevronLeft, Eye, EyeOff, CheckCircle2, Loader2, Bell } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./ResponsiveAddAgent.module.css";
 
@@ -162,7 +162,15 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
 
           <h1 className={styles.headerTitle}>Add Delivery Agent</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={20} />
+          </button>
         </header>
 
         {/* Content Area */}

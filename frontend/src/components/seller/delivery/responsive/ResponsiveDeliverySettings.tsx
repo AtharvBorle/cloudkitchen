@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Bell } from "lucide-react";
 import styles from "./ResponsiveDeliverySettings.module.css";
 
 export interface DeliverySettingsData {
@@ -116,7 +116,15 @@ export const ResponsiveDeliverySettings: React.FC<
 
           <h1 className={styles.headerTitle}>Delivery Settings</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={20} />
+          </button>
         </header>
 
         {/* Form Content Area */}

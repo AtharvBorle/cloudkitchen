@@ -117,8 +117,20 @@
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 0;
+  position: relative;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+.notificationDot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #F97316;
+  border: 1.5px solid #FFFFFF;
 }
 
 .iconButton:hover {
@@ -126,6 +138,7 @@
   color: #F97316;
   border-color: #CBD5E1;
 }
+
 
 .iconButton:active {
   transform: scale(0.95);

@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+
 import {
   Menu as MenuIcon,
   CheckCircle2,
@@ -160,7 +162,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   onSave,
   onSyncDevices,
 }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<SettingsTabType>("General");
+
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({
     ...INITIAL_SETTINGS,
@@ -271,12 +275,13 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
           <button
             type="button"
-            className={styles.avatarCircle}
-            onClick={() => setIsNavMenuOpen(true)}
-            aria-label="Open Navigation Menu"
-            title="Open Menu"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
           >
-            {avatarInitials}
+            <Bell size={22} />
+            <span className={styles.notificationDot} />
           </button>
         </header>
 

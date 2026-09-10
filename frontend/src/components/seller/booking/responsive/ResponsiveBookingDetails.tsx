@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Phone, Bed, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import { ChevronLeft, Phone, Bed, Calendar, CheckCircle2, XCircle, Bell } from "lucide-react";
 import styles from "./ResponsiveBookingDetails.module.css";
 
 export type BookingProgressStep =
@@ -130,7 +130,15 @@ export const ResponsiveBookingDetails: React.FC<
 
           <h1 className={styles.headerTitle}>Booking #{bookingId}</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={22} />
+          </button>
         </header>
 
         {/* Scrollable Content Area */}

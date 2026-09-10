@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, CheckCircle2, Copy } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Copy, Bell } from "lucide-react";
 import styles from "./ResponsiveAssignRider.module.css";
 
 export interface AvailableRiderItem {
@@ -107,7 +107,15 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
 
           <h1 className={styles.headerTitle}>Assign Rider</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={20} />
+          </button>
         </header>
 
         {/* Content Area */}

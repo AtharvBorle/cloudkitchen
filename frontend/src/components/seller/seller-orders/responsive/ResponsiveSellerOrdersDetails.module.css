@@ -94,10 +94,38 @@
   margin: 0;
 }
 
+.iconButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: #F1F5F9;
+}
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
 .headerPlaceholder {
   width: 44px;
   height: 44px;
 }
+
 
 /* Main Scrollable Content Area */
 .contentArea {
