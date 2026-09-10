@@ -83,6 +83,7 @@ export default function Topbar({
             margin: 0,
             letterSpacing: "-0.2px",
           }}
+          className="topbar-title"
         >
           {title}
         </h2>
@@ -149,6 +150,7 @@ export default function Topbar({
             cursor: "pointer",
             color: "#64748B",
             transition: "all 0.15s ease",
+            flexShrink: 0,
           }}
           className="notification-btn"
           title="Notifications"
@@ -216,6 +218,13 @@ export default function Topbar({
           .seller-topbar {
             padding: 0 16px !important;
           }
+          .topbar-title {
+            font-size: 15px !important;
+            max-width: 220px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
           .mobile-menu-trigger {
             display: flex !important;
           }
@@ -224,6 +233,15 @@ export default function Topbar({
           }
           .topbar-user-pill {
             display: none !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .seller-topbar {
+            padding: 0 12px !important;
+          }
+          .topbar-title {
+            font-size: 14px !important;
+            max-width: 180px !important;
           }
         }
       `}</style>
