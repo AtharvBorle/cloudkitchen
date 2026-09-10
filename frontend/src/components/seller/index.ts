@@ -33,6 +33,24 @@ export type {
   PlanServiceItem as ResponsivePlanServiceItem,
 } from "./seller-profile/responsive/ResSellerProfile";
 
+export { default as SettingsCanvas } from "./seller-settings/SettingsCanvas";
+export type { SettingsCanvasProps, SettingsFormData, OperatingHoursItem, SettingsTab } from "./seller-settings/SettingsCanvas";
+
+export { default as SettingsCanvasDas, default as SellerSettingsCanvasDas } from "./seller-settings/SettingsCanvasDas";
+export type { SettingsCanvasDasProps } from "./seller-settings/SettingsCanvasDas";
+
+export { default as SellerSettings, default as SellerSettingsConsole } from "./seller-settings/SellerSettings";
+export type { SellerSettingsProps, SellerSettingsData } from "./seller-settings/SellerSettings";
+
+export { default as ResponsiveSellerSettings, default as SellerSettingsResponsive } from "./seller-settings/responsive/ResponsiveSellerSettings";
+export type {
+  ResponsiveSellerSettingsProps,
+  ResponsiveSellerSettingsData,
+  OperatingHoursDay,
+  SettingsTabType,
+} from "./seller-settings/responsive/ResponsiveSellerSettings";
+
+
 
 // ==========================================
 // 3. Seller Operations Pages (Yash)
