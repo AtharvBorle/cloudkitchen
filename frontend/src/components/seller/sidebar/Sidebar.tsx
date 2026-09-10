@@ -217,9 +217,9 @@ export default function SellerSidebar({
           zIndex: 50,
           transition: "width 0.25s ease, transform 0.3s ease",
         }}
-        className={`${styles.sellerSidebar} seller-sidebar ${isMobileOpen ? "open" : ""} ${
-          isEffectiveCollapsed ? styles.collapsed : styles.expanded
-        }`}
+        className={`${styles.sellerSidebar} seller-sidebar ${
+          isMobileOpen ? `${styles.open} open` : ""
+        } ${isEffectiveCollapsed ? styles.collapsed : styles.expanded}`}
         aria-label="Seller Operations Navigation"
       >
         {/* Brand Header */}
@@ -498,17 +498,28 @@ export default function SellerSidebar({
         .nav-logout-btn:hover {
           background-color: #FEF2F2 !important;
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
           .seller-sidebar {
             position: fixed !important;
-            top: 0;
-            left: 0;
-            transform: translateX(-100%);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            z-index: 1000 !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            width: 280px !important;
+            min-width: 280px !important;
+            max-width: 85vw !important;
+            padding: 20px 16px !important;
+            transform: translateX(-100%) !important;
+            box-shadow: 6px 0 28px rgba(0, 0, 0, 0.16) !important;
+            z-index: 10000 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
           }
           .seller-sidebar.open {
-            transform: translateX(0);
+            transform: translateX(0) !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
           }
           .sidebar-close-btn {
             display: flex !important;
