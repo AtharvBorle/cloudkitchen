@@ -360,8 +360,8 @@ export default function ChatbotWidget() {
         };
     }, [status, session]);
 
-    // Hide chatbot on Superadmin, Admin, Support, and Seller Responsive pages
-    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard/support") || pathname?.startsWith("/seller/res")) {
+    // Hide chatbot on Superadmin, Admin, Support, and Seller pages
+    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard/support") || pathname?.startsWith("/seller")) {
         return null;
     }
 

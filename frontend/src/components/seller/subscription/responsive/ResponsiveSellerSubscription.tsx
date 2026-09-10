@@ -130,7 +130,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/dashboard");
+      router.push("/seller/dashboard");
     }
   };
 
@@ -139,7 +139,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     if (onCreatePlan) {
       onCreatePlan();
     } else {
-      router.push("/seller/res/subscription/newPlan");
+      router.push("/seller/subscription/newPlan");
     }
   };
 
@@ -149,7 +149,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     if (onEditPlan) {
       onEditPlan(plan);
     } else {
-      router.push("/seller/res/subscription/editPlan");
+      router.push("/seller/subscription/editPlan");
     }
   };
 
@@ -235,7 +235,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             >
               <MenuIcon size={24} />
             </button>
-            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <Link href="/seller/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
               <div className={styles.headerLogoWrapper}>
                 <Image
                   src="/images/logo-nav.png"
@@ -502,7 +502,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                 className={styles.modalActionBtn}
                 onClick={() => {
                   setSelectedPlanPreview(null);
-                  router.push("/seller/res/subscription/editPlan");
+                  router.push("/seller/subscription/editPlan");
                 }}
               >
                 Edit Full Configuration

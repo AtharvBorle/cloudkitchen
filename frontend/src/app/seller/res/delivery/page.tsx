@@ -70,7 +70,7 @@ export default function ResponsiveDeliveryPage() {
       ownerName="Rahul Sharma"
       totalOutstanding={totalOutstandingStr}
       riders={mappedRiders}
-      onSelectRider={(rider) => router.push(`/seller/res/delivery/handover?riderId=${rider.id}`)}
+      onSelectRider={(rider) => router.push(`/seller/delivery/handover?riderId=${rider.id}`)}
     />
   );
 }

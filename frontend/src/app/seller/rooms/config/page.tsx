@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import RoomConfigCanvasDas from "@/components/seller/rooms/RoomConfigCanvasDas";
+import { RoomConfigCanvasDas, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveRoomAddPage from "@/app/seller/res/rooms/add/page";
 
 export const metadata: Metadata = {
   title: "Room Configurator | Neo Cloud Kitchen",
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerRoomConfigPage() {
-  return <RoomConfigCanvasDas />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<RoomConfigCanvasDas />}
+      mobile={<ResponsiveRoomAddPage />}
+    />
+  );
 }

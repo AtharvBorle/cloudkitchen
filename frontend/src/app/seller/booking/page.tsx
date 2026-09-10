@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import BookingCanvasDas from "@/components/seller/booking/BookingCanvasDas";
+import { BookingCanvasDas, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveBookingPage from "@/app/seller/res/booking/page";
 
 export const metadata: Metadata = {
   title: "Reservations Ledger & Booking Management | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerBookingPage() {
-  return <BookingCanvasDas />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<BookingCanvasDas />}
+      mobile={<ResponsiveBookingPage />}
+    />
+  );
 }

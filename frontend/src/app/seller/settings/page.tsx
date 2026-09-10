@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import SettingsCanvasDas from "@/components/seller/seller-settings/SettingsCanvasDas";
+import { SettingsCanvasDas, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveSellerSettingsPage from "@/app/seller/res/settings/page";
 
 export const metadata: Metadata = {
   title: "Settings | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerSettingsPage() {
-  return <SettingsCanvasDas />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<SettingsCanvasDas />}
+      mobile={<ResponsiveSellerSettingsPage />}
+    />
+  );
 }

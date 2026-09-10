@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import SubscriptionEditCanvasDas from "@/components/seller/subscription/SubscriptionEditCanvasDas";
+import { SubscriptionEditCanvasDas, SellerResponsiveWrapper } from "@/components/seller";
+import EditSubscriptionPlanPage from "@/app/seller/res/subscription/editPlan/page";
 
 export const metadata: Metadata = {
   title: "Edit Subscription Plan | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerSubscriptionEditPage() {
-  return <SubscriptionEditCanvasDas />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<SubscriptionEditCanvasDas />}
+      mobile={<EditSubscriptionPlanPage />}
+    />
+  );
 }

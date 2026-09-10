@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SellerMenu } from "@/components/seller";
+import { SellerMenu, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveMenuPage from "@/app/seller/res/menu/page";
 
 export const metadata: Metadata = {
   title: "Menu Inventory | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerMenuPage() {
-  return <SellerMenu />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<SellerMenu />}
+      mobile={<ResponsiveMenuPage />}
+    />
+  );
 }

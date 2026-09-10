@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Profile from "@/components/seller/seller-profile/Profile";
+import { Profile, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveSellerProfilePage from "@/app/seller/res/profile/page";
 
 export const metadata: Metadata = {
   title: "Partner Profile Settings | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerProfilePage() {
-  return <Profile />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<Profile />}
+      mobile={<ResponsiveSellerProfilePage />}
+    />
+  );
 }

@@ -106,7 +106,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
     if (onAddItem) {
       onAddItem();
     } else {
-      router.push("/seller/res/menu/item");
+      router.push("/seller/menu/item");
     }
   };
 
@@ -186,7 +186,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
             >
               <MenuIcon size={24} />
             </button>
-            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <Link href="/seller/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
               <div className={styles.headerLogoWrapper}>
                 <Image
                   src="/images/logo-nav.png"

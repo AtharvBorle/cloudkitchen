@@ -67,7 +67,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/rooms");
+      router.push("/seller/rooms");
     }
   };
 
@@ -107,7 +107,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
     if (onSave) {
       onSave(data);
     } else {
-      router.push("/seller/res/rooms");
+      router.push("/seller/rooms");
     }
   };
 

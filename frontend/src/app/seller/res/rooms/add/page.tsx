@@ -41,7 +41,7 @@ export default function ResponsiveRoomAddPage() {
         return;
       }
 
-      router.push("/seller/res/rooms");
+      router.push("/seller/rooms");
     } catch (err: any) {
       console.error("Error creating room:", err);
       alert(err.message || "Error creating room");

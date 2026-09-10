@@ -78,7 +78,7 @@ export default function ResponsiveSellerDashboardPage() {
         amount: `₹${o.totalAmount || 0}`,
         timeAgo: timeAgoStr,
         status: statusText,
-        href: `/seller/res/orders/details?orderId=${encodeURIComponent(o.id)}`,
+        href: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}`,
       };
     });
   }, [ordersList]);

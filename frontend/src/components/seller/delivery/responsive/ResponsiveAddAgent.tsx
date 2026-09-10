@@ -72,7 +72,7 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
       onCancel();
       return;
     }
-    router.push("/seller/res/delivery/riders");
+    router.push("/seller/delivery/riders");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,7 +127,7 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
           if (onSubmitSuccess) {
             onSubmitSuccess(data);
           } else {
-            router.push("/seller/res/delivery/riders");
+            router.push("/seller/delivery/riders");
           }
         }, 800);
       } else {

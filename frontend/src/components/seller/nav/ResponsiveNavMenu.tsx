@@ -28,15 +28,15 @@ export interface NavItemConfig {
 }
 
 export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/res/dashboard" },
-  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/res/orders" },
-  { id: "menu", label: "Menu Management", icon: BookOpen, href: "/seller/res/menu" },
-  { id: "rooms", label: "Rooms Config", icon: Bed, href: "/seller/res/rooms" },
-  { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/res/booking" },
-  { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/res/delivery" },
-  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/res/subscription" },
-  { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/res/profile" },
-  { id: "settings", label: "Settings", icon: Settings, href: "/seller/res/settings" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
+  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
+  { id: "menu", label: "Menu Management", icon: BookOpen, href: "/seller/menu" },
+  { id: "rooms", label: "Rooms Config", icon: Bed, href: "/seller/rooms" },
+  { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
+  { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/delivery" },
+  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
+  { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/profile" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/seller/settings" },
 ];
 
 

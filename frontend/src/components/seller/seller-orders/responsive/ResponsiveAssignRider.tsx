@@ -69,7 +69,7 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
       onAssign(rider.id);
     } else {
       setTimeout(() => {
-        router.push("/seller/res/orders/details");
+        router.push("/seller/orders/details");
       }, 900);
     }
   };

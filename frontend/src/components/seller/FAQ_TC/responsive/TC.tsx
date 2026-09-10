@@ -78,7 +78,7 @@ export const TC: React.FC<TCProps> = ({
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/dashboard");
+      router.push("/seller/dashboard");
     }
   };
 

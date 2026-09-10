@@ -97,7 +97,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/menu");
+      router.push("/seller/menu");
     }
   };
 
@@ -168,7 +168,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     if (onSave) {
       onSave(data);
     } else {
-      router.push("/seller/res/menu");
+      router.push("/seller/menu");
     }
   };
 

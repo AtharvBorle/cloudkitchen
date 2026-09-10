@@ -80,7 +80,7 @@ export const ResponsiveBookingDetails: React.FC<
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/booking");
+      router.push("/seller/booking");
     }
   };
 

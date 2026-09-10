@@ -294,4 +294,7 @@ export type { FAQProps, FAQItem } from "./FAQ_TC/responsive/FAQ";
 export { default as TC, default as ResponsiveTC, default as SellerTCResponsive } from "./FAQ_TC/responsive/TC";
 export type { TCProps, TCSection, TCTab as ResponsiveTCTab } from "./FAQ_TC/responsive/TC";
 
+export { default as SellerResponsiveWrapper } from "./SellerResponsiveWrapper";
+export type { SellerResponsiveWrapperProps } from "./SellerResponsiveWrapper";
+
 export { default } from "./seller-profile/Profile";

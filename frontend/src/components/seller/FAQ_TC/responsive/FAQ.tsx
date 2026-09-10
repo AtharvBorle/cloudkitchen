@@ -72,7 +72,7 @@ export const FAQ: React.FC<FAQProps> = ({
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/dashboard");
+      router.push("/seller/dashboard");
     }
   };
 

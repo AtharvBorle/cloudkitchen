@@ -100,7 +100,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
     if (onViewDetails) {
       onViewDetails(booking);
     } else {
-      router.push(`/seller/res/booking/details?bookingId=${encodeURIComponent(booking.id)}`);
+      router.push(`/seller/booking/details?bookingId=${encodeURIComponent(booking.id)}`);
     }
   };
 
@@ -178,7 +178,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
             >
               <MenuIcon size={24} />
             </button>
-            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <Link href="/seller/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
               <div className={styles.headerLogoWrapper}>
                 <Image
                   src="/images/logo-nav.png"

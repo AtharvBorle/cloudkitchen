@@ -86,7 +86,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
     if (onAddRoom) {
       onAddRoom();
     } else {
-      router.push("/seller/res/rooms/add");
+      router.push("/seller/rooms/add");
     }
   };
 
@@ -126,7 +126,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
             >
               <MenuIcon size={24} />
             </button>
-            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <Link href="/seller/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
               <div className={styles.headerLogoWrapper}>
                 <Image
                   src="/images/logo-nav.png"

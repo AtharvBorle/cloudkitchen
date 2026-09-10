@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SellerDashboard } from "@/components/seller";
+import { SellerDashboard, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveSellerDashboardPage from "@/app/seller/res/dashboard/page";
 
 export const metadata: Metadata = {
   title: "Operations Dashboard | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerOperationsDashboardPage() {
-  return <SellerDashboard />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<SellerDashboard />}
+      mobile={<ResponsiveSellerDashboardPage />}
+    />
+  );
 }

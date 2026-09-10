@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import CreateSubscriptionPlan from "@/components/seller/create-subscription-plan/CreateSubscriptionPlan";
+import { CreateSubscriptionPlan, SellerResponsiveWrapper } from "@/components/seller";
+import NewSubscriptionPlanPage from "@/app/seller/res/subscription/newPlan/page";
 
 export const metadata: Metadata = {
   title: "Create New Subscription Plan | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerSubscriptionAddPage() {
-  return <CreateSubscriptionPlan />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<CreateSubscriptionPlan />}
+      mobile={<NewSubscriptionPlanPage />}
+    />
+  );
 }

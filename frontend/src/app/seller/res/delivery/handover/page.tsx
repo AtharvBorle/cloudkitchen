@@ -42,7 +42,7 @@ function CashHandoverContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount }),
       });
-      router.push("/seller/res/delivery/riders");
+      router.push("/seller/delivery/riders");
     } catch (err) {
       console.error("Failed to collect cash:", err);
     }
@@ -64,7 +64,7 @@ function CashHandoverContent() {
       totalCash={`₹${(rider?.outstandingBalance || 1700).toLocaleString("en-IN")}`}
       ordersCount={rider ? Math.max(1, Math.round((rider.outstandingBalance || 1700) / 850)) : 3}
       onConfirmReceipt={handleConfirmReceipt}
-      onBack={() => router.push("/seller/res/delivery/riders")}
+      onBack={() => router.push("/seller/delivery/riders")}
     />
   );
 }

@@ -68,7 +68,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     if (onBack) {
       onBack();
     } else {
-      router.push("/seller/res/delivery/riders");
+      router.push("/seller/delivery/riders");
     }
   };
 
@@ -79,7 +79,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     } else {
       showToast(`Receipt of ${totalCash} confirmed successfully!`);
       setTimeout(() => {
-        router.push("/seller/res/delivery/riders");
+        router.push("/seller/delivery/riders");
       }, 1000);
     }
   };

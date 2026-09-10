@@ -274,7 +274,7 @@ export default function SubscriptionEditCanvas({
           }}
         >
           <Link
-            href="/seller/res/subscription"
+            href="/seller/subscription"
             style={{
               color: "#334155",
               textDecoration: "none",

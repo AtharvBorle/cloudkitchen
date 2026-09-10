@@ -82,7 +82,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/orders");
+      router.push("/seller/orders");
     }
   };
 
@@ -362,7 +362,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
               type="button"
               className={styles.assignRiderButton}
               onClick={() =>
-                router.push(`/seller/res/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
+                router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
               }
             >
               Assign / Reassign Rider →

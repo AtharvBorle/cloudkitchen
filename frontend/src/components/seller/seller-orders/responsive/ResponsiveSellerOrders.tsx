@@ -181,7 +181,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     if (onOrderClick) {
       onOrderClick(order);
     } else {
-      router.push("/seller/res/orders/details");
+      router.push("/seller/orders/details");
     }
   };
 
@@ -235,7 +235,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
             >
               <Menu size={24} />
             </button>
-            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <Link href="/seller/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
               <div className={styles.headerLogoWrapper}>
                 <Image
                   src="/images/logo-nav.png"

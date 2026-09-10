@@ -128,7 +128,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/subscription");
+      router.push("/seller/subscription");
     }
   };
 
@@ -179,7 +179,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     } else {
       setToastMessage("Changes Saved Successfully!");
       setTimeout(() => {
-        router.push("/seller/res/subscription");
+        router.push("/seller/subscription");
       }, 1200);
     }
   };
@@ -188,7 +188,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     if (onDiscard) {
       onDiscard();
     } else {
-      router.push("/seller/res/subscription");
+      router.push("/seller/subscription");
     }
   };
 
@@ -199,7 +199,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       if (typeof window !== "undefined" && window.confirm("Are you sure you want to archive this plan?")) {
         setToastMessage("Plan Archived Successfully");
         setTimeout(() => {
-          router.push("/seller/res/subscription");
+          router.push("/seller/subscription");
         }, 1200);
       }
     }

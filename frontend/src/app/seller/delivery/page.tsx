@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { RiderCanvasDas } from '@/components/seller';
+import { RiderCanvasDas, SellerResponsiveWrapper } from '@/components/seller';
+import ResponsiveDeliveryPage from '@/app/seller/res/delivery/page';
 
 export const metadata: Metadata = {
   title: 'Delivery & Rider Management | Neo Cloud Kitchen',
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerDeliveryPage() {
-  return <RiderCanvasDas />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<RiderCanvasDas />}
+      mobile={<ResponsiveDeliveryPage />}
+    />
+  );
 }

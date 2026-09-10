@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SellerOrders } from "@/components/seller";
+import { SellerOrders, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveSellerOrdersPage from "@/app/seller/res/orders/page";
 
 export const metadata: Metadata = {
   title: "Food & Service Orders | Neo Cloud Kitchen",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerOrdersPage() {
-  return <SellerOrders />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<SellerOrders />}
+      mobile={<ResponsiveSellerOrdersPage />}
+    />
+  );
 }

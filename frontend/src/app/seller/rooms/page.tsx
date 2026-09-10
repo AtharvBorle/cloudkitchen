@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { SellerRooms } from '@/components/seller';
+import { SellerRooms, SellerResponsiveWrapper } from '@/components/seller';
+import ResponsiveRoomsPage from '@/app/seller/res/rooms/page';
 
 export const metadata: Metadata = {
   title: 'Rooms Inventory & Booking | Neo Cloud Kitchen',
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SellerRoomsPage() {
-  return <SellerRooms />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<SellerRooms />}
+      mobile={<ResponsiveRoomsPage />}
+    />
+  );
 }

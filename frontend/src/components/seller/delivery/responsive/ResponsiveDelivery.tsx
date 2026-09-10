@@ -69,7 +69,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
     if (onSelectRider) {
       onSelectRider(rider);
     } else {
-      router.push("/seller/res/delivery/handover");
+      router.push("/seller/delivery/handover");
     }
   };
 
@@ -101,7 +101,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
             >
               <MenuIcon size={24} />
             </button>
-            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <Link href="/seller/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
               <div className={styles.headerLogoWrapper}>
                 <Image
                   src="/images/logo-nav.png"
@@ -120,7 +120,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
           <button
             type="button"
             className={styles.iconButton}
-            onClick={() => router.push("/seller/res/delivery/settings")}
+            onClick={() => router.push("/seller/delivery/settings")}
             aria-label="Delivery Settings"
             title="Delivery Settings"
           >
@@ -133,7 +133,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
           {/* Total Outstanding Card */}
           <section
             className={styles.totalCard}
-            onClick={() => router.push("/seller/res/delivery/riders")}
+            onClick={() => router.push("/seller/delivery/riders")}
             role="button"
             tabIndex={0}
             style={{ cursor: "pointer" }}
@@ -152,7 +152,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
               <button
                 type="button"
                 className={styles.sectionActionBtn}
-                onClick={() => router.push("/seller/res/delivery/riders")}
+                onClick={() => router.push("/seller/delivery/riders")}
               >
                 View All Riders
               </button>

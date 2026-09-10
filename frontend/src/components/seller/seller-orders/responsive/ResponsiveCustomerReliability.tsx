@@ -70,7 +70,7 @@ export const ResponsiveCustomerReliability: React.FC<
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/orders");
+      router.push("/seller/orders");
     }
   };
 
@@ -80,7 +80,7 @@ export const ResponsiveCustomerReliability: React.FC<
       onAccept();
     } else {
       setTimeout(() => {
-        router.push("/seller/res/orders/assign-rider");
+        router.push("/seller/orders/assign-rider");
       }, 800);
     }
   };

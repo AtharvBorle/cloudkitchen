@@ -72,7 +72,7 @@ export const ResponsiveDeliverySettings: React.FC<
     if (onBack) {
       onBack();
     } else {
-      router.push("/seller/res/delivery");
+      router.push("/seller/delivery");
     }
   };
 
@@ -93,7 +93,7 @@ export const ResponsiveDeliverySettings: React.FC<
     } else {
       showToast("Delivery settings saved successfully!");
       setTimeout(() => {
-        router.push("/seller/res/delivery");
+        router.push("/seller/delivery");
       }, 900);
     }
   };

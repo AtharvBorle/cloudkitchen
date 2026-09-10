@@ -82,7 +82,7 @@ function MenuItemContent() {
           return;
         }
       }
-      router.push("/seller/res/menu");
+      router.push("/seller/menu");
     } catch (err: any) {
       console.error("Error saving menu item:", err);
       alert(err.message || "Error saving menu item");

@@ -73,7 +73,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/dashboard");
+      router.push("/seller/dashboard");
     }
   };
 
@@ -145,7 +145,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             >
               <MenuIcon size={24} />
             </button>
-            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+            <Link href="/seller/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
               <div className={styles.headerLogoWrapper}>
                 <Image
                   src="/images/logo-nav.png"

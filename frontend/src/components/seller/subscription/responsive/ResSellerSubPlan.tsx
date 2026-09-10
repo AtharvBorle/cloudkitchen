@@ -97,7 +97,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/seller/res/subscription");
+      router.push("/seller/subscription");
     }
   };
 
@@ -143,7 +143,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     } else {
       setToastMessage("Plan Created & Deployed Successfully!");
       setTimeout(() => {
-        router.push("/seller/res/subscription");
+        router.push("/seller/subscription");
       }, 1200);
     }
   };
@@ -152,7 +152,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     if (onDiscard) {
       onDiscard();
     } else {
-      router.push("/seller/res/subscription");
+      router.push("/seller/subscription");
     }
   };
 

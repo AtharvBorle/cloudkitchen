@@ -80,7 +80,7 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
     if (onBack) {
       onBack();
     } else {
-      router.push("/seller/res/delivery");
+      router.push("/seller/delivery");
     }
   };
 
@@ -88,7 +88,7 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
     if (onSelectRider) {
       onSelectRider(rider);
     } else {
-      router.push("/seller/res/delivery/handover");
+      router.push("/seller/delivery/handover");
     }
   };
 
@@ -194,7 +194,7 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
             <button
               type="button"
               className={styles.inviteButton}
-              onClick={() => router.push("/seller/res/delivery/add-agent")}
+              onClick={() => router.push("/seller/delivery/add-agent")}
             >
               + Add Delivery Agent
             </button>

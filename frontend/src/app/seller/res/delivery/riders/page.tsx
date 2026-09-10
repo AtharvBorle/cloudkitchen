@@ -49,7 +49,7 @@ export default function ResponsiveManageRidersPage() {
   }, []);
 
   const handleSelectRider = (rider: any) => {
-    router.push(`/seller/res/delivery/handover?riderId=${rider.id}`);
+    router.push(`/seller/delivery/handover?riderId=${rider.id}`);
   };
 
   return (
@@ -58,7 +58,7 @@ export default function ResponsiveManageRidersPage() {
       totalCodAmount={`₹${(totalCod || 14800).toLocaleString("en-IN")}`}
       riders={riders.length > 0 ? riders : undefined}
       onSelectRider={handleSelectRider}
-      onBack={() => router.push("/seller/res/delivery")}
+      onBack={() => router.push("/seller/delivery")}
     />
   );
 }
