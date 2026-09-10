@@ -27,6 +27,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     imageUrl: "/images/places/place-pizza.png",
     category: "Italian",
     kitchenId: "pizza-palace",
+    price: 249,
   },
   {
     id: "2",
@@ -36,6 +37,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
     kitchenId: "spice-biryani",
+    price: 289,
   },
   {
     id: "3",
@@ -45,6 +47,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     imageUrl: "/images/places/place-bakery.png",
     category: "Bakery",
     kitchenId: "baker-delight",
+    price: 139,
   },
   {
     id: "4",
@@ -54,6 +57,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
     kitchenId: "spice-biryani",
+    price: 289,
   },
   // Row 2
   {
@@ -64,6 +68,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     imageUrl: "/images/places/place-pizza.png",
     category: "Italian",
     kitchenId: "pizza-palace",
+    price: 249,
   },
   {
     id: "6",
@@ -73,6 +78,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
     kitchenId: "spice-biryani",
+    price: 289,
   },
   {
     id: "7",
@@ -81,6 +87,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     time: "15-25 min",
     imageUrl: "/images/places/place-bakery.png",
     category: "Bakery",
+    price: 139,
   },
   {
     id: "8",
@@ -89,6 +96,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     time: "20-30 min",
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
+    price: 289,
   },
   // Row 3
   {
@@ -98,6 +106,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     time: "25-35 min",
     imageUrl: "/images/places/place-pizza.png",
     category: "Italian",
+    price: 249,
   },
   {
     id: "10",
@@ -106,6 +115,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     time: "20-30 min",
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
+    price: 289,
   },
   {
     id: "11",
@@ -114,6 +124,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     time: "15-25 min",
     imageUrl: "/images/places/place-bakery.png",
     category: "Bakery",
+    price: 139,
   },
   {
     id: "12",
@@ -122,6 +133,7 @@ export const SAMPLE_PLACES: PlaceCardData[] = [
     time: "20-30 min",
     imageUrl: "/images/places/place-biryani.png",
     category: "Indian / Mughlai",
+    price: 289,
   },
 ];
 
@@ -143,12 +155,6 @@ const DIETARY = [
   { id: "jain", label: "Jain / Satvik 🌿", count: 8 },
 ];
 
-const PRICE_TIERS = [
-  { id: "under-150", label: "₹", title: "Under ₹150 (Budget)" },
-  { id: "150-300", label: "₹₹", title: "₹150 – ₹300 (Standard)" },
-  { id: "300-plus", label: "₹₹₹", title: "₹300+ (Premium)" },
-];
-
 interface PropertiesProps {
   places?: PlaceCardData[];
 }
@@ -156,7 +162,8 @@ interface PropertiesProps {
 export default function Properties({ places }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [priceTier, setPriceTier] = useState<string | null>(null);
+  const [maxPrice, setMaxPrice] = useState<number>(500);
+  const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
   const basePlaces = places && places.length > 0 ? places : SAMPLE_PLACES;
 
@@ -244,8 +251,19 @@ export default function Properties({ places }: PropertiesProps) {
       }
     }
 
+    // Filter by price range
+    if (activePricePreset === "under-150") {
+      list = list.filter((p) => (p.price || 199) <= 150);
+    } else if (activePricePreset === "150-300") {
+      list = list.filter((p) => (p.price || 199) >= 150 && (p.price || 199) <= 300);
+    } else if (activePricePreset === "300-plus") {
+      list = list.filter((p) => (p.price || 199) >= 300);
+    } else if (maxPrice < 500) {
+      list = list.filter((p) => (p.price || 199) <= maxPrice);
+    }
+
     return list;
-  }, [basePlaces, selectedCuisines, selectedDietary]);
+  }, [basePlaces, selectedCuisines, selectedDietary, maxPrice, activePricePreset]);
 
   // Fallback if filter result is empty
   const isFallbackApplied = filteredPlaces.length === 0 && (selectedCuisines.length > 0 || selectedDietary.length > 0);
@@ -266,7 +284,8 @@ export default function Properties({ places }: PropertiesProps) {
   const handleClearAll = () => {
     setSelectedCuisines([]);
     setSelectedDietary([]);
-    setPriceTier(null);
+    setMaxPrice(500);
+    setActivePricePreset("all");
   };
 
   return (
@@ -292,21 +311,22 @@ export default function Properties({ places }: PropertiesProps) {
         }}
         className="properties-container Properties"
       >
-        {/* ================= 1. sidebarFilters (Fixed 260px x 683px) ================= */}
+        {/* ================= 1. sidebarFilters (Adaptive Height, No Overflow) ================= */}
         <aside
           style={{
-            width: "260px",
-            minWidth: "260px",
-            height: "683px",
+            width: "270px",
+            minWidth: "270px",
+            height: "auto",
+            minHeight: "fit-content",
             borderRadius: "20px",
             border: "1px solid #E2E8F0",
-            padding: "24px",
+            padding: "24px 20px",
             backgroundColor: "#FFFFFF",
             display: "flex",
             flexDirection: "column",
-            gap: "44px",
+            gap: "26px",
             boxSizing: "border-box",
-            boxShadow: "0 2px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.03)",
             fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
           }}
           className="sidebar-filters sidebarFilters"
@@ -508,39 +528,102 @@ export default function Properties({ places }: PropertiesProps) {
             </div>
           </div>
 
-          {/* Section 3: Price Range (Indian Rupee Tiers) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <h4
-              style={{
-                fontSize: "16px",
-                fontWeight: "700",
-                color: "#0F172A",
-                margin: 0,
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              }}
-            >
-              Price Range
-            </h4>
-            <div style={{ display: "flex", gap: "10px" }}>
-              {PRICE_TIERS.map((tier) => {
-                const isSelected = priceTier === tier.id;
+          {/* Section 3: Price Range (Interactive Slider & Preset Figures) */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "700",
+                  color: "#0F172A",
+                  margin: 0,
+                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                }}
+              >
+                Price Range
+              </h4>
+              <span
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: "700",
+                  color: "#FF6B00",
+                  backgroundColor: "#FFF3EB",
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                }}
+              >
+                {activePricePreset === "under-150"
+                  ? "Under ₹150"
+                  : activePricePreset === "150-300"
+                  ? "₹150 – ₹300"
+                  : activePricePreset === "300-plus"
+                  ? "₹300+"
+                  : maxPrice >= 500
+                  ? "All Prices"
+                  : `Up to ₹${maxPrice}`}
+              </span>
+            </div>
+
+            {/* Range Slider */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <input
+                type="range"
+                min="100"
+                max="500"
+                step="25"
+                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-300" ? 300 : 500) : maxPrice}
+                onChange={(e) => {
+                  setMaxPrice(Number(e.target.value));
+                  setActivePricePreset("custom");
+                }}
+                style={{
+                  width: "100%",
+                  accentColor: "#FF6B00",
+                  cursor: "pointer",
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: "#94A3B8", fontWeight: "500" }}>
+                <span>₹100</span>
+                <span>₹300</span>
+                <span>₹500+</span>
+              </div>
+            </div>
+
+            {/* Quick Preset Figure Chips */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+              {[
+                { id: "all", label: "Any Price" },
+                { id: "under-150", label: "Under ₹150" },
+                { id: "150-300", label: "₹150 – ₹300" },
+                { id: "300-plus", label: "₹300+" },
+              ].map((tier) => {
+                const isSelected = activePricePreset === tier.id;
                 return (
                   <button
                     key={tier.id}
                     type="button"
-                    title={tier.title}
-                    onClick={() => setPriceTier(isSelected ? null : tier.id)}
+                    onClick={() => {
+                      if (isSelected) {
+                        setActivePricePreset("all");
+                        setMaxPrice(500);
+                      } else {
+                        setActivePricePreset(tier.id);
+                        if (tier.id === "under-150") setMaxPrice(150);
+                        else if (tier.id === "150-300") setMaxPrice(300);
+                        else if (tier.id === "300-plus") setMaxPrice(500);
+                        else setMaxPrice(500);
+                      }
+                    }}
                     style={{
-                      flex: 1,
-                      height: "38px",
+                      height: "32px",
                       borderRadius: "8px",
                       border: isSelected
                         ? "1.5px solid #FF6B00"
                         : "1px solid #E2E8F0",
                       backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
                       color: isSelected ? "#FF6B00" : "#334155",
-                      fontWeight: isSelected ? "800" : "600",
-                      fontSize: "15px",
+                      fontWeight: isSelected ? "700" : "500",
+                      fontSize: "12px",
                       cursor: "pointer",
                       transition: "all 0.15s ease",
                       fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
