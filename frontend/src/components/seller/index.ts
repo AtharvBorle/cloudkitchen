@@ -118,6 +118,12 @@ export type {
 export { default as RiderCanvasDas } from "./delivery/manage_rider/RiderCanvasDas";
 export type { RiderCanvasDasProps } from "./delivery/manage_rider/RiderCanvasDas";
 
+export { default as AgentCanvas } from "./delivery/manage_rider/AgentCanvas";
+export type { AgentCanvasProps, AgentFormData } from "./delivery/manage_rider/AgentCanvas";
+
+export { default as AgentCanvasDas } from "./delivery/manage_rider/AgentCanvasDas";
+export type { AgentCanvasDasProps } from "./delivery/manage_rider/AgentCanvasDas";
+
 export { default as RiderSettlements } from "./delivery/rider_settlement/RiderSettlements";
 export type {
   RiderSettlementsProps,

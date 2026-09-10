@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   User,
   AlertTriangle,
@@ -144,6 +145,8 @@ export default function RiderSettlements({
   onAddDeliveryAgent,
   onRecordSettlement,
 }: RiderSettlementsProps) {
+  const router = useRouter();
+
   // Date Filter States (From Date -> To Date)
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
@@ -350,7 +353,10 @@ export default function RiderSettlements({
           {/* Add Delivery Agent Button */}
           <button
             type="button"
-            onClick={onAddDeliveryAgent}
+            onClick={
+              onAddDeliveryAgent ||
+              (() => router.push("/seller/riderMng/settlements/add-agent"))
+            }
             style={{
               backgroundColor: "#F97316",
               backgroundImage: "linear-gradient(135deg, #FF5500 0%, #F97316 100%)",
