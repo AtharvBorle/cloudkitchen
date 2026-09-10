@@ -349,47 +349,80 @@
 @media (max-width: 960px) {
   .navbarContainer {
     padding: 0 16px;
-    height: 64px;
+    height: 62px;
+  }
+
+  .leftGroup {
+    gap: 8px;
+  }
+
+  .logoWrapper {
+    display: none !important;
+  }
+
+  .brandTitle {
+    display: none !important;
+  }
+
+  .locationContainer {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-top: 0;
+    padding: 6px 10px;
+    border-radius: 9999px;
+    background-color: #f8fafc;
+    border: 1px solid #f1f5f9;
   }
 
   .centerSection {
-    display: none;
+    display: none !important;
   }
 
   .langSelector {
-    display: none;
+    display: none !important;
+  }
+
+  .profileAvatar {
+    display: none !important;
   }
 
   .mobileHamburgerBtn {
-    display: flex;
+    display: flex !important;
+  }
+
+  .rightSection {
+    gap: 12px;
   }
 }
 
 @media (max-width: 640px) {
   .navbarContainer {
     padding: 0 12px;
-    height: 60px;
-  }
-
-  .logoWrapper {
-    width: 44px;
-    height: 44px;
-  }
-
-  .brandTitle {
-    font-size: 0.92rem;
+    height: 58px;
   }
 
   .locationContainer {
-    font-size: 0.72rem;
+    font-size: 0.76rem;
+    padding: 5px 8px;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .locationContainer span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .rightSection {
-    gap: 10px;
+    gap: 8px;
   }
 
   .vegLabel {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
   }
 
   .toggleTrack {
@@ -416,4 +449,3 @@
     height: 34px;
   }
 }
-

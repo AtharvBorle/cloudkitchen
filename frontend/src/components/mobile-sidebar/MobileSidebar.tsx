@@ -210,7 +210,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 className={styles.logoImg}
               />
             </div>
-            <span className={styles.brandText}>Cloud Kitchen</span>
+            <span className={styles.brandText}>NEO CLOUD BITES</span>
           </div>
 
           <button
