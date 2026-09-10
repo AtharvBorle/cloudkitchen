@@ -1,653 +1,635 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { SlidersHorizontal, X, Check, RotateCcw, ChevronRight } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Zap,
+  Star,
+  Tag,
+  ChevronDown,
+  X,
+  SlidersHorizontal,
+  Check,
+  UtensilsCrossed,
+  Leaf,
+} from "lucide-react";
+
+export interface ActiveHomeFilters {
+  fastest?: boolean;
+  minRating?: number | null;
+  offersOnly?: boolean;
+  dietary?: "all" | "veg" | "non_veg";
+  priceTier?: "all" | "under-150" | "150-300" | "300-plus" | null;
+  cuisines?: string[];
+}
 
 export interface FilterOption {
   id: string;
   label: string;
 }
 
-const DEFAULT_PILL_FILTERS: FilterOption[] = [
-  { id: "fastest", label: "Fastest" },
-  { id: "rating", label: "Rating 4.5+" },
-  { id: "offers", label: "Offers" },
-];
-
-const CUISINES = [
-  { id: "italian", label: "Italian", count: 12 },
-  { id: "american", label: "American", count: 18 },
-  { id: "healthy", label: "Healthy / Bowls", count: 8 },
-  { id: "japanese", label: "Japanese", count: 6 },
-  { id: "indian", label: "Indian / Mughlai", count: 24 },
-  { id: "mexican", label: "Mexican", count: 10 },
-];
-
-const DIETARY = [
-  { id: "veg", label: "Vegetarian", count: 15 },
-  { id: "vegan", label: "Vegan", count: 4 },
-  { id: "gluten-free", label: "Gluten-Free", count: 6 },
-  { id: "halal", label: "Halal Certified", count: 11 },
-];
-
-const PRICE_TIERS = ["$", "$$", "$$$"];
-
 interface FilterRowProps {
+  activeFilters?: ActiveHomeFilters;
+  onFilterChange?: (filters: ActiveHomeFilters) => void;
+  // Legacy / custom filter list support
   filters?: FilterOption[];
   activeFilterId?: string;
-  onFilterChange?: (filterId: string) => void;
+  onLegacyFilterClick?: (filterId: string) => void;
+  availableCuisines?: string[];
 }
 
+const DEFAULT_CUISINES = [
+  "Italian",
+  "Indian / Mughlai",
+  "Bakery",
+  "Healthy / Bowls",
+  "Burgers & Fast Food",
+  "Biryani",
+  "Desserts",
+  "South Indian",
+  "Chinese",
+];
+
 export default function FilterRow({
-  filters = DEFAULT_PILL_FILTERS,
-  activeFilterId = "fastest",
+  activeFilters = {},
   onFilterChange,
+  availableCuisines = DEFAULT_CUISINES,
 }: FilterRowProps) {
-  const [selectedPill, setSelectedPill] = useState<string>(activeFilterId);
-  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [internalFilters, setInternalFilters] = useState<ActiveHomeFilters>(activeFilters);
+  const [openPopover, setOpenPopover] = useState<"dietary" | "price" | "cuisines" | null>(null);
 
-  // Dynamic filter state
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([
-    "italian",
-    "american",
-    "healthy",
-  ]);
-  const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [selectedPrice, setSelectedPrice] = useState<string>("$");
+  const dietaryRef = useRef<HTMLDivElement>(null);
+  const priceRef = useRef<HTMLDivElement>(null);
+  const cuisinesRef = useRef<HTMLDivElement>(null);
 
-  // Lock body scroll when modal/drawer is open
+  // Sync internal state with prop changes
   useEffect(() => {
-    if (isDrawerOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
+    setInternalFilters(activeFilters);
+  }, [activeFilters]);
+
+  // Click outside listener to close popovers
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        openPopover === "dietary" &&
+        dietaryRef.current &&
+        !dietaryRef.current.contains(target)
+      ) {
+        setOpenPopover(null);
+      }
+      if (
+        openPopover === "price" &&
+        priceRef.current &&
+        !priceRef.current.contains(target)
+      ) {
+        setOpenPopover(null);
+      }
+      if (
+        openPopover === "cuisines" &&
+        cuisinesRef.current &&
+        !cuisinesRef.current.contains(target)
+      ) {
+        setOpenPopover(null);
+      }
     };
-  }, [isDrawerOpen]);
 
-  const activeFiltersCount =
-    selectedCuisines.length +
-    selectedDietary.length +
-    (selectedPrice ? 1 : 0);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openPopover]);
 
-  const handlePillClick = (id: string) => {
-    setSelectedPill(id);
+  const updateFilters = (updated: Partial<ActiveHomeFilters>) => {
+    const newFilters = { ...internalFilters, ...updated };
+    setInternalFilters(newFilters);
     if (onFilterChange) {
-      onFilterChange(id);
+      onFilterChange(newFilters);
     }
   };
 
-  const toggleCuisine = (id: string) => {
-    setSelectedCuisines((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const handleToggleFastest = () => {
+    updateFilters({ fastest: !internalFilters.fastest });
   };
 
-  const toggleDietary = (id: string) => {
-    setSelectedDietary((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const handleToggleRating = () => {
+    updateFilters({
+      minRating: internalFilters.minRating === 4.5 ? null : 4.5,
+    });
   };
 
-  const handlePriceSelect = (tier: string) => {
-    setSelectedPrice((prev) => (prev === tier ? "" : tier));
+  const handleToggleOffers = () => {
+    updateFilters({ offersOnly: !internalFilters.offersOnly });
   };
 
-  const handleResetFilters = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setSelectedCuisines([]);
-    setSelectedDietary([]);
-    setSelectedPrice("");
+  const handleSelectDietary = (dietary: "all" | "veg" | "non_veg") => {
+    updateFilters({ dietary });
+    setOpenPopover(null);
   };
 
-  const handleApplyFilters = () => {
-    setIsDrawerOpen(false);
+  const handleSelectPrice = (tier: "all" | "under-150" | "150-300" | "300-plus") => {
+    updateFilters({ priceTier: tier === "all" ? null : tier });
+    setOpenPopover(null);
+  };
+
+  const handleToggleCuisine = (cuisineName: string) => {
+    const current = internalFilters.cuisines || [];
+    const updated = current.includes(cuisineName)
+      ? current.filter((c) => c !== cuisineName)
+      : [...current, cuisineName];
+    updateFilters({ cuisines: updated });
+  };
+
+  const handleClearAll = () => {
+    const cleared: ActiveHomeFilters = {
+      fastest: false,
+      minRating: null,
+      offersOnly: false,
+      dietary: "all",
+      priceTier: null,
+      cuisines: [],
+    };
+    setInternalFilters(cleared);
     if (onFilterChange) {
-      const summary = [
-        ...selectedCuisines,
-        ...selectedDietary,
-        selectedPrice,
-      ]
-        .filter(Boolean)
-        .join(",");
-      onFilterChange(summary || selectedPill);
+      onFilterChange(cleared);
     }
+    setOpenPopover(null);
   };
+
+  // Count how many filters are active
+  const activeCount =
+    (internalFilters.fastest ? 1 : 0) +
+    (internalFilters.minRating ? 1 : 0) +
+    (internalFilters.offersOnly ? 1 : 0) +
+    (internalFilters.dietary && internalFilters.dietary !== "all" ? 1 : 0) +
+    (internalFilters.priceTier ? 1 : 0) +
+    (internalFilters.cuisines && internalFilters.cuisines.length > 0 ? 1 : 0);
+
+  const isDietaryActive = internalFilters.dietary && internalFilters.dietary !== "all";
+  const isPriceActive = Boolean(internalFilters.priceTier && internalFilters.priceTier !== "all");
+  const isCuisinesActive = Boolean(internalFilters.cuisines && internalFilters.cuisines.length > 0);
+
+  const displayCuisinesList =
+    availableCuisines && availableCuisines.length > 0
+      ? availableCuisines
+      : DEFAULT_CUISINES;
 
   return (
-    <section className="filter-row-section">
-      {/* Top Bar with Filter Icon Button & Quick Pills */}
-      <div className="filter-bar-container hide-scrollbar">
-        {/* 3-line filter trigger button */}
+    <section
+      style={{
+        width: "100%",
+        padding: "0",
+        background: "transparent",
+      }}
+      className="filter-row-section"
+    >
+      <div
+        style={{
+          maxWidth: "1280px",
+          width: "100%",
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: "10px",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          paddingBottom: "4px",
+          boxSizing: "border-box",
+          fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+        }}
+        className="hide-scrollbar"
+      >
+        {/* Reset / All Filters Count Badge */}
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={handleClearAll}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "38px",
+              padding: "0 14px",
+              borderRadius: "18px",
+              border: "1.5px solid #FF6B00",
+              backgroundColor: "#FFF3EB",
+              color: "#FF6B00",
+              fontSize: "0.85rem",
+              fontWeight: "700",
+              cursor: "pointer",
+              gap: "6px",
+              whiteSpace: "nowrap",
+              transition: "all 0.2s ease",
+              flexShrink: 0,
+            }}
+            className="filter-clear-pill"
+          >
+            <SlidersHorizontal size={14} />
+            <span>Clear ({activeCount})</span>
+            <X size={14} />
+          </button>
+        )}
+
+        {/* 1. Fastest Delivery Filter (<30 min) */}
         <button
           type="button"
-          onClick={() => setIsDrawerOpen(true)}
-          className={`filter-modal-trigger ${activeFiltersCount > 0 ? "active-trigger" : ""}`}
-          aria-label="Open Cuisines, Dietary and Price filters"
+          onClick={handleToggleFastest}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "38px",
+            padding: "0 16px",
+            borderRadius: "18px",
+            border: internalFilters.fastest
+              ? "1.5px solid #FF6B00"
+              : "1px solid #E2E8F0",
+            backgroundColor: internalFilters.fastest ? "#FF6B00" : "#FFFFFF",
+            color: internalFilters.fastest ? "#FFFFFF" : "#334155",
+            fontSize: "0.88rem",
+            fontWeight: internalFilters.fastest ? "700" : "500",
+            cursor: "pointer",
+            gap: "6px",
+            whiteSpace: "nowrap",
+            transition: "all 0.2s ease",
+            boxShadow: internalFilters.fastest
+              ? "0 3px 10px rgba(255, 107, 0, 0.25)"
+              : "0 1px 3px rgba(0, 0, 0, 0.02)",
+            flexShrink: 0,
+          }}
+          className="filter-pill-btn"
         >
-          <div className="icon-badge-box">
-            <SlidersHorizontal size={17} strokeWidth={2.4} />
-            {activeFiltersCount > 0 && (
-              <span className="count-badge">{activeFiltersCount}</span>
-            )}
-          </div>
-          <span className="filter-trigger-text">Filters</span>
+          <Zap
+            size={14}
+            color={internalFilters.fastest ? "#FFFFFF" : "#FF6B00"}
+            fill={internalFilters.fastest ? "#FFFFFF" : "#FF6B00"}
+          />
+          <span>Fastest Delivery</span>
         </button>
 
-        {/* Quick Pills */}
-        {filters.map((filter) => {
-          const isActive = selectedPill === filter.id && activeFiltersCount === 0;
-          return (
-            <button
-              key={filter.id}
-              type="button"
-              onClick={() => handlePillClick(filter.id)}
-              className={`filter-pill-btn ${isActive ? "active-pill" : ""}`}
+        {/* 2. Rating 4.5+ Filter */}
+        <button
+          type="button"
+          onClick={handleToggleRating}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "38px",
+            padding: "0 16px",
+            borderRadius: "18px",
+            border: internalFilters.minRating === 4.5
+              ? "1.5px solid #FF6B00"
+              : "1px solid #E2E8F0",
+            backgroundColor: internalFilters.minRating === 4.5 ? "#FF6B00" : "#FFFFFF",
+            color: internalFilters.minRating === 4.5 ? "#FFFFFF" : "#334155",
+            fontSize: "0.88rem",
+            fontWeight: internalFilters.minRating === 4.5 ? "700" : "500",
+            cursor: "pointer",
+            gap: "6px",
+            whiteSpace: "nowrap",
+            transition: "all 0.2s ease",
+            boxShadow: internalFilters.minRating === 4.5
+              ? "0 3px 10px rgba(255, 107, 0, 0.25)"
+              : "0 1px 3px rgba(0, 0, 0, 0.02)",
+            flexShrink: 0,
+          }}
+          className="filter-pill-btn"
+        >
+          <Star
+            size={14}
+            color={internalFilters.minRating === 4.5 ? "#FFFFFF" : "#F59E0B"}
+            fill={internalFilters.minRating === 4.5 ? "#FFFFFF" : "#F59E0B"}
+          />
+          <span>Rating 4.5+</span>
+        </button>
+
+        {/* 3. Special Offers Filter */}
+        <button
+          type="button"
+          onClick={handleToggleOffers}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "38px",
+            padding: "0 16px",
+            borderRadius: "18px",
+            border: internalFilters.offersOnly
+              ? "1.5px solid #FF6B00"
+              : "1px solid #E2E8F0",
+            backgroundColor: internalFilters.offersOnly ? "#FF6B00" : "#FFFFFF",
+            color: internalFilters.offersOnly ? "#FFFFFF" : "#334155",
+            fontSize: "0.88rem",
+            fontWeight: internalFilters.offersOnly ? "700" : "500",
+            cursor: "pointer",
+            gap: "6px",
+            whiteSpace: "nowrap",
+            transition: "all 0.2s ease",
+            boxShadow: internalFilters.offersOnly
+              ? "0 3px 10px rgba(255, 107, 0, 0.25)"
+              : "0 1px 3px rgba(0, 0, 0, 0.02)",
+            flexShrink: 0,
+          }}
+          className="filter-pill-btn"
+        >
+          <Tag size={14} color={internalFilters.offersOnly ? "#FFFFFF" : "#FF6B00"} />
+          <span>Offers &amp; Deals</span>
+        </button>
+
+        {/* 4. Dietary Preference Popover (Pure Veg / Non-Veg / All) */}
+        <div ref={dietaryRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setOpenPopover(openPopover === "dietary" ? null : "dietary")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "38px",
+              padding: "0 16px",
+              borderRadius: "18px",
+              border: isDietaryActive ? "1.5px solid #10B981" : "1px solid #E2E8F0",
+              backgroundColor: isDietaryActive ? "#ECFDF5" : "#FFFFFF",
+              color: isDietaryActive ? "#047857" : "#334155",
+              fontSize: "0.88rem",
+              fontWeight: isDietaryActive ? "700" : "500",
+              cursor: "pointer",
+              gap: "6px",
+              whiteSpace: "nowrap",
+              transition: "all 0.2s ease",
+            }}
+            className="filter-pill-btn"
+          >
+            <Leaf size={14} color={isDietaryActive ? "#047857" : "#10B981"} />
+            <span>
+              {internalFilters.dietary === "veg"
+                ? "Pure Veg 🥦"
+                : internalFilters.dietary === "non_veg"
+                ? "Non-Veg 🍗"
+                : "Dietary"}
+            </span>
+            <ChevronDown size={13} color={isDietaryActive ? "#047857" : "#94A3B8"} />
+          </button>
+
+          {openPopover === "dietary" && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                left: 0,
+                backgroundColor: "#FFFFFF",
+                borderRadius: "16px",
+                padding: "8px",
+                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                border: "1px solid #E2E8F0",
+                zIndex: 50,
+                minWidth: "160px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
             >
-              {filter.label}
-            </button>
-          );
-        })}
+              {[
+                { id: "all", label: "All Items" },
+                { id: "veg", label: "Pure Veg 🥦" },
+                { id: "non_veg", label: "Non-Veg 🍗" },
+              ].map((opt) => {
+                const isSelected = (internalFilters.dietary || "all") === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => handleSelectDietary(opt.id as any)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      border: "none",
+                      backgroundColor: isSelected ? "#ECFDF5" : "transparent",
+                      color: isSelected ? "#047857" : "#334155",
+                      fontWeight: isSelected ? "700" : "500",
+                      fontSize: "13.5px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected && <Check size={14} color="#047857" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 5. Price Range Popover */}
+        <div ref={priceRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setOpenPopover(openPopover === "price" ? null : "price")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "38px",
+              padding: "0 16px",
+              borderRadius: "18px",
+              border: isPriceActive ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+              backgroundColor: isPriceActive ? "#FFF3EB" : "#FFFFFF",
+              color: isPriceActive ? "#FF6B00" : "#334155",
+              fontSize: "0.88rem",
+              fontWeight: isPriceActive ? "700" : "500",
+              cursor: "pointer",
+              gap: "6px",
+              whiteSpace: "nowrap",
+              transition: "all 0.2s ease",
+            }}
+            className="filter-pill-btn"
+          >
+            <span>
+              {internalFilters.priceTier === "under-150"
+                ? "Under ₹150"
+                : internalFilters.priceTier === "150-300"
+                ? "₹150 – ₹300"
+                : internalFilters.priceTier === "300-plus"
+                ? "₹300+"
+                : "Price Range"}
+            </span>
+            <ChevronDown size={13} color={isPriceActive ? "#FF6B00" : "#94A3B8"} />
+          </button>
+
+          {openPopover === "price" && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                left: 0,
+                backgroundColor: "#FFFFFF",
+                borderRadius: "16px",
+                padding: "8px",
+                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                border: "1px solid #E2E8F0",
+                zIndex: 50,
+                minWidth: "170px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              {[
+                { id: "all", label: "Any Price" },
+                { id: "under-150", label: "Under ₹150 (Budget)" },
+                { id: "150-300", label: "₹150 – ₹300 (Standard)" },
+                { id: "300-plus", label: "₹300+ (Premium)" },
+              ].map((opt) => {
+                const isSelected =
+                  (internalFilters.priceTier || "all") === opt.id ||
+                  (!internalFilters.priceTier && opt.id === "all");
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => handleSelectPrice(opt.id as any)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      border: "none",
+                      backgroundColor: isSelected ? "#FFF3EB" : "transparent",
+                      color: isSelected ? "#FF6B00" : "#334155",
+                      fontWeight: isSelected ? "700" : "500",
+                      fontSize: "13.5px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected && <Check size={14} color="#FF6B00" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 6. Dynamic Cuisines Popover */}
+        <div ref={cuisinesRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setOpenPopover(openPopover === "cuisines" ? null : "cuisines")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "38px",
+              padding: "0 16px",
+              borderRadius: "18px",
+              border: isCuisinesActive ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+              backgroundColor: isCuisinesActive ? "#FFF3EB" : "#FFFFFF",
+              color: isCuisinesActive ? "#FF6B00" : "#334155",
+              fontSize: "0.88rem",
+              fontWeight: isCuisinesActive ? "700" : "500",
+              cursor: "pointer",
+              gap: "6px",
+              whiteSpace: "nowrap",
+              transition: "all 0.2s ease",
+            }}
+            className="filter-pill-btn"
+          >
+            <UtensilsCrossed size={14} color={isCuisinesActive ? "#FF6B00" : "#64748B"} />
+            <span>
+              {isCuisinesActive
+                ? `Cuisines (${internalFilters.cuisines?.length})`
+                : "Cuisines"}
+            </span>
+            <ChevronDown size={13} color={isCuisinesActive ? "#FF6B00" : "#94A3B8"} />
+          </button>
+
+          {openPopover === "cuisines" && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                left: 0,
+                backgroundColor: "#FFFFFF",
+                borderRadius: "16px",
+                padding: "10px",
+                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                border: "1px solid #E2E8F0",
+                zIndex: 50,
+                minWidth: "220px",
+                maxHeight: "260px",
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11.5px",
+                  fontWeight: "700",
+                  color: "#94A3B8",
+                  padding: "4px 8px",
+                  textTransform: "uppercase",
+                }}
+              >
+                Select Cuisines
+              </div>
+              {displayCuisinesList.map((c) => {
+                const isSelected = (internalFilters.cuisines || []).includes(c);
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => handleToggleCuisine(c)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: isSelected ? "#FFF3EB" : "transparent",
+                      color: isSelected ? "#FF6B00" : "#334155",
+                      fontWeight: isSelected ? "700" : "500",
+                      fontSize: "13.5px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span>{c}</span>
+                    {isSelected && <Check size={14} color="#FF6B00" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* FILTER DRAWER / MODAL POPUP */}
-      {isDrawerOpen && (
-        <div className="filter-modal-overlay" onClick={() => setIsDrawerOpen(false)}>
-          <div
-            className="filter-modal-content"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            {/* Modal Header */}
-            <div className="modal-header">
-              <h3 className="modal-heading">Filters</h3>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  className="clear-all-action-btn"
-                >
-                  Clear All
-                </button>
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  onClick={() => setIsDrawerOpen(false)}
-                  aria-label="Close filters"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: Continuous Form with Cuisines, Dietary Preferences & Price Range */}
-            <div className="modal-body hide-scrollbar">
-              {/* 1. CUISINES */}
-              <div className="form-filter-group">
-                <h4 className="group-title">Cuisines</h4>
-                <div className="checkbox-col">
-                  {CUISINES.map((item) => {
-                    const isChecked = selectedCuisines.includes(item.id);
-                    return (
-                      <div
-                        key={item.id}
-                        className="checkbox-row"
-                        onClick={() => toggleCuisine(item.id)}
-                      >
-                        <div className="row-left">
-                          <div className={`checkbox-square ${isChecked ? "checked" : ""}`}>
-                            {isChecked && <Check size={12} color="#FFFFFF" strokeWidth={3.5} />}
-                          </div>
-                          <span className={`row-label ${isChecked ? "label-active" : ""}`}>
-                            {item.label}
-                          </span>
-                        </div>
-                        <span className="row-count">{item.count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 2. DIETARY PREFERENCES */}
-              <div className="form-filter-group">
-                <h4 className="group-title">Dietary Preferences</h4>
-                <div className="checkbox-col">
-                  {DIETARY.map((item) => {
-                    const isChecked = selectedDietary.includes(item.id);
-                    return (
-                      <div
-                        key={item.id}
-                        className="checkbox-row"
-                        onClick={() => toggleDietary(item.id)}
-                      >
-                        <div className="row-left">
-                          <div className={`checkbox-square ${isChecked ? "checked" : ""}`}>
-                            {isChecked && <Check size={12} color="#FFFFFF" strokeWidth={3.5} />}
-                          </div>
-                          <span className={`row-label ${isChecked ? "label-active" : ""}`}>
-                            {item.label}
-                          </span>
-                        </div>
-                        <span className="row-count">{item.count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 3. PRICE RANGE */}
-              <div className="form-filter-group">
-                <h4 className="group-title">Price Range</h4>
-                <div className="price-tiers-row">
-                  {PRICE_TIERS.map((tier) => {
-                    const isSelected = selectedPrice === tier;
-                    return (
-                      <button
-                        key={tier}
-                        type="button"
-                        className={`price-pill-btn ${isSelected ? "price-pill-active" : ""}`}
-                        onClick={() => handlePriceSelect(tier)}
-                      >
-                        {tier}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="apply-btn"
-                onClick={handleApplyFilters}
-              >
-                Apply Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ""}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <style jsx>{`
-        .filter-row-section {
-          width: 100%;
-          padding: 0;
-          background: transparent;
-        }
-
-        .filter-bar-container {
-          max-width: 1280px;
-          width: 100%;
-          min-height: 42px;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: 10px;
-          overflow-x: auto;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-          padding-bottom: 2px;
-          box-sizing: border-box;
-        }
-
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }
-
-        /* 3-line filter trigger button */
-        .filter-modal-trigger {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          height: 38px;
-          padding: 0 16px;
-          border-radius: 9999px;
-          background-color: #ffffff;
-          border: 1.5px solid #e2e8f0;
-          color: #0f172a;
-          font-size: 0.9rem;
-          font-weight: 700;
-          cursor: pointer;
-          flex-shrink: 0;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        .filter-pill-btn:not(:active):hover {
+          border-color: #CBD5E1;
+          background-color: #F8FAFC;
         }
-
-        .filter-modal-trigger:hover {
-          border-color: #f97316;
-          color: #f97316;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.12);
+        .filter-clear-pill:hover {
+          background-color: #FFE6D6;
         }
-
-        .active-trigger {
-          background-color: #fff7ed;
-          border-color: #f97316;
-          color: #f97316;
-        }
-
-        .icon-badge-box {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .count-badge {
-          position: absolute;
-          top: -7px;
-          right: -9px;
-          background-color: #f97316;
-          color: #ffffff;
-          font-size: 0.65rem;
-          font-weight: 800;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .filter-trigger-text {
-          letter-spacing: 0.01em;
-        }
-
-        /* Pills */
-        .filter-pill-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          height: 38px;
-          padding: 0 16px;
-          border-radius: 9999px;
-          border: 1px solid #e2e8f0;
-          background-color: #ffffff;
-          color: #475569;
-          font-size: 0.86rem;
-          font-weight: 600;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-          flex-shrink: 0;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-        }
-
-        .filter-pill-btn:hover {
-          border-color: #cbd5e1;
-          background-color: #f8fafc;
-          color: #0f172a;
-        }
-
-        .active-pill {
-          background-color: #f97316 !important;
-          border-color: #f97316 !important;
-          color: #ffffff !important;
-          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25) !important;
-        }
-
-        /* MODAL OVERLAY & CONTENT */
-        .filter-modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background-color: rgba(15, 23, 42, 0.5);
-          backdrop-filter: blur(5px);
-          -webkit-backdrop-filter: blur(5px);
-          z-index: 1000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          box-sizing: border-box;
-          animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .filter-modal-content {
-          width: 100%;
-          max-width: 400px;
-          max-height: 88vh;
-          background-color: #ffffff;
-          border-radius: 20px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          border: 1px solid #f1f5f9;
-        }
-
-        /* Header */
-        .modal-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 18px 22px;
-          border-bottom: 1px solid #f1f5f9;
-        }
-
-        .modal-heading {
-          font-size: 1.25rem;
-          font-weight: 800;
-          color: #0f172a;
-          margin: 0;
-        }
-
-        .clear-all-action-btn {
-          color: #f97316;
-          font-size: 0.92rem;
-          font-weight: 700;
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          padding: 4px 6px;
-          transition: color 0.15s ease;
-        }
-
-        .clear-all-action-btn:hover {
-          color: #ea580c;
-        }
-
-        .modal-close-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          border: none;
-          background-color: #f1f5f9;
-          color: #64748b;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-        }
-
-        .modal-close-btn:hover {
-          background-color: #e2e8f0;
-          color: #0f172a;
-        }
-
-        /* Body */
-        .modal-body {
-          padding: 20px 22px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .form-filter-group {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
-
-        .group-title {
-          font-size: 1rem;
-          font-weight: 700;
-          color: #0f172a;
-          margin: 0;
-        }
-
-        .checkbox-col {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .checkbox-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          cursor: pointer;
-          user-select: none;
-          padding: 2px 0;
-        }
-
-        .row-left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .checkbox-square {
-          width: 18px;
-          height: 18px;
-          border-radius: 5px;
-          border: 1.5px solid #cbd5e1;
-          background-color: #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.15s ease;
-          box-sizing: border-box;
-          flex-shrink: 0;
-        }
-
-        .checked {
-          background-color: #f97316 !important;
-          border-color: #f97316 !important;
-        }
-
-        .row-label {
-          font-size: 0.92rem;
-          color: #475569;
-          font-weight: 500;
-          transition: color 0.15s ease;
-        }
-
-        .label-active {
-          color: #0f172a !important;
-          font-weight: 600 !important;
-        }
-
-        .row-count {
-          font-size: 0.88rem;
-          color: #94a3b8;
-          font-weight: 400;
-        }
-
-        /* Price Tiers */
-        .price-tiers-row {
-          display: flex;
-          gap: 10px;
-        }
-
-        .price-pill-btn {
-          flex: 1;
-          height: 40px;
-          border-radius: 10px;
-          border: 1px solid #e2e8f0;
-          background-color: #ffffff;
-          color: #334155;
-          font-weight: 600;
-          font-size: 0.95rem;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .price-pill-btn:hover {
-          border-color: #f97316;
-        }
-
-        .price-pill-active {
-          border: 1.5px solid #f97316 !important;
-          background-color: #fff7ed !important;
-          color: #f97316 !important;
-          font-weight: 700 !important;
-        }
-
-        /* Footer */
-        .modal-footer {
-          padding: 16px 22px;
-          border-top: 1px solid #f1f5f9;
-          background-color: #ffffff;
-        }
-
-        .apply-btn {
-          width: 100%;
-          height: 44px;
-          border-radius: 12px;
-          background-color: #f97316;
-          color: #ffffff;
-          font-size: 0.95rem;
-          font-weight: 700;
-          border: none;
-          cursor: pointer;
-          box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .apply-btn:hover {
-          background-color: #ea580c;
-          transform: translateY(-1px);
-          box-shadow: 0 6px 18px rgba(249, 115, 22, 0.36);
-        }
-
         @media (max-width: 768px) {
           .filter-row-section {
             display: none !important;
-          }
-        }
-
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes scaleUp {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
           }
         }
       `}</style>
     </section>
   );
 }
+

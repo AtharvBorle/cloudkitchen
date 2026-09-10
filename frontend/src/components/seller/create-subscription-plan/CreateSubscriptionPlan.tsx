@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Trash2, Pencil } from 'lucide-react';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
@@ -27,6 +29,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   onSearch,
   onNotificationClick,
 }) => {
+  const router = useRouter();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Form states
@@ -68,7 +71,8 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   };
 
   const handleRemoveFeature = (id: string) => {
-    setFeatures((prev) => prev.filter((f) => f.id !== id));
+    setFeatures((prev) =>
+      prev.filter((f) => f.id !== id));
   };
 
   const handleAddFeature = () => {
@@ -94,7 +98,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
   return (
     <div className={styles.planContainer}>
-      {/* 1. Left Sidebar with active Delivery tab */}
+      {/* 1. Left Sidebar with active Subscription tab */}
       <ConsoleSidebar
         activeItemId="subscription"
         isMobileOpen={isMobileOpen}
@@ -122,14 +126,39 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
           {/* Header Row: Breadcrumb, Title & Subtitle */}
           <div className={styles.headerSection}>
             <div className={styles.breadcrumbRow}>
-              <span className={styles.breadcrumbRoot}>Subscriptions</span>
+              <Link href="/seller/subscription" className={styles.breadcrumbRoot} style={{ textDecoration: 'none' }}>
+                Subscriptions
+              </Link>
               <span className={styles.breadcrumbSeparator}>&gt;</span>
               <span className={styles.breadcrumbCurrent}>Create Plan</span>
             </div>
-            <h1 className={styles.title}>Create New Subscription Plan</h1>
-            <p className={styles.subtitle}>
-              Define tier packages, custom features, and cycle options for partners.
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h1 className={styles.title}>Create New Subscription Plan</h1>
+                <p className={styles.subtitle}>
+                  Define tier packages, custom features, and cycle options for partners.
+                </p>
+              </div>
+              <Link
+                href="/seller/subscription"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  color: '#475569',
+                  fontSize: '0.88rem',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                ← Back to Plans
+              </Link>
+            </div>
           </div>
 
           {/* 2-Column Form & Live Preview Layout */}
@@ -430,7 +459,14 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                 <button
                   type="button"
                   className={styles.deployBtn}
-                  onClick={() => alert('Plan Created & Deployed!')}
+                  onClick={() => {
+                    if (!planName.trim()) {
+                      alert('Please enter a Plan Name before deploying.');
+                      return;
+                    }
+                    alert(`Subscription plan "${planName}" created & deployed successfully!`);
+                    router.push('/seller/subscription');
+                  }}
                 >
                   Create & Deploy Plan
                 </button>
@@ -439,10 +475,9 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   type="button"
                   className={styles.discardBtn}
                   onClick={() => {
-                    setPlanName('');
-                    setPlanTier('');
-                    setWeeklyPrice('');
-                    setCustomFeatureInput('');
+                    if (confirm('Discard changes and return to Manage Subscriptions?')) {
+                      router.push('/seller/subscription');
+                    }
                   }}
                 >
                   Discard Draft

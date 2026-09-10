@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { ExploreHeroBanner } from "@/components/explore-desktop/explore-herobanner";
 import { CloudKitchenReels } from "@/components/explore-desktop/cloudkitchen-reels";
@@ -9,20 +10,235 @@ import { CuratedDiningCollections } from "@/components/explore-desktop/curated-d
 import { WhatsOnYourMind } from "@/components/explore-desktop/whats-on-your-mind";
 import { Footer } from "@/components/explore-desktop/footer";
 import { ExploreMobileView } from "@/components/explore-desktop/explore-mobile";
+import { useHomeData } from "@/lib/useHomeData";
 import styles from "./page.module.css";
+import momentStyles from "@/components/explore-desktop/whats-on-your-mind/WhatsOnYourMind.module.css";
+import Link from "next/link";
+import Image from "next/image";
+import { Star } from "lucide-react";
 
-export default function ExploreDesktopPage() {
+function ExploreDesktopContent() {
+  const searchParams = useSearchParams();
+  const categoryFilter = searchParams.get("category");
+  const searchQuery = searchParams.get("query");
+  const homeData = useHomeData();
+
+  // Dynamic Reels from approved kitchens
+  const dynamicReels = useMemo(() => {
+    if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
+    return homeData.kitchens.map((k) => ({
+      id: k.id,
+      name: k.name,
+      subtitle: k.category || (k.foodType === "VEG" ? "Pure Veg" : "Cloud Kitchen"),
+      image: k.imageUrl || "/images/places/place-biryani.png",
+      kitchenId: k.trackingId || k.id,
+    }));
+  }, [homeData.kitchens]);
+
+  // Dynamic Featured Collections from food items
+  const dynamicCollections = useMemo(() => {
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    return homeData.foodItems.slice(0, 8).map((f, idx) => ({
+      id: f.id,
+      author: f.sellerName || "Verified Chef",
+      title: `${f.name} ${f.itemType === "VEG" ? "🥦" : "🍗"}`,
+      views: `${(10 + idx * 2.4).toFixed(1)}k views`,
+      image: f.imageUrl || "/images/places/place-biryani.png",
+      kitchenId: f.sellerTrackingId || f.sellerId,
+    }));
+  }, [homeData.foodItems]);
+
+  // Dynamic Curated Dining Collections (grouped by price/type)
+  const dynamicDiningItems = useMemo(() => {
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    return homeData.foodItems.slice(0, 8).map((f) => ({
+      id: f.id,
+      badge: f.price ? `₹${f.price}` : "Popular",
+      title: f.name,
+      image: f.imageUrl || "/images/places/place-pizza.png",
+      kitchenId: f.sellerTrackingId || f.sellerId,
+    }));
+  }, [homeData.foodItems]);
+
+  // Dynamic Meal Moments from DB Categories
+  const dynamicMoments = useMemo(() => {
+    if (!homeData.categories || homeData.categories.length === 0) return undefined;
+    const bgClasses = [
+      momentStyles.bgBreakfast,
+      momentStyles.bgLunch,
+      momentStyles.bgDinner,
+      momentStyles.bgSnacks,
+      momentStyles.bgLateNight,
+      momentStyles.bgDrinks,
+      momentStyles.bgDesserts,
+      momentStyles.bgHealthy,
+    ];
+    return homeData.categories.slice(0, 8).map((c, idx) => ({
+      id: c.id,
+      badge: "Category",
+      title: c.name,
+      icon: c.image || "/images/categories/cat-food.png",
+      bgClass: bgClasses[idx % bgClasses.length],
+      categoryQuery: c.name,
+    }));
+  }, [homeData.categories]);
+
+  // Filtered Food Items if user arrived via search or category filter
+  const filteredFoodItems = useMemo(() => {
+    if (!categoryFilter && !searchQuery) return null;
+    let list = homeData.foodItems;
+    if (categoryFilter) {
+      const q = categoryFilter.toLowerCase();
+      list = list.filter(
+        (f) =>
+          f.categoryName?.toLowerCase().includes(q) ||
+          f.name.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q)
+      );
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (f) =>
+          f.name.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q) ||
+          f.sellerName.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [homeData.foodItems, categoryFilter, searchQuery]);
+
   return (
     <div className={styles.pageContainer}>
       {/* 1. Desktop & Tablet View (>768px) */}
       <div className={styles.desktopOnly}>
         <Navbar initialActiveItem="Explore" />
         <main className={styles.desktopMain}>
+          {/* Active Filter Banner if filtered */}
+          {(categoryFilter || searchQuery) && (
+            <div
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: "16px",
+                padding: "20px 24px",
+                marginBottom: "28px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+                border: "1px solid #FFE6D0",
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#0F172A", margin: "0 0 4px 0" }}>
+                  Results for &quot;{categoryFilter || searchQuery}&quot;
+                </h2>
+                <p style={{ fontSize: "0.88rem", color: "#64748B", margin: 0 }}>
+                  Found {filteredFoodItems ? filteredFoodItems.length : 0} matching items
+                </p>
+              </div>
+              <Link
+                href="/explore-desktop"
+                style={{
+                  fontSize: "0.88rem",
+                  fontWeight: "600",
+                  color: "#FF6B00",
+                  textDecoration: "none",
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  backgroundColor: "#FFF3EB",
+                }}
+              >
+                Clear Filter
+              </Link>
+            </div>
+          )}
+
+          {/* Filtered Grid if active */}
+          {filteredFoodItems && filteredFoodItems.length > 0 && (
+            <section style={{ marginBottom: "48px" }}>
+              <h3 style={{ fontSize: "1.4rem", fontWeight: "800", color: "#0F172A", marginBottom: "16px" }}>
+                Matching Dishes &amp; Kitchens
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                  gap: "20px",
+                }}
+              >
+                {filteredFoodItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.sellerTrackingId ? `/shop/${item.sellerTrackingId}` : `/explore-desktop?item=${item.id}`}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "18px",
+                      overflow: "hidden",
+                      border: "1px solid #F1F5F9",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "flex",
+                      flexDirection: "column",
+                      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                    }}
+                    className="hover-lift"
+                  >
+                    <div style={{ position: "relative", width: "100%", height: "160px" }}>
+                      <Image
+                        src={item.imageUrl || "/images/places/place-biryani.png"}
+                        alt={item.name}
+                        fill
+                        style={{ objectFit: "cover" }}
+                      />
+                    </div>
+                    <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>{item.name}</span>
+                        <span style={{ fontSize: "0.95rem", fontWeight: "800", color: "#FF6B00" }}>₹{item.price}</span>
+                      </div>
+                      <span style={{ fontSize: "0.82rem", color: "#64748B" }}>{item.sellerName}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            backgroundColor: "#E8FBF2",
+                            color: "#10B981",
+                            padding: "2px 6px",
+                            borderRadius: "6px",
+                            fontSize: "0.78rem",
+                            fontWeight: "700",
+                          }}
+                        >
+                          <Star size={11} fill="#10B981" />
+                          <span>{item.rating || 4.8}</span>
+                        </div>
+                        <span style={{ fontSize: "0.78rem", color: "#94A3B8" }}>• {item.categoryName}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* 2. Explore Hero Banner */}
           <ExploreHeroBanner />
-          <CloudKitchenReels />
-          <FeaturedCollections />
-          <CuratedDiningCollections />
-          <WhatsOnYourMind />
+
+          {/* 3. Cloud Kitchen Reels */}
+          <CloudKitchenReels reels={dynamicReels} />
+
+          {/* 4. Featured Collections (Video Recipes / Streams) */}
+          <FeaturedCollections collections={dynamicCollections} />
+
+          {/* 5. Curated Dining Collections (8 Category Cards with Badges) */}
+          <CuratedDiningCollections items={dynamicDiningItems} />
+
+          {/* 6. What's on Your Mind? (8 Meal Moment Cards) */}
+          <WhatsOnYourMind moments={dynamicMoments} />
         </main>
         <Footer />
       </div>
@@ -34,3 +250,18 @@ export default function ExploreDesktopPage() {
     </div>
   );
 }
+
+export default function ExploreDesktopPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: "100vh", backgroundColor: "#FFF4E6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: "1.1rem", fontWeight: "600", color: "#FF6B00" }}>Loading Explore...</span>
+        </div>
+      }
+    >
+      <ExploreDesktopContent />
+    </Suspense>
+  );
+}
+

@@ -28,15 +28,40 @@ const CATEGORIES: CategoryItem[] = [
 interface CategoryBarProps {
   activeCategoryId?: string;
   onSelectCategory?: (id: string) => void;
+  items?: CategoryItem[];
 }
 
 export default function CategoryBar({
   activeCategoryId = "food",
   onSelectCategory,
+  items,
 }: CategoryBarProps) {
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string>(activeCategoryId);
+
+  // Use dynamic items if provided and not empty, otherwise fallback to CATEGORIES
+  const displayCategories: CategoryItem[] = React.useMemo(() => {
+    if (items && items.length > 0) {
+      const hasFood = items.some((c) => c.id === "food" || c.name.toLowerCase() === "food");
+      const hasRooms = items.some((c) => c.id === "rooms" || c.name.toLowerCase() === "rooms");
+      let list = [...items];
+      if (!hasFood) {
+        list = [
+          { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore-desktop" },
+          ...list,
+        ];
+      }
+      if (!hasRooms) {
+        list = [
+          ...list,
+          { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/room-booking" }
+        ];
+      }
+      return list;
+    }
+    return CATEGORIES;
+  }, [items]);
 
   const handleScroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
@@ -47,6 +72,10 @@ export default function CategoryBar({
 
   const handleItemClick = (cat: CategoryItem) => {
     setSelectedId(cat.id);
+    if (cat.id === "rooms" || cat.name.toLowerCase() === "rooms") {
+      router.push("/room-booking");
+      return;
+    }
     if (onSelectCategory) {
       onSelectCategory(cat.id);
     } else {
@@ -97,7 +126,7 @@ export default function CategoryBar({
           }}
           className="hide-scrollbar"
         >
-          {CATEGORIES.map((cat) => {
+          {displayCategories.map((cat) => {
             const isSelected = selectedId === cat.id;
 
             return (

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./SavedAddresses.module.css";
 import { Pencil, Trash2 } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface AddressItem {
   id: string;
@@ -36,11 +37,55 @@ const DEFAULT_ADDRESSES: AddressItem[] = [
 ];
 
 export const SavedAddresses: React.FC = () => {
-  const [selectedId, setSelectedId] = useState<string>("home");
   const [addresses, setAddresses] = useState<AddressItem[]>(DEFAULT_ADDRESSES);
+  const [selectedId, setSelectedId] = useState<string>("home");
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAddresses() {
+      try {
+        const res = await fetchApi("/api/user/addresses");
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.data?.addresses || data.addresses || data.data || [];
+          if (Array.isArray(list) && list.length > 0 && isMounted) {
+            const mapped: AddressItem[] = list.map((a: any) => ({
+              id: a.id,
+              tag: (a.type || "HOME").toUpperCase(),
+              isDefault: Boolean(a.isDefault),
+              recipientName: a.recipientName || "Registered User",
+              recipientPhone: a.recipientPhone || "+91 98765 43210",
+              addressLines: `${a.houseNumber || ""}, ${a.street || ""}, ${a.landmark ? a.landmark + ", " : ""}${a.pincode || ""}`.trim(),
+              mapType: (a.type || "").toLowerCase() === "office" ? "office" : "home",
+            }));
+            setAddresses(mapped);
+            const defaultItem = mapped.find((m) => m.isDefault);
+            if (defaultItem) setSelectedId(defaultItem.id);
+            else if (mapped[0]) setSelectedId(mapped[0].id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load user addresses:", err);
+      }
+    }
+
+    loadAddresses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    try {
+      if (id !== "home" && id !== "office") {
+        await fetchApi(`/api/user/addresses/${id}`, { method: "DELETE" });
+      }
+    } catch (err) {
+      console.error("Failed to delete address:", err);
+    }
     setAddresses((prev) => prev.filter((item) => item.id !== id));
   };
 

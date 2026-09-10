@@ -1,4 +1,4 @@
-import PublicShopClient from "./client-page";
+import RestaurantClient from "@/app/restaurant/[id]/RestaurantClient";
 import { LocationProvider } from "@/components/location-provider";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export default async function PublicShopPage({ params }: { params: Promise<{ tra
     const { trackingId } = await params;
     return (
         <LocationProvider>
-            <PublicShopClient trackingId={trackingId} />
+            <RestaurantClient kitchenId={trackingId} />
         </LocationProvider>
     );
 }

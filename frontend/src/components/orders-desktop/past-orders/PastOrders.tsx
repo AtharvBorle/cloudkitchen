@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import styles from "./PastOrders.module.css";
 
 export interface PastOrderItem {
@@ -8,6 +9,8 @@ export interface PastOrderItem {
   vendor: string;
   details: string;
   price: string;
+  sellerTrackingId?: string;
+  invoiceUrl?: string;
 }
 
 const DEFAULT_PAST_ORDERS: PastOrderItem[] = [
@@ -34,12 +37,14 @@ export const PastOrders: React.FC<PastOrdersProps> = ({
   orders = DEFAULT_PAST_ORDERS,
   onRenewPlan,
 }) => {
+  const displayOrders = orders && orders.length > 0 ? orders : DEFAULT_PAST_ORDERS;
+
   return (
     <section className={styles.sectionContainer} aria-label="Past Orders">
       <h2 className={styles.sectionHeading}>Past Orders</h2>
 
       <div className={styles.ordersList}>
-        {orders.map((order) => (
+        {displayOrders.map((order) => (
           <article key={order.id} className={styles.pastCard}>
             <div className={styles.cardLeft}>
               <h3 className={styles.vendorName}>{order.vendor}</h3>
@@ -48,14 +53,24 @@ export const PastOrders: React.FC<PastOrdersProps> = ({
 
             <div className={styles.cardRight}>
               <span className={styles.priceText}>{order.price}</span>
-              <button
-                type="button"
-                className={styles.renewBtn}
-                onClick={() => onRenewPlan && onRenewPlan(order)}
-                aria-label={`Renew plan for ${order.vendor}`}
-              >
-                Renew Plan
-              </button>
+              {order.sellerTrackingId ? (
+                <Link
+                  href={`/shop/${order.sellerTrackingId}`}
+                  className={styles.renewBtn}
+                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                >
+                  Reorder
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.renewBtn}
+                  onClick={() => onRenewPlan && onRenewPlan(order)}
+                  aria-label={`Renew plan for ${order.vendor}`}
+                >
+                  Renew Plan
+                </button>
+              )}
             </div>
           </article>
         ))}
@@ -65,3 +80,4 @@ export const PastOrders: React.FC<PastOrdersProps> = ({
 };
 
 export default PastOrders;
+

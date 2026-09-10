@@ -25,22 +25,28 @@ import logoImg from "./logo-nav.png";
 import profilePic from "./Rectangle.jpg";
 
 const FILTER_CUISINES = [
-  { id: "italian", label: "Italian", count: 12 },
-  { id: "american", label: "American", count: 18 },
-  { id: "healthy", label: "Healthy / Bowls", count: 8 },
-  { id: "japanese", label: "Japanese", count: 6 },
-  { id: "indian", label: "Indian / Mughlai", count: 24 },
-  { id: "mexican", label: "Mexican", count: 10 },
+  { id: "biryani", label: "Biryani & Mughlai", count: 24 },
+  { id: "homemeals", label: "Homely Meals / Thali", count: 18 },
+  { id: "italian", label: "Pizzas & Italian", count: 16 },
+  { id: "healthy", label: "Healthy Bowls & Salads", count: 12 },
+  { id: "bakery", label: "Bakery & Desserts", count: 14 },
+  { id: "fastfood", label: "Burgers & Fast Food", count: 20 },
+  { id: "chinese", label: "Chinese & Asian", count: 10 },
+  { id: "south-indian", label: "South Indian", count: 8 },
 ];
 
 const FILTER_DIETARY = [
-  { id: "veg", label: "Vegetarian", count: 15 },
-  { id: "vegan", label: "Vegan", count: 4 },
-  { id: "gluten-free", label: "Gluten-Free", count: 6 },
-  { id: "halal", label: "Halal Certified", count: 11 },
+  { id: "veg", label: "Pure Veg 🥦", count: 22 },
+  { id: "non-veg", label: "Non-Veg 🍗", count: 18 },
+  { id: "vegan", label: "Vegan (Plant-Based 🌱)", count: 6 },
+  { id: "jain", label: "Jain / Satvik 🌿", count: 8 },
 ];
 
-const PRICE_TIERS = ["$", "$$", "$$$"];
+const PRICE_TIERS = [
+  { id: "under-150", label: "Under ₹150" },
+  { id: "150-400", label: "₹150 – ₹400" },
+  { id: "400-plus", label: "₹400+" },
+];
 
 const DIET_OPTIONS = [
   { id: "all", label: "All" },
@@ -187,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (onCartClick) {
       onCartClick();
     } else {
-      router.push("/dashboard/user/checkout");
+      router.push("/user/cart");
     }
   };
 
@@ -217,13 +223,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState<"cuisines" | "dietary" | "price">("cuisines");
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([
-    "italian",
-    "american",
-    "healthy",
-  ]);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [selectedPrice, setSelectedPrice] = useState<string>("$");
+  const [selectedPrice, setSelectedPrice] = useState<string>("");
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -820,17 +822,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className={styles.filterSection}>
                   <div className={styles.priceTiersRow}>
                     {PRICE_TIERS.map((tier) => {
-                      const isSelected = selectedPrice === tier;
+                      const isSelected = selectedPrice === tier.id;
                       return (
                         <button
-                          key={tier}
+                          key={tier.id}
                           type="button"
                           className={`${styles.priceTierBtn} ${
                             isSelected ? styles.priceTierBtnActive : ""
                           }`}
-                          onClick={() => handlePriceSelect(tier)}
+                          onClick={() => handlePriceSelect(tier.id)}
                         >
-                          {tier}
+                          {tier.label}
                         </button>
                       );
                     })}

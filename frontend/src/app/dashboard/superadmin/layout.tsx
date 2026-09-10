@@ -120,6 +120,16 @@ export default function SuperadminLayout({
                         }}>
                         Platform Coupons
                     </Link>
+                    <Link href="/dashboard/superadmin/banners"
+                        style={{
+                            padding: "var(--spacing-2) var(--spacing-3)",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: pathname.includes("/banners") ? "var(--primary)" : "transparent",
+                            color: pathname.includes("/banners") ? "var(--text-inverse)" : "var(--text-main)",
+                            fontWeight: pathname.includes("/banners") ? "500" : "normal"
+                        }}>
+                        Home Promo Banners
+                    </Link>
                     <Link href="/dashboard/superadmin/support"
                         style={{
                             padding: "var(--spacing-2) var(--spacing-3)",

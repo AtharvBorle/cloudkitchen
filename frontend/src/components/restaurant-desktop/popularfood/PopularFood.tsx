@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Image, { StaticImageData } from "next/image";
-import { Star } from "lucide-react";
+import { Star, Plus, Minus } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 import styles from "./PopularFood.module.css";
 
 import img1 from "./pizza-margherita-classic.jpg";
@@ -29,6 +30,8 @@ export interface FoodCardItem {
   rating: string;
   price: string;
   image: StaticImageData | string;
+  category?: string;
+  isVeg?: boolean;
 }
 
 const DEFAULT_FOOD_ITEMS: FoodCardItem[] = [
@@ -113,6 +116,7 @@ export interface PopularFoodProps {
   items?: FoodCardItem[];
   onCategoryChange?: (category: string) => void;
   onAddItem?: (item: FoodCardItem) => void;
+  onDecreaseItem?: (itemId: string) => void;
 }
 
 export const PopularFood: React.FC<PopularFoodProps> = ({
@@ -122,11 +126,17 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
   items = DEFAULT_FOOD_ITEMS,
   onCategoryChange,
   onAddItem,
+  onDecreaseItem,
 }) => {
+  const { cartItems, addToCart, decreaseQuantity } = useCart();
   const [activeCategory, setActiveCategory] = useState<string>(
     defaultActiveCategory
   );
-  const [addedItems, setAddedItems] = useState<{ [id: string]: boolean }>({});
+
+  const getItemQuantity = (itemId: string) => {
+    const found = cartItems.find((ci) => ci.id === itemId);
+    return found ? found.quantity : 0;
+  };
 
   const handleTabClick = (category: string) => {
     setActiveCategory(category);
@@ -136,21 +146,36 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
   };
 
   const handleAddClick = (item: FoodCardItem) => {
-    setAddedItems((prev) => ({
-      ...prev,
-      [item.id]: true,
-    }));
-    setTimeout(() => {
-      setAddedItems((prev) => ({
-        ...prev,
-        [item.id]: false,
-      }));
-    }, 800);
-
     if (onAddItem) {
       onAddItem(item);
+    } else {
+      addToCart({
+        id: item.id,
+        name: item.title,
+        price: parseFloat(item.price.replace(/[^0-9.]/g, "")) || 199,
+        quantity: 1,
+        sellerId: "seller",
+        sellerName: "Kitchen",
+      });
     }
   };
+
+  const handleDecreaseClick = (itemId: string) => {
+    if (onDecreaseItem) {
+      onDecreaseItem(itemId);
+    } else {
+      decreaseQuantity(itemId);
+    }
+  };
+
+  const filteredItems =
+    activeCategory === "Popular" || activeCategory === "All"
+      ? items
+      : items.filter(
+          (it) => it.category?.toLowerCase() === activeCategory.toLowerCase()
+        );
+
+  const displayedList = filteredItems.length > 0 ? filteredItems : items;
 
   return (
     <section
@@ -183,7 +208,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
 
       {/* 3. 3-Column x 3-Row Food Card Grid */}
       <div className={styles.foodGrid} role="region" aria-label="Food Items Grid">
-        {items.map((item) => (
+        {displayedList.map((item) => (
           <article key={item.id} className={styles.foodCard}>
             {/* Square Food Image */}
             <div className={styles.imageWrapper}>
@@ -192,6 +217,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                 alt={item.title}
                 fill
                 sizes="110px"
+                unoptimized={typeof item.image === "string"}
                 className={styles.foodImg}
               />
             </div>
@@ -214,17 +240,39 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                 </p>
               </div>
 
-              {/* Price & Add Button */}
+              {/* Price & Add / Quantity Stepper Button */}
               <div className={styles.cardBottomRow}>
                 <span className={styles.priceText}>{item.price}</span>
-                <button
-                  type="button"
-                  className={styles.addBtn}
-                  onClick={() => handleAddClick(item)}
-                  aria-label={`Add ${item.title} to order`}
-                >
-                  {addedItems[item.id] ? "Added ✓" : "Add +"}
-                </button>
+                {getItemQuantity(item.id) === 0 ? (
+                  <button
+                    type="button"
+                    className={styles.addBtn}
+                    onClick={() => handleAddClick(item)}
+                    aria-label={`Add ${item.title} to order`}
+                  >
+                    Add +
+                  </button>
+                ) : (
+                  <div className={styles.stepperContainer} role="group" aria-label={`Quantity controls for ${item.title}`}>
+                    <button
+                      type="button"
+                      className={styles.stepperBtn}
+                      onClick={() => handleDecreaseClick(item.id)}
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={13} strokeWidth={2.5} />
+                    </button>
+                    <span className={styles.stepperCount}>{getItemQuantity(item.id)}</span>
+                    <button
+                      type="button"
+                      className={styles.stepperBtn}
+                      onClick={() => handleAddClick(item)}
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={13} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </article>

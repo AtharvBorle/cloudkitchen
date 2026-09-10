@@ -39,7 +39,22 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
         }
     }
 
-    return res;
+    return new Proxy(res, {
+        get(target, prop) {
+            if (prop === 'json') {
+                return async () => {
+                    try {
+                        const cloned = target.clone();
+                        return await cloned.json();
+                    } catch (e) {
+                        return { message: "Non-JSON response from server" };
+                    }
+                };
+            }
+            const value = (target as any)[prop];
+            return typeof value === 'function' ? value.bind(target) : value;
+        }
+    });
 }
 
 export function uploadWithProgress(

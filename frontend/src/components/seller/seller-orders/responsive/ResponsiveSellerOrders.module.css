@@ -1,0 +1,479 @@
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #F8FAFC;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+.mobileContainer {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background-color: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F8FAFC;
+  }
+
+  .mobileContainer {
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+}
+
+/* Top Sticky Bar */
+.topBar {
+  width: 100%;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #F8FAFC;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.headerLeftGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerLogoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.headerLogoWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.15);
+  border: 1.5px solid #FED7AA;
+  transition: transform 0.15s ease;
+}
+
+.headerLogoWrapper:active {
+  transform: scale(0.94);
+}
+
+.headerLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.iconButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
+.pageTitle {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.notificationDot {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #EF4444;
+  border: 1.5px solid #F8FAFC;
+}
+
+/* Status Filter Tabs (Horizontal scrolling pills) */
+.filterTabsWrapper {
+  padding: 8px 20px 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  background-color: #F8FAFC;
+  position: sticky;
+  top: 58px;
+  z-index: 40;
+}
+
+.filterTabsWrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.filterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.filterPill:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+.filterPillActive {
+  background-color: #F97316;
+  border-color: #F97316;
+  color: #FFFFFF;
+  box-shadow: 0 3px 10px rgba(249, 115, 22, 0.28);
+}
+
+.filterPillActive:hover {
+  background-color: #EA580C;
+  color: #FFFFFF;
+}
+
+.pillBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background-color: rgba(241, 245, 249, 0.9);
+  color: #64748B;
+}
+
+.filterPillActive .pillBadge {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+/* Content Area */
+.contentArea {
+  flex: 1;
+  padding: 4px 20px 36px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* Orders List */
+.ordersList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.orderCard {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  padding: 18px 18px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  border: 1px solid #F1F5F9;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-sizing: border-box;
+}
+
+.orderCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  border-color: #E2E8F0;
+}
+
+/* Top Meta Row (#1234 • 12 min ago  > ) */
+.cardTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.orderMetaText {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #94A3B8;
+  letter-spacing: 0.1px;
+}
+
+.chevronIcon {
+  color: #94A3B8;
+  transition: transform 0.15s ease;
+}
+
+.cardTopRow:hover .chevronIcon {
+  color: #0F172A;
+  transform: translateX(2px);
+}
+
+/* Customer & Items Details */
+.customerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customerName {
+  font-size: 17.5px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.itemsLine {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+  letter-spacing: -0.1px;
+}
+
+/* Secondary Info Row ((18 orders) ... ₹1,200) */
+.secondaryInfoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -2px;
+}
+
+.priorOrdersWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.packageIcon {
+  color: #94A3B8;
+}
+
+.totalAmountText {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #F97316;
+  letter-spacing: -0.2px;
+}
+
+/* Customer Metrics (⭐ 4.5  ● 128 Delivered  ● 3 Cancelled) */
+.customerStatsRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0 2px 0;
+  flex-wrap: wrap;
+}
+
+.ratingStat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.starIcon {
+  color: #F59E0B;
+  fill: #F59E0B;
+}
+
+.deliveredStat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #16A34A;
+}
+
+.statDotGreen {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #16A34A;
+}
+
+.cancelledStat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #DC2626;
+}
+
+.statDotRed {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #DC2626;
+}
+
+/* Action Buttons (Accept / Reject) */
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.acceptButton {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background-color: #F97316;
+  color: #FFFFFF;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.22);
+}
+
+.acceptButton:hover {
+  background-color: #EA580C;
+  transform: translateY(-1px);
+}
+
+.acceptButton:active {
+  transform: scale(0.98);
+}
+
+.rejectButton {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  border: 1.5px solid #FCA5A5;
+  background-color: #FFFFFF;
+  color: #EF4444;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+}
+
+.rejectButton:hover {
+  background-color: #FEF2F2;
+  border-color: #EF4444;
+  color: #DC2626;
+  transform: translateY(-1px);
+}
+
+.rejectButton:active {
+  transform: scale(0.98);
+}
+
+/* Empty State */
+.emptyState {
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  border: 1px dashed #CBD5E1;
+  margin-top: 10px;
+}
+
+.emptyIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.emptySubtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+}

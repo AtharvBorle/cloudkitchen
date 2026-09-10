@@ -16,7 +16,7 @@ interface RestaurantClientProps {
 }
 
 export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
-  const { addToCart } = useCart();
+  const { addToCart, decreaseQuantity } = useCart();
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(false);
 
@@ -33,18 +33,40 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               id: item.id,
               title: item.name,
               description: item.description || "Freshly cooked gourmet preparation.",
-              rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
+              rating: item.averageRating
+                ? Number(item.averageRating).toFixed(1)
+                : item.rating
+                ? Number(item.rating).toFixed(1)
+                : "4.8",
               price: `₹${item.price}`,
               image: item.imageUrl || kitchenData.items[0]?.image,
-              isVeg: item.isVeg ?? true,
+              isVeg: item.itemType ? item.itemType === "VEG" : item.isVeg !== false,
               category: item.foodCategory?.name || "Popular",
             }));
 
+            const uniqueCats = Array.from(
+              new Set(
+                (liveData.foodItems || [])
+                  .map((it: any) => it.foodCategory?.name)
+                  .filter(Boolean)
+              )
+            ) as string[];
+
             setKitchenData((prev) => ({
               ...prev,
-              restaurantName: liveData.businessName || prev.restaurantName,
-              location: `${liveData.addressLocality || ""} ${liveData.addressLandmark || ""} ${liveData.user?.city || ""}`.trim() || prev.location,
+              trackingId: liveData.trackingId || prev.trackingId,
+              restaurantName:
+                liveData.businessName || liveData.user?.name || prev.restaurantName,
+              location:
+                `${liveData.addressLocality || ""} ${liveData.addressLandmark || ""} ${
+                  liveData.user?.city || ""
+                }`.trim() || prev.location,
+              rating: liveData.averageRating || prev.rating,
+              reviewsCount: liveData.totalReviews
+                ? `(${liveData.totalReviews}+ reviews)`
+                : prev.reviewsCount,
               dietType: liveData.foodType === "VEG" ? "Pure Veg" : "Veg & Non-Veg",
+              categories: uniqueCats.length > 0 ? ["Popular", ...uniqueCats] : prev.categories,
               items: liveItems.length > 0 ? liveItems : prev.items,
             }));
           }
@@ -70,6 +92,10 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       sellerId: kitchenData.trackingId || kitchenId,
       sellerName: kitchenData.restaurantName,
     });
+  };
+
+  const handleDecreaseItem = (itemId: string) => {
+    decreaseQuantity(itemId);
   };
 
   const displayedItems = isVegOnly
@@ -106,6 +132,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             defaultActiveCategory={kitchenData.defaultActiveCategory}
             items={displayedItems}
             onAddItem={handleAddItem}
+            onDecreaseItem={handleDecreaseItem}
           />
         </main>
       </div>
@@ -117,6 +144,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           isVegOnly={isVegOnly}
           onVegToggle={(veg) => setIsVegOnly(veg)}
           onAddItem={handleAddItem}
+          onDecreaseItem={handleDecreaseItem}
         />
       </div>
     </div>

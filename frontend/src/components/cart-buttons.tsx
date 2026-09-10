@@ -42,28 +42,80 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    backgroundColor: '#F9FAFB',
-                    border: '1px solid #EAEAEA',
+                    backgroundColor: '#FFF7ED',
+                    border: '1.5px solid #EA580C',
                     borderRadius: '8px',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 8px rgba(234, 88, 12, 0.12)',
+                    boxSizing: 'border-box'
                 }}
             >
                 <button
                     onClick={() => decreaseQuantity(item.id)}
-                    style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#4A5568', transition: 'background-color 0.2s' }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#EDF2F7'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    style={{
+                        flex: 1,
+                        padding: '8px 14px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '800',
+                        fontSize: '1.1rem',
+                        color: '#EA580C',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#EA580C';
+                        e.currentTarget.style.color = '#FFFFFF';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#EA580C';
+                    }}
+                    aria-label="Decrease quantity"
                 >
                     -
                 </button>
-                <div style={{ padding: '10px 15px', fontWeight: 'bold', color: '#2D3748', backgroundColor: 'white', borderLeft: '1px solid #EAEAEA', borderRight: '1px solid #EAEAEA' }}>
+                <div style={{
+                    padding: '8px 16px',
+                    fontWeight: '800',
+                    fontSize: '0.95rem',
+                    color: '#EA580C',
+                    backgroundColor: '#FFFFFF',
+                    borderLeft: '1.5px solid #EA580C',
+                    borderRight: '1.5px solid #EA580C',
+                    minWidth: '24px',
+                    textAlign: 'center'
+                }}>
                     {cartItem.quantity}
                 </div>
                 <button
                     onClick={handleAction}
-                    style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#4A5568', transition: 'background-color 0.2s' }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#EDF2F7'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    style={{
+                        flex: 1,
+                        padding: '8px 14px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '800',
+                        fontSize: '1.1rem',
+                        color: '#EA580C',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#EA580C';
+                        e.currentTarget.style.color = '#FFFFFF';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#EA580C';
+                    }}
+                    aria-label="Increase quantity"
                 >
                     +
                 </button>

@@ -173,7 +173,6 @@ export const RoomBookingMobileView: React.FC = () => {
           >
             <Menu size={24} strokeWidth={2.2} />
           </button>
-
           <Link href="/" className={styles.brandLink}>
             <div className={styles.logoWrapper}>
               <Image

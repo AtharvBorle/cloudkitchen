@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Play,
@@ -317,6 +318,7 @@ const SlidersIcon = () => (
 );
 
 export const ExploreMobileView: React.FC = () => {
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLang, setSelectedLang] = useState("en");
@@ -330,6 +332,13 @@ export const ExploreMobileView: React.FC = () => {
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/explore-desktop?query=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   const handleLangSelect = (id: string) => {
@@ -457,19 +466,19 @@ export const ExploreMobileView: React.FC = () => {
       </div>
 
       {/* 3. Search Bar (Full Width, No Veg Toggle) */}
-      <div className={styles.searchWrapper}>
+      <form onSubmit={handleSearchSubmit} className={styles.searchWrapper}>
         <Search size={19} strokeWidth={2.2} className={styles.searchIcon} />
         <input
           type="text"
           className={styles.searchInput}
-          placeholder="Search  cuisines, dishes..."
+          placeholder="Search cuisines, dishes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <button className={styles.filterBtn} aria-label="Filters">
+        <button type="submit" className={styles.filterBtn} aria-label="Filters">
           <SlidersIcon />
         </button>
-      </div>
+      </form>
 
       {/* 3. Cloud Kitchen Reels */}
       <section className={styles.reelsSection}>

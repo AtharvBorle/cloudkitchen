@@ -1,0 +1,475 @@
+/* ResponsiveBookingDetails.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F4F6FA;
+  }
+}
+
+/* 420px Mobile View Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  background-color: #F4F6FA;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Top Sticky Bar */
+.topBar {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #EEF0F4;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.backButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.backButton:hover {
+  background-color: #F1F5F9;
+}
+
+.backButton:active {
+  transform: scale(0.95);
+}
+
+.headerTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.headerPlaceholder {
+  width: 44px;
+  height: 44px;
+}
+
+/* Content Area */
+.contentArea {
+  flex: 1;
+  padding: 14px 16px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+/* General Card Base */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 1. Guest Card */
+.guestCard {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guestLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatarCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  color: #EA580C;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid #FFD8BE;
+}
+
+.guestInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.guestName {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.guestPhone {
+  font-size: 13px;
+  font-weight: 400;
+  color: #64748B;
+  margin: 0;
+}
+
+.callButton {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  color: #EA580C;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.callButton:hover {
+  background-color: #FFE4D6;
+  transform: scale(1.05);
+}
+
+.callButton:active {
+  transform: scale(0.95);
+}
+
+/* 2. Room & Date Cards */
+.infoCard {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+
+.iconBadge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background-color: #FFF1E8;
+  color: #EA580C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.infoDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.infoTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.infoSubtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Section Header */
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* 3. Payment Summary Card */
+.paymentCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paymentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: #64748B;
+}
+
+.paymentVal {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 14px;
+}
+
+.divider {
+  height: 1px;
+  background-color: #F1F5F9;
+  margin: 4px 0;
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2px;
+}
+
+.totalLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.totalAmount {
+  font-size: 18px;
+  font-weight: 800;
+  color: #EA580C;
+  letter-spacing: -0.2px;
+}
+
+/* 4. Booking Progress / Timeline Card */
+.progressCard {
+  display: flex;
+  flex-direction: column;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+  padding-left: 2px;
+}
+
+.timelineStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 36px;
+  position: relative;
+}
+
+.indicatorWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 14px;
+  margin-top: 5px;
+}
+
+.dotActive {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #EA580C;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2);
+  flex-shrink: 0;
+}
+
+.dotInactive {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #CBD5E1;
+  flex-shrink: 0;
+}
+
+.connectingLine {
+  width: 2px;
+  height: 24px;
+  background-color: #E2E8F0;
+  margin-top: 2px;
+}
+
+.stepTitleActive {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.stepTitleInactive {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94A3B8;
+  margin: 0;
+}
+
+/* 5. Bottom Actions */
+.bottomActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.confirmBtn {
+  width: 100%;
+  height: 50px;
+  background-color: #F97316;
+  border: none;
+  border-radius: 14px;
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+  transition: all 0.18s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.confirmBtn:hover {
+  background-color: #EA580C;
+  transform: translateY(-1px);
+}
+
+.confirmBtn:active {
+  transform: scale(0.99);
+}
+
+.declineBtn {
+  width: 100%;
+  height: 50px;
+  background-color: #FFFFFF;
+  border: 1.5px solid #F97316;
+  border-radius: 14px;
+  color: #EA580C;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.declineBtn:hover {
+  background-color: #FFF7ED;
+  border-color: #EA580C;
+}
+
+.declineBtn:active {
+  transform: scale(0.99);
+}
+
+.declinedNotice {
+  width: 100%;
+  height: 50px;
+  border-radius: 14px;
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #EF4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+/* Toast Notification */
+.toastNotification {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1E293B;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

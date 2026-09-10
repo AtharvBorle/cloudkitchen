@@ -87,8 +87,10 @@ interface DashboardBodyProps {
 export default function DashboardBody({
   title = "Top Rated",
   seeAllLink = "/explore-desktop?sort=top_rated",
-  items = TOP_RATED_ITEMS,
+  items,
 }: DashboardBodyProps) {
+  const displayItems = items && items.length > 0 ? items : TOP_RATED_ITEMS;
+
   return (
     <section
       style={{
@@ -161,7 +163,7 @@ export default function DashboardBody({
           }}
           className="top-rated-grid"
         >
-          {items.map((item) => (
+          {displayItems.map((item) => (
             <div
               key={item.id}
               style={{
@@ -298,14 +300,14 @@ export default function DashboardBody({
               <Link
                 href={item.link || "/explore-desktop"}
                 style={{
-                  backgroundColor: "#FF5500",
+                  backgroundColor: "#FF6B00",
                   color: "#FFFFFF",
                   fontSize: "0.82rem",
                   fontWeight: "700",
                   padding: "6px 15px",
                   borderRadius: "9999px",
                   textDecoration: "none",
-                  boxShadow: "0 3px 10px rgba(255, 85, 0, 0.25)",
+                  boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
                   transition: "all 0.2s ease",
                   whiteSpace: "nowrap",
                   flexShrink: 0,
@@ -326,7 +328,7 @@ export default function DashboardBody({
           transform: translateY(-2px);
         }
         .top-rated-order-btn:hover {
-          background-color: #E64D00;
+          background-color: #E65F00;
           transform: scale(1.03);
         }
         @media (max-width: 1024px) {

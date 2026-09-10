@@ -274,15 +274,15 @@ export default function DeliveryPersonsPage() {
                         <ArrowLeft size={16} /> Back to Dashboard
                     </Link>
                 </div>
-                <button
-                    onClick={() => { closeModal(); setIsModalOpen(true); }}
+                <Link
+                    href="/seller/riderMng/settlements/add-agent"
                     style={{
                         backgroundColor: '#F16F68', color: 'white', border: 'none', padding: '12px 24px',
-                        borderRadius: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
+                        borderRadius: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', textDecoration: 'none'
                     }}
                 >
                     <Plus size={20} /> Add Delivery Person
-                </button>
+                </Link>
             </div>
 
             {fetching ? (
@@ -296,12 +296,12 @@ export default function DeliveryPersonsPage() {
                     <p style={{ color: '#718096', maxWidth: '400px', margin: '0 auto 20px' }}>
                         Add delivery persons so you can assign them to orders for faster fulfillment.
                     </p>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        style={{ color: '#F16F68', backgroundColor: 'transparent', border: '1px solid #F16F68', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                    <Link
+                        href="/seller/riderMng/settlements/add-agent"
+                        style={{ color: '#F16F68', backgroundColor: 'transparent', border: '1px solid #F16F68', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', textDecoration: 'none', display: 'inline-block' }}
                     >
                         Register First Staff
-                    </button>
+                    </Link>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>

@@ -39,12 +39,15 @@ import streetFoodImg from "../../explore-desktop/curated-dining-collections/dini
 import comfortFoodImg from "../../explore-desktop/curated-dining-collections/dining-comfort-food.jpg";
 import saladImg from "../../explore-desktop/curated-dining-collections/dining-fresh-salads.jpg";
 import { KitchenData, FoodCardItem } from "../restaurant-data";
+import { useCart } from "@/context/CartContext";
 
 export interface RestaurantMobileViewProps {
   kitchenData: KitchenData;
   isVegOnly: boolean;
   onVegToggle: (veg: boolean) => void;
   onAddItem: (item: FoodCardItem) => void;
+  onDecreaseItem?: (itemId: string) => void;
+  onRemoveItem?: (itemId: string) => void;
 }
 
 export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
@@ -52,8 +55,11 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   isVegOnly,
   onVegToggle,
   onAddItem,
+  onDecreaseItem,
+  onRemoveItem,
 }) => {
   const router = useRouter();
+  const { cartItems, addToCart, decreaseQuantity, removeFromCart, cartTotal } = useCart();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("premium");
@@ -61,13 +67,10 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>("Pizza");
   const [couponCopied, setCouponCopied] = useState<boolean>(false);
 
-  // Local state for interactive item quantity & customization in mobile view
-  const [itemQuantities, setItemQuantities] = useState<{ [id: string]: number }>({
-    "pizza-2": 1,
-  });
-  const [itemSizes, setItemSizes] = useState<{ [id: string]: string }>({
-    "pizza-2": "Medium",
-  });
+  const getItemQuantity = (itemId: string) => {
+    const found = cartItems.find((ci) => ci.id === itemId);
+    return found ? found.quantity : 0;
+  };
 
   const handleShare = async () => {
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -87,38 +90,27 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   };
 
   const handleAdd = (item: FoodCardItem) => {
-    setItemQuantities((prev) => ({
-      ...prev,
-      [item.id]: (prev[item.id] || 0) + 1,
-    }));
     onAddItem(item);
   };
 
-  const handleIncrement = (itemId: string) => {
-    setItemQuantities((prev) => ({
-      ...prev,
-      [itemId]: (prev[itemId] || 0) + 1,
-    }));
+  const handleIncrement = (item: FoodCardItem) => {
+    onAddItem(item);
   };
 
   const handleDecrement = (itemId: string) => {
-    setItemQuantities((prev) => {
-      const current = prev[itemId] || 0;
-      if (current <= 1) {
-        const next = { ...prev };
-        delete next[itemId];
-        return next;
-      }
-      return { ...prev, [itemId]: current - 1 };
-    });
+    if (onDecreaseItem) {
+      onDecreaseItem(itemId);
+    } else {
+      decreaseQuantity(itemId);
+    }
   };
 
   const handleRemove = (itemId: string) => {
-    setItemQuantities((prev) => {
-      const next = { ...prev };
-      delete next[itemId];
-      return next;
-    });
+    if (onRemoveItem) {
+      onRemoveItem(itemId);
+    } else {
+      removeFromCart(itemId);
+    }
   };
 
   const categories = ["Popular", "Pizza", "Sides", "Drinks", "Desserts"];
@@ -352,13 +344,8 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
     },
   ];
 
-  const totalCartCount = Object.values(itemQuantities).reduce((acc, qty) => acc + qty, 0);
-  const totalCartPrice = Object.entries(itemQuantities).reduce((acc, [id, qty]) => {
-    const item = baseItems.find((i) => i.id === id);
-    if (!item) return acc;
-    const numPrice = parseInt(item.price.replace(/[^\d]/g, ""), 10) || 0;
-    return acc + numPrice * qty;
-  }, 0);
+  const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
+  const totalCartPrice = cartTotal;
 
   return (
     <div className={styles.mobileContainer}>
@@ -568,7 +555,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                         className={styles.planSubscribeBtn}
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push("/dashboard/user/checkout");
+                          router.push("/user/checkout");
                         }}
                       >
                         Subscribe Now
@@ -613,9 +600,8 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
           <div className={styles.foodList}>
             {finalDisplayItems.map((item) => {
-              const quantity = itemQuantities[item.id] || 0;
+              const quantity = getItemQuantity(item.id);
               const hasQuantity = quantity > 0;
-              const size = itemSizes[item.id] || "Medium";
 
               return (
                 <div key={item.id} className={styles.foodCard}>
@@ -664,7 +650,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                             <button
                               type="button"
                               className={styles.stepperBtn}
-                              onClick={() => handleIncrement(item.id)}
+                              onClick={() => handleIncrement(item)}
                               aria-label="Increase quantity"
                             >
                               <Plus size={12} strokeWidth={2.5} />
@@ -710,9 +696,9 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           <button
             type="button"
             className={styles.cartPayBtn}
-            onClick={() => router.push("/dashboard/user/checkout")}
+            onClick={() => router.push("/user/cart")}
           >
-            <span>Pay ₹{totalCartPrice || 547}</span>
+            <span>View Cart • ₹{totalCartPrice.toFixed(2)}</span>
             <ChevronRight size={16} />
           </button>
         </div>

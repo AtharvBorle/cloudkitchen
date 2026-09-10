@@ -101,6 +101,12 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       hasBadge: false,
     },
     {
+      label: "Cart",
+      href: "/user/cart",
+      icon: <ShoppingBag className={styles.navIcon} size={19} />,
+      hasBadge: false,
+    },
+    {
       label: "Rooms",
       href: "/room-booking",
       icon: <BedDouble className={styles.navIcon} size={18} />,
@@ -197,13 +203,13 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             <div className={styles.logoCircle}>
               <Image
                 src={logoImg}
-                alt="Cloud Kitchen Logo"
+                alt="Neo Cloud Bites Logo"
                 width={32}
                 height={32}
                 className={styles.logoImg}
               />
             </div>
-            <span className={styles.brandText}>Cloud Kitchen</span>
+            <span className={styles.brandText}>Neo Cloud Bites</span>
           </div>
 
           <button

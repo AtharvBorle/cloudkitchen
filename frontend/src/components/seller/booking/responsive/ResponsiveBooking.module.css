@@ -1,0 +1,400 @@
+/* ResponsiveBooking.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F5F6F8;
+  }
+}
+
+/* 390px Mobile View Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 390px;
+  min-height: 874px;
+  background-color: #F5F6F8;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
+
+/* Top Navigation Bar */
+.topBar {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #EEF0F4;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.headerLeftGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerLogoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.headerLogoWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.15);
+  border: 1.5px solid #FED7AA;
+  transition: transform 0.15s ease;
+}
+
+.headerLogoWrapper:active {
+  transform: scale(0.94);
+}
+
+.headerLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.iconButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: #F1F5F9;
+}
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
+.pageTitle {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.headerPlaceholder {
+  width: 38px;
+  height: 38px;
+}
+
+/* Filter Tabs / Pills */
+.filterTabsSection {
+  padding: 16px 16px 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filterTabsSection::-webkit-scrollbar {
+  display: none;
+}
+
+.tabPill {
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.tabPill:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+.tabPillActive {
+  background-color: #F97316;
+  border-color: #F97316;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+}
+
+.tabPillActive:hover {
+  background-color: #EA580C;
+  color: #FFFFFF;
+}
+
+/* Main Content Area */
+.contentArea {
+  flex: 1;
+  padding: 10px 16px 32px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+/* Booking Card */
+.bookingCard {
+  background-color: #FFFFFF;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #EEF0F4;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.bookingCard:hover {
+  border-color: #E2E8F0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* Card Header: Guest Info & Status */
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.guestInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.guestName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.roomName {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Status Badges */
+.statusBadge {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusRequested {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.statusConfirmed {
+  background-color: #DCFCE7;
+  color: #16A34A;
+}
+
+.statusPaid {
+  background-color: #E0F2FE;
+  color: #0284C7;
+}
+
+.statusDeclined {
+  background-color: #FEE2E2;
+  color: #DC2626;
+}
+
+/* Dates & Amount Container */
+.datesAmountContainer {
+  background-color: #F8FAFC;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0;
+  border: 1px solid #F1F5F9;
+}
+
+.datesLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748B;
+}
+
+.dateRangeText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.amountText {
+  font-size: 15px;
+  font-weight: 700;
+  color: #F97316;
+}
+
+/* Actions Row (Decline / Confirm) */
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.declineButton {
+  flex: 1;
+  height: 42px;
+  background-color: #FFFFFF;
+  border: 1.5px solid #F97316;
+  border-radius: 12px;
+  color: #F97316;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.declineButton:hover {
+  background-color: #FFF7ED;
+}
+
+.declineButton:active {
+  transform: scale(0.98);
+}
+
+.confirmButton {
+  flex: 1;
+  height: 42px;
+  background-color: #F97316;
+  border: none;
+  border-radius: 12px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.2);
+}
+
+.confirmButton:hover {
+  background-color: #EA580C;
+}
+
+.confirmButton:active {
+  transform: scale(0.98);
+}
+
+.secondaryActionBtn {
+  width: 100%;
+  height: 40px;
+  background-color: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  color: #334155;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.secondaryActionBtn:hover {
+  background-color: #E2E8F0;
+}
+
+/* Empty State */
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: #64748B;
+  font-weight: 500;
+}
+

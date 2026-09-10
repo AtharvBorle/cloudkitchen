@@ -1,0 +1,464 @@
+/* ResponsiveCashHandover.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F4F6FA;
+  }
+}
+
+/* 420px Mobile View Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  background-color: #F4F6FA;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow-x: hidden;
+  padding-bottom: 32px;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
+
+/* Top Header Bar */
+.topBar {
+  width: 100%;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #F1F5F9;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.backButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.backButton:hover {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.backButton:active {
+  transform: scale(0.95);
+}
+
+.headerTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.3px;
+  margin: 0;
+  flex: 1;
+  text-align: center;
+  margin-right: 38px; /* Balance left back button */
+}
+
+.headerPlaceholder {
+  display: none;
+}
+
+/* Content Area */
+.contentArea {
+  flex: 1;
+  padding: 16px 18px 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* Rider Info Card */
+.riderCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.avatarCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #FFEDD5;
+  color: #EA580C;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.riderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.riderName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.riderSubtext {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Highlight Banner */
+.highlightBanner {
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  border: 1px solid #FED7AA;
+  border-radius: 18px;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.amountTitle {
+  font-size: 36px;
+  font-weight: 800;
+  color: #EA580C;
+  margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.ordersCountText {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #EA580C;
+  margin: 0;
+}
+
+/* Section Header */
+.breakdownSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 2px 0 0 2px;
+}
+
+/* Breakdown List */
+.breakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.breakdownRow {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.orderText {
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #0F172A;
+}
+
+.orderNum {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.orderDot {
+  color: #94A3B8;
+  font-size: 12px;
+}
+
+.orderCust {
+  font-weight: 600;
+  color: #334155;
+}
+
+.orderAmount {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+/* Confirmation Checkbox Card */
+.checkboxCard {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+}
+
+.checkboxCard:hover {
+  border-color: #CBD5E1;
+}
+
+.checkboxBox {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background-color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.checkboxBoxUnchecked {
+  background-color: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+}
+
+.checkboxLabel {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.3;
+}
+
+/* Action Buttons */
+.confirmReceiptBtn {
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  border: none;
+  border-radius: 14px;
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+  transition: all 0.15s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.confirmReceiptBtn:hover {
+  filter: brightness(1.05);
+}
+
+.confirmReceiptBtn:active {
+  transform: scale(0.98);
+}
+
+.confirmReceiptBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.reportBtn {
+  background: transparent;
+  border: none;
+  color: #EF4444;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  align-self: center;
+  padding: 6px 14px;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+  touch-action: manipulation;
+}
+
+.reportBtn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* Report Modal Dialog */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 360px;
+  background-color: #FFFFFF;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.modalText {
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.modalCancelBtn {
+  flex: 1;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalReportBtn {
+  flex: 1;
+  height: 42px;
+  border-radius: 10px;
+  border: none;
+  background-color: #EF4444;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Toast Notification */
+.toastNotification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0F172A;
+  color: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
