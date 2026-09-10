@@ -186,11 +186,13 @@ export default function SellerSidebar({
   return (
     <>
       {/* Mobile Backdrop Overlay */}
-      <div
-        onClick={onClose}
-        className={`${styles.backdrop} ${isMobileOpen ? styles.open : ""}`}
-        aria-hidden={!isMobileOpen}
-      />
+      {isMobileOpen && (
+        <div
+          onClick={onClose}
+          className={`${styles.backdrop} ${styles.open}`}
+          aria-hidden="false"
+        />
+      )}
 
       {/* Main Sidebar Container */}
       <aside
@@ -374,144 +376,52 @@ export default function SellerSidebar({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "18px",
+            gap: "4px",
             flex: 1,
             width: "100%",
           }}
         >
-          {/* Section 1: Main Top Navigation Bar Links (Expanded only) */}
-          {!isEffectiveCollapsed && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <span
+          {SELLER_NAV_ITEMS.map((item) => {
+            const active = isItemActive(item);
+            const IconComponent = item.icon;
+
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                onClick={onClose}
+                title={item.label}
                 style={{
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: "#94A3B8",
-                  letterSpacing: "0.6px",
-                  textTransform: "uppercase",
-                  padding: "0 12px",
-                  marginBottom: "4px",
+                  width: "100%",
+                  height: "40px",
+                  borderRadius: "8px",
+                  padding: isEffectiveCollapsed ? "0" : "8px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: isEffectiveCollapsed ? "center" : "flex-start",
+                  gap: isEffectiveCollapsed ? "0" : "10px",
+                  textDecoration: "none",
+                  boxSizing: "border-box",
+                  backgroundColor: active ? "#FFF1E8" : "transparent",
+                  color: active ? "#F97316" : "#475569",
+                  fontWeight: active ? 700 : 500,
+                  fontSize: "13.5px",
+                  transition: "all 0.18s ease",
                 }}
+                className={`nav-item ${active ? "active" : ""}`}
               >
-                MAIN NAVIGATION
-              </span>
-
-              {MAIN_NAV_ITEMS.map((item) => {
-                const active = isItemActive(item);
-                const IconComponent = item.icon;
-
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    onClick={onClose}
-                    style={{
-                      width: "100%",
-                      height: "38px",
-                      borderRadius: "8px",
-                      padding: "8px 12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      textDecoration: "none",
-                      boxSizing: "border-box",
-                      backgroundColor: active ? "#FFF1E8" : "transparent",
-                      color: active ? "#F97316" : "#475569",
-                      fontWeight: active ? 700 : 500,
-                      fontSize: "13px",
-                      transition: "all 0.18s ease",
-                    }}
-                    className={`nav-item ${active ? "active" : ""}`}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <IconComponent
-                        size={18}
-                        color={active ? "#F97316" : "#64748B"}
-                      />
-                      <span style={{ lineHeight: 1 }}>{item.label}</span>
-                    </div>
-
-                    {item.badge && (
-                      <span
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 700,
-                          backgroundColor: "#FF5500",
-                          color: "#FFFFFF",
-                          padding: "2px 6px",
-                          borderRadius: "10px",
-                          lineHeight: 1,
-                        }}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Section 2: Seller Operations Options */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            {!isEffectiveCollapsed && (
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: "#94A3B8",
-                  letterSpacing: "0.6px",
-                  textTransform: "uppercase",
-                  padding: "0 12px",
-                  marginBottom: "4px",
-                }}
-              >
-                SELLER OPERATIONS
-              </span>
-            )}
-
-            {SELLER_NAV_ITEMS.map((item) => {
-              const active = isItemActive(item);
-              const IconComponent = item.icon;
-
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  onClick={onClose}
-                  title={item.label}
-                  style={{
-                    width: "100%",
-                    height: "38px",
-                    borderRadius: "8px",
-                    padding: isEffectiveCollapsed ? "0" : "8px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: isEffectiveCollapsed ? "center" : "flex-start",
-                    gap: isEffectiveCollapsed ? "0" : "10px",
-                    textDecoration: "none",
-                    boxSizing: "border-box",
-                    backgroundColor: active ? "#FFF1E8" : "transparent",
-                    color: active ? "#F97316" : "#475569",
-                    fontWeight: active ? 700 : 500,
-                    fontSize: "13px",
-                    transition: "all 0.18s ease",
-                  }}
-                  className={`nav-item ${active ? "active" : ""}`}
-                >
-                  <IconComponent
-                    size={18}
-                    color={active ? "#F97316" : "#64748B"}
-                  />
-                  {!isEffectiveCollapsed && (
-                    <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>
-                      {item.label}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
+                <IconComponent
+                  size={18}
+                  color={active ? "#F97316" : "#64748B"}
+                />
+                {!isEffectiveCollapsed && (
+                  <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>
+                    {item.label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Footer with Logout Action & Collapse Trigger */}

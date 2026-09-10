@@ -175,11 +175,13 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className={`${styles.overlay} ${isOpen ? styles.open : ""}`}
-        onClick={onClose}
-        aria-hidden={!isOpen}
-      />
+      {isOpen && (
+        <div
+          className={`${styles.overlay} ${styles.open}`}
+          onClick={onClose}
+          aria-hidden="false"
+        />
+      )}
 
       {/* Drawer */}
       <aside
