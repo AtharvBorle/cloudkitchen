@@ -162,7 +162,7 @@ interface PropertiesProps {
 export default function Properties({ places }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [maxPrice, setMaxPrice] = useState<number>(500);
+  const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
   const basePlaces = places && places.length > 0 ? places : SAMPLE_PLACES;
@@ -251,14 +251,14 @@ export default function Properties({ places }: PropertiesProps) {
       }
     }
 
-    // Filter by price range
+    // Filter by price range (0 to 1000+)
     if (activePricePreset === "under-150") {
       list = list.filter((p) => (p.price || 199) <= 150);
-    } else if (activePricePreset === "150-300") {
-      list = list.filter((p) => (p.price || 199) >= 150 && (p.price || 199) <= 300);
-    } else if (activePricePreset === "300-plus") {
-      list = list.filter((p) => (p.price || 199) >= 300);
-    } else if (maxPrice < 500) {
+    } else if (activePricePreset === "150-400") {
+      list = list.filter((p) => (p.price || 199) >= 150 && (p.price || 199) <= 400);
+    } else if (activePricePreset === "400-plus") {
+      list = list.filter((p) => (p.price || 199) >= 400);
+    } else if (maxPrice < 1000) {
       list = list.filter((p) => (p.price || 199) <= maxPrice);
     }
 
@@ -284,7 +284,7 @@ export default function Properties({ places }: PropertiesProps) {
   const handleClearAll = () => {
     setSelectedCuisines([]);
     setSelectedDietary([]);
-    setMaxPrice(500);
+    setMaxPrice(1000);
     setActivePricePreset("all");
   };
 
@@ -554,12 +554,12 @@ export default function Properties({ places }: PropertiesProps) {
               >
                 {activePricePreset === "under-150"
                   ? "Under ₹150"
-                  : activePricePreset === "150-300"
-                  ? "₹150 – ₹300"
-                  : activePricePreset === "300-plus"
-                  ? "₹300+"
-                  : maxPrice >= 500
-                  ? "All Prices"
+                  : activePricePreset === "150-400"
+                  ? "₹150 – ₹400"
+                  : activePricePreset === "400-plus"
+                  ? "₹400+"
+                  : maxPrice >= 1000
+                  ? "₹0 – ₹1000+"
                   : `Up to ₹${maxPrice}`}
               </span>
             </div>
@@ -568,10 +568,10 @@ export default function Properties({ places }: PropertiesProps) {
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <input
                 type="range"
-                min="100"
-                max="500"
-                step="25"
-                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-300" ? 300 : 500) : maxPrice}
+                min="0"
+                max="1000"
+                step="10"
+                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-400" ? 400 : 1000) : maxPrice}
                 onChange={(e) => {
                   setMaxPrice(Number(e.target.value));
                   setActivePricePreset("custom");
@@ -582,10 +582,10 @@ export default function Properties({ places }: PropertiesProps) {
                   cursor: "pointer",
                 }}
               />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: "#94A3B8", fontWeight: "500" }}>
-                <span>₹100</span>
-                <span>₹300</span>
-                <span>₹500+</span>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: "#94A3B8", fontWeight: "600" }}>
+                <span>₹0</span>
+                <span>₹500</span>
+                <span>₹1000+</span>
               </div>
             </div>
 
@@ -594,8 +594,8 @@ export default function Properties({ places }: PropertiesProps) {
               {[
                 { id: "all", label: "Any Price" },
                 { id: "under-150", label: "Under ₹150" },
-                { id: "150-300", label: "₹150 – ₹300" },
-                { id: "300-plus", label: "₹300+" },
+                { id: "150-400", label: "₹150 – ₹400" },
+                { id: "400-plus", label: "₹400+" },
               ].map((tier) => {
                 const isSelected = activePricePreset === tier.id;
                 return (
@@ -605,13 +605,13 @@ export default function Properties({ places }: PropertiesProps) {
                     onClick={() => {
                       if (isSelected) {
                         setActivePricePreset("all");
-                        setMaxPrice(500);
+                        setMaxPrice(1000);
                       } else {
                         setActivePricePreset(tier.id);
                         if (tier.id === "under-150") setMaxPrice(150);
-                        else if (tier.id === "150-300") setMaxPrice(300);
-                        else if (tier.id === "300-plus") setMaxPrice(500);
-                        else setMaxPrice(500);
+                        else if (tier.id === "150-400") setMaxPrice(400);
+                        else if (tier.id === "400-plus") setMaxPrice(1000);
+                        else setMaxPrice(1000);
                       }
                     }}
                     style={{
