@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -18,6 +18,9 @@ import {
   BedDouble,
   LogOut,
   X,
+  ChevronDown,
+  Utensils,
+  ChefHat,
 } from "lucide-react";
 
 export interface NavItem {
@@ -69,6 +72,14 @@ export default function SellerSidebar({
   avatarInitials = "JD",
 }: SellerSidebarProps) {
   const pathname = usePathname();
+  const isRoomRoute = Boolean(pathname?.startsWith("/room-booking") || activeItemId === "rooms");
+  const [isRoomsDropdownOpen, setIsRoomsDropdownOpen] = useState<boolean>(isRoomRoute);
+
+  const roomSubOptions = [
+    { id: "sub-rooms", label: "Rooms", href: "/room-booking", icon: BedDouble },
+    { id: "sub-food", label: "Food", href: "/explore-desktop", icon: Utensils },
+    { id: "sub-mess", label: "Mess/Tiffin", href: "/my-subscriptions-desktop", icon: ChefHat },
+  ];
 
   // Helper to determine if a nav item is currently active
   const isItemActive = (item: NavItem) => {
@@ -303,6 +314,122 @@ export default function SellerSidebar({
             </span>
 
             {MAIN_NAV_ITEMS.map((item) => {
+              if (item.id === "rooms") {
+                const active = isItemActive(item);
+                const IconComponent = item.icon;
+
+                return (
+                  <div key={item.id} style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <div
+                      onClick={() => setIsRoomsDropdownOpen((prev) => !prev)}
+                      style={{
+                        width: "100%",
+                        height: "40px",
+                        borderRadius: "8px",
+                        padding: "8px 12px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        boxSizing: "border-box",
+                        backgroundColor: active ? "#FFF1E8" : "transparent",
+                        color: active ? "#F97316" : "#475569",
+                        fontWeight: active ? 700 : 500,
+                        fontSize: "13.5px",
+                        cursor: "pointer",
+                        transition: "all 0.18s ease",
+                      }}
+                      className={`nav-item ${active ? "active" : ""}`}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <IconComponent
+                          size={18}
+                          color={active ? "#F97316" : "#64748B"}
+                        />
+                        <span style={{ lineHeight: 1 }}>{item.label}</span>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        {item.badge && (
+                          <span
+                            style={{
+                              fontSize: "9.5px",
+                              fontWeight: 700,
+                              backgroundColor: "#FF5500",
+                              color: "#FFFFFF",
+                              padding: "2px 6px",
+                              borderRadius: "10px",
+                              lineHeight: 1,
+                            }}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                        <ChevronDown
+                          size={15}
+                          style={{
+                            color: active ? "#F97316" : "#94A3B8",
+                            transform: isRoomsDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s ease",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submenu with Food, Mess/Tiffin, Rooms */}
+                    {isRoomsDropdownOpen && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                          paddingLeft: "16px",
+                          marginLeft: "12px",
+                          borderLeft: "2px solid #FED7AA",
+                          marginTop: "3px",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {roomSubOptions.map((sub) => {
+                          const SubIcon = sub.icon;
+                          const isSubActive =
+                            (sub.label === "Food" && pathname === "/explore-desktop") ||
+                            (sub.label === "Mess/Tiffin" && pathname?.startsWith("/my-subscription")) ||
+                            (sub.label === "Rooms" && pathname?.startsWith("/room-booking"));
+
+                          return (
+                            <Link
+                              key={sub.id}
+                              href={sub.href}
+                              onClick={onClose}
+                              style={{
+                                width: "100%",
+                                height: "34px",
+                                borderRadius: "6px",
+                                padding: "6px 10px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                textDecoration: "none",
+                                boxSizing: "border-box",
+                                backgroundColor: isSubActive ? "#FFF7ED" : "transparent",
+                                color: isSubActive ? "#F97316" : "#64748B",
+                                fontWeight: isSubActive ? 700 : 500,
+                                fontSize: "12.5px",
+                                transition: "all 0.15s ease",
+                              }}
+                              className="subnav-link-item"
+                            >
+                              <SubIcon size={14} color={isSubActive ? "#F97316" : "#94A3B8"} />
+                              <span>{sub.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const active = isItemActive(item);
               const IconComponent = item.icon;
 

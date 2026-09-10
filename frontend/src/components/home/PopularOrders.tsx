@@ -85,15 +85,16 @@ export default function PopularOrders({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: "12px",
           }}
         >
           <h2
             style={{
-              fontSize: "1.55rem",
+              fontSize: "clamp(1.2rem, 2.5vw, 1.55rem)",
               fontWeight: "800",
               color: "#18181B",
               margin: 0,
-              letterSpacing: "-0.3px",
+              letterSpacing: "-0.02em",
             }}
           >
             {title}
@@ -103,10 +104,12 @@ export default function PopularOrders({
             href={seeAllLink}
             style={{
               color: "#FF5500",
-              fontSize: "0.95rem",
+              fontSize: "0.92rem",
               fontWeight: "700",
               textDecoration: "none",
               transition: "color 0.2s ease",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             See all

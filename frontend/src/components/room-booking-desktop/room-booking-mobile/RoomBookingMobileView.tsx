@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 import Image, { StaticImageData } from "next/image";
+import Link from "next/link";
 import {
   Menu,
   Bell,
   Search,
-  SlidersHorizontal,
   ChevronDown,
+  Globe,
+  Check,
   Star,
   Heart,
   MapPin,
@@ -17,7 +19,33 @@ import neoLivingImg from "../featured-colivings/neo-living-room.jpg";
 import comfortStayImg from "../featured-colivings/comfort-stay-room.jpg";
 import executiveDoubleImg from "../all-available-rooms/executive-double-room.jpg";
 import premiumSingleImg from "../all-available-rooms/premium-single-room.jpg";
+import logoImg from "@/components/navbar/logo-nav.png";
 import { MobileSidebar } from "@/components/mobile-sidebar";
+
+const LANG_OPTIONS = [
+  { id: "hi", label: "Hindi", code: "HI" },
+  { id: "mr", label: "Marathi", code: "MR" },
+  { id: "en", label: "English", code: "EN" },
+];
+
+// Orange 3-Slider Filter Icon matching design
+const SlidersIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4 21V14M4 10V3M12 21V12M12 8V3M20 21V16M20 12V3M1 14H7M9 8H15M17 16H23"
+      stroke="#f97316"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 export interface MobileRoomCard {
   id: string;
@@ -92,6 +120,8 @@ export const RoomBookingMobileView: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLang, setSelectedLang] = useState("en");
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({
     "room-1": false,
     "room-2": false,
@@ -102,6 +132,16 @@ export const RoomBookingMobileView: React.FC = () => {
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleLangSelect = (id: string) => {
+    setSelectedLang(id);
+    setIsLangDropdownOpen(false);
+  };
+
+  const getSelectedLangCode = () => {
+    const found = LANG_OPTIONS.find((l) => l.id === selectedLang);
+    return found ? found.code : "EN";
   };
 
   const filteredRooms = SAMPLE_ROOMS.filter((room) => {
@@ -123,36 +163,102 @@ export const RoomBookingMobileView: React.FC = () => {
         activeItem="Rooms"
       />
 
-      {/* 1. Top Header Bar */}
-      <header className={styles.topHeader}>
-        <div className={styles.headerLeft}>
+      {/* 1. Top Navigation Bar (Logo, Location, Bell, Lang) matching Explore */}
+      <nav className={styles.topNavRow} aria-label="Rooms Mobile Top Navigation">
+        <div className={styles.navLeftGroup}>
           <button
             className={styles.menuBtn}
-            aria-label="Open Menu"
+            aria-label="Open navigation menu"
             onClick={() => setIsSidebarOpen(true)}
           >
-            <Menu size={22} strokeWidth={2.2} />
+            <Menu size={24} strokeWidth={2.2} />
           </button>
-          <div className={styles.logoBadge}>
-            <span>🏠</span>
-          </div>
-          <div className={styles.brandInfo}>
-            <span className={styles.brandTitle}>Cloud Bites Rooms</span>
-            <button className={styles.locationDropdown}>
-              <span>Kothrud, Pune</span>
-              <ChevronDown size={14} strokeWidth={2.5} />
-            </button>
-          </div>
+
+          <Link href="/" className={styles.brandLink}>
+            <div className={styles.logoWrapper}>
+              <Image
+                src={logoImg}
+                alt="Cloud Kitchen Logo"
+                width={40}
+                height={40}
+                className={styles.logoImage}
+                priority
+              />
+            </div>
+            <div className={styles.brandInfo}>
+              <span className={styles.brandTitle}>Cloud Kitchen</span>
+              <div className={styles.locationContainer}>
+                <span>Kothrud, Pune</span>
+                <ChevronDown size={14} />
+              </div>
+            </div>
+          </Link>
         </div>
 
-        <button className={styles.bellBtn} aria-label="Notifications">
-          <Bell size={18} strokeWidth={2} />
-        </button>
-      </header>
+        <div className={styles.navRightGroup}>
+          {/* Notification Bell Button */}
+          <button
+            type="button"
+            className={styles.bellBtn}
+            aria-label="Notifications"
+          >
+            <Bell size={20} strokeWidth={2} />
+          </button>
 
-      {/* 2. Search Bar */}
+          {/* Language Selector Pill with Dropdown */}
+          <div className={styles.langWrapper}>
+            <button
+              type="button"
+              className={styles.langBtn}
+              onClick={() => setIsLangDropdownOpen((prev) => !prev)}
+              aria-label={`Language: ${getSelectedLangCode()}`}
+              aria-expanded={isLangDropdownOpen}
+            >
+              <Globe size={20} strokeWidth={2.2} />
+            </button>
+
+            {isLangDropdownOpen && (
+              <>
+                <div
+                  className={styles.langBackdrop}
+                  onClick={() => setIsLangDropdownOpen(false)}
+                />
+                <div className={styles.langDropdown} role="menu">
+                  {LANG_OPTIONS.map((option) => {
+                    const isSelected = selectedLang === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`${styles.langItem} ${
+                          isSelected ? styles.langItemActive : ""
+                        }`}
+                        onClick={() => handleLangSelect(option.id)}
+                        role="menuitem"
+                      >
+                        <span className={styles.langLabel}>{option.label}</span>
+                        {isSelected && (
+                          <Check size={18} color="#16A34A" strokeWidth={2.8} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* 2. Room Title Section */}
+      <div className={styles.roomTitleSection}>
+        <h1 className={styles.title}>Cloud Bites Rooms</h1>
+        <p className={styles.subtitle}>Find your ideal PG, hostel or flat</p>
+      </div>
+
+      {/* 3. Search Bar */}
       <div className={styles.searchWrapper}>
-        <Search size={18} className={styles.searchIcon} />
+        <Search size={19} strokeWidth={2.2} className={styles.searchIcon} />
         <input
           type="text"
           className={styles.searchInput}
@@ -161,7 +267,7 @@ export const RoomBookingMobileView: React.FC = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         <button className={styles.filterBtn} aria-label="Filter listings">
-          <SlidersHorizontal size={17} />
+          <SlidersIcon />
         </button>
       </div>
 

@@ -20,7 +20,7 @@ export default function OrdersDesktopPage() {
       </div>
 
       <main className={styles.mainContent}>
-        {/* 2. My Orders Header & Category Filters */}
+        {/* 2. Orders Header & Category Filters */}
         <OrdersHeader />
 
         {/* 3. Active Orders Section (Food Live Tracking & Room Subscriptions) */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
@@ -15,7 +15,12 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  ChevronDown,
   Star,
+  Utensils,
+  ChefHat,
+  BedDouble,
+  Check,
 } from "lucide-react";
 import styles from "./MobileSidebar.module.css";
 import userAvatar from "../settings-desktop/settings-sidebar/rahul-sharma-avatar.jpg";
@@ -30,6 +35,8 @@ export interface MobileSidebarProps {
     | "My Orders"
     | "Orders"
     | "Rooms"
+    | "Food"
+    | "Mess/Tiffin"
     | "Settings"
     | "Help & Support"
     | string;
@@ -47,20 +54,23 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
+  const isRoomRoute = Boolean(pathname?.startsWith("/room-booking") || activeItem === "Rooms");
+  const [isRoomsDropdownOpen, setIsRoomsDropdownOpen] = useState<boolean>(isRoomRoute);
 
   const userName = customUserName || session?.user?.name || "Siddharth Sharma";
 
-  // Lock body scroll when drawer is open
+  // Lock body scroll and sync dropdown state when drawer is opened
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      setIsRoomsDropdownOpen(Boolean(pathname?.startsWith("/room-booking") || activeItem === "Rooms"));
     } else {
       document.body.style.overflow = "";
     }
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen]);
+  }, [isOpen, pathname, activeItem]);
 
   const handleLogout = () => {
     onClose();
@@ -93,9 +103,10 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     {
       label: "Rooms",
       href: "/room-booking",
-      icon: <Tag className={styles.navIcon} size={18} />,
+      icon: <BedDouble className={styles.navIcon} size={18} />,
       hasBadge: true,
       badgeText: "NEW",
+      isDropdown: true,
     },
     {
       label: "Settings",
@@ -111,11 +122,58 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     },
   ];
 
+  const roomSubOptions = [
+    {
+      label: "Rooms",
+      href: "/room-booking",
+      icon: <BedDouble className={styles.subnavIcon} size={15} />,
+    },
+    {
+      label: "Food",
+      href: "/explore-desktop",
+      icon: <Utensils className={styles.subnavIcon} size={15} />,
+    },
+    {
+      label: "Mess/Tiffin",
+      href: "/my-subscriptions-desktop",
+      icon: <ChefHat className={styles.subnavIcon} size={15} />,
+    },
+  ];
+
   const isLinkActive = (item: { label: string; href: string }) => {
     if (item.href === "/" && (pathname === "/" || activeItem === "Home")) return true;
+    if (item.label === "Rooms") {
+      return pathname?.startsWith("/room-booking") || activeItem === "Rooms";
+    }
     if (item.href !== "/" && pathname?.startsWith(item.href)) return true;
     if (activeItem === item.label) return true;
     if (item.label === "My Orders" && activeItem === "Orders") return true;
+    return false;
+  };
+
+  const isSubOptionActive = (sub: { label: string; href: string }) => {
+    if (sub.label === "Rooms") {
+      return (
+        pathname?.startsWith("/room-booking") ||
+        activeItem === "Rooms" ||
+        (activeItem !== "Food" &&
+          activeItem !== "Mess/Tiffin" &&
+          !pathname?.startsWith("/explore-desktop") &&
+          !pathname?.startsWith("/my-subscription") &&
+          !pathname?.startsWith("/my-subscriptions-desktop") &&
+          pathname?.startsWith("/room-booking"))
+      );
+    }
+    if (sub.label === "Food") {
+      return pathname === "/explore-desktop" || activeItem === "Food";
+    }
+    if (sub.label === "Mess/Tiffin") {
+      return (
+        pathname?.startsWith("/my-subscription") ||
+        pathname?.startsWith("/my-subscriptions-desktop") ||
+        activeItem === "Mess/Tiffin"
+      );
+    }
     return false;
   };
 
@@ -182,6 +240,81 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         <div className={styles.navContainer}>
           <div className={styles.navGroup}>
             {navLinks.map((item) => {
+              if (item.isDropdown) {
+                const isHeaderActive = isLinkActive(item);
+                return (
+                  <div key={item.label} className={styles.dropdownContainer}>
+                    <div
+                      className={`${styles.dropdownHeader} ${isHeaderActive ? styles.dropdownHeaderActive : ""}`}
+                      onClick={() => setIsRoomsDropdownOpen((prev) => !prev)}
+                    >
+                      <div className={styles.navItemLeft}>
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </div>
+
+                      <div className={styles.dropdownRight}>
+                        {item.hasBadge && (
+                          <span className={styles.newBadge}>{item.badgeText}</span>
+                        )}
+                        <button
+                          type="button"
+                          className={styles.dropdownToggleBtn}
+                          aria-label="Toggle dropdown"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsRoomsDropdownOpen((prev) => !prev);
+                          }}
+                        >
+                          <ChevronDown
+                            className={`${styles.dropdownChevron} ${
+                              isRoomsDropdownOpen ? styles.dropdownChevronOpen : ""
+                            }`}
+                            size={16}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Submenu Dropdown List with the 3 options and smooth accordion animation */}
+                    <div
+                      className={`${styles.subnavWrapper} ${
+                        isRoomsDropdownOpen ? styles.subnavWrapperOpen : ""
+                      }`}
+                    >
+                      <div className={styles.subnavInner}>
+                        {roomSubOptions.map((sub, index) => {
+                          const isSubActive = isSubOptionActive(sub);
+                          return (
+                            <Link
+                              key={sub.label}
+                              href={sub.href}
+                              style={{
+                                animationDelay: `${index * 0.05}s`,
+                              }}
+                              className={`${styles.subnavItem} ${
+                                isSubActive ? styles.subnavItemActive : ""
+                              }`}
+                              onClick={onClose}
+                            >
+                              <div className={styles.subnavItemLeft}>
+                                {sub.icon}
+                                <span>{sub.label}</span>
+                              </div>
+                              {isSubActive && (
+                                <span className={styles.subnavActiveBadge}>
+                                  <Check size={11} strokeWidth={3} />
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               const isActive = isLinkActive(item);
               return (
                 <Link

@@ -12,7 +12,6 @@ import {
   BestPlaces,
   DashboardBody,
   RecommendedForYou,
-  MobileBottomNav,
 } from "@/components/home";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 
@@ -84,9 +83,6 @@ export default function Home() {
         <RecommendedForYou />
       </main>
 
-      {/* Mobile Fixed Bottom Navigation */}
-      <MobileBottomNav />
-
       <style jsx>{`
         @media (max-width: 1024px) {
           .home-page-canvas {
@@ -96,12 +92,12 @@ export default function Home() {
         }
         @media (max-width: 768px) {
           .home-page-canvas {
-            padding-bottom: 80px !important;
+            padding-bottom: 32px !important;
           }
         }
         @media (max-width: 640px) {
           .home-page-canvas {
-            padding: 16px 12px 85px 12px !important;
+            padding: 16px 12px 32px 12px !important;
             gap: 18px !important;
           }
         }
