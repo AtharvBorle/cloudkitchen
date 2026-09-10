@@ -132,7 +132,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
           <button
             type="button"
             className={styles.iconButton}
-            onClick={() => router.push("/seller/res/notifications")}
+            onClick={() => router.push("/seller/notifications")}
             aria-label="Notifications"
             title="Notifications"
           >

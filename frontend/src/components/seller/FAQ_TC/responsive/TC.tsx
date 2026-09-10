@@ -120,7 +120,7 @@ export const TC: React.FC<TCProps> = ({
               if (onNotificationClick) {
                 onNotificationClick();
               } else {
-                router.push("/seller/res/notifications");
+                router.push("/seller/notifications");
               }
             }}
             aria-label="Notifications"

@@ -110,7 +110,7 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
           <button
             type="button"
             className={styles.iconButton}
-            onClick={() => router.push("/seller/res/notifications")}
+            onClick={() => router.push("/seller/notifications")}
             aria-label="Notifications"
             title="Notifications"
           >

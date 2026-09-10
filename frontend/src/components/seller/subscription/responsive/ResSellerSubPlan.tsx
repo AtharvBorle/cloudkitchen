@@ -188,7 +188,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             <button
               type="button"
               className={styles.moreButton}
-              onClick={() => router.push("/seller/res/notifications")}
+              onClick={() => router.push("/seller/notifications")}
               aria-label="Notifications"
               title="Notifications"
             >

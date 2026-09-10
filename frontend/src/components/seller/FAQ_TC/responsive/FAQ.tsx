@@ -122,7 +122,7 @@ export const FAQ: React.FC<FAQProps> = ({
               if (onNotificationClick) {
                 onNotificationClick();
               } else {
-                router.push("/seller/res/notifications");
+                router.push("/seller/notifications");
               }
             }}
             aria-label="Notifications"
