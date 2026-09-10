@@ -69,16 +69,13 @@ export default function SignUpPage() {
             flex-direction: column !important;
           }
           .signup-left-pane {
-            flex: none !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            min-height: 520px !important;
+            display: none !important;
           }
           .signup-right-pane {
-            flex: none !important;
+            flex: 1 1 100% !important;
             width: 100% !important;
             max-width: 100% !important;
-            min-height: auto !important;
+            min-height: 100vh !important;
           }
         }
       `}</style>
