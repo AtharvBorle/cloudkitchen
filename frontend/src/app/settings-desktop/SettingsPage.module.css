@@ -1,4 +1,4 @@
-﻿.pageWrapper {
+.pageWrapper {
   min-height: 100vh;
   background-color: #FFF4E6;
   display: flex;
@@ -7,6 +7,7 @@
 
 .desktopNavbar {
   display: block;
+  width: 100%;
 }
 
 .mainContainer {
@@ -45,12 +46,8 @@
 }
 
 @media (max-width: 768px) {
-  .desktopNavbar {
-    display: none;
-  }
-
   .pageWrapper {
-    background-color: #ffffff;
+    background-color: #FFF4E6;
   }
 
   .mainContainer {

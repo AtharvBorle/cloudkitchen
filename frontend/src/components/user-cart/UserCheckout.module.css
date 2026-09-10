@@ -2,7 +2,8 @@
 
 .userCheckoutWrapper {
   width: 100%;
-  min-height: 1024px;
+  max-width: 100vw;
+  min-height: 100vh;
   background: linear-gradient(0deg, rgba(255, 243, 227, 0.15), rgba(255, 243, 227, 0.15)),
               linear-gradient(180deg, #FFF3E3 0%, #FFFBF7 50%, #FFFFFF 100%);
   display: flex;
@@ -14,6 +15,7 @@
   margin: 0;
   padding: 0;
   opacity: 1;
+  overflow-x: hidden;
 }
 
 /* =========================================================
@@ -255,7 +257,10 @@
 .stepperRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .stepPillActive {
@@ -265,18 +270,21 @@
   background: #FFFFFF;
   border: 1.5px solid #F97316;
   border-radius: 9999px;
-  padding: 7px 20px;
-  font-size: 13.5px;
+  padding: 8px 20px;
+  font-size: 15px;
   font-weight: 700;
   color: #EA580C;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.12);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .activeDot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background-color: #EA580C;
+  flex-shrink: 0;
 }
 
 .stepPillInactive {
@@ -286,12 +294,14 @@
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 9999px;
-  padding: 7px 20px;
-  font-size: 13.5px;
+  padding: 8px 20px;
+  font-size: 15px;
   font-weight: 600;
   color: #64748B;
   transition: all 0.15s ease;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .stepPillInactive:hover {
@@ -300,16 +310,18 @@
 }
 
 .inactiveDot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background-color: #CBD5E1;
+  flex-shrink: 0;
 }
 
 .stepperLine {
-  width: 32px;
+  width: 18px;
   height: 1.5px;
   background-color: #CBD5E1;
+  flex-shrink: 0;
 }
 
 /* Header Section */
@@ -974,16 +986,29 @@
 /* =========================================================
    5. RESPONSIVE BREAKPOINTS
    ========================================================= */
-@media (max-width: 1024px) {
-  .navBar {
-    padding: 16px 24px;
-  }
+@media (max-width: 1280px) {
   .checkoutLayoutContainer {
-    padding: 32px 24px 60px 24px;
+    padding: 32px 32px 60px 32px;
+  }
+  .mainContent {
+    grid-template-columns: 1fr 370px;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 1120px) {
+  .checkoutLayoutContainer {
+    padding: 28px 24px 60px 24px;
   }
   .mainContent {
     grid-template-columns: 1fr;
     gap: 24px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .checkoutLayoutContainer {
+    padding: 24px 20px 50px 20px;
   }
 }
 
@@ -1004,16 +1029,50 @@
     font-size: 16px;
   }
   .checkoutLayoutContainer {
-    padding: 20px 16px 40px 16px;
+    padding: 16px 12px 36px 12px;
+    gap: 20px;
+  }
+  .stepperRow {
+    gap: 6px;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .stepperRow::-webkit-scrollbar {
+    display: none;
+  }
+  .stepPillActive {
+    padding: 7px 14px;
+    font-size: 13.5px;
+    gap: 6px;
+  }
+  .stepPillInactive {
+    padding: 7px 14px;
+    font-size: 13.5px;
+    gap: 6px;
+  }
+  .activeDot,
+  .inactiveDot {
+    width: 7px;
+    height: 7px;
+  }
+  .stepperLine {
+    width: 14px;
+    min-width: 10px;
   }
   .pageTitle {
-    font-size: 26px;
+    font-size: 24px;
+  }
+  .pageSubtitle {
+    font-size: 13.5px;
   }
   .cartItemCard {
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
-    padding: 16px;
+    padding: 14px;
   }
   .itemRightActions {
     width: 100%;
@@ -1024,5 +1083,32 @@
   }
   .applyButton {
     width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .checkoutLayoutContainer {
+    padding: 14px 8px 32px 8px;
+  }
+  .stepperRow {
+    gap: 4px;
+  }
+  .stepPillActive {
+    padding: 6px 10px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .stepPillInactive {
+    padding: 6px 10px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .activeDot,
+  .inactiveDot {
+    width: 6px;
+    height: 6px;
+  }
+  .stepperLine {
+    width: 10px;
   }
 }

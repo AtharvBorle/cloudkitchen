@@ -65,3 +65,9 @@
     margin-top: 3px;
   }
 }
+
+@media (max-width: 380px) {
+  .title {
+    font-size: 20px;
+  }
+}

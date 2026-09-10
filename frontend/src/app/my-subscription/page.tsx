@@ -19,6 +19,8 @@ export default function MySubscriptionPage() {
         <Navbar
           navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
           initialActiveItem="Settings"
+          hideSearch={true}
+          hideVegToggle={true}
         />
       </div>
 
