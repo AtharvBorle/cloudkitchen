@@ -531,20 +531,28 @@
   .formContainer {
     width: 100%;
     height: auto;
-    min-height: auto;
+    min-height: 100vh;
     max-height: none;
-    padding: 36px 24px;
+    padding: 32px 20px;
+    align-items: center;
   }
 }
 
 @media (max-width: 768px) {
   .formContainer {
     padding: 24px 16px;
+    min-height: 100vh;
+  }
+
+  .topBar {
+    max-width: 100%;
+    margin-bottom: 16px;
   }
 
   .loginCard {
-    padding: 24px 20px;
+    padding: 26px 20px;
     border-radius: 20px;
+    max-width: 100%;
   }
 
   .cardHeading {
