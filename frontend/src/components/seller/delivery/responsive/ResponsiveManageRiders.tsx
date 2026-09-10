@@ -187,14 +187,38 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
             </div>
           </section>
 
-          {/* Invite Rider Button */}
-          <button
-            type="button"
-            className={styles.inviteButton}
-            onClick={handleInvite}
-          >
-            + Invite Rider
-          </button>
+          {/* Action Buttons */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
+            <button
+              type="button"
+              className={styles.inviteButton}
+              onClick={() => router.push("/seller/res/delivery/add-agent")}
+            >
+              + Add Delivery Agent
+            </button>
+
+            <button
+              type="button"
+              onClick={handleInvite}
+              style={{
+                width: "100%",
+                height: "44px",
+                backgroundColor: "#FFFFFF",
+                color: "#F97316",
+                border: "1.5px solid #FFEDD5",
+                borderRadius: "14px",
+                fontSize: "14px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "inherit",
+              }}
+            >
+              Share Onboarding Link
+            </button>
+          </div>
         </main>
 
         {/* Invite Rider Modal */}

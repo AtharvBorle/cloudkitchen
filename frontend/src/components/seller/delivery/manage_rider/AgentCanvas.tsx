@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ChevronLeft, X, Eye, EyeOff, Loader2 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 
 export interface AgentFormData {
@@ -52,14 +52,20 @@ export default function AgentCanvas({
   };
 
   // Handle Cancel / Close Navigation
-  const handleClose = () => {
+  const handleClose = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (onClose) {
       onClose();
-    } else if (onCancel) {
-      onCancel();
-    } else {
-      router.push("/seller/riderMng/settlements");
+      return;
     }
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    router.push("/seller/riderMng/settlements");
   };
 
   // Handle Form Submission
@@ -150,11 +156,35 @@ export default function AgentCanvas({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "20px 24px",
+          padding: "18px 24px",
           borderBottom: "1px solid #F1F5F9",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            type="button"
+            onClick={handleClose}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              border: "1px solid #E2E8F0",
+              backgroundColor: "#F8FAFC",
+              color: "#0F172A",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              padding: 0,
+            }}
+            className="back-arrow-btn"
+            aria-label="Back to settlements"
+            title="Back"
+          >
+            <ChevronLeft size={18} strokeWidth={2.5} />
+          </button>
+
           <h2
             style={{
               fontSize: "18px",
@@ -166,6 +196,7 @@ export default function AgentCanvas({
           >
             Add Delivery Agent
           </h2>
+
           <span
             style={{
               backgroundColor: "#FFF4EC",
@@ -198,6 +229,7 @@ export default function AgentCanvas({
           }}
           className="close-btn"
           aria-label="Close dialog"
+          title="Close"
         >
           <X size={19} />
         </button>
@@ -534,6 +566,10 @@ export default function AgentCanvas({
       </form>
 
       <style jsx>{`
+        .back-arrow-btn:hover {
+          background-color: #F1F5F9 !important;
+          border-color: #CBD5E1 !important;
+        }
         .close-btn:hover {
           background-color: #F1F5F9 !important;
           color: #0F172A !important;

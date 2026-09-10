@@ -159,6 +159,12 @@ export type {
   ManagedRiderItem as ResponsiveManagedRiderItem,
 } from "./delivery/responsive/ResponsiveManageRiders";
 
+export { default as ResponsiveAddAgent, default as SellerAddAgentResponsive } from "./delivery/responsive/ResponsiveAddAgent";
+export type {
+  ResponsiveAddAgentProps,
+  ResponsiveAddAgentFormData as ResponsiveAddAgentFormData,
+} from "./delivery/responsive/ResponsiveAddAgent";
+
 // ==========================================
 // 5. Seller Booking & Reservations (Pravin)
 // ==========================================

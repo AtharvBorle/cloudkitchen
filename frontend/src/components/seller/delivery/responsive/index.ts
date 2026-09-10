@@ -21,3 +21,9 @@ export type {
   ResponsiveManageRidersProps,
   ManagedRiderItem,
 } from "./ResponsiveManageRiders";
+
+export { default as ResponsiveAddAgent, default as SellerAddAgentResponsive } from "./ResponsiveAddAgent";
+export type {
+  ResponsiveAddAgentProps,
+  ResponsiveAddAgentFormData,
+} from "./ResponsiveAddAgent";
