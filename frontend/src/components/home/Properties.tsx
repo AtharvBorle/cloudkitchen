@@ -141,7 +141,6 @@ const DIETARY = [
   { id: "non-veg", label: "Non-Veg 🍗", count: 18 },
   { id: "vegan", label: "Vegan (Plant-Based 🌱)", count: 6 },
   { id: "jain", label: "Jain / Satvik 🌿", count: 8 },
-  { id: "halal", label: "Halal Certified ☪️", count: 12 },
 ];
 
 const PRICE_TIERS = [
@@ -193,7 +192,6 @@ export default function Properties({ places }: PropertiesProps) {
         if (d.id === "non-veg") return cat.includes("non-veg") || cat.includes("biryani") || cat.includes("mughlai");
         if (d.id === "vegan") return cat.includes("vegan") || cat.includes("organic");
         if (d.id === "jain") return cat.includes("satvik") || cat.includes("jain") || cat.includes("pure veg");
-        if (d.id === "halal") return cat.includes("halal") || cat.includes("biryani");
         return true;
       }).length;
       return {
