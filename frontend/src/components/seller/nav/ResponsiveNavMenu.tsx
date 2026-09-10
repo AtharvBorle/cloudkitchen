@@ -2,19 +2,19 @@
 
 import React, { useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   X,
   LayoutGrid,
   ShoppingBag,
   BookOpen,
-  Home,
+  Bed,
   CalendarCheck,
   Truck,
   CreditCard,
   UserCircle,
   RefreshCw,
-  Store,
   ChevronRight,
 } from "lucide-react";
 import styles from "./ResponsiveNavMenu.module.css";
@@ -30,7 +30,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/res/dashboard" },
   { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/res/orders" },
   { id: "menu", label: "Menu Management", icon: BookOpen, href: "/seller/res/menu" },
-  { id: "rooms", label: "Rooms Config", icon: Home, href: "/seller/res/rooms" },
+  { id: "rooms", label: "Rooms Config", icon: Bed, href: "/seller/res/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/res/booking" },
   { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/res/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/res/subscription" },
@@ -180,7 +180,14 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         <div className={styles.drawerHeader}>
           <div className={styles.brandGroup}>
             <div className={styles.logoIcon}>
-              <Store size={20} />
+              <Image
+                src="/images/logo-nav.png"
+                alt="Neo Cloud Bites Logo"
+                width={36}
+                height={36}
+                className={styles.logoImage}
+                priority
+              />
             </div>
             <div className={styles.brandInfo}>
               <span className={styles.brandName}>NEO CLOUD BITES</span>

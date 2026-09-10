@@ -12,34 +12,42 @@ export default function ResponsiveSellerSubscriptionPage() {
     async function loadData() {
       try {
         const [profileRes, plansRes] = await Promise.all([
-          fetchApi<{ seller: any }>("/api/seller/profile"),
-          fetchApi<any[]>("/api/seller/subscription/plans"),
+          fetchApi("/api/seller/profile"),
+          fetchApi("/api/seller/subscription/plans"),
         ]);
 
-        if (profileRes.data?.seller?.user?.name) {
-          setOwnerName(profileRes.data.seller.user.name);
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          const sellerObj = profileData.data?.seller || profileData.seller;
+          if (sellerObj?.user?.name) {
+            setOwnerName(sellerObj.user.name);
+          }
         }
 
-        if (plansRes.data && plansRes.data.length > 0) {
-          const mapped = plansRes.data.map((p: any, idx: number) => {
-            const tiers = ["Starter", "Professional", "Enterprise"] as const;
-            const variants = ["orange", "purple", "indigo", "blue"] as const;
-            return {
-              id: p.id,
-              title: p.name || "Subscription Plan",
-              tier: tiers[idx % 3],
-              tierVariant: variants[idx % 4],
-              price: `₹${p.price || 998}`,
-              subscribersCount: (idx + 1) * 28 + 12,
-              status: "Active" as const,
-              createdAt: "Active 2024",
-              billingCycle: p.durationMonths === 1 ? ("Monthly" as const) : ("Quarterly" as const),
-              mealsPerDay: 2,
-              mealTypes: ["Lunch", "Dinner"],
-              description: Array.isArray(p.features) ? p.features.join(". ") : "Full access to platform perks.",
-            };
-          });
-          setPlans(mapped);
+        if (plansRes.ok) {
+          const plansData = await plansRes.json();
+          const plansList = plansData.data || plansData;
+          if (Array.isArray(plansList) && plansList.length > 0) {
+            const mapped = plansList.map((p: any, idx: number) => {
+              const tiers = ["Starter", "Professional", "Enterprise"] as const;
+              const variants = ["orange", "purple", "indigo", "blue"] as const;
+              return {
+                id: p.id,
+                title: p.name || "Subscription Plan",
+                tier: tiers[idx % 3],
+                tierVariant: variants[idx % 4],
+                price: `₹${p.price || 998}`,
+                subscribersCount: (idx + 1) * 28 + 12,
+                status: "Active" as const,
+                createdAt: "Active 2024",
+                billingCycle: p.durationMonths === 1 ? ("Monthly" as const) : ("Quarterly" as const),
+                mealsPerDay: 2,
+                mealTypes: ["Lunch", "Dinner"],
+                description: Array.isArray(p.features) ? p.features.join(". ") : "Full access to platform perks.",
+              };
+            });
+            setPlans(mapped);
+          }
         }
       } catch (err) {
         console.error("Failed to load subscription plans:", err);

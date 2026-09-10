@@ -42,6 +42,7 @@ export default function AgentCanvasDas({
         width: "100%",
         minHeight: "100vh",
         display: "flex",
+        alignItems: "flex-start",
         backgroundColor: "#CBD5E1",
         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}

@@ -134,10 +134,17 @@ export const RoomBookingMobileView: React.FC = () => {
             <Menu size={22} strokeWidth={2.2} />
           </button>
           <div className={styles.logoBadge}>
-            <span>🏠</span>
+            <Image
+              src="/images/logo-nav.png"
+              alt="Neo Cloud Bites Logo"
+              width={34}
+              height={34}
+              className={styles.logoBadgeImg}
+              priority
+            />
           </div>
           <div className={styles.brandInfo}>
-            <span className={styles.brandTitle}>Cloud Bites Rooms</span>
+            <span className={styles.brandTitle}>Neo Cloud Bites Rooms</span>
             <button className={styles.locationDropdown}>
               <span>Kothrud, Pune</span>
               <ChevronDown size={14} strokeWidth={2.5} />

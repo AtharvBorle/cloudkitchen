@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, Plus, User, ChevronRight } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
@@ -111,18 +113,32 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
       <div className={styles.mobileContainer}>
         {/* Top Header Bar with Hamburger and Plus Icon */}
         <header className={styles.topBar}>
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsNavMenuOpen(true);
-            }}
-            aria-label="Open Navigation Menu"
-            title="Menu"
-          >
-            <MenuIcon size={24} />
-          </button>
+          <div className={styles.headerLeftGroup}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsNavMenuOpen(true);
+              }}
+              aria-label="Open Navigation Menu"
+              title="Menu"
+            >
+              <MenuIcon size={24} />
+            </button>
+            <Link href="/seller/res/dashboard" className={styles.headerLogoLink} title="Neo Cloud Bites">
+              <div className={styles.headerLogoWrapper}>
+                <Image
+                  src="/images/logo-nav.png"
+                  alt="Neo Cloud Bites"
+                  width={30}
+                  height={30}
+                  className={styles.headerLogoImg}
+                  priority
+                />
+              </div>
+            </Link>
+          </div>
 
           <h1 className={styles.pageTitle}>Rooms</h1>
 

@@ -15,12 +15,16 @@ function CashHandoverContent() {
   useEffect(() => {
     async function loadRider() {
       try {
-        const res = await fetchApi<{ deliveryPersons: any[] }>("/api/seller/delivery");
-        if (res.data?.deliveryPersons && res.data.deliveryPersons.length > 0) {
-          const found = riderId
-            ? res.data.deliveryPersons.find((r) => r.id === riderId)
-            : res.data.deliveryPersons[0];
-          if (found) setRider(found);
+        const res = await fetchApi("/api/seller/delivery");
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.data?.deliveryPersons || data.deliveryPersons || data.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            const found = riderId
+              ? list.find((r: any) => r.id === riderId)
+              : list[0];
+            if (found) setRider(found);
+          }
         }
       } catch (err) {
         console.error("Failed to load delivery person details:", err);
@@ -33,12 +37,12 @@ function CashHandoverContent() {
     if (!rider || !rider.id) return;
     try {
       const amount = rider.outstandingBalance || 1700;
-      await fetch(`/api/seller/delivery/${rider.id}/collect`, {
+      await fetchApi(`/api/seller/delivery/${rider.id}/collect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount }),
       });
-      router.push("/seller/res/delivery");
+      router.push("/seller/res/delivery/riders");
     } catch (err) {
       console.error("Failed to collect cash:", err);
     }
@@ -53,11 +57,14 @@ function CashHandoverContent() {
               .split(" ")
               .map((n: string) => n[0])
               .join("")
+              .toUpperCase()
+              .slice(0, 2)
           : "RK"
       }
-      totalCash={`₹${(rider?.outstandingBalance || 1700).toLocaleString()}`}
+      totalCash={`₹${(rider?.outstandingBalance || 1700).toLocaleString("en-IN")}`}
       ordersCount={rider ? Math.max(1, Math.round((rider.outstandingBalance || 1700) / 850)) : 3}
       onConfirmReceipt={handleConfirmReceipt}
+      onBack={() => router.push("/seller/res/delivery/riders")}
     />
   );
 }

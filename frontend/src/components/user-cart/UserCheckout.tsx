@@ -12,6 +12,7 @@ import {
   X,
   Plus,
   Minus,
+  ShoppingBag,
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import styles from "./UserCheckout.module.css";

@@ -12,6 +12,7 @@ import {
   X,
   Plus,
   Minus,
+  ShoppingBag,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";

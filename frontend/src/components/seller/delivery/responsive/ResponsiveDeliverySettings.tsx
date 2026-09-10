@@ -64,11 +64,13 @@ export const ResponsiveDeliverySettings: React.FC<
     }, 2500);
   };
 
-  const handleBack = () => {
+  const handleBack = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (onBack) {
       onBack();
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
     } else {
       router.push("/seller/res/delivery");
     }

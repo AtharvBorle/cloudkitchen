@@ -48,9 +48,9 @@ export default function BookingCanvasDas({
     <div
       style={{
         width: "100%",
-        minHeight: "1024px",
-        height: "100%",
+        minHeight: "100vh",
         display: "flex",
+        alignItems: "flex-start",
         backgroundColor: "#F7F8FB",
         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}
@@ -70,7 +70,7 @@ export default function BookingCanvasDas({
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          minHeight: "1024px",
+          minHeight: "100vh",
           backgroundColor: "#F7F8FB",
         }}
         className="booking-canvas-main-wrapper"

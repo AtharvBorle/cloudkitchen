@@ -16,13 +16,17 @@ function DetailsContent() {
   useEffect(() => {
     async function loadOrder() {
       try {
-        const res = await fetchApi<{ orders: any[] }>("/api/seller/orders");
-        if (res.data?.orders) {
-          const found = res.data.orders.find(
-            (o) => o.id === cleanId || o.id === rawId || `#${o.id.slice(0, 6)}` === rawId
-          );
-          if (found) {
-            setOrder(found);
+        const res = await fetchApi("/api/seller/orders");
+        if (res.ok) {
+          const ordersData = await res.json();
+          const list = ordersData.data?.orders || ordersData.orders || ordersData.data || [];
+          if (Array.isArray(list)) {
+            const found = list.find(
+              (o: any) => o.id === cleanId || o.id === rawId || `#${o.id.slice(0, 6)}` === rawId
+            );
+            if (found) {
+              setOrder(found);
+            }
           }
         }
       } catch (err) {

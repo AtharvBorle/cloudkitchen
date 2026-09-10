@@ -15,13 +15,15 @@ function MenuItemContent() {
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetchApi<{ items: any[]; foodCategories: any[] }>("/api/seller/menu");
-        if (res.data) {
-          if (res.data.foodCategories) {
-            setCategories(res.data.foodCategories);
+        const res = await fetchApi("/api/seller/menu");
+        if (res.ok) {
+          const menuData = await res.json();
+          const dataPayload = menuData.data || menuData;
+          if (dataPayload.foodCategories) {
+            setCategories(dataPayload.foodCategories);
           }
-          if (itemId && res.data.items) {
-            const found = res.data.items.find((it: any) => it.id === itemId);
+          if (itemId && dataPayload.items) {
+            const found = dataPayload.items.find((it: any) => it.id === itemId);
             if (found) {
               setInitialData(found);
             }
