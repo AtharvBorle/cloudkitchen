@@ -816,17 +816,21 @@ export default function Properties({ places }: PropertiesProps) {
             align-items: center !important;
             height: auto !important;
           }
-          .sidebarFilters {
-            width: 100% !important;
-            min-width: 100% !important;
-            height: auto !important;
-          }
           .Properties2 {
             width: 100% !important;
             height: auto !important;
           }
           .PlacesGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 1024px) {
+          .sidebarFilters,
+          .sidebar-filters {
+            display: none !important;
+          }
+          .properties-container {
+            gap: 16px !important;
           }
         }
         @media (max-width: 768px) {

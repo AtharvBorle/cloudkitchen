@@ -623,6 +623,11 @@ export default function FilterRow({
         .filter-clear-pill:hover {
           background-color: #FFE6D6;
         }
+        @media (max-width: 768px) {
+          .filter-row-section {
+            display: none !important;
+          }
+        }
       `}</style>
     </section>
   );
