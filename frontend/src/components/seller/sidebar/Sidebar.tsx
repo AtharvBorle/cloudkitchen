@@ -14,6 +14,9 @@ import {
   CreditCard,
   UserCircle,
   Headphones,
+  Compass,
+  BedDouble,
+  LogOut,
   X,
 } from "lucide-react";
 
@@ -22,13 +25,21 @@ export interface NavItem {
   label: string;
   icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
   href: string;
+  badge?: string;
 }
+
+export const MAIN_NAV_ITEMS: NavItem[] = [
+  { id: "home", label: "Home", icon: Home, href: "/explore-desktop" },
+  { id: "explore", label: "Explore", icon: Compass, href: "/restaurant" },
+  { id: "my-orders", label: "Orders", icon: ShoppingBag, href: "/orders-desktop" },
+  { id: "rooms", label: "Rooms", icon: BedDouble, href: "/room-booking", badge: "NEW" },
+];
 
 export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
   { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
   { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
-  { id: "rooms", label: "Rooms", icon: Home, href: "/seller/rooms" },
+  { id: "rooms-seller", label: "Rooms", icon: Home, href: "/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/dashboard/seller/bookings" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/create-subscription-plan" },
@@ -42,6 +53,9 @@ export interface SellerSidebarProps {
   activeItemId?: string;
   logoSrc?: string;
   roleTagText?: string;
+  ownerName?: string;
+  partnerRole?: string;
+  avatarInitials?: string;
 }
 
 export default function SellerSidebar({
@@ -50,6 +64,9 @@ export default function SellerSidebar({
   activeItemId,
   logoSrc = "/images/seller-logo.png",
   roleTagText = "OWNER ROLE",
+  ownerName = "John Doe",
+  partnerRole = "Neo Cloud Partner",
+  avatarInitials = "JD",
 }: SellerSidebarProps) {
   const pathname = usePathname();
 
@@ -70,10 +87,13 @@ export default function SellerSidebar({
     if (item.id === "delivery") {
       return pathname?.startsWith("/seller/delivery") || pathname?.startsWith("/dashboard/seller/delivery");
     }
-    if (item.href === "/dashboard/seller") {
-      return pathname === "/dashboard/seller";
+    if (item.id === "rooms-seller") {
+      return pathname?.startsWith("/seller/rooms") || pathname?.startsWith("/dashboard/seller/rooms");
     }
-    return Boolean(pathname?.startsWith(item.href));
+    if (item.id === "dashboard") {
+      return pathname === "/seller/dashboard" || pathname === "/dashboard/seller";
+    }
+    return Boolean(pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)));
   };
 
   return (
@@ -93,12 +113,12 @@ export default function SellerSidebar({
         />
       )}
 
-      {/* Main Sidebar Container (Width: 240px, Height: 100vh, Padding: 24px, Gap: 32px, Background: #FFFFFF) */}
+      {/* Main Sidebar Container */}
       <aside
         style={{
-          width: "240px",
-          minWidth: "240px",
-          maxWidth: "240px",
+          width: "250px",
+          minWidth: "250px",
+          maxWidth: "250px",
           height: "100vh",
           maxHeight: "100vh",
           overflowY: "auto",
@@ -107,10 +127,10 @@ export default function SellerSidebar({
           top: 0,
           backgroundColor: "#FFFFFF",
           borderRight: "1px solid #F1F5F9",
-          padding: "24px",
+          padding: "20px 16px 28px 16px",
           display: "flex",
           flexDirection: "column",
-          gap: "32px",
+          gap: "20px",
           boxSizing: "border-box",
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
           zIndex: 50,
@@ -118,22 +138,20 @@ export default function SellerSidebar({
         }}
         className={`seller-sidebar ${isMobileOpen ? "open" : ""}`}
       >
-        {/* Brand Wrapper (Width: 192px, Height: 65px, Gap: 12px) */}
+        {/* Brand Header */}
         <div
           style={{
-            width: "192px",
-            maxWidth: "100%",
             display: "flex",
             flexDirection: "column",
             gap: "12px",
+            width: "100%",
           }}
           className="brand-wrapper"
         >
-          {/* Logo Row (Width: 192px, Height: 32px) */}
+          {/* Logo Row */}
           <div
             style={{
-              width: "192px",
-              maxWidth: "100%",
+              width: "100%",
               height: "32px",
               display: "flex",
               alignItems: "center",
@@ -155,12 +173,12 @@ export default function SellerSidebar({
               <Image
                 src={logoSrc}
                 alt="Seller Brand Logo"
-                width={192}
+                width={180}
                 height={32}
                 style={{
                   height: "32px",
                   width: "auto",
-                  maxWidth: "192px",
+                  maxWidth: "180px",
                   objectFit: "contain",
                   objectPosition: "left",
                 }}
@@ -188,100 +206,239 @@ export default function SellerSidebar({
               </button>
             )}
           </div>
+        </div>
 
-          {/* Role Tag (Width: 89px, Height: 21px, Radius: 6px, Padding: 4px 8px, Background: #FFF1E8) */}
+        {/* User Profile Card inside Sidebar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "10px 12px",
+            backgroundColor: "#F8FAFC",
+            borderRadius: "12px",
+            border: "1px solid #E2E8F0",
+            boxSizing: "border-box",
+            width: "100%",
+          }}
+          className="sidebar-user-card"
+        >
           <div
             style={{
-              width: "89px",
-              minWidth: "89px",
-              maxWidth: "89px",
-              height: "21px",
-              backgroundColor: "#FFF1E8",
-              borderRadius: "6px",
-              padding: "4px 8px",
-              display: "inline-flex",
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              backgroundColor: "#FF5500",
+              color: "#FFFFFF",
+              display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxSizing: "border-box",
+              fontWeight: 700,
+              fontSize: "14px",
+              letterSpacing: "0.5px",
+              flexShrink: 0,
+              boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
             }}
-            className="role-tag"
           >
+            {avatarInitials}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1, overflow: "hidden" }}>
+            <span
+              style={{
+                fontSize: "13.5px",
+                fontWeight: 700,
+                color: "#0F172A",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: 1.2,
+              }}
+            >
+              {ownerName}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: "#F97316",
+                  backgroundColor: "#FFF1E8",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  letterSpacing: "0.4px",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {roleTagText}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Nav Container */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "18px",
+            flex: 1,
+            width: "100%",
+          }}
+        >
+          {/* Section 1: Main Top Navigation Bar Links */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <span
               style={{
                 fontSize: "11px",
                 fontWeight: 700,
-                color: "#F97316",
-                letterSpacing: "0.5px",
+                color: "#94A3B8",
+                letterSpacing: "0.6px",
                 textTransform: "uppercase",
-                lineHeight: 1,
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                whiteSpace: "nowrap",
+                padding: "0 12px",
+                marginBottom: "4px",
               }}
             >
-              {roleTagText}
+              MAIN NAVIGATION
             </span>
+
+            {MAIN_NAV_ITEMS.map((item) => {
+              const active = isItemActive(item);
+              const IconComponent = item.icon;
+
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={onClose}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                    backgroundColor: active ? "#FFF1E8" : "transparent",
+                    color: active ? "#F97316" : "#475569",
+                    fontWeight: active ? 700 : 500,
+                    fontSize: "13.5px",
+                    transition: "all 0.18s ease",
+                  }}
+                  className={`nav-item ${active ? "active" : ""}`}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <IconComponent
+                      size={18}
+                      color={active ? "#F97316" : "#64748B"}
+                    />
+                    <span style={{ lineHeight: 1 }}>{item.label}</span>
+                  </div>
+
+                  {item.badge && (
+                    <span
+                      style={{
+                        fontSize: "9.5px",
+                        fontWeight: 700,
+                        backgroundColor: "#FF5500",
+                        color: "#FFFFFF",
+                        padding: "2px 6px",
+                        borderRadius: "10px",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Section 2: Seller Operations Options */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <span
+              style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                color: "#94A3B8",
+                letterSpacing: "0.6px",
+                textTransform: "uppercase",
+                padding: "0 12px",
+                marginBottom: "4px",
+              }}
+            >
+              SELLER OPERATIONS
+            </span>
+
+            {SELLER_NAV_ITEMS.map((item) => {
+              const active = isItemActive(item);
+              const IconComponent = item.icon;
+
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={onClose}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                    backgroundColor: active ? "#FFF1E8" : "transparent",
+                    color: active ? "#F97316" : "#475569",
+                    fontWeight: active ? 700 : 500,
+                    fontSize: "13.5px",
+                    transition: "all 0.18s ease",
+                  }}
+                  className={`nav-item ${active ? "active" : ""}`}
+                >
+                  <IconComponent
+                    size={18}
+                    color={active ? "#F97316" : "#64748B"}
+                  />
+                  <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
-        {/* Navigation List (Width: 192px, Gap: 4px) */}
-        <nav
-          style={{
-            width: "192px",
-            maxWidth: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-          }}
-          className="nav-list"
-          aria-label="Seller Navigation"
-        >
-          {SELLER_NAV_ITEMS.map((item) => {
-            const active = isItemActive(item);
-            const IconComponent = item.icon;
-
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={onClose}
-                style={{
-                  width: "192px",
-                  maxWidth: "100%",
-                  height: "42px",
-                  borderRadius: "8px",
-                  padding: "10px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  textDecoration: "none",
-                  boxSizing: "border-box",
-                  backgroundColor: active ? "#FFF1E8" : "transparent",
-                  borderLeft: active ? "3px solid #F97316" : "3px solid transparent",
-                  color: active ? "#F97316" : "#64748B",
-                  fontWeight: active ? 600 : 500,
-                  fontSize: "14px",
-                  transition: "all 0.18s ease",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  position: "relative",
-                }}
-                className={`nav-item ${active ? "active" : ""}`}
-              >
-                <IconComponent
-                  size={19}
-                  color={active ? "#F97316" : "#64748B"}
-                />
-                <span
-                  style={{
-                    lineHeight: 1,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Footer with Logout Action */}
+        <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
+          <Link
+            href="/login"
+            onClick={onClose}
+            style={{
+              width: "100%",
+              height: "40px",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              textDecoration: "none",
+              color: "#EF4444",
+              fontWeight: 600,
+              fontSize: "13.5px",
+              boxSizing: "border-box",
+              transition: "all 0.18s ease",
+            }}
+            className="nav-logout-btn"
+          >
+            <LogOut size={18} color="#EF4444" />
+            <span>Log Out</span>
+          </Link>
+        </div>
       </aside>
 
       <style jsx>{`
@@ -292,6 +449,9 @@ export default function SellerSidebar({
         .nav-item:hover:not(.active) :global(svg) {
           color: #0F172A !important;
         }
+        .nav-logout-btn:hover {
+          background-color: #FEF2F2 !important;
+        }
         @media (max-width: 900px) {
           .seller-sidebar {
             position: fixed !important;
@@ -299,6 +459,7 @@ export default function SellerSidebar({
             left: 0;
             transform: translateX(-100%);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 1000 !important;
           }
           .seller-sidebar.open {
             transform: translateX(0);

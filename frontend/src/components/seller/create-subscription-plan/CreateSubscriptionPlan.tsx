@@ -96,9 +96,12 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
     <div className={styles.planContainer}>
       {/* 1. Left Sidebar with active Delivery tab */}
       <ConsoleSidebar
-        activeItemId="delivery"
+        activeItemId="subscription"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}

@@ -157,13 +157,14 @@ export default function Topbar({
           <Bell size={17} />
         </button>
 
-        {/* User Profile Pill */}
+        {/* User Profile Pill (hidden on mobile, shown on desktop) */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "10px",
           }}
+          className="topbar-user-pill"
         >
           <div
             style={{
@@ -213,12 +214,15 @@ export default function Topbar({
         }
         @media (max-width: 900px) {
           .seller-topbar {
-            padding: 0 20px !important;
+            padding: 0 16px !important;
           }
           .mobile-menu-trigger {
             display: flex !important;
           }
           .topbar-search {
+            display: none !important;
+          }
+          .topbar-user-pill {
             display: none !important;
           }
         }
