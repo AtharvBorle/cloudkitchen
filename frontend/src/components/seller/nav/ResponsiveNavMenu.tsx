@@ -14,6 +14,7 @@ import {
   Truck,
   CreditCard,
   UserCircle,
+  Settings,
   RefreshCw,
   ChevronRight,
 } from "lucide-react";
@@ -35,6 +36,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
   { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/res/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/res/subscription" },
   { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/res/profile" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/seller/res/settings" },
 ];
 
 
@@ -148,6 +150,14 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         pathname?.startsWith("/seller/res/profile") ||
         pathname?.startsWith("/seller/profile") ||
         pathname?.startsWith("/dashboard/seller/profile")
+      );
+    }
+    if (item.id === "settings") {
+      return (
+        pathname === "/seller/res/settings" ||
+        pathname?.startsWith("/seller/res/settings") ||
+        pathname?.startsWith("/seller/settings") ||
+        pathname?.startsWith("/dashboard/seller/settings")
       );
     }
 

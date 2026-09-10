@@ -15,6 +15,7 @@ export interface PlaceCardData {
   kitchenId?: string;
   trackingId?: string;
   locality?: string;
+  price?: number;
 }
 
 export const SAMPLE_PLACES: PlaceCardData[] = [

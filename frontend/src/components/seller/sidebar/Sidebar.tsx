@@ -15,6 +15,7 @@ import {
   CreditCard,
   UserCircle,
   Headphones,
+  Settings,
   Compass,
   BedDouble,
   LogOut,
@@ -45,12 +46,13 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
   { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
   { id: "menu", label: "Menu", icon: BookOpen, href: "/seller/menu" },
-  { id: "rooms-seller", label: "Rooms", icon: Home, href: "/seller/rooms" },
+  { id: "rooms-seller", label: "Rooms", icon: BedDouble, href: "/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/delivery" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
   { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/seller/settings" },
 ];
 
 export interface SellerSidebarProps {
@@ -167,6 +169,13 @@ export default function SellerSidebar({
         pathname?.startsWith("/seller/profile") ||
         pathname?.startsWith("/seller/res/profile") ||
         pathname?.startsWith("/dashboard/seller/profile")
+      );
+    }
+    if (item.id === "settings") {
+      return (
+        pathname?.startsWith("/seller/settings") ||
+        pathname?.startsWith("/seller/res/settings") ||
+        pathname?.startsWith("/dashboard/seller/settings")
       );
     }
     return Boolean(pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)));
