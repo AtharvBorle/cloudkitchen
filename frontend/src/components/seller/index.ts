@@ -50,6 +50,18 @@ export type {
   SettingsTabType,
 } from "./seller-settings/responsive/ResponsiveSellerSettings";
 
+// ==========================================
+// 2.1 Seller Notifications
+// ==========================================
+export * from "./seller-notifications";
+export { default as SellerNotificationsCanvas } from "./seller-notifications/SellerNotificationsCanvas";
+export type { SellerNotificationsCanvasProps } from "./seller-notifications/SellerNotificationsCanvas";
+export { default as SellerNotificationsCanvasDas, default as SellerNotificationsDashboard } from "./seller-notifications/SellerNotificationsCanvasDas";
+export type { SellerNotificationsCanvasDasProps } from "./seller-notifications/SellerNotificationsCanvasDas";
+export { default as ResponsiveSellerNotifications, default as SellerNotificationsResponsive } from "./seller-notifications/responsive/ResponsiveSellerNotifications";
+export type { ResponsiveSellerNotificationsProps } from "./seller-notifications/responsive/ResponsiveSellerNotifications";
+
+
 
 
 // ==========================================

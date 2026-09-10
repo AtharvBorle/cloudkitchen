@@ -254,7 +254,13 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           <button
             type="button"
             className={styles.iconButton}
-            onClick={onNotificationClick}
+            onClick={() => {
+              if (onNotificationClick) {
+                onNotificationClick();
+              } else {
+                router.push("/seller/res/notifications");
+              }
+            }}
             aria-label="Notifications"
             title="Notifications"
           >

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Menu,
   Bell,
@@ -90,7 +91,9 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
   onOrderClick,
   onSyncDevices,
 }) => {
+  const router = useRouter();
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+
 
   const getStatusBadgeStyle = (status: string) => {
     switch (status.toLowerCase()) {
@@ -111,6 +114,14 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
   const handleOrderClick = (order: ResponsiveOrderSummary, e: React.MouseEvent) => {
     if (onOrderClick) {
       onOrderClick(order);
+    }
+  };
+
+  const handleNotificationClick = () => {
+    if (onNotificationClick) {
+      onNotificationClick();
+    } else {
+      router.push("/seller/res/notifications");
     }
   };
 
@@ -164,7 +175,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
           <button
             type="button"
             className={styles.iconButton}
-            onClick={onNotificationClick}
+            onClick={handleNotificationClick}
             aria-label="Notifications"
             title="Notifications"
           >

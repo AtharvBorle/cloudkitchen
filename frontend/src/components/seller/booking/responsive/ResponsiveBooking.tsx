@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Menu as MenuIcon, Calendar } from "lucide-react";
+import { Menu as MenuIcon, Calendar, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveBooking.module.css";
 
@@ -194,7 +194,15 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
 
           <h1 className={styles.pageTitle}>Bookings</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={22} />
+          </button>
         </header>
 
         {/* Filter Pills / Tabs */}

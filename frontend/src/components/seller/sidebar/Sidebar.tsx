@@ -16,6 +16,7 @@ import {
   UserCircle,
   Headphones,
   Settings,
+  Bell,
   Compass,
   BedDouble,
   LogOut,
@@ -52,8 +53,10 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
   { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
+  { id: "notifications", label: "Notifications", icon: Bell, href: "/seller/notifications" },
   { id: "settings", label: "Settings", icon: Settings, href: "/seller/settings" },
 ];
+
 
 export interface SellerSidebarProps {
   isMobileOpen?: boolean;
@@ -169,6 +172,12 @@ export default function SellerSidebar({
         pathname?.startsWith("/seller/profile") ||
         pathname?.startsWith("/seller/res/profile") ||
         pathname?.startsWith("/dashboard/seller/profile")
+      );
+    }
+    if (item.id === "notifications") {
+      return (
+        pathname?.startsWith("/seller/notifications") ||
+        pathname?.startsWith("/seller/res/notifications")
       );
     }
     if (item.id === "settings") {

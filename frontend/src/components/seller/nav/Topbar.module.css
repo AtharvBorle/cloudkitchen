@@ -117,12 +117,33 @@
   transition: all 0.15s ease;
   flex-shrink: 0;
   touch-action: manipulation;
+  position: relative;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #ffffff;
+  box-sizing: border-box;
 }
 
 .notificationBtn:hover {
   background-color: #f1f5f9;
   color: #0f172a;
 }
+
 
 .profilePill {
   display: flex;

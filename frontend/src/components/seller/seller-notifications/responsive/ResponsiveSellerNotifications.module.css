@@ -1,0 +1,510 @@
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #F8FAFC;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+}
+
+.mobileContainer {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background-color: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
+  padding-bottom: 32px;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    border-radius: 0;
+  }
+}
+
+/* Top Sticky Header */
+.topBar {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #FFFFFF;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid #F1F5F9;
+  box-sizing: border-box;
+}
+
+.headerLeftGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iconButton {
+  min-width: 40px;
+  min-height: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: #F1F5F9;
+}
+
+.iconButton:active {
+  transform: scale(0.94);
+}
+
+.headerLogoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.headerLogoWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.15);
+  border: 1.5px solid #FED7AA;
+  transition: transform 0.15s ease;
+}
+
+.headerLogoWrapper:active {
+  transform: scale(0.94);
+}
+
+.headerLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.pageTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pageTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.unreadBadge {
+  background-color: #F97316;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerTextBtn {
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #EA580C;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.headerTextBtn:active {
+  background-color: #FFF7ED;
+}
+
+/* Settings Notice Banner */
+.settingsBanner {
+  background: #FFF7ED;
+  border-bottom: 1px solid #FFEDD5;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settingsBannerText {
+  font-size: 11.5px;
+  color: #9A3412;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.settingsBannerLink {
+  color: #EA580C;
+  font-weight: 700;
+  font-size: 11.5px;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* Horizontal Scrollable Tabs */
+.pillsContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  background-color: #F8FAFC;
+}
+
+.pillsContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.pillBtn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  color: #64748B;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.pillBtn.activePill {
+  background-color: #0F172A;
+  border-color: #0F172A;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+}
+
+.pillBadge {
+  background-color: #F1F5F9;
+  color: #475569;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.activePill .pillBadge {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+/* Notification List */
+.contentArea {
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.notificationCard {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.unreadCard {
+  border-left: 3.5px solid #F97316;
+}
+
+/* Category Icon */
+.iconWrapper {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconStock {
+  background-color: #FFF7ED;
+  color: #EA580C;
+}
+
+.iconOrders {
+  background-color: #EFF6FF;
+  color: #2563EB;
+}
+
+.iconDelivery {
+  background-color: #ECFEFF;
+  color: #0891B2;
+}
+
+.iconTimings {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.iconBookings {
+  background-color: #ECFDF5;
+  color: #059669;
+}
+
+.iconReviews {
+  background-color: #FDF2F8;
+  color: #DB2777;
+}
+
+.iconSettlements {
+  background-color: #F0FDF4;
+  color: #16A34A;
+}
+
+.cardContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cardTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.unreadDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #F97316;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.cardTopMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.severityTag {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+}
+
+.severityCritical {
+  background-color: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+}
+
+.severityWarning {
+  background-color: #FFFBEB;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.severityInfo {
+  background-color: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+}
+
+.severitySuccess {
+  background-color: #F0FDF4;
+  color: #16A34A;
+  border: 1px solid #BBF7D0;
+}
+
+.timeAgo {
+  font-size: 11px;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+
+.cardMessage {
+  font-size: 12.5px;
+  color: #334155;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cardDetails {
+  font-size: 11.5px;
+  color: #64748B;
+  background-color: #F8FAFC;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 4px;
+  line-height: 1.4;
+  border: 1px solid #F1F5F9;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  gap: 8px;
+}
+
+.cardActionLink {
+  font-size: 12px;
+  font-weight: 700;
+  color: #F97316;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  text-decoration: none;
+}
+
+.dismissBtn {
+  background: none;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty State */
+.emptyState {
+  background-color: #FFFFFF;
+  border: 1px dashed #CBD5E1;
+  border-radius: 14px;
+  padding: 36px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.emptyIconWrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #F1F5F9;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.emptyDesc {
+  font-size: 12.5px;
+  color: #64748B;
+  max-width: 280px;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0F172A;
+  color: #FFFFFF;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  white-space: nowrap;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

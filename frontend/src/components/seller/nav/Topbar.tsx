@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Bell, Menu } from "lucide-react";
 import styles from "./Topbar.module.css";
 
@@ -10,6 +11,7 @@ export interface TopbarProps {
   partnerRole?: string;
   avatarInitials?: string;
   searchPlaceholder?: string;
+  unreadCount?: number;
   onSearch?: (query: string) => void;
   onNotificationClick?: () => void;
   onMenuToggle?: () => void;
@@ -21,11 +23,22 @@ export default function Topbar({
   partnerRole = "Neo Cloud Partner",
   avatarInitials = "JD",
   searchPlaceholder = "Search order, room, dish...",
+  unreadCount = 4,
   onSearch,
   onNotificationClick,
   onMenuToggle,
 }: TopbarProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+
+  const handleNotificationClick = () => {
+    if (onNotificationClick) {
+      onNotificationClick();
+    } else {
+      router.push("/seller/notifications");
+    }
+  };
+
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -70,13 +83,19 @@ export default function Topbar({
         {/* Notification Button */}
         <button
           type="button"
-          onClick={onNotificationClick}
+          onClick={handleNotificationClick}
           className={`${styles.notificationBtn} notification-btn`}
           title="Notifications"
           aria-label="Notifications"
         >
           <Bell size={18} />
+          {unreadCount > 0 && (
+            <span className={styles.notificationBadge}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </button>
+
 
         {/* User Profile Pill */}
         <div className={`${styles.profilePill} topbar-user-pill`}>
