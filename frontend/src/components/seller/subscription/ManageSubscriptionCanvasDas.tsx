@@ -34,6 +34,7 @@ export default function ManageSubscriptionCanvasDas({
         width: "100%",
         minHeight: "100vh",
         display: "flex",
+        alignItems: "flex-start",
         backgroundColor: "#F7F8FB",
         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
       }}

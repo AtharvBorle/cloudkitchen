@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, X, Phone, Calendar, Bed, CheckCircle2, AlertCircle } from "lucide-react";
 
 export interface BookingRecord {
   id: string;
@@ -283,25 +283,33 @@ export default function BookingCanvas({
   onTabChange,
 }: BookingCanvasProps) {
   const [activeTab, setActiveTab] = useState<BookingFilterTab>(initialTab);
+  const [bookingList, setBookingList] = useState<BookingRecord[]>(bookings);
+  const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
 
   // Filter tab counts
   const tabCounts = useMemo(() => {
-    const all = bookings.length;
-    const requested = bookings.filter(
+    const all = bookingList.length;
+    const requested = bookingList.filter(
       (b) => b.status.toLowerCase() === "requested"
     ).length;
-    const confirmed = bookings.filter(
+    const confirmed = bookingList.filter(
       (b) => b.status.toLowerCase() === "confirmed"
     ).length;
-    const paid = bookings.filter(
+    const paid = bookingList.filter(
       (b) => b.status.toLowerCase() === "paid"
     ).length;
-    const cancelled = bookings.filter(
+    const cancelled = bookingList.filter(
       (b) => b.status.toLowerCase() === "cancelled"
     ).length;
 
     return { all, requested, confirmed, paid, cancelled };
-  }, [bookings]);
+  }, [bookingList]);
 
   const tabs: { id: BookingFilterTab; label: string; count: number }[] = [
     { id: "All", label: "All Bookings", count: tabCounts.all },
@@ -318,13 +326,31 @@ export default function BookingCanvas({
     }
   };
 
+  const handleDetailsClick = (booking: BookingRecord) => {
+    if (onViewDetails) {
+      onViewDetails(booking);
+    } else {
+      setSelectedBooking(booking);
+    }
+  };
+
+  const handleUpdateBookingStatus = (bookingId: string, nextStatus: string) => {
+    setBookingList((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status: nextStatus } : b))
+    );
+    if (selectedBooking && selectedBooking.id === bookingId) {
+      setSelectedBooking((prev) => (prev ? { ...prev, status: nextStatus } : null));
+    }
+    showToast(`Booking #${bookingId.toUpperCase()} updated to ${nextStatus}!`);
+  };
+
   // Filtered Bookings based on active tab
   const filteredBookings = useMemo(() => {
-    if (activeTab === "All") return bookings;
-    return bookings.filter(
+    if (activeTab === "All") return bookingList;
+    return bookingList.filter(
       (b) => b.status.toLowerCase() === activeTab.toLowerCase()
     );
-  }, [bookings, activeTab]);
+  }, [bookingList, activeTab]);
 
   // Helper for Initials
   const getInitials = (name: string, fallback?: string): string => {
@@ -855,7 +881,7 @@ export default function BookingCanvas({
                         >
                           <button
                             type="button"
-                            onClick={() => onViewDetails && onViewDetails(booking)}
+                            onClick={() => handleDetailsClick(booking)}
                             style={{
                               background: "none",
                               border: "none",
@@ -900,6 +926,399 @@ export default function BookingCanvas({
           </div>
         </div>
       </div>
+
+      {/* Booking Details Modal */}
+      {selectedBooking && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.45)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            boxSizing: "border-box",
+          }}
+          onClick={() => setSelectedBooking(null)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "540px",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              border: "1px solid #E2E8F0",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              boxSizing: "border-box",
+              fontFamily: "inherit",
+              animation: "fadeIn 0.2s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px 24px",
+                borderBottom: "1px solid #F1F5F9",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <h3
+                  style={{
+                    fontSize: "17px",
+                    fontWeight: 700,
+                    color: "#0F172A",
+                    margin: 0,
+                  }}
+                >
+                  Reservation Details
+                </h3>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#64748B",
+                    backgroundColor: "#F1F5F9",
+                    padding: "3px 8px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  #{selectedBooking.id.toUpperCase()}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedBooking(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#64748B",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "6px",
+                }}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              style={{
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "18px",
+              }}
+            >
+              {/* Guest Profile Card */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: "#F8FAFC",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  border: "1px solid #E2E8F0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "50%",
+                      backgroundColor: "#FFF1E8",
+                      color: "#FF5500",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "16px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {getInitials(selectedBooking.guestName, selectedBooking.guestInitials)}
+                  </div>
+                  <div>
+                    <h4
+                      style={{
+                        margin: 0,
+                        fontSize: "15px",
+                        fontWeight: 700,
+                        color: "#0F172A",
+                      }}
+                    >
+                      {selectedBooking.guestName}
+                    </h4>
+                    <span
+                      style={{
+                        fontSize: "12.5px",
+                        color: "#64748B",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        marginTop: "2px",
+                      }}
+                    >
+                      <Phone size={13} />
+                      +91 98765 43210
+                    </span>
+                  </div>
+                </div>
+
+                <div>{renderStatusBadge(selectedBooking.status)}</div>
+              </div>
+
+              {/* Reservation Info Grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, 1fr)",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "10px",
+                    padding: "12px 14px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      color: "#64748B",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <Bed size={14} color="#FF5500" />
+                    Room Assigned
+                  </span>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: "#0F172A",
+                      margin: "6px 0 0 0",
+                    }}
+                  >
+                    {selectedBooking.room}
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "10px",
+                    padding: "12px 14px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      color: "#64748B",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <Calendar size={14} color="#3B82F6" />
+                    Stay Duration
+                  </span>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#0F172A",
+                      margin: "6px 0 0 0",
+                    }}
+                  >
+                    {selectedBooking.checkIn} → {selectedBooking.checkOut}
+                  </p>
+                </div>
+              </div>
+
+              {/* Total Billing Banner */}
+              <div
+                style={{
+                  backgroundColor: "#FFF8F4",
+                  border: "1px solid #FFEDD5",
+                  borderRadius: "12px",
+                  padding: "14px 18px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: "12px", fontWeight: 600, color: "#C2410C" }}>
+                    Total Tariff
+                  </span>
+                  <div style={{ fontSize: "11px", color: "#9A3412" }}>
+                    Inclusive of taxes & services
+                  </div>
+                </div>
+                <span
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: 800,
+                    color: "#C2410C",
+                  }}
+                >
+                  {selectedBooking.amount}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #F1F5F9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                backgroundColor: "#F8FAFC",
+              }}
+            >
+              {selectedBooking.status.toLowerCase() !== "cancelled" ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleUpdateBookingStatus(selectedBooking.id, "Cancelled")
+                  }
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #FECACA",
+                    backgroundColor: "#FFFFFF",
+                    color: "#EF4444",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel Booking
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {selectedBooking.status.toLowerCase() === "requested" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateBookingStatus(selectedBooking.id, "Confirmed")
+                    }
+                    style={{
+                      padding: "8px 18px",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: "#FF5500",
+                      color: "#FFFFFF",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Confirm Booking
+                  </button>
+                )}
+
+                {selectedBooking.status.toLowerCase() === "confirmed" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateBookingStatus(selectedBooking.id, "Paid")
+                    }
+                    style={{
+                      padding: "8px 18px",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: "#2563EB",
+                      color: "#FFFFFF",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Mark as Paid
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedBooking(null)}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    border: "1px solid #CBD5E1",
+                    backgroundColor: "#FFFFFF",
+                    color: "#334155",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            backgroundColor: "#0F172A",
+            color: "#FFFFFF",
+            padding: "12px 20px",
+            borderRadius: "10px",
+            fontSize: "13.5px",
+            fontWeight: 600,
+            boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            zIndex: 10000,
+          }}
+        >
+          <CheckCircle2 size={18} color="#10B981" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       <style jsx>{`
         .booking-tab-btn:hover:not(.active-tab) {

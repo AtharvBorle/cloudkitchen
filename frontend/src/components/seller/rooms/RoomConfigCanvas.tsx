@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   Plus,
@@ -66,6 +67,7 @@ export default function RoomConfigCanvas({
   onSave,
   onCancel,
 }: RoomConfigCanvasProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<RoomConfigData>({
     ...DEFAULT_ROOM_DATA,
     ...initialData,
@@ -127,19 +129,19 @@ export default function RoomConfigCanvas({
       onSave(formData);
     }
     setToastMessage("Room configuration saved successfully!");
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => {
+      setToastMessage(null);
+      if (!onSave) {
+        router.push("/seller/rooms");
+      }
+    }, 1200);
   };
 
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
     } else {
-      setFormData({
-        ...DEFAULT_ROOM_DATA,
-        ...initialData,
-      });
-      setToastMessage("Changes reverted");
-      setTimeout(() => setToastMessage(null), 2000);
+      router.push("/seller/rooms");
     }
   };
 

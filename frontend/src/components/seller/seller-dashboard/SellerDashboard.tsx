@@ -240,7 +240,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           <div className={styles.tableCard}>
             <div className={styles.tableHeader}>
               <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
-              <Link href="/dashboard/seller/orders" className={styles.viewAllLink}>
+              <Link href="/seller/orders" className={styles.viewAllLink}>
                 <span>View All Orders</span>
                 <ArrowRight size={16} strokeWidth={2.4} />
               </Link>
