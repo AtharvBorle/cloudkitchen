@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   QrCode,
   Sparkles,
+  Bell,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResSellerProfile.module.css";
@@ -165,17 +166,17 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             <p className={styles.headerSubtitle}>Manage Operations credential</p>
           </div>
 
-          {/* Top-Right Back Button with Back text for UX */}
+          {/* Top-Right Notification Bell */}
           <div className={styles.headerRight}>
             <button
               type="button"
-              className={styles.backButton}
-              onClick={handleBack}
-              aria-label="Back to Dashboard"
-              title="Back"
+              className={styles.iconButton}
+              onClick={() => router.push("/seller/res/notifications")}
+              aria-label="Notifications"
+              title="Notifications"
             >
-              <ChevronLeft size={16} strokeWidth={2.5} />
-              <span className={styles.backText}>Back</span>
+              <Bell size={22} />
+              <span className={styles.notificationDot} />
             </button>
           </div>
         </header>

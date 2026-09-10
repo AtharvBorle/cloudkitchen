@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera } from "lucide-react";
+import { ChevronLeft, Camera, Bell } from "lucide-react";
 import styles from "./ResponsiveRoomAdd.module.css";
 
 export interface ResponsiveAmenity {
@@ -129,7 +129,15 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
 
           <h1 className={styles.headerTitle}>Add room</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={22} />
+          </button>
         </header>
 
         {/* Scrollable Form Content */}

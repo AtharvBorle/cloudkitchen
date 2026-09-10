@@ -116,7 +116,13 @@ export const TC: React.FC<TCProps> = ({
           <button
             type="button"
             className={styles.iconButton}
-            onClick={onNotificationClick}
+            onClick={() => {
+              if (onNotificationClick) {
+                onNotificationClick();
+              } else {
+                router.push("/seller/res/notifications");
+              }
+            }}
             aria-label="Notifications"
             title="Notifications"
           >

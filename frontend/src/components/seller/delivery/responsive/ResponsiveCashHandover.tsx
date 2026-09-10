@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Check, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Check, CheckCircle2, AlertTriangle, Bell } from "lucide-react";
 import styles from "./ResponsiveCashHandover.module.css";
 
 export interface CashOrderLine {
@@ -110,7 +110,15 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
 
           <h1 className={styles.headerTitle}>Cash Handover</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={20} />
+          </button>
         </header>
 
         {/* Content Area */}

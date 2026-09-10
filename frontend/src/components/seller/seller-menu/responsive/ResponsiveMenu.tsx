@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Menu as MenuIcon, Plus, Search, Minus, UtensilsCrossed } from "lucide-react";
+import { Menu as MenuIcon, Plus, Search, Minus, UtensilsCrossed, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveMenu.module.css";
 
@@ -202,15 +202,27 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
 
           <h1 className={styles.pageTitle}>Menu</h1>
 
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={handleAddItem}
-            aria-label="Add New Dish"
-            title="Add Dish"
-          >
-            <Plus size={24} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => router.push("/seller/res/notifications")}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell size={22} />
+              <span className={styles.notificationDot} />
+            </button>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={handleAddItem}
+              aria-label="Add New Dish"
+              title="Add Dish"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
         </header>
 
         {/* Top Controls: Search Input & Category Pills */}

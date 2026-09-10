@@ -12,6 +12,7 @@ import {
   Pencil,
   X,
   CheckCircle2,
+  Bell,
 } from "lucide-react";
 import styles from "./ResSellerSubPlan.module.css";
 
@@ -187,11 +188,11 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             <button
               type="button"
               className={styles.moreButton}
-              onClick={() => setToastMessage("Plan options")}
-              aria-label="More options"
-              title="More options"
+              onClick={() => router.push("/seller/res/notifications")}
+              aria-label="Notifications"
+              title="Notifications"
             >
-              <MoreHorizontal size={20} />
+              <Bell size={18} />
             </button>
           </div>
 

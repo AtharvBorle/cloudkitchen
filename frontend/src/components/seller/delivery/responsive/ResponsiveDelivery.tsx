@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Menu as MenuIcon, ChevronRight, Settings } from "lucide-react";
+import { Menu as MenuIcon, ChevronRight, Settings, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveDelivery.module.css";
 
@@ -117,15 +117,27 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
 
           <h1 className={styles.pageTitle}>Delivery &amp; COD</h1>
 
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={() => router.push("/seller/delivery/settings")}
-            aria-label="Delivery Settings"
-            title="Delivery Settings"
-          >
-            <Settings size={20} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => router.push("/seller/res/notifications")}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell size={22} />
+              <span className={styles.notificationDot} />
+            </button>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => router.push("/seller/delivery/settings")}
+              aria-label="Delivery Settings"
+              title="Delivery Settings"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
         </header>
 
         {/* Content Area */}

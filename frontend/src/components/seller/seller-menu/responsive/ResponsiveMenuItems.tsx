@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus } from "lucide-react";
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell } from "lucide-react";
 import styles from "./ResponsiveMenuItems.module.css";
 
 export interface ResponsiveVariantItem {
@@ -190,7 +190,15 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
 
           <h1 className={styles.headerTitle}>Add item</h1>
 
-          <div className={styles.headerPlaceholder} />
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => router.push("/seller/res/notifications")}
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={22} />
+          </button>
         </header>
 
         {/* Scrollable Form Content */}
