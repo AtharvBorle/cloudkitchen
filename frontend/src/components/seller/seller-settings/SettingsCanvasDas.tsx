@@ -89,11 +89,13 @@ export default function SettingsCanvasDas({
           }}
           className="settings-canvas-container"
         >
-          <SettingsCanvas
-            initialData={initialData}
-            onSave={onSave}
-            onCancel={onCancel}
-          />
+          <React.Suspense fallback={<div style={{ padding: "32px", color: "#64748B" }}>Loading settings...</div>}>
+            <SettingsCanvas
+              initialData={initialData}
+              onSave={onSave}
+              onCancel={onCancel}
+            />
+          </React.Suspense>
         </main>
       </div>
     </div>
