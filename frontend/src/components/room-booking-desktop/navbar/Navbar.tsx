@@ -133,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick(item)}
               aria-current={activeItem === item ? "page" : undefined}
             >
-              {item}
+              <span className={styles.navItemText}>{item}</span>
             </button>
           ))}
         </nav>

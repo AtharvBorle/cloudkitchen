@@ -389,8 +389,9 @@ export const FALLBACK_COUPONS: DynamicCoupon[] = [
 export const FALLBACK_BANNERS: DynamicPromoBanner[] = [
   {
     id: "b-1",
-    title: "Special Weekend Offer - 30% OFF",
-    desktopImageUrl: "/artifacts/promo-banner.png",
+    title: "Limited Welcome Offer - 30% OFF",
+    desktopImageUrl: "/images/promo-banner-full.png",
+    mobileImageUrl: "/images/promo-welcome-mobile-3d.png",
     redirectUrl: "/explore-desktop",
     displayOrder: 1,
   },

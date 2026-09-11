@@ -167,7 +167,6 @@ export default function PromoRow2({
           style={{
             width: "100%",
             maxWidth: "1280px",
-            aspectRatio: "1280 / 324",
             margin: "0 auto",
             borderRadius: "22px",
             backgroundColor: "#FFEADB",
@@ -191,22 +190,20 @@ export default function PromoRow2({
             }}
           >
             <picture style={{ display: "block", width: "100%", height: "100%" }}>
-              {currentBanner.mobileImageUrl && (
-                <source
-                  media="(max-width: 640px)"
-                  srcSet={currentBanner.mobileImageUrl}
-                />
-              )}
+              <source
+                media="(max-width: 768px)"
+                srcSet={currentBanner.mobileImageUrl || "/images/promo-welcome-mobile-3d.png"}
+              />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={currentBanner.desktopImageUrl}
-                alt={currentBanner.title || "Promotional Banner"}
+                src={currentBanner.desktopImageUrl || "/images/promo-banner-full.png"}
+                alt={currentBanner.title || "Limited Welcome Offer"}
                 style={{
                   width: "100%",
-                  height: "100%",
+                  height: "auto",
+                  display: "block",
                   objectFit: "cover",
                   objectPosition: "center",
-                  display: "block",
                   transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
                 className="banner-graphic-img"
@@ -218,7 +215,7 @@ export default function PromoRow2({
             <div
               style={{
                 position: "absolute",
-                bottom: "14px",
+                bottom: "10px",
                 left: "50%",
                 transform: "translateX(-50%)",
                 display: "flex",
@@ -258,20 +255,38 @@ export default function PromoRow2({
         </div>
 
         <style jsx>{`
+          .PromoRow2 {
+            aspect-ratio: 1280 / 324;
+          }
           .PromoRow2:hover .banner-graphic-img {
             transform: scale(1.015);
           }
           @media (max-width: 768px) {
             .PromoRow2 {
-              border-radius: 18px !important;
+              border-radius: 20px !important;
+              aspect-ratio: 16 / 9 !important;
+              max-height: 220px !important;
+              height: auto !important;
+            }
+            .banner-graphic-img {
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: cover !important;
+              object-position: center !important;
             }
           }
           @media (max-width: 640px) {
             .PromoRow2 {
-              border-radius: 16px !important;
+              border-radius: 18px !important;
+              aspect-ratio: 16 / 9 !important;
+              max-height: 205px !important;
+              height: auto !important;
             }
-            .PromoRow2.has-mobile-img {
-              aspect-ratio: 640 / 320 !important;
+            .banner-graphic-img {
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: cover !important;
+              object-position: center !important;
             }
           }
         `}</style>

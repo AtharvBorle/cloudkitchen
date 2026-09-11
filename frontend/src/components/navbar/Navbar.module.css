@@ -162,6 +162,16 @@
   justify-content: center;
 }
 
+.navItemText {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s ease;
+  will-change: transform;
+}
+
+.navItem:hover .navItemText {
+  transform: translateY(-3px);
+}
+
 .navItem::after {
   content: '';
   position: absolute;
