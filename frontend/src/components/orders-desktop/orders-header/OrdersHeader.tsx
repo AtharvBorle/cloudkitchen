@@ -15,12 +15,8 @@ const LANG_OPTIONS = [
 ];
 
 export const ORDER_CATEGORIES = [
-  "All",
-  "Food",
-  "Mess",
-  "Bakery",
-  "Home Meals",
-  "Rooms",
+  "Foods",
+  "Room Booking",
 ] as const;
 
 export interface OrdersHeaderProps {
@@ -35,7 +31,7 @@ export const OrdersHeader: React.FC<OrdersHeaderProps> = ({
   title = "Orders",
   subtitle = "Track and manage your orders",
   categories = ORDER_CATEGORIES,
-  defaultCategory = "All",
+  defaultCategory = "Foods",
   onCategoryChange,
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>(defaultCategory);

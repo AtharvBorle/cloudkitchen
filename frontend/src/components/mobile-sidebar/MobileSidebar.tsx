@@ -181,7 +181,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     },
     {
       label: "Mess/Tiffin",
-      href: "/my-subscriptions-desktop",
+      href: "/explore-desktop",
       icon: <ChefHat className={styles.subnavIcon} size={15} />,
     },
   ];
@@ -270,11 +270,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       return pathname === "/explore-desktop" || activeItem === "Food";
     }
     if (sub.label === "Mess/Tiffin") {
-      return (
-        pathname?.startsWith("/my-subscription") ||
-        pathname?.startsWith("/my-subscriptions-desktop") ||
-        activeItem === "Mess/Tiffin"
-      );
+      return pathname === "/explore-desktop" || activeItem === "Mess/Tiffin";
     }
     return false;
   };

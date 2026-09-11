@@ -101,7 +101,9 @@ export default function SellerSidebar({
   // Helper to determine if a nav item is currently active
   const isItemActive = (item: NavItem) => {
     if (activeItemId) {
-      return activeItemId === item.id;
+      if (activeItemId === item.id) return true;
+      if (activeItemId === "rooms" && item.id === "rooms-seller") return true;
+      if (activeItemId === "rooms-seller" && item.id === "rooms-seller") return true;
     }
     if (item.id === "dashboard") {
       return (
@@ -220,11 +222,10 @@ export default function SellerSidebar({
           gap: isEffectiveCollapsed ? "20px" : "20px",
           boxSizing: "border-box",
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-          zIndex: 50,
           transition: "width 0.25s ease, transform 0.3s ease",
         }}
         className={`${styles.sellerSidebar} seller-sidebar ${
-          isMobileOpen ? `${styles.open} open` : ""
+          isMobileOpen ? styles.open : ""
         } ${isEffectiveCollapsed ? styles.collapsed : styles.expanded}`}
         aria-label="Seller Operations Navigation"
       >
@@ -503,33 +504,6 @@ export default function SellerSidebar({
         }
         .nav-logout-btn:hover {
           background-color: #FEF2F2 !important;
-        }
-        @media (max-width: 1024px) {
-          .seller-sidebar {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            bottom: 0 !important;
-            height: 100vh !important;
-            height: 100dvh !important;
-            width: 280px !important;
-            min-width: 280px !important;
-            max-width: 85vw !important;
-            padding: 20px 16px !important;
-            transform: translateX(-100%) !important;
-            box-shadow: 6px 0 28px rgba(0, 0, 0, 0.16) !important;
-            z-index: 10000 !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-          }
-          .seller-sidebar.open {
-            transform: translateX(0) !important;
-            visibility: visible !important;
-            pointer-events: auto !important;
-          }
-          .sidebar-close-btn {
-            display: flex !important;
-          }
         }
       `}</style>
     </>
