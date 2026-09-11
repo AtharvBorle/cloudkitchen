@@ -56,7 +56,7 @@ interface PopularOrdersProps {
 
 export default function PopularOrders({
   title = "Today's Special Offers",
-  seeAllLink = "/explore-desktop?offers=true",
+  seeAllLink = "/explore?offers=true",
   offers,
 }: PopularOrdersProps) {
   const displayOffers = offers && offers.length > 0 ? offers : OFFERS;

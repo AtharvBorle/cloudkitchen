@@ -126,7 +126,7 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
       const params = new URLSearchParams();
       if (finalQuery) params.set("query", finalQuery);
       if (location || selectedLocation) params.set("location", location || selectedLocation);
-      router.push(`/explore-desktop?${params.toString()}`);
+      router.push(`/explore?${params.toString()}`);
     }
   };
 

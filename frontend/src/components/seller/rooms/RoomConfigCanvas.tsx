@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   Plus,
@@ -69,6 +69,10 @@ export default function RoomConfigCanvas({
   onCancel,
 }: RoomConfigCanvasProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const roomId = searchParams ? searchParams.get("id") : null;
+  const isEditMode = Boolean(roomId);
+
   const [formData, setFormData] = useState<RoomConfigData>({
     ...DEFAULT_ROOM_DATA,
     ...initialData,
@@ -81,6 +85,47 @@ export default function RoomConfigCanvas({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const capacityOptions = ["1 Guest", "2 Guests", "3 Guests", "4 Guests", "5+ Guests"];
+
+  useEffect(() => {
+    if (!roomId) return;
+    async function loadRoom() {
+      try {
+        const res = await fetchApi(`/api/seller/rooms/${roomId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const room = data.data?.room || data.room;
+          if (room) {
+            let photos: string[] = [];
+            try {
+              const parsed = typeof room.images === "string" ? JSON.parse(room.images) : room.images;
+              if (Array.isArray(parsed)) photos = parsed;
+              else if (typeof parsed === "string") photos = [parsed];
+            } catch (e) {
+              if (room.images) photos = [room.images];
+            }
+            if (photos.length === 0) {
+              photos = DEFAULT_PHOTOS;
+            }
+
+            setFormData({
+              roomName: room.title || "",
+              capacity: `${room.capacity || 2} Guest${(room.capacity || 2) > 1 ? "s" : ""}`,
+              pricePerNight: String(room.price || ""),
+              mediaPhotos: photos,
+              amenities: DEFAULT_AMENITIES.map((a) => ({
+                ...a,
+                selected: room.description ? room.description.toLowerCase().includes(a.name.toLowerCase()) : a.selected,
+              })),
+              isInstantlyBookable: room.isAvailable ?? true,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load room details:", err);
+      }
+    }
+    loadRoom();
+  }, [roomId]);
 
   const handleTextChange = (field: keyof RoomConfigData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -148,9 +193,13 @@ export default function RoomConfigCanvas({
       const capacityNum = guestsMatch ? guestsMatch[0] : "2";
 
       const bodyFormData = new FormData();
+      if (roomId) {
+        bodyFormData.append("roomId", roomId);
+      }
       bodyFormData.append("title", formData.roomName);
       bodyFormData.append("price", parsedPrice);
       bodyFormData.append("capacity", capacityNum);
+      bodyFormData.append("isAvailable", String(formData.isInstantlyBookable));
       bodyFormData.append(
         "description",
         `Amenities: ${formData.amenities
@@ -165,8 +214,11 @@ export default function RoomConfigCanvas({
         bodyFormData.append("imageUrl", formData.mediaPhotos[0]);
       }
 
-      const res = await fetchApi("/api/seller/rooms", {
-        method: "POST",
+      const endpoint = roomId ? `/api/seller/rooms/${roomId}` : "/api/seller/rooms";
+      const method = roomId ? "PATCH" : "POST";
+
+      const res = await fetchApi(endpoint, {
+        method,
         body: bodyFormData,
       });
 
@@ -177,7 +229,7 @@ export default function RoomConfigCanvas({
         return;
       }
 
-      setToastMessage("Room configuration saved successfully!");
+      setToastMessage(isEditMode ? "Room updated successfully!" : "Room configuration saved successfully!");
       setTimeout(() => {
         setToastMessage(null);
         router.push("/seller/rooms");

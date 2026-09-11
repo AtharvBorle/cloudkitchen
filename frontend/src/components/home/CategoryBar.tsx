@@ -14,14 +14,14 @@ export interface CategoryItem {
 }
 
 const CATEGORIES: CategoryItem[] = [
-  { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore-desktop" },
-  { id: "mess", name: "Mess", image: "/images/categories/cat-mess.png", emoji: "🧺", route: "/explore-desktop?category=mess" },
-  { id: "bakery", name: "Bakery", image: "/images/categories/cat-backery.png", emoji: "🥐", route: "/explore-desktop?category=bakery" },
-  { id: "home-meals", name: "Home Meals", image: "/images/categories/cat-homemeals.png", emoji: "🍲", route: "/explore-desktop?category=homemeals" },
-  { id: "healthy", name: "Healthy", image: "/images/categories/cat-healthy.png", emoji: "🥗", route: "/explore-desktop?category=healthy" },
-  { id: "snacks", name: "Snacks", image: "/images/categories/cat-snacks.png", emoji: "🍿", route: "/explore-desktop?category=snacks" },
-  { id: "desserts", name: "Desserts", image: "/images/categories/cat-deserts.png", emoji: "🍰", route: "/explore-desktop?category=desserts" },
-  { id: "drink", name: "Drink", image: "/images/categories/cat-drink.png", emoji: "🍹", route: "/explore-desktop?category=drinks" },
+  { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore" },
+  { id: "mess", name: "Mess", image: "/images/categories/cat-mess.png", emoji: "🧺", route: "/explore?category=mess" },
+  { id: "bakery", name: "Bakery", image: "/images/categories/cat-backery.png", emoji: "🥐", route: "/explore?category=bakery" },
+  { id: "home-meals", name: "Home Meals", image: "/images/categories/cat-homemeals.png", emoji: "🍲", route: "/explore?category=homemeals" },
+  { id: "healthy", name: "Healthy", image: "/images/categories/cat-healthy.png", emoji: "🥗", route: "/explore?category=healthy" },
+  { id: "snacks", name: "Snacks", image: "/images/categories/cat-snacks.png", emoji: "🍿", route: "/explore?category=snacks" },
+  { id: "desserts", name: "Desserts", image: "/images/categories/cat-deserts.png", emoji: "🍰", route: "/explore?category=desserts" },
+  { id: "drink", name: "Drink", image: "/images/categories/cat-drink.png", emoji: "🍹", route: "/explore?category=drinks" },
   { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/room-booking" },
 ];
 
@@ -50,7 +50,7 @@ export default function CategoryBar({
       let list = [...items];
       if (!hasFood) {
         list = [
-          { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore-desktop" },
+          { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore" },
           ...list,
         ];
       }

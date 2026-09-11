@@ -203,7 +203,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     if (onProceedToCheckout) {
       onProceedToCheckout();
     } else {
-      router.push("/user/checkout");
+      router.push("/checkout");
     }
   };
 
@@ -227,7 +227,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           <div className={styles.stepperLine} />
 
           {/* Step 2: Checkout (Inactive) */}
-          <Link href="/user/checkout" style={{ textDecoration: "none" }}>
+          <Link href="/checkout" style={{ textDecoration: "none" }}>
             <div
               className={styles.stepPillInactive}
               title="Go to Checkout"

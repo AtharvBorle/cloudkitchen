@@ -56,7 +56,7 @@ interface BestPlacesProps {
 
 export default function BestPlaces({
   title = "Popular Dishes",
-  seeAllLink = "/explore-desktop",
+  seeAllLink = "/explore",
   dishes,
 }: BestPlacesProps) {
   const displayDishes = dishes && dishes.length > 0 ? dishes : POPULAR_DISHES;
@@ -67,37 +67,41 @@ export default function BestPlaces({
         width: "100%",
         background: "transparent",
         padding: "0",
+        boxSizing: "border-box",
+        marginBottom: "24px",
       }}
+      aria-label={title}
     >
+      {/* Outer Card Wrapper */}
       <div
         style={{
-          maxWidth: "1280px",
           width: "100%",
-          minHeight: "303px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
+          backgroundColor: "#FDFDFD",
+          borderRadius: "24px",
+          border: "1px solid #EFEFEF",
+          boxShadow: "0 6px 24px rgba(0, 0, 0, 0.03)",
+          padding: "24px 28px",
           boxSizing: "border-box",
         }}
+        className="popular-dishes-container-card"
       >
-        {/* Header Row: Title + See All */}
+        {/* Section Header */}
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            gap: "12px",
+            justifyContent: "space-between",
+            marginBottom: "20px",
           }}
         >
           <h2
             style={{
-              fontSize: "clamp(1.2rem, 2.5vw, 1.55rem)",
+              fontSize: "1.45rem",
               fontWeight: "800",
               color: "#18181B",
               margin: 0,
-              letterSpacing: "-0.02em",
             }}
+            className="popular-dishes-title"
           >
             {title}
           </h2>
@@ -105,8 +109,8 @@ export default function BestPlaces({
           <Link
             href={seeAllLink}
             style={{
-              color: "#FF5500",
-              fontSize: "0.92rem",
+              color: "#FF6B00",
+              fontSize: "0.95rem",
               fontWeight: "700",
               textDecoration: "none",
               transition: "color 0.2s ease",
@@ -131,7 +135,7 @@ export default function BestPlaces({
           {displayDishes.slice(0, 4).map((dish) => (
             <Link
               key={dish.id}
-              href={dish.link || "/explore-desktop"}
+              href={dish.link || "/explore"}
               style={{
                 textDecoration: "none",
                 display: "flex",

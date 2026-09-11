@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image, { StaticImageData } from "next/image";
+import { useRouter } from "next/navigation";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./FeaturedColivings.module.css";
 import neoLivingImg from "./neo-living-room.jpg";
 import comfortStayImg from "./comfort-stay-room.jpg";
@@ -68,56 +70,108 @@ export interface FeaturedColivingsProps {
 
 export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
   heading = "Featured Premium co-livings",
-  cards = DEFAULT_COLIVINGS,
+  cards: propCards,
   onBookRoom,
 }) => {
+  const router = useRouter();
+  const [dynamicCards, setDynamicCards] = useState<ColivingCardItem[]>([]);
+
+  useEffect(() => {
+    async function loadFeatured() {
+      try {
+        const res = await fetchApi("/api/public/rooms");
+        if (res.ok) {
+          const json = await res.json();
+          const list = json.data || json;
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: ColivingCardItem[] = list.slice(0, 4).map((r: any, idx: number) => {
+              let imgUrl: string | StaticImageData = idx % 2 === 0 ? neoLivingImg : comfortStayImg;
+              if (r.images) {
+                try {
+                  const parsed = typeof r.images === "string" ? JSON.parse(r.images) : r.images;
+                  if (Array.isArray(parsed) && parsed[0]) imgUrl = parsed[0];
+                } catch {
+                  if (typeof r.images === "string" && r.images.startsWith("http")) imgUrl = r.images;
+                }
+              }
+              return {
+                id: r.id,
+                title: r.title || "Neo Luxury Living",
+                location: `${r.seller?.addressLocality || "Kothrud"}, ${r.seller?.addressCity || "Pune"}`,
+                startingLabel: "STARTING FROM",
+                price: `₹${Number(r.price || 5500).toLocaleString("en-IN")}/night`,
+                tags: ["WiFi", "AC", "Meals Included", `${r.capacity || 2} Guests`],
+                buttonText: "Book Room",
+                image: imgUrl,
+              };
+            });
+            setDynamicCards(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load featured rooms:", err);
+      }
+    }
+    loadFeatured();
+  }, []);
+
+  const displayCards =
+    propCards || (dynamicCards.length > 0 ? dynamicCards : DEFAULT_COLIVINGS);
+
   const handleBookClick = (card: ColivingCardItem) => {
     if (onBookRoom) {
       onBookRoom(card);
+    } else {
+      router.push(`/room-booking/${card.id}`);
     }
   };
 
   return (
-    <section
-      className={styles.sectionContainer}
-      aria-label={heading}
-    >
+    <section className={styles.sectionContainer} aria-label={heading}>
       <h2 className={styles.heading}>{heading}</h2>
 
       <div className={styles.cardsGrid}>
-        {cards.map((card) => (
-          <article key={card.id} className={styles.colivingCard}>
+        {displayCards.map((card) => (
+          <article key={card.id} className={styles.card}>
             {/* Top Room Image */}
             <div className={styles.imageWrapper}>
-              <Image
-                src={card.image}
-                alt={card.title}
-                fill
-                priority
-                sizes="(max-width: 1400px) 50vw, 700px"
-                className={styles.roomImg}
-              />
+              {typeof card.image === "string" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  className={styles.cardImg}
+                />
+              ) : (
+                <Image
+                  src={card.image}
+                  alt={card.title}
+                  fill
+                  priority
+                  sizes="(max-width: 1400px) 25vw, 340px"
+                  className={styles.cardImg}
+                />
+              )}
             </div>
 
             {/* Card Body */}
             <div className={styles.cardBody}>
-              {/* Row 1: Title & Location (Left) + Price Box (Right) */}
-              <div className={styles.headerRow}>
-                <div className={styles.titleLocation}>
-                  <h3 className={styles.cardTitle}>{card.title}</h3>
-                  <span className={styles.locationText}>{card.location}</span>
-                </div>
+              <div className={styles.mainInfo}>
+                <h3 className={styles.cardTitle} title={card.title}>
+                  {card.title}
+                </h3>
+                <p className={styles.location}>{card.location}</p>
 
+                {/* Price Box */}
                 <div className={styles.priceBox}>
                   <span className={styles.startingLabel}>
                     {card.startingLabel}
                   </span>
                   <span className={styles.priceAmount}>{card.price}</span>
                 </div>
-              </div>
 
-              {/* Row 2: Amenity Pills (Left) + Book Room Button (Right) */}
-              <div className={styles.bottomRow}>
+                {/* Tags */}
                 <div className={styles.tagsRow}>
                   {card.tags.map((tag, idx) => (
                     <span key={idx} className={styles.tagPill}>
@@ -125,16 +179,17 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
                     </span>
                   ))}
                 </div>
-
-                <button
-                  type="button"
-                  className={styles.bookBtn}
-                  onClick={() => handleBookClick(card)}
-                  aria-label={`${card.buttonText} for ${card.title}`}
-                >
-                  {card.buttonText}
-                </button>
               </div>
+
+              {/* Action Button */}
+              <button
+                type="button"
+                className={styles.bookBtn}
+                onClick={() => handleBookClick(card)}
+                aria-label={`Book ${card.title}`}
+              >
+                {card.buttonText}
+              </button>
             </div>
           </article>
         ))}

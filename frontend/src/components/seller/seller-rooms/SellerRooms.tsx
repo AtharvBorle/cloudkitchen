@@ -213,11 +213,12 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
     setEditingRoom(null);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRoom) return;
 
     const formattedPrice = editPrice.startsWith('₹') ? editPrice : `₹${editPrice}`;
+    const rawPrice = editPrice.replace(/[^\d.]/g, '') || '2800';
 
     setRoomList((prev) =>
       prev.map((r) =>
@@ -234,6 +235,23 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
           : r
       )
     );
+
+    try {
+      await fetchApi(`/api/seller/rooms/${editingRoom.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: editingRoom.id,
+          title: editTitle,
+          price: parseFloat(rawPrice),
+          capacity: Number(editGuests) || 1,
+          isAvailable: editAvailable,
+          imageUrl: editImage,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to update room in backend:', err);
+    }
 
     setEditingRoom(null);
   };
@@ -309,7 +327,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
                     className={styles.imageEditBadge}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleOpenEditModal(room);
+                      router.push(`/seller/rooms/config?id=${room.id}`);
                     }}
                     title={`Edit ${room.title}`}
                     aria-label={`Edit ${room.title}`}

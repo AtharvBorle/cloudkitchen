@@ -52,29 +52,22 @@ function EditMenuInner({
     { id: 'cat-6', name: 'Beverages' },
   ]);
 
-  // Form states
-  const [itemName, setItemName] = useState('Special Butter Chicken');
-  const [price, setPrice] = useState('380');
-  const [category, setCategory] = useState('North Indian');
-  const [description, setDescription] = useState(
-    'Tender chicken cubes simmered in a rich, buttery, spiced tomato gravy with fresh cream.'
-  );
+  // Form states (clean empty defaults for Add New Dish)
+  const [itemName, setItemName] = useState('');
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
 
   // Food type dropdown & multi-select
   const [isFoodTypeDropdownOpen, setIsFoodTypeDropdownOpen] = useState(false);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(['Veg']);
 
   // Stock
-  const [stockQty, setStockQty] = useState('24');
+  const [stockQty, setStockQty] = useState('10');
   const [isInStock, setIsInStock] = useState(true);
 
   // Variants & Add-ons
-  const [variants, setVariants] = useState<VariantItem[]>([
-    { id: '1', name: 'Extra Cheese', price: '40' },
-    { id: '2', name: 'Paneer with Corn', price: '60' },
-    { id: '3', name: 'Extra Pizza Slice', price: '80' },
-    { id: '4', name: 'Mushroom Topping', price: '50' },
-  ]);
+  const [variants, setVariants] = useState<VariantItem[]>([]);
 
   // Day-wise Operational Hours
   const [schedules, setSchedules] = useState<DaySchedule[]>([
@@ -98,6 +91,9 @@ function EditMenuInner({
           const dataPayload = json.data || json;
           if (dataPayload.foodCategories && dataPayload.foodCategories.length > 0) {
             setCategoriesList(dataPayload.foodCategories);
+            if (!category) {
+              setCategory(dataPayload.foodCategories[0].name);
+            }
           }
           if (itemId && dataPayload.items) {
             const found = dataPayload.items.find((it: any) => it.id === itemId);
@@ -106,7 +102,7 @@ function EditMenuInner({
               setPrice(String(found.price || ''));
               if (found.foodCategory?.name) setCategory(found.foodCategory.name);
               setDescription(found.description || '');
-              setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 24));
+              setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 10));
               setIsInStock(found.isAvailable ?? true);
               setSelectedFoodTypes(found.itemType === 'NON_VEG' ? ['Non Veg'] : ['Veg']);
             }

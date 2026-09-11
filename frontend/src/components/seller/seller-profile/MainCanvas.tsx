@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { signOut } from "next-auth/react";
 import Topbar, { TopbarProps } from "../nav/Topbar";
 
 export interface SellerProfileData {
@@ -415,7 +416,13 @@ export default function MainCanvas({
               {/* Logout Button */}
               <button
                 type="button"
-                onClick={onLogout}
+                onClick={() => {
+                  if (onLogout) {
+                    onLogout();
+                  } else {
+                    signOut({ callbackUrl: "/seller/login" });
+                  }
+                }}
                 style={{
                   backgroundColor: "#FEE2E2",
                   color: "#DC2626",

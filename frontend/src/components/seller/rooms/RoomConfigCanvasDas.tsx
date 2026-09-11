@@ -78,7 +78,9 @@ export default function RoomConfigCanvasDas({
 
         {/* RoomConfigCanvas Main Body */}
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <RoomConfigCanvas {...canvasProps} />
+          <React.Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "#64748B" }}>Loading Room Configurator...</div>}>
+            <RoomConfigCanvas {...canvasProps} />
+          </React.Suspense>
         </div>
       </div>
     </div>

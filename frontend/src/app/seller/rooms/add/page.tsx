@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { RoomConfigCanvasDas, SellerResponsiveWrapper } from "@/components/seller";
 import ResponsiveRoomAddPage from "@/app/seller/res/rooms/add/page";
 
@@ -9,9 +10,11 @@ export const metadata: Metadata = {
 
 export default function SellerRoomAddPage() {
   return (
-    <SellerResponsiveWrapper
-      desktop={<RoomConfigCanvasDas />}
-      mobile={<ResponsiveRoomAddPage />}
-    />
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "#64748B" }}>Loading Room Configurator...</div>}>
+      <SellerResponsiveWrapper
+        desktop={<RoomConfigCanvasDas />}
+        mobile={<ResponsiveRoomAddPage />}
+      />
+    </Suspense>
   );
 }

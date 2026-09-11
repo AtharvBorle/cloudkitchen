@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import MainCanvas, { SellerProfileData } from "./MainCanvas";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface SellerProfileProps {
   topbarTitle?: string;
@@ -20,8 +22,8 @@ export default function Profile({
   headerTitle = "Partner Profile Settings",
   headerDescription = "Manage operational credentials, personal contacts, and business workspace parameters.",
   initialData,
-  onSave,
-  onLogout,
+  onSave: customOnSave,
+  onLogout: customOnLogout,
   onSearch,
 }: SellerProfileProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -37,8 +39,75 @@ export default function Profile({
     avatarInitials: initialData?.avatarInitials || "JD",
   });
 
+  useEffect(() => {
+    async function loadSellerProfile() {
+      try {
+        const res = await fetchApi("/api/seller/profile");
+        if (res.ok) {
+          const data = await res.json();
+          const user = data.data?.user || data.user;
+          const profile = data.data?.profile || data.profile;
+          if (user) {
+            const name = user.name || "Seller Partner";
+            const initials = name
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2) || "SP";
+
+            setProfileData((prev) => ({
+              ...prev,
+              ownerName: name,
+              email: user.email || prev.email,
+              mobileNumber: user.phone || prev.mobileNumber,
+              outletName: profile?.businessName || prev.outletName,
+              registeredAddress:
+                profile?.addressLocality ||
+                `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
+                prev.registeredAddress,
+              avatarInitials: initials,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load seller profile:", err);
+      }
+    }
+    loadSellerProfile();
+  }, []);
+
   const handleDataChange = (data: SellerProfileData) => {
     setProfileData(data);
+  };
+
+  const handleSave = async (data: SellerProfileData) => {
+    if (customOnSave) {
+      customOnSave(data);
+      return;
+    }
+    try {
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerName: data.ownerName,
+          mobileNumber: data.mobileNumber,
+          outletName: data.outletName,
+          registeredAddress: data.registeredAddress,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save seller profile:", err);
+    }
+  };
+
+  const handleLogout = () => {
+    if (customOnLogout) {
+      customOnLogout();
+      return;
+    }
+    signOut({ callbackUrl: "/seller/login" });
   };
 
   return (
@@ -91,8 +160,8 @@ export default function Profile({
             formData={profileData}
             headerTitle={headerTitle}
             headerDescription={headerDescription}
-            onSave={onSave}
-            onLogout={onLogout}
+            onSave={handleSave}
+            onLogout={handleLogout}
             onDataChange={handleDataChange}
           />
         </div>
