@@ -1,40 +1,41 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import AdminLoginPage from "@/app/auth/login/admin/page";
+import React from "react";
+import { Navbar } from "@/components/navbar";
+import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
+import { SupportHeader, FaqAccordion } from "@/components/support-desktop";
+import styles from "./SupportPage.module.css";
 
-export default function SupportPortalRoot() {
-    const { data: session, status } = useSession();
-    const router = useRouter();
+export default function HelpFaqPage() {
+  return (
+    <div className={styles.pageWrapper}>
+      {/* 1. Shared Top Navbar with Settings Active */}
+      <div className={styles.desktopNavbar}>
+        <Navbar
+          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
+          initialActiveItem="Settings"
+          hideSearch={true}
+          hideVegToggle={true}
+        />
+      </div>
 
-    useEffect(() => {
-        if (status === "authenticated" && session?.user) {
-            const role = session.user.role;
-            if (role === "SUPPORT") {
-                router.push("/dashboard/support");
-            } else if (role === "SUPERADMIN") {
-                router.push("/dashboard/superadmin");
-            } else if (role === "AGENT") {
-                router.push("/dashboard/admin");
-            } else if (role === "SELLER") {
-                router.push("/dashboard/seller");
-            } else if (role === "DELIVERY") {
-                router.push("/dashboard/delivery");
-            } else {
-                router.push("/dashboard/user");
-            }
-        }
-    }, [session, status, router]);
+      <main className={styles.mainContainer}>
+        <div className={styles.layoutRow}>
+          {/* Left Column: Modular Settings Sidebar (hidden on mobile <=992px) */}
+          <div className={styles.sidebarWrapper}>
+            <SettingsSidebar activeTabId="help-faq" />
+          </div>
 
-    if (status === "loading") {
-        return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#1A252F', color: '#FFFFFF' }}>Loading Support Portal...</div>;
-    }
+          {/* Right Column: Help & FAQ Content */}
+          <div className={styles.contentWrapper}>
+            {/* 2. Page Header */}
+            <SupportHeader />
 
-    if (status === "unauthenticated" || !session) {
-        return <AdminLoginPage />;
-    }
-
-    return null;
+            {/* 3. Search & Interactive FAQ Accordion List */}
+            <FaqAccordion />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }

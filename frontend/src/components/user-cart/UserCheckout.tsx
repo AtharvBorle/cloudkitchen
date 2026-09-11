@@ -186,21 +186,19 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       <main className={styles.checkoutLayoutContainer}>
         {/* Stepper Progress Bar */}
         <section className={styles.stepperRow} aria-label="Checkout Progress">
-          {/* Step 1: Cart (Active) */}
-          <div className={styles.stepPillActive}>
-            <span className={styles.activeDot} />
-            <span>Cart</span>
-          </div>
+          {/* Step 1: Cart */}
+          <Link href="/user/cart" style={{ textDecoration: "none" }}>
+            <div className={styles.stepPillInactive} title="Back to Cart">
+              <span className={styles.inactiveDot} />
+              <span>Cart</span>
+            </div>
+          </Link>
 
           <div className={styles.stepperLine} />
 
-          {/* Step 2: Checkout (Inactive) */}
-          <div
-            className={styles.stepPillInactive}
-            onClick={handleCheckoutClick}
-            title="Go to Checkout"
-          >
-            <span className={styles.inactiveDot} />
+          {/* Step 2: Checkout (Active) */}
+          <div className={styles.stepPillActive}>
+            <span className={styles.activeDot} />
             <span>Checkout</span>
           </div>
 
@@ -220,11 +218,15 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
               Home
             </Link>
             <span>/</span>
-            <span className={styles.breadcrumbCurrent}>Cart</span>
+            <Link href="/user/cart" className={styles.breadcrumbLink}>
+              Cart
+            </Link>
+            <span>/</span>
+            <span className={styles.breadcrumbCurrent}>Checkout</span>
           </div>
-          <h1 className={styles.pageTitle}>Your Cart</h1>
+          <h1 className={styles.pageTitle}>Checkout</h1>
           <p className={styles.pageSubtitle}>
-            Review your items, apply a promo, and proceed to checkout.
+            Complete your delivery details and place your order.
           </p>
         </section>
 

@@ -118,15 +118,18 @@ export default function DashboardBody({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: "12px",
+            width: "100%",
+            boxSizing: "border-box",
           }}
         >
           <h2
             style={{
-              fontSize: "1.55rem",
+              fontSize: "clamp(1.2rem, 2.5vw, 1.55rem)",
               fontWeight: "800",
               color: "#18181B",
               margin: 0,
-              letterSpacing: "-0.3px",
+              letterSpacing: "-0.02em",
             }}
           >
             {title}
@@ -135,24 +138,28 @@ export default function DashboardBody({
           <Link
             href={seeAllLink}
             style={{
-              color: "#FF6B00",
-              fontSize: "0.95rem",
+              color: "#FF5500",
+              fontSize: "0.92rem",
               fontWeight: "700",
               textDecoration: "none",
               transition: "color 0.2s ease",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             See all
           </Link>
         </div>
 
-        {/* Top Rated 2-Column Grid */}
+        {/* Top Rated Grid */}
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: "16px",
             width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
           }}
           className="top-rated-grid"
         >
@@ -161,18 +168,21 @@ export default function DashboardBody({
               key={item.id}
               style={{
                 width: "100%",
-                minHeight: "101px",
+                maxWidth: "100%",
+                minWidth: 0,
+                minHeight: "90px",
                 borderRadius: "16px",
                 border: "1px solid #E2E8F0",
                 backgroundColor: "#FFFFFF",
-                padding: "12px 16px 12px 12px",
+                padding: "10px 14px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: "14px",
+                gap: "10px",
                 boxSizing: "border-box",
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
                 transition: "all 0.2s ease",
+                overflow: "hidden",
               }}
               className="top-rated-card"
             >
@@ -181,21 +191,24 @@ export default function DashboardBody({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "14px",
-                  flex: "1 1 auto",
+                  gap: "10px",
+                  flex: "1 1 0%",
+                  minWidth: 0,
                   overflow: "hidden",
                 }}
               >
                 {/* Thumbnail Image */}
                 <div
                   style={{
-                    width: "76px",
-                    height: "76px",
-                    minWidth: "76px",
+                    width: "66px",
+                    height: "66px",
+                    minWidth: "66px",
                     borderRadius: "12px",
                     overflow: "hidden",
                     backgroundColor: "#F1F5F9",
+                    flexShrink: 0,
                   }}
+                  className="top-rated-thumb"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -214,13 +227,15 @@ export default function DashboardBody({
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: "4px",
+                    gap: "3px",
+                    minWidth: 0,
+                    flex: "1 1 0%",
                     overflow: "hidden",
                   }}
                 >
                   <h3
                     style={{
-                      fontSize: "1rem",
+                      fontSize: "0.92rem",
                       fontWeight: "700",
                       color: "#18181B",
                       margin: 0,
@@ -228,24 +243,25 @@ export default function DashboardBody({
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
+                    className="top-rated-name"
                   >
                     {item.name}
                   </h3>
 
-                  {/* Stars, Category & Price */}
+                  {/* Stars Row */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "6px",
-                      flexWrap: "wrap",
+                      gap: "4px",
+                      minWidth: 0,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "1.5px", flexShrink: 0 }}>
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          size={13}
+                          size={11}
                           fill="#F59E0B"
                           color="#F59E0B"
                         />
@@ -254,24 +270,28 @@ export default function DashboardBody({
 
                     <span
                       style={{
-                        fontSize: "0.82rem",
+                        fontSize: "0.76rem",
                         color: "#64748B",
-                        fontWeight: "500",
+                        fontWeight: "600",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      {item.rating} • {item.category} • ₹{item.price}
+                      {item.rating}
                     </span>
                   </div>
 
-                  {/* Delivery Time */}
+                  {/* Category, Price & Time */}
                   <span
                     style={{
-                      fontSize: "0.8rem",
-                      color: "#94A3B8",
+                      fontSize: "0.74rem",
+                      color: "#64748B",
                       fontWeight: "500",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    {item.time}
+                    {item.category} • ₹{item.price} • {item.time}
                   </span>
                 </div>
               </div>
@@ -282,9 +302,9 @@ export default function DashboardBody({
                 style={{
                   backgroundColor: "#FF6B00",
                   color: "#FFFFFF",
-                  fontSize: "0.88rem",
+                  fontSize: "0.82rem",
                   fontWeight: "700",
-                  padding: "8px 24px",
+                  padding: "6px 15px",
                   borderRadius: "9999px",
                   textDecoration: "none",
                   boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
@@ -312,9 +332,6 @@ export default function DashboardBody({
           transform: scale(1.03);
         }
         @media (max-width: 1024px) {
-          .dashboard-body-wrapper {
-            padding: 32px 24px !important;
-          }
           .top-rated-grid {
             grid-template-columns: 1fr !important;
           }
@@ -325,11 +342,22 @@ export default function DashboardBody({
           }
         }
         @media (max-width: 640px) {
-          .dashboard-body-wrapper {
-            padding: 24px 16px !important;
-          }
           .top-rated-card {
-            padding: 10px !important;
+            padding: 8px 10px !important;
+            gap: 8px !important;
+            min-height: 74px !important;
+          }
+          .top-rated-thumb {
+            width: 52px !important;
+            height: 52px !important;
+            min-width: 52px !important;
+          }
+          .top-rated-name {
+            font-size: 0.86rem !important;
+          }
+          .top-rated-order-btn {
+            padding: 5px 12px !important;
+            font-size: 0.76rem !important;
           }
         }
       `}</style>

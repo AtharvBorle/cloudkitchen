@@ -16,7 +16,7 @@ const RECOMMENDED_DISHES: RecommendedDish[] = [
     id: "rec-1",
     name: "Creamy Pasta",
     time: "₹329 • 20 min",
-    imageUrl: "https://images.unsplash.com/photo-1621996346565-e3adc6d6d1b9?w=500&auto=format&fit=crop&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=500&auto=format&fit=crop&q=80",
     link: "/explore-desktop",
   },
   {
@@ -59,35 +59,38 @@ export default function RecommendedForYou({
         width: "100%",
         background: "transparent",
         padding: "0",
+        boxSizing: "border-box",
       }}
     >
       <div
         style={{
           maxWidth: "1280px",
           width: "100%",
-          minHeight: "303px",
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
-          gap: "20px",
+          gap: "16px",
           boxSizing: "border-box",
         }}
       >
-        {/* Header Row: Title + See All */}
+        {/* Header Row: Title + See All with distinct spacing */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: "14px",
+            width: "100%",
           }}
         >
           <h2
             style={{
-              fontSize: "1.55rem",
+              fontSize: "clamp(1.15rem, 2.3vw, 1.45rem)",
               fontWeight: "800",
               color: "#18181B",
               margin: 0,
-              letterSpacing: "-0.3px",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.2,
             }}
           >
             {title}
@@ -97,10 +100,12 @@ export default function RecommendedForYou({
             href={seeAllLink}
             style={{
               color: "#FF5500",
-              fontSize: "0.95rem",
+              fontSize: "0.92rem",
               fontWeight: "700",
               textDecoration: "none",
               transition: "color 0.2s ease",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             See all
@@ -112,8 +117,9 @@ export default function RecommendedForYou({
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: "20px",
+            gap: "16px",
             width: "100%",
+            boxSizing: "border-box",
           }}
           className="rec-dishes-grid"
         >
@@ -133,8 +139,8 @@ export default function RecommendedForYou({
                   backgroundColor: "#FFFFFF",
                   borderRadius: "16px",
                   overflow: "hidden",
-                  border: "1px solid #F1F5F9",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
+                  border: "1px solid #E2E8F0",
+                  boxShadow: "0 2px 10px rgba(0, 0, 0, 0.03)",
                   display: "flex",
                   flexDirection: "column",
                   cursor: "pointer",
@@ -146,7 +152,7 @@ export default function RecommendedForYou({
                 <div
                   style={{
                     width: "100%",
-                    height: "150px",
+                    height: "140px",
                     position: "relative",
                     overflow: "hidden",
                     backgroundColor: "#F8FAFC",
@@ -170,15 +176,15 @@ export default function RecommendedForYou({
                 {/* Card Info */}
                 <div
                   style={{
-                    padding: "12px 14px 14px 14px",
+                    padding: "10px 12px 12px 12px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "6px",
+                    gap: "4px",
                   }}
                 >
                   <h3
                     style={{
-                      fontSize: "0.98rem",
+                      fontSize: "0.95rem",
                       fontWeight: "700",
                       color: "#18181B",
                       margin: 0,
@@ -194,7 +200,7 @@ export default function RecommendedForYou({
                   {/* Price & Delivery Time */}
                   <span
                     style={{
-                      fontSize: "0.82rem",
+                      fontSize: "0.8rem",
                       color: "#64748B",
                       fontWeight: "500",
                     }}
@@ -211,7 +217,8 @@ export default function RecommendedForYou({
       <style jsx>{`
         .rec-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
+          border-color: #CBD5E1 !important;
         }
         .rec-card:hover .rec-card-img {
           transform: scale(1.05);

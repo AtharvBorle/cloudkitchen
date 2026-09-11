@@ -21,6 +21,9 @@ import {
   BedDouble,
   LogOut,
   X,
+  ChevronDown,
+  Utensils,
+  ChefHat,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronLeft,
@@ -35,13 +38,6 @@ export interface NavItem {
   href: string;
   badge?: string;
 }
-
-export const MAIN_NAV_ITEMS: NavItem[] = [
-  { id: "home", label: "Home", icon: Home, href: "/" },
-  { id: "explore", label: "Explore", icon: Compass, href: "/explore-desktop" },
-  { id: "my-orders", label: "Orders", icon: ShoppingBag, href: "/orders-desktop" },
-  { id: "rooms", label: "Rooms", icon: BedDouble, href: "/room-booking", badge: "NEW" },
-];
 
 export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
@@ -88,6 +84,7 @@ export default function SellerSidebar({
   avatarInitials = "JD",
 }: SellerSidebarProps) {
   const pathname = usePathname();
+
   const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
 
   // Controlled or uncontrolled collapse state

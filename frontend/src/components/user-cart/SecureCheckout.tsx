@@ -158,8 +158,46 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           2. CHECKOUT LAYOUT CONTAINER (1440px x 888px)
           ========================================================= */}
       <main className={styles.checkoutLayoutContainer}>
-        {/* Page Header */}
+        {/* Stepper Progress Bar */}
+        <section className={styles.stepperRow} aria-label="Checkout Progress">
+          {/* Step 1: Cart */}
+          <Link href="/user/cart" style={{ textDecoration: "none" }}>
+            <div className={styles.stepPillInactive} title="Back to Cart">
+              <span className={styles.inactiveDot} />
+              <span>Cart</span>
+            </div>
+          </Link>
+
+          <div className={styles.stepperLine} />
+
+          {/* Step 2: Checkout (Active) */}
+          <div className={styles.stepPillActive}>
+            <span className={styles.activeDot} />
+            <span>Checkout</span>
+          </div>
+
+          <div className={styles.stepperLine} />
+
+          {/* Step 3: Confirmation (Inactive) */}
+          <div className={styles.stepPillInactive}>
+            <span className={styles.inactiveDot} />
+            <span>Confirmation</span>
+          </div>
+        </section>
+
+        {/* Page Header & Breadcrumbs */}
         <section className={styles.pageHeaderGroup}>
+          <div className={styles.breadcrumb}>
+            <Link href="/" className={styles.breadcrumbLink}>
+              Home
+            </Link>
+            <span>/</span>
+            <Link href="/user/cart" className={styles.breadcrumbLink}>
+              Cart
+            </Link>
+            <span>/</span>
+            <span className={styles.breadcrumbCurrent}>Checkout</span>
+          </div>
           <h1 className={styles.pageTitle}>Secure Checkout</h1>
           <p className={styles.pageSubtitle}>
             Complete your gourmet order in just a few simple steps.
@@ -338,7 +376,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
               {/* Mini Item List */}
               <div className={styles.miniItemsList}>
-                {items.map((item) => (
+                {checkoutItems.map((item) => (
                   <div key={item.id} className={styles.miniItemRow}>
                     <div className={styles.miniItemLeft}>
                       <div className={styles.miniItemImgWrapper}>

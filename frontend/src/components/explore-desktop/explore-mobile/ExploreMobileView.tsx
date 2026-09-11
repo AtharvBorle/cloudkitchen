@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import styles from "./ExploreMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
-import MobileBottomNav from "@/components/home/MobileBottomNav";
 import logoImg from "@/components/navbar/logo-nav.png";
 
 const LANG_OPTIONS = [
@@ -681,10 +680,7 @@ export const ExploreMobileView: React.FC = () => {
         </div>
       </section>
 
-      {/* 6. Fixed Mobile Bottom Navigation */}
-      <MobileBottomNav />
-
-      {/* 7. Full-Screen Reels Modal */}
+      {/* 6. Full-Screen Reels Modal */}
       <ReelModal
         isOpen={activeReelIndex !== null}
         onClose={() => setActiveReelIndex(null)}

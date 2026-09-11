@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -29,23 +29,39 @@ export interface SettingsSidebarProps {
 }
 
 export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
-  activeTabId = "general-overview",
+  activeTabId,
   onTabSelect,
   onLogout,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
-  const [currentTab, setCurrentTab] = useState<string>(activeTabId);
+
+  const getActiveTab = (): string => {
+    if (activeTabId) return activeTabId;
+    if (pathname === "/settings-desktop" || pathname === "/settings") return "general-overview";
+    if (pathname?.startsWith("/my-subscription") || pathname?.startsWith("/my-subscriptions-desktop")) return "my-subscriptions";
+    if (pathname?.startsWith("/notifications-desktop") || pathname?.startsWith("/notifications")) return "notifications";
+    if (pathname?.startsWith("/payment-methods-desktop") || pathname?.startsWith("/payment-methods")) return "payment-methods";
+    if (pathname?.startsWith("/delivery-addresses-desktop") || pathname?.startsWith("/delivery-addresses")) return "delivery-addresses";
+    if (pathname?.startsWith("/order-history-desktop") || pathname?.startsWith("/order-history")) return "order-history";
+    if (pathname?.startsWith("/support")) return "help-faq";
+    if (pathname?.startsWith("/terms")) return "terms";
+    if (pathname?.startsWith("/privacy")) return "privacy";
+    if (pathname?.startsWith("/rate")) return "rate";
+    return "general-overview";
+  };
+
+  const currentTab = getActiveTab();
 
   const handleTabClick = (tabId: string) => {
-    setCurrentTab(tabId);
     if (onTabSelect) {
       onTabSelect(tabId);
     } else {
       if (tabId === "general-overview") {
         router.push("/settings-desktop");
       } else if (tabId === "my-subscriptions") {
-        router.push("/my-subscription");
+        router.push("/my-subscriptions-desktop");
       } else if (tabId === "notifications") {
         router.push("/notifications-desktop");
       } else if (tabId === "payment-methods") {
@@ -54,6 +70,14 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         router.push("/delivery-addresses-desktop");
       } else if (tabId === "order-history") {
         router.push("/order-history-desktop");
+      } else if (tabId === "help-faq") {
+        router.push("/support");
+      } else if (tabId === "terms") {
+        router.push("/terms");
+      } else if (tabId === "privacy") {
+        router.push("/privacy");
+      } else if (tabId === "rate") {
+        router.push("/rate-app");
       }
     }
   };

@@ -93,6 +93,8 @@ export interface NavbarProps {
   onCartClick?: () => void;
   onProfileClick?: () => void;
   onLocationClick?: () => void;
+  hideSearch?: boolean;
+  hideVegToggle?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -107,6 +109,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onCartClick,
   onProfileClick,
   onLocationClick,
+  hideSearch,
+  hideVegToggle,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -141,9 +145,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (
       pathname.startsWith("/settings-desktop") ||
       pathname.startsWith("/my-subscription") ||
+      pathname.startsWith("/my-subscriptions-desktop") ||
       pathname.startsWith("/notifications-desktop") ||
       pathname.startsWith("/payment-methods-desktop") ||
-      pathname.startsWith("/delivery-addresses-desktop")
+      pathname.startsWith("/delivery-addresses-desktop") ||
+      pathname.startsWith("/order-history-desktop") ||
+      pathname.startsWith("/support") ||
+      pathname.startsWith("/terms") ||
+      pathname.startsWith("/privacy") ||
+      pathname.startsWith("/rate")
     ) {
       return "Settings";
     }
@@ -169,6 +179,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   );
 
   const currentVegOnly = controlledVegOnly !== undefined ? controlledVegOnly : internalVegOnly;
+
+  const isSettingsPage = Boolean(
+    pathname?.startsWith("/settings") ||
+    pathname?.startsWith("/notifications") ||
+    pathname?.startsWith("/payment-methods") ||
+    pathname?.startsWith("/delivery-addresses") ||
+    pathname?.startsWith("/order-history") ||
+    pathname?.startsWith("/my-subscriptions") ||
+    pathname?.startsWith("/my-subscription") ||
+    pathname?.startsWith("/support") ||
+    pathname?.startsWith("/terms") ||
+    pathname?.startsWith("/privacy") ||
+    pathname?.startsWith("/rate") ||
+    currentActiveItem === "Settings"
+  );
+
+  const shouldHideSearch = hideSearch !== undefined ? hideSearch : isSettingsPage;
+  const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : isSettingsPage;
 
   const handleNavClick = (item: string) => {
     setInternalActiveItem(item);
@@ -420,32 +448,34 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* 3. RIGHT SECTION */}
           <div className={styles.rightSection}>
             {/* Desktop Veg Only Toggle */}
-            <div
-              className={styles.vegToggleWrapper}
-              onClick={toggleVegOnly}
-              role="switch"
-              aria-checked={currentVegOnly}
-              tabIndex={0}
-              onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toggleVegOnly();
-                }
-              }}
-            >
-              <span className={styles.vegLabel}>VEG ONLY</span>
+            {!shouldHideVegToggle && (
               <div
-                className={`${styles.toggleTrack} ${
-                  currentVegOnly ? styles.toggleTrackActive : ""
-                }`}
+                className={styles.vegToggleWrapper}
+                onClick={toggleVegOnly}
+                role="switch"
+                aria-checked={currentVegOnly}
+                tabIndex={0}
+                onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleVegOnly();
+                  }
+                }}
               >
+                <span className={styles.vegLabel}>VEG ONLY</span>
                 <div
-                  className={`${styles.toggleThumb} ${
-                    currentVegOnly ? styles.toggleThumbActive : ""
+                  className={`${styles.toggleTrack} ${
+                    currentVegOnly ? styles.toggleTrackActive : ""
                   }`}
-                />
+                >
+                  <div
+                    className={`${styles.toggleThumb} ${
+                      currentVegOnly ? styles.toggleThumbActive : ""
+                    }`}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Language Selector Pill + Dropdown Popover */}
             <div className={styles.langWrapper}>
@@ -571,96 +601,102 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Second Row: Mobile Search Bar + Veg Filter Pill (Mobile Only) */}
-        <div className={styles.mobileSecondRow}>
-          <form onSubmit={handleMobileSearch} className={styles.mobileSearchBar}>
-            <Search size={18} color="#FF5500" strokeWidth={2.5} />
-            <input
-              type="text"
-              placeholder="near by home meals..."
-              value={mobileSearchQuery}
-              onChange={(e) => setMobileSearchQuery(e.target.value)}
-              className={styles.mobileSearchInput}
-            />
-            <button
-              type="button"
-              className={styles.mobileFilterBtn}
-              onClick={() => setIsFilterModalOpen(true)}
-              aria-label="Open filter options"
-            >
-              <SlidersHorizontal size={18} color="#FF5500" strokeWidth={2.2} />
-              {activeFiltersCount > 0 && (
-                <span className={styles.filterDotBadge} />
-              )}
-            </button>
-          </form>
-
-          {/* Veg / Diet Selector Pill + Dropdown Popover */}
-          <div className={styles.vegWrapper}>
-            <button
-              type="button"
-              className={`${styles.mobileVegPill} ${
-                selectedDiet !== "all" ? styles.mobileVegPillActive : ""
-              }`}
-              onClick={() => setIsDietDropdownOpen((prev) => !prev)}
-              aria-label="Diet Filter Options"
-              aria-expanded={isDietDropdownOpen}
-            >
-              <span
-                className={styles.mobileVegDot}
-                style={{ backgroundColor: getDietPillDotColor() }}
-              />
-              <span className={styles.mobileVegText}>{getDietPillLabel()}</span>
-              <ChevronDown
-                size={15}
-                color="#18181B"
-                strokeWidth={2.5}
-                style={{
-                  transform: isDietDropdownOpen ? "rotate(180deg)" : "none",
-                  transition: "transform 0.2s ease",
-                }}
-              />
-            </button>
-
-            {/* Diet Dropdown Popover Menu */}
-            {isDietDropdownOpen && (
-              <>
-                <div
-                  className={styles.dietBackdrop}
-                  onClick={() => setIsDietDropdownOpen(false)}
+        {(!shouldHideSearch || !shouldHideVegToggle) && (
+          <div className={styles.mobileSecondRow}>
+            {!shouldHideSearch && (
+              <form onSubmit={handleMobileSearch} className={styles.mobileSearchBar}>
+                <Search size={18} color="#FF5500" strokeWidth={2.5} />
+                <input
+                  type="text"
+                  placeholder="near by home meals..."
+                  value={mobileSearchQuery}
+                  onChange={(e) => setMobileSearchQuery(e.target.value)}
+                  className={styles.mobileSearchInput}
                 />
-                <div
-                  className={styles.dietDropdown}
-                  role="menu"
-                  aria-orientation="vertical"
+                <button
+                  type="button"
+                  className={styles.mobileFilterBtn}
+                  onClick={() => setIsFilterModalOpen(true)}
+                  aria-label="Open filter options"
                 >
-                  {DIET_OPTIONS.map((option) => {
-                    const isSelected = selectedDiet === option.id;
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`${styles.dietItem} ${
-                          isSelected ? styles.dietItemActive : ""
-                        }`}
-                        onClick={() => handleDietSelect(option.id)}
-                        role="menuitem"
-                      >
-                        <div className={styles.dietItemLeft}>
-                          {renderDietSymbol(option.id)}
-                          <span className={styles.dietLabel}>{option.label}</span>
-                        </div>
+                  <SlidersHorizontal size={18} color="#FF5500" strokeWidth={2.2} />
+                  {activeFiltersCount > 0 && (
+                    <span className={styles.filterDotBadge} />
+                  )}
+                </button>
+              </form>
+            )}
 
-                        {isSelected && (
-                          <Check size={16} color="#16A34A" strokeWidth={2.8} />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
+            {/* Veg / Diet Selector Pill + Dropdown Popover */}
+            {!shouldHideVegToggle && (
+              <div className={styles.vegWrapper}>
+                <button
+                  type="button"
+                  className={`${styles.mobileVegPill} ${
+                    selectedDiet !== "all" ? styles.mobileVegPillActive : ""
+                  }`}
+                  onClick={() => setIsDietDropdownOpen((prev) => !prev)}
+                  aria-label="Diet Filter Options"
+                  aria-expanded={isDietDropdownOpen}
+                >
+                  <span
+                    className={styles.mobileVegDot}
+                    style={{ backgroundColor: getDietPillDotColor() }}
+                  />
+                  <span className={styles.mobileVegText}>{getDietPillLabel()}</span>
+                  <ChevronDown
+                    size={15}
+                    color="#18181B"
+                    strokeWidth={2.5}
+                    style={{
+                      transform: isDietDropdownOpen ? "rotate(180deg)" : "none",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </button>
+
+                {/* Diet Dropdown Popover Menu */}
+                {isDietDropdownOpen && (
+                  <>
+                    <div
+                      className={styles.dietBackdrop}
+                      onClick={() => setIsDietDropdownOpen(false)}
+                    />
+                    <div
+                      className={styles.dietDropdown}
+                      role="menu"
+                      aria-orientation="vertical"
+                    >
+                      {DIET_OPTIONS.map((option) => {
+                        const isSelected = selectedDiet === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            className={`${styles.dietItem} ${
+                              isSelected ? styles.dietItemActive : ""
+                            }`}
+                            onClick={() => handleDietSelect(option.id)}
+                            role="menuitem"
+                          >
+                            <div className={styles.dietItemLeft}>
+                              {renderDietSymbol(option.id)}
+                              <span className={styles.dietLabel}>{option.label}</span>
+                            </div>
+
+                            {isSelected && (
+                              <Check size={16} color="#16A34A" strokeWidth={2.8} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* FILTER FORM MODAL (Cuisines, Dietary Preferences, Price Range) */}

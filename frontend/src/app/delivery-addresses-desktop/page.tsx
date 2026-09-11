@@ -17,6 +17,8 @@ export default function DeliveryAddressesDesktopPage() {
         <Navbar
           navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
           initialActiveItem="Settings"
+          hideSearch={true}
+          hideVegToggle={true}
         />
       </div>
 

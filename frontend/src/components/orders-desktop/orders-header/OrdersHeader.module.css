@@ -3,11 +3,22 @@
   margin-bottom: 32px;
 }
 
-.headerTopRow {
+/* 1. Mobile Top Navigation Bar (Hidden on desktop, shown <=768px) */
+.topNavRow {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 2px 0 6px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.navLeftGroup {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .headerLeftGroup {
@@ -50,28 +61,200 @@
 }
 
 .menuBtn {
-  display: none;
   background: none;
   border: none;
+  display: flex;
   align-items: center;
   justify-content: center;
-  color: #0f172a;
+  color: #18181b;
   cursor: pointer;
-  padding: 4px 0 0 0;
+  padding: 4px;
+  margin-right: 0;
   transition: opacity 0.15s ease;
 }
 
 .menuBtn:active {
-  opacity: 0.7;
+  transform: scale(0.92);
 }
 
-.headerTitleCol {
+.brandLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.logoWrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.logoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.brandInfo {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.brandTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #18181b;
+  line-height: 1.2;
+}
+
+.locationContainer {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 1px;
+}
+
+.navRightGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bellBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.bellBtn:active {
+  transform: scale(0.95);
+}
+
+.langWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.langBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff5500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.langBtn:active {
+  transform: scale(0.95);
+}
+
+.langBackdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 299;
+}
+
+.langDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 175px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 300;
+  box-sizing: border-box;
+  animation: dietPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+}
+
+@keyframes dietPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.langItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  background-color: transparent;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.langItem:hover {
+  background-color: #f8fafc;
+}
+
+.langItemActive {
+  background-color: #f8fafc;
+}
+
+.langLabel {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: #0f172a;
+  font-family: inherit;
+}
+
+/* 2. Orders Title Section */
+.ordersTitleSection {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+  gap: 4px;
 }
 
 .title {
-  font-size: clamp(1.6rem, 3.5vw, 2rem);
+  font-size: clamp(1.6rem, 3.5vw, 2.1rem);
   font-weight: 900;
   color: #0f172a;
   margin: 0;
@@ -81,13 +264,13 @@
 }
 
 .subtitle {
-  display: none;
-  font-size: 13px;
+  font-size: 14px;
   color: #64748b;
-  margin: 3px 0 0 0;
+  margin: 0;
   font-weight: 500;
 }
 
+/* 3. Category Filter Chips */
 .filtersRow {
   display: flex;
   align-items: center;
@@ -138,26 +321,23 @@
     margin-bottom: 20px;
   }
 
-  .headerTopRow {
+  .topNavRow {
+    display: flex;
+  }
+
+  .ordersTitleSection {
     margin-bottom: 14px;
-    padding-top: 2px;
-  }
-
-  .headerLeftGroup {
-    display: flex;
-  }
-
-  .menuBtn {
-    display: flex;
-  }
-
-  .subtitle {
-    display: block;
+    gap: 2px;
   }
 
   .title {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 13.5px;
   }
 
   .filtersRow {

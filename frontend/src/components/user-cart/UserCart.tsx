@@ -227,14 +227,15 @@ export const UserCart: React.FC<UserCartProps> = ({
           <div className={styles.stepperLine} />
 
           {/* Step 2: Checkout (Inactive) */}
-          <div
-            className={styles.stepPillInactive}
-            onClick={handleCheckoutClick}
-            title="Go to Checkout"
-          >
-            <span className={styles.inactiveDot} />
-            <span>Checkout</span>
-          </div>
+          <Link href="/user/checkout" style={{ textDecoration: "none" }}>
+            <div
+              className={styles.stepPillInactive}
+              title="Go to Checkout"
+            >
+              <span className={styles.inactiveDot} />
+              <span>Checkout</span>
+            </div>
+          </Link>
 
           <div className={styles.stepperLine} />
 
