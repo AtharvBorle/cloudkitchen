@@ -160,11 +160,15 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         name: ci.name,
         price: ci.price,
         quantity: ci.quantity || ci.qty || 1,
+        image: ci.image,
+        variant: ci.variant,
       }));
 
       const fullDeliveryAddress = `${streetAddress}, ${city} - ${postalCode}${
         deliveryInstructions ? ` (Note: ${deliveryInstructions})` : ""
       }`;
+
+      let finalOrderId = "NCB-" + Math.floor(100000 + Math.random() * 900000);
 
       if (sellerId && cartItems.length > 0) {
         const res = await fetchApi("/api/user/orders", {
@@ -182,23 +186,64 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
         if (res.ok) {
           const resData = await res.json().catch(() => ({}));
-          const orderId = resData.data?.id || resData.id || `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-          setPlacedOrderNumber(orderId);
-        } else {
-          setPlacedOrderNumber(`ORD-${Math.floor(100000 + Math.random() * 900000)}`);
+          finalOrderId = resData.data?.id || resData.id || finalOrderId;
         }
-      } else {
-        setPlacedOrderNumber(`ORD-${Math.floor(100000 + Math.random() * 900000)}`);
+      }
+
+      setPlacedOrderNumber(finalOrderId);
+
+      const confirmedOrderPayload = {
+        orderId: finalOrderId,
+        orderTime: "Just now",
+        estimatedDelivery: "25-35 mins",
+        deliveryAddress: {
+          fullName: fullName.trim(),
+          phoneNumber: phoneNumber.trim(),
+          streetAddress: streetAddress.trim(),
+          city: city.trim() || "Kothrud, Pune",
+          pincode: postalCode.trim() || "411038",
+        },
+        paymentMethod: paymentMethod === "UPI" ? "UPI (Paid Online)" : "Cash on Delivery",
+        items: checkoutItems.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          qty: item.qty,
+          image: item.image,
+          variant: item.variant,
+          itemType: "VEG",
+        })),
+        subtotal,
+        discount: discountAmount,
+        deliveryFee,
+        taxes: taxesAndCharges,
+        grandTotal,
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+        } catch (e) {
+          console.error("Failed to save confirmed order to session storage:", e);
+        }
       }
 
       setIsOrderPlaced(true);
       clearCart();
       showToast("Order Placed Successfully!");
+
+      setTimeout(() => {
+        router.push(`/order-confirmation?orderId=${finalOrderId}`);
+      }, 700);
     } catch (err) {
       console.error("Error placing order:", err);
-      setPlacedOrderNumber(`ORD-${Math.floor(100000 + Math.random() * 900000)}`);
+      const fallbackId = `NCB-${Math.floor(100000 + Math.random() * 900000)}`;
+      setPlacedOrderNumber(fallbackId);
       setIsOrderPlaced(true);
       clearCart();
+      setTimeout(() => {
+        router.push(`/order-confirmation?orderId=${fallbackId}`);
+      }, 700);
     } finally {
       setIsSubmitting(false);
     }
