@@ -166,7 +166,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
                         View Invoice
                       </Link>
                     ) : (
-                      <Link href={`/orders-desktop?orderId=${order.id}`} className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                      <Link href={`/order-confirmation?orderId=${order.id}`} className={styles.actionBtn} style={{ textDecoration: "none" }}>
                         Track Order
                       </Link>
                     )}
@@ -233,7 +233,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
                   <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
                     Need Help?
                   </Link>
-                  <Link href="/orders-desktop" className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                  <Link href="/order-confirmation?orderId=NCB-712849" className={styles.actionBtn} style={{ textDecoration: "none" }}>
                     Track Order
                   </Link>
                 </div>
@@ -295,7 +295,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
                   <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
                     Need Help?
                   </Link>
-                  <Link href="/orders-desktop" className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                  <Link href="/order-confirmation?orderId=NCB-902341" className={styles.actionBtn} style={{ textDecoration: "none" }}>
                     Track Order
                   </Link>
                 </div>

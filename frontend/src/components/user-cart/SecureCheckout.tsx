@@ -138,14 +138,52 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       return;
     }
 
+    const generatedOrderId = "NCB-" + Math.floor(100000 + Math.random() * 900000);
+
+    const confirmedOrderPayload = {
+      orderId: generatedOrderId,
+      orderTime: "Just now",
+      estimatedDelivery: "25-35 mins",
+      deliveryAddress: {
+        fullName: fullName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        streetAddress: streetAddress.trim(),
+        city: city.trim() || "Kothrud, Pune",
+        pincode: pincode.trim() || "411038",
+      },
+      paymentMethod: paymentMethod === "UPI" ? "UPI (Paid Online)" : "Cash on Delivery",
+      items: displayItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        qty: item.qty,
+        image: item.image,
+        variant: item.variant,
+        itemType: item.itemType || "VEG",
+      })),
+      subtotal,
+      discount: discountAmount,
+      deliveryFee,
+      taxes: taxesAndCharges,
+      grandTotal,
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+      } catch (e) {
+        console.error("Failed to save confirmed order to session storage:", e);
+      }
+    }
+
     if (onPlaceOrder) {
       onPlaceOrder();
     } else {
       showToast(`Order Placed Successfully! Paid with ${paymentMethod === "UPI" ? "Pay Now / UPI" : "COD"}`);
       clearCart();
       setTimeout(() => {
-        router.push("/dashboard/user/orders");
-      }, 1200);
+        router.push(`/order-confirmation?orderId=${generatedOrderId}`);
+      }, 900);
     }
   };
 
