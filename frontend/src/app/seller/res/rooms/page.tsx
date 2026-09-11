@@ -59,10 +59,26 @@ export default function ResponsiveRoomsPage() {
     });
   }, [rooms]);
 
+  const handleToggleAvailability = async (roomId: string, isAvailable: boolean) => {
+    try {
+      await fetchApi("/api/seller/rooms", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId, isAvailable }),
+      });
+      setRooms((prev) =>
+        prev.map((r) => (r.id === roomId ? { ...r, isAvailable } : r))
+      );
+    } catch (err) {
+      console.error("Failed to toggle room availability:", err);
+    }
+  };
+
   return (
     <ResponsiveRoom
       ownerName="Rahul Sharma"
       rooms={mappedRooms}
+      onToggleAvailability={handleToggleAvailability}
     />
   );
 }

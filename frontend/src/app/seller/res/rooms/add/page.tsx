@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import ResponsiveRoomAdd from "@/components/seller/rooms/responsive/ResponsiveRoomAdd";
+import { fetchApi } from "@/lib/fetch-api";
 
 export default function ResponsiveRoomAddPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function ResponsiveRoomAddPage() {
         formData.append("image", data.imageFile);
       }
 
-      const res = await fetch("/api/seller/rooms", {
+      const res = await fetchApi("/api/seller/rooms", {
         method: "POST",
         body: formData,
       });

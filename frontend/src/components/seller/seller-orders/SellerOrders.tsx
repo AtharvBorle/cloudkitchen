@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./SellerOrders.module.css";
 
 export type OrderStatusFilter =
@@ -24,69 +25,6 @@ export interface OrderRow {
   time: string;
 }
 
-const DEFAULT_ORDERS: OrderRow[] = [
-  {
-    id: "1",
-    orderId: "#NCR-8291",
-    customer: "Aditya Sharma",
-    room: "Room 102",
-    items: "1x Butter Chicken, 2x Butter Naan",
-    total: "₹480",
-    status: "Preparing",
-    time: "10 mins ago",
-  },
-  {
-    id: "2",
-    orderId: "#NCR-8290",
-    customer: "Sneha Patel",
-    room: "Room 304",
-    items: "1x Margherita Pizza, 1x Coke",
-    total: "₹350",
-    status: "Pending",
-    time: "14 mins ago",
-  },
-  {
-    id: "3",
-    orderId: "#NCR-8289",
-    customer: "Rohit Verma",
-    room: "Room 211",
-    items: "1x Veg Biryani, 1x Raita",
-    total: "₹290",
-    status: "Out for Delivery",
-    time: "22 mins ago",
-  },
-  {
-    id: "4",
-    orderId: "#NCR-8288",
-    customer: "Priya Nair",
-    room: "Room 105",
-    items: "2x Paneer Tikka, 1x Garlic Naan",
-    total: "₹520",
-    status: "Completed",
-    time: "45 mins ago",
-  },
-  {
-    id: "5",
-    orderId: "#NCR-8287",
-    customer: "Karan Johar",
-    room: "Room 401",
-    items: "1x Hakka Noodles, 1x Chilli Chicken",
-    total: "₹440",
-    status: "Cancelled",
-    time: "1 hour ago",
-  },
-  {
-    id: "6",
-    orderId: "#NCR-8286",
-    customer: "Vikram Malhotra",
-    room: "Room 302",
-    items: "2x Club Sandwich, 2x Cold Coffee",
-    total: "₹610",
-    status: "Completed",
-    time: "2 hours ago",
-  },
-];
-
 export interface SellerOrdersProps {
   ownerName?: string;
   partnerRole?: string;
@@ -100,12 +38,75 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   ownerName = "John Doe",
   partnerRole = "Neo Cloud Partner",
   avatarInitials = "JD",
-  orders = DEFAULT_ORDERS,
+  orders,
   onSearch,
   onNotificationClick,
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<OrderStatusFilter>("All");
+  const [orderList, setOrderList] = useState<OrderRow[]>(orders || []);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (orders) {
+      setOrderList(orders);
+      return;
+    }
+
+    async function loadOrders() {
+      try {
+        setLoading(true);
+        const res = await fetchApi("/api/seller/orders");
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.data?.orders || data.orders || data.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: OrderRow[] = list.map((o: any) => {
+              let itemsSummary = "";
+              try {
+                const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+                if (Array.isArray(parsed)) {
+                  itemsSummary = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+                }
+              } catch (e) {
+                itemsSummary = "Kitchen Items";
+              }
+
+              let statusVal: OrderRow["status"] = "Pending";
+              const s = (o.status || "").toUpperCase();
+              if (s === "PREPARING") statusVal = "Preparing";
+              else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out for Delivery";
+              else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Completed";
+              else if (s === "CANCELLED") statusVal = "Cancelled";
+              else statusVal = "Pending";
+
+              const timeAgoStr = o.createdAt
+                ? new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+                : "Just now";
+
+              return {
+                id: o.id,
+                orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+                customer: o.user?.name || "Customer",
+                room: o.room?.title || o.deliveryAddress || "Room 101",
+                items: itemsSummary || "1x Dish Item",
+                total: `₹${o.totalAmount || 0}`,
+                status: statusVal,
+                time: timeAgoStr,
+              };
+            });
+            setOrderList(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load seller orders:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadOrders();
+  }, [orders]);
 
   const statusFilters: OrderStatusFilter[] = [
     "All",
@@ -118,8 +119,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
   const filteredOrders =
     activeFilter === "All"
-      ? orders
-      : orders.filter((order) => order.status === activeFilter);
+      ? orderList
+      : orderList.filter((order) => order.status === activeFilter);
 
   const getStatusBadgeClass = (status: OrderRow["status"]) => {
     switch (status) {

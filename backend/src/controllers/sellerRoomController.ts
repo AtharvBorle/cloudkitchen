@@ -29,7 +29,7 @@ const checkPropertyCategoryActive = async (userId: string) => {
     const { propertyExpiry } = getCategoryExpiries(activeSubs);
     const isPropertyActive = (propertyExpiry ? propertyExpiry > new Date() : false) && sellerProfile.propertyVerificationStatus === "APPROVED";
 
-    if (!isPropertyActive) {
+    if (!isPropertyActive && sellerProfile.verificationStatus !== "APPROVED") {
         throw new ApiError("Property subscription not active or approved", 403);
     }
 
@@ -50,18 +50,19 @@ export const createSellerRoom = async (req: Request) => {
     const description = formData.get("description") as string;
     const capacity = parseInt(formData.get("capacity") as string) || 1;
     const imageFile = formData.get("image") as File | null;
+    const imageUrlField = formData.get("imageUrl") as string | null;
 
     if (!title || isNaN(price)) {
         throw new ApiError("Title and Price are required", 400);
     }
 
-    if (!imageFile || imageFile.size === 0) {
-        throw new ApiError("Image is required", 400);
+    let imageUrl = imageUrlField || "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&auto=format&fit=crop&q=80";
+    if (imageFile && imageFile.size > 0) {
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "rooms");
     }
 
-    const bytes = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "rooms");
     const imagesArray = [imageUrl];
 
     const room = await db.room.create({
@@ -76,6 +77,35 @@ export const createSellerRoom = async (req: Request) => {
     });
 
     return { room };
+};
+
+export const deleteSellerRoom = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
+    const { searchParams } = new URL(req.url);
+    const roomId = searchParams.get("id");
+
+    if (!roomId) {
+        throw new ApiError("Room ID is required", 400);
+    }
+
+    const existingRoom = await db.room.findUnique({
+        where: { id: roomId, sellerId: sellerProfile.id }
+    });
+
+    if (!existingRoom) {
+        throw new ApiError("Room not found or unauthorized", 404);
+    }
+
+    await db.room.delete({
+        where: { id: roomId }
+    });
+
+    return { success: true, message: "Room deleted successfully" };
 };
 
 export const getSellerRooms = async () => {
@@ -134,12 +164,17 @@ export const updateSellerRoom = async (req: Request) => {
         imageFile = formData.get("image") as File | null;
     } else {
         const body = await req.json();
-        roomId = body.roomId;
+        roomId = body.roomId || body.id;
         title = body.title;
         if (body.price !== undefined) price = parseFloat(body.price);
         description = body.description;
         if (body.capacity !== undefined) capacity = parseInt(body.capacity);
         if (body.isAvailable !== undefined) isAvailable = body.isAvailable;
+    }
+
+    if (!roomId) {
+        const url = new URL(req.url);
+        roomId = url.searchParams.get("id") || url.searchParams.get("roomId");
     }
 
     if (!roomId) {

@@ -65,7 +65,7 @@ export default function AgentCanvas({
       onCancel();
       return;
     }
-    router.push("/seller/riderMng/settlements");
+    router.push("/seller/delivery");
   };
 
   // Handle Form Submission
@@ -119,7 +119,7 @@ export default function AgentCanvas({
         if (onSubmitSuccess) {
           onSubmitSuccess(data);
         } else {
-          router.push("/seller/riderMng/settlements");
+          router.push("/seller/delivery");
         }
       } else {
         const errorData = await res.json().catch(() => null);

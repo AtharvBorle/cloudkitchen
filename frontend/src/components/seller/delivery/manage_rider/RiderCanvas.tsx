@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, CheckCircle2, Truck, User, ArrowRight } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface RiderSummaryMetric {
   id: string;
@@ -93,11 +94,74 @@ const DEFAULT_RIDERS: RiderWalletRecord[] = [
 export default function RiderCanvas({
   title = "COD Cash Collection & Delivery Logs",
   subtitle = "Audit outstanding cash collections and assign delivery routes to riders.",
-  metrics = DEFAULT_METRICS,
-  riders = DEFAULT_RIDERS,
+  metrics: initialMetrics,
+  riders: initialRiders,
   onViewWallet,
 }: RiderCanvasProps) {
   const router = useRouter();
+  const [riderList, setRiderList] = React.useState<RiderWalletRecord[]>(initialRiders || DEFAULT_RIDERS);
+  const [metricsList, setMetricsList] = React.useState<RiderSummaryMetric[]>(initialMetrics || DEFAULT_METRICS);
+
+  React.useEffect(() => {
+    if (initialRiders) {
+      setRiderList(initialRiders);
+      return;
+    }
+
+    async function loadRiders() {
+      try {
+        const res = await fetchApi("/api/seller/delivery");
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.data?.deliveryPersons || data.deliveryPersons || data.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: RiderWalletRecord[] = list.map((dp: any) => ({
+              id: dp.id,
+              name: dp.name,
+              phone: dp.phone || "+91 98765 00000",
+              codBalance: `₹${(dp.outstandingBalance || 0).toLocaleString("en-IN")}`,
+              dutyStatus: dp.isActive ? "ON DUTY" : "OFF DUTY",
+            }));
+            setRiderList(mapped);
+
+            const totalCod = list.reduce((sum: number, dp: any) => sum + (dp.outstandingBalance || 0), 0);
+            const activeCount = list.filter((dp: any) => dp.isActive).length;
+
+            setMetricsList([
+              {
+                id: "total_cod",
+                label: "Total COD Outstanding",
+                value: `₹${totalCod.toLocaleString("en-IN")}`,
+                description: "Cumulative cash held by active delivery riders",
+                iconType: "card",
+              },
+              {
+                id: "cash_collected",
+                label: "Cash Collected Today",
+                value: "₹0",
+                description: "Deposited safely to partner cash drawers",
+                iconType: "check",
+              },
+              {
+                id: "active_squad",
+                label: "Active Delivery Squad",
+                value: `${activeCount} Rider${activeCount === 1 ? "" : "s"} Online`,
+                description: "Real-time geofenced tracking configured",
+                iconType: "truck",
+              },
+            ]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load seller delivery data in RiderCanvas:", err);
+      }
+    }
+
+    loadRiders();
+  }, [initialRiders]);
+
+  const metrics = metricsList;
+  const riders = riderList;
 
   // Render Metric Icon Badge
   const renderMetricIcon = (type: "card" | "check" | "truck") => {

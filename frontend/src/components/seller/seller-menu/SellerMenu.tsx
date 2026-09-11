@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, SquarePen, Sparkles } from "lucide-react";
+import { Plus, Search, SquarePen, Sparkles, Trash2 } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./SellerMenu.module.css";
 
 export type MenuCategoryFilter =
@@ -102,7 +103,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   storeTimings = "07:00 AM - 11:30 PM",
   operationalPincodes = "110001, 110022, 110045",
   initialIsOpen = true,
-  dishes = DEFAULT_DISHES,
+  dishes,
   onSearch,
   onNotificationClick,
   onAddNewDish,
@@ -113,7 +114,52 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   const [isOpen, setIsOpen] = useState(initialIsOpen);
   const [selectedCategory, setSelectedCategory] = useState<MenuCategoryFilter>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dishList, setDishList] = useState<DishItem[]>(dishes);
+  const [dishList, setDishList] = useState<DishItem[]>(dishes || DEFAULT_DISHES);
+  const [pincodesStr, setPincodesStr] = useState(operationalPincodes);
+  const [sellerName, setSellerName] = useState(ownerName);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch live menu items from DB
+  useEffect(() => {
+    let isMounted = true;
+    async function loadMenu() {
+      try {
+        const res = await fetchApi("/api/seller/menu");
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.items && Array.isArray(data.items) && isMounted) {
+            if (data.items.length > 0) {
+              const mapped: DishItem[] = data.items.map((item: any) => ({
+                id: item.id,
+                name: item.name,
+                category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
+                price: `₹${item.price}`,
+                type: item.itemType === "NON_VEG" ? "NON-VEG" : "VEG",
+                stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
+                inStock: item.isAvailable,
+              }));
+              setDishList(mapped);
+            }
+            if (data.servedPincodes && Array.isArray(data.servedPincodes) && data.servedPincodes.length > 0) {
+              setPincodesStr(data.servedPincodes.map((sp: any) => sp.pincode).join(", "));
+            }
+            if (data.seller) {
+              if (data.seller.businessName) setSellerName(data.seller.businessName);
+              if (typeof data.seller.isOnline === "boolean") setIsOpen(data.seller.isOnline);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching seller menu from DB:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    loadMenu();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories: MenuCategoryFilter[] = [
     "All Items",
@@ -123,18 +169,56 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
     "Beverages",
   ];
 
-  const handleToggleStore = () => {
+  const handleToggleStore = async () => {
     const newState = !isOpen;
     setIsOpen(newState);
     if (onToggleStore) onToggleStore(newState);
+    try {
+      await fetchApi("/api/seller/profile/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOnline: newState }),
+      });
+    } catch (err) {
+      console.error("Failed to update store status:", err);
+    }
   };
 
-  const handleToggleDishStock = (id: string) => {
+  const handleToggleDishStock = async (id: string) => {
+    const targetDish = dishList.find((d) => d.id === id);
+    if (!targetDish) return;
+    const nextInStock = !targetDish.inStock;
+    const nextQty = nextInStock ? (targetDish.stockQty > 0 ? targetDish.stockQty : 20) : 0;
+
     setDishList((prev) =>
       prev.map((dish) =>
-        dish.id === id ? { ...dish, inStock: !dish.inStock } : dish
+        dish.id === id ? { ...dish, inStock: nextInStock, stockQty: nextQty } : dish
       )
     );
+
+    try {
+      await fetchApi(`/api/seller/menu/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isAvailable: nextInStock, stockQuantity: nextQty }),
+      });
+    } catch (err) {
+      console.error("Failed to toggle dish stock in DB:", err);
+    }
+  };
+
+  const handleDeleteDish = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}" from your menu?`)) return;
+
+    setDishList((prev) => prev.filter((d) => d.id !== id));
+
+    try {
+      await fetchApi(`/api/seller/menu/${id}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.error("Failed to delete dish from DB:", err);
+    }
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +246,14 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
     return true;
   });
 
+  const handleAddClick = () => {
+    if (onAddNewDish) {
+      onAddNewDish();
+    } else {
+      router.push("/seller/edit-menu");
+    }
+  };
+
   return (
     <div className={styles.menuContainer}>
       {/* 1. Left Sidebar with active Menu tab */}
@@ -176,7 +268,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         {/* Top Navbar */}
         <Topbar
           title="Owner Operations Console"
-          ownerName={ownerName}
+          ownerName={sellerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
           onSearch={onSearch}
@@ -197,7 +289,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
             <button
               type="button"
               className={styles.addDishBtn}
-              onClick={onAddNewDish}
+              onClick={handleAddClick}
             >
               <Plus size={18} strokeWidth={2.8} />
               <span>Add New Dish</span>
@@ -245,7 +337,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
             {/* Operational Pincodes */}
             <div className={styles.opMetaGroup}>
               <span className={styles.opMetaHeader}>OPERATIONAL PINCODES</span>
-              <span className={styles.opMetaValue}>{operationalPincodes}</span>
+              <span className={styles.opMetaValue}>{pincodesStr}</span>
             </div>
           </div>
 
@@ -296,16 +388,27 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                 <tbody>
                   {filteredDishes.map((dish) => (
                     <tr key={dish.id}>
-                      {/* Dish Name with Edit Icon Button */}
+                      {/* Dish Name with Edit & Delete Icon Buttons */}
                       <td>
                         <div className={styles.dishNameCell}>
                           <button
                             type="button"
                             className={styles.editDishBtn}
                             aria-label={`Edit ${dish.name}`}
+                            title="Edit dish"
                             onClick={() => router.push(`/seller/edit-menu?id=${dish.id}`)}
                           >
                             <SquarePen size={17} strokeWidth={2.2} />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editDishBtn}
+                            style={{ color: "#EF4444" }}
+                            aria-label={`Delete ${dish.name}`}
+                            title="Delete dish"
+                            onClick={() => handleDeleteDish(dish.id, dish.name)}
+                          >
+                            <Trash2 size={16} strokeWidth={2.2} />
                           </button>
                           <span className={styles.dishNameText}>{dish.name}</span>
                         </div>

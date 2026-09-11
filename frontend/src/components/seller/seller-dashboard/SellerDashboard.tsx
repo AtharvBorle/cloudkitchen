@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   ArrowRight,
 } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./SellerDashboard.module.css";
 
 export interface OrderItem {
@@ -84,16 +85,94 @@ export interface SellerDashboardProps {
 }
 
 export const SellerDashboard: React.FC<SellerDashboardProps> = ({
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
-  orders = DEFAULT_ORDERS,
+  ownerName: initialOwnerName = "John Doe",
+  partnerRole: initialPartnerRole = "Neo Cloud Partner",
+  avatarInitials: initialAvatarInitials = "JD",
+  orders: initialOrders,
   onSearch,
   onNotificationClick,
   onSyncDevices,
   onRenewPlan,
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [orders, setOrders] = useState<OrderItem[]>(initialOrders || DEFAULT_ORDERS);
+  const [overview, setOverview] = useState<any>(null);
+  const [ownerName, setOwnerName] = useState(initialOwnerName);
+  const [avatarInitials, setAvatarInitials] = useState(initialAvatarInitials);
+
+  useEffect(() => {
+    if (initialOrders) {
+      setOrders(initialOrders);
+      return;
+    }
+
+    async function loadDashboard() {
+      try {
+        const [overviewRes, ordersRes] = await Promise.allSettled([
+          fetchApi("/api/seller/dashboard/overview"),
+          fetchApi("/api/seller/orders"),
+        ]);
+
+        if (overviewRes.status === "fulfilled" && overviewRes.value.ok) {
+          const res = await overviewRes.value.json();
+          const d = res.data || res;
+          setOverview(d);
+          if (d.sellerProfile?.businessName) {
+            setOwnerName(d.sellerProfile.businessName);
+            const words = d.sellerProfile.businessName.split(" ");
+            setAvatarInitials(
+              words.length > 1
+                ? `${words[0][0]}${words[1][0]}`.toUpperCase()
+                : words[0].slice(0, 2).toUpperCase()
+            );
+          }
+        }
+
+        if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
+          const res = await ordersRes.value.json();
+          const list = res.data?.orders || res.orders || res.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: OrderItem[] = list.slice(0, 5).map((o: any) => {
+              let itemsSummary = "";
+              try {
+                const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+                if (Array.isArray(parsed)) {
+                  itemsSummary = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+                }
+              } catch (e) {
+                itemsSummary = "Kitchen Items";
+              }
+
+              let statusVal: OrderItem["status"] = "Pending";
+              const s = (o.status || "").toUpperCase();
+              if (s === "PREPARING") statusVal = "Preparing";
+              else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out for Delivery";
+              else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Completed";
+              else if (s === "CANCELLED") statusVal = "Cancelled";
+              else statusVal = "Pending";
+
+              return {
+                id: o.id,
+                orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+                customer: o.user?.name || "Customer",
+                roomNo: o.room?.title || o.deliveryAddress || "Room 101",
+                items: itemsSummary || "1x Food Item",
+                total: `₹${o.totalAmount || 0}`,
+                status: statusVal,
+              };
+            });
+            setOrders(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load seller dashboard data:", err);
+      }
+    }
+
+    loadDashboard();
+  }, [initialOrders]);
+
+  const partnerRole = initialPartnerRole;
 
   const getStatusBadgeClass = (status: OrderItem["status"]) => {
     switch (status) {
@@ -163,10 +242,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   <ShoppingBag size={18} strokeWidth={2.4} />
                 </div>
               </div>
-              <h2 className={styles.cardValue}>₹24,500</h2>
+              <h2 className={styles.cardValue}>
+                {overview ? `₹${(overview.totalRevenue || 0).toLocaleString("en-IN")}` : "₹24,500"}
+              </h2>
               <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>+14.2%</span>
-                <span className={styles.footerMuted}>from yesterday</span>
+                <span className={styles.badgeOrange}>Live</span>
+                <span className={styles.footerMuted}>total revenue</span>
               </div>
             </div>
 
@@ -178,25 +259,29 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   <Truck size={18} strokeWidth={2.4} />
                 </div>
               </div>
-              <h2 className={styles.cardValue}>18</h2>
+              <h2 className={styles.cardValue}>
+                {overview?.todayOrdersCount !== undefined ? overview.todayOrdersCount : 18}
+              </h2>
               <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>+8.3%</span>
-                <span className={styles.footerMuted}>vs average</span>
+                <span className={styles.badgeOrange}>Active</span>
+                <span className={styles.footerMuted}>orders today</span>
               </div>
             </div>
 
             {/* Card 3: Pending Bookings */}
             <div className={styles.statCard}>
               <div className={styles.cardHeader}>
-                <span className={styles.cardLabel}>Pending Bookings</span>
+                <span className={styles.cardLabel}>Rooms & Bookings</span>
                 <div className={styles.iconBadge}>
                   <Calendar size={18} strokeWidth={2.4} />
                 </div>
               </div>
-              <h2 className={styles.cardValue}>4 Rooms</h2>
+              <h2 className={styles.cardValue}>
+                {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "4 Rooms"}
+              </h2>
               <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>Active</span>
-                <span className={styles.footerMuted}>room occupancy high</span>
+                <span className={styles.badgeOrange}>Inventory</span>
+                <span className={styles.footerMuted}>configured units</span>
               </div>
             </div>
 
@@ -208,10 +293,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   <CreditCard size={18} strokeWidth={2.4} />
                 </div>
               </div>
-              <h2 className={styles.cardValue}>₹8,200</h2>
+              <h2 className={styles.cardValue}>
+                {overview?.codOutstanding !== undefined ? `₹${(overview.codOutstanding || 0).toLocaleString("en-IN")}` : "₹8,200"}
+              </h2>
               <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>₹1,200 collected</span>
-                <span className={styles.footerMuted}>cash collection</span>
+                <span className={styles.badgeOrange}>Audit</span>
+                <span className={styles.footerMuted}>rider cash balance</span>
               </div>
             </div>
           </div>

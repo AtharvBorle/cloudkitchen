@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check } from 'lucide-react';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
+import { fetchApi } from '@/lib/fetch-api';
 import styles from './EditMenu.module.css';
 
 export interface VariantItem {
@@ -29,15 +30,27 @@ export interface EditMenuProps {
   onNotificationClick?: () => void;
 }
 
-export const EditMenu: React.FC<EditMenuProps> = ({
+function EditMenuInner({
   ownerName = 'John Doe',
   partnerRole = 'Neo Cloud Partner',
   avatarInitials = 'JD',
   onSearch,
   onNotificationClick,
-}) => {
+}: EditMenuProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const itemId = searchParams?.get('id');
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string }>>([
+    { id: 'cat-1', name: 'North Indian' },
+    { id: 'cat-2', name: 'South Indian' },
+    { id: 'cat-3', name: 'Chinese' },
+    { id: 'cat-4', name: 'Italian' },
+    { id: 'cat-5', name: 'Desserts' },
+    { id: 'cat-6', name: 'Beverages' },
+  ]);
 
   // Form states
   const [itemName, setItemName] = useState('Special Butter Chicken');
@@ -76,6 +89,36 @@ export const EditMenu: React.FC<EditMenuProps> = ({
 
   const [imageFile, setImageFile] = useState<File | null>(null);
 
+  useEffect(() => {
+    async function loadItem() {
+      try {
+        const res = await fetchApi('/api/seller/menu');
+        if (res.ok) {
+          const json = await res.json();
+          const dataPayload = json.data || json;
+          if (dataPayload.foodCategories && dataPayload.foodCategories.length > 0) {
+            setCategoriesList(dataPayload.foodCategories);
+          }
+          if (itemId && dataPayload.items) {
+            const found = dataPayload.items.find((it: any) => it.id === itemId);
+            if (found) {
+              setItemName(found.name || '');
+              setPrice(String(found.price || ''));
+              if (found.foodCategory?.name) setCategory(found.foodCategory.name);
+              setDescription(found.description || '');
+              setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 24));
+              setIsInStock(found.isAvailable ?? true);
+              setSelectedFoodTypes(found.itemType === 'NON_VEG' ? ['Non Veg'] : ['Veg']);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch menu item details:', err);
+      }
+    }
+    loadItem();
+  }, [itemId]);
+
   const toggleFoodType = (type: string) => {
     if (selectedFoodTypes.includes(type)) {
       if (selectedFoodTypes.length > 1) {
@@ -113,9 +156,55 @@ export const EditMenu: React.FC<EditMenuProps> = ({
     );
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push('/seller/menu');
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', itemName);
+      formData.append('price', price);
+      formData.append('description', description || '');
+      formData.append('itemType', selectedFoodTypes.includes('Non Veg') ? 'NON_VEG' : 'VEG');
+      formData.append('stockQuantity', stockQty || '24');
+      formData.append('isAvailable', String(isInStock));
+
+      let matchedCatId = categoriesList[0]?.id || '';
+      const matched = categoriesList.find((c) => c.name.toLowerCase() === category.toLowerCase());
+      if (matched) matchedCatId = matched.id;
+      if (matchedCatId) {
+        formData.append('foodCategoryId', matchedCatId);
+      }
+
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
+      let res;
+      if (itemId) {
+        res = await fetchApi(`/api/seller/menu/${itemId}`, {
+          method: 'PATCH',
+          body: formData,
+        });
+      } else {
+        res = await fetchApi('/api/seller/menu', {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.message || 'Failed to save menu item');
+        setLoading(false);
+        return;
+      }
+
+      router.push('/seller/menu');
+    } catch (err: any) {
+      console.error('Error saving menu item:', err);
+      alert(err.message || 'Error saving menu item');
+      setLoading(false);
+    }
   };
 
   return (
@@ -206,12 +295,11 @@ export const EditMenu: React.FC<EditMenuProps> = ({
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                   >
-                    <option value="North Indian">North Indian</option>
-                    <option value="South Indian">South Indian</option>
-                    <option value="Chinese">Chinese</option>
-                    <option value="Italian">Italian</option>
-                    <option value="Desserts">Desserts</option>
-                    <option value="Beverages">Beverages</option>
+                    {categoriesList.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown size={16} className={styles.selectArrow} />
                 </div>
@@ -423,14 +511,28 @@ export const EditMenu: React.FC<EditMenuProps> = ({
               <Link href="/seller/menu" className={styles.cancelBtn}>
                 Cancel
               </Link>
-              <button type="submit" className={styles.saveItemBtn}>
-                Save Item
+              <button type="submit" className={styles.saveItemBtn} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Item'}
               </button>
             </div>
           </form>
         </main>
       </div>
     </div>
+  );
+}
+
+export const EditMenu: React.FC<EditMenuProps> = (props) => {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>
+          Loading Edit Menu...
+        </div>
+      }
+    >
+      <EditMenuInner {...props} />
+    </Suspense>
   );
 };
 

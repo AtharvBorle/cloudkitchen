@@ -62,22 +62,22 @@ function MenuItemContent() {
       }
 
       if (itemId) {
-        const res = await fetch(`/api/seller/menu/${itemId}`, {
+        const res = await fetchApi(`/api/seller/menu/${itemId}`, {
           method: "PATCH",
           body: formData,
         });
         if (!res.ok) {
-          const err = await res.json();
+          const err = await res.json().catch(() => ({}));
           alert(err.message || "Failed to update item");
           return;
         }
       } else {
-        const res = await fetch("/api/seller/menu", {
+        const res = await fetchApi("/api/seller/menu", {
           method: "POST",
           body: formData,
         });
         if (!res.ok) {
-          const err = await res.json();
+          const err = await res.json().catch(() => ({}));
           alert(err.message || "Failed to create item");
           return;
         }

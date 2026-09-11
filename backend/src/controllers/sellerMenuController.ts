@@ -29,7 +29,7 @@ const checkFoodCategoryActive = async (userId: string) => {
     const { foodExpiry } = getCategoryExpiries(activeSubs);
     const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
 
-    if (!isFoodActive) {
+    if (!isFoodActive && sellerProfile.verificationStatus !== "APPROVED") {
         throw new ApiError("Food subscription not active or approved", 403);
     }
 
@@ -83,7 +83,32 @@ export const getMenuItems = async () => {
         });
     }
 
-    return { items, servedPincodes, foodType: sellerProfile.foodType, foodCategories };
+    if (foodCategories.length === 0) {
+        foodCategories = await db.foodCategory.findMany({
+            include: {
+                subCategories: {
+                    orderBy: { name: 'asc' }
+                }
+            },
+            take: 10,
+            orderBy: { name: 'asc' }
+        });
+    }
+
+    return { 
+        items, 
+        servedPincodes, 
+        foodType: sellerProfile.foodType, 
+        foodCategories,
+        seller: {
+            id: sellerProfile.id,
+            businessName: sellerProfile.businessName,
+            isOnline: sellerProfile.isOnline,
+            trackingId: sellerProfile.trackingId,
+            type: sellerProfile.type,
+            addressLocality: sellerProfile.addressLocality,
+        }
+    };
 };
 
 export const createMenuItem = async (req: Request) => {
@@ -107,7 +132,7 @@ export const createMenuItem = async (req: Request) => {
     const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
     const itemType = sellerProfile.foodType === "VEG" ? "VEG" : (formData.get("itemType") as string || "VEG");
-    const foodCategoryId = formData.get("foodCategoryId") as string | null;
+    let foodCategoryId = formData.get("foodCategoryId") as string | null;
     const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
     if (!name || isNaN(price)) {
@@ -115,16 +140,21 @@ export const createMenuItem = async (req: Request) => {
     }
 
     if (!foodCategoryId) {
-        throw new ApiError("Food Category is required", 400);
+        const anyCat = await db.foodCategory.findFirst();
+        if (anyCat) {
+            foodCategoryId = anyCat.id;
+        }
     }
 
-    if (!imageFile || imageFile.size === 0) {
-        throw new ApiError("Image is required", 400);
+    let imageUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80";
+    if (imageFile && imageFile.size > 0) {
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
+    } else {
+        const providedImgUrl = formData.get("imageUrl") as string | null;
+        if (providedImgUrl) imageUrl = providedImgUrl;
     }
-
-    const bytes = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
 
     const foodItem = await db.foodItem.create({
         data: {

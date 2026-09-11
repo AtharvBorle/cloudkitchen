@@ -15,6 +15,7 @@ import {
   Coffee,
   Trash2,
 } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface AmenityItem {
   id: string;
@@ -72,6 +73,8 @@ export default function RoomConfigCanvas({
     ...DEFAULT_ROOM_DATA,
     ...initialData,
   });
+  const [rawFiles, setRawFiles] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const [isCapacityDropdownOpen, setIsCapacityDropdownOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -104,10 +107,13 @@ export default function RoomConfigCanvas({
     if (!files || files.length === 0) return;
 
     const newPhotoUrls: string[] = [];
+    const addedFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       newPhotoUrls.push(URL.createObjectURL(files[i]));
+      addedFiles.push(files[i]);
     }
 
+    setRawFiles((prev) => [...prev, ...addedFiles]);
     setFormData((prev) => ({
       ...prev,
       mediaPhotos: [...prev.mediaPhotos, ...newPhotoUrls],
@@ -122,19 +128,65 @@ export default function RoomConfigCanvas({
       ...prev,
       mediaPhotos: prev.mediaPhotos.filter((_, i) => i !== index),
     }));
+    setRawFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (onSave) {
       onSave(formData);
+      setToastMessage("Room configuration saved successfully!");
+      setTimeout(() => {
+        setToastMessage(null);
+      }, 1200);
+      return;
     }
-    setToastMessage("Room configuration saved successfully!");
-    setTimeout(() => {
-      setToastMessage(null);
-      if (!onSave) {
-        router.push("/seller/rooms");
+
+    setSaving(true);
+    try {
+      const parsedPrice = formData.pricePerNight.replace(/[^\d.]/g, "") || "2500";
+      const guestsMatch = formData.capacity.match(/\d+/);
+      const capacityNum = guestsMatch ? guestsMatch[0] : "2";
+
+      const bodyFormData = new FormData();
+      bodyFormData.append("title", formData.roomName);
+      bodyFormData.append("price", parsedPrice);
+      bodyFormData.append("capacity", capacityNum);
+      bodyFormData.append(
+        "description",
+        `Amenities: ${formData.amenities
+          .filter((a) => a.selected)
+          .map((a) => a.name)
+          .join(", ")}`
+      );
+
+      if (rawFiles.length > 0) {
+        bodyFormData.append("image", rawFiles[0]);
+      } else if (formData.mediaPhotos.length > 0) {
+        bodyFormData.append("imageUrl", formData.mediaPhotos[0]);
       }
-    }, 1200);
+
+      const res = await fetchApi("/api/seller/rooms", {
+        method: "POST",
+        body: bodyFormData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || "Failed to save room configuration");
+        setSaving(false);
+        return;
+      }
+
+      setToastMessage("Room configuration saved successfully!");
+      setTimeout(() => {
+        setToastMessage(null);
+        router.push("/seller/rooms");
+      }, 1000);
+    } catch (err: any) {
+      console.error("Error saving room:", err);
+      alert(err.message || "Error saving room");
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {

@@ -19,3 +19,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         return errorResponse("An error occurred while assigning the delivery person", 500);
     }
 }
+
+export async function POST(req: Request, { params }: RouteParams) {
+    return PATCH(req, { params });
+}
