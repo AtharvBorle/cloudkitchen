@@ -116,7 +116,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         variant: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
         qty: ci.quantity,
         price: ci.price * ci.quantity,
-        image: "/images/places/place-pizza.png",
+        image: ci.image || "/images/places/place-pizza.png",
       }))
     : items;
 
