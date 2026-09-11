@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export interface CategoryItem {
@@ -39,6 +39,8 @@ export default function CategoryBar({
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string>(activeCategoryId);
+  const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
 
   // Use dynamic items if provided and not empty, otherwise fallback to CATEGORIES
   const displayCategories: CategoryItem[] = React.useMemo(() => {
@@ -63,10 +65,32 @@ export default function CategoryBar({
     return CATEGORIES;
   }, [items]);
 
+  const checkScrollPosition = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkScrollPosition();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScrollPosition, { passive: true });
+      window.addEventListener("resize", checkScrollPosition);
+      return () => {
+        container.removeEventListener("scroll", checkScrollPosition);
+        window.removeEventListener("resize", checkScrollPosition);
+      };
+    }
+  }, [displayCategories, checkScrollPosition]);
+
   const handleScroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
-      const scrollAmount = direction === "right" ? 220 : -220;
+      const scrollAmount = direction === "right" ? 320 : -320;
       scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+      setTimeout(checkScrollPosition, 350);
     }
   };
 
@@ -101,21 +125,48 @@ export default function CategoryBar({
           display: "flex",
           flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingRight: "12px",
-          paddingLeft: "0",
           position: "relative",
           boxSizing: "border-box",
-          gap: "12px",
+          gap: "8px",
         }}
       >
+        {/* Left Arrow Navigation Button (Dynamic: visible when scrolled right) */}
+        {canScrollLeft && (
+          <button
+            type="button"
+            onClick={() => handleScroll("left")}
+            style={{
+              width: "44px",
+              height: "44px",
+              minWidth: "44px",
+              borderRadius: "50%",
+              backgroundColor: "#FF6B00",
+              color: "#FFFFFF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 6px 16px rgba(255, 107, 0, 0.35)",
+              transition: "all 0.2s ease",
+              marginRight: "4px",
+              flexShrink: 0,
+              zIndex: 2,
+            }}
+            className="category-scroll-arrow category-scroll-arrow-left"
+            aria-label="Scroll Categories Left"
+          >
+            <ChevronLeft size={22} strokeWidth={2.5} />
+          </button>
+        )}
+
         {/* Scrollable Categories Wrapper */}
         <div
           ref={scrollContainerRef}
+          onScroll={checkScrollPosition}
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
             flex: 1,
             gap: "16px",
             overflowX: "auto",
@@ -210,32 +261,35 @@ export default function CategoryBar({
           })}
         </div>
 
-        {/* Right Arrow Navigation Button */}
-        <button
-          type="button"
-          onClick={() => handleScroll("right")}
-          style={{
-            width: "44px",
-            height: "44px",
-            minWidth: "44px",
-            borderRadius: "50%",
-            backgroundColor: "#FF6B00",
-            color: "#FFFFFF",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "none",
-            cursor: "pointer",
-            boxShadow: "0 6px 16px rgba(255, 107, 0, 0.35)",
-            transition: "all 0.2s ease",
-            marginLeft: "8px",
-            flexShrink: 0,
-          }}
-          className="category-scroll-arrow"
-          aria-label="Scroll Categories Right"
-        >
-          <ChevronRight size={22} strokeWidth={2.5} />
-        </button>
+        {/* Right Arrow Navigation Button (Dynamic: visible when can scroll right) */}
+        {canScrollRight && (
+          <button
+            type="button"
+            onClick={() => handleScroll("right")}
+            style={{
+              width: "44px",
+              height: "44px",
+              minWidth: "44px",
+              borderRadius: "50%",
+              backgroundColor: "#FF6B00",
+              color: "#FFFFFF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 6px 16px rgba(255, 107, 0, 0.35)",
+              transition: "all 0.2s ease",
+              marginLeft: "4px",
+              flexShrink: 0,
+              zIndex: 2,
+            }}
+            className="category-scroll-arrow category-scroll-arrow-right"
+            aria-label="Scroll Categories Right"
+          >
+            <ChevronRight size={22} strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       <style jsx>{`
