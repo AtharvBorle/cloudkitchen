@@ -242,7 +242,26 @@ export default function Home() {
       <PopupBannerDisplay />
 
       {/* 0. Top Navbar */}
-      <Navbar />
+      <Navbar
+        selectedDiet={
+          activeFilters.dietary === "non_veg"
+            ? "non-veg"
+            : activeFilters.dietary === "all"
+            ? "all"
+            : "veg"
+        }
+        onDietChange={(diet) => {
+          setActiveFilters((prev) => ({
+            ...prev,
+            dietary:
+              diet === "all"
+                ? "all"
+                : diet === "non-veg"
+                ? "non_veg"
+                : "veg",
+          }));
+        }}
+      />
 
       {/* Main Canvas Container */}
       <main

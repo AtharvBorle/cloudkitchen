@@ -65,8 +65,8 @@ async function uploadToS3(
 ): Promise<string> {
     // Dynamic import to avoid requiring the SDK unless S3 is used
     try {
-        // @ts-ignore - Assuming the package will be installed when switching
-        const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+        const s3ModuleName = '@aws-sdk/client-s3';
+        const { S3Client, PutObjectCommand } = await import(/* webpackIgnore: true */ s3ModuleName);
 
         const s3Client = new S3Client({
             region: process.env.AWS_REGION,

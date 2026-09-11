@@ -8,94 +8,89 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  role         String   @default("USER") // SUPERADMIN, AGENT, SELLER, USER, DELIVERY
-  name         String
-  phone        String
-  city         String
-  pincode      String
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  sellerProfile   SellerProfile?
+  id              String          @id @default(uuid())
+  email           String          @unique
+  passwordHash    String
+  role            String          @default("USER")
+  name            String
+  phone           String
+  city            String
+  pincode         String
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  addresses       Address[]
   agentProfile    AgentProfile?
+  bookings        Booking[]
   deliveryProfile DeliveryPerson?
   orders          Order[]
-  bookings        Booking[]
-  addresses       Address[]
+  refunds         Refund[]
   reviews         Review[]
+  sellerProfile   SellerProfile?
   tickets         Ticket[]        @relation("UserTickets")
   messagesSent    TicketMessage[] @relation("SenderMessages")
-  refunds         Refund[]
 }
 
 model SellerProfile {
-  id                 String  @id @default(uuid())
-  userId             String  @unique
-  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type               String // Homely Food, Mess, Bakery
-  businessName       String  @default("")
-  addressFlat        String  @default("")
-  addressLocality    String  @default("")
-  addressLandmark    String?
-  kitchenImages      String  @default("[]") // JSON stringified array of URLs (Max 3)
-  cuisineImages      String  @default("[]") // JSON stringified array of URLs (Max 3)
-  roomImages         String  @default("[]") // JSON stringified array of URLs (Max 3)
-  bannerImageUrl     String?
-  adhaarUrl          String
-  fssaiUrl           String?
-  lightBillUrl       String?
-  passbookUrl        String?
-  verificationStatus String  @default("PENDING") // PENDING, APPROVED, REJECTED, REVISION
-  verificationNote   String?
-  trackingId         String  @unique
-  upiId              String?
-  isOnline           Boolean @default(true)
-  businessCategory   String  @default("FOOD")
-  foodType           String  @default("BOTH") // VEG or BOTH
-  foodVerificationStatus     String  @default("NONE")
-  propertyVerificationStatus String  @default("NONE")
-
-  agentId String?
-  agent   AgentProfile? @relation(fields: [agentId], references: [id])
-
-  foodItems       FoodItem[]
-  rooms           Room[]
-  orders          Order[]
-  deliveryPersons DeliveryPerson[]
-  subscriptions   Subscription[]
-  servedPincodes  ServedPincode[]
-  reviews         Review[]
+  id                         String           @id @default(uuid())
+  userId                     String           @unique
+  type                       String
+  businessName               String           @default("")
+  addressFlat                String           @default("")
+  addressLocality            String           @default("")
+  addressLandmark            String?
+  kitchenImages              String           @default("[]")
+  cuisineImages              String           @default("[]")
+  bannerImageUrl             String?
+  adhaarUrl                  String
+  fssaiUrl                   String?
+  verificationStatus         String           @default("PENDING")
+  verificationNote           String?
+  trackingId                 String           @unique
+  upiId                      String?
+  isOnline                   Boolean          @default(true)
+  agentId                    String?
+  businessCategory           String           @default("FOOD")
+  foodType                   String           @default("BOTH")
+  lightBillUrl               String?
+  passbookUrl                String?
+  roomImages                 String           @default("[]")
+  foodVerificationStatus     String           @default("NONE")
+  propertyVerificationStatus String           @default("NONE")
+  deliveryPersons            DeliveryPerson[]
+  foodItems                  FoodItem[]
+  orders                     Order[]
+  reviews                    Review[]
+  rooms                      Room[]
+  agent                      AgentProfile?    @relation(fields: [agentId], references: [id])
+  user                       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  servedPincodes             ServedPincode[]
+  subscriptions              Subscription[]
 }
 
 model ServedPincode {
-  id        String        @id @default(uuid())
-  sellerId  String
-  seller    SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  pincode   String
-  name      String
+  id       String        @id @default(uuid())
+  sellerId String
+  pincode  String
+  name     String
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@unique([sellerId, pincode])
 }
 
 model AgentProfile {
-  id     String @id @default(uuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  canManageOffers   Boolean @default(false)
-  canManageBanners  Boolean @default(false)
-
-  assignedSellers SellerProfile[]
+  id               String          @id @default(uuid())
+  userId           String          @unique
+  canManageOffers  Boolean         @default(false)
+  canManageBanners Boolean         @default(false)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedSellers  SellerProfile[]
 }
 
 model Category {
   id             String         @id @default(uuid())
   name           String
-  type           String // FOOD or ROOM
+  type           String
   foodItems      FoodItem[]
   foodCategories FoodCategory[] @relation("CategoryToFoodCategory")
 }
@@ -104,24 +99,23 @@ model FoodCategory {
   id            String            @id @default(uuid())
   name          String
   imageUrl      String?
-  categories    Category[]        @relation("CategoryToFoodCategory")
-  subCategories FoodSubCategory[]
   foodItems     FoodItem[]
+  subCategories FoodSubCategory[]
+  categories    Category[]        @relation("CategoryToFoodCategory")
 }
 
 model FoodSubCategory {
   id             String       @id @default(uuid())
   name           String
-  imageUrl       String?
   foodCategoryId String
-  foodCategory   FoodCategory @relation(fields: [foodCategoryId], references: [id], onDelete: Cascade)
+  imageUrl       String?
   foodItems      FoodItem[]
+  foodCategory   FoodCategory @relation(fields: [foodCategoryId], references: [id], onDelete: Cascade)
 }
 
 model FoodItem {
   id                String           @id @default(uuid())
   sellerId          String
-  seller            SellerProfile    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   name              String
   description       String
   price             Float
@@ -129,126 +123,121 @@ model FoodItem {
   availableDays     String           @default("Mon,Tue,Wed,Thu,Fri,Sat,Sun")
   isAvailable       Boolean          @default(true)
   stockQuantity     Int              @default(-1)
-  deliveryPincodes  String?
-  openTime          String? // Format: HH:MM, e.g. "08:00"
-  closeTime         String? // Format: HH:MM, e.g. "22:00"
-  operationalHours  String? // JSON string of daily hours: { Mon: { isOpen: boolean, openTime: string, closeTime: string }, ... }
   categoryId        String?
-  category          Category?        @relation(fields: [categoryId], references: [id])
+  deliveryPincodes  String?
+  closeTime         String?
+  openTime          String?
+  operationalHours  String?
+  itemType          String           @default("VEG")
   foodCategoryId    String?
-  foodCategory      FoodCategory?    @relation(fields: [foodCategoryId], references: [id])
   foodSubCategoryId String?
+  category          Category?        @relation(fields: [categoryId], references: [id])
+  foodCategory      FoodCategory?    @relation(fields: [foodCategoryId], references: [id])
   foodSubCategory   FoodSubCategory? @relation(fields: [foodSubCategoryId], references: [id])
-  itemType          String           @default("VEG") // VEG or NON_VEG
+  seller            SellerProfile    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   itemRatings       ItemRating[]
 }
 
 model Order {
-  id               String          @id @default(uuid())
-  userId           String
-  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sellerId         String
-  seller           SellerProfile   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  status           String          @default("PENDING") // PENDING, PREPARING, OUT_FOR_DELIVERY, DELIVERED
-  items            String          @default("[]") // JSON stringified array of items
-  deliveryAddress  String          @default("Pickup")
-  customerPhone    String          @default("")
-  paymentMethod    String // QR or COD
-  totalAmount      Float
-  isPaid           Boolean         @default(false)
-  deliveryPersonId String?
-  deliveryPerson   DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
-  razorpayOrderId  String?         @unique
-  razorpayPaymentId String?        @unique
-  appliedCouponId   String?        // To track usage count per user
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  review           Review?
-  refund           Refund?
+  id                   String                @id @default(uuid())
+  userId               String
+  sellerId             String
+  status               String                @default("PENDING")
+  items                String                @default("[]")
+  deliveryAddress      String                @default("Pickup")
+  customerPhone        String                @default("")
+  paymentMethod        String
+  totalAmount          Float
+  isPaid               Boolean               @default(false)
+  deliveryPersonId     String?
+  razorpayOrderId      String?               @unique
+  razorpayPaymentId    String?               @unique
+  appliedCouponId      String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   deliveryTransactions DeliveryTransaction[]
+  deliveryPerson       DeliveryPerson?       @relation(fields: [deliveryPersonId], references: [id])
+  seller               SellerProfile         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refund               Refund?
+  review               Review?
 }
 
 model Room {
   id          String        @id @default(uuid())
   sellerId    String
-  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   title       String        @default("Cozy Room")
   price       Float
   description String
   capacity    Int           @default(1)
-  images      String        @default("[]") // JSON stringified array of URLs
+  images      String        @default("[]")
   isAvailable Boolean       @default(true)
   bookings    Booking[]
+  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 }
 
 model Booking {
   id                String   @id @default(uuid())
   roomId            String
-  room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   startDate         DateTime
   endDate           DateTime
-  status            String // PENDING, CONFIRMED, CANCELLED
-  paymentMethod     String   @default("COD") // ONLINE, COD
-  totalAmount       Float    @default(0)
+  status            String
+  createdAt         DateTime @default(now())
   isPaid            Boolean  @default(false)
+  paymentMethod     String   @default("COD")
   razorpayOrderId   String?  @unique
   razorpayPaymentId String?  @unique
-  createdAt         DateTime @default(now())
+  totalAmount       Float    @default(0)
+  room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   refund            Refund?
 }
 
 model SubscriptionPlan {
-  id             String   @id @default(uuid())
-  name           String // e.g., "Monthly Premium", "Yearly Standard"
-  price          Float
-  durationMonths Int // 1, 3, 6, 12, etc.
-  features       String   @default("[]") // JSON stringified array of features
-  isActive       Boolean  @default(true)
-  category       String   @default("BOTH")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  subscriptions        Subscription[]
-  subscriptionCoupons  SubscriptionCoupon[]
+  id                  String               @id @default(uuid())
+  name                String
+  price               Float
+  durationMonths      Int
+  features            String               @default("[]")
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  category            String               @default("BOTH")
+  subscriptions       Subscription[]
+  subscriptionCoupons SubscriptionCoupon[]
 }
 
 model Subscription {
   id                String            @id @default(uuid())
   sellerId          String
-  seller            SellerProfile     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   planId            String?
-  plan              SubscriptionPlan? @relation(fields: [planId], references: [id])
-  status            String // ACTIVE, EXPIRED, INACTIVE
+  status            String
   validUntil        DateTime
   amount            Float
   razorpayOrderId   String?           @unique
   razorpayPaymentId String?           @unique
   appliedCoupon     String?
   createdAt         DateTime          @default(now())
+  plan              SubscriptionPlan? @relation(fields: [planId], references: [id])
+  seller            SellerProfile     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 }
 
 model SubscriptionCoupon {
   id                 String            @id @default(uuid())
   code               String            @unique
   description        String            @default("")
-  
   discountPercentage Float?
   discountAmount     Float?
-  
   planId             String?
-  plan               SubscriptionPlan? @relation(fields: [planId], references: [id])
-  
-  maxUsage           Int               @default(0) // 0 means unlimited
+  maxUsage           Int               @default(0)
   currentUsage       Int               @default(0)
-  
   isActive           Boolean           @default(true)
-  category           String            @default("BOTH")
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+  category           String            @default("BOTH")
+  plan               SubscriptionPlan? @relation(fields: [planId], references: [id])
 }
-
 
 model SystemSettings {
   id        String   @id @default("GLOBAL")
@@ -258,41 +247,32 @@ model SystemSettings {
 }
 
 model Coupon {
-  id          String @id @default(uuid())
-  code        String @unique
-  description String @default("")
-
-  // Discount Amount/Percent
+  id                 String    @id @default(uuid())
+  code               String    @unique
+  description        String    @default("")
   discountPercentage Float?
   discountAmount     Float?
-
-  // Scope
-  creatorId          String  @default("SYSTEM") // User ID who created it
-  appliesToSellerId  String? // Null = global, Set = specific seller
-  appliesToProductId String? // Null = all products, Set = specific item
-
-  // Timing
-  validFrom  DateTime  @default(now())
-  validUntil DateTime? // Null = indefinite
-
-  // Advanced Rules
-  maxUsagesPerUser     Int?      // Null = unlimited uses per user
-  maxUsers             Int?      // Null = unlimited users
-  currentUsersCount    Int       @default(0) // Tracks total successful redemptions
-  minimumCartValue     Float?    // Null = no minimum value
-
-  isActive       Boolean  @default(true)
-  category       String   @default("BOTH")
-  approvalStatus String   @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED, REVISION
-  adminNote      String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  creatorId          String    @default("SYSTEM")
+  appliesToSellerId  String?
+  appliesToProductId String?
+  validFrom          DateTime  @default(now())
+  validUntil         DateTime?
+  maxUsagesPerUser   Int?
+  maxUsers           Int?
+  currentUsersCount  Int       @default(0)
+  minimumCartValue   Float?
+  isActive           Boolean   @default(true)
+  approvalStatus     String    @default("APPROVED")
+  adminNote          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  category           String    @default("BOTH")
 }
 
 model AuditLog {
   id          String   @id @default(uuid())
   action      String
-  performedBy String // User ID of the admin/agent
+  performedBy String
   details     String
   timestamp   DateTime @default(now())
 }
@@ -300,16 +280,16 @@ model AuditLog {
 model Address {
   id          String   @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String // Home, Work, Other
+  type        String
   houseNumber String
   street      String
   landmark    String?
   pincode     String
-  latitude    Float?
-  longitude   Float?
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
+  latitude    Float?
+  longitude   Float?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PopupBanner {
@@ -317,9 +297,9 @@ model PopupBanner {
   title             String
   imageUrl          String
   redirectUrl       String?
-  appliesToSellerId String? // Null = global, Set = specific seller store
+  appliesToSellerId String?
   isActive          Boolean  @default(true)
-  approvalStatus    String   @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED, REVISION
+  approvalStatus    String   @default("APPROVED")
   adminNote         String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -340,103 +320,95 @@ model HomePromoBanner {
 model DeliveryPerson {
   id                 String                @id @default(uuid())
   userId             String                @unique
-  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   name               String
   phone              String
   sellerId           String
-  seller             SellerProfile         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   isActive           Boolean               @default(true)
-  outstandingBalance Float                 @default(0.0)
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
-  orders             Order[]
+  outstandingBalance Float                 @default(0.0)
+  seller             SellerProfile         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions       DeliveryTransaction[]
+  orders             Order[]
 }
 
 model Review {
-  id          String   @id @default(uuid())
-  orderId     String   @unique
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id          String        @id @default(uuid())
+  orderId     String        @unique
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   sellerId    String
-  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  
-  rating      Int      // 1 to 5
+  rating      Int
   comment     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   itemRatings ItemRating[]
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ItemRating {
   id         String   @id @default(uuid())
   reviewId   String
-  review     Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   foodItemId String
-  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
-  
-  rating     Int      // 1 to 5
+  rating     Int
   comment    String?
   createdAt  DateTime @default(now())
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+  review     Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 }
 
 model Ticket {
   id          String          @id @default(uuid())
   userId      String
-  user        User            @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
   title       String
   description String
-  category    String          // FOOD, ROOM, PAYMENT, OTHER
-  status      String          @default("OPEN") // OPEN, IN_PROGRESS, CLOSED
+  category    String
+  status      String          @default("OPEN")
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  user        User            @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
   messages    TicketMessage[]
 }
 
 model TicketMessage {
   id        String   @id @default(uuid())
   ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   senderId  String
-  sender    User     @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
   message   String
   createdAt DateTime @default(now())
+  sender    User     @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 model Refund {
-  id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  orderId         String?  @unique
-  order           Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  bookingId       String?  @unique
-  booking         Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
-  amount          Float
-  reason          String
-  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  transactionId   String?  
-  adminNote       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  userId        String
+  orderId       String?  @unique
+  bookingId     String?  @unique
+  amount        Float
+  reason        String
+  status        String   @default("PENDING")
+  transactionId String?
+  adminNote     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  booking       Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model DeliveryTransaction {
   id               String         @id @default(uuid())
   deliveryPersonId String
-  deliveryPerson   DeliveryPerson @relation(fields: [deliveryPersonId], references: [id], onDelete: Cascade)
-  type             String         // COD_COLLECTION, SETTLEMENT, ADJUSTMENT
+  type             String
   amount           Float
   orderId          String?
-  order            Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
   description      String?
-  status           String         @default("COMPLETED") // COMPLETED, PENDING
+  status           String         @default("COMPLETED")
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  deliveryPerson   DeliveryPerson @relation(fields: [deliveryPersonId], references: [id], onDelete: Cascade)
+  order            Order?         @relation(fields: [orderId], references: [id])
 }
-
