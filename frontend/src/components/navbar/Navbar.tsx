@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -90,6 +90,8 @@ export interface NavbarProps {
   cartCount?: number;
   isVegOnly?: boolean;
   onVegToggle?: (isVeg: boolean) => void;
+  selectedDiet?: string;
+  onDietChange?: (diet: string) => void;
   onCartClick?: () => void;
   onProfileClick?: () => void;
   onLocationClick?: () => void;
@@ -106,6 +108,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   cartCount: controlledCartCount,
   isVegOnly: controlledVegOnly,
   onVegToggle,
+  selectedDiet: controlledDiet,
+  onDietChange,
   onCartClick,
   onProfileClick,
   onLocationClick,
@@ -301,6 +305,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (controlledDiet !== undefined) {
+      setSelectedDiet(controlledDiet);
+    }
+  }, [controlledDiet]);
+
   const handleDietSelect = (id: string) => {
     setSelectedDiet(id);
     setIsDietDropdownOpen(false);
@@ -308,6 +318,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     setInternalVegOnly(isVeg);
     if (onVegToggle) {
       onVegToggle(isVeg);
+    }
+    if (onDietChange) {
+      onDietChange(id);
     }
   };
 
@@ -447,33 +460,72 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* 3. RIGHT SECTION */}
           <div className={styles.rightSection}>
-            {/* Desktop Veg Only Toggle */}
+            {/* Desktop Diet / Veg Selector Pill + Dropdown Popover */}
             {!shouldHideVegToggle && (
-              <div
-                className={styles.vegToggleWrapper}
-                onClick={toggleVegOnly}
-                role="switch"
-                aria-checked={currentVegOnly}
-                tabIndex={0}
-                onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleVegOnly();
-                  }
-                }}
-              >
-                <span className={styles.vegLabel}>VEG ONLY</span>
-                <div
-                  className={`${styles.toggleTrack} ${
-                    currentVegOnly ? styles.toggleTrackActive : ""
+              <div className={styles.desktopVegWrapper}>
+                <button
+                  type="button"
+                  className={`${styles.dietPillBtn} ${
+                    selectedDiet !== "all" ? styles.dietPillBtnActive : ""
                   }`}
+                  onClick={() => setIsDietDropdownOpen((prev) => !prev)}
+                  aria-label="Diet Filter Options"
+                  aria-expanded={isDietDropdownOpen}
                 >
-                  <div
-                    className={`${styles.toggleThumb} ${
-                      currentVegOnly ? styles.toggleThumbActive : ""
-                    }`}
+                  <span
+                    className={styles.dietPillDot}
+                    style={{ backgroundColor: getDietPillDotColor() }}
                   />
-                </div>
+                  <span className={styles.dietPillText}>{getDietPillLabel()}</span>
+                  <ChevronDown
+                    size={15}
+                    color="#18181B"
+                    strokeWidth={2.5}
+                    style={{
+                      transform: isDietDropdownOpen ? "rotate(180deg)" : "none",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </button>
+
+                {/* Diet Dropdown Popover Menu */}
+                {isDietDropdownOpen && (
+                  <>
+                    <div
+                      className={styles.dietBackdrop}
+                      onClick={() => setIsDietDropdownOpen(false)}
+                    />
+                    <div
+                      className={styles.dietDropdown}
+                      role="menu"
+                      aria-orientation="vertical"
+                    >
+                      {DIET_OPTIONS.map((option) => {
+                        const isSelected = selectedDiet === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            className={`${styles.dietItem} ${
+                              isSelected ? styles.dietItemActive : ""
+                            }`}
+                            onClick={() => handleDietSelect(option.id)}
+                            role="menuitem"
+                          >
+                            <div className={styles.dietItemLeft}>
+                              {renderDietSymbol(option.id)}
+                              <span className={styles.dietLabel}>{option.label}</span>
+                            </div>
+
+                            {isSelected && (
+                              <Check size={16} color="#16A34A" strokeWidth={2.8} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -632,18 +684,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className={styles.vegWrapper}>
                 <button
                   type="button"
-                  className={`${styles.mobileVegPill} ${
-                    selectedDiet !== "all" ? styles.mobileVegPillActive : ""
+                  className={`${styles.dietPillBtn} ${
+                    selectedDiet !== "all" ? styles.dietPillBtnActive : ""
                   }`}
                   onClick={() => setIsDietDropdownOpen((prev) => !prev)}
                   aria-label="Diet Filter Options"
                   aria-expanded={isDietDropdownOpen}
                 >
                   <span
-                    className={styles.mobileVegDot}
+                    className={styles.dietPillDot}
                     style={{ backgroundColor: getDietPillDotColor() }}
                   />
-                  <span className={styles.mobileVegText}>{getDietPillLabel()}</span>
+                  <span className={styles.dietPillText}>{getDietPillLabel()}</span>
                   <ChevronDown
                     size={15}
                     color="#18181B"

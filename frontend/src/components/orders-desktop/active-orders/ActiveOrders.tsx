@@ -29,14 +29,20 @@ export interface ActiveOrdersProps {
   foodOrders?: DynamicActiveFoodOrder[];
   roomBookings?: DynamicActiveBooking[];
   loading?: boolean;
+  selectedCategory?: string;
 }
 
 export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
-  foodOrders,
-  roomBookings,
+  foodOrders = [],
+  roomBookings = [],
   loading = false,
+  selectedCategory = "Foods",
 }) => {
-  const hasDynamicData = (foodOrders && foodOrders.length > 0) || (roomBookings && roomBookings.length > 0);
+  const isFoodTab = selectedCategory === "Foods";
+  const isRoomTab = selectedCategory === "Room Booking";
+
+  const hasFoodData = foodOrders.length > 0;
+  const hasRoomData = roomBookings.length > 0;
 
   // Helper to map order status to step index (1: Placed, 2: Preparing, 3: On the way, 4: Delivered)
   const getStepIndex = (status: string) => {
@@ -60,7 +66,9 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
   if (loading) {
     return (
       <section className={styles.sectionContainer} aria-label="Active Orders">
-        <h2 className={styles.sectionHeading}>Active Orders</h2>
+        <h2 className={styles.sectionHeading}>
+          {isRoomTab ? "Active Room Bookings" : "Active Orders"}
+        </h2>
         <div style={{ padding: "32px 0", textAlign: "center", color: "#785E54" }}>
           Loading active orders...
         </div>
@@ -70,13 +78,15 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
 
   return (
     <section className={styles.sectionContainer} aria-label="Active Orders">
-      <h2 className={styles.sectionHeading}>Active Orders</h2>
+      <h2 className={styles.sectionHeading}>
+        {isRoomTab ? "Active Room Bookings" : "Active Orders"}
+      </h2>
 
       <div className={styles.cardsGrid}>
-        {hasDynamicData ? (
-          <>
-            {/* Dynamic Food Orders */}
-            {foodOrders?.map((order) => {
+        {/* ================= FOODS TAB ================= */}
+        {isFoodTab && (
+          hasFoodData ? (
+            foodOrders.map((order) => {
               const stepIdx = getStepIndex(order.status);
               return (
                 <article key={order.id} className={styles.orderCard}>
@@ -163,10 +173,141 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
                   </div>
                 </article>
               );
-            })}
+            })
+          ) : (
+            /* Fallback 2 Food Order Cards */
+            <>
+              {/* Food Order 1 */}
+              <article className={styles.orderCard}>
+                <div>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.titleWithAccent}>
+                      <div className={styles.orangeAccentBar} />
+                      <div className={styles.headerInfo}>
+                        <h3 className={styles.vendorName}>7/12 Kitchen</h3>
+                        <p className={styles.itemSummary}>1x Margherita Pizza, 1x Coke Zero</p>
+                        <p className={styles.orderDate}>Oct 1, 2024 , 02:34 pm</p>
+                      </div>
+                    </div>
+                    <span className={styles.statusPreparing}>Preparing</span>
+                  </div>
 
-            {/* Dynamic Room Bookings */}
-            {roomBookings?.map((booking) => (
+                  <div className={styles.timelineContainer}>
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
+                        <Receipt size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabel}>Order Placed</span>
+                    </div>
+
+                    <div className={styles.dashedLineActive} />
+
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
+                        <CookingPot size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabelActive}>Preparing</span>
+                    </div>
+
+                    <div className={styles.dashedLineInactive} />
+
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
+                        <Bike size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabel}>On the way</span>
+                    </div>
+
+                    <div className={styles.dashedLineInactive} />
+
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
+                        <Package size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabel}>Delivered</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.cardFooter}>
+                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                    Need Help?
+                  </Link>
+                  <Link href="/orders-desktop" className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                    Track Order
+                  </Link>
+                </div>
+              </article>
+
+              {/* Food Order 2 */}
+              <article className={styles.orderCard}>
+                <div>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.titleWithAccent}>
+                      <div className={styles.orangeAccentBar} />
+                      <div className={styles.headerInfo}>
+                        <h3 className={styles.vendorName}>Spice Garden Bistro</h3>
+                        <p className={styles.itemSummary}>2x Butter Chicken Combo, 1x Garlic Naan</p>
+                        <p className={styles.orderDate}>Oct 1, 2024 , 02:50 pm</p>
+                      </div>
+                    </div>
+                    <span className={styles.statusPreparing}>On The Way</span>
+                  </div>
+
+                  <div className={styles.timelineContainer}>
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
+                        <Receipt size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabel}>Order Placed</span>
+                    </div>
+
+                    <div className={styles.dashedLineActive} />
+
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
+                        <CookingPot size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabel}>Preparing</span>
+                    </div>
+
+                    <div className={styles.dashedLineActive} />
+
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
+                        <Bike size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabelActive}>On the way</span>
+                    </div>
+
+                    <div className={styles.dashedLineInactive} />
+
+                    <div className={styles.timelineStep}>
+                      <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
+                        <Package size={18} strokeWidth={2.2} />
+                      </div>
+                      <span className={styles.stepLabel}>Delivered</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.cardFooter}>
+                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                    Need Help?
+                  </Link>
+                  <Link href="/orders-desktop" className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                    Track Order
+                  </Link>
+                </div>
+              </article>
+            </>
+          )
+        )}
+
+        {/* ================= ROOM BOOKING TAB ================= */}
+        {isRoomTab && (
+          hasRoomData ? (
+            roomBookings.map((booking) => (
               <article key={booking.id} className={styles.orderCard}>
                 <div>
                   {/* Header */}
@@ -202,103 +343,75 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
                   </Link>
                 </div>
               </article>
-            ))}
-          </>
-        ) : (
-          /* ================= FALLBACK CARDS (When user has no active orders) ================= */
-          <>
-            <article className={styles.orderCard}>
-              <div>
-                <div className={styles.cardHeader}>
-                  <div className={styles.titleWithAccent}>
-                    <div className={styles.orangeAccentBar} />
-                    <div className={styles.headerInfo}>
-                      <h3 className={styles.vendorName}>7/12 Kitchen</h3>
-                      <p className={styles.itemSummary}>1x Margherita Pizza, 1x Coke Zero</p>
-                      <p className={styles.orderDate}>Recent Order</p>
+            ))
+          ) : (
+            /* Fallback 2 Room Booking Cards */
+            <>
+              {/* Room Booking 1 */}
+              <article className={styles.orderCard}>
+                <div>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.titleWithAccent}>
+                      <div className={styles.blueAccentBar} />
+                      <div className={styles.headerInfo}>
+                        <h3 className={styles.vendorName}>Comfort Stay PG - Room 204</h3>
+                        <p className={styles.itemSummary}>Monthly Rental Subscription</p>
+                      </div>
                     </div>
-                  </div>
-                  <span className={styles.statusPreparing}>Preparing</span>
-                </div>
-
-                <div className={styles.timelineContainer}>
-                  <div className={styles.timelineStep}>
-                    <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
-                      <Receipt size={18} strokeWidth={2.2} />
-                    </div>
-                    <span className={styles.stepLabel}>Order Placed</span>
+                    <span className={styles.statusConfirmed}>Confirmed</span>
                   </div>
 
-                  <div className={styles.dashedLineActive} />
-
-                  <div className={styles.timelineStep}>
-                    <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
-                      <CookingPot size={18} strokeWidth={2.2} />
-                    </div>
-                    <span className={styles.stepLabelActive}>Preparing</span>
-                  </div>
-
-                  <div className={styles.dashedLineInactive} />
-
-                  <div className={styles.timelineStep}>
-                    <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
-                      <Bike size={18} strokeWidth={2.2} />
-                    </div>
-                    <span className={styles.stepLabel}>On the way</span>
-                  </div>
-
-                  <div className={styles.dashedLineInactive} />
-
-                  <div className={styles.timelineStep}>
-                    <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
-                      <Package size={18} strokeWidth={2.2} />
-                    </div>
-                    <span className={styles.stepLabel}>Delivered</span>
+                  <div className={styles.stayMiddleRow}>
+                    <p className={styles.rentalPeriodText}>Rental Period: Oct 1, 2024 – Nov 1, 2024</p>
+                    <Link href="/room-booking" className={styles.rulesBtn} style={{ textDecoration: "none" }}>
+                      View PG Rules
+                    </Link>
                   </div>
                 </div>
-              </div>
 
-              <div className={styles.cardFooter}>
-                <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
-                  Need Help?
-                </Link>
-                <Link href="/explore-desktop" className={styles.actionBtn} style={{ textDecoration: "none" }}>
-                  Explore Menu
-                </Link>
-              </div>
-            </article>
-
-            <article className={styles.orderCard}>
-              <div>
-                <div className={styles.cardHeader}>
-                  <div className={styles.titleWithAccent}>
-                    <div className={styles.blueAccentBar} />
-                    <div className={styles.headerInfo}>
-                      <h3 className={styles.vendorName}>Comfort Stay PG - Room 204</h3>
-                      <p className={styles.itemSummary}>Monthly Rental Subscription</p>
-                    </div>
-                  </div>
-                  <span className={styles.statusConfirmed}>Confirmed</span>
-                </div>
-
-                <div className={styles.stayMiddleRow}>
-                  <p className={styles.rentalPeriodText}>Rental Period: Active</p>
-                  <Link href="/room-booking" className={styles.rulesBtn} style={{ textDecoration: "none" }}>
-                    View Rooms
+                <div className={styles.cardFooter}>
+                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                    Need Help?
+                  </Link>
+                  <Link href="/dashboard/user/bookings" className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                    View Details
                   </Link>
                 </div>
-              </div>
+              </article>
 
-              <div className={styles.cardFooter}>
-                <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
-                  Need Help?
-                </Link>
-                <Link href="/room-booking" className={styles.actionBtn} style={{ textDecoration: "none" }}>
-                  Book Room
-                </Link>
-              </div>
-            </article>
-          </>
+              {/* Room Booking 2 */}
+              <article className={styles.orderCard}>
+                <div>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.titleWithAccent}>
+                      <div className={styles.blueAccentBar} />
+                      <div className={styles.headerInfo}>
+                        <h3 className={styles.vendorName}>Skyline Luxury PG - Suite 305</h3>
+                        <p className={styles.itemSummary}>Executive Studio Booking</p>
+                      </div>
+                    </div>
+                    <span className={styles.statusConfirmed}>Confirmed</span>
+                  </div>
+
+                  <div className={styles.stayMiddleRow}>
+                    <p className={styles.rentalPeriodText}>Rental Period: Oct 5, 2024 – Nov 5, 2024</p>
+                    <Link href="/room-booking" className={styles.rulesBtn} style={{ textDecoration: "none" }}>
+                      View PG Rules
+                    </Link>
+                  </div>
+                </div>
+
+                <div className={styles.cardFooter}>
+                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                    Need Help?
+                  </Link>
+                  <Link href="/dashboard/user/bookings" className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                    View Details
+                  </Link>
+                </div>
+              </article>
+            </>
+          )
         )}
       </div>
     </section>

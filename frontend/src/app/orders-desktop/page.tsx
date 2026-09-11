@@ -146,9 +146,8 @@ export default function OrdersDesktopPage() {
       });
   }, [orders]);
 
-  const displayedFoodOrders = selectedCategory === "Room Booking" ? [] : activeFoodOrders;
-  const displayedRoomBookings = selectedCategory === "Foods" ? [] : activeRoomBookings;
-  const showPastOrders = selectedCategory !== "Room Booking";
+  const isFoodTab = selectedCategory === "Foods";
+  const isRoomTab = selectedCategory === "Room Booking";
 
   return (
     <div className={styles.pageWrapper}>
@@ -169,13 +168,14 @@ export default function OrdersDesktopPage() {
 
         {/* 3. Active Orders Section (Food Live Tracking & Room Subscriptions) */}
         <ActiveOrders
-          foodOrders={displayedFoodOrders}
-          roomBookings={displayedRoomBookings}
+          foodOrders={activeFoodOrders}
+          roomBookings={activeRoomBookings}
+          selectedCategory={selectedCategory}
           loading={loading}
         />
 
-        {/* 4. Past Orders Section */}
-        {showPastOrders && (
+        {/* 4. Past Orders Section (Visible for Foods) */}
+        {isFoodTab && (
           <PastOrders
             orders={pastOrdersList}
           />

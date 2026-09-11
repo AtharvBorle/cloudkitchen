@@ -140,33 +140,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* 3. RIGHT SECTION */}
         <div className={styles.rightSection}>
-          {/* Veg Only Toggle */}
-          <div
-            className={styles.vegToggleWrapper}
-            onClick={toggleVegOnly}
-            role="switch"
-            aria-checked={isVegOnly}
-            tabIndex={0}
-            onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                toggleVegOnly();
-              }
-            }}
-          >
-            <span className={styles.vegLabel}>VEG ONLY</span>
-            <div
-              className={`${styles.toggleTrack} ${
-                isVegOnly ? styles.toggleTrackActive : ""
-              }`}
-            >
-              <div
-                className={`${styles.toggleThumb} ${
-                  isVegOnly ? styles.toggleThumbActive : ""
-                }`}
-              />
-            </div>
-          </div>
 
           {/* Language Selector Pill with Globe, EN, Chevron in #F97316 */}
           <button

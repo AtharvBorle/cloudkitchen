@@ -200,53 +200,60 @@
   gap: 20px;
 }
 
-/* Veg Only Toggle */
-.vegToggleWrapper {
-  display: flex;
+/* Desktop Veg / Diet Selector Pill */
+.desktopVegWrapper {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dietPillBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #dcfce7;
+  border: 1.5px solid #d97706;
+  border-radius: 9999px;
+  height: 38px;
+  padding: 0 14px;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+  white-space: nowrap;
   user-select: none;
 }
 
-.vegLabel {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: #22c55e;
-  text-transform: uppercase;
+.dietPillBtn:hover {
+  background-color: #d1fae5;
+  border-color: #b45309;
 }
 
-.toggleTrack {
-  width: 40px;
-  height: 22px;
-  background-color: #e5e7eb;
-  border-radius: 9999px;
-  position: relative;
-  transition: background-color 0.25s ease;
-  display: flex;
-  align-items: center;
-  padding: 2px;
-  box-sizing: border-box;
+.dietPillBtn:active {
+  transform: scale(0.96);
 }
 
-.toggleTrackActive {
-  background-color: #ff6b00;
+.dietPillBtnActive {
+  background-color: #dcfce7;
+  border-color: #d97706;
 }
 
-.toggleThumb {
-  width: 18px;
-  height: 18px;
-  background-color: #ffffff;
+.dietPillDot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  position: absolute;
-  left: 2px;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  background-color: #10b981;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
-.toggleThumbActive {
-  transform: translateX(18px);
+.dietPillText {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #18181b;
+  line-height: 1;
 }
 
 .langWrapper {
@@ -725,7 +732,7 @@
     display: none !important;
   }
 
-  .vegToggleWrapper {
+  .desktopVegWrapper {
     display: none !important;
   }
 

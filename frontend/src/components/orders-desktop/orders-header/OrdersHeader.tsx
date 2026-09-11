@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, ChevronDown, Bell, Globe, Check } from "lucide-react";
@@ -38,6 +38,12 @@ export const OrdersHeader: React.FC<OrdersHeaderProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [selectedLang, setSelectedLang] = useState("en");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (defaultCategory) {
+      setActiveCategory(defaultCategory);
+    }
+  }, [defaultCategory]);
 
   const handleCategoryClick = (cat: string) => {
     setActiveCategory(cat);
