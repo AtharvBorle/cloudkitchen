@@ -238,7 +238,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         router.push("/settings-desktop");
       }
     } else {
-      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/")}`);
+      router.push("/settings-desktop");
     }
   };
 

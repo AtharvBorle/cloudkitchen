@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { MapPin, Plus, Check, Pencil, Trash2 } from "lucide-react";
 import styles from "./DeliveryAddresses.module.css";
 
@@ -17,6 +19,19 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
   onEditAddress,
   onDeleteAddress,
 }) => {
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  const handleAction = (callback?: () => void) => {
+    if (callback) {
+      callback();
+    } else if (!session?.user) {
+      router.push("/login?callbackUrl=/delivery-addresses-desktop");
+    } else {
+      router.push("/delivery-addresses-desktop");
+    }
+  };
+
   return (
     <div className={styles.sectionCard}>
       {/* Header */}
@@ -31,7 +46,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
         <button
           type="button"
           className={styles.addBtn}
-          onClick={onAddNewAddress}
+          onClick={() => handleAction(onAddNewAddress)}
           aria-label="Add New Address"
         >
           <Plus size={15} strokeWidth={3} />
@@ -68,7 +83,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
             <button
               type="button"
               className={styles.mapLocationBtn}
-              onClick={() => onSetLocationMap && onSetLocationMap("home")}
+              onClick={() => handleAction(onSetLocationMap ? () => onSetLocationMap("home") : undefined)}
             >
               <MapPin size={14} />
               <span>Set Location on Map</span>
@@ -78,7 +93,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
               <button
                 type="button"
                 className={styles.iconActionBtn}
-                onClick={() => onEditAddress && onEditAddress("home")}
+                onClick={() => handleAction(onEditAddress ? () => onEditAddress("home") : undefined)}
                 aria-label="Edit Home Address"
               >
                 <Pencil size={15} />
@@ -86,7 +101,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
               <button
                 type="button"
                 className={styles.deleteBtn}
-                onClick={() => onDeleteAddress && onDeleteAddress("home")}
+                onClick={() => handleAction(onDeleteAddress ? () => onDeleteAddress("home") : undefined)}
                 aria-label="Delete Home Address"
               >
                 <Trash2 size={14} color="#ef4444" />
@@ -121,7 +136,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
             <button
               type="button"
               className={styles.mapLocationBtn}
-              onClick={() => onSetLocationMap && onSetLocationMap("office")}
+              onClick={() => handleAction(onSetLocationMap ? () => onSetLocationMap("office") : undefined)}
             >
               <MapPin size={14} />
               <span>Set Location on Map</span>
@@ -131,7 +146,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
               <button
                 type="button"
                 className={styles.iconActionBtn}
-                onClick={() => onEditAddress && onEditAddress("office")}
+                onClick={() => handleAction(onEditAddress ? () => onEditAddress("office") : undefined)}
                 aria-label="Edit Office Address"
               >
                 <Pencil size={15} />
@@ -139,7 +154,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
               <button
                 type="button"
                 className={styles.deleteBtn}
-                onClick={() => onDeleteAddress && onDeleteAddress("office")}
+                onClick={() => handleAction(onDeleteAddress ? () => onDeleteAddress("office") : undefined)}
                 aria-label="Delete Office Address"
               >
                 <Trash2 size={14} color="#ef4444" />

@@ -17,6 +17,7 @@ import {
   Star,
   ChevronRight,
   LogOut,
+  LogIn,
   Pencil,
 } from "lucide-react";
 import styles from "./SettingsSidebar.module.css";
@@ -82,11 +83,23 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     }
   };
 
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
+  const handleEditProfile = () => {
+    if (!session?.user) {
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);
     } else {
-      signOut({ callbackUrl: "/login" });
+      router.push("/settings-desktop");
+    }
+  };
+
+  const handleAuthAction = () => {
+    if (session?.user) {
+      if (onLogout) {
+        onLogout();
+      } else {
+        signOut({ callbackUrl: "/login" });
+      }
+    } else {
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);
     }
   };
 
@@ -126,7 +139,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           <div className={styles.userInfo}>
             <h3 className={styles.userName}>{session?.user?.name || "Rahul Sharma"}</h3>
             <p className={styles.userPhone}>{session?.user?.email || "+91 98765 43210"}</p>
-            <button type="button" className={styles.editProfileLink}>
+            <button type="button" className={styles.editProfileLink} onClick={handleEditProfile} aria-label="Edit Profile">
               <span>Edit Profile</span>
               <Pencil size={11} strokeWidth={2.5} />
             </button>
@@ -292,15 +305,24 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         {/* Separator before Log Out with light spacing */}
         <div className={styles.logoutDivider} />
 
-        {/* 3. Log Out Button */}
+        {/* 3. Log Out / Sign In Button */}
         <button
           type="button"
           className={styles.logoutBtn}
-          onClick={handleLogout}
-          aria-label="Log Out"
+          onClick={handleAuthAction}
+          aria-label={session?.user ? "Log Out" : "Sign In"}
         >
-          <LogOut size={18} strokeWidth={2.4} />
-          <span>Log Out</span>
+          {session?.user ? (
+            <>
+              <LogOut size={18} strokeWidth={2.4} />
+              <span>Log Out</span>
+            </>
+          ) : (
+            <>
+              <LogIn size={18} strokeWidth={2.4} />
+              <span>Sign In</span>
+            </>
+          )}
         </button>
       </div>
     </aside>
