@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import LoginPage from "@/app/auth/login/page";
+import LoginDesktopPage from "@/app/login-desktop/page";
 
 export default function UserPortalRoot() {
     const { data: session, status } = useSession();
@@ -33,7 +33,7 @@ export default function UserPortalRoot() {
     }
 
     if (status === "unauthenticated" || !session) {
-        return <LoginPage />;
+        return <LoginDesktopPage />;
     }
 
     return null;

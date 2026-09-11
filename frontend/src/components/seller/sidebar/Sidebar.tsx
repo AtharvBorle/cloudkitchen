@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import navLogoImg from "@/components/navbar/logo-nav.png";
 import {
   LayoutGrid,
@@ -435,8 +436,12 @@ export default function SellerSidebar({
         <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #F1F5F9", display: "flex", flexDirection: "column", gap: "8px" }}>
           {!isEffectiveCollapsed && (
             <Link
-              href="/auth/login"
-              onClick={onClose}
+              href="/seller/login"
+              onClick={(e) => {
+                e.preventDefault();
+                if (onClose) onClose();
+                signOut({ callbackUrl: "/seller/login" });
+              }}
               style={{
                 width: "100%",
                 height: "38px",

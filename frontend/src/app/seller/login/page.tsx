@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { SellerLogin, SellerResponsiveWrapper } from '@/components/seller';
-import ResponsiveSellerLoginPage from '@/app/seller/res/login/page';
+import React, { Suspense } from 'react';
+import { SellerLogin, SellerResponsiveWrapper, ResSellerLogin } from '@/components/seller';
 
 export const metadata: Metadata = {
   title: 'Owner Login | Neo Cloud Bite',
@@ -9,9 +9,11 @@ export const metadata: Metadata = {
 
 export default function SellerLoginPage() {
   return (
-    <SellerResponsiveWrapper
-      desktop={<SellerLogin />}
-      mobile={<ResponsiveSellerLoginPage />}
-    />
+    <Suspense fallback={<div style={{ minHeight: '100vh', backgroundColor: '#FFFBF7' }} />}>
+      <SellerResponsiveWrapper
+        desktop={<SellerLogin />}
+        mobile={<ResSellerLogin />}
+      />
+    </Suspense>
   );
 }
