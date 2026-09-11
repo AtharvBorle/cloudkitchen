@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   CheckCircle2,
@@ -16,6 +17,14 @@ import {
   Star,
   Lock,
 } from "lucide-react";
+import SellerNotificationChannels, {
+  NotificationChannelsData,
+  DEFAULT_NOTIFICATION_CHANNELS,
+} from "./notification-channels/SellerNotificationChannels";
+import {
+  PasswordManagementCard,
+  ActiveLoginSessionsCard,
+} from "./security-settings/SellerSecuritySettings";
 import styles from "./SettingsCanvas.module.css";
 
 export type SettingsTab = "General" | "Notifications" | "Security" | "Preferences";
@@ -36,6 +45,15 @@ export interface SettingsFormData {
   timezone: string;
   currency: string;
   operatingHours: OperatingHoursItem[];
+
+  // Notification Channels & Quiet Hours (Reference Image)
+  emailNotifications: boolean;
+  smsAlerts: boolean;
+  pushNotifications: boolean;
+  whatsappUpdates: boolean;
+  enableQuietHours: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
 
   // 1. Stock & Inventory Alerts
   lowStockAlert: boolean;
@@ -63,8 +81,6 @@ export interface SettingsFormData {
   bookingRequestAlert: boolean;
   negativeReviewAlert: boolean;
   dailyDigest: boolean;
-  smsAlerts: boolean;
-  whatsappUpdates: boolean;
 
   // Security
   twoFactorAuth: boolean;
@@ -103,6 +119,15 @@ const DEFAULT_DATA: SettingsFormData = {
   currency: "INR (₹)",
   operatingHours: DEFAULT_HOURS,
 
+  // Notification Channels & Quiet Hours (Reference Image)
+  emailNotifications: true,
+  smsAlerts: true,
+  pushNotifications: true,
+  whatsappUpdates: false,
+  enableQuietHours: true,
+  quietHoursStart: "10:00 PM",
+  quietHoursEnd: "07:00 AM",
+
   // Stock
   lowStockAlert: true,
   outOfStockAlert: true,
@@ -129,8 +154,6 @@ const DEFAULT_DATA: SettingsFormData = {
   bookingRequestAlert: true,
   negativeReviewAlert: true,
   dailyDigest: true,
-  smsAlerts: true,
-  whatsappUpdates: true,
 
   // Security
   twoFactorAuth: false,
@@ -144,21 +167,36 @@ const DEFAULT_DATA: SettingsFormData = {
 };
 
 export interface SettingsCanvasProps {
+  initialTab?: SettingsTab;
   initialData?: Partial<SettingsFormData>;
   onSave?: (data: SettingsFormData) => void;
   onCancel?: () => void;
 }
 
 export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
+  initialTab = "General",
   initialData,
   onSave,
   onCancel,
 }) => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("General");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [formData, setFormData] = useState<SettingsFormData>({
     ...DEFAULT_DATA,
     ...initialData,
   });
+
+  useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam) {
+      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTab[]).find(
+        (t) => t.toLowerCase() === tabParam.toLowerCase()
+      );
+      if (matched) {
+        setActiveTab(matched);
+      }
+    }
+  }, [searchParams]);
 
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -476,64 +514,36 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {/* Tab 2: Notifications */}
         {activeTab === "Notifications" && (
           <div className={styles.mainGrid}>
-            {/* Left Column: Stock, Orders & Timings */}
+            {/* Left Column: Notification Channels & Quiet Hours (Exact Reference Image Design) */}
             <div className={styles.leftColumn}>
-              {/* 1. Stock & Inventory Alerts */}
-              <div className={styles.card}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <Package size={18} color="#F97316" />
-                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Stock &amp; Inventory Alerts</h2>
-                </div>
+              <SellerNotificationChannels
+                data={{
+                  emailNotifications: formData.emailNotifications,
+                  smsAlerts: formData.smsAlerts,
+                  pushNotifications: formData.pushNotifications,
+                  whatsappUpdates: formData.whatsappUpdates,
+                  enableQuietHours: formData.enableQuietHours,
+                  quietHoursStart: formData.quietHoursStart,
+                  quietHoursEnd: formData.quietHoursEnd,
+                }}
+                onChange={(field, value) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    [field]: value,
+                  }));
+                }}
+                onToggle={(field) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    [field]: !prev[field as keyof SettingsFormData],
+                  }));
+                }}
+              />
+            </div>
 
-                <div className={styles.notificationGroup}>
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Low Stock Alert</span>
-                      <span className={styles.notificationDesc}>Notify immediately when item inventory drops below 5 units</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.lowStockAlert}
-                        onChange={() => handleCheckboxToggle("lowStockAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Out of Stock Critical Alert</span>
-                      <span className={styles.notificationDesc}>Push critical sound alert when an ingredient or dish reaches zero</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.outOfStockAlert}
-                        onChange={() => handleCheckboxToggle("outOfStockAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Auto-Pause Sold Out Items</span>
-                      <span className={styles.notificationDesc}>Automatically mark depleted dishes as unavailable on online menus</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.autoPauseOutOfStock}
-                        onChange={() => handleCheckboxToggle("autoPauseOutOfStock")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. Order & Kitchen Notifications */}
+            {/* Right Column: Order, Stock & Delivery Operational Alerts */}
+            <div className={styles.rightColumn}>
+              {/* 1. Order & Kitchen Notifications */}
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                   <Bell size={18} color="#F97316" />
@@ -602,28 +612,25 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Right Column: Timings, Delivery & Reports */}
-            <div className={styles.rightColumn}>
-              {/* 3. Shop Timings & Closing Alerts */}
+              {/* 2. Stock & Inventory Alerts */}
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <Clock size={18} color="#F97316" />
-                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Shop Timings &amp; Auto-Close</h2>
+                  <Package size={18} color="#F97316" />
+                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Stock &amp; Inventory Alerts</h2>
                 </div>
 
                 <div className={styles.notificationGroup}>
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Closing Reminder (30 mins before)</span>
-                      <span className={styles.notificationDesc}>Remind staff 30 minutes before scheduled kitchen shutdown</span>
+                      <span className={styles.notificationLabel}>Low Stock Alert</span>
+                      <span className={styles.notificationDesc}>Notify immediately when item inventory drops below 5 units</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
                         type="checkbox"
-                        checked={formData.closingReminder30Min}
-                        onChange={() => handleCheckboxToggle("closingReminder30Min")}
+                        checked={formData.lowStockAlert}
+                        onChange={() => handleCheckboxToggle("lowStockAlert")}
                       />
                       <span className={styles.toggleSlider} />
                     </label>
@@ -631,14 +638,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Final Order Cut-Off (15 mins before)</span>
-                      <span className={styles.notificationDesc}>Warning before system stops accepting new customer orders</span>
+                      <span className={styles.notificationLabel}>Out of Stock Critical Alert</span>
+                      <span className={styles.notificationDesc}>Push critical sound alert when an ingredient reaches zero</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
                         type="checkbox"
-                        checked={formData.closingReminder15Min}
-                        onChange={() => handleCheckboxToggle("closingReminder15Min")}
+                        checked={formData.outOfStockAlert}
+                        onChange={() => handleCheckboxToggle("outOfStockAlert")}
                       />
                       <span className={styles.toggleSlider} />
                     </label>
@@ -646,14 +653,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Shop Status Auto-Close Alert</span>
-                      <span className={styles.notificationDesc}>Confirmation alert when store switches to Offline at closing time</span>
+                      <span className={styles.notificationLabel}>Auto-Pause Sold Out Items</span>
+                      <span className={styles.notificationDesc}>Automatically mark depleted dishes as unavailable on online menus</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
                         type="checkbox"
-                        checked={formData.autoCloseStatusAlert}
-                        onChange={() => handleCheckboxToggle("autoCloseStatusAlert")}
+                        checked={formData.autoPauseOutOfStock}
+                        onChange={() => handleCheckboxToggle("autoPauseOutOfStock")}
                       />
                       <span className={styles.toggleSlider} />
                     </label>
@@ -661,7 +668,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                 </div>
               </div>
 
-              {/* 4. Order Delivery Status Notifications */}
+              {/* 3. Delivery & Logistics Status */}
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                   <Truck size={18} color="#F97316" />
@@ -701,21 +708,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Delivery Delay Alerts</span>
-                      <span className={styles.notificationDesc}>Notify kitchen if rider is delayed by over 15 mins due to traffic</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.deliveryDelayAlert}
-                        onChange={() => handleCheckboxToggle("deliveryDelayAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
                       <span className={styles.notificationLabel}>Order Delivered Confirmation</span>
                       <span className={styles.notificationDesc}>Live confirmation when customer receives order successfully</span>
                     </div>
@@ -730,61 +722,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   </div>
                 </div>
               </div>
-
-              {/* 5. Bookings, Reviews & Summaries */}
-              <div className={styles.card}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <Star size={18} color="#F97316" />
-                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Bookings, Reviews &amp; Reports</h2>
-                </div>
-
-                <div className={styles.notificationGroup}>
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Table &amp; Room Reservations</span>
-                      <span className={styles.notificationDesc}>Notify on new booking requests and guest arrival check-ins</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.bookingRequestAlert}
-                        onChange={() => handleCheckboxToggle("bookingRequestAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Critical Customer Reviews (≤ 2 Stars)</span>
-                      <span className={styles.notificationDesc}>Immediate alert for low ratings to resolve customer issues fast</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.negativeReviewAlert}
-                        onChange={() => handleCheckboxToggle("negativeReviewAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Daily Payout &amp; Settlement Digest</span>
-                      <span className={styles.notificationDesc}>Nightly revenue breakdown and bank settlement email report</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.dailyDigest}
-                        onChange={() => handleCheckboxToggle("dailyDigest")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -793,7 +730,10 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {activeTab === "Security" && (
           <div className={styles.mainGrid}>
             <div className={styles.leftColumn}>
-              {/* Account Security Card */}
+              {/* 1. Password Management Card (Matching Reference Image) */}
+              <PasswordManagementCard />
+
+              {/* 2. Authentication & Access Control Card */}
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                   <Shield size={18} color="#F97316" />
@@ -850,7 +790,10 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             </div>
 
             <div className={styles.rightColumn}>
-              {/* Danger Zone: Delete Account */}
+              {/* 3. Active Login Sessions Card (Matching Reference Image) */}
+              <ActiveLoginSessionsCard />
+
+              {/* 4. Danger Zone: Delete Account */}
               <div className={styles.dangerCard}>
                 <div className={styles.dangerHeader}>
                   <AlertTriangle size={20} />

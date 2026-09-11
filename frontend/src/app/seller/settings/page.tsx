@@ -1,3 +1,4 @@
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import { SettingsCanvasDas, SellerResponsiveWrapper } from "@/components/seller";
 import ResponsiveSellerSettingsPage from "@/app/seller/res/settings/page";
@@ -9,9 +10,12 @@ export const metadata: Metadata = {
 
 export default function SellerSettingsPage() {
   return (
-    <SellerResponsiveWrapper
-      desktop={<SettingsCanvasDas />}
-      mobile={<ResponsiveSellerSettingsPage />}
-    />
+    <Suspense fallback={<div style={{ padding: "32px", color: "#64748B" }}>Loading settings...</div>}>
+      <SellerResponsiveWrapper
+        desktop={<SettingsCanvasDas />}
+        mobile={<ResponsiveSellerSettingsPage />}
+      />
+    </Suspense>
   );
 }
+
