@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Plus, User } from 'lucide-react';
+import { Plus, User, Pencil, X, Check, Upload, Sparkles, Image as ImageIcon } from 'lucide-react';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import styles from './SellerRooms.module.css';
@@ -93,6 +93,8 @@ const DEFAULT_ROOMS: RoomItem[] = [
   },
 ];
 
+const TIER_OPTIONS = ['Standard Tier', 'Executive Tier', 'Premium Tier', 'Luxury Tier'];
+
 export interface SellerRoomsProps {
   ownerName?: string;
   partnerRole?: string;
@@ -118,6 +120,15 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [roomList, setRoomList] = useState<RoomItem[]>(rooms);
 
+  // Edit Modal State
+  const [editingRoom, setEditingRoom] = useState<RoomItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editGuests, setEditGuests] = useState(2);
+  const [editTier, setEditTier] = useState('Standard Tier');
+  const [editPrice, setEditPrice] = useState('');
+  const [editImage, setEditImage] = useState('');
+  const [editAvailable, setEditAvailable] = useState(true);
+
   const handleToggleRoom = (id: string) => {
     setRoomList((prev) =>
       prev.map((room) => {
@@ -129,6 +140,45 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
         return room;
       })
     );
+  };
+
+  const handleOpenEditModal = (room: RoomItem) => {
+    setEditingRoom(room);
+    setEditTitle(room.title);
+    setEditGuests(room.guestsCount);
+    setEditTier(room.tier);
+    setEditPrice(room.pricePerNight.replace('₹', '').trim());
+    setEditImage(room.image);
+    setEditAvailable(room.isAvailable);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingRoom(null);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRoom) return;
+
+    const formattedPrice = editPrice.startsWith('₹') ? editPrice : `₹${editPrice}`;
+
+    setRoomList((prev) =>
+      prev.map((r) =>
+        r.id === editingRoom.id
+          ? {
+              ...r,
+              title: editTitle,
+              guestsCount: Number(editGuests) || 1,
+              tier: editTier,
+              pricePerNight: formattedPrice,
+              image: editImage || r.image,
+              isAvailable: editAvailable,
+            }
+          : r
+      )
+    );
+
+    setEditingRoom(null);
   };
 
   const handleAddRoomClick = () => {
@@ -185,7 +235,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
           <div className={styles.roomsGrid}>
             {roomList.map((room) => (
               <div key={room.id} className={styles.roomCard}>
-                {/* Room Hero Image */}
+                {/* Room Hero Image Container with Floating Edit Action */}
                 <div className={styles.imageContainer}>
                   <Image
                     src={room.image}
@@ -195,6 +245,21 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     priority
                   />
+
+                  {/* Unique Dynamic Edit Action Button Floating on Image */}
+                  <button
+                    type="button"
+                    className={styles.imageEditBadge}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEditModal(room);
+                    }}
+                    title={`Edit ${room.title}`}
+                    aria-label={`Edit ${room.title}`}
+                  >
+                    <Pencil size={13} strokeWidth={2.6} className={styles.editIcon} />
+                    <span className={styles.editLabel}>Edit</span>
+                  </button>
                 </div>
 
                 {/* Card Content */}
@@ -248,6 +313,160 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Interactive Edit Room Modal */}
+      {editingRoom && (
+        <div className={styles.modalOverlay} onClick={handleCloseEditModal}>
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitleGroup}>
+                <div className={styles.modalIconCircle}>
+                  <Pencil size={16} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className={styles.modalTitle}>Edit Room Details</h3>
+                  <p className={styles.modalSubtitle}>Update pricing, capacity, and cover photo.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={handleCloseEditModal}
+                aria-label="Close modal"
+              >
+                <X size={18} strokeWidth={2.5} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className={styles.modalForm}>
+              {/* Image Preview & URL */}
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>ROOM COVER IMAGE URL</label>
+                <div className={styles.imagePreviewRow}>
+                  <div className={styles.modalImageThumbnail}>
+                    <Image
+                      src={editImage || editingRoom.image}
+                      alt="Room Preview"
+                      fill
+                      className={styles.thumbnailImg}
+                    />
+                  </div>
+                  <input
+                    type="url"
+                    value={editImage}
+                    onChange={(e) => setEditImage(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className={styles.formInput}
+                  />
+                </div>
+              </div>
+
+              {/* Room Title */}
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>ROOM SUITE TITLE</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="e.g. Deluxe Executive Suite 101"
+                  required
+                  className={styles.formInput}
+                />
+              </div>
+
+              {/* Tier & Capacity 2-Column Row */}
+              <div className={styles.formTwoCol}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>ROOM TIER</label>
+                  <select
+                    value={editTier}
+                    onChange={(e) => setEditTier(e.target.value)}
+                    className={styles.formSelect}
+                  >
+                    {TIER_OPTIONS.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tier}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>MAX GUESTS</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={editGuests}
+                    onChange={(e) => setEditGuests(Number(e.target.value))}
+                    required
+                    className={styles.formInput}
+                  />
+                </div>
+              </div>
+
+              {/* Price Per Night */}
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>PRICE PER NIGHT (₹)</label>
+                <input
+                  type="text"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  placeholder="2,800"
+                  required
+                  className={styles.formInput}
+                />
+              </div>
+
+              {/* Availability Switch in Modal */}
+              <div className={styles.modalToggleRow}>
+                <div>
+                  <span className={styles.toggleLabelTitle}>Listing Status</span>
+                  <p className={styles.toggleLabelSub}>
+                    {editAvailable
+                      ? 'Room is visible and available for guest bookings'
+                      : 'Room is offline and hidden from explore'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditAvailable((prev) => !prev)}
+                  className={`${styles.toggleSwitch} ${
+                    editAvailable ? styles.toggleSwitchActive : ''
+                  }`}
+                  aria-label="Toggle availability"
+                >
+                  <span
+                    className={`${styles.toggleThumb} ${
+                      editAvailable ? styles.toggleThumbActive : ''
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Modal Actions */}
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={handleCloseEditModal}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className={styles.saveBtn}>
+                  <Check size={16} strokeWidth={2.8} />
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

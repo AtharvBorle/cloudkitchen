@@ -1,21 +1,21 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 9998;
+  z-index: 9990;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s ease;
   touch-action: none;
 }
 
 .backdrop.open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .sellerSidebar {
@@ -241,25 +241,28 @@
 @media (max-width: 1024px) {
   .sellerSidebar {
     position: fixed !important;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 280px !important;
-    min-width: 280px !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 285px !important;
+    min-width: 285px !important;
     max-width: 85vw !important;
     height: 100% !important;
+    height: 100dvh !important;
     padding: 20px 16px !important;
-    transform: translateX(-100%);
-    box-shadow: 6px 0 28px rgba(0, 0, 0, 0.16);
-    z-index: 9999;
-    visibility: hidden;
-    pointer-events: none;
+    background-color: #ffffff !important;
+    border-right: 1px solid #E2E8F0 !important;
+    transform: translateX(-100%) !important;
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08) !important;
+    z-index: 10000 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 
   .sellerSidebar.open {
-    transform: translateX(0);
-    visibility: visible;
-    pointer-events: auto;
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
   }
 
   .sidebarCloseBtn {
@@ -268,6 +271,7 @@
 
   .desktopCollapseBtn,
   .desktopExpandBtn,
+  .footerToggleBtn,
   .sidebarFooter {
     display: none !important;
   }

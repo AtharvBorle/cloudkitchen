@@ -92,7 +92,7 @@ export default function SellerSidebar({
   const roomSubOptions = [
     { id: "sub-rooms", label: "Rooms", href: "/room-booking", icon: BedDouble },
     { id: "sub-food", label: "Food", href: "/explore-desktop", icon: Utensils },
-    { id: "sub-mess", label: "Mess/Tiffin", href: "/my-subscriptions-desktop", icon: ChefHat },
+    { id: "sub-mess", label: "Mess/Tiffin", href: "/explore-desktop", icon: ChefHat },
   ];
 
   const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
@@ -111,7 +111,9 @@ export default function SellerSidebar({
   // Helper to determine if a nav item is currently active
   const isItemActive = (item: NavItem) => {
     if (activeItemId) {
-      return activeItemId === item.id;
+      if (activeItemId === item.id) return true;
+      if (activeItemId === "rooms" && item.id === "rooms-seller") return true;
+      if (activeItemId === "rooms-seller" && item.id === "rooms-seller") return true;
     }
     if (item.id === "dashboard") {
       return (
@@ -215,10 +217,9 @@ export default function SellerSidebar({
           gap: isEffectiveCollapsed ? "20px" : "20px",
           boxSizing: "border-box",
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-          zIndex: 50,
           transition: "width 0.25s ease, transform 0.3s ease",
         }}
-        className={`${styles.sellerSidebar} seller-sidebar ${isMobileOpen ? "open" : ""} ${
+        className={`${styles.sellerSidebar} seller-sidebar ${isMobileOpen ? styles.open : ""} ${
           isEffectiveCollapsed ? styles.collapsed : styles.expanded
         }`}
         aria-label="Seller Operations Navigation"
@@ -479,7 +480,7 @@ export default function SellerSidebar({
                           const SubIcon = sub.icon;
                           const isSubActive =
                             (sub.label === "Food" && pathname === "/explore-desktop") ||
-                            (sub.label === "Mess/Tiffin" && pathname?.startsWith("/my-subscription")) ||
+                            (sub.label === "Mess/Tiffin" && pathname === "/explore-desktop") ||
                             (sub.label === "Rooms" && pathname?.startsWith("/room-booking"));
 
                           return (
@@ -706,22 +707,6 @@ export default function SellerSidebar({
         }
         .nav-logout-btn:hover {
           background-color: #FEF2F2 !important;
-        }
-        @media (max-width: 900px) {
-          .seller-sidebar {
-            position: fixed !important;
-            top: 0;
-            left: 0;
-            transform: translateX(-100%);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            z-index: 1000 !important;
-          }
-          .seller-sidebar.open {
-            transform: translateX(0);
-          }
-          .sidebar-close-btn {
-            display: flex !important;
-          }
         }
       `}</style>
     </>
