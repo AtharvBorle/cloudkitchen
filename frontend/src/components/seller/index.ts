@@ -7,6 +7,7 @@ export * from "./seller-header";
 export * from "./seller-layout";
 export * from "./seller-stepper";
 export * from "./seller-registration";
+export * from "./seller-login";
 export * from "./verification-status";
 export * from "./revision-action-required";
 
