@@ -13,6 +13,7 @@ export default function OrdersDesktopPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Foods");
 
   useEffect(() => {
     let isMounted = true;
@@ -145,6 +146,10 @@ export default function OrdersDesktopPage() {
       });
   }, [orders]);
 
+  const displayedFoodOrders = selectedCategory === "Room Booking" ? [] : activeFoodOrders;
+  const displayedRoomBookings = selectedCategory === "Foods" ? [] : activeRoomBookings;
+  const showPastOrders = selectedCategory !== "Room Booking";
+
   return (
     <div className={styles.pageWrapper}>
       {/* 1. Shared Desktop Navbar Component (hidden on mobile <=768px) */}
@@ -157,19 +162,24 @@ export default function OrdersDesktopPage() {
 
       <main className={styles.mainContent}>
         {/* 2. Orders Header & Category Filters */}
-        <OrdersHeader />
+        <OrdersHeader
+          defaultCategory={selectedCategory}
+          onCategoryChange={(cat) => setSelectedCategory(cat)}
+        />
 
         {/* 3. Active Orders Section (Food Live Tracking & Room Subscriptions) */}
         <ActiveOrders
-          foodOrders={activeFoodOrders}
-          roomBookings={activeRoomBookings}
+          foodOrders={displayedFoodOrders}
+          roomBookings={displayedRoomBookings}
           loading={loading}
         />
 
         {/* 4. Past Orders Section */}
-        <PastOrders
-          orders={pastOrdersList}
-        />
+        {showPastOrders && (
+          <PastOrders
+            orders={pastOrdersList}
+          />
+        )}
       </main>
     </div>
   );
