@@ -392,7 +392,7 @@ export const FALLBACK_BANNERS: DynamicPromoBanner[] = [
     title: "Limited Welcome Offer - 30% OFF",
     desktopImageUrl: "/images/promo-banner-full.png",
     mobileImageUrl: "/images/promo-welcome-mobile-3d.png",
-    redirectUrl: "/explore-desktop",
+    redirectUrl: "/explore",
     displayOrder: 1,
   },
 ];
