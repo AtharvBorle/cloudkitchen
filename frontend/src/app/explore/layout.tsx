@@ -8,7 +8,8 @@ import { useState, useEffect, useRef } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useLocation, LocationProvider } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -616,12 +617,12 @@ export function ExploreHeader() {
                         <Link href="/dashboard/user" className="btn btn-secondary" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             Dashboard
                         </Link>
-                        <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                        <button className="btn btn-primary" onClick={() => performLogout({ role: "USER" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                             <LogOut size={18} /> Sign Out
                         </button>
                     </>
                 ) : (
-                    <Link href="/user" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                    <Link href="/login" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                         <LogIn size={18} /> Sign In
                     </Link>
                 )}
@@ -672,12 +673,12 @@ export function ExploreHeader() {
                             <Link href="/dashboard/user" className="btn btn-secondary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                                 Dashboard
                             </Link>
-                            <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); signOut({ callbackUrl: window.location.origin + "/" }); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                            <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); performLogout({ role: "USER" }); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                                 <LogOut size={18} /> Sign Out
                             </button>
                         </>
                     ) : (
-                        <Link href="/user" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <Link href="/login" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                             <LogIn size={18} /> Sign In
                         </Link>
                     )}

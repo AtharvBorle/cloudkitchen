@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import MainCanvas, { SellerProfileData } from "./MainCanvas";
@@ -120,7 +120,7 @@ export default function Profile({
       customOnLogout();
       return;
     }
-    signOut({ callbackUrl: "/seller/login" });
+    performLogout({ role: "SELLER" });
   };
 
   return (

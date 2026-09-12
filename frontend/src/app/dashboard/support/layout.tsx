@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, MessageSquare, RefreshCw, LogOut, LifeBuoy } from "lucide-react";
@@ -111,7 +112,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
 
                 <div style={{ padding: "1.5rem 1rem", borderTop: "1px solid #334155" }}>
                     <button
-                        onClick={() => signOut({ callbackUrl: window.location.origin + "/admin" })}
+                        onClick={() => performLogout({ role: "SUPPORT" })}
                         style={{
                             width: "100%",
                             display: "flex",

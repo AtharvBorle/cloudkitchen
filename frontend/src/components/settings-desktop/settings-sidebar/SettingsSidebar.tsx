@@ -3,7 +3,8 @@
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import {
   Settings,
   Calendar,
@@ -96,7 +97,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
       if (onLogout) {
         onLogout();
       } else {
-        signOut({ callbackUrl: "/login" });
+        performLogout({ role: "USER" });
       }
     } else {
       router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);

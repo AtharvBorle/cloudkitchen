@@ -2,7 +2,8 @@
 import { fetchApi } from "@/lib/fetch-api";
 
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { ShoppingCart, LogOut, LogIn, Menu, X, MapPin } from "lucide-react";
@@ -625,11 +626,11 @@ export function UserHeader() {
                     <ShoppingCart size={18} /> Cart ({totalCount})
                 </button>
                 {session ? (
-                    <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                    <button className="btn btn-primary" onClick={() => performLogout({ role: "USER" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                         <LogOut size={18} /> Sign Out
                     </button>
                 ) : (
-                    <button className="btn btn-primary" onClick={() => router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`)} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                    <button className="btn btn-primary" onClick={() => router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`)} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                         <LogIn size={18} /> Sign In
                     </button>
                 )}
@@ -676,11 +677,11 @@ export function UserHeader() {
                         <ShoppingCart size={18} /> Cart ({totalCount})
                     </button>
                     {session ? (
-                        <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); performLogout({ role: "USER" }); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                             <LogOut size={18} /> Sign Out
                         </button>
                     ) : (
-                        <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); router.push(`/user?callbackUrl=${encodeURIComponent(pathname)}`); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                             <LogIn size={18} /> Sign In
                         </button>
                     )}

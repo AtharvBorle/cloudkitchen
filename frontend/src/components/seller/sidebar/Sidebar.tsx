@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import navLogoImg from "@/components/navbar/logo-nav.png";
 import {
   LayoutGrid,
@@ -440,13 +440,38 @@ export default function SellerSidebar({
 
         {/* Footer with Logout Action & Collapse Trigger */}
         <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #F1F5F9", display: "flex", flexDirection: "column", gap: "8px" }}>
-          {!isEffectiveCollapsed && (
-            <Link
-              href="/seller/login"
-              onClick={(e) => {
-                e.preventDefault();
+          {isEffectiveCollapsed ? (
+            <button
+              type="button"
+              onClick={() => {
                 if (onClose) onClose();
-                signOut({ callbackUrl: "/seller/login" });
+                performLogout({ role: "SELLER" });
+              }}
+              title="Log Out"
+              style={{
+                width: "100%",
+                height: "38px",
+                borderRadius: "8px",
+                padding: "8px 0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                background: "transparent",
+                color: "#EF4444",
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+              }}
+              className="nav-logout-btn"
+            >
+              <LogOut size={18} color="#EF4444" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (onClose) onClose();
+                performLogout({ role: "SELLER" });
               }}
               style={{
                 width: "100%",
@@ -456,10 +481,12 @@ export default function SellerSidebar({
                 display: "flex",
                 alignItems: "center",
                 gap: "10px",
-                textDecoration: "none",
+                border: "none",
+                background: "transparent",
                 color: "#EF4444",
                 fontWeight: 600,
                 fontSize: "13px",
+                cursor: "pointer",
                 boxSizing: "border-box",
                 transition: "all 0.18s ease",
               }}
@@ -467,7 +494,7 @@ export default function SellerSidebar({
             >
               <LogOut size={18} color="#EF4444" />
               <span>Log Out</span>
-            </Link>
+            </button>
           )}
 
           {showCollapseToggle && (

@@ -1,6 +1,7 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -153,7 +154,7 @@ export default function SuperadminLayout({
                 </nav>
 
                 <div style={{ padding: "var(--spacing-4)", borderTop: "1px solid var(--border)" }}>
-                    <button onClick={() => signOut({ callbackUrl: window.location.origin + "/admin" })} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
+                    <button onClick={() => performLogout({ role: "SUPERADMIN" })} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
                         Sign Out
                     </button>
                 </div>

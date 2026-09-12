@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import {
   X,
   Home,
@@ -115,7 +116,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const handleAuthAction = () => {
     onClose();
     if (session?.user) {
-      signOut({ callbackUrl: "/login" });
+      performLogout({ role: "USER" });
     } else {
       router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);
     }

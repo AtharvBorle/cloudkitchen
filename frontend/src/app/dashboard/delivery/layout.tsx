@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Bike, ClipboardList, User, Menu, X } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 
 export default function DeliveryLayout({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
@@ -154,7 +155,7 @@ export default function DeliveryLayout({ children }: { children: React.ReactNode
 
                 <div style={{ padding: '20px', borderTop: '1px solid #2D3748' }}>
                     <button
-                        onClick={() => signOut({ callbackUrl: window.location.origin + "/delivery" })}
+                        onClick={() => performLogout({ role: "DELIVERY" })}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 15px', width: '100%', borderRadius: '8px', color: '#FC8181', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontWeight: '600' }}
                     >
                         <LogOut size={20} /> Logout

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import Topbar, { TopbarProps } from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 
@@ -437,7 +437,7 @@ export default function MainCanvas({
                   if (onLogout) {
                     onLogout();
                   } else {
-                    signOut({ callbackUrl: "/seller/login" });
+                    performLogout({ role: "SELLER" });
                   }
                 }}
                 style={{

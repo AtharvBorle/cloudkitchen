@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import {
   ChevronLeft,
   Menu as MenuIcon,
@@ -137,7 +137,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       onLogout();
     } else {
       if (typeof window !== "undefined" && window.confirm("Are you sure you want to log out?")) {
-        signOut({ callbackUrl: "/seller/login" });
+        performLogout({ role: "SELLER" });
       }
     }
   };
