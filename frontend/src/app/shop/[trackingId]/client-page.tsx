@@ -264,10 +264,11 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                             const filteredFoodItems = seller.foodItems
                                 .filter((item: any) => isCurrentlyOpen(item))
                                 .filter((item: any) => {
-                                    if (foodFilter === "VEG") return item.itemType === "VEG";
-                                    if (foodFilter === "NON_VEG") return item.itemType === "NON_VEG";
-                                    if (foodFilter === "JAIN") return item.itemType === "JAIN";
-                                    if (foodFilter === "VEGAN") return item.itemType === "VEGAN";
+                                    const raw = String(item.itemType || "VEG").toUpperCase();
+                                    if (foodFilter === "VEG") return raw.includes("VEG") && !raw.includes("NON_VEG");
+                                    if (foodFilter === "NON_VEG") return raw.includes("NON_VEG");
+                                    if (foodFilter === "JAIN") return raw.includes("JAIN");
+                                    if (foodFilter === "VEGAN") return raw.includes("VEGAN");
                                     return true;
                                 });
 
@@ -302,17 +303,23 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                             });
 
                             const renderDietaryBadge = (itemType: string) => {
-                                switch (itemType) {
-                                    case 'NON_VEG':
-                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#EF4444' }}>Non-Veg</span>;
-                                    case 'JAIN':
-                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#F59E0B' }}>Jain 🙏</span>;
-                                    case 'VEGAN':
-                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#059669' }}>Vegan 🌿</span>;
-                                    case 'VEG':
-                                    default:
-                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#10B981' }}>Veg</span>;
+                                const raw = String(itemType || "VEG").split(",").map(s => s.trim().toUpperCase());
+                                if (raw.includes("NON_VEG") || raw.includes("NON-VEG") || raw.includes("NON VEG")) {
+                                    return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#EF4444' }}>Non-Veg</span>;
                                 }
+                                return (
+                                    <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '4px' }}>
+                                        {raw.includes("VEG") && (
+                                            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#10B981' }}>Veg</span>
+                                        )}
+                                        {raw.includes("VEGAN") && (
+                                            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#059669' }}>Vegan 🌿</span>
+                                        )}
+                                        {raw.includes("JAIN") && (
+                                            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#F59E0B' }}>Jain 🙏</span>
+                                        )}
+                                    </div>
+                                );
                             };
 
                             const FoodItemCard = ({ item }: { item: any }) => {

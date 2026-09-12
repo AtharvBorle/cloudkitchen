@@ -38,10 +38,10 @@ const DEFAULT_AMENITIES: ResponsiveAmenity[] = [
 ];
 
 export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
-  initialRoomName = "Deluxe Premium Suite",
-  initialCapacity = "4",
-  initialPricePerNight = "2,500",
-  initialAmenities = DEFAULT_AMENITIES,
+  initialRoomName = "",
+  initialCapacity = "",
+  initialPricePerNight = "",
+  initialAmenities = DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
   initialIsAvailable = true,
   initialImageUrl,
   onBack,
@@ -210,7 +210,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
                 className={styles.textInput}
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                placeholder="4"
+                placeholder="e.g. 2"
                 required
               />
             </div>
@@ -227,7 +227,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
                   className={`${styles.textInput} ${styles.priceInput}`}
                   value={pricePerNight}
                   onChange={(e) => setPricePerNight(e.target.value)}
-                  placeholder="2,500"
+                  placeholder="e.g. 2,500"
                   required
                 />
               </div>

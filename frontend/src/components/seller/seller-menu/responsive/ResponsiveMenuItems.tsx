@@ -23,7 +23,9 @@ export interface ResponsiveMenuItemsProps {
   initialPrice?: string;
   initialCategory?: string;
   initialType?: string;
+  initialSelectedFoodTypes?: string[];
   initialDescription?: string;
+  stockQty?: number | string;
   initialStockQty?: number | string;
   initialIsInStock?: boolean;
   initialVariants?: ResponsiveVariantItem[];
@@ -35,6 +37,7 @@ export interface ResponsiveMenuItemsProps {
     price: string;
     category: string;
     type: string;
+    selectedFoodTypes?: string[];
     description: string;
     stockQty: number | string;
     isInStock: boolean;
@@ -61,6 +64,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   initialPrice = "",
   initialCategory = "Mains",
   initialType = "Veg",
+  initialSelectedFoodTypes,
   initialDescription = "",
   initialStockQty = "24",
   initialIsInStock = true,
@@ -79,6 +83,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   const [category, setCategory] = useState(initialCategory);
   const [type, setType] = useState(initialType);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(() => {
+    if (initialSelectedFoodTypes && initialSelectedFoodTypes.length > 0) {
+      return initialSelectedFoodTypes;
+    }
     if (initialType) return [initialType];
     return ["Veg"];
   });
@@ -177,6 +184,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       price,
       category,
       type,
+      selectedFoodTypes,
       description,
       stockQty,
       isInStock,

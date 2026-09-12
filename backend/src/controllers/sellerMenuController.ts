@@ -36,6 +36,20 @@ const checkFoodCategoryActive = async (userId: string) => {
     return sellerProfile;
 };
 
+export const normalizeFoodItemType = (raw: string | null | undefined): string => {
+    if (!raw) return "VEG";
+    const valid = ["VEG", "NON_VEG", "JAIN", "VEGAN"];
+    const parts = String(raw)
+        .split(",")
+        .map(s => s.trim().toUpperCase().replace(/\s+/g, '_').replace(/-/g, '_'))
+        .map(s => (s === "NON-VEG" || s === "NON_VEG" || s === "NON VEG") ? "NON_VEG" : s)
+        .filter(s => valid.includes(s));
+
+    const unique = Array.from(new Set(parts));
+    if (unique.includes("NON_VEG")) return "NON_VEG";
+    return unique.length > 0 ? unique.join(",") : "VEG";
+};
+
 export const getMenuItems = async () => {
     const session = await getAuthSession();
     if (!session?.user || session.user.role !== "SELLER") {
@@ -131,9 +145,8 @@ export const createMenuItem = async (req: Request) => {
     const closeTime = formData.get("closeTime") as string | null;
     const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
-    const rawItemType = (formData.get("itemType") as string || "VEG").toUpperCase();
-    const validItemTypes = ["VEG", "NON_VEG", "JAIN", "VEGAN"];
-    const itemType = validItemTypes.includes(rawItemType) ? rawItemType : "VEG";
+    const rawItemType = formData.get("itemType") as string | null;
+    const itemType = normalizeFoodItemType(rawItemType);
 
     const rawVariants = formData.get("variants") as string | null;
     let variantsStr = "[]";
@@ -245,8 +258,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (closeTime !== null) dataToUpdate.closeTime = closeTime;
         if (operationalHours !== null) dataToUpdate.operationalHours = operationalHours;
         if (itemType !== null) {
-            const upper = itemType.toUpperCase();
-            dataToUpdate.itemType = validItemTypes.includes(upper) ? upper : "VEG";
+            dataToUpdate.itemType = normalizeFoodItemType(itemType);
         }
         if (variants !== null) {
             try {
@@ -280,8 +292,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
         if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
         if (body.itemType !== undefined) {
-            const upper = (body.itemType || "").toUpperCase();
-            dataToUpdate.itemType = validItemTypes.includes(upper) ? upper : "VEG";
+            dataToUpdate.itemType = normalizeFoodItemType(body.itemType);
         }
         if (body.variants !== undefined) {
             try {

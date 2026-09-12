@@ -14,7 +14,8 @@ export interface ResponsiveDishItem {
   id: string;
   name: string;
   price: string;
-  category: "Starters" | "Mains" | "Desserts" | "Drinks";
+  category: "Starters" | "Mains" | "Desserts" | "Drinks" | string;
+  types?: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN">;
   stockQty: number;
   isAvailable: boolean;
   imageUrl: string;
@@ -294,6 +295,30 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
                     <div className={styles.itemDetails}>
                       <h2 className={styles.dishName}>{dish.name}</h2>
                       <p className={styles.dishPrice}>{dish.price}</p>
+                      {dish.types && dish.types.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
+                          {dish.types.includes("VEG") && (
+                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#16A34A", backgroundColor: "#DCFCE7", padding: "1px 5px", borderRadius: "4px" }}>
+                              VEG
+                            </span>
+                          )}
+                          {dish.types.includes("NON-VEG") && (
+                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#DC2626", backgroundColor: "#FEE2E2", padding: "1px 5px", borderRadius: "4px" }}>
+                              NON-VEG
+                            </span>
+                          )}
+                          {dish.types.includes("VEGAN") && (
+                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#059669", backgroundColor: "#D1FAE5", padding: "1px 5px", borderRadius: "4px" }}>
+                              VEGAN
+                            </span>
+                          )}
+                          {dish.types.includes("JAIN") && (
+                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#D97706", backgroundColor: "#FEF3C7", padding: "1px 5px", borderRadius: "4px" }}>
+                              JAIN
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 

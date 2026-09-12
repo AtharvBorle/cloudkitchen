@@ -58,11 +58,23 @@ export default function ResponsiveMenuPage() {
       else if (catName.includes("dessert") || catName.includes("sweet")) cat = "Desserts";
       else if (catName.includes("drink") || catName.includes("beverage")) cat = "Drinks";
 
+      const rawTypes = String(item.itemType || "VEG").split(",").map((s: string) => s.trim().toUpperCase());
+      let parsedTypes: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN"> = [];
+      if (rawTypes.includes("NON_VEG") || rawTypes.includes("NON-VEG") || rawTypes.includes("NON VEG")) {
+        parsedTypes = ["NON-VEG"];
+      } else {
+        if (rawTypes.includes("VEG")) parsedTypes.push("VEG");
+        if (rawTypes.includes("VEGAN")) parsedTypes.push("VEGAN");
+        if (rawTypes.includes("JAIN")) parsedTypes.push("JAIN");
+        if (parsedTypes.length === 0) parsedTypes = ["VEG"];
+      }
+
       return {
         id: item.id,
         name: item.name,
         price: `₹${item.price}`,
         category: cat,
+        types: parsedTypes,
         stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 24,
         isAvailable: item.isAvailable ?? true,
         imageUrl: item.imageUrl || "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=150&auto=format&fit=crop&q=80",

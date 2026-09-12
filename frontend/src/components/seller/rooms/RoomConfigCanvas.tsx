@@ -55,11 +55,11 @@ const DEFAULT_PHOTOS = [
 ];
 
 const DEFAULT_ROOM_DATA: RoomConfigData = {
-  roomName: "Deluxe Executive Suite 101",
-  capacity: "2 Guests",
-  pricePerNight: "2,800",
-  mediaPhotos: DEFAULT_PHOTOS,
-  amenities: DEFAULT_AMENITIES,
+  roomName: "",
+  capacity: "",
+  pricePerNight: "",
+  mediaPhotos: [],
+  amenities: DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
   isInstantlyBookable: true,
 };
 
@@ -103,9 +103,6 @@ export default function RoomConfigCanvas({
             } catch (e) {
               if (room.images) photos = [room.images];
             }
-            if (photos.length === 0) {
-              photos = DEFAULT_PHOTOS;
-            }
 
             setFormData({
               roomName: room.title || "",
@@ -114,7 +111,7 @@ export default function RoomConfigCanvas({
               mediaPhotos: photos,
               amenities: DEFAULT_AMENITIES.map((a) => ({
                 ...a,
-                selected: room.description ? room.description.toLowerCase().includes(a.name.toLowerCase()) : a.selected,
+                selected: room.description ? room.description.toLowerCase().includes(a.name.toLowerCase()) : false,
               })),
               isInstantlyBookable: room.isAvailable ?? true,
             });
@@ -186,6 +183,16 @@ export default function RoomConfigCanvas({
       return;
     }
 
+    if (!formData.roomName.trim()) {
+      alert("Please enter a room name or identifier.");
+      return;
+    }
+
+    if (!formData.pricePerNight.trim()) {
+      alert("Please enter the price per night.");
+      return;
+    }
+
     setSaving(true);
     try {
       const parsedPrice = formData.pricePerNight.replace(/[^\d.]/g, "") || "2500";
@@ -196,7 +203,7 @@ export default function RoomConfigCanvas({
       if (roomId) {
         bodyFormData.append("roomId", roomId);
       }
-      bodyFormData.append("title", formData.roomName);
+      bodyFormData.append("title", formData.roomName.trim());
       bodyFormData.append("price", parsedPrice);
       bodyFormData.append("capacity", capacityNum);
       bodyFormData.append("isAvailable", String(formData.isInstantlyBookable));
@@ -389,6 +396,7 @@ export default function RoomConfigCanvas({
               type="text"
               value={formData.roomName}
               onChange={(e) => handleTextChange("roomName", e.target.value)}
+              placeholder="e.g. Deluxe Executive Suite 101"
               style={{
                 width: "100%",
                 borderRadius: "8px",
@@ -443,12 +451,12 @@ export default function RoomConfigCanvas({
                   justifyContent: "space-between",
                   backgroundColor: "#FFFFFF",
                   fontSize: "13.5px",
-                  color: "#0F172A",
+                  color: formData.capacity ? "#0F172A" : "#94A3B8",
                   cursor: "pointer",
                   boxSizing: "border-box",
                 }}
               >
-                <span>{formData.capacity}</span>
+                <span>{formData.capacity || "Select capacity"}</span>
                 <ChevronDown
                   size={16}
                   color="#64748B"
@@ -516,6 +524,7 @@ export default function RoomConfigCanvas({
                 type="text"
                 value={formData.pricePerNight}
                 onChange={(e) => handleTextChange("pricePerNight", e.target.value)}
+                placeholder="e.g. 2,800"
                 style={{
                   width: "100%",
                   borderRadius: "8px",

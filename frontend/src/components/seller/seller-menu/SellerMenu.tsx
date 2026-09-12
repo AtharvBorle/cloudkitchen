@@ -18,12 +18,26 @@ export type MenuCategoryFilter =
   | "Desserts"
   | "Beverages";
 
+export function parseFoodTypes(itemTypeStr?: string): Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN"> {
+  if (!itemTypeStr) return ["VEG"];
+  const parts = String(itemTypeStr).split(",").map((s) => s.trim().toUpperCase());
+  if (parts.includes("NON_VEG") || parts.includes("NON-VEG") || parts.includes("NON VEG")) {
+    return ["NON-VEG"];
+  }
+  const result: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN"> = [];
+  if (parts.includes("VEG")) result.push("VEG");
+  if (parts.includes("VEGAN")) result.push("VEGAN");
+  if (parts.includes("JAIN")) result.push("JAIN");
+  return result.length > 0 ? result : ["VEG"];
+}
+
 export interface DishItem {
   id: string;
   name: string;
   category: string;
   price: string;
   type: "VEG" | "NON-VEG" | "JAIN" | "VEGAN";
+  types: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN">;
   variantsCount?: number;
   stockQty: number;
   inStock: boolean;
@@ -88,17 +102,15 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                 } catch {}
               }
 
-              let mappedType: "VEG" | "NON-VEG" | "JAIN" | "VEGAN" = "VEG";
-              if (item.itemType === "NON_VEG") mappedType = "NON-VEG";
-              else if (item.itemType === "JAIN") mappedType = "JAIN";
-              else if (item.itemType === "VEGAN") mappedType = "VEGAN";
+              const foodTypes = parseFoodTypes(item.itemType);
 
               return {
                 id: item.id,
                 name: item.name,
                 category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
                 price: `₹${item.price}`,
-                type: mappedType,
+                type: foodTypes[0] || "VEG",
+                types: foodTypes,
                 variantsCount,
                 stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
                 inStock: item.isAvailable,
@@ -196,10 +208,10 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   // Filter Dishes by Category and Search
   const filteredDishes = dishList.filter((dish) => {
     // 1. Category Filter
-    if (selectedCategory === "Veg" && dish.type !== "VEG") return false;
-    if (selectedCategory === "Non-Veg" && dish.type !== "NON-VEG") return false;
-    if (selectedCategory === "Jain" && dish.type !== "JAIN") return false;
-    if (selectedCategory === "Vegan" && dish.type !== "VEGAN") return false;
+    if (selectedCategory === "Veg" && !dish.types?.includes("VEG")) return false;
+    if (selectedCategory === "Non-Veg" && !dish.types?.includes("NON-VEG")) return false;
+    if (selectedCategory === "Jain" && !dish.types?.includes("JAIN")) return false;
+    if (selectedCategory === "Vegan" && !dish.types?.includes("VEGAN")) return false;
     if (selectedCategory === "Desserts" && dish.category !== "Desserts") return false;
     if (selectedCategory === "Beverages" && dish.category !== "Beverages") return false;
 
@@ -406,38 +418,40 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
 
                       {/* Type (VEG / NON-VEG / JAIN / VEGAN badge) */}
                       <td>
-                        {dish.type === "VEG" && (
-                          <div className={`${styles.typeBadge} ${styles.typeVeg}`}>
-                            <div className={styles.vegSymbol}>
-                              <div className={styles.vegDot} />
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                          {dish.types?.includes("VEG") && (
+                            <div className={`${styles.typeBadge} ${styles.typeVeg}`}>
+                              <div className={styles.vegSymbol}>
+                                <div className={styles.vegDot} />
+                              </div>
+                              <span>VEG</span>
                             </div>
-                            <span>VEG</span>
-                          </div>
-                        )}
-                        {dish.type === "NON-VEG" && (
-                          <div className={`${styles.typeBadge} ${styles.typeNonVeg}`}>
-                            <div className={styles.nonVegSymbol}>
-                              <div className={styles.nonVegDot} />
+                          )}
+                          {dish.types?.includes("NON-VEG") && (
+                            <div className={`${styles.typeBadge} ${styles.typeNonVeg}`}>
+                              <div className={styles.nonVegSymbol}>
+                                <div className={styles.nonVegDot} />
+                              </div>
+                              <span>NON-VEG</span>
                             </div>
-                            <span>NON-VEG</span>
-                          </div>
-                        )}
-                        {dish.type === "JAIN" && (
-                          <div className={`${styles.typeBadge} ${styles.typeJain}`}>
-                            <div className={styles.jainSymbol}>
-                              <div className={styles.jainDot} />
+                          )}
+                          {dish.types?.includes("VEGAN") && (
+                            <div className={`${styles.typeBadge} ${styles.typeVegan}`}>
+                              <div className={styles.veganSymbol}>
+                                <div className={styles.veganDot} />
+                              </div>
+                              <span>VEGAN</span>
                             </div>
-                            <span>JAIN</span>
-                          </div>
-                        )}
-                        {dish.type === "VEGAN" && (
-                          <div className={`${styles.typeBadge} ${styles.typeVegan}`}>
-                            <div className={styles.veganSymbol}>
-                              <div className={styles.veganDot} />
+                          )}
+                          {dish.types?.includes("JAIN") && (
+                            <div className={`${styles.typeBadge} ${styles.typeJain}`}>
+                              <div className={styles.jainSymbol}>
+                                <div className={styles.jainDot} />
+                              </div>
+                              <span>JAIN</span>
                             </div>
-                            <span>VEGAN</span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
 
                       {/* Stock Qty */}

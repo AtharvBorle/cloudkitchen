@@ -44,9 +44,16 @@ function MenuItemContent() {
       formData.append("description", data.description || "");
 
       let itemType = "VEG";
-      if (data.type === "Non-Veg") itemType = "NON_VEG";
-      else if (data.type === "Jain") itemType = "JAIN";
-      else if (data.type === "Vegan") itemType = "VEGAN";
+      const types = data.selectedFoodTypes || (data.type ? [data.type] : ["Veg"]);
+      if (types.includes("Non-Veg") || types.includes("Non Veg") || types.includes("NON_VEG")) {
+        itemType = "NON_VEG";
+      } else {
+        const mappedList: string[] = [];
+        if (types.includes("Veg")) mappedList.push("VEG");
+        if (types.includes("Vegan")) mappedList.push("VEGAN");
+        if (types.includes("Jain")) mappedList.push("JAIN");
+        itemType = mappedList.length > 0 ? mappedList.join(",") : "VEG";
+      }
       formData.append("itemType", itemType);
 
       formData.append("stockQuantity", String(data.stockQty || 24));
@@ -120,10 +127,20 @@ function MenuItemContent() {
     } catch {}
   }
 
-  let mappedType = "Veg";
-  if (initialData?.itemType === "NON_VEG") mappedType = "Non-Veg";
-  else if (initialData?.itemType === "JAIN") mappedType = "Jain";
-  else if (initialData?.itemType === "VEGAN") mappedType = "Vegan";
+  const parsedFoodTypes: string[] = (() => {
+    if (!initialData?.itemType) return ["Veg"];
+    const raw = String(initialData.itemType).split(",").map((s: string) => s.trim().toUpperCase());
+    if (raw.includes("NON_VEG") || raw.includes("NON-VEG") || raw.includes("NON VEG")) {
+      return ["Non-Veg"];
+    }
+    const res: string[] = [];
+    if (raw.includes("VEG")) res.push("Veg");
+    if (raw.includes("VEGAN")) res.push("Vegan");
+    if (raw.includes("JAIN")) res.push("Jain");
+    return res.length > 0 ? res : ["Veg"];
+  })();
+
+  const mappedType = parsedFoodTypes[0] || "Veg";
 
   return (
     <ResponsiveMenuItems
@@ -132,6 +149,7 @@ function MenuItemContent() {
       initialPrice={initialData ? String(initialData.price) : undefined}
       initialCategory={initialData?.foodCategory?.name}
       initialType={mappedType}
+      initialSelectedFoodTypes={parsedFoodTypes}
       initialDescription={initialData?.description}
       initialStockQty={initialData?.stockQuantity}
       initialIsInStock={initialData?.isAvailable}

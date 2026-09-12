@@ -121,14 +121,17 @@ function EditMenuInner({
               setDescription(found.description || '');
               setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 10));
               setIsInStock(found.isAvailable ?? true);
-              if (found.itemType === 'NON_VEG') {
-                setSelectedFoodTypes(['Non Veg']);
-              } else if (found.itemType === 'JAIN') {
-                setSelectedFoodTypes(['Jain']);
-              } else if (found.itemType === 'VEGAN') {
-                setSelectedFoodTypes(['Vegan']);
-              } else {
-                setSelectedFoodTypes(['Veg']);
+              if (found.itemType) {
+                const parts = String(found.itemType).split(',').map((s: string) => s.trim().toUpperCase());
+                if (parts.includes('NON_VEG') || parts.includes('NON-VEG') || parts.includes('NON VEG')) {
+                  setSelectedFoodTypes(['Non Veg']);
+                } else {
+                  const loadedTypes: string[] = [];
+                  if (parts.includes('VEG')) loadedTypes.push('Veg');
+                  if (parts.includes('VEGAN')) loadedTypes.push('Vegan');
+                  if (parts.includes('JAIN')) loadedTypes.push('Jain');
+                  setSelectedFoodTypes(loadedTypes.length > 0 ? loadedTypes : ['Veg']);
+                }
               }
 
               if (found.variants) {
@@ -230,9 +233,15 @@ function EditMenuInner({
       formData.append('description', description || '');
 
       let itemTypeVal = 'VEG';
-      if (selectedFoodTypes.includes('Non Veg')) itemTypeVal = 'NON_VEG';
-      else if (selectedFoodTypes.includes('Jain')) itemTypeVal = 'JAIN';
-      else if (selectedFoodTypes.includes('Vegan')) itemTypeVal = 'VEGAN';
+      if (selectedFoodTypes.includes('Non Veg') || selectedFoodTypes.includes('Non-Veg')) {
+        itemTypeVal = 'NON_VEG';
+      } else {
+        const typesList: string[] = [];
+        if (selectedFoodTypes.includes('Veg')) typesList.push('VEG');
+        if (selectedFoodTypes.includes('Vegan')) typesList.push('VEGAN');
+        if (selectedFoodTypes.includes('Jain')) typesList.push('JAIN');
+        itemTypeVal = typesList.length > 0 ? typesList.join(',') : 'VEG';
+      }
       formData.append('itemType', itemTypeVal);
 
       formData.append('stockQuantity', stockQty || '24');
