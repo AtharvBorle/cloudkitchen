@@ -88,7 +88,7 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
     if (onSelectRider) {
       onSelectRider(rider);
     } else {
-      router.push("/seller/delivery/handover");
+      router.push(`/seller/delivery/handover?riderId=${encodeURIComponent(rider.id)}`);
     }
   };
 

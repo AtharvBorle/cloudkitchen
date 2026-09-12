@@ -636,7 +636,11 @@ export default function RiderCanvas({
                             if (onViewWallet) {
                               onViewWallet(rider);
                             } else {
-                              router.push("/seller/riderMng/settlements");
+                              router.push(
+                                `/seller/delivery/settlements?riderId=${encodeURIComponent(
+                                  rider.id
+                                )}`
+                              );
                             }
                           }}
                           style={{

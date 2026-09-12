@@ -41,7 +41,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
     if (onSelectRider) {
       onSelectRider(rider);
     } else {
-      router.push("/seller/delivery/handover");
+      router.push(`/seller/delivery/handover?riderId=${encodeURIComponent(rider.id)}`);
     }
   };
 
