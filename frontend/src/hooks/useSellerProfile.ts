@@ -28,8 +28,24 @@ function notifyListeners() {
   listeners.forEach((l) => l());
 }
 
+export function isGenericFallbackName(name?: string): boolean {
+  if (!name || !name.trim()) return true;
+  const lower = name.trim().toLowerCase();
+  return (
+    lower === "john doe" ||
+    lower === "rahul sharma" ||
+    lower === "rahul" ||
+    lower === "kitchen owner" ||
+    lower === "seller" ||
+    lower === "seller partner" ||
+    lower === "seller role" ||
+    lower === "owner role" ||
+    lower === "cloud kitchen"
+  );
+}
+
 export function computeInitials(name?: string): string {
-  if (!name || !name.trim()) return "KP";
+  if (!name || !name.trim()) return "RK";
   const clean = name.trim().replace(/[^a-zA-Z0-9\s]/g, "");
   const parts = clean.split(/\s+/).filter(Boolean);
   if (parts.length > 1) {
@@ -38,7 +54,15 @@ export function computeInitials(name?: string): string {
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase();
   }
-  return "KP";
+  return "RK";
+}
+
+export function updateCachedProfile(partial: Partial<SellerProfileData>) {
+  if (!cachedProfile) {
+    cachedProfile = {};
+  }
+  cachedProfile = { ...cachedProfile, ...partial };
+  notifyListeners();
 }
 
 export function useSellerProfile() {
@@ -47,10 +71,12 @@ export function useSellerProfile() {
   const sessionEmail = session?.user?.email || "";
 
   const [profileState, setProfileState] = useState<SellerProfileData>(() => {
-    const name = cachedProfile?.ownerName || sessionName || "";
+    const rawName = cachedProfile?.ownerName || (!isGenericFallbackName(sessionName) ? sessionName : "") || "";
+    const busName = cachedProfile?.businessName || rawName;
+    const name = busName || rawName;
     return {
       ownerName: name,
-      businessName: cachedProfile?.businessName || name,
+      businessName: busName,
       userFullName: cachedProfile?.userFullName || sessionName || name,
       email: cachedProfile?.email || sessionEmail || "",
       phone: cachedProfile?.phone || "",
@@ -128,9 +154,12 @@ export function useSellerProfile() {
           const user = json.data?.user || json.user;
           const profile = json.data?.profile || json.profile;
 
-          const rawOwnerName = profile?.businessName || user?.name || sessionName || "";
-          const rawBusinessName = profile?.businessName || user?.name || "Cloud Kitchen";
-          const rawFullName = user?.name || sessionName || rawOwnerName;
+          const validUserName = user?.name && !isGenericFallbackName(user.name) ? user.name : "";
+          const validSessionName = sessionName && !isGenericFallbackName(sessionName) ? sessionName : "";
+          const rawBusinessName =
+            profile?.businessName || validUserName || validSessionName || "Radha's Kitchen";
+          const rawOwnerName = rawBusinessName;
+          const rawFullName = validUserName || validSessionName || user?.name || rawBusinessName;
           const rawEmail = user?.email || sessionEmail || "";
           const rawPhone = user?.phone || "";
           const rawCity = user?.city || "";
@@ -140,7 +169,7 @@ export function useSellerProfile() {
             `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
             user?.city ||
             "";
-          const rawInitials = computeInitials(rawOwnerName);
+          const rawInitials = computeInitials(rawBusinessName);
           const rawOnline = typeof profile?.isOnline === "boolean" ? profile.isOnline : true;
 
           cachedProfile = {

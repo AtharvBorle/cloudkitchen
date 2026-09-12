@@ -4,7 +4,7 @@ import React from "react";
 import { Search, Bell } from "lucide-react";
 import styles from "./SellerNavbar.module.css";
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
 
 export interface SellerNavbarProps {
   title?: string;
@@ -23,18 +23,14 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
 }) => {
   const seller = useSellerProfile();
   const effectiveUserName =
-    userName &&
-    userName !== "Rahul Sharma" &&
-    userName !== "Rahul" &&
-    userName !== "John Doe" &&
-    userName !== "Kitchen Owner"
+    userName && !isGenericFallbackName(userName)
       ? userName
-      : seller.ownerName;
+      : (seller.businessName || seller.ownerName);
   const effectiveUserRole = userRole || seller.partnerRole;
   const effectiveUserInitials =
-    userInitials && userInitials !== "JD" && userInitials !== "KP"
+    userInitials && !isGenericFallbackName(userInitials) && userInitials !== "JD" && userInitials !== "KP" && userInitials !== "SE"
       ? userInitials
-      : seller.avatarInitials;
+      : (seller.avatarInitials || computeInitials(effectiveUserName));
   return (
     <nav
       className={styles.navbar}

@@ -6,7 +6,7 @@ import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import MainCanvas, { SellerProfileData } from "./MainCanvas";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useSellerProfile, computeInitials, isGenericFallbackName, updateCachedProfile } from "@/hooks/useSellerProfile";
 
 export interface SellerProfileProps {
   topbarTitle?: string;
@@ -29,32 +29,41 @@ export default function Profile({
 }: SellerProfileProps) {
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profileData, setProfileData] = useState<SellerProfileData>(() => ({
-    ownerName: initialData?.ownerName || seller.ownerName,
-    mobileNumber: initialData?.mobileNumber || seller.phone || "",
-    email: initialData?.email || seller.email || "",
-    outletName: initialData?.outletName || seller.businessName,
-    registeredAddress: initialData?.registeredAddress || seller.address || "",
-    partnerRole: initialData?.partnerRole || seller.partnerRole,
-    avatarInitials: initialData?.avatarInitials || seller.avatarInitials,
-  }));
+  const [profileData, setProfileData] = useState<SellerProfileData>(() => {
+    const owner = initialData?.ownerName || (!isGenericFallbackName(seller.userFullName) ? seller.userFullName : "") || seller.ownerName;
+    const outlet = initialData?.outletName || seller.businessName || seller.ownerName;
+    return {
+      ownerName: owner,
+      mobileNumber: initialData?.mobileNumber || seller.phone || "",
+      email: initialData?.email || seller.email || "",
+      outletName: outlet,
+      registeredAddress: initialData?.registeredAddress || seller.address || "",
+      partnerRole: initialData?.partnerRole || seller.partnerRole,
+      avatarInitials: initialData?.avatarInitials || computeInitials(outlet || owner),
+    };
+  });
 
   useEffect(() => {
-    if (seller.ownerName) {
+    if (seller.ownerName || seller.businessName) {
       setProfileData((prev) => {
-        if (prev.ownerName && prev.ownerName !== "John Doe" && prev.ownerName !== "Kitchen Owner") return prev;
+        const outlet = prev.outletName && !isGenericFallbackName(prev.outletName)
+          ? prev.outletName
+          : (seller.businessName || seller.ownerName);
+        const owner = prev.ownerName && !isGenericFallbackName(prev.ownerName)
+          ? prev.ownerName
+          : (seller.userFullName || seller.ownerName);
         return {
           ...prev,
-          ownerName: seller.ownerName,
+          ownerName: owner,
           email: seller.email || prev.email,
           mobileNumber: seller.phone || prev.mobileNumber,
-          outletName: seller.businessName || prev.outletName,
+          outletName: outlet,
           registeredAddress: seller.address || prev.registeredAddress,
-          avatarInitials: seller.avatarInitials,
+          avatarInitials: computeInitials(outlet || owner),
         };
       });
     }
-  }, [seller.ownerName, seller.email, seller.phone, seller.businessName, seller.address, seller.avatarInitials]);
+  }, [seller.ownerName, seller.userFullName, seller.email, seller.phone, seller.businessName, seller.address]);
 
   useEffect(() => {
     async function loadSellerProfile() {
@@ -65,15 +74,17 @@ export default function Profile({
           const user = data.data?.user || data.user;
           const profile = data.data?.profile || data.profile;
           if (user) {
-            const name = user.name || "Seller Partner";
-            const initials = computeInitials(name);
+            const rawUserName = user.name && !isGenericFallbackName(user.name) ? user.name : "";
+            const outlet = profile?.businessName || rawUserName || "Radha's Kitchen";
+            const owner = rawUserName || user.name || outlet;
+            const initials = computeInitials(outlet);
 
             setProfileData((prev) => ({
               ...prev,
-              ownerName: name,
+              ownerName: owner,
               email: user.email || prev.email,
               mobileNumber: user.phone || prev.mobileNumber,
-              outletName: profile?.businessName || prev.outletName,
+              outletName: outlet,
               registeredAddress:
                 profile?.addressLocality ||
                 `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
@@ -95,6 +106,16 @@ export default function Profile({
   };
 
   const handleSave = async (data: SellerProfileData) => {
+    updateCachedProfile({
+      ownerName: data.outletName || data.ownerName,
+      businessName: data.outletName,
+      userFullName: data.ownerName,
+      email: data.email,
+      phone: data.mobileNumber,
+      address: data.registeredAddress,
+      avatarInitials: computeInitials(data.outletName || data.ownerName),
+    });
+
     if (customOnSave) {
       customOnSave(data);
       return;
@@ -123,6 +144,8 @@ export default function Profile({
     performLogout({ role: "SELLER" });
   };
 
+  const currentDisplayOutlet = profileData.outletName || seller.businessName || seller.ownerName;
+
   return (
     <div
       style={{
@@ -141,9 +164,9 @@ export default function Profile({
         activeItemId="profile"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
-        ownerName={profileData.ownerName}
+        ownerName={currentDisplayOutlet}
         partnerRole={profileData.partnerRole}
-        avatarInitials={profileData.avatarInitials}
+        avatarInitials={computeInitials(currentDisplayOutlet)}
       />
 
       {/* 2. Right Canvas Area calling Topbar and MainCanvas */}
@@ -163,9 +186,9 @@ export default function Profile({
         {/* Standalone Topbar Component */}
         <Topbar
           title={topbarTitle}
-          ownerName={profileData.ownerName}
+          ownerName={currentDisplayOutlet}
           partnerRole={profileData.partnerRole}
-          avatarInitials={profileData.avatarInitials}
+          avatarInitials={computeInitials(currentDisplayOutlet)}
           onSearch={onSearch}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />

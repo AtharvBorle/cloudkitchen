@@ -19,7 +19,7 @@ import {
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResSellerProfile.module.css";
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 
 export interface PlanServiceItem {
   id: string;
@@ -57,7 +57,9 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
 
   // Form State
   const [ownerName, setOwnerName] = useState(
-    initialOwnerName && initialOwnerName !== "John Doe" ? initialOwnerName : seller.ownerName
+    initialOwnerName && !isGenericFallbackName(initialOwnerName)
+      ? initialOwnerName
+      : (seller.userFullName || seller.ownerName)
   );
   const [mobileNumber, setMobileNumber] = useState(
     initialMobileNumber && initialMobileNumber !== "+91 98887 76655" ? initialMobileNumber : seller.phone
@@ -68,9 +70,9 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       : seller.email
   );
   const [outletName, setOutletName] = useState(
-    initialOutletName && initialOutletName !== "Neo Cloud Room - Bangalore Central Hub"
+    initialOutletName && !isGenericFallbackName(initialOutletName)
       ? initialOutletName
-      : seller.businessName
+      : (seller.businessName || seller.ownerName)
   );
   const [registeredAddress, setRegisteredAddress] = useState(
     initialRegisteredAddress && !initialRegisteredAddress.includes("Koramangala")
@@ -79,8 +81,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   );
 
   useEffect(() => {
-    if (seller.ownerName) {
-      setOwnerName((prev) => (!prev || prev === "John Doe" || prev === "Kitchen Owner" ? seller.ownerName : prev));
+    if (seller.ownerName || seller.businessName) {
+      setOwnerName((prev) => (!prev || isGenericFallbackName(prev) ? (seller.userFullName || seller.ownerName) : prev));
     }
     if (seller.phone) {
       setMobileNumber((prev) => (!prev || prev === "+91 98887 76655" ? seller.phone : prev));
@@ -88,13 +90,13 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     if (seller.email) {
       setPrimaryEmail((prev) => (!prev || prev === "john.doe@neocloudroom.com" ? seller.email : prev));
     }
-    if (seller.businessName) {
-      setOutletName((prev) => (!prev || prev === "Neo Cloud Room - Bangalore Central Hub" || prev === "Cloud Kitchen" ? seller.businessName : prev));
+    if (seller.businessName || seller.ownerName) {
+      setOutletName((prev) => (!prev || isGenericFallbackName(prev) ? (seller.businessName || seller.ownerName) : prev));
     }
     if (seller.address) {
       setRegisteredAddress((prev) => (!prev || prev.includes("Koramangala") ? seller.address : prev));
     }
-  }, [seller.ownerName, seller.phone, seller.email, seller.businessName, seller.address]);
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address]);
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -124,6 +126,16 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       outletName,
       registeredAddress,
     };
+
+    updateCachedProfile({
+      ownerName: outletName || ownerName,
+      businessName: outletName,
+      userFullName: ownerName,
+      email: primaryEmail,
+      phone: mobileNumber,
+      address: registeredAddress,
+      avatarInitials: computeInitials(outletName || ownerName),
+    });
 
     if (onSaveProfile) {
       onSaveProfile(payload);
@@ -155,6 +167,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     showToast("Kitchen QR Code downloaded!");
   };
 
+  const currentDisplayOutlet = outletName || seller.businessName || seller.ownerName;
+
   return (
     <div className={styles.screenWrapper}>
       {/* Slide-out Drawer Navigation Menu */}
@@ -162,7 +176,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="profile"
-        ownerName={ownerName}
+        ownerName={currentDisplayOutlet}
         onSyncDevices={onSyncDevices}
       />
 

@@ -7,7 +7,7 @@ import { SellerNavbar } from "../seller-navbar";
 import { SellerStepper } from "../seller-stepper";
 import styles from "./SellerLayout.module.css";
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
 
 export interface SellerLayoutProps {
   children: React.ReactNode;
@@ -49,18 +49,14 @@ export const SellerLayout: React.FC<SellerLayoutProps> = ({
   const router = useRouter();
   const seller = useSellerProfile();
   const effectiveUserName =
-    userName &&
-    userName !== "Rahul Sharma" &&
-    userName !== "Rahul" &&
-    userName !== "John Doe" &&
-    userName !== "Kitchen Owner"
+    userName && !isGenericFallbackName(userName)
       ? userName
-      : seller.ownerName;
+      : (seller.businessName || seller.ownerName);
   const effectiveUserRole = userRole || seller.partnerRole;
   const effectiveUserInitials =
-    userInitials && userInitials !== "JD" && userInitials !== "KP"
+    userInitials && !isGenericFallbackName(userInitials) && userInitials !== "JD" && userInitials !== "KP" && userInitials !== "SE"
       ? userInitials
-      : seller.avatarInitials;
+      : (seller.avatarInitials || computeInitials(effectiveUserName));
 
   const handleBack = () => {
     if (onBack) {

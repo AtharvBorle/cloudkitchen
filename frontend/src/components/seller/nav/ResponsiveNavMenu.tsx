@@ -45,7 +45,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
 
 
 
-import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
 
 export interface ResponsiveNavMenuProps {
   isOpen: boolean;
@@ -66,13 +66,9 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
 }) => {
   const seller = useSellerProfile();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (seller.businessName || seller.ownerName);
   const pathname = usePathname();
 
   // Close drawer on Esc key

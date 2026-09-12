@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { performLogout } from "@/lib/logout";
 import Topbar, { TopbarProps } from "../nav/Topbar";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName, computeInitials } from "@/hooks/useSellerProfile";
 
 export interface SellerProfileData {
   ownerName: string;
@@ -39,32 +39,41 @@ export default function MainCanvas({
   onDataChange,
 }: MainCanvasProps) {
   const seller = useSellerProfile();
-  const [internalFormData, setInternalFormData] = useState<SellerProfileData>(() => ({
-    ownerName: initialData?.ownerName || seller.ownerName,
-    mobileNumber: initialData?.mobileNumber || seller.phone || "",
-    email: initialData?.email || seller.email || "",
-    outletName: initialData?.outletName || seller.businessName,
-    registeredAddress: initialData?.registeredAddress || seller.address || "",
-    partnerRole: initialData?.partnerRole || seller.partnerRole,
-    avatarInitials: initialData?.avatarInitials || seller.avatarInitials,
-  }));
+  const [internalFormData, setInternalFormData] = useState<SellerProfileData>(() => {
+    const owner = initialData?.ownerName || (!isGenericFallbackName(seller.userFullName) ? seller.userFullName : "") || seller.ownerName;
+    const outlet = initialData?.outletName || seller.businessName || seller.ownerName;
+    return {
+      ownerName: owner,
+      mobileNumber: initialData?.mobileNumber || seller.phone || "",
+      email: initialData?.email || seller.email || "",
+      outletName: outlet,
+      registeredAddress: initialData?.registeredAddress || seller.address || "",
+      partnerRole: initialData?.partnerRole || seller.partnerRole,
+      avatarInitials: initialData?.avatarInitials || computeInitials(outlet || owner),
+    };
+  });
 
   useEffect(() => {
-    if (!initialData?.ownerName && seller.ownerName) {
+    if (seller.ownerName || seller.businessName) {
       setInternalFormData((prev) => {
-        if (prev.ownerName !== "Kitchen Owner") return prev;
+        const outlet = prev.outletName && !isGenericFallbackName(prev.outletName)
+          ? prev.outletName
+          : (seller.businessName || seller.ownerName);
+        const owner = prev.ownerName && !isGenericFallbackName(prev.ownerName)
+          ? prev.ownerName
+          : (seller.userFullName || seller.ownerName);
         return {
           ...prev,
-          ownerName: seller.ownerName,
+          ownerName: owner,
           mobileNumber: seller.phone || prev.mobileNumber,
           email: seller.email || prev.email,
-          outletName: seller.businessName || prev.outletName,
+          outletName: outlet,
           registeredAddress: seller.address || prev.registeredAddress,
-          avatarInitials: seller.avatarInitials,
+          avatarInitials: computeInitials(outlet || owner),
         };
       });
     }
-  }, [seller.ownerName, seller.phone, seller.email, seller.businessName, seller.address, seller.avatarInitials, initialData?.ownerName]);
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address]);
 
   const formData = externalFormData || internalFormData;
 

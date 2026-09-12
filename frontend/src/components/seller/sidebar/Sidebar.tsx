@@ -31,7 +31,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import styles from "./ConsoleSidebar.module.css";
-import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
 
 export interface NavItem {
   id: string;
@@ -89,17 +89,13 @@ export default function SellerSidebar({
   const seller = useSellerProfile();
 
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (seller.businessName || seller.ownerName);
   const effectivePartnerRole =
     partnerRole && partnerRole !== "Neo Cloud Partner" ? partnerRole : seller.partnerRole;
   const effectiveAvatarInitials =
-    avatarInitials && avatarInitials !== "JD" && avatarInitials !== "KP"
+    avatarInitials && !isGenericFallbackName(avatarInitials) && avatarInitials !== "JD" && avatarInitials !== "KP" && avatarInitials !== "SE"
       ? avatarInitials
       : (seller.avatarInitials || computeInitials(effectiveOwnerName));
 
