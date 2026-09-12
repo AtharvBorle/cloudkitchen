@@ -4,8 +4,10 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export type CartItem = {
-    id: string; // The food item ID
+    id: string; // The food item ID or variant composite ID
+    foodItemId?: string; // The base food item ID
     name: string;
+    variantName?: string;
     price: number;
     quantity: number;
     sellerId: string;

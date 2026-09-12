@@ -11,8 +11,10 @@ import styles from "./SellerMenu.module.css";
 
 export type MenuCategoryFilter =
   | "All Items"
-  | "Veg Only"
+  | "Veg"
   | "Non-Veg"
+  | "Jain"
+  | "Vegan"
   | "Desserts"
   | "Beverages";
 
@@ -21,7 +23,8 @@ export interface DishItem {
   name: string;
   category: string;
   price: string;
-  type: "VEG" | "NON-VEG";
+  type: "VEG" | "NON-VEG" | "JAIN" | "VEGAN";
+  variantsCount?: number;
   stockQty: number;
   inStock: boolean;
 }
@@ -76,15 +79,31 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         if (res.ok) {
           const data = await res.json();
           if (data && data.items && Array.isArray(data.items) && isMounted) {
-            const mapped: DishItem[] = data.items.map((item: any) => ({
-              id: item.id,
-              name: item.name,
-              category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
-              price: `₹${item.price}`,
-              type: item.itemType === "NON_VEG" ? "NON-VEG" : "VEG",
-              stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
-              inStock: item.isAvailable,
-            }));
+            const mapped: DishItem[] = data.items.map((item: any) => {
+              let variantsCount = 0;
+              if (item.variants) {
+                try {
+                  const parsed = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants;
+                  if (Array.isArray(parsed)) variantsCount = parsed.length;
+                } catch {}
+              }
+
+              let mappedType: "VEG" | "NON-VEG" | "JAIN" | "VEGAN" = "VEG";
+              if (item.itemType === "NON_VEG") mappedType = "NON-VEG";
+              else if (item.itemType === "JAIN") mappedType = "JAIN";
+              else if (item.itemType === "VEGAN") mappedType = "VEGAN";
+
+              return {
+                id: item.id,
+                name: item.name,
+                category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
+                price: `₹${item.price}`,
+                type: mappedType,
+                variantsCount,
+                stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
+                inStock: item.isAvailable,
+              };
+            });
             setDishList(mapped);
 
             if (data.servedPincodes && Array.isArray(data.servedPincodes) && data.servedPincodes.length > 0) {
@@ -109,8 +128,10 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
 
   const categories: MenuCategoryFilter[] = [
     "All Items",
-    "Veg Only",
+    "Veg",
     "Non-Veg",
+    "Jain",
+    "Vegan",
     "Desserts",
     "Beverages",
   ];
@@ -175,8 +196,10 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   // Filter Dishes by Category and Search
   const filteredDishes = dishList.filter((dish) => {
     // 1. Category Filter
-    if (selectedCategory === "Veg Only" && dish.type !== "VEG") return false;
+    if (selectedCategory === "Veg" && dish.type !== "VEG") return false;
     if (selectedCategory === "Non-Veg" && dish.type !== "NON-VEG") return false;
+    if (selectedCategory === "Jain" && dish.type !== "JAIN") return false;
+    if (selectedCategory === "Vegan" && dish.type !== "VEGAN") return false;
     if (selectedCategory === "Desserts" && dish.category !== "Desserts") return false;
     if (selectedCategory === "Beverages" && dish.category !== "Beverages") return false;
 
@@ -361,7 +384,14 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                           >
                             <Trash2 size={16} strokeWidth={2.2} />
                           </button>
-                          <span className={styles.dishNameText}>{dish.name}</span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <span className={styles.dishNameText}>{dish.name}</span>
+                            {dish.variantsCount && dish.variantsCount > 0 ? (
+                              <span style={{ fontSize: "0.72rem", color: "#EA580C", fontWeight: 600 }}>
+                                {dish.variantsCount} {dish.variantsCount === 1 ? "variant" : "variants"} available
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
 
@@ -371,21 +401,38 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                       {/* Price */}
                       <td className={styles.priceText}>{dish.price}</td>
 
-                      {/* Type (VEG / NON-VEG badge) */}
+                      {/* Type (VEG / NON-VEG / JAIN / VEGAN badge) */}
                       <td>
-                        {dish.type === "VEG" ? (
+                        {dish.type === "VEG" && (
                           <div className={`${styles.typeBadge} ${styles.typeVeg}`}>
                             <div className={styles.vegSymbol}>
                               <div className={styles.vegDot} />
                             </div>
                             <span>VEG</span>
                           </div>
-                        ) : (
+                        )}
+                        {dish.type === "NON-VEG" && (
                           <div className={`${styles.typeBadge} ${styles.typeNonVeg}`}>
                             <div className={styles.nonVegSymbol}>
                               <div className={styles.nonVegDot} />
                             </div>
                             <span>NON-VEG</span>
+                          </div>
+                        )}
+                        {dish.type === "JAIN" && (
+                          <div className={`${styles.typeBadge} ${styles.typeJain}`}>
+                            <div className={styles.jainSymbol}>
+                              <div className={styles.jainDot} />
+                            </div>
+                            <span>JAIN</span>
+                          </div>
+                        )}
+                        {dish.type === "VEGAN" && (
+                          <div className={`${styles.typeBadge} ${styles.typeVegan}`}>
+                            <div className={styles.veganSymbol}>
+                              <div className={styles.veganDot} />
+                            </div>
+                            <span>VEGAN</span>
                           </div>
                         )}
                       </td>

@@ -340,9 +340,9 @@ export default function UserFoodPage() {
                                                 fontSize: '0.7rem',
                                                 fontWeight: 'bold',
                                                 color: 'white',
-                                                backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                                backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : item.itemType === 'JAIN' ? '#F59E0B' : item.itemType === 'VEGAN' ? '#059669' : '#10B981'
                                             }}>
-                                                {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                                                {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                             </span>
                                         </h3>
                                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>By {item.sellerName} • {item.sellerCity}</p>
@@ -395,9 +395,9 @@ export default function UserFoodPage() {
                                                         fontSize: '0.7rem',
                                                         fontWeight: 'bold',
                                                         color: 'white',
-                                                        backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
+                                                        backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : item.itemType === 'JAIN' ? '#F59E0B' : item.itemType === 'VEGAN' ? '#059669' : '#10B981'
                                                     }}>
-                                                        {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                                                        {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                                     </span>
                                                 </h3>
                                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>By {item.sellerName} • {item.sellerCity}</p>

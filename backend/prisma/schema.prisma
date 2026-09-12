@@ -129,6 +129,7 @@ model FoodItem {
   openTime          String?
   operationalHours  String?
   itemType          String           @default("VEG")
+  variants          String?          @default("[]")
   foodCategoryId    String?
   foodSubCategoryId String?
   category          Category?        @relation(fields: [categoryId], references: [id])

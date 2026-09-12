@@ -61,7 +61,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
     const [loading, setLoading] = useState(true);
     const [seller, setSeller] = useState<any | null>(null);
     const [error, setError] = useState<boolean>(false);
-    const [foodFilter, setFoodFilter] = useState<"ALL" | "VEG" | "NON_VEG">("ALL");
+    const [foodFilter, setFoodFilter] = useState<"ALL" | "VEG" | "NON_VEG" | "JAIN" | "VEGAN">("ALL");
     const [activeTab, setActiveTab] = useState<"menu" | "reviews">("menu");
 
     const isDeliverable = (item: any) => {
@@ -225,9 +225,15 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '2px solid #EAEAEA', paddingBottom: '10px', flexWrap: 'wrap', gap: '15px' }}>
                             <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>Menu</h2>
                             {seller.foodItems && seller.foodItems.length > 0 && (
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    {(["ALL", "VEG", "NON_VEG"] as const).map((filter) => {
-                                        const label = filter === "ALL" ? "All" : filter === "VEG" ? "Veg 🌱" : "Non-Veg 🍖";
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {(["ALL", "VEG", "NON_VEG", "JAIN", "VEGAN"] as const).map((filter) => {
+                                        let label = "All";
+                                        let activeBg = "#10B981";
+                                        if (filter === "VEG") { label = "Veg 🌱"; activeBg = "#10B981"; }
+                                        else if (filter === "NON_VEG") { label = "Non-Veg 🍖"; activeBg = "#EF4444"; }
+                                        else if (filter === "JAIN") { label = "Jain 🙏"; activeBg = "#F59E0B"; }
+                                        else if (filter === "VEGAN") { label = "Vegan 🌿"; activeBg = "#059669"; }
+
                                         const isActive = foodFilter === filter;
                                         return (
                                             <button
@@ -237,13 +243,13 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                     padding: '8px 16px',
                                                     borderRadius: '20px',
                                                     border: isActive ? 'none' : '1px solid #D1D5DB',
-                                                    backgroundColor: isActive ? '#10B981' : 'white',
+                                                    backgroundColor: isActive ? activeBg : 'white',
                                                     color: isActive ? 'white' : 'var(--text-main)',
                                                     fontWeight: '600',
                                                     fontSize: '0.9rem',
                                                     cursor: 'pointer',
                                                     transition: 'all 0.2s',
-                                                    boxShadow: isActive ? '0 4px 10px rgba(16, 185, 129, 0.25)' : 'none'
+                                                    boxShadow: isActive ? `0 4px 10px ${activeBg}35` : 'none'
                                                 }}
                                             >
                                                 {label}
@@ -260,13 +266,21 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 .filter((item: any) => {
                                     if (foodFilter === "VEG") return item.itemType === "VEG";
                                     if (foodFilter === "NON_VEG") return item.itemType === "NON_VEG";
+                                    if (foodFilter === "JAIN") return item.itemType === "JAIN";
+                                    if (foodFilter === "VEGAN") return item.itemType === "VEGAN";
                                     return true;
                                 });
 
                             if (filteredFoodItems.length === 0) {
+                                let emptyMsg = "No items available at the moment.";
+                                if (foodFilter === "VEG") emptyMsg = "No Veg items available.";
+                                else if (foodFilter === "NON_VEG") emptyMsg = "No Non-Veg items available.";
+                                else if (foodFilter === "JAIN") emptyMsg = "No Jain items available.";
+                                else if (foodFilter === "VEGAN") emptyMsg = "No Vegan items available.";
+
                                 return (
                                     <p style={{ color: 'var(--text-muted)', marginBottom: '40px' }}>
-                                        {foodFilter === "ALL" ? "No items available at the moment." : `No ${foodFilter === "VEG" ? "Veg" : "Non-Veg"} items available.`}
+                                        {emptyMsg}
                                     </p>
                                 );
                             }
@@ -287,87 +301,156 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 }
                             });
 
-                            const renderItemCard = (item: any) => (
-                                <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ height: '200px', backgroundColor: '#EEE' }}>
-                                        <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    </div>
-                                    <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {item.name}
-                                                    <span style={{
-                                                        display: 'inline-block',
-                                                        padding: '2px 6px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '0.7rem',
-                                                        fontWeight: 'bold',
-                                                        color: 'white',
-                                                        backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : '#10B981'
-                                                    }}>
-                                                        {item.itemType === 'NON_VEG' ? 'Non-Veg' : 'Veg'}
+                            const renderDietaryBadge = (itemType: string) => {
+                                switch (itemType) {
+                                    case 'NON_VEG':
+                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#EF4444' }}>Non-Veg</span>;
+                                    case 'JAIN':
+                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#F59E0B' }}>Jain 🙏</span>;
+                                    case 'VEGAN':
+                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#059669' }}>Vegan 🌿</span>;
+                                    case 'VEG':
+                                    default:
+                                        return <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#10B981' }}>Veg</span>;
+                                }
+                            };
+
+                            const FoodItemCard = ({ item }: { item: any }) => {
+                                let variants: Array<{ id: string; name: string; price: number }> = [];
+                                if (item.variants) {
+                                    try {
+                                        const parsed = typeof item.variants === "string" ? JSON.parse(item.variants) : item.variants;
+                                        if (Array.isArray(parsed) && parsed.length > 0) {
+                                            variants = parsed.map((v: any, idx: number) => ({
+                                                id: String(v.id || idx + 1),
+                                                name: String(v.name || ""),
+                                                price: Number(v.price) || Number(item.price) || 0
+                                            }));
+                                        }
+                                    } catch {}
+                                }
+
+                                const [selectedVariantId, setSelectedVariantId] = useState<string>(variants[0]?.id || "");
+                                const activeVariant = variants.find(v => v.id === selectedVariantId) || null;
+                                const currentPrice = activeVariant ? activeVariant.price : item.price;
+                                const currentItemName = activeVariant ? `${item.name} (${activeVariant.name})` : item.name;
+                                const cartItemId = activeVariant ? `${item.id}-${activeVariant.id}` : item.id;
+
+                                const cartPayload = {
+                                    id: cartItemId,
+                                    foodItemId: item.id,
+                                    name: currentItemName,
+                                    variantName: activeVariant?.name,
+                                    price: currentPrice,
+                                    stockQuantity: item.stockQuantity,
+                                    sellerId: seller.id,
+                                    sellerName: seller.businessName || seller.user.name,
+                                    imageUrl: item.imageUrl
+                                };
+
+                                return (
+                                    <div style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ height: '200px', backgroundColor: '#EEE', position: 'relative' }}>
+                                            <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </div>
+                                        <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
+                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {item.name}
+                                                        {renderDietaryBadge(item.itemType)}
                                                     </span>
-                                                </span>
-                                                
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-                                                    {/* Item Rating Badge */}
-                                                    {item.averageRating > 0 && (
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', width: 'fit-content' }}>
-                                                            <Star size={12} fill="#D97706" color="#D97706" />
-                                                            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#D97706' }}>
-                                                                {item.averageRating} ({item.totalRatings})
+                                                    
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                                        {item.averageRating > 0 && (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', width: 'fit-content' }}>
+                                                                <Star size={12} fill="#D97706" color="#D97706" />
+                                                                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#D97706' }}>
+                                                                    {item.averageRating} ({item.totalRatings})
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {item.foodSubCategory && (
+                                                            <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                {item.foodSubCategory.imageUrl ? (
+                                                                    <img
+                                                                        src={item.foodSubCategory.imageUrl}
+                                                                        alt={item.foodSubCategory.name}
+                                                                        style={{ width: "14px", height: "14px", borderRadius: "3px", objectFit: "cover" }}
+                                                                    />
+                                                                ) : "🏷️"}
+                                                                {item.foodSubCategory.name}
                                                             </span>
-                                                        </div>
-                                                    )}
-                                                    {/* Sub-Category Badge */}
-                                                    {item.foodSubCategory && (
-                                                        <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            {item.foodSubCategory.imageUrl ? (
-                                                                <img
-                                                                    src={item.foodSubCategory.imageUrl}
-                                                                    alt={item.foodSubCategory.name}
-                                                                    style={{ width: "14px", height: "14px", borderRadius: "3px", objectFit: "cover" }}
-                                                                />
-                                                            ) : "🏷️"}
-                                                            {item.foodSubCategory.name}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </h3>
-                                            <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{item.price}</span>
-                                        </div>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
-                                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                            {item.stockQuantity === 0 ? (
-                                                <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                            ) : item.stockQuantity > 0 ? (
-                                                <span>Only {item.stockQuantity} left!</span>
-                                            ) : (
-                                                <span style={{ color: '#10B981' }}>In Stock</span>
-                                            )}
-                                        </div>
-
-                                        {userAddress && !isDeliverable(item) && (
-                                            <div style={{
-                                                backgroundColor: '#FEF2F2',
-                                                color: '#EF4444',
-                                                padding: '6px 10px',
-                                                borderRadius: '6px',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 'bold',
-                                                marginBottom: '15px',
-                                                border: '1px solid #FEE2E2',
-                                                textAlign: 'center'
-                                            }}>
-                                                Out of delivery range for {userAddress.pincode}
+                                                        )}
+                                                    </div>
+                                                </h3>
+                                                <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.15rem' }}>₹{currentPrice}</span>
                                             </div>
-                                        )}
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
 
-                                        <AddToCartButton item={{ ...item, sellerId: seller.id, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline || item.stockQuantity === 0 || !!(userAddress && !isDeliverable(item))} />
+                                            {/* Variants Selector */}
+                                            {variants.length > 0 && (
+                                                <div style={{ marginBottom: '12px' }}>
+                                                    <div style={{ fontSize: '0.78rem', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>Select Variant:</div>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                        {variants.map((v) => {
+                                                            const isChosen = v.id === selectedVariantId;
+                                                            return (
+                                                                <button
+                                                                    key={v.id}
+                                                                    type="button"
+                                                                    onClick={() => setSelectedVariantId(v.id)}
+                                                                    style={{
+                                                                        padding: '4px 10px',
+                                                                        borderRadius: '6px',
+                                                                        fontSize: '0.8rem',
+                                                                        fontWeight: isChosen ? '700' : '500',
+                                                                        border: isChosen ? '1.5px solid #EA580C' : '1px solid #E2E8F0',
+                                                                        backgroundColor: isChosen ? '#FFF7ED' : '#F8FAFC',
+                                                                        color: isChosen ? '#EA580C' : '#334155',
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.15s ease'
+                                                                    }}
+                                                                >
+                                                                    {v.name} (₹{v.price})
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                                {item.stockQuantity === 0 ? (
+                                                    <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
+                                                ) : item.stockQuantity > 0 ? (
+                                                    <span>Only {item.stockQuantity} left!</span>
+                                                ) : (
+                                                    <span style={{ color: '#10B981' }}>In Stock</span>
+                                                )}
+                                            </div>
+
+                                            {userAddress && !isDeliverable(item) && (
+                                                <div style={{
+                                                    backgroundColor: '#FEF2F2',
+                                                    color: '#EF4444',
+                                                    padding: '6px 10px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 'bold',
+                                                    marginBottom: '15px',
+                                                    border: '1px solid #FEE2E2',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    Out of delivery range for {userAddress.pincode}
+                                                </div>
+                                            )}
+
+                                            <AddToCartButton item={cartPayload} disabled={!seller.isOnline || item.stockQuantity === 0 || !!(userAddress && !isDeliverable(item))} />
+                                        </div>
                                     </div>
-                                </div>
-                            );
+                                );
+                            };
 
                             return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', marginBottom: '50px' }}>
@@ -386,7 +469,9 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                     {categoryName}
                                                 </h3>
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
-                                                    {items.map(renderItemCard)}
+                                                    {items.map((it) => (
+                                                        <FoodItemCard key={it.id} item={it} />
+                                                    ))}
                                                 </div>
                                             </div>
                                         );
@@ -397,7 +482,9 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                 General Menu
                                             </h3>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
-                                                {uncategorizedItems.map(renderItemCard)}
+                                                {uncategorizedItems.map((it) => (
+                                                    <FoodItemCard key={it.id} item={it} />
+                                                ))}
                                             </div>
                                         </div>
                                     )}

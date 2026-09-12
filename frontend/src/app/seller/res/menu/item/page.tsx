@@ -42,9 +42,26 @@ function MenuItemContent() {
       formData.append("name", data.itemName);
       formData.append("price", data.price);
       formData.append("description", data.description || "");
-      formData.append("itemType", data.type === "Non-Veg" ? "NON_VEG" : "VEG");
+
+      let itemType = "VEG";
+      if (data.type === "Non-Veg") itemType = "NON_VEG";
+      else if (data.type === "Jain") itemType = "JAIN";
+      else if (data.type === "Vegan") itemType = "VEGAN";
+      formData.append("itemType", itemType);
+
       formData.append("stockQuantity", String(data.stockQty || 24));
       formData.append("isAvailable", String(data.isInStock));
+
+      if (data.variants && Array.isArray(data.variants)) {
+        const validVariants = data.variants
+          .filter((v: any) => v.name && v.name.trim().length > 0)
+          .map((v: any) => ({
+            id: v.id,
+            name: v.name.trim(),
+            price: Number(v.price) || Number(data.price) || 0
+          }));
+        formData.append("variants", JSON.stringify(validVariants));
+      }
 
       let foodCatId = categories[0]?.id || "";
       if (data.category && categories.length > 0) {
@@ -89,16 +106,36 @@ function MenuItemContent() {
     }
   };
 
+  let parsedVariants: any[] = [];
+  if (initialData?.variants) {
+    try {
+      const p = typeof initialData.variants === "string" ? JSON.parse(initialData.variants) : initialData.variants;
+      if (Array.isArray(p)) {
+        parsedVariants = p.map((v: any, idx: number) => ({
+          id: v.id || String(idx + 1),
+          name: v.name || "",
+          price: String(v.price ?? "")
+        }));
+      }
+    } catch {}
+  }
+
+  let mappedType = "Veg";
+  if (initialData?.itemType === "NON_VEG") mappedType = "Non-Veg";
+  else if (initialData?.itemType === "JAIN") mappedType = "Jain";
+  else if (initialData?.itemType === "VEGAN") mappedType = "Vegan";
+
   return (
     <ResponsiveMenuItems
       key={initialData ? initialData.id : "new-item"}
       initialItemName={initialData?.name}
       initialPrice={initialData ? String(initialData.price) : undefined}
       initialCategory={initialData?.foodCategory?.name}
-      initialType={initialData?.itemType === "NON_VEG" ? "Non-Veg" : "Veg"}
+      initialType={mappedType}
       initialDescription={initialData?.description}
       initialStockQty={initialData?.stockQuantity}
       initialIsInStock={initialData?.isAvailable}
+      initialVariants={parsedVariants}
       initialImageUrl={initialData?.imageUrl}
       onSave={handleSave}
     />

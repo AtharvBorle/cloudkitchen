@@ -54,19 +54,14 @@ const DEFAULT_SCHEDULES: ResponsiveDaySchedule[] = [
   { day: "Sunday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
 ];
 
-const DEFAULT_VARIANTS: ResponsiveVariantItem[] = [
-  { id: "1", name: "Extra Cheese", price: "40" },
-  { id: "2", name: "Paneer with Corn", price: "60" },
-  { id: "3", name: "Extra Pizza Slice", price: "80" },
-  { id: "4", name: "Mushroom Topping", price: "50" },
-];
+const DEFAULT_VARIANTS: ResponsiveVariantItem[] = [];
 
 export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
-  initialItemName = "Butter Chicken",
-  initialPrice = "450",
+  initialItemName = "",
+  initialPrice = "",
   initialCategory = "Mains",
   initialType = "Veg",
-  initialDescription = "Rich and creamy tomato-based curry with succulent chicken tandoori pieces cooked in butter and aromatic spices.",
+  initialDescription = "",
   initialStockQty = "24",
   initialIsInStock = true,
   initialVariants = DEFAULT_VARIANTS,
@@ -318,7 +313,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
               >
                 <option value="Veg">Veg</option>
                 <option value="Non-Veg">Non-Veg</option>
-                <option value="Egg">Egg</option>
+                <option value="Jain">Jain</option>
                 <option value="Vegan">Vegan</option>
               </select>
               <ChevronDown size={18} className={styles.selectArrow} />
