@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -15,10 +15,22 @@ import {
   Search,
   SlidersHorizontal,
   Check,
+  LogIn,
+  LogOut,
+  Settings,
+  Package,
+  Calendar,
+  MapPin,
+  Store,
+  Bike,
+  HelpCircle,
+  Shield,
+  Sparkles,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
@@ -201,7 +213,33 @@ export const Navbar: React.FC<NavbarProps> = ({
     currentActiveItem === "Settings"
   );
 
-  const shouldHideSearch = hideSearch !== undefined ? hideSearch : isSettingsPage;
+  const [isProfileHoverOpen, setIsProfileHoverOpen] = useState<boolean>(false);
+  const profileTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleProfileMouseEnter = () => {
+    if (profileTimeoutRef.current) {
+      clearTimeout(profileTimeoutRef.current);
+      profileTimeoutRef.current = null;
+    }
+    setIsProfileHoverOpen(true);
+  };
+
+  const handleProfileMouseLeave = () => {
+    profileTimeoutRef.current = setTimeout(() => {
+      setIsProfileHoverOpen(false);
+    }, 180);
+  };
+
+  const closeProfileMenu = () => {
+    if (profileTimeoutRef.current) {
+      clearTimeout(profileTimeoutRef.current);
+      profileTimeoutRef.current = null;
+    }
+    setIsProfileHoverOpen(false);
+  };
+
+  const isHomePage = pathname === "/";
+  const shouldHideSearch = hideSearch !== undefined ? hideSearch : (isHomePage || isSettingsPage);
   const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : isSettingsPage;
 
   const handleNavClick = (item: string) => {
@@ -244,8 +282,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         router.push("/settings-desktop");
       }
     } else {
-      router.push("/settings-desktop");
+      router.push("/login");
     }
+    closeProfileMenu();
   };
 
   const handleLocationClick = () => {
@@ -734,42 +773,234 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Profile Avatar (Desktop Only) */}
-            <button
-              type="button"
-              className={styles.profileAvatar}
-              onClick={handleProfileClick}
-              aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
-              title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
+            {/* Profile Avatar with Hover Dropdown (Desktop Only) */}
+            <div
+              className={styles.profileWrapper}
+              onMouseEnter={handleProfileMouseEnter}
+              onMouseLeave={handleProfileMouseLeave}
             >
-              {session?.user?.name ? (
+              <button
+                type="button"
+                className={styles.profileAvatar}
+                onClick={handleProfileClick}
+                aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
+                title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
+                aria-expanded={isProfileHoverOpen}
+              >
+                {session?.user?.name ? (
+                  <div className={styles.avatarInitial}>
+                    {session.user.name.trim().charAt(0).toUpperCase()}
+                  </div>
+                ) : (
+                  <Image
+                    src={profilePic}
+                    alt="Sign In"
+                    width={38}
+                    height={38}
+                    style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                  />
+                )}
+              </button>
+
+              {/* Profile Hover Dropdown Popover */}
+              {isProfileHoverOpen && (
                 <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: "50%",
-                    backgroundColor: "#FF5500",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 700,
-                    fontSize: "15px",
-                    userSelect: "none",
-                  }}
+                  className={styles.profileDropdown}
+                  role="menu"
+                  aria-orientation="vertical"
+                  onMouseEnter={handleProfileMouseEnter}
+                  onMouseLeave={handleProfileMouseLeave}
                 >
-                  {session.user.name.trim().charAt(0).toUpperCase()}
+                  {!session?.user ? (
+                    // ================= GUEST / UNAUTHENTICATED STATE =================
+                    <div className={styles.profileGuestCard}>
+                      <div className={styles.profileGuestHeader}>
+                        <div className={styles.profileGreeting}>
+                          <span className={styles.profileWelcomeTitle}>Welcome</span>
+                          <span className={styles.profileWelcomeSub}>To access orders & account</span>
+                        </div>
+                      </div>
+
+                      {/* Primary Login CTA */}
+                      <Link
+                        href="/login"
+                        className={styles.profileLoginBtn}
+                        onClick={closeProfileMenu}
+                        role="menuitem"
+                      >
+                        <LogIn size={16} strokeWidth={2.4} />
+                        <span>Login</span>
+                      </Link>
+
+                      <div className={styles.profileSignupPrompt}>
+                        <span>New customer?</span>{" "}
+                        <Link
+                          href="/signup"
+                          className={styles.profileSignupLink}
+                          onClick={closeProfileMenu}
+                        >
+                          Sign Up
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDivider} />
+
+                      {/* Quick Nav Links */}
+                      <div className={styles.profileNavList}>
+                        <Link
+                          href="/orders-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Package size={16} className={styles.profileNavIcon} />
+                          <span>Orders & Reorders</span>
+                        </Link>
+
+                        <Link
+                          href="/seller/login"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Store size={16} className={styles.profileNavIcon} />
+                          <span>Seller / Partner Login</span>
+                        </Link>
+
+                        <Link
+                          href="/auth/login/delivery"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Bike size={16} className={styles.profileNavIcon} />
+                          <span>Delivery Partner</span>
+                        </Link>
+
+                        <Link
+                          href="/support"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <HelpCircle size={16} className={styles.profileNavIcon} />
+                          <span>Help & Support</span>
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    // ================= AUTHENTICATED USER STATE =================
+                    <div className={styles.profileAuthCard}>
+                      <div className={styles.profileUserHeader}>
+                        <div className={styles.profileUserAvatarCircle}>
+                          {session.user.name?.trim().charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <div className={styles.profileUserDetails}>
+                          <span className={styles.profileUserName}>{session.user.name || "User"}</span>
+                          <span className={styles.profileUserEmail}>
+                            {session.user.email || "Active Account"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDivider} />
+
+                      {/* Auth Nav Links */}
+                      <div className={styles.profileNavList}>
+                        <Link
+                          href="/settings-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Settings size={16} className={styles.profileNavIcon} />
+                          <span>My Profile & Settings</span>
+                        </Link>
+
+                        <Link
+                          href="/orders-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Package size={16} className={styles.profileNavIcon} />
+                          <span>My Orders</span>
+                        </Link>
+
+                        <Link
+                          href="/my-subscription"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Calendar size={16} className={styles.profileNavIcon} />
+                          <span>My Subscriptions</span>
+                        </Link>
+
+                        <Link
+                          href="/delivery-addresses-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <MapPin size={16} className={styles.profileNavIcon} />
+                          <span>Delivery Addresses</span>
+                        </Link>
+
+                        {(session.user as any)?.role === "SELLER" && (
+                          <Link
+                            href="/dashboard/seller"
+                            className={styles.profileNavItem}
+                            onClick={closeProfileMenu}
+                            role="menuitem"
+                          >
+                            <Store size={16} className={styles.profileNavIcon} />
+                            <span>Seller Dashboard</span>
+                          </Link>
+                        )}
+
+                        {((session.user as any)?.role === "ADMIN" || (session.user as any)?.role === "SUPERADMIN") && (
+                          <Link
+                            href="/dashboard/admin"
+                            className={styles.profileNavItem}
+                            onClick={closeProfileMenu}
+                            role="menuitem"
+                          >
+                            <Shield size={16} className={styles.profileNavIcon} />
+                            <span>Admin Console</span>
+                          </Link>
+                        )}
+
+                        <Link
+                          href="/support"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <HelpCircle size={16} className={styles.profileNavIcon} />
+                          <span>Help & Support</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDivider} />
+
+                      <button
+                        type="button"
+                        className={styles.profileLogoutBtn}
+                        onClick={() => {
+                          closeProfileMenu();
+                          performLogout({ role: (session.user as any)?.role });
+                        }}
+                        role="menuitem"
+                      >
+                        <LogOut size={16} strokeWidth={2.2} />
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <Image
-                  src={profilePic}
-                  alt="Sign In"
-                  width={38}
-                  height={38}
-                  style={{ objectFit: "cover", width: "100%", height: "100%" }}
-                />
               )}
-            </button>
+            </div>
           </div>
         </div>
 

@@ -243,6 +243,7 @@ export default function Home() {
 
       {/* 0. Top Navbar */}
       <Navbar
+        hideSearch={true}
         selectedDiet={
           activeFilters.dietary === "non_veg"
             ? "non-veg"
