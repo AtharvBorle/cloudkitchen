@@ -346,11 +346,9 @@ function CheckoutContent() {
         if (isClient && session?.user?.role === "USER") {
             fetchUserProfile();
         } else if (isClient && status === "unauthenticated") {
-            setPhone("");
-            setAddresses([]);
-            setAddressId("");
+            router.push(`/login?callbackUrl=${encodeURIComponent("/dashboard/user/checkout")}`);
         }
-    }, [isClient, defaultAddress, session, status]);
+    }, [isClient, defaultAddress, session, status, router]);
 
     // Fetch Seller data when items or room are confirmed
     useEffect(() => {

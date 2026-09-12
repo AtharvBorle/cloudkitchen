@@ -14,6 +14,7 @@ import {
   Minus,
   ShoppingBag,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
 import styles from "./UserCart.module.css";
@@ -197,11 +198,14 @@ export const UserCart: React.FC<UserCartProps> = ({
   const taxesAndCharges = subtotal > 0 ? 38 : 0;
   const grandTotal = Math.max(0, subtotal - discountAmount + deliveryFee + taxesAndCharges);
 
+  const { data: session, status } = useSession();
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   const handleCheckoutClick = () => {
     if (onProceedToCheckout) {
       onProceedToCheckout();
+    } else if (status === "unauthenticated") {
+      router.push(`/login?callbackUrl=${encodeURIComponent("/checkout")}`);
     } else {
       router.push("/checkout");
     }

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   MapPin,
   User,
@@ -42,45 +43,64 @@ export interface SecureCheckoutProps {
   onPlaceOrder?: () => void;
 }
 
-const DEFAULT_SUMMARY_ITEMS: CheckoutSummaryItem[] = [
-  {
-    id: "item-1",
-    name: "Gourmet Brick-Oven Margherita Pizza",
-    variant: "Medium | Fresh Basil & Extra Mozzarella",
-    qty: 1,
-    price: 449,
-    image: "/images/places/place-pizza.png",
-  },
-  {
-    id: "item-2",
-    name: "Avocado & Quinoa Power Bowl",
-    variant: "Organic | Tahini Lime Dressing",
-    qty: 2,
-    price: 598,
-    image: "/images/auth/salad-bowl.jpg",
-  },
-];
-
 export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
-  defaultLocation = "Kothrud, Pune",
-  initialName = "Rahul Sharma",
-  initialPhone = "+91 98765 43210",
-  initialAddress = "Flat 402, Golden Crest Apartments, Kothrud",
-  initialCity = "Pune",
-  initialPincode = "411038",
-  items = DEFAULT_SUMMARY_ITEMS,
+  defaultLocation = "Powai, Mumbai",
+  initialName = "",
+  initialPhone = "",
+  initialAddress = "",
+  initialCity = "",
+  initialPincode = "",
+  items = [],
   onPlaceOrder,
 }) => {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { cartItems, cartTotal, clearCart } = useCart();
 
+  // Authentication redirect guard
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push(`/login?callbackUrl=${encodeURIComponent("/checkout")}`);
+    }
+  }, [status, router]);
+
   // Form States
-  const [fullName, setFullName] = useState<string>(initialName);
+  const [fullName, setFullName] = useState<string>(initialName || session?.user?.name || "");
   const [phoneNumber, setPhoneNumber] = useState<string>(initialPhone);
   const [streetAddress, setStreetAddress] = useState<string>(initialAddress);
   const [city, setCity] = useState<string>(initialCity);
   const [postalCode, setPostalCode] = useState<string>(initialPincode);
   const [deliveryInstructions, setDeliveryInstructions] = useState<string>("");
+
+  useEffect(() => {
+    if (session?.user) {
+      if (!fullName && session.user.name) setFullName(session.user.name);
+    }
+  }, [session, fullName]);
+
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const res = await fetchApi("/api/user/profile");
+        if (res.ok) {
+          const json = await res.json();
+          const user = json.data?.user || json.user || json.data || json;
+          if (user) {
+            if (user.name) setFullName((prev) => prev || user.name);
+            if (user.phone) setPhoneNumber((prev) => prev || user.phone);
+            if (user.city) setCity((prev) => prev || user.city);
+            if (user.pincode) setPostalCode((prev) => prev || user.pincode);
+          }
+        }
+      } catch (e) {
+        // Silently continue
+      }
+    }
+
+    if (status === "authenticated") {
+      loadUserProfile();
+    }
+  }, [status]);
 
   // Payment Method Selection ('UPI' | 'COD')
   const [paymentMethod, setPaymentMethod] = useState<"UPI" | "COD">("UPI");

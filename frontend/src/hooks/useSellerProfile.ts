@@ -42,12 +42,12 @@ export function computeInitials(name?: string): string {
 }
 
 export function useSellerProfile() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const sessionName = session?.user?.name || "";
   const sessionEmail = session?.user?.email || "";
 
   const [profileState, setProfileState] = useState<SellerProfileData>(() => {
-    const name = cachedProfile?.ownerName || sessionName || "Kitchen Owner";
+    const name = cachedProfile?.ownerName || sessionName || "";
     return {
       ownerName: name,
       businessName: cachedProfile?.businessName || name,
@@ -65,6 +65,41 @@ export function useSellerProfile() {
       profile: cachedProfile?.profile || null,
     };
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pathname = window.location.pathname;
+    const isPublicSellerPath =
+      pathname === "/seller/login" ||
+      pathname === "/seller/res/login" ||
+      pathname === "/auth/login/seller" ||
+      pathname.startsWith("/seller/registration") ||
+      pathname.startsWith("/seller/account-information") ||
+      pathname.startsWith("/seller/business-information") ||
+      pathname.startsWith("/seller/confirm-information") ||
+      pathname.startsWith("/seller/confirm-registration") ||
+      pathname.startsWith("/seller/legal-documents") ||
+      pathname.startsWith("/seller/legal-information") ||
+      pathname.startsWith("/seller/media-gallery") ||
+      pathname.startsWith("/seller/media-information") ||
+      pathname.startsWith("/seller/verification") ||
+      pathname.startsWith("/seller/faq") ||
+      pathname.startsWith("/seller/res/faq") ||
+      pathname.startsWith("/seller/tc") ||
+      pathname.startsWith("/seller/res/tc");
+
+    const isSellerRoute =
+      pathname === "/seller" ||
+      pathname.startsWith("/seller/") ||
+      pathname === "/dashboard/seller" ||
+      pathname.startsWith("/dashboard/seller/");
+
+    if (isSellerRoute && !isPublicSellerPath && status === "unauthenticated") {
+      const callbackUrl = encodeURIComponent(pathname + window.location.search);
+      window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
+    }
+  }, [status]);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -93,7 +128,7 @@ export function useSellerProfile() {
           const user = json.data?.user || json.user;
           const profile = json.data?.profile || json.profile;
 
-          const rawOwnerName = profile?.businessName || user?.name || sessionName || "Kitchen Owner";
+          const rawOwnerName = profile?.businessName || user?.name || sessionName || "";
           const rawBusinessName = profile?.businessName || user?.name || "Cloud Kitchen";
           const rawFullName = user?.name || sessionName || rawOwnerName;
           const rawEmail = user?.email || sessionEmail || "";
@@ -143,6 +178,22 @@ export function useSellerProfile() {
               user,
               profile,
             });
+          }
+        } else if (res.status === 401) {
+          if (typeof window !== "undefined") {
+            const pathname = window.location.pathname;
+            const isPublicSellerPath =
+              pathname === "/seller/login" ||
+              pathname === "/seller/res/login" ||
+              pathname === "/auth/login/seller" ||
+              pathname.startsWith("/seller/registration") ||
+              pathname.startsWith("/seller/faq") ||
+              pathname.startsWith("/seller/tc");
+
+            if (!isPublicSellerPath && (pathname.startsWith("/seller") || pathname.startsWith("/dashboard/seller"))) {
+              const callbackUrl = encodeURIComponent(pathname + window.location.search);
+              window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
+            }
           }
         }
       } catch (e) {
