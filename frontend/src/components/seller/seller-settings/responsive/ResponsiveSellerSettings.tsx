@@ -194,9 +194,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({
     ...INITIAL_SETTINGS,
-    restaurantName: seller.businessName || INITIAL_SETTINGS.restaurantName,
-    primaryPhone: seller.phone || INITIAL_SETTINGS.primaryPhone,
-    orderEmail: seller.email || INITIAL_SETTINGS.orderEmail,
+    businessName: seller.businessName || INITIAL_SETTINGS.businessName,
+    phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
+    businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
     address: seller.address || INITIAL_SETTINGS.address,
     ...initialData,
   });
@@ -205,10 +205,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     if (seller.businessName || seller.phone || seller.email || seller.address) {
       setFormData((prev) => ({
         ...prev,
-        restaurantName: prev.restaurantName === "Neo Cloud Bites Hub" && seller.businessName ? seller.businessName : prev.restaurantName,
-        primaryPhone: prev.primaryPhone === "+91 98765 43210" && seller.phone ? seller.phone : prev.primaryPhone,
-        orderEmail: prev.orderEmail === "orders@neocloudbites.com" && seller.email ? seller.email : prev.orderEmail,
-        address: prev.address.includes("Indiranagar") && seller.address ? seller.address : prev.address,
+        businessName: prev.businessName === "Neo Cloud Kitchen & Rooms" && seller.businessName ? seller.businessName : prev.businessName,
+        phoneNumber: prev.phoneNumber === "+91 98765 43210" && seller.phone ? seller.phone : prev.phoneNumber,
+        businessEmail: prev.businessEmail === "hello@neocloudbite.com" && seller.email ? seller.email : prev.businessEmail,
+        address: prev.address.includes("Innovation Way") && seller.address ? seller.address : prev.address,
       }));
     }
   }, [seller.businessName, seller.phone, seller.email, seller.address]);

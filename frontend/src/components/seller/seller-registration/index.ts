@@ -1,4 +1,4 @@
-export * from "./seller-login--responsive";
+
 export * from "./account-information";
 export * from "./business-information";
 export * from "./legal-documents";

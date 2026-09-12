@@ -1,6 +1,5 @@
 export {
   default as SellerSecuritySettings,
-  SellerSecuritySettings,
   PasswordManagementCard,
   ActiveLoginSessionsCard,
   DEFAULT_LOGIN_SESSIONS,

@@ -9,9 +9,11 @@ import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./OrderDefault.module.css";
 
 export interface OrderItemRow {
+  id?: string;
   name: string;
   qty: number;
   price: string;
+  total?: string;
 }
 
 export interface OrderDetailsData {
@@ -19,15 +21,22 @@ export interface OrderDetailsData {
   placedTime: string;
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
   customerName: string;
-  customerPhone: string;
-  deliveryAddress: string;
+  customerPhone?: string;
+  contactNumber?: string;
+  deliveryAddress?: string;
+  roomAssigned?: string;
   items: OrderItemRow[];
   subtotal: string;
-  deliveryFee: string;
-  taxes: string;
-  total: string;
+  deliveryFee?: string;
+  serviceFee?: string;
+  taxes?: string;
+  total?: string;
+  grandTotal?: string;
   paymentMethod: string;
 }
+
+export type OrderDetailData = OrderDetailsData;
+export type OrderItemDetail = OrderItemRow;
 
 const DEFAULT_ORDER_DATA: OrderDetailsData = {
   orderId: "#NCR-8291",
@@ -35,16 +44,20 @@ const DEFAULT_ORDER_DATA: OrderDetailsData = {
   status: "Preparing",
   customerName: "Rahul Sharma",
   customerPhone: "+91 98765 43210",
+  contactNumber: "+91 98765 43210",
   deliveryAddress: "Room 204, Tower B, Neo Cloud Suites, Bangalore",
+  roomAssigned: "Room 204",
   items: [
-    { name: "Paneer Butter Masala", qty: 2, price: "₹440" },
-    { name: "Butter Roti", qty: 4, price: "₹120" },
-    { name: "Sweet Lassi", qty: 2, price: "₹120" },
+    { id: "item-1", name: "Paneer Butter Masala", qty: 2, price: "₹440", total: "₹440" },
+    { id: "item-2", name: "Butter Roti", qty: 4, price: "₹120", total: "₹120" },
+    { id: "item-3", name: "Sweet Lassi", qty: 2, price: "₹120", total: "₹120" },
   ],
   subtotal: "₹680",
   deliveryFee: "₹0",
+  serviceFee: "Free",
   taxes: "₹34",
   total: "₹714",
+  grandTotal: "₹714",
   paymentMethod: "UPI (Prepaid)",
 };
 

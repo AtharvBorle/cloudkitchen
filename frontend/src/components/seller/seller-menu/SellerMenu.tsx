@@ -430,10 +430,11 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                         </div>
                       </td>
                     </tr>
-                  )))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
           </div>
         </main>
       </div>
