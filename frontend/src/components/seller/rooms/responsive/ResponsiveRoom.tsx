@@ -75,7 +75,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
     if (onSelectRoom) {
       onSelectRoom(room);
     } else {
-      router.push("/seller/rooms/config");
+      router.push(`/seller/rooms/config?id=${encodeURIComponent(room.id)}`);
     }
   };
 

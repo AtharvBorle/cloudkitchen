@@ -6,7 +6,10 @@ import ResponsiveRoom, {
 } from "@/components/seller/rooms/responsive/ResponsiveRoom";
 import { fetchApi } from "@/lib/fetch-api";
 
+import { useRouter } from "next/navigation";
+
 export default function ResponsiveRoomsPage() {
+  const router = useRouter();
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,6 +80,8 @@ export default function ResponsiveRoomsPage() {
   return (
     <ResponsiveRoom
       rooms={mappedRooms}
+      onSelectRoom={(room) => router.push(`/seller/rooms/config?id=${encodeURIComponent(room.id)}`)}
+      onAddRoom={() => router.push("/seller/rooms/add")}
       onToggleAvailability={handleToggleAvailability}
     />
   );
