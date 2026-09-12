@@ -1,57 +1,51 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import ResponsiveSellerSubscription from "@/components/seller/subscription/responsive/ResponsiveSellerSubscription";
-import { fetchApi } from "@/lib/fetch-api";
-
+import ResponsiveSellerSubscription, { ResponsiveSubscriptionPlan } from "@/components/seller/subscription/responsive/ResponsiveSellerSubscription";
+import { getStoredMealPlans } from "@/lib/meal-subscriptions";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export default function ResponsiveSellerSubscriptionPage() {
   const seller = useSellerProfile();
-  const [plans, setPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<ResponsiveSubscriptionPlan[]>([]);
+
+  const refreshPlans = () => {
+    const stored = getStoredMealPlans();
+    const mapped: ResponsiveSubscriptionPlan[] = stored.map((p) => {
+      const tierLower = (p.tier || "").toLowerCase();
+      const tierVariant = tierLower === "gold" ? "purple" : tierLower === "silver" ? "blue" : "orange";
+      return {
+        id: p.id,
+        title: p.name,
+        tier: p.tier,
+        tierVariant,
+        price: p.weeklyPrice || p.monthlyPrice,
+        subscribersCount: p.subscribersCount || 0,
+        status: p.status === "Live" ? "Active" : p.status === "Paused" ? "Paused" : "Draft",
+        createdAt: p.deployedDate,
+        billingCycle: p.duration?.toLowerCase().includes("month") ? "Monthly" : "Weekly",
+        mealsPerDay: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.length : 1,
+        mealTypes: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.map((m) => m.split(":")[0].trim()) : ["Lunch"],
+        description: p.features && p.features.length > 0 ? p.features.join(". ") : "Fresh chef-prepared daily meal subscription.",
+      };
+    });
+    setPlans(mapped);
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const plansRes = await fetchApi("/api/seller/subscription/plans");
-
-        if (plansRes.ok) {
-          const plansData = await plansRes.json();
-          const plansList = plansData.data || plansData;
-          if (Array.isArray(plansList) && plansList.length > 0) {
-            const mapped = plansList.map((p: any, idx: number) => {
-              const tiers = ["Starter", "Professional", "Enterprise"] as const;
-              const variants = ["orange", "purple", "indigo", "blue"] as const;
-              return {
-                id: p.id,
-                title: p.name || "Subscription Plan",
-                tier: tiers[idx % 3],
-                tierVariant: variants[idx % 4],
-                price: `₹${p.price || 998}`,
-                subscribersCount: (idx + 1) * 28 + 12,
-                status: "Active" as const,
-                createdAt: "Active 2024",
-                billingCycle: p.durationMonths === 1 ? ("Monthly" as const) : ("Quarterly" as const),
-                mealsPerDay: 2,
-                mealTypes: ["Lunch", "Dinner"],
-                description: Array.isArray(p.features) ? p.features.join(". ") : "Full access to platform perks.",
-              };
-            });
-            setPlans(mapped);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load subscription plans:", err);
-      }
-    }
-    loadData();
+    refreshPlans();
+    window.addEventListener("meal-plans-updated", refreshPlans);
+    return () => {
+      window.removeEventListener("meal-plans-updated", refreshPlans);
+    };
   }, []);
 
   return (
     <ResponsiveSellerSubscription
       ownerName={seller.ownerName}
-      plans={plans.length > 0 ? plans : undefined}
+      plans={plans}
     />
   );
 }
+
 

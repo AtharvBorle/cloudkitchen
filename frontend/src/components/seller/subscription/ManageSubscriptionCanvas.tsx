@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -17,170 +17,55 @@ import {
   AlertCircle,
   Sparkles,
 } from "lucide-react";
+import {
+  getStoredMealPlans,
+  getStoredMealSubscribers,
+  updateMealPlan,
+  MealSubscriptionPlan,
+  MealSubscriber,
+} from "@/lib/meal-subscriptions";
 
-export interface PlanItem {
-  id: string;
-  planId: string;
-  name: string;
-  tier: string;
-  tierColor: string;
-  tierBg: string;
-  monthlyPrice: string;
-  quarterlyPrice: string;
-  yearlyPrice: string;
-  features: string[];
-  mealTimings: string[];
-  subscribersCount: number;
-  monthlyRevenue: string;
-  status: "Live" | "Draft" | "Paused";
-  deployedDate: string;
-}
-
-const SAMPLE_PLANS: PlanItem[] = [
-  {
-    id: "1",
-    planId: "PLN-7831",
-    name: "Bronze Starter Plan",
-    tier: "BRONZE TIER",
-    tierColor: "#B45309",
-    tierBg: "#FEF3C7",
-    monthlyPrice: "₹699.00",
-    quarterlyPrice: "₹1,999.00",
-    yearlyPrice: "₹7,200.00",
-    features: [
-      "5 Meals per week (Monday to Friday Lunch)",
-      "Homestyle Dal Tadka + Seasonal Sabzi",
-      "3 Phulkas + Steamed Rice",
-      "Fresh Curd & Green Salad",
-    ],
-    mealTimings: ["Lunch: 12:30 PM – 1:45 PM"],
-    subscribersCount: 52,
-    monthlyRevenue: "₹36.3K",
-    status: "Live",
-    deployedDate: "Jan 15, 2024",
-  },
-  {
-    id: "2",
-    planId: "PLN-7832",
-    name: "Silver Balanced Plan",
-    tier: "SILVER TIER",
-    tierColor: "#475569",
-    tierBg: "#F1F5F9",
-    monthlyPrice: "₹999.00",
-    quarterlyPrice: "₹2,699.00",
-    yearlyPrice: "₹9,599.00",
-    features: [
-      "7 Meals per week (Daily Lunch or Dinner)",
-      "1 Dal (Seasonal) + 1 Sabzi (Dry / Gravy)",
-      "4 Fresh Chapatis + Jeera Rice",
-      "Salad, Pickle & Roasted Papad",
-    ],
-    mealTimings: ["Lunch: 12:30 PM – 2:00 PM", "Dinner: 8:00 PM – 9:30 PM"],
-    subscribersCount: 342,
-    monthlyRevenue: "₹3.41 Lakhs",
-    status: "Live",
-    deployedDate: "Feb 10, 2024",
-  },
-  {
-    id: "3",
-    planId: "PLN-7833",
-    name: "Gold Deluxe Executive Plan",
-    tier: "GOLD TIER",
-    tierColor: "#A16207",
-    tierBg: "#FEF9C3",
-    monthlyPrice: "₹1,799.00",
-    quarterlyPrice: "₹4,999.00",
-    yearlyPrice: "₹18,500.00",
-    features: [
-      "14 Meals per week (Both Lunch & Dinner)",
-      "2 Premium Curries (Paneer / Chicken option)",
-      "Choice of Butter Naan / Tandoori Roti",
-      "Dessert (Gulab Jamun / Kheer) + Buttermilk",
-      "Complimentary Express Room Delivery",
-    ],
-    mealTimings: ["Lunch: 12:00 PM – 2:30 PM", "Dinner: 7:30 PM – 10:00 PM"],
-    subscribersCount: 128,
-    monthlyRevenue: "₹2.30 Lakhs",
-    status: "Live",
-    deployedDate: "Mar 01, 2024",
-  },
-];
-
-interface RecentSubscriber {
-  id: string;
-  name: string;
-  roomNo: string;
-  planName: string;
-  startDate: string;
-  renewalDate: string;
-  amount: string;
-  status: "Active" | "Expiring Soon" | "Paused";
-}
-
-const SAMPLE_SUBSCRIBERS: RecentSubscriber[] = [
-  {
-    id: "sub-1",
-    name: "Aman Verma",
-    roomNo: "Room 402",
-    planName: "Silver Balanced Plan",
-    startDate: "Aug 01, 2024",
-    renewalDate: "Sep 01, 2024",
-    amount: "₹999",
-    status: "Active",
-  },
-  {
-    id: "sub-2",
-    name: "Sneha Kapoor",
-    roomNo: "Room 214",
-    planName: "Gold Deluxe Executive Plan",
-    startDate: "Jul 15, 2024",
-    renewalDate: "Aug 15, 2024",
-    amount: "₹1,799",
-    status: "Expiring Soon",
-  },
-  {
-    id: "sub-3",
-    name: "Rahul Mehra",
-    roomNo: "Room 309",
-    planName: "Bronze Starter Plan",
-    startDate: "Jun 10, 2024",
-    renewalDate: "Aug 10, 2024",
-    amount: "₹699",
-    status: "Paused",
-  },
-  {
-    id: "sub-4",
-    name: "Priya Nair",
-    roomNo: "Room 105",
-    planName: "Silver Balanced Plan",
-    startDate: "Jul 28, 2024",
-    renewalDate: "Aug 28, 2024",
-    amount: "₹999",
-    status: "Active",
-  },
-];
+export type PlanItem = MealSubscriptionPlan;
+export type RecentSubscriber = MealSubscriber;
 
 export default function ManageSubscriptionCanvas() {
-  const [plans, setPlans] = useState<PlanItem[]>(SAMPLE_PLANS);
+  const [plans, setPlans] = useState<PlanItem[]>([]);
+  const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "active" | "draft">("all");
 
+  const refreshData = () => {
+    setPlans(getStoredMealPlans());
+    setSubscribers(getStoredMealSubscribers());
+  };
+
+  useEffect(() => {
+    refreshData();
+    window.addEventListener("meal-plans-updated", refreshData);
+    return () => {
+      window.removeEventListener("meal-plans-updated", refreshData);
+    };
+  }, []);
+
   const togglePlanStatus = (id: string) => {
-    setPlans((prev) =>
-      prev.map((plan) => {
-        if (plan.id === id) {
-          const nextStatus = plan.status === "Live" ? "Paused" : "Live";
-          return { ...plan, status: nextStatus };
-        }
-        return plan;
-      })
-    );
+    const target = plans.find((p) => p.id === id || p.planId === id);
+    if (target) {
+      const nextStatus = target.status === "Live" ? "Paused" : "Live";
+      updateMealPlan(target.id, { status: nextStatus });
+      refreshData();
+    }
   };
 
   const filteredPlans = plans.filter((plan) => {
     if (activeTab === "active") return plan.status === "Live";
-    if (activeTab === "draft") return plan.status === "Draft";
+    if (activeTab === "draft") return plan.status === "Draft" || plan.status === "Paused";
     return true;
   });
+
+  const activePlansCount = plans.filter((p) => p.status === "Live").length;
+  const totalSubscribers = subscribers.filter((s) => s.status === "Active").length + plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0);
+  const totalMonthlyRevNum = subscribers.reduce((sum, s) => sum + (parseFloat(s.amount.replace(/[^\d.]/g, "")) || 0), 0) +
+    plans.reduce((sum, p) => sum + (parseFloat(p.monthlyPrice.replace(/[^\d.]/g, "")) || 0) * (p.subscribersCount || 0), 0);
+  const totalMonthlyRev = totalMonthlyRevNum > 0 ? `₹${totalMonthlyRevNum.toLocaleString("en-IN")}` : "₹0";
 
   return (
     <div
@@ -325,10 +210,10 @@ export default function ManageSubscriptionCanvas() {
               <Users size={18} strokeWidth={2.4} />
             </div>
           </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>522</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{totalSubscribers}</div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#16A34A", fontWeight: 700 }}>+12.4%</span>
-            <span style={{ color: "#94A3B8" }}>vs last month</span>
+            <span style={{ color: "#16A34A", fontWeight: 700 }}>Active</span>
+            <span style={{ color: "#94A3B8" }}>resident meal packages</span>
           </div>
         </div>
 
@@ -364,10 +249,10 @@ export default function ManageSubscriptionCanvas() {
               <TrendingUp size={18} strokeWidth={2.4} />
             </div>
           </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>₹5.42 Lakhs</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{totalMonthlyRev}</div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#16A34A", fontWeight: 700 }}>+8.7%</span>
-            <span style={{ color: "#94A3B8" }}>consistent growth</span>
+            <span style={{ color: "#16A34A", fontWeight: 700 }}>Live</span>
+            <span style={{ color: "#94A3B8" }}>recurring billing</span>
           </div>
         </div>
 
@@ -403,10 +288,10 @@ export default function ManageSubscriptionCanvas() {
               <Sparkles size={18} strokeWidth={2.4} />
             </div>
           </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>3 Live Tiers</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{activePlansCount} Live</div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#8B5CF6", fontWeight: 700 }}>100% Online</span>
-            <span style={{ color: "#94A3B8" }}>in room catalogue</span>
+            <span style={{ color: "#8B5CF6", fontWeight: 700 }}>Available</span>
+            <span style={{ color: "#94A3B8" }}>for kitchen subscriptions</span>
           </div>
         </div>
 
@@ -442,10 +327,10 @@ export default function ManageSubscriptionCanvas() {
               <CheckCircle2 size={18} strokeWidth={2.4} />
             </div>
           </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>98.6%</div>
+          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>100%</div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#0284C7", fontWeight: 700 }}>Top Rated</span>
-            <span style={{ color: "#94A3B8" }}>on-time delivery</span>
+            <span style={{ color: "#0284C7", fontWeight: 700 }}>On-Time</span>
+            <span style={{ color: "#94A3B8" }}>daily meal delivery</span>
           </div>
         </div>
       </div>
@@ -530,17 +415,75 @@ export default function ManageSubscriptionCanvas() {
       </div>
 
       {/* 4. Active Subscription Plan Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: "24px",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-        className="plans-grid"
-      >
-        {filteredPlans.map((plan) => (
+      {filteredPlans.length === 0 ? (
+        <div
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: "14px",
+            border: "1.5px dashed #CBD5E1",
+            padding: "48px 24px",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "14px",
+              backgroundColor: "#FFF1E8",
+              color: "#FF5500",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <CreditCard size={28} />
+          </div>
+          <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
+            No subscription plans found
+          </h3>
+          <p style={{ fontSize: "13.5px", color: "#64748B", margin: 0, maxWidth: "440px" }}>
+            Create custom Bronze, Silver, or Gold meal packages (breakfast, lunch, or dinner) to start offering subscription dining.
+          </p>
+          <Link
+            href="/seller/subscription/add"
+            style={{
+              marginTop: "8px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              backgroundColor: "#FF5500",
+              color: "#FFFFFF",
+              padding: "10px 20px",
+              borderRadius: "8px",
+              fontSize: "13.5px",
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            <Plus size={16} strokeWidth={2.8} />
+            <span>Create First Plan</span>
+          </Link>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: "24px",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+          className="plans-grid"
+        >
+          {filteredPlans.map((plan) => (
           <div
             key={plan.id}
             style={{
@@ -814,6 +757,7 @@ export default function ManageSubscriptionCanvas() {
           </div>
         ))}
       </div>
+      )}
 
       {/* 5. Recent Active Subscribers Ledger Card */}
       <div
@@ -895,53 +839,69 @@ export default function ManageSubscriptionCanvas() {
               </tr>
             </thead>
             <tbody>
-              {SAMPLE_SUBSCRIBERS.map((sub) => (
-                <tr
-                  key={sub.id}
-                  style={{
-                    borderBottom: "1px solid #F1F5F9",
-                    transition: "background-color 0.15s ease",
-                  }}
-                  className="sub-row"
-                >
-                  <td style={{ padding: "14px 16px", fontWeight: 600, color: "#0F172A" }}>
-                    {sub.name}
-                  </td>
-                  <td style={{ padding: "14px 16px", color: "#475569" }}>{sub.roomNo}</td>
-                  <td style={{ padding: "14px 16px", color: "#334155", fontWeight: 500 }}>
-                    {sub.planName}
-                  </td>
-                  <td style={{ padding: "14px 16px", color: "#64748B" }}>{sub.startDate}</td>
-                  <td style={{ padding: "14px 16px", color: "#64748B" }}>{sub.renewalDate}</td>
-                  <td style={{ padding: "14px 16px", fontWeight: 700, color: "#0F172A" }}>
-                    {sub.amount}
-                  </td>
-                  <td style={{ padding: "14px 16px" }}>
-                    <span
-                      style={{
-                        padding: "3px 8px",
-                        borderRadius: "5px",
-                        fontSize: "11.5px",
-                        fontWeight: 700,
-                        backgroundColor:
-                          sub.status === "Active"
-                            ? "#DCFCE7"
-                            : sub.status === "Expiring Soon"
-                            ? "#FEF3C7"
-                            : "#F1F5F9",
-                        color:
-                          sub.status === "Active"
-                            ? "#15803D"
-                            : sub.status === "Expiring Soon"
-                            ? "#B45309"
-                            : "#64748B",
-                      }}
-                    >
-                      {sub.status}
-                    </span>
+              {subscribers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    style={{
+                      textAlign: "center",
+                      padding: "40px 16px",
+                      color: "#64748B",
+                      fontSize: "13.5px",
+                    }}
+                  >
+                    No active subscribers yet. Once residents subscribe to your meal plans, their assignments will appear here.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                subscribers.map((sub) => (
+                  <tr
+                    key={sub.id}
+                    style={{
+                      borderBottom: "1px solid #F1F5F9",
+                      transition: "background-color 0.15s ease",
+                    }}
+                    className="sub-row"
+                  >
+                    <td style={{ padding: "14px 16px", fontWeight: 600, color: "#0F172A" }}>
+                      {sub.name}
+                    </td>
+                    <td style={{ padding: "14px 16px", color: "#475569" }}>{sub.roomNo}</td>
+                    <td style={{ padding: "14px 16px", color: "#334155", fontWeight: 500 }}>
+                      {sub.planName}
+                    </td>
+                    <td style={{ padding: "14px 16px", color: "#64748B" }}>{sub.startDate}</td>
+                    <td style={{ padding: "14px 16px", color: "#64748B" }}>{sub.renewalDate}</td>
+                    <td style={{ padding: "14px 16px", fontWeight: 700, color: "#0F172A" }}>
+                      {sub.amount}
+                    </td>
+                    <td style={{ padding: "14px 16px" }}>
+                      <span
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: "5px",
+                          fontSize: "11.5px",
+                          fontWeight: 700,
+                          backgroundColor:
+                            sub.status === "Active"
+                              ? "#DCFCE7"
+                              : sub.status === "Expiring Soon"
+                              ? "#FEF3C7"
+                              : "#F1F5F9",
+                          color:
+                            sub.status === "Active"
+                              ? "#15803D"
+                              : sub.status === "Expiring Soon"
+                              ? "#B45309"
+                              : "#64748B",
+                        }}
+                      >
+                        {sub.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

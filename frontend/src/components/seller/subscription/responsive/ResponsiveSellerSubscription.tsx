@@ -17,6 +17,7 @@ import {
   Bell,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./ResponsiveSellerSubscription.module.css";
 
 
@@ -38,60 +39,6 @@ export interface ResponsiveSubscriptionPlan {
   description?: string;
   mealTypes?: string[];
 }
-
-export interface ResponsiveSellerSubscriptionProps {
-  ownerName?: string;
-  plans?: ResponsiveSubscriptionPlan[];
-  onCreatePlan?: () => void;
-  onEditPlan?: (plan: ResponsiveSubscriptionPlan) => void;
-  onPreviewPlan?: (plan: ResponsiveSubscriptionPlan) => void;
-  onBack?: () => void;
-  onSyncDevices?: () => void;
-}
-
-const DEFAULT_PLANS: ResponsiveSubscriptionPlan[] = [
-  {
-    id: "1",
-    title: "Bronze Weekly Lunch Plan",
-    tier: "Bronze",
-    price: "₹999",
-    subscribersCount: 142,
-    status: "Active",
-    createdAt: "Jun 15, 2024",
-    billingCycle: "Weekly",
-    mealsPerDay: 1,
-    mealTypes: ["Lunch"],
-    description: "Includes Lunch (Mon-Fri) with fresh home-cooked dal, seasonal sabzi & rotis.",
-  },
-  {
-    id: "2",
-    title: "Silver Balanced Meal Plan",
-    tier: "Silver",
-    price: "₹1,799",
-    subscribersCount: 88,
-    status: "Active",
-    createdAt: "Feb 3, 2024",
-    billingCycle: "Monthly",
-    mealsPerDay: 2,
-    mealTypes: ["Lunch", "Dinner"],
-    description: "Complete daily lunch and dinner with rotating regional specialties.",
-  },
-  {
-    id: "3",
-    title: "Gold Gourmet Executive",
-    tier: "Gold",
-    price: "₹2,699",
-    subscribersCount: 34,
-    status: "Active",
-    createdAt: "Mar 10, 2024",
-    billingCycle: "Monthly",
-    mealsPerDay: 3,
-    mealTypes: ["Breakfast", "Lunch", "Dinner"],
-    description: "Premium all-meal plan including weekend feasts, sweet treats & express delivery.",
-  },
-];
-
-import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface ResponsiveSellerSubscriptionProps {
   ownerName?: string;
@@ -134,7 +81,6 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     }
   };
 
-
   const handleCreatePlan = () => {
     if (onCreatePlan) {
       onCreatePlan();
@@ -143,16 +89,14 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     }
   };
 
-
   const handleEditPlan = (plan: ResponsiveSubscriptionPlan, e: React.MouseEvent) => {
     e.stopPropagation();
     if (onEditPlan) {
       onEditPlan(plan);
     } else {
-      router.push("/seller/subscription/editPlan");
+      router.push(`/seller/subscription/editPlan?id=${plan.id}`);
     }
   };
-
 
   const handlePreviewPlan = (plan: ResponsiveSubscriptionPlan, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -504,8 +448,9 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                 type="button"
                 className={styles.modalActionBtn}
                 onClick={() => {
+                  const targetId = selectedPlanPreview.id;
                   setSelectedPlanPreview(null);
-                  router.push("/seller/subscription/editPlan");
+                  router.push(`/seller/subscription/editPlan?id=${targetId}`);
                 }}
               >
                 Edit Full Configuration

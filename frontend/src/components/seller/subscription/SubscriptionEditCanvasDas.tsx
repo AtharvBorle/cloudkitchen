@@ -83,7 +83,9 @@ export default function SubscriptionEditCanvasDas({
 
         {/* SubscriptionEditCanvas Main Body */}
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <SubscriptionEditCanvas {...canvasProps} />
+          <React.Suspense fallback={<div style={{ padding: "40px", color: "#64748B" }}>Loading plan configuration...</div>}>
+            <SubscriptionEditCanvas {...canvasProps} />
+          </React.Suspense>
         </div>
       </div>
     </div>

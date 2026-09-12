@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, Trash2, Edit2, Plus, ChevronLeft } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, Trash2, Edit2, Plus, ChevronLeft, CheckCircle2 } from "lucide-react";
+import {
+  getStoredMealPlans,
+  updateMealPlan,
+  deleteMealPlan,
+  MealSubscriptionPlan,
+} from "@/lib/meal-subscriptions";
 
 
 export interface PlanFeatureItem {
@@ -99,12 +106,59 @@ export default function SubscriptionEditCanvas({
   onAddFeature,
   onAddTiming,
 }: SubscriptionEditCanvasProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const planIdParam = searchParams.get("id");
+
+  const [targetPlanId, setTargetPlanId] = useState<string | null>(planIdParam);
   const [formData, setFormData] = useState<SubscriptionPlanData>({
     ...DEFAULT_DATA,
     ...initialData,
     metrics: { ...DEFAULT_DATA.metrics, ...initialData?.metrics },
     metadata: { ...DEFAULT_DATA.metadata, ...initialData?.metadata },
   });
+
+  useEffect(() => {
+    const plans = getStoredMealPlans();
+    const found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
+    if (found) {
+      setTargetPlanId(found.id);
+      setFormData({
+        planName: found.name,
+        planTier: found.tier,
+        monthlyPrice: found.monthlyPrice,
+        quarterlyPrice: found.quarterlyPrice,
+        yearlyPrice: found.yearlyPrice,
+        includedFeatures: (found.features || []).map((feat, idx) => ({
+          id: `feat-${idx}`,
+          label: feat,
+          checked: true,
+        })),
+        customFeature: "",
+        planDuration: found.duration,
+        mealTimings: (found.mealTimings || []).map((t, idx) => {
+          const [mealName, timing] = t.includes(":") ? t.split(/:\s*(.+)/) : ["Meal", t];
+          return {
+            id: `time-${idx}`,
+            mealName: mealName || "Meal",
+            timing: timing || t,
+          };
+        }),
+        allowCancelSubscription: found.allowCancel ?? true,
+        allowPauseBilling: found.pauseBillingPeriod !== "None",
+        metrics: {
+          subscribers: found.subscribersCount,
+          monthlyRevenue: found.monthlyRevenue,
+        },
+        metadata: {
+          planId: found.planId,
+          deployedDate: found.deployedDate,
+          taxCode: "GST 18% Extra",
+          tierBadgeText: `${found.tier.toUpperCase()} TIER`,
+        },
+      });
+    }
+  }, [planIdParam]);
 
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -145,7 +199,7 @@ export default function SubscriptionEditCanvas({
     const newFeature: PlanFeatureItem = {
       id: newId,
       label: "New Weekly Plan Item",
-      checked: false,
+      checked: true,
     };
     setFormData((prev) => ({
       ...prev,
@@ -178,34 +232,51 @@ export default function SubscriptionEditCanvas({
   };
 
   const handleSave = () => {
+    if (targetPlanId) {
+      updateMealPlan(targetPlanId, {
+        name: formData.planName,
+        tier: formData.planTier,
+        monthlyPrice: formData.monthlyPrice,
+        quarterlyPrice: formData.quarterlyPrice,
+        yearlyPrice: formData.yearlyPrice,
+        duration: formData.planDuration,
+        features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
+        mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
+        allowCancel: formData.allowCancelSubscription,
+        pauseBillingPeriod: formData.allowPauseBilling ? "Monthly" : "None",
+      });
+    }
+
     if (onSave) {
       onSave(formData);
     }
-    setSaveStatus("Saved successfully!");
-    setTimeout(() => setSaveStatus(null), 3000);
+    setSaveStatus("Plan modifications saved successfully!");
+    setTimeout(() => {
+      setSaveStatus(null);
+      router.push("/seller/subscription");
+    }, 900);
   };
 
   const handleDiscard = () => {
     if (onDiscard) {
       onDiscard();
     } else {
-      setFormData({
-        ...DEFAULT_DATA,
-        ...initialData,
-      });
-      setSaveStatus("Modifications discarded");
-      setTimeout(() => setSaveStatus(null), 2500);
+      router.push("/seller/subscription");
     }
   };
 
   const handleArchive = () => {
+    if (targetPlanId) {
+      deleteMealPlan(targetPlanId);
+    }
     if (onArchive) {
       onArchive();
     } else {
-      if (window.confirm("Are you sure you want to archive this plan tier?")) {
-        setSaveStatus("Plan archived");
-        setTimeout(() => setSaveStatus(null), 2500);
-      }
+      setSaveStatus("Plan archived successfully");
+      setTimeout(() => {
+        setSaveStatus(null);
+        router.push("/seller/subscription");
+      }, 900);
     }
   };
 
