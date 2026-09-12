@@ -1,17 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import ResponsiveSellerOrders, {
   ResponsiveOrderItem,
 } from "@/components/seller/seller-orders/responsive/ResponsiveSellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
 
 export default function ResponsiveSellerOrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async (isPolling = false) => {
     try {
+      if (!isPolling) setLoading(true);
       const res = await fetchApi("/api/seller/orders");
       if (res.ok) {
         const data = await res.json();
@@ -23,13 +26,17 @@ export default function ResponsiveSellerOrdersPage() {
     } catch (err) {
       console.error("Failed to load seller orders:", err);
     } finally {
-      setLoading(false);
+      if (!isPolling) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    loadOrders(false);
+    const interval = setInterval(() => {
+      loadOrders(true);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [loadOrders]);
 
   const handleAcceptOrder = async (orderId: string) => {
     try {
@@ -38,20 +45,21 @@ export default function ResponsiveSellerOrdersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "PREPARING" }),
       });
-      loadOrders();
+      loadOrders(true);
     } catch (err) {
       console.error("Failed to accept order:", err);
     }
   };
 
   const handleRejectOrder = async (orderId: string) => {
+    if (!confirm("Are you sure you want to reject / cancel this order?")) return;
     try {
       await fetchApi(`/api/seller/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "CANCELLED" }),
       });
-      loadOrders();
+      loadOrders(true);
     } catch (err) {
       console.error("Failed to reject order:", err);
     }
@@ -105,7 +113,11 @@ export default function ResponsiveSellerOrdersPage() {
       orders={mappedOrders}
       onAccept={handleAcceptOrder}
       onReject={handleRejectOrder}
+      onOrderClick={(order) => {
+        router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}`);
+      }}
     />
   );
 }
+
 

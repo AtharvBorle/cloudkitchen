@@ -10,80 +10,127 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import styles from "./OrderHistoryPage.module.css";
 
+import { useRouter } from "next/navigation";
+
 export default function OrderHistoryDesktopPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<OrderFilterTab>("all");
-  const [liveOrders, setLiveOrders] = useState<OrderItemData[] | null>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<string>("All Time");
+  const [liveOrders, setLiveOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadOrders() {
+    async function loadOrders(initial = false) {
+      if (initial) setLoading(true);
       try {
         const res = await fetchApi("/api/user/orders");
         if (res.ok) {
           const data = await res.json();
           const list = data.data || data || [];
-          if (Array.isArray(list) && list.length > 0 && isMounted) {
-            const mapped: OrderItemData[] = list.map((o: any) => {
-              let itemsDesc = "";
-              try {
-                const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
-                if (Array.isArray(parsed)) {
-                  itemsDesc = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
-                }
-              } catch (e) {
-                itemsDesc = "Order Items";
-              }
-
-              const dateStr = o.createdAt
-                ? new Date(o.createdAt).toLocaleDateString("en-IN", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : "Recent";
-
-              let statusVal: "DELIVERED" | "CANCELLED" | "IN_PROGRESS" = "IN_PROGRESS";
-              const s = (o.status || "").toUpperCase();
-              if (s === "DELIVERED") statusVal = "DELIVERED";
-              else if (s === "CANCELLED") statusVal = "CANCELLED";
-
-              return {
-                id: o.id,
-                restaurantName: o.seller?.businessName || "Neo Cloud Kitchen",
-                orderNumber: `Order #${o.id.slice(0, 8).toUpperCase()}`,
-                orderDate: dateStr,
-                status: statusVal,
-                itemsOrdered: itemsDesc || "Delicious Meals",
-                totalAmount: o.totalAmount || 0,
-                deliveryAddress: o.deliveryAddress ? `Delivered to ${o.deliveryAddress}` : "Pickup",
-                hasViewDetails: true,
-              };
-            });
-            setLiveOrders(mapped);
+          if (Array.isArray(list) && isMounted) {
+            setLiveOrders(list);
           }
         }
       } catch (err) {
         console.error("Failed to load live orders for history:", err);
+      } finally {
+        if (initial && isMounted) setLoading(false);
       }
     }
 
-    loadOrders();
+    loadOrders(true);
+
+    const interval = setInterval(() => {
+      loadOrders(false);
+    }, 4000);
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 
-  const ordersToFilter = liveOrders && liveOrders.length > 0 ? liveOrders : SAMPLE_ORDERS;
+  const formattedOrders: (OrderItemData & { rawDate?: Date })[] = useMemo(() => {
+    return liveOrders.map((o: any) => {
+      let itemsDesc = "";
+      try {
+        const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+        if (Array.isArray(parsed)) {
+          itemsDesc = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+        }
+      } catch (e) {
+        itemsDesc = "Order Items";
+      }
+
+      const rawDate = o.createdAt ? new Date(o.createdAt) : new Date();
+      const dateStr = rawDate.toLocaleDateString("en-IN", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      let statusVal: "DELIVERED" | "CANCELLED" | "IN_PROGRESS" = "IN_PROGRESS";
+      const s = (o.status || "").toUpperCase();
+      if (s === "DELIVERED") statusVal = "DELIVERED";
+      else if (s === "CANCELLED") statusVal = "CANCELLED";
+
+      return {
+        id: o.id,
+        restaurantName: o.seller?.businessName || "Neo Cloud Kitchen",
+        orderNumber: `Order #${o.id.slice(0, 8).toUpperCase()}`,
+        orderDate: dateStr,
+        rawDate,
+        status: statusVal,
+        itemsOrdered: itemsDesc || "Delicious Meals",
+        totalAmount: o.totalAmount || 0,
+        deliveryAddress: o.deliveryAddress ? `Delivered to ${o.deliveryAddress.split(" | Loc:")[0]}` : "Pickup",
+        hasViewDetails: true,
+      };
+    });
+  }, [liveOrders]);
 
   const filteredOrders = useMemo(() => {
-    return ordersToFilter.filter((order) => {
-      if (activeTab === "delivered") return order.status === "DELIVERED";
-      if (activeTab === "cancelled") return order.status === "CANCELLED";
+    const now = new Date();
+    return formattedOrders.filter((order) => {
+      // 1. Status Filter
+      if (activeTab === "delivered" && order.status !== "DELIVERED") return false;
+      if (activeTab === "cancelled" && order.status !== "CANCELLED") return false;
+
+      // 2. Date Range Filter
+      if (order.rawDate && selectedDateRange !== "All Time") {
+        const orderTime = order.rawDate.getTime();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+        if (selectedDateRange === "Today") {
+          if (orderTime < startOfDay) return false;
+        } else if (selectedDateRange === "Last 7 Days") {
+          const sevenDaysAgo = startOfDay - 7 * 24 * 60 * 60 * 1000;
+          if (orderTime < sevenDaysAgo) return false;
+        } else if (selectedDateRange === "Last 30 Days") {
+          const thirtyDaysAgo = startOfDay - 30 * 24 * 60 * 60 * 1000;
+          if (orderTime < thirtyDaysAgo) return false;
+        } else if (selectedDateRange === "Last 3 Months") {
+          const threeMonthsAgo = startOfDay - 90 * 24 * 60 * 60 * 1000;
+          if (orderTime < threeMonthsAgo) return false;
+        } else if (selectedDateRange === "This Year") {
+          const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+          if (orderTime < startOfYear) return false;
+        }
+      }
+
       return true;
     });
-  }, [ordersToFilter, activeTab]);
+  }, [formattedOrders, activeTab, selectedDateRange]);
+
+  const handleViewDetails = (orderId: string) => {
+    router.push(`/order-confirmation?orderId=${orderId}`);
+  };
+
+  const handleReorderMeal = (orderId: string) => {
+    router.push("/food");
+  };
 
   return (
     <div className={styles.pageWrapper}>
@@ -113,10 +160,22 @@ export default function OrderHistoryDesktopPage() {
             <OrderFilters
               activeTab={activeTab}
               onTabChange={(tab) => setActiveTab(tab)}
+              dateRangeText={selectedDateRange}
+              onDateRangeChange={(range) => setSelectedDateRange(range)}
             />
 
             {/* 4. Order List */}
-            <OrderList orders={filteredOrders} />
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#64748B" }}>
+                Loading your order history...
+              </div>
+            ) : (
+              <OrderList
+                orders={filteredOrders}
+                onViewDetails={handleViewDetails}
+                onReorderMeal={handleReorderMeal}
+              />
+            )}
           </div>
         </div>
       </main>

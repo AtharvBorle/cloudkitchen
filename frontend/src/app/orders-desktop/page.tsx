@@ -18,7 +18,8 @@ export default function OrdersDesktopPage() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadUserOrdersData() {
+    async function loadUserOrdersData(initial = false) {
+      if (initial) setLoading(true);
       try {
         const [ordersRes, bookingsRes] = await Promise.allSettled([
           fetchApi("/api/user/orders"),
@@ -39,14 +40,19 @@ export default function OrdersDesktopPage() {
       } catch (err) {
         console.error("Failed to load user orders/bookings:", err);
       } finally {
-        if (isMounted) setLoading(false);
+        if (initial && isMounted) setLoading(false);
       }
     }
 
-    loadUserOrdersData();
+    loadUserOrdersData(true);
+
+    const interval = setInterval(() => {
+      loadUserOrdersData(false);
+    }, 4000);
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 

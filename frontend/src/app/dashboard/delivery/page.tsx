@@ -1,7 +1,7 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect, useRef } from "react";
-import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet, Download } from "lucide-react";
+import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet, Download, Search, Filter, ArrowUpDown } from "lucide-react";
 import Script from "next/script";
 
 const loadRazorpayScript = (): Promise<boolean> => {
@@ -133,16 +133,20 @@ export default function DeliveryDashboard() {
     const [profile, setProfile] = useState<any>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loadingTx, setLoadingTx] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [activeStatusFilter, setActiveStatusFilter] = useState<'ALL' | 'PICKUP' | 'OUT_FOR_DELIVERY'>('ALL');
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'amount_high' | 'amount_low'>('newest');
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (showLoading = false) => {
+        if (showLoading) setLoading(true);
         try {
             const res = await fetchApi("/api/delivery/orders");
             const data = await res.json();
             if (res.ok) setOrders(data.orders || []);
         } catch (error) {
-            console.error("Failed to fetch orders");
+            console.error("Failed to fetch orders", error);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
@@ -152,7 +156,7 @@ export default function DeliveryDashboard() {
             const data = await res.json();
             if (res.ok) setProfile(data.profile);
         } catch (error) {
-            console.error("Failed to fetch profile");
+            console.error("Failed to fetch profile", error);
         }
     };
 
@@ -163,7 +167,7 @@ export default function DeliveryDashboard() {
             const data = await res.json();
             if (res.ok) setTransactions(data.transactions || []);
         } catch (error) {
-            console.error("Failed to fetch transactions");
+            console.error("Failed to fetch transactions", error);
         } finally {
             setLoadingTx(false);
         }
@@ -221,9 +225,17 @@ export default function DeliveryDashboard() {
         document.body.removeChild(link);
     };
 
+    // Initial load + Real-time auto-polling every 4 seconds
     useEffect(() => {
-        fetchOrders();
+        fetchOrders(true);
         fetchProfile();
+
+        const interval = setInterval(() => {
+            fetchOrders(false);
+            fetchProfile();
+        }, 4000);
+
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -317,17 +329,60 @@ export default function DeliveryDashboard() {
     };
 
     // Segregate orders
-    const activeOrders = orders.filter(o => o.status !== 'DELIVERED');
-    const historyOrders = orders.filter(o => o.status === 'DELIVERED');
+    const rawActiveOrders = orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED');
+    const rawHistoryOrders = orders.filter(o => o.status === 'DELIVERED' || o.status === 'CANCELLED');
+
+    // Filter & sort active orders
+    const activeOrders = rawActiveOrders
+        .filter((order) => {
+            if (activeStatusFilter === 'PICKUP' && order.status !== 'PENDING' && order.status !== 'PREPARING') return false;
+            if (activeStatusFilter === 'OUT_FOR_DELIVERY' && order.status !== 'OUT_FOR_DELIVERY') return false;
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase();
+                const matchId = order.id.toLowerCase().includes(q);
+                const matchPhone = (order.customerPhone || '').toLowerCase().includes(q);
+                const matchAddress = (order.deliveryAddress || '').toLowerCase().includes(q);
+                const matchUser = (order.user?.name || '').toLowerCase().includes(q);
+                if (!matchId && !matchPhone && !matchAddress && !matchUser) return false;
+            }
+            return true;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            if (sortBy === 'amount_high') return (b.totalAmount || 0) - (a.totalAmount || 0);
+            if (sortBy === 'amount_low') return (a.totalAmount || 0) - (b.totalAmount || 0);
+            return 0;
+        });
+
+    // Filter & sort history orders
+    const historyOrders = rawHistoryOrders
+        .filter((order) => {
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase();
+                const matchId = order.id.toLowerCase().includes(q);
+                const matchPhone = (order.customerPhone || '').toLowerCase().includes(q);
+                const matchAddress = (order.deliveryAddress || '').toLowerCase().includes(q);
+                const matchUser = (order.user?.name || '').toLowerCase().includes(q);
+                if (!matchId && !matchPhone && !matchAddress && !matchUser) return false;
+            }
+            return true;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (sortBy === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            if (sortBy === 'amount_high') return (b.totalAmount || 0) - (a.totalAmount || 0);
+            if (sortBy === 'amount_low') return (a.totalAmount || 0) - (b.totalAmount || 0);
+            return 0;
+        });
 
     // Group history by date
     const groupedHistory = historyOrders.reduce((acc: any, order: any) => {
-        const dateStr = new Date(order.updatedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        const dateStr = new Date(order.updatedAt || order.createdAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
         if (!acc[dateStr]) acc[dateStr] = [];
         acc[dateStr].push(order);
         return acc;
     }, {});
-
 
     return (
         <div>
@@ -335,6 +390,10 @@ export default function DeliveryDashboard() {
                 <div>
                     <h1 style={{ fontSize: '2.2rem', fontWeight: '900', color: '#1A1C23', marginBottom: '8px' }}>Delivery Hub</h1>
                     <p style={{ color: '#718096', fontSize: '1.1rem' }}>Manage your pickups and deliveries in real-time.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#ECFDF5', padding: '6px 14px', borderRadius: '20px', border: '1px solid #A7F3D0' }}>
+                    <span style={{ width: '8px', height: '8px', backgroundColor: '#10B981', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)' }} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#065F46' }}>Live Auto-Sync Active</span>
                 </div>
             </div>
 
@@ -379,18 +438,24 @@ export default function DeliveryDashboard() {
             )}
 
                 {/* Tabs */}
-                <div style={{ display: 'flex', backgroundColor: '#EDF2F7', padding: '4px', borderRadius: '12px', gap: '4px' }}>
+                <div style={{ display: 'flex', backgroundColor: '#EDF2F7', padding: '4px', borderRadius: '12px', gap: '4px', marginBottom: '16px' }}>
                     <button
                         onClick={() => setActiveTab('ACTIVE')}
-                        style={{ padding: '10px 20px', backgroundColor: activeTab === 'ACTIVE' ? 'white' : 'transparent', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: activeTab === 'ACTIVE' ? 'var(--primary)' : '#718096', boxShadow: activeTab === 'ACTIVE' ? '0 2px 10px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                        style={{ padding: '10px 20px', backgroundColor: activeTab === 'ACTIVE' ? 'white' : 'transparent', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: activeTab === 'ACTIVE' ? 'var(--primary)' : '#718096', boxShadow: activeTab === 'ACTIVE' ? '0 2px 10px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                         Active Orders
+                        <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: activeTab === 'ACTIVE' ? '#FFF7ED' : '#E2E8F0', color: activeTab === 'ACTIVE' ? '#C2410C' : '#64748B' }}>
+                            {rawActiveOrders.length}
+                        </span>
                     </button>
                     <button
                         onClick={() => setActiveTab('HISTORY')}
-                        style={{ padding: '10px 20px', backgroundColor: activeTab === 'HISTORY' ? 'white' : 'transparent', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: activeTab === 'HISTORY' ? 'var(--primary)' : '#718096', boxShadow: activeTab === 'HISTORY' ? '0 2px 10px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                        style={{ padding: '10px 20px', backgroundColor: activeTab === 'HISTORY' ? 'white' : 'transparent', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: activeTab === 'HISTORY' ? 'var(--primary)' : '#718096', boxShadow: activeTab === 'HISTORY' ? '0 2px 10px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                         History
+                        <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: activeTab === 'HISTORY' ? '#FFF7ED' : '#E2E8F0', color: activeTab === 'HISTORY' ? '#C2410C' : '#64748B' }}>
+                            {rawHistoryOrders.length}
+                        </span>
                     </button>
                     <button
                         onClick={() => setActiveTab('WALLET')}
@@ -399,6 +464,67 @@ export default function DeliveryDashboard() {
                         Wallet & Transactions
                     </button>
                 </div>
+
+                {/* Filter and Search Bar for Active & History tabs */}
+                {(activeTab === 'ACTIVE' || activeTab === 'HISTORY') && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', backgroundColor: 'white', padding: '14px 18px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                        {/* Search Input */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '220px', maxWidth: '400px', backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                            <Search size={16} color="#94A3B8" />
+                            <input
+                                type="text"
+                                placeholder="Search by Order ID, phone or address..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', fontSize: '0.9rem', color: '#1E293B' }}
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                                    <X size={14} color="#94A3B8" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Status Sub-filter (for ACTIVE tab) */}
+                        {activeTab === 'ACTIVE' && (
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <button
+                                    onClick={() => setActiveStatusFilter('ALL')}
+                                    style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', backgroundColor: activeStatusFilter === 'ALL' ? '#1E293B' : '#F1F5F9', color: activeStatusFilter === 'ALL' ? 'white' : '#64748B' }}
+                                >
+                                    All ({rawActiveOrders.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveStatusFilter('PICKUP')}
+                                    style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', backgroundColor: activeStatusFilter === 'PICKUP' ? '#D97706' : '#FEF3C7', color: activeStatusFilter === 'PICKUP' ? 'white' : '#92400E' }}
+                                >
+                                    Ready for Pickup ({rawActiveOrders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveStatusFilter('OUT_FOR_DELIVERY')}
+                                    style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', backgroundColor: activeStatusFilter === 'OUT_FOR_DELIVERY' ? '#059669' : '#D1FAE5', color: activeStatusFilter === 'OUT_FOR_DELIVERY' ? 'white' : '#065F46' }}
+                                >
+                                    Out for Delivery ({rawActiveOrders.filter(o => o.status === 'OUT_FOR_DELIVERY').length})
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Sort Dropdown */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <ArrowUpDown size={15} color="#64748B" />
+                            <select
+                                value={sortBy}
+                                onChange={(e: any) => setSortBy(e.target.value)}
+                                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', fontWeight: 600, color: '#334155', backgroundColor: 'white', cursor: 'pointer', outline: 'none' }}
+                            >
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="amount_high">Amount: High to Low</option>
+                                <option value="amount_low">Amount: Low to High</option>
+                            </select>
+                        </div>
+                    </div>
+                )}
 
 
             {/* Collect Cash Modal */}
@@ -436,8 +562,12 @@ export default function DeliveryDashboard() {
                 activeOrders.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '80px 20px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                         <Package size={60} color="#CBD5E0" style={{ marginBottom: '20px' }} />
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2D3748', marginBottom: '10px' }}>All caught up!</h3>
-                        <p style={{ color: '#718096' }}>No active orders assigned to you at the moment.</p>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2D3748', marginBottom: '10px' }}>
+                            {searchQuery || activeStatusFilter !== 'ALL' ? 'No matching orders found' : 'All caught up!'}
+                        </h3>
+                        <p style={{ color: '#718096' }}>
+                            {searchQuery || activeStatusFilter !== 'ALL' ? 'Try adjusting your search query or status filter.' : 'No active orders assigned to you at the moment.'}
+                        </p>
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
@@ -553,8 +683,12 @@ export default function DeliveryDashboard() {
                 Object.keys(groupedHistory).length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '80px 20px', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                         <Clock size={60} color="#CBD5E0" style={{ marginBottom: '20px' }} />
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2D3748', marginBottom: '10px' }}>No History Yet</h3>
-                        <p style={{ color: '#718096' }}>You haven't completed any deliveries.</p>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2D3748', marginBottom: '10px' }}>
+                            {searchQuery ? 'No matching history records' : 'No History Yet'}
+                        </h3>
+                        <p style={{ color: '#718096' }}>
+                            {searchQuery ? 'Try searching with a different order ID or phone number.' : "You haven't completed any deliveries yet."}
+                        </p>
                     </div>
                 ) : (
                     <div>

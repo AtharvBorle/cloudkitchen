@@ -175,132 +175,14 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
               );
             })
           ) : (
-            /* Fallback 2 Food Order Cards */
-            <>
-              {/* Food Order 1 */}
-              <article className={styles.orderCard}>
-                <div>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.titleWithAccent}>
-                      <div className={styles.orangeAccentBar} />
-                      <div className={styles.headerInfo}>
-                        <h3 className={styles.vendorName}>7/12 Kitchen</h3>
-                        <p className={styles.itemSummary}>1x Margherita Pizza, 1x Coke Zero</p>
-                        <p className={styles.orderDate}>Oct 1, 2024 , 02:34 pm</p>
-                      </div>
-                    </div>
-                    <span className={styles.statusPreparing}>Preparing</span>
-                  </div>
-
-                  <div className={styles.timelineContainer}>
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
-                        <Receipt size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabel}>Order Placed</span>
-                    </div>
-
-                    <div className={styles.dashedLineActive} />
-
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
-                        <CookingPot size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabelActive}>Preparing</span>
-                    </div>
-
-                    <div className={styles.dashedLineInactive} />
-
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
-                        <Bike size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabel}>On the way</span>
-                    </div>
-
-                    <div className={styles.dashedLineInactive} />
-
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
-                        <Package size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabel}>Delivered</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.cardFooter}>
-                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
-                    Need Help?
-                  </Link>
-                  <Link href="/order-confirmation?orderId=NCB-712849" className={styles.actionBtn} style={{ textDecoration: "none" }}>
-                    Track Order
-                  </Link>
-                </div>
-              </article>
-
-              {/* Food Order 2 */}
-              <article className={styles.orderCard}>
-                <div>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.titleWithAccent}>
-                      <div className={styles.orangeAccentBar} />
-                      <div className={styles.headerInfo}>
-                        <h3 className={styles.vendorName}>Spice Garden Bistro</h3>
-                        <p className={styles.itemSummary}>2x Butter Chicken Combo, 1x Garlic Naan</p>
-                        <p className={styles.orderDate}>Oct 1, 2024 , 02:50 pm</p>
-                      </div>
-                    </div>
-                    <span className={styles.statusPreparing}>On The Way</span>
-                  </div>
-
-                  <div className={styles.timelineContainer}>
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
-                        <Receipt size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabel}>Order Placed</span>
-                    </div>
-
-                    <div className={styles.dashedLineActive} />
-
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
-                        <CookingPot size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabel}>Preparing</span>
-                    </div>
-
-                    <div className={styles.dashedLineActive} />
-
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepActive}`}>
-                        <Bike size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabelActive}>On the way</span>
-                    </div>
-
-                    <div className={styles.dashedLineInactive} />
-
-                    <div className={styles.timelineStep}>
-                      <div className={`${styles.stepIconBox} ${styles.stepInactive}`}>
-                        <Package size={18} strokeWidth={2.2} />
-                      </div>
-                      <span className={styles.stepLabel}>Delivered</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.cardFooter}>
-                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
-                    Need Help?
-                  </Link>
-                  <Link href="/order-confirmation?orderId=NCB-902341" className={styles.actionBtn} style={{ textDecoration: "none" }}>
-                    Track Order
-                  </Link>
-                </div>
-              </article>
-            </>
+            <div style={{ textAlign: "center", padding: "48px 24px", gridColumn: "1 / -1", backgroundColor: "#fff", borderRadius: "16px", border: "1px dashed #E2E8F0" }}>
+              <Package size={48} color="#A0AEC0" style={{ marginBottom: "12px" }} />
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#2D3748", marginBottom: "6px" }}>No Active Food Orders</h3>
+              <p style={{ color: "#718096", fontSize: "0.95rem", marginBottom: "16px" }}>You don&apos;t have any orders in progress right now.</p>
+              <Link href="/food" style={{ display: "inline-block", backgroundColor: "#E28743", color: "#fff", padding: "10px 22px", borderRadius: "10px", fontWeight: 600, textDecoration: "none" }}>
+                Explore Cloud Kitchens
+              </Link>
+            </div>
           )
         )}
 
@@ -345,72 +227,14 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
               </article>
             ))
           ) : (
-            /* Fallback 2 Room Booking Cards */
-            <>
-              {/* Room Booking 1 */}
-              <article className={styles.orderCard}>
-                <div>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.titleWithAccent}>
-                      <div className={styles.blueAccentBar} />
-                      <div className={styles.headerInfo}>
-                        <h3 className={styles.vendorName}>Comfort Stay PG - Room 204</h3>
-                        <p className={styles.itemSummary}>Monthly Rental Subscription</p>
-                      </div>
-                    </div>
-                    <span className={styles.statusConfirmed}>Confirmed</span>
-                  </div>
-
-                  <div className={styles.stayMiddleRow}>
-                    <p className={styles.rentalPeriodText}>Rental Period: Oct 1, 2024 – Nov 1, 2024</p>
-                    <Link href="/room-booking" className={styles.rulesBtn} style={{ textDecoration: "none" }}>
-                      View PG Rules
-                    </Link>
-                  </div>
-                </div>
-
-                <div className={styles.cardFooter}>
-                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
-                    Need Help?
-                  </Link>
-                  <Link href="/dashboard/user/bookings" className={styles.actionBtn} style={{ textDecoration: "none" }}>
-                    View Details
-                  </Link>
-                </div>
-              </article>
-
-              {/* Room Booking 2 */}
-              <article className={styles.orderCard}>
-                <div>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.titleWithAccent}>
-                      <div className={styles.blueAccentBar} />
-                      <div className={styles.headerInfo}>
-                        <h3 className={styles.vendorName}>Skyline Luxury PG - Suite 305</h3>
-                        <p className={styles.itemSummary}>Executive Studio Booking</p>
-                      </div>
-                    </div>
-                    <span className={styles.statusConfirmed}>Confirmed</span>
-                  </div>
-
-                  <div className={styles.stayMiddleRow}>
-                    <p className={styles.rentalPeriodText}>Rental Period: Oct 5, 2024 – Nov 5, 2024</p>
-                    <Link href="/room-booking" className={styles.rulesBtn} style={{ textDecoration: "none" }}>
-                      View PG Rules
-                    </Link>
-                  </div>
-                </div>
-
-                <div className={styles.cardFooter}>
-                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
-                    Need Help?
-                  </Link>
-                  <Link href="/dashboard/user/bookings" className={styles.actionBtn} style={{ textDecoration: "none" }}>
-                    View Details
-                  </Link>
-                </div>
-              </article>
-            </>
+            <div style={{ textAlign: "center", padding: "48px 24px", gridColumn: "1 / -1", backgroundColor: "#fff", borderRadius: "16px", border: "1px dashed #E2E8F0" }}>
+              <Package size={48} color="#A0AEC0" style={{ marginBottom: "12px" }} />
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#2D3748", marginBottom: "6px" }}>No Active Room Bookings</h3>
+              <p style={{ color: "#718096", fontSize: "0.95rem", marginBottom: "16px" }}>You don&apos;t have any active room bookings.</p>
+              <Link href="/room-booking" style={{ display: "inline-block", backgroundColor: "#E28743", color: "#fff", padding: "10px 22px", borderRadius: "10px", fontWeight: 600, textDecoration: "none" }}>
+                Find PG &amp; Rooms
+              </Link>
+            </div>
           )
         )}
       </div>

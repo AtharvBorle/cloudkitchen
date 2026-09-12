@@ -67,11 +67,10 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
     showToast(`${rider.name} assigned to Order ${orderId}!`);
     if (onAssign) {
       onAssign(rider.id);
-    } else {
-      setTimeout(() => {
-        router.push("/seller/orders/details");
-      }, 900);
     }
+    setTimeout(() => {
+      router.push(`/seller/orders/details?orderId=${encodeURIComponent(orderId)}`);
+    }, 900);
   };
 
   const handleCopyLink = () => {

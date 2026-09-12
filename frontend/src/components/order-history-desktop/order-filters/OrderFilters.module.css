@@ -111,7 +111,8 @@
   transition: all 0.15s ease;
 }
 
-.dropdownOption:hover {
+.dropdownOption:hover,
+.selectedOption {
   background-color: #fff7ed;
   color: #f97316;
 }

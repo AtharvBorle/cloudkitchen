@@ -59,10 +59,20 @@ export interface OrderListProps {
 }
 
 export const OrderList: React.FC<OrderListProps> = ({
-  orders = SAMPLE_ORDERS,
+  orders = [],
   onViewDetails,
   onReorderMeal,
 }) => {
+  if (!orders || orders.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "64px 24px", backgroundColor: "#fff", borderRadius: "16px", border: "1px dashed #E2E8F0", marginTop: "20px" }}>
+        <ShoppingBag size={48} color="#CBD5E0" style={{ marginBottom: "16px" }} />
+        <h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#1E293B", marginBottom: "8px" }}>No orders found</h3>
+        <p style={{ color: "#64748B", fontSize: "0.95rem" }}>No order history matches your selected filter criteria.</p>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.ordersContainer}>
       {orders.map((order) => (
