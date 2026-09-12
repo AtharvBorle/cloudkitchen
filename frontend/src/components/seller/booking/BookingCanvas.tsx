@@ -277,8 +277,8 @@ const DEFAULT_BOOKINGS: BookingRecord[] = [
 export default function BookingCanvas({
   title = "Reservations Ledger",
   subtitle = "Track booking requests, check-in schedules, payment completion statuses, and cancellations.",
-  bookings = DEFAULT_BOOKINGS,
-  initialTab = "Requested",
+  bookings = [],
+  initialTab = "All",
   onViewDetails,
   onTabChange,
 }: BookingCanvasProps) {
@@ -286,6 +286,12 @@ export default function BookingCanvas({
   const [bookingList, setBookingList] = useState<BookingRecord[]>(bookings);
   const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (bookings) {
+      setBookingList(bookings);
+    }
+  }, [bookings]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);

@@ -5,57 +5,51 @@ import Link from "next/link";
 import { ArrowLeft, Check, Clock } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./OrderDefault.module.css";
 
-export interface OrderItemDetail {
-  id: string;
+export interface OrderItemRow {
   name: string;
-  price: string;
   qty: number;
-  total: string;
+  price: string;
 }
 
-export interface OrderDetailData {
+export interface OrderDetailsData {
   orderId: string;
   placedTime: string;
+  status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
   customerName: string;
-  roomAssigned: string;
-  contactNumber: string;
-  items: OrderItemDetail[];
+  customerPhone: string;
+  deliveryAddress: string;
+  items: OrderItemRow[];
   subtotal: string;
-  serviceFee: string;
-  grandTotal: string;
+  deliveryFee: string;
+  taxes: string;
+  total: string;
+  paymentMethod: string;
 }
 
-const DEFAULT_ORDER_DATA: OrderDetailData = {
+const DEFAULT_ORDER_DATA: OrderDetailsData = {
   orderId: "#NCR-8291",
-  placedTime: "Placed on Today, 01:24 PM",
-  customerName: "Aditya Sharma",
-  roomAssigned: "Room 102 (Premium Suite)",
-  contactNumber: "+91 98765 43210",
+  placedTime: "Today at 02:45 PM",
+  status: "Preparing",
+  customerName: "Rahul Sharma",
+  customerPhone: "+91 98765 43210",
+  deliveryAddress: "Room 204, Tower B, Neo Cloud Suites, Bangalore",
   items: [
-    {
-      id: "1",
-      name: "Special Butter Chicken (Chef Special)",
-      price: "₹380.00",
-      qty: 1,
-      total: "₹380.00",
-    },
-    {
-      id: "2",
-      name: "Garlic Butter Naan",
-      price: "₹50.00",
-      qty: 2,
-      total: "₹100.00",
-    },
+    { name: "Paneer Butter Masala", qty: 2, price: "₹440" },
+    { name: "Butter Roti", qty: 4, price: "₹120" },
+    { name: "Sweet Lassi", qty: 2, price: "₹120" },
   ],
-  subtotal: "₹480.00",
-  serviceFee: "FREE",
-  grandTotal: "₹480.00",
+  subtotal: "₹680",
+  deliveryFee: "₹0",
+  taxes: "₹34",
+  total: "₹714",
+  paymentMethod: "UPI (Prepaid)",
 };
 
 export interface OrderDefaultProps {
-  orderData?: OrderDetailData;
+  orderData?: OrderDetailsData;
   ownerName?: string;
   partnerRole?: string;
   avatarInitials?: string;
@@ -67,15 +61,20 @@ export interface OrderDefaultProps {
 
 export const OrderDefault: React.FC<OrderDefaultProps> = ({
   orderData = DEFAULT_ORDER_DATA,
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   onSearch,
   onNotificationClick,
   onAcceptOrder,
   onRejectOrder,
 }) => {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   return (
     <div className={styles.container}>

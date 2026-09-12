@@ -5,6 +5,8 @@ import SellerSidebar from "../../sidebar/Sidebar";
 import Topbar from "../../nav/Topbar";
 import AgentCanvas, { AgentCanvasProps, AgentFormData } from "./AgentCanvas";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface AgentCanvasDasProps {
   topbarTitle?: string;
   searchPlaceholder?: string;
@@ -23,9 +25,9 @@ export interface AgentCanvasDasProps {
 export default function AgentCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, dish...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName,
+  partnerRole,
+  avatarInitials,
   activeSidebarId = "delivery",
   initialData,
   onClose,
@@ -34,6 +36,11 @@ export default function AgentCanvasDas({
   onSearch,
   onNotificationClick,
 }: AgentCanvasDasProps) {
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectivePartnerRole = partnerRole || seller.partnerRole;
+  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
@@ -71,9 +78,9 @@ export default function AgentCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
-          ownerName={ownerName}
-          partnerRole={partnerRole}
-          avatarInitials={avatarInitials}
+          ownerName={effectiveOwnerName}
+          partnerRole={effectivePartnerRole}
+          avatarInitials={effectiveAvatarInitials}
           onSearch={onSearch}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}

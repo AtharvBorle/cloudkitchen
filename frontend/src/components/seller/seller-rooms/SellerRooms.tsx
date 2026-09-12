@@ -7,6 +7,7 @@ import { Plus, User, Pencil, X, Check, Upload, Sparkles, Image as ImageIcon } fr
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
+import { useSellerProfile } from '@/hooks/useSellerProfile';
 import styles from './SellerRooms.module.css';
 
 export interface RoomItem {
@@ -18,81 +19,6 @@ export interface RoomItem {
   isAvailable: boolean;
   image: string;
 }
-
-const DEFAULT_ROOMS: RoomItem[] = [
-  {
-    id: '1',
-    title: 'Deluxe Executive Suite 101',
-    guestsCount: 2,
-    tier: 'Standard Tier',
-    pricePerNight: '₹2,800',
-    isAvailable: true,
-    image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '2',
-    title: 'Presidential Penthouse 402',
-    guestsCount: 4,
-    tier: 'Premium Tier',
-    pricePerNight: '₹6,500',
-    isAvailable: false,
-    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '3',
-    title: 'Classic Studio Suite 204',
-    guestsCount: 2,
-    tier: 'Standard Tier',
-    pricePerNight: '₹3,200',
-    isAvailable: true,
-    image: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '4',
-    title: 'Garden View Villa 05',
-    guestsCount: 6,
-    tier: 'Luxury Tier',
-    pricePerNight: '₹9,800',
-    isAvailable: true,
-    image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?w=800&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '5',
-    title: 'Corner Skyline Room 305',
-    guestsCount: 3,
-    tier: 'Executive Tier',
-    pricePerNight: '₹4,400',
-    isAvailable: true,
-    image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '6',
-    title: 'Economy Urban Pod 12',
-    guestsCount: 1,
-    tier: 'Standard Tier',
-    pricePerNight: '₹1,500',
-    isAvailable: false,
-    image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '7',
-    title: 'Superior King Suite 201',
-    guestsCount: 2,
-    tier: 'Executive Tier',
-    pricePerNight: '₹4,100',
-    isAvailable: true,
-    image: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '8',
-    title: 'Standard Double Room 108',
-    guestsCount: 2,
-    tier: 'Standard Tier',
-    pricePerNight: '₹2,800',
-    isAvailable: true,
-    image: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800&auto=format&fit=crop&q=80',
-  },
-];
 
 const TIER_OPTIONS = ['Standard Tier', 'Executive Tier', 'Premium Tier', 'Luxury Tier'];
 export interface SellerRoomsProps {
@@ -107,9 +33,9 @@ export interface SellerRoomsProps {
 }
 
 export const SellerRooms: React.FC<SellerRoomsProps> = ({
-  ownerName = 'John Doe',
-  partnerRole = 'Neo Cloud Partner',
-  avatarInitials = 'JD',
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   rooms,
   onSearch,
   onNotificationClick,
@@ -117,9 +43,14 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   onToggleAvailability,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [roomList, setRoomList] = useState<RoomItem[]>(rooms || []);
   const [loading, setLoading] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   // Edit Modal State
   const [editingRoom, setEditingRoom] = useState<RoomItem | null>(null);
@@ -143,7 +74,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
         if (res.ok) {
           const data = await res.json();
           const list = data.data?.rooms || data.rooms || data.data || [];
-          if (Array.isArray(list) && list.length > 0) {
+          if (Array.isArray(list)) {
             const mapped: RoomItem[] = list.map((r: any) => {
               let imgUrl = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&auto=format&fit=crop&q=80';
               try {
@@ -308,7 +239,12 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
 
           {/* Rooms Grid Cards */}
           <div className={styles.roomsGrid}>
-            {roomList.map((room) => (
+            {roomList.length === 0 ? (
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 16px", backgroundColor: "#FFFFFF", borderRadius: "12px", border: "1px solid #E2E8F0", color: "#64748b" }}>
+                {loading ? "Loading configured rooms..." : "No rooms configured yet. Click '+ Add Room' to create your first listing."}
+              </div>
+            ) : (
+              roomList.map((room) => (
               <div key={room.id} className={styles.roomCard}>
                 {/* Room Hero Image Container with Floating Edit Action */}
                 <div className={styles.imageContainer}>
@@ -384,7 +320,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </main>
       </div>

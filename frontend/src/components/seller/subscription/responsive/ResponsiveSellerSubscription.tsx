@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -108,9 +108,21 @@ const DEFAULT_PLANS: ResponsiveSubscriptionPlan[] = [
   },
 ];
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
+export interface ResponsiveSellerSubscriptionProps {
+  ownerName?: string;
+  plans?: ResponsiveSubscriptionPlan[];
+  onCreatePlan?: () => void;
+  onEditPlan?: (plan: ResponsiveSubscriptionPlan) => void;
+  onPreviewPlan?: (plan: ResponsiveSubscriptionPlan) => void;
+  onBack?: () => void;
+  onSyncDevices?: () => void;
+}
+
 export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscriptionProps> = ({
-  ownerName = "Rahul Sharma",
-  plans = DEFAULT_PLANS,
+  ownerName,
+  plans = [],
   onCreatePlan,
   onEditPlan,
   onPreviewPlan,
@@ -118,12 +130,20 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<PlanStatus>("All");
   const [tierFilter, setTierFilter] = useState<PlanTier>("All");
   const [sortBy, setSortBy] = useState<SortOption>("Newest");
   const [activePlans, setActivePlans] = useState<ResponsiveSubscriptionPlan[]>(plans);
   const [selectedPlanPreview, setSelectedPlanPreview] = useState<ResponsiveSubscriptionPlan | null>(null);
+
+  useEffect(() => {
+    if (plans) {
+      setActivePlans(plans);
+    }
+  }, [plans]);
 
   const handleBackClick = () => {
     if (onBack) {
@@ -214,7 +234,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="subscription"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 

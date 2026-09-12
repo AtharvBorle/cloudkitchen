@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./SellerOrders.module.css";
 
 export type OrderStatusFilter =
@@ -35,17 +36,22 @@ export interface SellerOrdersProps {
 }
 
 export const SellerOrders: React.FC<SellerOrdersProps> = ({
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   orders,
   onSearch,
   onNotificationClick,
 }) => {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<OrderStatusFilter>("All");
   const [orderList, setOrderList] = useState<OrderRow[]>(orders || []);
   const [loading, setLoading] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   useEffect(() => {
     if (orders) {
@@ -60,7 +66,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
         if (res.ok) {
           const data = await res.json();
           const list = data.data?.orders || data.orders || data.data || [];
-          if (Array.isArray(list) && list.length > 0) {
+          if (Array.isArray(list)) {
             const mapped: OrderRow[] = list.map((o: any) => {
               let itemsSummary = "";
               try {
@@ -216,32 +222,40 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr
-                      key={order.id}
-                      onClick={() => {
-                        window.location.href = "/seller/order-default";
-                      }}
-                      style={{ cursor: "pointer" }}
-                      title="Click to view order details"
-                    >
-                      <td className={styles.orderIdText}>{order.orderId}</td>
-                      <td className={styles.customerText}>{order.customer}</td>
-                      <td className={styles.roomText}>{order.room}</td>
-                      <td className={styles.itemsText}>{order.items}</td>
-                      <td className={styles.totalText}>{order.total}</td>
-                      <td>
-                        <span
-                          className={`${styles.statusBadge} ${getStatusBadgeClass(
-                            order.status
-                          )}`}
-                        >
-                          {order.status}
-                        </span>
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b", fontSize: "14px" }}>
+                        {loading ? "Loading orders..." : `No ${activeFilter !== "All" ? activeFilter.toLowerCase() : ""} orders found.`}
                       </td>
-                      <td className={styles.timeText}>{order.time}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <tr
+                        key={order.id}
+                        onClick={() => {
+                          window.location.href = "/seller/order-default";
+                        }}
+                        style={{ cursor: "pointer" }}
+                        title="Click to view order details"
+                      >
+                        <td className={styles.orderIdText}>{order.orderId}</td>
+                        <td className={styles.customerText}>{order.customer}</td>
+                        <td className={styles.roomText}>{order.room}</td>
+                        <td className={styles.itemsText}>{order.items}</td>
+                        <td className={styles.totalText}>{order.total}</td>
+                        <td>
+                          <span
+                            className={`${styles.statusBadge} ${getStatusBadgeClass(
+                              order.status
+                            )}`}
+                          >
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className={styles.timeText}>{order.time}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

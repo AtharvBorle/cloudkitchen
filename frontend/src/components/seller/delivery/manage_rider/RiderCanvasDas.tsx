@@ -9,6 +9,8 @@ import RiderCanvas, {
   RiderWalletRecord,
 } from "./RiderCanvas";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface RiderCanvasDasProps {
   topbarTitle?: string;
   searchPlaceholder?: string;
@@ -26,9 +28,9 @@ export interface RiderCanvasDasProps {
 export default function RiderCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, booking...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName,
+  partnerRole,
+  avatarInitials,
   activeSidebarId = "delivery",
   metrics,
   riders,
@@ -36,6 +38,11 @@ export default function RiderCanvasDas({
   onNotificationClick,
   onViewWallet,
 }: RiderCanvasDasProps) {
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectivePartnerRole = partnerRole || seller.partnerRole;
+  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
@@ -73,9 +80,9 @@ export default function RiderCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
-          ownerName={ownerName}
-          partnerRole={partnerRole}
-          avatarInitials={avatarInitials}
+          ownerName={effectiveOwnerName}
+          partnerRole={effectivePartnerRole}
+          avatarInitials={effectiveAvatarInitials}
           onSearch={onSearch}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}

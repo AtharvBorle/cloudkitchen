@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResSellerProfile.module.css";
+
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface PlanServiceItem {
   id: string;
@@ -39,25 +41,60 @@ export interface ResSellerProfileProps {
 }
 
 export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
-  initialOwnerName = "John Doe",
-  initialMobileNumber = "+91 98887 76655",
-  initialPrimaryEmail = "john.doe@neocloudroom.com",
-  initialOutletName = "Neo Cloud Room - Bangalore Central Hub",
-  initialRegisteredAddress = "45, 1st Main Rd, Koramangala 4th Block, Bangalore, Karnataka 560034",
+  initialOwnerName,
+  initialMobileNumber,
+  initialPrimaryEmail,
+  initialOutletName,
+  initialRegisteredAddress,
   onBack,
   onSaveProfile,
   onLogout,
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   // Form State
-  const [ownerName, setOwnerName] = useState(initialOwnerName);
-  const [mobileNumber, setMobileNumber] = useState(initialMobileNumber);
-  const [primaryEmail, setPrimaryEmail] = useState(initialPrimaryEmail);
-  const [outletName, setOutletName] = useState(initialOutletName);
-  const [registeredAddress, setRegisteredAddress] = useState(initialRegisteredAddress);
+  const [ownerName, setOwnerName] = useState(
+    initialOwnerName && initialOwnerName !== "John Doe" ? initialOwnerName : seller.ownerName
+  );
+  const [mobileNumber, setMobileNumber] = useState(
+    initialMobileNumber && initialMobileNumber !== "+91 98887 76655" ? initialMobileNumber : seller.phone
+  );
+  const [primaryEmail, setPrimaryEmail] = useState(
+    initialPrimaryEmail && initialPrimaryEmail !== "john.doe@neocloudroom.com"
+      ? initialPrimaryEmail
+      : seller.email
+  );
+  const [outletName, setOutletName] = useState(
+    initialOutletName && initialOutletName !== "Neo Cloud Room - Bangalore Central Hub"
+      ? initialOutletName
+      : seller.businessName
+  );
+  const [registeredAddress, setRegisteredAddress] = useState(
+    initialRegisteredAddress && !initialRegisteredAddress.includes("Koramangala")
+      ? initialRegisteredAddress
+      : seller.address
+  );
+
+  useEffect(() => {
+    if (seller.ownerName && (!ownerName || ownerName === "John Doe" || ownerName === "Kitchen Owner")) {
+      setOwnerName(seller.ownerName);
+    }
+    if (seller.phone && (!mobileNumber || mobileNumber === "+91 98887 76655")) {
+      setMobileNumber(seller.phone);
+    }
+    if (seller.email && (!primaryEmail || primaryEmail === "john.doe@neocloudroom.com")) {
+      setPrimaryEmail(seller.email);
+    }
+    if (seller.businessName && (!outletName || outletName === "Neo Cloud Room - Bangalore Central Hub" || outletName === "Cloud Kitchen")) {
+      setOutletName(seller.businessName);
+    }
+    if (seller.address && (!registeredAddress || registeredAddress.includes("Koramangala"))) {
+      setRegisteredAddress(seller.address);
+    }
+  }, [seller.ownerName, seller.phone, seller.email, seller.businessName, seller.address]);
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);

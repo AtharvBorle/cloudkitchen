@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -33,6 +33,8 @@ export interface ResponsiveOrderItem {
   status: "New" | "Preparing" | "Out" | "Done" | "Cancelled";
 }
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface ResponsiveSellerOrdersProps {
   orders?: ResponsiveOrderItem[];
   ownerName?: string;
@@ -44,116 +46,9 @@ export interface ResponsiveSellerOrdersProps {
   onSyncDevices?: () => void;
 }
 
-const DEFAULT_ORDERS: ResponsiveOrderItem[] = [
-  {
-    id: "1",
-    orderNumber: "#1234",
-    timeAgo: "12 min ago",
-    customerName: "Priya Mehta",
-    itemsText: "32 items • ₹850",
-    priorOrdersCount: 18,
-    totalAmount: "₹1,200",
-    rating: 4.5,
-    deliveredCount: 128,
-    cancelledCount: 3,
-    status: "New",
-  },
-  {
-    id: "2",
-    orderNumber: "#1235",
-    timeAgo: "15 min ago",
-    customerName: "Priya Mehta",
-    itemsText: "32 items • ₹850",
-    priorOrdersCount: 18,
-    totalAmount: "₹1,200",
-    rating: 4.5,
-    deliveredCount: 128,
-    cancelledCount: 3,
-    status: "New",
-  },
-  {
-    id: "3",
-    orderNumber: "#1236",
-    timeAgo: "22 min ago",
-    customerName: "Priya Mehta",
-    itemsText: "32 items • ₹850",
-    priorOrdersCount: 18,
-    totalAmount: "₹1,200",
-    rating: 4.5,
-    deliveredCount: 128,
-    cancelledCount: 3,
-    status: "New",
-  },
-  {
-    id: "4",
-    orderNumber: "#1237",
-    timeAgo: "30 min ago",
-    customerName: "Priya Mehta",
-    itemsText: "32 items • ₹850",
-    priorOrdersCount: 18,
-    totalAmount: "₹1,200",
-    rating: 4.5,
-    deliveredCount: 128,
-    cancelledCount: 3,
-    status: "New",
-  },
-  {
-    id: "5",
-    orderNumber: "#1233",
-    timeAgo: "24 min ago",
-    customerName: "Rohan Sharma",
-    itemsText: "14 items • ₹420",
-    priorOrdersCount: 6,
-    totalAmount: "₹420",
-    rating: 4.8,
-    deliveredCount: 42,
-    cancelledCount: 1,
-    status: "Preparing",
-  },
-  {
-    id: "6",
-    orderNumber: "#1231",
-    timeAgo: "35 min ago",
-    customerName: "Sneha Kapoor",
-    itemsText: "8 items • ₹650",
-    priorOrdersCount: 12,
-    totalAmount: "₹650",
-    rating: 4.9,
-    deliveredCount: 89,
-    cancelledCount: 0,
-    status: "Preparing",
-  },
-  {
-    id: "7",
-    orderNumber: "#1230",
-    timeAgo: "40 min ago",
-    customerName: "Amit Kumar",
-    itemsText: "5 items • ₹290",
-    priorOrdersCount: 3,
-    totalAmount: "₹290",
-    rating: 4.2,
-    deliveredCount: 15,
-    cancelledCount: 2,
-    status: "Out",
-  },
-  {
-    id: "8",
-    orderNumber: "#1229",
-    timeAgo: "1 hr ago",
-    customerName: "Anjali Gupta",
-    itemsText: "18 items • ₹1,150",
-    priorOrdersCount: 24,
-    totalAmount: "₹1,150",
-    rating: 4.7,
-    deliveredCount: 154,
-    cancelledCount: 4,
-    status: "Done",
-  },
-];
-
 export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
-  orders = DEFAULT_ORDERS,
-  ownerName = "Rahul Sharma",
+  orders = [],
+  ownerName,
   hasUnreadNotifications = true,
   onAccept,
   onReject,
@@ -162,9 +57,17 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<OrderFilterTab>("New");
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);
+
+  useEffect(() => {
+    if (orders) {
+      setOrdersList(orders);
+    }
+  }, [orders]);
 
   // Filter tab counts
   const newCount = ordersList.filter((o) => o.status === "New").length;
@@ -214,7 +117,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="orders"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 

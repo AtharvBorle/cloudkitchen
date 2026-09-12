@@ -63,7 +63,6 @@ export default function ResponsiveBookingPage() {
 
   return (
     <ResponsiveBooking
-      ownerName="Rahul Sharma"
       bookings={mappedBookings}
     />
   );

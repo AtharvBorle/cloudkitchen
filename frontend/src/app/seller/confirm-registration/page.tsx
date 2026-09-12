@@ -23,9 +23,6 @@ export default function ConfirmRegistrationPage() {
       currentStep={5}
       activeSidebarItem="registration"
       pageTitle="Neo Cloud Room Onboarding"
-      userName="John Doe"
-      userRole="Owner Account"
-      userInitials="JD"
     >
       {/* 5-Step Stepper Wizard (Step 5 Active, Steps 1, 2, 3, 4 Completed with Orange Tick) */}
       <ConfirmRegistration

@@ -4,31 +4,10 @@ import React, { Suspense, useState, useEffect } from "react";
 import ResSellerProfile from "@/components/seller/seller-profile/responsive/ResSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 function ProfileContent() {
-  const [profileData, setProfileData] = useState<any | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadProfile() {
-      try {
-        const res = await fetchApi("/api/seller/profile");
-        if (res.ok) {
-          const data = await res.json();
-          const d = data.data || data;
-          if (isMounted) setProfileData(d);
-        }
-      } catch (err) {
-        console.error("Failed to load seller profile:", err);
-      }
-    }
-
-    loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const seller = useSellerProfile();
 
   const handleSaveProfile = async (formDataPayload: any) => {
     try {
@@ -47,16 +26,13 @@ function ProfileContent() {
     }
   };
 
-  const user = profileData?.user;
-  const prof = profileData?.profile;
-
   return (
     <ResSellerProfile
-      initialOwnerName={user?.name || "John Doe"}
-      initialMobileNumber={user?.phone || "+91 98887 76655"}
-      initialPrimaryEmail={user?.email || "john.doe@neocloudroom.com"}
-      initialOutletName={prof?.businessName || "Neo Cloud Room - Bangalore Central Hub"}
-      initialRegisteredAddress={`${prof?.addressFlat || ""} ${prof?.addressLocality || ""} ${user?.city || ""}`.trim() || "45, 1st Main Rd, Koramangala 4th Block, Bangalore, Karnataka 560034"}
+      initialOwnerName={seller.ownerName}
+      initialMobileNumber={seller.phone}
+      initialPrimaryEmail={seller.email}
+      initialOutletName={seller.businessName}
+      initialRegisteredAddress={seller.address}
       onSaveProfile={handleSaveProfile}
     />
   );

@@ -7,6 +7,7 @@ import SubscriptionEditCanvas, {
   SubscriptionEditCanvasProps,
   SubscriptionPlanData,
 } from "./SubscriptionEditCanvas";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface SubscriptionEditCanvasDasProps extends SubscriptionEditCanvasProps {
   topbarTitle?: string;
@@ -22,15 +23,20 @@ export interface SubscriptionEditCanvasDasProps extends SubscriptionEditCanvasPr
 export default function SubscriptionEditCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, dish...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   activeSidebarId = "subscription",
   onSearch,
   onNotificationClick,
   ...canvasProps
 }: SubscriptionEditCanvasDasProps) {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   return (
     <div

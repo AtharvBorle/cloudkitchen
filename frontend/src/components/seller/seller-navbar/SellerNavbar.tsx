@@ -1,8 +1,10 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { Search, Bell } from "lucide-react";
 import styles from "./SellerNavbar.module.css";
+
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface SellerNavbarProps {
   title?: string;
@@ -14,11 +16,15 @@ export interface SellerNavbarProps {
 
 export const SellerNavbar: React.FC<SellerNavbarProps> = ({
   title = "Neo Cloud Room Onboarding",
-  userName = "John Doe",
-  userRole = "Owner Account",
-  userInitials = "JD",
+  userName,
+  userRole,
+  userInitials,
   onSearch,
 }) => {
+  const seller = useSellerProfile();
+  const effectiveUserName = userName && userName !== "John Doe" ? userName : seller.ownerName;
+  const effectiveUserRole = userRole || seller.partnerRole;
+  const effectiveUserInitials = userInitials && userInitials !== "JD" ? userInitials : seller.avatarInitials;
   return (
     <nav
       className={styles.navbar}
@@ -156,7 +162,7 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
               flexShrink: 0,
             }}
           >
-            {userInitials}
+            {effectiveUserInitials}
           </div>
           <div
             className={styles.profileInfo}
@@ -176,7 +182,7 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
                 lineHeight: 1.2,
               }}
             >
-              {userName}
+              {effectiveUserName}
             </span>
             <span
               className={styles.userRole}
@@ -187,7 +193,7 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
                 fontWeight: 500,
               }}
             >
-              {userRole}
+              {effectiveUserRole}
             </span>
           </div>
         </div>

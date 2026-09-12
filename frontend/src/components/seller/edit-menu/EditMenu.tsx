@@ -7,9 +7,16 @@ import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check } from 'lucide
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
+import { useSellerProfile } from '@/hooks/useSellerProfile';
 import styles from './EditMenu.module.css';
 
 export interface VariantItem {
+  id: string;
+  name: string;
+  price: string;
+}
+
+export interface AddonItem {
   id: string;
   name: string;
   price: string;
@@ -31,15 +38,20 @@ export interface EditMenuProps {
 }
 
 function EditMenuInner({
-  ownerName = 'John Doe',
-  partnerRole = 'Neo Cloud Partner',
-  avatarInitials = 'JD',
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   onSearch,
   onNotificationClick,
 }: EditMenuProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const itemId = searchParams?.get('id');
+  const seller = useSellerProfile();
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loading, setLoading] = useState(false);

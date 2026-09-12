@@ -43,6 +43,8 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
 
 
 
+import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
+
 export interface ResponsiveNavMenuProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,10 +58,12 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   isOpen,
   onClose,
   activeItemId,
-  ownerName = "Rahul Sharma",
+  ownerName,
   roleTagText = "OWNER ROLE",
   onSyncDevices,
 }) => {
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
   const pathname = usePathname();
 
   // Close drawer on Esc key
@@ -228,9 +232,9 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
 
         {/* Profile Info Card */}
         <div className={styles.profileCard}>
-          <div className={styles.avatar}>{getInitials(ownerName)}</div>
+          <div className={styles.avatar}>{computeInitials(effectiveOwnerName)}</div>
           <div className={styles.profileDetails}>
-            <span className={styles.profileName}>{ownerName}</span>
+            <span className={styles.profileName}>{effectiveOwnerName}</span>
             <span className={styles.profileStatus}>
               <span className={styles.statusDot} />
               Store Online

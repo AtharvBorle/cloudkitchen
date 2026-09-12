@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import Topbar, { TopbarProps } from "../nav/Topbar";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface SellerProfileData {
   ownerName: string;
@@ -37,17 +38,30 @@ export default function MainCanvas({
   onLogout,
   onDataChange,
 }: MainCanvasProps) {
-  const [internalFormData, setInternalFormData] = useState<SellerProfileData>({
-    ownerName: initialData?.ownerName || "John Doe",
-    mobileNumber: initialData?.mobileNumber || "+91 99887 76655",
-    email: initialData?.email || "john.doe@neocloudroom.com",
-    outletName: initialData?.outletName || "Neo Cloud Room - Bangalore Central Hub",
-    registeredAddress:
-      initialData?.registeredAddress ||
-      "45, 1st Main Rd, Koramangala 4th Block, Bangalore, Karnataka 560034",
-    partnerRole: initialData?.partnerRole || "Neo Cloud Partner",
-    avatarInitials: initialData?.avatarInitials || "JD",
-  });
+  const seller = useSellerProfile();
+  const [internalFormData, setInternalFormData] = useState<SellerProfileData>(() => ({
+    ownerName: initialData?.ownerName || seller.ownerName,
+    mobileNumber: initialData?.mobileNumber || seller.phone || "",
+    email: initialData?.email || seller.email || "",
+    outletName: initialData?.outletName || seller.businessName,
+    registeredAddress: initialData?.registeredAddress || seller.address || "",
+    partnerRole: initialData?.partnerRole || seller.partnerRole,
+    avatarInitials: initialData?.avatarInitials || seller.avatarInitials,
+  }));
+
+  useEffect(() => {
+    if (!initialData?.ownerName && seller.ownerName && internalFormData.ownerName === "Kitchen Owner") {
+      setInternalFormData((prev) => ({
+        ...prev,
+        ownerName: seller.ownerName,
+        mobileNumber: seller.phone || prev.mobileNumber,
+        email: seller.email || prev.email,
+        outletName: seller.businessName || prev.outletName,
+        registeredAddress: seller.address || prev.registeredAddress,
+        avatarInitials: seller.avatarInitials,
+      }));
+    }
+  }, [seller]);
 
   const formData = externalFormData || internalFormData;
 

@@ -76,7 +76,6 @@ export default function ResponsiveRoomsPage() {
 
   return (
     <ResponsiveRoom
-      ownerName="Rahul Sharma"
       rooms={mappedRooms}
       onToggleAvailability={handleToggleAvailability}
     />

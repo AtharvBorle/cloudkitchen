@@ -4,25 +4,16 @@ import React, { useState, useEffect } from "react";
 import ResponsiveSellerSubscription from "@/components/seller/subscription/responsive/ResponsiveSellerSubscription";
 import { fetchApi } from "@/lib/fetch-api";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export default function ResponsiveSellerSubscriptionPage() {
+  const seller = useSellerProfile();
   const [plans, setPlans] = useState<any[]>([]);
-  const [ownerName, setOwnerName] = useState("Rahul Sharma");
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [profileRes, plansRes] = await Promise.all([
-          fetchApi("/api/seller/profile"),
-          fetchApi("/api/seller/subscription/plans"),
-        ]);
-
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          const sellerObj = profileData.data?.seller || profileData.seller;
-          if (sellerObj?.user?.name) {
-            setOwnerName(sellerObj.user.name);
-          }
-        }
+        const plansRes = await fetchApi("/api/seller/subscription/plans");
 
         if (plansRes.ok) {
           const plansData = await plansRes.json();
@@ -58,7 +49,7 @@ export default function ResponsiveSellerSubscriptionPage() {
 
   return (
     <ResponsiveSellerSubscription
-      ownerName={ownerName}
+      ownerName={seller.ownerName}
       plans={plans.length > 0 ? plans : undefined}
     />
   );

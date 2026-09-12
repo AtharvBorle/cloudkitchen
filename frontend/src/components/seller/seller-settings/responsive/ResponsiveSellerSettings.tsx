@@ -166,6 +166,8 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   allowCod: true,
 };
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface ResponsiveSellerSettingsProps {
   ownerName?: string;
   avatarInitials?: string;
@@ -176,8 +178,8 @@ export interface ResponsiveSellerSettingsProps {
 }
 
 export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> = ({
-  ownerName = "Rahul Sharma",
-  avatarInitials = "JD",
+  ownerName,
+  avatarInitials,
   initialTab = "General",
   initialData,
   onSave,
@@ -185,13 +187,31 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
   const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({
     ...INITIAL_SETTINGS,
+    restaurantName: seller.businessName || INITIAL_SETTINGS.restaurantName,
+    primaryPhone: seller.phone || INITIAL_SETTINGS.primaryPhone,
+    orderEmail: seller.email || INITIAL_SETTINGS.orderEmail,
+    address: seller.address || INITIAL_SETTINGS.address,
     ...initialData,
   });
+
+  useEffect(() => {
+    if (seller.businessName || seller.phone || seller.email || seller.address) {
+      setFormData((prev) => ({
+        ...prev,
+        restaurantName: prev.restaurantName === "Neo Cloud Bites Hub" && seller.businessName ? seller.businessName : prev.restaurantName,
+        primaryPhone: prev.primaryPhone === "+91 98765 43210" && seller.phone ? seller.phone : prev.primaryPhone,
+        orderEmail: prev.orderEmail === "orders@neocloudbites.com" && seller.email ? seller.email : prev.orderEmail,
+        address: prev.address.includes("Indiranagar") && seller.address ? seller.address : prev.address,
+      }));
+    }
+  }, [seller.businessName, seller.phone, seller.email, seller.address]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
@@ -271,7 +291,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="settings"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 

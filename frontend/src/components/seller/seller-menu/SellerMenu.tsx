@@ -6,6 +6,7 @@ import { Plus, Search, SquarePen, Sparkles, Trash2 } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./SellerMenu.module.css";
 
 export type MenuCategoryFilter =
@@ -25,63 +26,6 @@ export interface DishItem {
   inStock: boolean;
 }
 
-const DEFAULT_DISHES: DishItem[] = [
-  {
-    id: "1",
-    name: "Special Butter Chicken",
-    category: "North Indian",
-    price: "₹380",
-    type: "NON-VEG",
-    stockQty: 24,
-    inStock: true,
-  },
-  {
-    id: "2",
-    name: "Veg Hakka Noodles",
-    category: "Chinese",
-    price: "₹220",
-    type: "VEG",
-    stockQty: 18,
-    inStock: true,
-  },
-  {
-    id: "3",
-    name: "Paneer Butter Masala",
-    category: "North Indian",
-    price: "₹310",
-    type: "VEG",
-    stockQty: 32,
-    inStock: true,
-  },
-  {
-    id: "4",
-    name: "Double Cheese Margherita Pizza",
-    category: "Italian",
-    price: "₹350",
-    type: "VEG",
-    stockQty: 0,
-    inStock: false,
-  },
-  {
-    id: "5",
-    name: "Moong Dal Halwa",
-    category: "Desserts",
-    price: "₹150",
-    type: "VEG",
-    stockQty: 4,
-    inStock: true,
-  },
-  {
-    id: "6",
-    name: "Spicy Chilli Chicken",
-    category: "Chinese",
-    price: "₹290",
-    type: "NON-VEG",
-    stockQty: 12,
-    inStock: true,
-  },
-];
-
 export interface SellerMenuProps {
   ownerName?: string;
   partnerRole?: string;
@@ -97,11 +41,11 @@ export interface SellerMenuProps {
 }
 
 export const SellerMenu: React.FC<SellerMenuProps> = ({
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   storeTimings = "07:00 AM - 11:30 PM",
-  operationalPincodes = "110001, 110022, 110045",
+  operationalPincodes,
   initialIsOpen = true,
   dishes,
   onSearch,
@@ -110,14 +54,18 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   onToggleStore,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(initialIsOpen);
   const [selectedCategory, setSelectedCategory] = useState<MenuCategoryFilter>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dishList, setDishList] = useState<DishItem[]>(dishes || DEFAULT_DISHES);
-  const [pincodesStr, setPincodesStr] = useState(operationalPincodes);
-  const [sellerName, setSellerName] = useState(ownerName);
+  const [dishList, setDishList] = useState<DishItem[]>(dishes || []);
+  const [pincodesStr, setPincodesStr] = useState(operationalPincodes || seller.pincode || "Not configured");
   const [loading, setLoading] = useState(true);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   // Fetch live menu items from DB
   useEffect(() => {
@@ -128,23 +76,21 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         if (res.ok) {
           const data = await res.json();
           if (data && data.items && Array.isArray(data.items) && isMounted) {
-            if (data.items.length > 0) {
-              const mapped: DishItem[] = data.items.map((item: any) => ({
-                id: item.id,
-                name: item.name,
-                category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
-                price: `₹${item.price}`,
-                type: item.itemType === "NON_VEG" ? "NON-VEG" : "VEG",
-                stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
-                inStock: item.isAvailable,
-              }));
-              setDishList(mapped);
-            }
+            const mapped: DishItem[] = data.items.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
+              price: `₹${item.price}`,
+              type: item.itemType === "NON_VEG" ? "NON-VEG" : "VEG",
+              stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
+              inStock: item.isAvailable,
+            }));
+            setDishList(mapped);
+
             if (data.servedPincodes && Array.isArray(data.servedPincodes) && data.servedPincodes.length > 0) {
               setPincodesStr(data.servedPincodes.map((sp: any) => sp.pincode).join(", "));
             }
             if (data.seller) {
-              if (data.seller.businessName) setSellerName(data.seller.businessName);
               if (typeof data.seller.isOnline === "boolean") setIsOpen(data.seller.isOnline);
             }
           }
@@ -268,7 +214,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         {/* Top Navbar */}
         <Topbar
           title="Owner Operations Console"
-          ownerName={sellerName}
+          ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
           onSearch={onSearch}
@@ -322,47 +268,45 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
               </div>
             </div>
 
-            {/* Vertical Divider */}
-            <div className={styles.verticalDivider} />
+            <div className={styles.opDivider} />
 
             {/* Store Timings */}
-            <div className={styles.opMetaGroup}>
-              <span className={styles.opMetaHeader}>STORE TIMINGS</span>
-              <span className={styles.opMetaValue}>{storeTimings}</span>
+            <div className={styles.opItem}>
+              <span className={styles.opLabel}>Store Timings:</span>
+              <span className={styles.opValue}>{storeTimings}</span>
             </div>
 
-            {/* Vertical Divider */}
-            <div className={styles.verticalDivider} />
+            <div className={styles.opDivider} />
 
             {/* Operational Pincodes */}
-            <div className={styles.opMetaGroup}>
-              <span className={styles.opMetaHeader}>OPERATIONAL PINCODES</span>
-              <span className={styles.opMetaValue}>{pincodesStr}</span>
+            <div className={styles.opItem}>
+              <span className={styles.opLabel}>Operational Pincodes:</span>
+              <span className={styles.opValue}>{pincodesStr}</span>
             </div>
           </div>
 
-          {/* 3. Search and Category Filter Row */}
-          <div className={styles.searchFilterRow}>
-            {/* Search Input Box */}
-            <div className={styles.searchInputWrapper}>
-              <Search size={17} className={styles.searchIcon} />
+          {/* 3. Search Bar + Category Tabs Row */}
+          <div className={styles.filtersRow}>
+            {/* Search Input */}
+            <div className={styles.searchBox}>
+              <Search size={16} className={styles.searchIcon} />
               <input
                 type="text"
-                placeholder="Search food items..."
+                placeholder="Search dish by name..."
                 value={searchQuery}
-                onChange={handleSearchChange}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className={styles.searchInput}
               />
             </div>
 
-            {/* Category Filter Pills */}
-            <div className={styles.categoryPillsGroup}>
+            {/* Category Filter Tabs */}
+            <div className={styles.categoryTabs}>
               {categories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`${styles.categoryPill} ${selectedCategory === cat ? styles.activeCategoryPill : ""
+                  className={`${styles.categoryTab} ${selectedCategory === cat ? styles.categoryTabActive : ""
                     }`}
                 >
                   {cat}
@@ -386,7 +330,14 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDishes.map((dish) => (
+                  {filteredDishes.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b", fontSize: "14px" }}>
+                        {loading ? "Loading menu items..." : "No dishes found. Click '+ Add New Dish' to add dishes to your menu."}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDishes.map((dish) => (
                     <tr key={dish.id}>
                       {/* Dish Name with Edit & Delete Icon Buttons */}
                       <td>
@@ -479,7 +430,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>

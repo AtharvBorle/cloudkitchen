@@ -25,6 +25,7 @@ import {
   PasswordManagementCard,
   ActiveLoginSessionsCard,
 } from "./security-settings/SellerSecuritySettings";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./SettingsCanvas.module.css";
 
 export type SettingsTab = "General" | "Notifications" | "Security" | "Preferences";
@@ -110,10 +111,10 @@ const TIME_OPTIONS = [
 ];
 
 const DEFAULT_DATA: SettingsFormData = {
-  businessName: "Neo Cloud Kitchen & Rooms",
-  businessEmail: "hello@neocloudbite.com",
-  phoneNumber: "+91 98765 43210",
-  address: "451 Innovation Way, Suite 300, Mumbai, MH 400001",
+  businessName: "",
+  businessEmail: "",
+  phoneNumber: "",
+  address: "",
   language: "English",
   timezone: "Asia/Kolkata (UTC+5:30)",
   currency: "INR (₹)",
@@ -180,11 +181,28 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   onCancel,
 }) => {
   const searchParams = useSearchParams();
+  const seller = useSellerProfile();
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
-  const [formData, setFormData] = useState<SettingsFormData>({
+  const [formData, setFormData] = useState<SettingsFormData>(() => ({
     ...DEFAULT_DATA,
+    businessName: initialData?.businessName || seller.businessName,
+    businessEmail: initialData?.businessEmail || seller.email,
+    phoneNumber: initialData?.phoneNumber || seller.phone,
+    address: initialData?.address || seller.address,
     ...initialData,
-  });
+  }));
+
+  useEffect(() => {
+    if (seller.businessName && (!formData.businessName || formData.businessName === "Neo Cloud Kitchen & Rooms")) {
+      setFormData((prev) => ({
+        ...prev,
+        businessName: seller.businessName || prev.businessName,
+        businessEmail: seller.email || prev.businessEmail,
+        phoneNumber: seller.phone || prev.phoneNumber,
+        address: seller.address || prev.address,
+      }));
+    }
+  }, [seller]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");

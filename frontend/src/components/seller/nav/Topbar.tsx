@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Bell, Menu } from "lucide-react";
 import styles from "./Topbar.module.css";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface TopbarProps {
   title?: string;
@@ -19,9 +20,9 @@ export interface TopbarProps {
 
 export default function Topbar({
   title = "Owner Operations Console",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName,
+  partnerRole,
+  avatarInitials,
   searchPlaceholder = "Search order, room, dish...",
   unreadCount = 4,
   onSearch,
@@ -29,7 +30,12 @@ export default function Topbar({
   onMenuToggle,
 }: TopbarProps) {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [searchQuery, setSearchQuery] = useState("");
+
+  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectivePartnerRole = partnerRole && partnerRole !== "Neo Cloud Partner" ? partnerRole : seller.partnerRole;
+  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
 
   const handleNotificationClick = () => {
     if (onNotificationClick) {
@@ -99,10 +105,10 @@ export default function Topbar({
 
         {/* User Profile Pill */}
         <div className={`${styles.profilePill} topbar-user-pill`}>
-          <div className={styles.avatarCircle}>{avatarInitials}</div>
+          <div className={styles.avatarCircle}>{effectiveAvatarInitials}</div>
           <div className={styles.profileInfo}>
-            <span className={styles.ownerName}>{ownerName}</span>
-            <span className={styles.partnerRole}>{partnerRole}</span>
+            <span className={styles.ownerName}>{effectiveOwnerName}</span>
+            <span className={styles.partnerRole}>{effectivePartnerRole}</span>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import RiderSettlements, {
   CashCollectionBalanceInfo,
   LedgerEntry,
 } from "./RiderSettlements";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface RiderSettlementDasProps {
   topbarTitle?: string;
@@ -29,9 +30,9 @@ export interface RiderSettlementDasProps {
 export default function RiderSettlementDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, dish...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   activeSidebarId = "delivery",
   riderProfile,
   cashBalance,
@@ -41,7 +42,12 @@ export default function RiderSettlementDas({
   onAddDeliveryAgent,
   onRecordSettlement,
 }: RiderSettlementDasProps) {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   return (
     <div

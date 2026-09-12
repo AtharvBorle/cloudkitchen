@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -86,21 +86,31 @@ const DEFAULT_DISHES: ResponsiveDishItem[] = [
   },
 ];
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 const CATEGORIES: MenuCategory[] = ["All", "Starters", "Mains", "Desserts", "Drinks"];
 
 export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
-  ownerName = "Rahul Sharma",
-  dishes = DEFAULT_DISHES,
+  ownerName,
+  dishes = [],
   onAddItem,
   onStockChange,
   onToggleAvailability,
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [dishList, setDishList] = useState<ResponsiveDishItem[]>(dishes);
+
+  useEffect(() => {
+    if (dishes) {
+      setDishList(dishes);
+    }
+  }, [dishes]);
 
   const handleAddItem = () => {
     if (onAddItem) {
@@ -165,7 +175,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="menu"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 

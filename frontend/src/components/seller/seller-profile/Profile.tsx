@@ -6,6 +6,7 @@ import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import MainCanvas, { SellerProfileData } from "./MainCanvas";
 import { fetchApi } from "@/lib/fetch-api";
+import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
 
 export interface SellerProfileProps {
   topbarTitle?: string;
@@ -26,18 +27,31 @@ export default function Profile({
   onLogout: customOnLogout,
   onSearch,
 }: SellerProfileProps) {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profileData, setProfileData] = useState<SellerProfileData>({
-    ownerName: initialData?.ownerName || "John Doe",
-    mobileNumber: initialData?.mobileNumber || "+91 99887 76655",
-    email: initialData?.email || "john.doe@neocloudroom.com",
-    outletName: initialData?.outletName || "Neo Cloud Room - Bangalore Central Hub",
-    registeredAddress:
-      initialData?.registeredAddress ||
-      "45, 1st Main Rd, Koramangala 4th Block, Bangalore, Karnataka 560034",
-    partnerRole: initialData?.partnerRole || "Neo Cloud Partner",
-    avatarInitials: initialData?.avatarInitials || "JD",
-  });
+  const [profileData, setProfileData] = useState<SellerProfileData>(() => ({
+    ownerName: initialData?.ownerName || seller.ownerName,
+    mobileNumber: initialData?.mobileNumber || seller.phone || "",
+    email: initialData?.email || seller.email || "",
+    outletName: initialData?.outletName || seller.businessName,
+    registeredAddress: initialData?.registeredAddress || seller.address || "",
+    partnerRole: initialData?.partnerRole || seller.partnerRole,
+    avatarInitials: initialData?.avatarInitials || seller.avatarInitials,
+  }));
+
+  useEffect(() => {
+    if (seller.ownerName && (!profileData.ownerName || profileData.ownerName === "John Doe")) {
+      setProfileData((prev) => ({
+        ...prev,
+        ownerName: seller.ownerName,
+        email: seller.email || prev.email,
+        mobileNumber: seller.phone || prev.mobileNumber,
+        outletName: seller.businessName || prev.outletName,
+        registeredAddress: seller.address || prev.registeredAddress,
+        avatarInitials: seller.avatarInitials,
+      }));
+    }
+  }, [seller]);
 
   useEffect(() => {
     async function loadSellerProfile() {
@@ -49,12 +63,7 @@ export default function Profile({
           const profile = data.data?.profile || data.profile;
           if (user) {
             const name = user.name || "Seller Partner";
-            const initials = name
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2) || "SP";
+            const initials = computeInitials(name);
 
             setProfileData((prev) => ({
               ...prev,
@@ -65,6 +74,7 @@ export default function Profile({
               registeredAddress:
                 profile?.addressLocality ||
                 `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
+                user?.city ||
                 prev.registeredAddress,
               avatarInitials: initials,
             }));

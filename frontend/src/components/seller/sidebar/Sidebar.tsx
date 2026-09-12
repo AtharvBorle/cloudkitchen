@@ -31,6 +31,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import styles from "./ConsoleSidebar.module.css";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface NavItem {
   id: string;
@@ -80,11 +81,16 @@ export default function SellerSidebar({
   defaultCollapsed = false,
   onToggleCollapse,
   showCollapseToggle = true,
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName,
+  partnerRole,
+  avatarInitials,
 }: SellerSidebarProps) {
   const pathname = usePathname();
+  const seller = useSellerProfile();
+
+  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectivePartnerRole = partnerRole && partnerRole !== "Neo Cloud Partner" ? partnerRole : seller.partnerRole;
+  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
 
   const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
 
@@ -342,7 +348,7 @@ export default function SellerSidebar({
                 boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
               }}
             >
-              {avatarInitials}
+              {effectiveAvatarInitials}
             </div>
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1, overflow: "hidden" }}>
               <span
@@ -356,7 +362,7 @@ export default function SellerSidebar({
                   lineHeight: 1.2,
                 }}
               >
-                {ownerName}
+                {effectiveOwnerName}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
                 <span

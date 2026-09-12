@@ -159,6 +159,8 @@ const INITIAL_TICKETS: Ticket[] = [
   },
 ];
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface SellerSupportProps {
   ownerName?: string;
   partnerRole?: string;
@@ -170,12 +172,17 @@ export interface SellerSupportProps {
 const FILTER_PILLS = ["All", "Open", "In Progress", "Closed"];
 
 export const SellerSupport: React.FC<SellerSupportProps> = ({
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName,
+  partnerRole,
+  avatarInitials,
   onSearch,
   onNotificationClick,
 }) => {
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectivePartnerRole = partnerRole || seller.partnerRole;
+  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
   const [selectedTicketId, setSelectedTicketId] = useState<string>("1");
@@ -269,9 +276,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
         <div className={styles.desktopTopbarWrapper}>
           <Topbar
             title="Owner Operations Console"
-            ownerName={ownerName}
-            partnerRole={partnerRole}
-            avatarInitials={avatarInitials}
+            ownerName={effectiveOwnerName}
+            partnerRole={effectivePartnerRole}
+            avatarInitials={effectiveAvatarInitials}
             onSearch={onSearch}
             onNotificationClick={onNotificationClick}
             onMenuToggle={() => setIsMobileOpen(true)}

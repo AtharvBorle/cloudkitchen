@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Pencil } from 'lucide-react';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
+import { useSellerProfile } from '@/hooks/useSellerProfile';
 import styles from './CreateSubscriptionPlan.module.css';
 
 export interface CreateSubscriptionPlanProps {
@@ -23,14 +24,19 @@ export interface PlanFeature {
 }
 
 export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
-  ownerName = 'John Doe',
-  partnerRole = 'Neo Cloud Partner',
-  avatarInitials = 'JD',
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   onSearch,
   onNotificationClick,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   // Form states
   const [planName, setPlanName] = useState('');

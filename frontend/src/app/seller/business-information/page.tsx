@@ -32,9 +32,6 @@ export default function BusinessInformationPage() {
       currentStep={2}
       activeSidebarItem="registration"
       pageTitle="Neo Cloud Room Onboarding"
-      userName="John Doe"
-      userRole="Owner Account"
-      userInitials="JD"
     >
       <BusinessInformation
         initialData={businessData}

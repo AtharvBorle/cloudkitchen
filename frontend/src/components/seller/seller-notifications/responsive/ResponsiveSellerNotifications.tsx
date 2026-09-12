@@ -46,15 +46,19 @@ const TABS: TabItem[] = [
   { id: "settlements", label: "Settlements" },
 ];
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface ResponsiveSellerNotificationsProps {
   ownerName?: string;
   onSyncDevices?: () => void;
 }
 
 export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificationsProps> = ({
-  ownerName = "Rahul Sharma",
+  ownerName,
   onSyncDevices,
 }) => {
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
   const [notifications, setNotifications] = useState<SellerNotificationItem[]>(
     INITIAL_SELLER_NOTIFICATIONS
   );
@@ -176,7 +180,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="notifications"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 
