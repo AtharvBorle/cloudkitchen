@@ -27,9 +27,11 @@ export interface ResponsiveRoomProps {
   onSyncDevices?: () => void;
 }
 
+const EMPTY_ROOMS: ResponsiveRoomItem[] = [];
+
 export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
   ownerName,
-  rooms = [],
+  rooms = EMPTY_ROOMS,
   onAddRoom,
   onToggleAvailability,
   onSelectRoom,
@@ -42,7 +44,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
   const [roomList, setRoomList] = useState<ResponsiveRoomItem[]>(rooms);
 
   useEffect(() => {
-    if (rooms) {
+    if (rooms && rooms !== EMPTY_ROOMS) {
       setRoomList(rooms);
     }
   }, [rooms]);

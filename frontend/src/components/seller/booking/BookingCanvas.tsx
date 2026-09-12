@@ -274,10 +274,12 @@ const DEFAULT_BOOKINGS: BookingRecord[] = [
   },
 ];
 
+const EMPTY_BOOKINGS: BookingRecord[] = [];
+
 export default function BookingCanvas({
-  title = "Reservations Ledger",
-  subtitle = "Track booking requests, check-in schedules, payment completion statuses, and cancellations.",
-  bookings = [],
+  title = "Room Bookings",
+  subtitle = "Manage room reservations, confirm bookings, and assign rooms to customers.",
+  bookings = EMPTY_BOOKINGS,
   initialTab = "All",
   onViewDetails,
   onTabChange,
@@ -288,7 +290,7 @@ export default function BookingCanvas({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   React.useEffect(() => {
-    if (bookings) {
+    if (bookings && bookings !== EMPTY_BOOKINGS) {
       setBookingList(bookings);
     }
   }, [bookings]);

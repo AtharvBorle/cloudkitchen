@@ -46,8 +46,10 @@ export interface ResponsiveSellerOrdersProps {
   onSyncDevices?: () => void;
 }
 
+const EMPTY_ORDERS: ResponsiveOrderItem[] = [];
+
 export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
-  orders = [],
+  orders = EMPTY_ORDERS,
   ownerName,
   hasUnreadNotifications = true,
   onAccept,
@@ -64,7 +66,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);
 
   useEffect(() => {
-    if (orders) {
+    if (orders && orders !== EMPTY_ORDERS) {
       setOrdersList(orders);
     }
   }, [orders]);

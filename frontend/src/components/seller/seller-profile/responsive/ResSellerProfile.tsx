@@ -79,20 +79,20 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   );
 
   useEffect(() => {
-    if (seller.ownerName && (!ownerName || ownerName === "John Doe" || ownerName === "Kitchen Owner")) {
-      setOwnerName(seller.ownerName);
+    if (seller.ownerName) {
+      setOwnerName((prev) => (!prev || prev === "John Doe" || prev === "Kitchen Owner" ? seller.ownerName : prev));
     }
-    if (seller.phone && (!mobileNumber || mobileNumber === "+91 98887 76655")) {
-      setMobileNumber(seller.phone);
+    if (seller.phone) {
+      setMobileNumber((prev) => (!prev || prev === "+91 98887 76655" ? seller.phone : prev));
     }
-    if (seller.email && (!primaryEmail || primaryEmail === "john.doe@neocloudroom.com")) {
-      setPrimaryEmail(seller.email);
+    if (seller.email) {
+      setPrimaryEmail((prev) => (!prev || prev === "john.doe@neocloudroom.com" ? seller.email : prev));
     }
-    if (seller.businessName && (!outletName || outletName === "Neo Cloud Room - Bangalore Central Hub" || outletName === "Cloud Kitchen")) {
-      setOutletName(seller.businessName);
+    if (seller.businessName) {
+      setOutletName((prev) => (!prev || prev === "Neo Cloud Room - Bangalore Central Hub" || prev === "Cloud Kitchen" ? seller.businessName : prev));
     }
-    if (seller.address && (!registeredAddress || registeredAddress.includes("Koramangala"))) {
-      setRegisteredAddress(seller.address);
+    if (seller.address) {
+      setRegisteredAddress((prev) => (!prev || prev.includes("Koramangala") ? seller.address : prev));
     }
   }, [seller.ownerName, seller.phone, seller.email, seller.businessName, seller.address]);
 

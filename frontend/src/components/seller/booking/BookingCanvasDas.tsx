@@ -54,7 +54,7 @@ export default function BookingCanvasDas({
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   useEffect(() => {
-    if (initialBookings) {
+    if (initialBookings && initialBookings.length > 0) {
       setBookingList(initialBookings);
       return;
     }

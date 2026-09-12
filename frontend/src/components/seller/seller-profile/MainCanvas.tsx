@@ -50,18 +50,21 @@ export default function MainCanvas({
   }));
 
   useEffect(() => {
-    if (!initialData?.ownerName && seller.ownerName && internalFormData.ownerName === "Kitchen Owner") {
-      setInternalFormData((prev) => ({
-        ...prev,
-        ownerName: seller.ownerName,
-        mobileNumber: seller.phone || prev.mobileNumber,
-        email: seller.email || prev.email,
-        outletName: seller.businessName || prev.outletName,
-        registeredAddress: seller.address || prev.registeredAddress,
-        avatarInitials: seller.avatarInitials,
-      }));
+    if (!initialData?.ownerName && seller.ownerName) {
+      setInternalFormData((prev) => {
+        if (prev.ownerName !== "Kitchen Owner") return prev;
+        return {
+          ...prev,
+          ownerName: seller.ownerName,
+          mobileNumber: seller.phone || prev.mobileNumber,
+          email: seller.email || prev.email,
+          outletName: seller.businessName || prev.outletName,
+          registeredAddress: seller.address || prev.registeredAddress,
+          avatarInitials: seller.avatarInitials,
+        };
+      });
     }
-  }, [seller]);
+  }, [seller.ownerName, seller.phone, seller.email, seller.businessName, seller.address, seller.avatarInitials, initialData?.ownerName]);
 
   const formData = externalFormData || internalFormData;
 

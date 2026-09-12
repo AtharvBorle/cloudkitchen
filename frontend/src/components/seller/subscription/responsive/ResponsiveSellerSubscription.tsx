@@ -120,9 +120,11 @@ export interface ResponsiveSellerSubscriptionProps {
   onSyncDevices?: () => void;
 }
 
+const EMPTY_PLANS: ResponsiveSubscriptionPlan[] = [];
+
 export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscriptionProps> = ({
   ownerName,
-  plans = [],
+  plans,
   onCreatePlan,
   onEditPlan,
   onPreviewPlan,
@@ -136,14 +138,8 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   const [statusFilter, setStatusFilter] = useState<PlanStatus>("All");
   const [tierFilter, setTierFilter] = useState<PlanTier>("All");
   const [sortBy, setSortBy] = useState<SortOption>("Newest");
-  const [activePlans, setActivePlans] = useState<ResponsiveSubscriptionPlan[]>(plans);
+  const activePlans = plans || EMPTY_PLANS;
   const [selectedPlanPreview, setSelectedPlanPreview] = useState<ResponsiveSubscriptionPlan | null>(null);
-
-  useEffect(() => {
-    if (plans) {
-      setActivePlans(plans);
-    }
-  }, [plans]);
 
   const handleBackClick = () => {
     if (onBack) {

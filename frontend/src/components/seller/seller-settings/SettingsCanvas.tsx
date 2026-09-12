@@ -193,16 +193,19 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   }));
 
   useEffect(() => {
-    if (seller.businessName && (!formData.businessName || formData.businessName === "Neo Cloud Kitchen & Rooms")) {
-      setFormData((prev) => ({
-        ...prev,
-        businessName: seller.businessName || prev.businessName,
-        businessEmail: seller.email || prev.businessEmail,
-        phoneNumber: seller.phone || prev.phoneNumber,
-        address: seller.address || prev.address,
-      }));
+    if (seller.businessName) {
+      setFormData((prev) => {
+        if (prev.businessName && prev.businessName !== "Neo Cloud Kitchen & Rooms") return prev;
+        return {
+          ...prev,
+          businessName: seller.businessName || prev.businessName,
+          businessEmail: seller.email || prev.businessEmail,
+          phoneNumber: seller.phone || prev.phoneNumber,
+          address: seller.address || prev.address,
+        };
+      });
     }
-  }, [seller]);
+  }, [seller.businessName, seller.email, seller.phone, seller.address]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");

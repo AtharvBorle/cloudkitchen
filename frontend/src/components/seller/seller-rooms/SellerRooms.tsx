@@ -62,7 +62,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   const [editAvailable, setEditAvailable] = useState(true);
 
   useEffect(() => {
-    if (rooms) {
+    if (rooms && rooms.length > 0) {
       setRoomList(rooms);
       return;
     }

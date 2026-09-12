@@ -54,7 +54,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   useEffect(() => {
-    if (orders) {
+    if (orders && orders.length > 0) {
       setOrderList(orders);
       return;
     }

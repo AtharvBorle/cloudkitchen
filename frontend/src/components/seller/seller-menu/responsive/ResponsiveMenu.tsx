@@ -89,10 +89,11 @@ const DEFAULT_DISHES: ResponsiveDishItem[] = [
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 const CATEGORIES: MenuCategory[] = ["All", "Starters", "Mains", "Desserts", "Drinks"];
+const EMPTY_DISHES: ResponsiveDishItem[] = [];
 
 export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
   ownerName,
-  dishes = [],
+  dishes = EMPTY_DISHES,
   onAddItem,
   onStockChange,
   onToggleAvailability,
@@ -107,7 +108,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
   const [dishList, setDishList] = useState<ResponsiveDishItem[]>(dishes);
 
   useEffect(() => {
-    if (dishes) {
+    if (dishes && dishes !== EMPTY_DISHES) {
       setDishList(dishes);
     }
   }, [dishes]);

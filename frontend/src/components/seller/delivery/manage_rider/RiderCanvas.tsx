@@ -103,7 +103,7 @@ export default function RiderCanvas({
   const [metricsList, setMetricsList] = React.useState<RiderSummaryMetric[]>(initialMetrics || DEFAULT_METRICS);
 
   React.useEffect(() => {
-    if (initialRiders) {
+    if (initialRiders && initialRiders.length > 0) {
       setRiderList(initialRiders);
       return;
     }

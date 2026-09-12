@@ -31,10 +31,11 @@ export interface ResponsiveBookingProps {
 }
 
 const TABS: BookingStatusTab[] = ["Requested", "Confirmed", "Paid"];
+const EMPTY_BOOKINGS: ResponsiveBookingItem[] = [];
 
 export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
   ownerName,
-  bookings = [],
+  bookings = EMPTY_BOOKINGS,
   initialTab = "Requested",
   onConfirm,
   onDecline,
@@ -49,7 +50,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
   const [bookingList, setBookingList] = useState<ResponsiveBookingItem[]>(bookings);
 
   useEffect(() => {
-    if (bookings) {
+    if (bookings && bookings !== EMPTY_BOOKINGS) {
       setBookingList(bookings);
     }
   }, [bookings]);

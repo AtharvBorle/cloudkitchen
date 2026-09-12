@@ -57,7 +57,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   useEffect(() => {
-    if (initialOrders) {
+    if (initialOrders && initialOrders.length > 0) {
       setOrders(initialOrders);
       return;
     }

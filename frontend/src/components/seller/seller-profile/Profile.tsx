@@ -40,18 +40,21 @@ export default function Profile({
   }));
 
   useEffect(() => {
-    if (seller.ownerName && (!profileData.ownerName || profileData.ownerName === "John Doe")) {
-      setProfileData((prev) => ({
-        ...prev,
-        ownerName: seller.ownerName,
-        email: seller.email || prev.email,
-        mobileNumber: seller.phone || prev.mobileNumber,
-        outletName: seller.businessName || prev.outletName,
-        registeredAddress: seller.address || prev.registeredAddress,
-        avatarInitials: seller.avatarInitials,
-      }));
+    if (seller.ownerName) {
+      setProfileData((prev) => {
+        if (prev.ownerName && prev.ownerName !== "John Doe" && prev.ownerName !== "Kitchen Owner") return prev;
+        return {
+          ...prev,
+          ownerName: seller.ownerName,
+          email: seller.email || prev.email,
+          mobileNumber: seller.phone || prev.mobileNumber,
+          outletName: seller.businessName || prev.outletName,
+          registeredAddress: seller.address || prev.registeredAddress,
+          avatarInitials: seller.avatarInitials,
+        };
+      });
     }
-  }, [seller]);
+  }, [seller.ownerName, seller.email, seller.phone, seller.businessName, seller.address, seller.avatarInitials]);
 
   useEffect(() => {
     async function loadSellerProfile() {
