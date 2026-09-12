@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import ResponsiveSellerSubscription, { ResponsiveSubscriptionPlan } from "@/components/seller/subscription/responsive/ResponsiveSellerSubscription";
-import { getStoredMealPlans } from "@/lib/meal-subscriptions";
+import { fetchStoredMealPlans, getStoredMealPlans } from "@/lib/meal-subscriptions";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export default function ResponsiveSellerSubscriptionPage() {
   const seller = useSellerProfile();
   const [plans, setPlans] = useState<ResponsiveSubscriptionPlan[]>([]);
 
-  const refreshPlans = () => {
-    const stored = getStoredMealPlans();
-    const mapped: ResponsiveSubscriptionPlan[] = stored.map((p) => {
+  const mapPlans = (stored: any[]) => {
+    return stored.map((p) => {
       const tierLower = (p.tier || "").toLowerCase();
       const tierVariant = tierLower === "gold" ? "purple" : tierLower === "silver" ? "blue" : "orange";
       return {
@@ -25,11 +24,26 @@ export default function ResponsiveSellerSubscriptionPage() {
         createdAt: p.deployedDate,
         billingCycle: p.duration?.toLowerCase().includes("month") ? "Monthly" : "Weekly",
         mealsPerDay: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.length : 1,
-        mealTypes: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.map((m) => m.split(":")[0].trim()) : ["Lunch"],
+        mealTypes: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.map((m: string) => m.split(":")[0].trim()) : ["Lunch"],
         description: p.features && p.features.length > 0 ? p.features.join(". ") : "Fresh chef-prepared daily meal subscription.",
       };
     });
-    setPlans(mapped);
+  };
+
+  const refreshPlans = async () => {
+    const cached = getStoredMealPlans();
+    if (cached.length > 0) {
+      setPlans(mapPlans(cached));
+    }
+
+    try {
+      const data = await fetchStoredMealPlans();
+      if (data?.plans) {
+        setPlans(mapPlans(data.plans));
+      }
+    } catch (e) {
+      console.error("Failed to load meal plans on mobile:", e);
+    }
   };
 
   useEffect(() => {

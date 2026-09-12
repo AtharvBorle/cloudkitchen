@@ -496,7 +496,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                 <button
                   type="button"
                   className={styles.deployBtn}
-                  onClick={() => {
+                  onClick={async () => {
                     if (!planName.trim()) {
                       setErrorMessage('Please enter a Plan Name before deploying.');
                       return;
@@ -508,7 +508,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
                     setErrorMessage(null);
 
-                    saveMealPlan({
+                    await saveMealPlan({
                       name: planName.trim(),
                       tier: planTier,
                       weeklyPrice: weeklyPrice.trim(),

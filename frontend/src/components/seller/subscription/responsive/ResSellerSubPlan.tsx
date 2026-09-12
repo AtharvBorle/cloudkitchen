@@ -128,7 +128,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     setEditingTiming(null);
   };
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     const payload = {
       name: planName.trim() || "Bronze Plan",
       tier: planTier.trim() || "Bronze",
@@ -144,7 +144,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       status: "Live" as const,
     };
 
-    saveMealPlan(payload);
+    await saveMealPlan(payload);
 
     if (onDeployPlan) {
       onDeployPlan(payload);

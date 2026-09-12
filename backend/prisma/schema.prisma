@@ -29,6 +29,7 @@ model User {
   sellerProfile   SellerProfile?
   tickets         Ticket[]        @relation("UserTickets")
   messagesSent    TicketMessage[] @relation("SenderMessages")
+  userMealSubscriptions UserMealSubscription[]
 }
 
 model SellerProfile {
@@ -66,6 +67,8 @@ model SellerProfile {
   user                       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   servedPincodes             ServedPincode[]
   subscriptions              Subscription[]
+  mealPlans                  SellerMealPlan[]
+  userMealSubscriptions      UserMealSubscription[]
 }
 
 model ServedPincode {
@@ -238,6 +241,52 @@ model SubscriptionCoupon {
   updatedAt          DateTime          @updatedAt
   category           String            @default("BOTH")
   plan               SubscriptionPlan? @relation(fields: [planId], references: [id])
+}
+
+model SellerMealPlan {
+  id                 String                 @id @default(uuid())
+  sellerId           String
+  name               String
+  tier               String                 @default("Bronze")
+  description        String?                @default("")
+  weeklyPrice        Float
+  monthlyPrice       Float?
+  quarterlyPrice     Float?
+  yearlyPrice        Float?
+  duration           String                 @default("1 Week")
+  features           String                 @default("[]")
+  mealTimings        String                 @default("[]")
+  status             String                 @default("Live")
+  allowCancel        Boolean                @default(true)
+  pauseBillingPeriod String                 @default("Monthly")
+  subscribersCount   Int                    @default(0)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  seller             SellerProfile          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  userSubscriptions  UserMealSubscription[]
+}
+
+model UserMealSubscription {
+  id                String         @id @default(uuid())
+  userId            String
+  sellerId          String
+  planId            String
+  status            String         @default("ACTIVE")
+  tier              String         @default("Bronze")
+  startDate         DateTime       @default(now())
+  endDate           DateTime?
+  pricePaid         Float          @default(0)
+  cycle             String         @default("WEEKLY")
+  isPaused          Boolean        @default(false)
+  deliveryAddress   String?        @default("")
+  contactPhone      String?        @default("")
+  razorpayOrderId   String?        @unique
+  razorpayPaymentId String?        @unique
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  plan              SellerMealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  seller            SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SystemSettings {

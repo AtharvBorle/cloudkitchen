@@ -16,6 +16,7 @@ import {
   Bell,
 } from "lucide-react";
 import {
+  fetchStoredMealPlans,
   getStoredMealPlans,
   updateMealPlan,
   deleteMealPlan,
@@ -133,37 +134,51 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const plans = getStoredMealPlans();
-    const found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
-    if (found) {
-      setTargetPlanId(found.id);
-      setPlanName(found.name);
-      setPlanTier(found.tier);
-      setPrice(found.weeklyPrice ? found.weeklyPrice.replace(/[^\d.]/g, "") : "499.00");
-      setFeatures(found.features || []);
-      setDuration(found.duration || "1 Week");
-      setMealTimings(
-        (found.mealTimings || []).map((t, idx) => {
-          const [mealName, time] = t.includes(":") ? t.split(/:\s*(.+)/) : [`Meal ${idx + 1}`, t];
-          return {
-            id: `time-${idx}`,
-            name: mealName || "Meal",
-            time: time || t,
-          };
-        })
-      );
-      setAllowCancellation(found.allowCancel ?? true);
-      setAllowPauseBilling(found.pauseBillingPeriod !== "None");
-      setMetrics({
-        subscribers: found.subscribersCount || 0,
-        monthlyRevenue: found.monthlyRevenue || "₹0",
-      });
-      setMetadata({
-        planId: found.planId,
-        deployedDate: found.deployedDate,
-        taxCode: "GST 18% Extra",
-      });
-    }
+    const loadPlan = async () => {
+      let plans = getStoredMealPlans();
+      let found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam);
+      if (!found) {
+        const fetched = await fetchStoredMealPlans();
+        if (fetched?.plans) {
+          plans = fetched.plans;
+          found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
+        }
+      } else {
+        found = found || plans[0];
+      }
+
+      if (found) {
+        setTargetPlanId(found.id);
+        setPlanName(found.name);
+        setPlanTier(found.tier);
+        setPrice(found.weeklyPrice ? found.weeklyPrice.replace(/[^\d.]/g, "") : "499.00");
+        setFeatures(found.features || []);
+        setDuration(found.duration || "1 Week");
+        setMealTimings(
+          (found.mealTimings || []).map((t, idx) => {
+            const [mealName, time] = t.includes(":") ? t.split(/:\s*(.+)/) : [`Meal ${idx + 1}`, t];
+            return {
+              id: `time-${idx}`,
+              name: mealName || "Meal",
+              time: time || t,
+            };
+          })
+        );
+        setAllowCancellation(found.allowCancel ?? true);
+        setAllowPauseBilling(found.pauseBillingPeriod !== "None");
+        setMetrics({
+          subscribers: found.subscribersCount || 0,
+          monthlyRevenue: found.monthlyRevenue || "₹0",
+        });
+        setMetadata({
+          planId: found.planId,
+          deployedDate: found.deployedDate,
+          taxCode: "GST 18% Extra",
+        });
+      }
+    };
+
+    loadPlan();
   }, [planIdParam]);
 
   const handleBack = () => {
@@ -205,10 +220,10 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     setEditingTiming(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (targetPlanId) {
       const numPrice = parseFloat(price.replace(/[^\d.]/g, "")) || 0;
-      updateMealPlan(targetPlanId, {
+      await updateMealPlan(targetPlanId, {
         name: planName.trim() || "Bronze Plan",
         tier: planTier.trim() || "Bronze",
         weeklyPrice: price.trim().startsWith("₹") ? price.trim() : `₹${price.trim()}`,
@@ -253,9 +268,9 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     }
   };
 
-  const handleArchive = () => {
+  const handleArchive = async () => {
     if (targetPlanId) {
-      deleteMealPlan(targetPlanId);
+      await deleteMealPlan(targetPlanId);
     }
     if (onArchivePlan) {
       onArchivePlan();

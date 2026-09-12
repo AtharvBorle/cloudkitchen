@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  fetchStoredMealPlans,
   getStoredMealPlans,
   getStoredMealSubscribers,
   updateMealPlan,
@@ -32,10 +33,25 @@ export default function ManageSubscriptionCanvas() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "active" | "draft">("all");
+  const [loading, setLoading] = useState(true);
 
-  const refreshData = () => {
-    setPlans(getStoredMealPlans());
-    setSubscribers(getStoredMealSubscribers());
+  const refreshData = async () => {
+    const cachedPlans = getStoredMealPlans();
+    const cachedSubscribers = getStoredMealSubscribers();
+    if (cachedPlans.length > 0 || cachedSubscribers.length > 0) {
+      setPlans(cachedPlans);
+      setSubscribers(cachedSubscribers);
+    }
+
+    try {
+      const data = await fetchStoredMealPlans();
+      if (data) {
+        setPlans(data.plans);
+        setSubscribers(data.subscribers);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -46,11 +62,11 @@ export default function ManageSubscriptionCanvas() {
     };
   }, []);
 
-  const togglePlanStatus = (id: string) => {
+  const togglePlanStatus = async (id: string) => {
     const target = plans.find((p) => p.id === id || p.planId === id);
     if (target) {
       const nextStatus = target.status === "Live" ? "Paused" : "Live";
-      updateMealPlan(target.id, { status: nextStatus });
+      await updateMealPlan(target.id, { status: nextStatus });
       refreshData();
     }
   };

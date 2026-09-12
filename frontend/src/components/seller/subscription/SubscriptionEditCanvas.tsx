@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Trash2, Edit2, Plus, ChevronLeft, CheckCircle2 } from "lucide-react";
 import {
+  fetchStoredMealPlans,
   getStoredMealPlans,
   updateMealPlan,
   deleteMealPlan,
@@ -119,45 +120,59 @@ export default function SubscriptionEditCanvas({
   });
 
   useEffect(() => {
-    const plans = getStoredMealPlans();
-    const found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
-    if (found) {
-      setTargetPlanId(found.id);
-      setFormData({
-        planName: found.name,
-        planTier: found.tier,
-        monthlyPrice: found.monthlyPrice,
-        quarterlyPrice: found.quarterlyPrice,
-        yearlyPrice: found.yearlyPrice,
-        includedFeatures: (found.features || []).map((feat, idx) => ({
-          id: `feat-${idx}`,
-          label: feat,
-          checked: true,
-        })),
-        customFeature: "",
-        planDuration: found.duration,
-        mealTimings: (found.mealTimings || []).map((t, idx) => {
-          const [mealName, timing] = t.includes(":") ? t.split(/:\s*(.+)/) : ["Meal", t];
-          return {
-            id: `time-${idx}`,
-            mealName: mealName || "Meal",
-            timing: timing || t,
-          };
-        }),
-        allowCancelSubscription: found.allowCancel ?? true,
-        allowPauseBilling: found.pauseBillingPeriod !== "None",
-        metrics: {
-          subscribers: found.subscribersCount,
-          monthlyRevenue: found.monthlyRevenue,
-        },
-        metadata: {
-          planId: found.planId,
-          deployedDate: found.deployedDate,
-          taxCode: "GST 18% Extra",
-          tierBadgeText: `${found.tier.toUpperCase()} TIER`,
-        },
-      });
-    }
+    const loadPlan = async () => {
+      let plans = getStoredMealPlans();
+      let found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam);
+      if (!found) {
+        const fetched = await fetchStoredMealPlans();
+        if (fetched?.plans) {
+          plans = fetched.plans;
+          found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
+        }
+      } else {
+        found = found || plans[0];
+      }
+
+      if (found) {
+        setTargetPlanId(found.id);
+        setFormData({
+          planName: found.name,
+          planTier: found.tier,
+          monthlyPrice: found.monthlyPrice,
+          quarterlyPrice: found.quarterlyPrice,
+          yearlyPrice: found.yearlyPrice,
+          includedFeatures: (found.features || []).map((feat, idx) => ({
+            id: `feat-${idx}`,
+            label: feat,
+            checked: true,
+          })),
+          customFeature: "",
+          planDuration: found.duration,
+          mealTimings: (found.mealTimings || []).map((t, idx) => {
+            const [mealName, timing] = t.includes(":") ? t.split(/:\s*(.+)/) : ["Meal", t];
+            return {
+              id: `time-${idx}`,
+              mealName: mealName || "Meal",
+              timing: timing || t,
+            };
+          }),
+          allowCancelSubscription: found.allowCancel ?? true,
+          allowPauseBilling: found.pauseBillingPeriod !== "None",
+          metrics: {
+            subscribers: found.subscribersCount,
+            monthlyRevenue: found.monthlyRevenue,
+          },
+          metadata: {
+            planId: found.planId,
+            deployedDate: found.deployedDate,
+            taxCode: "GST 18% Extra",
+            tierBadgeText: `${found.tier.toUpperCase()} TIER`,
+          },
+        });
+      }
+    };
+
+    loadPlan();
   }, [planIdParam]);
 
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
@@ -183,46 +198,61 @@ export default function SubscriptionEditCanvas({
     }));
   };
 
-  const handleDeleteFeature = (id: string) => {
+  const handleFeatureDelete = (id: string) => {
     setFormData((prev) => ({
       ...prev,
       includedFeatures: prev.includedFeatures.filter((f) => f.id !== id),
     }));
   };
 
-  const handleAddFeatureItem = () => {
-    if (onAddFeature) {
-      onAddFeature();
-      return;
-    }
-    const newId = `feat-${Date.now()}`;
+  const handleAddCustomFeature = () => {
+    if (!formData.customFeature.trim()) return;
     const newFeature: PlanFeatureItem = {
-      id: newId,
-      label: "New Weekly Plan Item",
+      id: `feat-${Date.now()}`,
+      label: formData.customFeature.trim(),
+      checked: true,
+    };
+    setFormData((prev) => ({
+      ...prev,
+      includedFeatures: [...prev.includedFeatures, newFeature],
+      customFeature: "",
+    }));
+    if (onAddFeature) onAddFeature();
+  };
+
+  const handleAddFeatureDirect = () => {
+    const newFeature: PlanFeatureItem = {
+      id: `feat-${Date.now()}`,
+      label: "New Plan Feature",
       checked: true,
     };
     setFormData((prev) => ({
       ...prev,
       includedFeatures: [...prev.includedFeatures, newFeature],
     }));
+    if (onAddFeature) onAddFeature();
   };
 
-  const handleDeleteTiming = (id: string) => {
+  const handleTimingChange = (id: string, newTiming: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      mealTimings: prev.mealTimings.map((t) =>
+        t.id === id ? { ...t, timing: newTiming } : t
+      ),
+    }));
+  };
+
+  const handleTimingDelete = (id: string) => {
     setFormData((prev) => ({
       ...prev,
       mealTimings: prev.mealTimings.filter((t) => t.id !== id),
     }));
   };
 
-  const handleAddTimingItem = () => {
-    if (onAddTiming) {
-      onAddTiming();
-      return;
-    }
-    const newId = `time-${Date.now()}`;
+  const handleAddMealTiming = () => {
     const newTiming: MealTimingItem = {
-      id: newId,
-      mealName: "New Meal Timing",
+      id: `time-${Date.now()}`,
+      mealName: "New Meal",
       timing: "10:00 AM – 11:00 AM",
     };
     setFormData((prev) => ({
@@ -231,9 +261,9 @@ export default function SubscriptionEditCanvas({
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (targetPlanId) {
-      updateMealPlan(targetPlanId, {
+      await updateMealPlan(targetPlanId, {
         name: formData.planName,
         tier: formData.planTier,
         monthlyPrice: formData.monthlyPrice,
@@ -265,9 +295,9 @@ export default function SubscriptionEditCanvas({
     }
   };
 
-  const handleArchive = () => {
+  const handleArchive = async () => {
     if (targetPlanId) {
-      deleteMealPlan(targetPlanId);
+      await deleteMealPlan(targetPlanId);
     }
     if (onArchive) {
       onArchive();
