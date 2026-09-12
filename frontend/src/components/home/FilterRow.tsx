@@ -17,7 +17,7 @@ export interface ActiveHomeFilters {
   fastest?: boolean;
   minRating?: number | null;
   offersOnly?: boolean;
-  dietary?: "all" | "veg" | "non_veg";
+  dietary?: "all" | "veg" | "non_veg" | "vegan" | "jain";
   priceTier?: "all" | "under-150" | "150-300" | "300-plus" | null;
   cuisines?: string[];
 }
@@ -366,6 +366,10 @@ export default function FilterRow({
                 ? "Pure Veg 🥦"
                 : internalFilters.dietary === "non_veg"
                 ? "Non-Veg 🍗"
+                : internalFilters.dietary === "vegan"
+                ? "Vegan 🌱"
+                : internalFilters.dietary === "jain"
+                ? "Jain 🌿"
                 : "Dietary"}
             </span>
             <ChevronDown size={13} color={isDietaryActive ? "#047857" : "#94A3B8"} />
@@ -383,7 +387,7 @@ export default function FilterRow({
                 boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
                 border: "1px solid #E2E8F0",
                 zIndex: 50,
-                minWidth: "160px",
+                minWidth: "165px",
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
@@ -393,6 +397,8 @@ export default function FilterRow({
                 { id: "all", label: "All Items" },
                 { id: "veg", label: "Pure Veg 🥦" },
                 { id: "non_veg", label: "Non-Veg 🍗" },
+                { id: "vegan", label: "Vegan 🌱" },
+                { id: "jain", label: "Jain 🌿" },
               ].map((opt) => {
                 const isSelected = (internalFilters.dietary || "all") === opt.id;
                 return (

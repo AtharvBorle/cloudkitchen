@@ -250,6 +250,13 @@ export default function Properties({ places }: PropertiesProps) {
           p.category.toLowerCase().includes("healthy")
         );
       }
+      if (selectedDietary.includes("jain")) {
+        list = list.filter((p) =>
+          p.category.toLowerCase().includes("satvik") ||
+          p.category.toLowerCase().includes("jain") ||
+          p.category.toLowerCase().includes("pure veg")
+        );
+      }
     }
 
     // Filter by price range (0 to 1000+)
@@ -277,9 +284,19 @@ export default function Properties({ places }: PropertiesProps) {
   };
 
   const toggleDietary = (id: string) => {
-    setSelectedDietary((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setSelectedDietary((prev) => {
+      const isSelected = prev.includes(id);
+      if (isSelected) {
+        return prev.filter((item) => item !== id);
+      } else {
+        if (id === "non-veg" || id === "Non-Veg") {
+          return [id];
+        } else {
+          const withoutNonVeg = prev.filter((item) => item !== "non-veg" && item !== "Non-Veg");
+          return [...withoutNonVeg, id];
+        }
+      }
+    });
   };
 
   const handleClearAll = () => {

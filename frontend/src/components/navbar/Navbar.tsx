@@ -317,9 +317,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const toggleDietary = (id: string) => {
-    setSelectedDietary((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setSelectedDietary((prev) => {
+      const isSelected = prev.includes(id);
+      if (isSelected) {
+        return prev.filter((item) => item !== id);
+      } else {
+        if (id === "non-veg" || id === "Non-Veg" || id === "NON_VEG") {
+          return [id];
+        } else {
+          const withoutNonVeg = prev.filter(
+            (item) => item !== "non-veg" && item !== "Non-Veg" && item !== "NON_VEG"
+          );
+          return [...withoutNonVeg, id];
+        }
+      }
+    });
   };
 
   const handlePriceSelect = (tier: string) => {

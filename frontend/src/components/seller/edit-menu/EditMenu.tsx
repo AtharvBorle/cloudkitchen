@@ -156,9 +156,26 @@ function EditMenuInner({
   }, [itemId]);
 
   const toggleFoodType = (type: string) => {
-    // Single-select or multi-select option
-    setSelectedFoodTypes([type]);
-    setIsFoodTypeDropdownOpen(false);
+    setSelectedFoodTypes((prev) => {
+      const isAlreadySelected = prev.includes(type);
+
+      if (isAlreadySelected) {
+        // Unselect the clicked type
+        return prev.filter((t) => t !== type);
+      } else {
+        // Select the clicked type
+        if (type === 'Non Veg' || type === 'Non-Veg' || type === 'NON_VEG') {
+          // If Non Veg is selected: automatically unselect Veg, Vegan, and Jain
+          return ['Non Veg'];
+        } else {
+          // If Veg, Vegan, or Jain is selected: automatically unselect Non Veg
+          const withoutNonVeg = prev.filter(
+            (t) => t !== 'Non Veg' && t !== 'Non-Veg' && t !== 'NON_VEG'
+          );
+          return [...withoutNonVeg, type];
+        }
+      }
+    });
   };
 
   const handleAddVariant = () => {
@@ -391,27 +408,40 @@ function EditMenuInner({
                   </button>
 
                   {isFoodTypeDropdownOpen && (
-                    <div className={styles.dropdownMenu}>
-                      {['Veg', 'Non Veg', 'Vegan', 'Jain'].map((type) => {
-                        const isSelected = selectedFoodTypes.includes(type);
-                        return (
-                          <div
-                            key={type}
-                            className={styles.dropdownOption}
-                            onClick={() => toggleFoodType(type)}
-                          >
+                    <>
+                      <div
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 40,
+                        }}
+                        onClick={() => setIsFoodTypeDropdownOpen(false)}
+                      />
+                      <div className={styles.dropdownMenu} style={{ zIndex: 45 }}>
+                        {['Veg', 'Non Veg', 'Vegan', 'Jain'].map((type) => {
+                          const isSelected = selectedFoodTypes.includes(type);
+                          return (
                             <div
-                              className={`${styles.checkboxBox} ${
-                                isSelected ? styles.checkboxBoxActive : ''
-                              }`}
+                              key={type}
+                              className={styles.dropdownOption}
+                              onClick={() => toggleFoodType(type)}
                             >
-                              {isSelected && <Check size={12} strokeWidth={3} />}
+                              <div
+                                className={`${styles.checkboxBox} ${
+                                  isSelected ? styles.checkboxBoxActive : ''
+                                }`}
+                              >
+                                {isSelected && <Check size={12} strokeWidth={3} />}
+                              </div>
+                              <span className={styles.optionLabel}>{type}</span>
                             </div>
-                            <span className={styles.optionLabel}>{type}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
