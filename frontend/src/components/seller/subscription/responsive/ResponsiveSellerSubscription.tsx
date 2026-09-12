@@ -21,13 +21,13 @@ import styles from "./ResponsiveSellerSubscription.module.css";
 
 
 export type PlanStatus = "All" | "Active" | "Paused" | "Draft";
-export type PlanTier = "All" | "Starter" | "Professional" | "Enterprise";
+export type PlanTier = "All" | "Bronze" | "Silver" | "Gold" | "Starter" | "Professional" | "Enterprise";
 export type SortOption = "Newest" | "Subscribers" | "Price: Low to High" | "Price: High to Low";
 
 export interface ResponsiveSubscriptionPlan {
   id: string;
   title: string;
-  tier: "Starter" | "Professional" | "Enterprise";
+  tier: "Bronze" | "Silver" | "Gold" | "Starter" | "Professional" | "Enterprise" | string;
   tierVariant?: "orange" | "purple" | "indigo" | "blue";
   price: string;
   subscribersCount: number;
@@ -52,59 +52,42 @@ export interface ResponsiveSellerSubscriptionProps {
 const DEFAULT_PLANS: ResponsiveSubscriptionPlan[] = [
   {
     id: "1",
-    title: "Starter Weekly Basic",
-    tier: "Starter",
-    tierVariant: "orange",
-    price: "₹998",
+    title: "Bronze Weekly Lunch Plan",
+    tier: "Bronze",
+    price: "₹999",
     subscribersCount: 142,
     status: "Active",
     createdAt: "Jun 15, 2024",
     billingCycle: "Weekly",
-    mealsPerDay: 2,
-    mealTypes: ["Lunch", "Dinner"],
-    description: "Includes Lunch & Dinner (Mon-Fri) with fresh home-cooked meals.",
+    mealsPerDay: 1,
+    mealTypes: ["Lunch"],
+    description: "Includes Lunch (Mon-Fri) with fresh home-cooked dal, seasonal sabzi & rotis.",
   },
   {
     id: "2",
-    title: "Professional Monthly",
-    tier: "Professional",
-    tierVariant: "purple",
-    price: "₹998",
+    title: "Silver Balanced Meal Plan",
+    tier: "Silver",
+    price: "₹1,799",
     subscribersCount: 88,
     status: "Active",
     createdAt: "Feb 3, 2024",
     billingCycle: "Monthly",
-    mealsPerDay: 3,
-    mealTypes: ["Breakfast", "Lunch", "Dinner"],
-    description: "Full meal plan with breakfast, lunch, and dinner + weekend specials.",
+    mealsPerDay: 2,
+    mealTypes: ["Lunch", "Dinner"],
+    description: "Complete daily lunch and dinner with rotating regional specialties.",
   },
   {
     id: "3",
-    title: "Enterprise Premium",
-    tier: "Enterprise",
-    tierVariant: "indigo",
-    price: "₹998",
+    title: "Gold Gourmet Executive",
+    tier: "Gold",
+    price: "₹2,699",
     subscribersCount: 34,
     status: "Active",
     createdAt: "Mar 10, 2024",
     billingCycle: "Monthly",
     mealsPerDay: 3,
-    mealTypes: ["Breakfast", "Lunch", "Dinner", "Evening Snack"],
-    description: "Executive gourmet selection with custom diet and beverage options.",
-  },
-  {
-    id: "4",
-    title: "Starter Lite",
-    tier: "Starter",
-    tierVariant: "blue",
-    price: "₹998",
-    subscribersCount: 12,
-    status: "Paused",
-    createdAt: "Apr 2, 2024",
-    billingCycle: "Weekly",
-    mealsPerDay: 1,
-    mealTypes: ["Lunch Only"],
-    description: "Single meal subscription for busy working professionals.",
+    mealTypes: ["Breakfast", "Lunch", "Dinner"],
+    description: "Premium all-meal plan including weekend feasts, sweet treats & express delivery.",
   },
 ];
 
@@ -205,11 +188,11 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     });
 
   const getTierBadgeClass = (tierVariant?: string, tier?: string) => {
-    if (tierVariant === "orange" || tier === "Starter") return styles.tierStarter;
-    if (tierVariant === "blue") return styles.tierStarterBlue;
-    if (tierVariant === "purple" || tier === "Professional") return styles.tierProfessional;
-    if (tierVariant === "indigo" || tier === "Enterprise") return styles.tierEnterprise;
-    return styles.tierStarter;
+    const t = (tier || "").toLowerCase();
+    if (t === "bronze" || tierVariant === "orange" || tier === "Starter") return styles.tierBronze;
+    if (t === "silver" || tierVariant === "blue" || tier === "Professional") return styles.tierSilver;
+    if (t === "gold" || tierVariant === "purple" || tierVariant === "indigo" || tier === "Enterprise") return styles.tierGold;
+    return styles.tierBronze;
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -327,10 +310,13 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
               className={`${styles.filterChip} ${tierFilter !== "All" ? styles.filterChipActive : ""}`}
               onClick={() => {
                 const nextTier: Record<PlanTier, PlanTier> = {
-                  All: "Starter",
-                  Starter: "Professional",
-                  Professional: "Enterprise",
-                  Enterprise: "All",
+                  All: "Bronze",
+                  Bronze: "Silver",
+                  Silver: "Gold",
+                  Gold: "All",
+                  Starter: "Bronze",
+                  Professional: "Silver",
+                  Enterprise: "Gold",
                 };
                 setTierFilter(nextTier[tierFilter] || "All");
               }}

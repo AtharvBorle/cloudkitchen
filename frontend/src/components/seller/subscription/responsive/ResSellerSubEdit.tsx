@@ -85,8 +85,8 @@ const DURATION_OPTIONS = [
 ];
 
 export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
-  initialPlanName = "Professional Plan",
-  initialPlanTier = "Professional",
+  initialPlanName = "Bronze Plan",
+  initialPlanTier = "Bronze",
   initialPrice = "499.00",
   initialMetrics = DEFAULT_METRICS,
   initialFeatures = DEFAULT_FEATURES,
@@ -164,8 +164,8 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
 
   const handleSave = () => {
     const payload = {
-      planName: planName.trim() || "Professional Plan",
-      planTier: planTier.trim() || "Professional",
+      planName: planName.trim() || "Bronze Plan",
+      planTier: planTier.trim() || "Bronze",
       price: price.trim() || "499.00",
       duration,
       features,
@@ -286,14 +286,17 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
               <label htmlFor="editPlanTier" className={styles.label}>
                 Plan Tier
               </label>
-              <input
+              <select
                 id="editPlanTier"
-                type="text"
                 className={styles.input}
-                placeholder="Plan Tier"
                 value={planTier}
                 onChange={(e) => setPlanTier(e.target.value)}
-              />
+                style={{ cursor: "pointer" }}
+              >
+                <option value="Bronze">Bronze Tier</option>
+                <option value="Silver">Silver Tier</option>
+                <option value="Gold">Gold Tier</option>
+              </select>
             </div>
           </section>
 

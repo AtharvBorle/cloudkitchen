@@ -40,7 +40,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
   // Form states
   const [planName, setPlanName] = useState('');
-  const [planTier, setPlanTier] = useState('');
+  const [planTier, setPlanTier] = useState('Bronze');
   const [weeklyPrice, setWeeklyPrice] = useState('');
 
   // Included in weekly plans feature list
@@ -187,13 +187,18 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   </div>
                   <div className={styles.fieldGroup}>
                     <label className={styles.fieldLabel}>Plan Tier</label>
-                    <input
-                      type="text"
-                      className={styles.textInput}
-                      placeholder="e.g. Starter, Pro, Enterprise"
-                      value={planTier}
-                      onChange={(e) => setPlanTier(e.target.value)}
-                    />
+                    <div className={styles.selectWrapper}>
+                      <select
+                        className={styles.selectInput}
+                        value={planTier}
+                        onChange={(e) => setPlanTier(e.target.value)}
+                      >
+                        <option value="Bronze">Bronze Tier</option>
+                        <option value="Silver">Silver Tier</option>
+                        <option value="Gold">Gold Tier</option>
+                      </select>
+                      <span className={styles.selectArrow}>▼</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -419,7 +424,23 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
                 {/* Inner Preview Box */}
                 <div className={styles.innerPreviewBox}>
-                  <span className={styles.previewModeLabel}>PREVIEW MODE</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                    <span className={styles.previewModeLabel}>PREVIEW MODE</span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.4px',
+                        backgroundColor: planTier === 'Bronze' ? '#FFFBEB' : planTier === 'Silver' ? '#F1F5F9' : '#FEF3C7',
+                        color: planTier === 'Bronze' ? '#B45309' : planTier === 'Silver' ? '#475569' : '#D97706',
+                      }}
+                    >
+                      {planTier} Tier
+                    </span>
+                  </div>
                   <h4 className={styles.previewPlanName}>
                     {planName.trim() ? planName : '[Plan Name Draft]'}
                   </h4>

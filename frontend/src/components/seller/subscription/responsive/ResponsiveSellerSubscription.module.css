@@ -464,6 +464,24 @@
   color: #6366F1;
 }
 
+.tierBronze {
+  background-color: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.tierSilver {
+  background-color: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.tierGold {
+  background-color: #FEF9C3;
+  color: #A16207;
+  border: 1px solid #FDE047;
+}
+
 /* Price & Subscribers Row */
 .priceSubscribersRow {
   display: flex;

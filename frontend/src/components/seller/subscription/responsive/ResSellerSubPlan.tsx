@@ -59,8 +59,8 @@ const DURATION_OPTIONS = [
 ];
 
 export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
-  initialPlanName = "Professional Plan",
-  initialPlanTier = "Pro",
+  initialPlanName = "Bronze Plan",
+  initialPlanTier = "Bronze",
   initialPrice = "499",
   initialFeatures = DEFAULT_FEATURES,
   initialDuration = "1 Week",
@@ -129,8 +129,8 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
 
   const handleDeploy = () => {
     const payload = {
-      planName: planName.trim() || "New Plan",
-      planTier: planTier.trim() || "Starter",
+      planName: planName.trim() || "Bronze Plan",
+      planTier: planTier.trim() || "Bronze",
       price: price.trim() || "0",
       duration,
       features,
@@ -215,7 +215,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                 id="planName"
                 type="text"
                 className={styles.input}
-                placeholder="e.g. Starter, Enterprise, Growth"
+                placeholder="e.g. Bronze Plan, Silver Plan, Gold Plan"
                 value={planName}
                 onChange={(e) => setPlanName(e.target.value)}
               />
@@ -225,14 +225,17 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
               <label htmlFor="planTier" className={styles.label}>
                 Plan Tier
               </label>
-              <input
+              <select
                 id="planTier"
-                type="text"
                 className={styles.input}
-                placeholder="e.g. Starter, Pro, Enterprise"
                 value={planTier}
                 onChange={(e) => setPlanTier(e.target.value)}
-              />
+                style={{ cursor: "pointer" }}
+              >
+                <option value="Bronze">Bronze Tier</option>
+                <option value="Silver">Silver Tier</option>
+                <option value="Gold">Gold Tier</option>
+              </select>
             </div>
           </section>
 

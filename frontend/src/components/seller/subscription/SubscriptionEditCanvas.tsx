@@ -68,8 +68,8 @@ const DEFAULT_MEAL_TIMINGS: MealTimingItem[] = [
 ];
 
 const DEFAULT_DATA: SubscriptionPlanData = {
-  planName: "Professional Plan",
-  planTier: "Professional",
+  planName: "Bronze Plan",
+  planTier: "Bronze",
   monthlyPrice: "₹ 999.00",
   quarterlyPrice: "₹ 2,699.00",
   yearlyPrice: "₹ 9,599.00",
@@ -87,7 +87,7 @@ const DEFAULT_DATA: SubscriptionPlanData = {
     planId: "PLN-7832",
     deployedDate: "Feb 10, 2024",
     taxCode: "GST 18% Extra",
-    tierBadgeText: "PROFESSIONAL TIER",
+    tierBadgeText: "BRONZE TIER",
   },
 };
 
@@ -319,8 +319,25 @@ export default function SubscriptionEditCanvas({
           </h1>
           <span
             style={{
-              backgroundColor: "#FFF1E8",
-              color: "#FF5500",
+              backgroundColor:
+                formData.planTier?.toLowerCase() === "gold"
+                  ? "#FEF9C3"
+                  : formData.planTier?.toLowerCase() === "silver"
+                  ? "#F1F5F9"
+                  : "#FEF3C7",
+              color:
+                formData.planTier?.toLowerCase() === "gold"
+                  ? "#A16207"
+                  : formData.planTier?.toLowerCase() === "silver"
+                  ? "#475569"
+                  : "#B45309",
+              border: `1px solid ${
+                formData.planTier?.toLowerCase() === "gold"
+                  ? "#FDE047"
+                  : formData.planTier?.toLowerCase() === "silver"
+                  ? "#CBD5E1"
+                  : "#FDE68A"
+              }`,
               fontSize: "10.5px",
               fontWeight: 700,
               padding: "3px 8px",
@@ -332,7 +349,7 @@ export default function SubscriptionEditCanvas({
               lineHeight: 1.2,
             }}
           >
-            {formData.metadata.tierBadgeText || "PROFESSIONAL TIER"}
+            {formData.metadata.tierBadgeText || `${(formData.planTier || "BRONZE").toUpperCase()} TIER`}
           </span>
         </div>
 
@@ -447,10 +464,19 @@ export default function SubscriptionEditCanvas({
                 >
                   Plan Tier
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.planTier}
-                  onChange={(e) => handleTextChange("planTier", e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      planTier: val,
+                      metadata: {
+                        ...prev.metadata,
+                        tierBadgeText: `${val.toUpperCase()} TIER`,
+                      },
+                    }));
+                  }}
                   style={{
                     width: "100%",
                     borderRadius: "8px",
@@ -463,8 +489,13 @@ export default function SubscriptionEditCanvas({
                     boxSizing: "border-box",
                     fontFamily: "inherit",
                     transition: "border-color 0.15s ease",
+                    cursor: "pointer",
                   }}
-                />
+                >
+                  <option value="Bronze">Bronze Tier</option>
+                  <option value="Silver">Silver Tier</option>
+                  <option value="Gold">Gold Tier</option>
+                </select>
               </div>
             </div>
           </div>
