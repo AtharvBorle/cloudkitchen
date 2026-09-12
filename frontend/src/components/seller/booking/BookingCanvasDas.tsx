@@ -68,20 +68,36 @@ export default function BookingCanvasDas({
           const list = data.data?.bookings || data.bookings || [];
           if (Array.isArray(list)) {
             const mapped: BookingRecord[] = list.map((b: any) => {
-              const checkInStr = b.checkInDate
-                ? new Date(b.checkInDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+              const checkInRaw = b.startDate || b.checkInDate || b.checkIn;
+              const checkOutRaw = b.endDate || b.checkOutDate || b.checkOut;
+              const checkInStr = checkInRaw
+                ? new Date(checkInRaw).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                 : "-";
-              const checkOutStr = b.checkOutDate
-                ? new Date(b.checkOutDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+              const checkOutStr = checkOutRaw
+                ? new Date(checkOutRaw).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                 : "-";
+
+              let duration = "";
+              if (checkInRaw && checkOutRaw) {
+                const d1 = new Date(checkInRaw);
+                const d2 = new Date(checkOutRaw);
+                if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                  const diffDays = Math.max(1, Math.round(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
+                  duration = `${diffDays} ${diffDays === 1 ? "Night" : "Nights"}`;
+                }
+              }
+
               const name = b.user?.name || "Guest";
               return {
                 id: b.id,
                 guestName: name,
                 guestInitials: computeInitials(name),
+                guestPhone: b.user?.phone || "+91 98765 43210",
                 room: b.room?.title || "Room",
+                capacity: b.room?.capacity ? `Sleeps ${b.room.capacity} Guests` : "Sleeps 2 Guests",
                 checkIn: checkInStr,
                 checkOut: checkOutStr,
+                duration: duration,
                 amount: `₹${b.totalAmount || 0}`,
                 status: b.status === "CONFIRMED" ? "Confirmed" : b.status === "PAID" ? "Paid" : b.status === "CANCELLED" ? "Cancelled" : "Requested",
               };

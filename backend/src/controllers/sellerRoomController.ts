@@ -126,13 +126,40 @@ export const getSellerRooms = async () => {
     const bookings = await db.booking.findMany({
         where: { roomId: { in: roomIds } },
         include: {
-            user: { select: { name: true, phone: true } },
-            room: { select: { title: true } }
+            user: { select: { name: true, phone: true, email: true } },
+            room: { select: { title: true, price: true, images: true, capacity: true } }
         },
         orderBy: { createdAt: 'desc' }
     });
 
     return { rooms, bookings };
+};
+
+export const getSellerBookings = async () => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
+
+    const rooms = await db.room.findMany({
+        where: { sellerId: sellerProfile.id },
+        select: { id: true }
+    });
+
+    const roomIds = rooms.map(r => r.id);
+
+    const bookings = await db.booking.findMany({
+        where: { roomId: { in: roomIds } },
+        include: {
+            user: { select: { name: true, phone: true, email: true } },
+            room: { select: { title: true, price: true, images: true, capacity: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
+    return { bookings };
 };
 
 export const getSellerRoomById = async (roomId: string) => {
