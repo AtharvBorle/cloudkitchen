@@ -44,6 +44,7 @@ export default function RiderSettlementDas({
 }: RiderSettlementDasProps) {
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
@@ -87,7 +88,10 @@ export default function RiderSettlementDas({
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            if (onSearch) onSearch(q);
+          }}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -97,6 +101,7 @@ export default function RiderSettlementDas({
           riderProfile={riderProfile}
           cashBalance={cashBalance}
           ledgerHistory={ledgerHistory}
+          searchQuery={searchQuery}
           onAddDeliveryAgent={onAddDeliveryAgent}
           onRecordSettlement={onRecordSettlement}
         />

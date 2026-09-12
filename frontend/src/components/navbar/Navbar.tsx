@@ -97,6 +97,7 @@ export interface NavbarProps {
   onLocationClick?: () => void;
   hideSearch?: boolean;
   hideVegToggle?: boolean;
+  onSearch?: (query: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -115,6 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLocationClick,
   hideSearch,
   hideVegToggle,
+  onSearch,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -252,12 +254,61 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState<"cuisines" | "dietary" | "price">("cuisines");
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<string>("");
+
+  // Section-aware search target, placeholder, and label
+  const getSectionSearchConfig = () => {
+    if (pathname.startsWith("/room-booking") || currentActiveItem === "Rooms") {
+      return {
+        section: "Rooms",
+        placeholder: "Search rooms, stays, coliving...",
+        targetRoute: "/room-booking",
+      };
+    }
+    if (pathname.startsWith("/explore/furniture") || currentActiveItem === "Furniture") {
+      return {
+        section: "Furniture",
+        placeholder: "Search furniture, chairs, tables, beds...",
+        targetRoute: "/explore/furniture",
+      };
+    }
+    if (
+      pathname.startsWith("/orders-desktop") ||
+      pathname.startsWith("/order-history") ||
+      pathname.startsWith("/dashboard/user/orders") ||
+      currentActiveItem === "Orders"
+    ) {
+      return {
+        section: "Orders",
+        placeholder: "Search orders by ID, dish, kitchen...",
+        targetRoute: "/orders-desktop",
+      };
+    }
+    // Default to Food / Explore
+    return {
+      section: "Food",
+      placeholder: "Search home meals, cuisines, kitchens...",
+      targetRoute: "/explore-desktop",
+    };
+  };
+
+  // Sync search input with URL search parameters on mount or navigation
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("query");
+      if (q) {
+        setSearchQuery(q);
+        setMobileSearchQuery(q);
+      }
+    }
+  }, [pathname]);
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -296,12 +347,41 @@ export const Navbar: React.FC<NavbarProps> = ({
     selectedDietary.length +
     (selectedPrice ? 1 : 0);
 
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const q = searchQuery.trim();
+    if (onSearch) {
+      onSearch(q);
+    }
+    const config = getSectionSearchConfig();
+    if (q) {
+      router.push(`${config.targetRoute}?query=${encodeURIComponent(q)}`);
+    } else {
+      router.push(config.targetRoute);
+    }
+  };
+
   const handleMobileSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (mobileSearchQuery.trim()) {
-      router.push(`/explore-desktop?query=${encodeURIComponent(mobileSearchQuery.trim())}`);
+    const q = mobileSearchQuery.trim();
+    if (onSearch) {
+      onSearch(q);
+    }
+    const config = getSectionSearchConfig();
+    if (q) {
+      router.push(`${config.targetRoute}?query=${encodeURIComponent(q)}`);
     } else {
-      router.push("/explore-desktop");
+      router.push(config.targetRoute);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setMobileSearchQuery("");
+    if (onSearch) onSearch("");
+    const config = getSectionSearchConfig();
+    if (pathname === config.targetRoute) {
+      router.push(config.targetRoute);
     }
   };
 
@@ -457,6 +537,35 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
           </nav>
+
+          {/* Desktop Section-Aware Search Bar */}
+          {!shouldHideSearch && (
+            <form onSubmit={handleSearchSubmit} className={styles.desktopSearchBar}>
+              <Search size={16} className={styles.desktopSearchIcon} strokeWidth={2.2} />
+              <input
+                type="text"
+                placeholder={getSectionSearchConfig().placeholder}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setMobileSearchQuery(e.target.value);
+                  if (onSearch) onSearch(e.target.value);
+                }}
+                className={styles.desktopSearchInput}
+                aria-label={`Search in ${getSectionSearchConfig().section}`}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className={styles.desktopClearBtn}
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </form>
+          )}
 
           {/* 3. RIGHT SECTION */}
           <div className={styles.rightSection}>
@@ -660,22 +769,40 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Search size={18} color="#FF5500" strokeWidth={2.5} />
                 <input
                   type="text"
-                  placeholder="near by home meals..."
+                  placeholder={getSectionSearchConfig().placeholder}
                   value={mobileSearchQuery}
-                  onChange={(e) => setMobileSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setMobileSearchQuery(e.target.value);
+                    setSearchQuery(e.target.value);
+                    if (onSearch) onSearch(e.target.value);
+                  }}
                   className={styles.mobileSearchInput}
+                  aria-label={`Search in ${getSectionSearchConfig().section}`}
                 />
-                <button
-                  type="button"
-                  className={styles.mobileFilterBtn}
-                  onClick={() => setIsFilterModalOpen(true)}
-                  aria-label="Open filter options"
-                >
-                  <SlidersHorizontal size={18} color="#FF5500" strokeWidth={2.2} />
-                  {activeFiltersCount > 0 && (
-                    <span className={styles.filterDotBadge} />
-                  )}
-                </button>
+                {mobileSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className={styles.desktopClearBtn}
+                    aria-label="Clear mobile search"
+                    style={{ marginRight: "4px" }}
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+                {getSectionSearchConfig().section === "Food" && (
+                  <button
+                    type="button"
+                    className={styles.mobileFilterBtn}
+                    onClick={() => setIsFilterModalOpen(true)}
+                    aria-label="Open filter options"
+                  >
+                    <SlidersHorizontal size={18} color="#FF5500" strokeWidth={2.2} />
+                    {activeFiltersCount > 0 && (
+                      <span className={styles.filterDotBadge} />
+                    )}
+                  </button>
+                )}
               </form>
             )}
 

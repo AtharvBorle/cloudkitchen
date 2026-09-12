@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { OrdersHeader } from "@/components/orders-desktop/orders-header";
 import { ActiveOrders, DynamicActiveFoodOrder, DynamicActiveBooking } from "@/components/orders-desktop/active-orders";
@@ -9,7 +11,9 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import styles from "./OrdersPage.module.css";
 
-export default function OrdersDesktopPage() {
+function OrdersDesktopContent() {
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams ? searchParams.get("query") || "" : "";
   const [orders, setOrders] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +62,7 @@ export default function OrdersDesktopPage() {
 
   // Format active food orders (PENDING, PREPARING, OUT_FOR_DELIVERY)
   const activeFoodOrders: DynamicActiveFoodOrder[] = useMemo(() => {
-    return orders
+    let list = orders
       .filter((o) => {
         const s = (o.status || "").toUpperCase();
         return s !== "DELIVERED" && s !== "CANCELLED";
@@ -95,11 +99,24 @@ export default function OrdersDesktopPage() {
           trackingId: o.seller?.trackingId,
         };
       });
-  }, [orders]);
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (o) =>
+          o.id.toLowerCase().includes(q) ||
+          o.vendorName.toLowerCase().includes(q) ||
+          o.itemSummary.toLowerCase().includes(q) ||
+          o.status.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [orders, searchQuery]);
 
   // Format active room bookings (PENDING, CONFIRMED)
   const activeRoomBookings: DynamicActiveBooking[] = useMemo(() => {
-    return bookings
+    let list = bookings
       .filter((b) => {
         const s = (b.status || "").toUpperCase();
         return s === "PENDING" || s === "CONFIRMED";
@@ -116,12 +133,24 @@ export default function OrdersDesktopPage() {
           totalAmount: b.totalAmount,
         };
       });
-  }, [bookings]);
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (b) =>
+          b.id.toLowerCase().includes(q) ||
+          b.vendorName.toLowerCase().includes(q) ||
+          b.roomName.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [bookings, searchQuery]);
 
   // Format past orders (DELIVERED, CANCELLED)
   const pastOrdersList: PastOrderItem[] = useMemo(() => {
     if (orders.length === 0) return [];
-    return orders
+    let list = orders
       .filter((o) => {
         const s = (o.status || "").toUpperCase();
         return s === "DELIVERED" || s === "CANCELLED";
@@ -150,10 +179,21 @@ export default function OrdersDesktopPage() {
           invoiceUrl: `/invoice/order/${o.id}`,
         };
       });
-  }, [orders]);
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (o) =>
+          o.id.toLowerCase().includes(q) ||
+          o.vendor.toLowerCase().includes(q) ||
+          o.details.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [orders, searchQuery]);
 
   const isFoodTab = selectedCategory === "Foods";
-  const isRoomTab = selectedCategory === "Room Booking";
 
   return (
     <div className={styles.pageWrapper}>
@@ -166,6 +206,53 @@ export default function OrdersDesktopPage() {
       </div>
 
       <main className={styles.mainContent}>
+        {/* Active Search Result Banner */}
+        {searchQuery.trim() && (
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "16px 22px",
+              marginBottom: "24px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+              border: "1px solid #FFE4D3",
+            }}
+          >
+            <div>
+              <h3
+                style={{
+                  fontSize: "1.15rem",
+                  fontWeight: "700",
+                  color: "#0F172A",
+                  margin: "0 0 2px 0",
+                }}
+              >
+                Orders matching &quot;{searchQuery}&quot;
+              </h3>
+              <p style={{ fontSize: "0.85rem", color: "#64748B", margin: 0 }}>
+                Found {activeFoodOrders.length + activeRoomBookings.length + pastOrdersList.length} matching order records
+              </p>
+            </div>
+            <Link
+              href="/orders-desktop"
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: "600",
+                color: "#FF6B00",
+                textDecoration: "none",
+                padding: "6px 14px",
+                borderRadius: "8px",
+                backgroundColor: "#FFF3EB",
+              }}
+            >
+              Clear Search
+            </Link>
+          </div>
+        )}
+
         {/* 2. Orders Header & Category Filters */}
         <OrdersHeader
           defaultCategory={selectedCategory}
@@ -188,6 +275,14 @@ export default function OrdersDesktopPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function OrdersDesktopPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", backgroundColor: "#FFF8F2", padding: "40px", textAlign: "center" }}>Loading orders...</div>}>
+      <OrdersDesktopContent />
+    </Suspense>
   );
 }
 

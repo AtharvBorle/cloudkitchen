@@ -44,6 +44,7 @@ export default function RiderCanvasDas({
   const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <div
@@ -83,7 +84,10 @@ export default function RiderCanvasDas({
           ownerName={effectiveOwnerName}
           partnerRole={effectivePartnerRole}
           avatarInitials={effectiveAvatarInitials}
-          onSearch={onSearch}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            if (onSearch) onSearch(q);
+          }}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -92,6 +96,7 @@ export default function RiderCanvasDas({
         <RiderCanvas
           metrics={metrics}
           riders={riders}
+          searchQuery={searchQuery}
           onViewWallet={onViewWallet}
         />
       </div>

@@ -46,6 +46,7 @@ export default function BookingCanvasDas({
 }: BookingCanvasDasProps) {
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [bookingList, setBookingList] = useState<BookingRecord[]>(initialBookings || []);
   const [loading, setLoading] = useState(false);
 
@@ -97,6 +98,19 @@ export default function BookingCanvasDas({
     loadBookings();
   }, [initialBookings]);
 
+  const displayedBookings = React.useMemo(() => {
+    if (!searchQuery.trim()) return bookingList;
+    const q = searchQuery.toLowerCase().trim();
+    return bookingList.filter(
+      (b) =>
+        b.guestName.toLowerCase().includes(q) ||
+        b.room.toLowerCase().includes(q) ||
+        b.status.toLowerCase().includes(q) ||
+        b.amount.toLowerCase().includes(q) ||
+        b.id.toLowerCase().includes(q)
+    );
+  }, [bookingList, searchQuery]);
+
   return (
     <div
       style={{
@@ -135,7 +149,10 @@ export default function BookingCanvasDas({
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            if (onSearch) onSearch(q);
+          }}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -144,7 +161,7 @@ export default function BookingCanvasDas({
         <BookingCanvas
           title={title}
           subtitle={subtitle}
-          bookings={bookingList}
+          bookings={displayedBookings}
           initialTab={initialTab}
           onViewDetails={onViewDetails}
           onTabChange={onTabChange}

@@ -26,6 +26,7 @@ export interface RiderCanvasProps {
   subtitle?: string;
   metrics?: RiderSummaryMetric[];
   riders?: RiderWalletRecord[];
+  searchQuery?: string;
   onViewWallet?: (rider: RiderWalletRecord) => void;
 }
 
@@ -96,6 +97,7 @@ export default function RiderCanvas({
   subtitle = "Audit outstanding cash collections and assign delivery routes to riders.",
   metrics: initialMetrics,
   riders: initialRiders,
+  searchQuery = "",
   onViewWallet,
 }: RiderCanvasProps) {
   const router = useRouter();
@@ -161,7 +163,18 @@ export default function RiderCanvas({
   }, [initialRiders]);
 
   const metrics = metricsList;
-  const riders = riderList;
+  const filteredRiders = React.useMemo(() => {
+    if (!searchQuery.trim()) return riderList;
+    const q = searchQuery.toLowerCase().trim();
+    return riderList.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.phone.toLowerCase().includes(q) ||
+        r.dutyStatus.toLowerCase().includes(q) ||
+        r.codBalance.toString().toLowerCase().includes(q)
+    );
+  }, [riderList, searchQuery]);
+  const riders = filteredRiders;
 
   // Render Metric Icon Badge
   const renderMetricIcon = (type: "card" | "check" | "truck") => {

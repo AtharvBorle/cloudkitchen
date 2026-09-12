@@ -45,6 +45,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   const router = useRouter();
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [roomList, setRoomList] = useState<RoomItem[]>(rooms || []);
   const [loading, setLoading] = useState(false);
 
@@ -212,7 +213,10 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            if (onSearch) onSearch(q);
+          }}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -239,12 +243,30 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
 
           {/* Rooms Grid Cards */}
           <div className={styles.roomsGrid}>
-            {roomList.length === 0 ? (
+            {roomList.filter((r) => {
+              if (!searchQuery.trim()) return true;
+              const q = searchQuery.toLowerCase().trim();
+              return (
+                r.title.toLowerCase().includes(q) ||
+                r.tier.toLowerCase().includes(q) ||
+                r.pricePerNight.toLowerCase().includes(q)
+              );
+            }).length === 0 ? (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 16px", backgroundColor: "#FFFFFF", borderRadius: "12px", border: "1px solid #E2E8F0", color: "#64748b" }}>
-                {loading ? "Loading configured rooms..." : "No rooms configured yet. Click '+ Add Room' to create your first listing."}
+                {loading ? "Loading configured rooms..." : searchQuery.trim() ? `No rooms matching "${searchQuery}" found.` : "No rooms configured yet. Click '+ Add Room' to create your first listing."}
               </div>
             ) : (
-              roomList.map((room) => (
+              roomList
+                .filter((r) => {
+                  if (!searchQuery.trim()) return true;
+                  const q = searchQuery.toLowerCase().trim();
+                  return (
+                    r.title.toLowerCase().includes(q) ||
+                    r.tier.toLowerCase().includes(q) ||
+                    r.pricePerNight.toLowerCase().includes(q)
+                  );
+                })
+                .map((room) => (
               <div key={room.id} className={styles.roomCard}>
                 {/* Room Hero Image Container with Floating Edit Action */}
                 <div className={styles.imageContainer}>

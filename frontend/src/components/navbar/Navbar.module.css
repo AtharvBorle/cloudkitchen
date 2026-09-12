@@ -203,6 +203,83 @@
   transform: translateX(-50%) scaleX(1);
 }
 
+/* ================= DESKTOP SEARCH BAR ================= */
+.desktopSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9999px;
+  height: 38px;
+  padding: 0 14px;
+  width: 250px;
+  max-width: 320px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.desktopSearchBar:focus-within {
+  background-color: #ffffff;
+  border-color: #ff6b00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+  width: 280px;
+}
+
+.desktopSearchIcon {
+  color: #ff6b00;
+  flex-shrink: 0;
+}
+
+.desktopSearchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.84rem;
+  color: #0f172a;
+  font-family: inherit;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.desktopSearchInput::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.desktopClearBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  border-radius: 50%;
+  transition: color 0.15s ease;
+}
+
+.desktopClearBtn:hover {
+  color: #ff6b00;
+}
+
+@media (max-width: 1100px) {
+  .desktopSearchBar {
+    width: 190px;
+  }
+  .desktopSearchBar:focus-within {
+    width: 210px;
+  }
+}
+
+@media (max-width: 960px) {
+  .desktopSearchBar {
+    display: none;
+  }
+}
+
 /* ================= RIGHT SECTION ================= */
 .rightSection {
   display: flex;

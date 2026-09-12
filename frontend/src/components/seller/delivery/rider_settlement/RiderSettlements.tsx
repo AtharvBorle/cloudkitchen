@@ -42,6 +42,7 @@ export interface RiderSettlementsProps {
   riderProfile?: RiderProfileInfo;
   cashBalance?: CashCollectionBalanceInfo;
   ledgerHistory?: LedgerEntry[];
+  searchQuery?: string;
   onAddDeliveryAgent?: () => void;
   onRecordSettlement?: () => void;
 }
@@ -142,6 +143,7 @@ export default function RiderSettlements({
   riderProfile = DEFAULT_RIDER_PROFILE,
   cashBalance = DEFAULT_CASH_BALANCE,
   ledgerHistory = DEFAULT_LEDGER_HISTORY,
+  searchQuery = "",
   onAddDeliveryAgent,
   onRecordSettlement,
 }: RiderSettlementsProps) {
@@ -165,7 +167,7 @@ export default function RiderSettlements({
     return "";
   };
 
-  // Filtered Ledger History by Date Range (From Date -> To Date)
+  // Filtered Ledger History by Date Range & Search Query
   const filteredLedger = useMemo(() => {
     return ledgerHistory.filter((item) => {
       const itemDateStr = getEntryDateString(item);
@@ -177,9 +179,19 @@ export default function RiderSettlements({
         return false;
       }
 
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matches =
+          item.description.toLowerCase().includes(q) ||
+          item.type.toLowerCase().includes(q) ||
+          item.amount.toLowerCase().includes(q) ||
+          item.dateTime.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
       return true;
     });
-  }, [ledgerHistory, fromDate, toDate]);
+  }, [ledgerHistory, fromDate, toDate, searchQuery]);
 
   const handleClearDateFilter = () => {
     setFromDate("");

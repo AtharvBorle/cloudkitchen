@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Navbar } from "@/components/room-booking-desktop/navbar";
+import React, { Suspense } from "react";
+import { Navbar } from "@/components/navbar";
 import { RoomBookingHeroBanner } from "@/components/room-booking-desktop/room-booking-herobanner";
 import { RoomSearchFilter } from "@/components/room-booking-desktop/room-search-filter";
 import { FeaturedColivings } from "@/components/room-booking-desktop/featured-colivings";
@@ -9,7 +9,7 @@ import { AllAvailableRooms } from "@/components/room-booking-desktop/all-availab
 import { RoomBookingMobileView } from "@/components/room-booking-desktop/room-booking-mobile";
 import styles from "./page.module.css";
 
-export default function RoomBookingPage() {
+function RoomBookingContent() {
   return (
     <div className={styles.pageContainer}>
       {/* 1. Desktop & Tablet View (>768px) */}
@@ -23,10 +23,18 @@ export default function RoomBookingPage() {
         </main>
       </div>
 
-      {/* 2. Mobile View (<=768px) matching native mobile design (No bottom navigation bar) */}
+      {/* 2. Mobile View (<=768px) matching native mobile design */}
       <div className={styles.mobileOnly}>
         <RoomBookingMobileView />
       </div>
     </div>
+  );
+}
+
+export default function RoomBookingPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", backgroundColor: "#FFF8F2", padding: "40px", textAlign: "center" }}>Loading rooms...</div>}>
+      <RoomBookingContent />
+    </Suspense>
   );
 }

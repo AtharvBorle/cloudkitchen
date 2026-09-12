@@ -240,7 +240,10 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            if (onSearch) onSearch(q);
+          }}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />

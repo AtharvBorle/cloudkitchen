@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image, { StaticImageData } from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Star, ArrowRight } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./AllAvailableRooms.module.css";
@@ -61,15 +62,19 @@ const DEFAULT_ROOMS: AvailableRoomItem[] = [
 export interface AllAvailableRoomsProps {
   heading?: string;
   rooms?: AvailableRoomItem[];
+  searchQuery?: string;
   onBookNow?: (room: AvailableRoomItem) => void;
 }
 
 export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
   heading = "All Available Rooms",
   rooms: propRooms,
+  searchQuery: propQuery,
   onBookNow,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryParam = propQuery !== undefined ? propQuery : (searchParams ? searchParams.get("query") || "" : "");
   const [dynamicRooms, setDynamicRooms] = useState<AvailableRoomItem[]>([]);
 
   useEffect(() => {
@@ -124,8 +129,20 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
     loadPublicRooms();
   }, []);
 
-  const displayRooms =
+  const rawDisplayRooms =
     propRooms || (dynamicRooms.length > 0 ? dynamicRooms : DEFAULT_ROOMS);
+
+  const displayRooms = useMemo(() => {
+    if (!queryParam.trim()) return rawDisplayRooms;
+    const q = queryParam.toLowerCase().trim();
+    return rawDisplayRooms.filter(
+      (room) =>
+        room.title.toLowerCase().includes(q) ||
+        room.location.toLowerCase().includes(q) ||
+        room.tags.some((tag) => tag.toLowerCase().includes(q)) ||
+        room.price.toLowerCase().includes(q)
+    );
+  }, [rawDisplayRooms, queryParam]);
 
   const handleBookClick = (room: AvailableRoomItem) => {
     if (onBookNow) {
@@ -137,6 +154,54 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
 
   return (
     <section className={styles.sectionContainer} aria-label={heading}>
+      {/* Active Search Filter Banner */}
+      {queryParam.trim() && (
+        <div
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: "16px",
+            padding: "18px 24px",
+            marginBottom: "28px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+            border: "1px solid #FFE4D3",
+          }}
+        >
+          <div>
+            <h3
+              style={{
+                fontSize: "1.2rem",
+                fontWeight: "700",
+                color: "#0F172A",
+                margin: "0 0 4px 0",
+              }}
+            >
+              Rooms matching &quot;{queryParam}&quot;
+            </h3>
+            <p style={{ fontSize: "0.85rem", color: "#64748B", margin: 0 }}>
+              Found {displayRooms.length} available{" "}
+              {displayRooms.length === 1 ? "room" : "rooms"}
+            </p>
+          </div>
+          <Link
+            href="/room-booking"
+            style={{
+              fontSize: "0.85rem",
+              fontWeight: "600",
+              color: "#FF6B00",
+              textDecoration: "none",
+              padding: "6px 14px",
+              borderRadius: "8px",
+              backgroundColor: "#FFF3EB",
+            }}
+          >
+            Clear Search
+          </Link>
+        </div>
+      )}
+
       <h2 className={styles.heading}>{heading}</h2>
 
       <div className={styles.cardsGrid}>
