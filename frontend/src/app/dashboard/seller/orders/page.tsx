@@ -119,21 +119,23 @@ export default function SellerOrdersPage() {
     const [upiId, setUpiId] = useState("");
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-    // Search, filter, pagination states
+    // Search, filter, sorting, pagination states
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
+    const [dateFilter, setDateFilter] = useState("ALL");
+    const [sortBy, setSortBy] = useState("NEWEST");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(5);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, statusFilter]);
+    }, [searchQuery, statusFilter, dateFilter, sortBy]);
 
     const fetchOrders = async () => {
         try {
             const res = await fetchApi("/api/seller/orders");
             const data = await res.json();
-            if (res.ok) setOrders(data.orders);
+            if (res.ok) setOrders(data.orders || data.data?.orders || data.data || []);
         } catch (error) {
             console.error("Failed to fetch orders");
         }
@@ -297,8 +299,30 @@ export default function SellerOrdersPage() {
     };
 
     const filteredOrders = orders.filter((order) => {
+        // 1. Status Filter
         const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
+        if (!matchesStatus) return false;
 
+        // 2. Date Filter
+        if (dateFilter !== "ALL") {
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+            const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+            const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
+            const orderDate = new Date(order.createdAt);
+            if (!isNaN(orderDate.getTime())) {
+                if (dateFilter === "TODAY" && (orderDate < startOfToday || orderDate > endOfToday)) return false;
+                if (dateFilter === "YESTERDAY" && (orderDate < startOfYesterday || orderDate > endOfYesterday)) return false;
+                if (dateFilter === "THIS_WEEK" && orderDate < startOfWeek) return false;
+                if (dateFilter === "THIS_MONTH" && orderDate < startOfMonth) return false;
+            }
+        }
+
+        // 3. Search Filter
         const customerName = order.user?.name?.toLowerCase() || "";
         const customerEmail = order.user?.email?.toLowerCase() || "";
         const customerPhone = (order.customerPhone || order.user?.phone || "").toLowerCase();
@@ -317,8 +341,31 @@ export default function SellerOrdersPage() {
             orderId.includes(searchLower) ||
             itemsString.includes(searchLower);
 
-        return matchesStatus && matchesSearch;
+        return matchesSearch;
+    }).sort((a, b) => {
+        const timeA = new Date(a.createdAt).getTime() || 0;
+        const timeB = new Date(b.createdAt).getTime() || 0;
+        const totalA = Number(a.totalAmount) || 0;
+        const totalB = Number(b.totalAmount) || 0;
+
+        if (sortBy === "NEWEST") return timeB - timeA;
+        if (sortBy === "OLDEST") return timeA - timeB;
+        if (sortBy === "TOTAL_HIGH") return totalB - totalA;
+        if (sortBy === "TOTAL_LOW") return totalA - totalB;
+        if (sortBy === "CUSTOMER_AZ") {
+            const nameA = a.user?.name || "";
+            const nameB = b.user?.name || "";
+            return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+        }
+        return 0;
     });
+
+    const resetFilters = () => {
+        setSearchQuery("");
+        setStatusFilter("ALL");
+        setDateFilter("ALL");
+        setSortBy("NEWEST");
+    };
 
     const totalPages = Math.ceil(filteredOrders.length / pageSize);
     const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -335,11 +382,11 @@ export default function SellerOrdersPage() {
             </div>
 
             {/* Filter controls */}
-            <div style={{ display: "flex", gap: "15px", backgroundColor: "white", padding: "15px", borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.02)", border: "1px solid #F1F5F9", marginBottom: "24px", flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ flex: 1, minWidth: "200px" }}>
+            <div style={{ display: "flex", gap: "12px", backgroundColor: "white", padding: "15px", borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.02)", border: "1px solid #F1F5F9", marginBottom: "24px", flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: "220px" }}>
                     <input
                         type="text"
-                        placeholder="Search by customer name, address, order ID, items..."
+                        placeholder="Search by customer, address, order ID, items..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
@@ -352,7 +399,7 @@ export default function SellerOrdersPage() {
                         }}
                     />
                 </div>
-                <div style={{ minWidth: "150px" }}>
+                <div style={{ minWidth: "140px" }}>
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -375,6 +422,52 @@ export default function SellerOrdersPage() {
                         <option value="DELIVERED">Delivered</option>
                     </select>
                 </div>
+                <div style={{ minWidth: "140px" }}>
+                    <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none",
+                            fontWeight: "600",
+                            backgroundColor: "white",
+                            color: "#334155"
+                        }}
+                    >
+                        <option value="ALL">All Time</option>
+                        <option value="TODAY">Filter: Today</option>
+                        <option value="YESTERDAY">Filter: Yesterday</option>
+                        <option value="THIS_WEEK">Filter: This Week</option>
+                        <option value="THIS_MONTH">Filter: This Month</option>
+                    </select>
+                </div>
+                <div style={{ minWidth: "140px" }}>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none",
+                            fontWeight: "600",
+                            backgroundColor: "white",
+                            color: "#334155"
+                        }}
+                    >
+                        <option value="NEWEST">Sort: Newest</option>
+                        <option value="OLDEST">Sort: Oldest</option>
+                        <option value="TOTAL_HIGH">Total: High to Low</option>
+                        <option value="TOTAL_LOW">Total: Low to High</option>
+                        <option value="CUSTOMER_AZ">Customer: A to Z</option>
+                    </select>
+                </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -383,8 +476,24 @@ export default function SellerOrdersPage() {
                         <p style={{ color: '#94A3B8', fontSize: '1.1rem' }}>No orders at the moment. Good things come to those who wait!</p>
                     </div>
                 ) : filteredOrders.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '80px', backgroundColor: 'white', borderRadius: '16px', border: '1px solid #F1F5F9' }}>
-                        <p style={{ color: '#94A3B8', fontSize: '1.1rem' }}>No orders match your search criteria.</p>
+                    <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'white', borderRadius: '16px', border: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                        <p style={{ color: '#94A3B8', fontSize: '1.05rem', margin: 0 }}>No orders match your active filter or search criteria.</p>
+                        <button
+                            type="button"
+                            onClick={resetFilters}
+                            style={{
+                                padding: "8px 16px",
+                                fontSize: "0.85rem",
+                                fontWeight: "700",
+                                color: "#F16F68",
+                                backgroundColor: "#FFF5F5",
+                                border: "1px solid #FED7D7",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Reset All Filters
+                        </button>
                     </div>
                 ) : (
                     <>

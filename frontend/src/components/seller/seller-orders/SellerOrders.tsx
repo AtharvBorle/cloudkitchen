@@ -232,23 +232,52 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     "Cancelled",
   ];
 
-  // Calculate status counts
+  // Calculate status counts respecting active date filter
   const counts = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+    const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
+    const baseList = orderList.filter((order) => {
+      if (dateFilter !== "ALL") {
+        const orderDate = new Date(order.createdAt);
+        if (isNaN(orderDate.getTime())) return true;
+
+        if (dateFilter === "TODAY") {
+          return orderDate >= startOfToday && orderDate <= endOfToday;
+        }
+        if (dateFilter === "YESTERDAY") {
+          return orderDate >= startOfYesterday && orderDate <= endOfYesterday;
+        }
+        if (dateFilter === "THIS_WEEK") {
+          return orderDate >= startOfWeek;
+        }
+        if (dateFilter === "THIS_MONTH") {
+          return orderDate >= startOfMonth;
+        }
+      }
+      return true;
+    });
+
     const map: Record<OrderStatusFilter, number> = {
-      All: orderList.length,
+      All: baseList.length,
       Pending: 0,
       Preparing: 0,
       "Out for Delivery": 0,
       Completed: 0,
       Cancelled: 0,
     };
-    orderList.forEach((o) => {
+    baseList.forEach((o) => {
       if (map[o.status] !== undefined) {
         map[o.status]++;
       }
     });
     return map;
-  }, [orderList]);
+  }, [orderList, dateFilter]);
 
   // Filter & Sort computation
   const filteredOrders = useMemo(() => {
@@ -262,20 +291,22 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     // 2. Date Range Filter
     if (dateFilter !== "ALL") {
       const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfYesterday = new Date(startOfToday);
-      startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+      const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 
       list = list.filter((order) => {
         const orderDate = new Date(order.createdAt);
+        if (isNaN(orderDate.getTime())) return true;
+
         if (dateFilter === "TODAY") {
-          return orderDate >= startOfToday;
+          return orderDate >= startOfToday && orderDate <= endOfToday;
         }
         if (dateFilter === "YESTERDAY") {
-          return orderDate >= startOfYesterday && orderDate < startOfToday;
+          return orderDate >= startOfYesterday && orderDate <= endOfYesterday;
         }
         if (dateFilter === "THIS_WEEK") {
           return orderDate >= startOfWeek;
@@ -296,33 +327,45 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
           order.customer.toLowerCase().includes(query) ||
           order.room.toLowerCase().includes(query) ||
           order.items.toLowerCase().includes(query) ||
-          order.id.toLowerCase().includes(query)
+          order.id.toLowerCase().includes(query) ||
+          (order.deliveryPersonName && order.deliveryPersonName.toLowerCase().includes(query)) ||
+          order.status.toLowerCase().includes(query)
         );
       });
     }
 
     // 4. Sorting
     list.sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime() || 0;
+      const timeB = new Date(b.createdAt).getTime() || 0;
+
       if (sortBy === "NEWEST") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return timeB - timeA;
       }
       if (sortBy === "OLDEST") {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        return timeA - timeB;
       }
       if (sortBy === "TOTAL_HIGH") {
-        return b.rawTotal - a.rawTotal;
+        return (b.rawTotal || 0) - (a.rawTotal || 0);
       }
       if (sortBy === "TOTAL_LOW") {
-        return a.rawTotal - b.rawTotal;
+        return (a.rawTotal || 0) - (b.rawTotal || 0);
       }
       if (sortBy === "CUSTOMER_AZ") {
-        return a.customer.localeCompare(b.customer);
+        return (a.customer || "").localeCompare(b.customer || "", undefined, { sensitivity: "base" });
       }
       return 0;
     });
 
     return list;
   }, [orderList, activeFilter, dateFilter, searchQuery, sortBy]);
+
+  const resetFilters = () => {
+    setActiveFilter("All");
+    setDateFilter("ALL");
+    setSearchQuery("");
+    setSortBy("NEWEST");
+  };
 
   const getStatusBadgeClass = (status: OrderRow["status"]) => {
     switch (status) {
@@ -466,8 +509,36 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                 <tbody>
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b", fontSize: "14px" }}>
-                        {loading ? "Loading orders..." : `No ${activeFilter !== "All" ? activeFilter.toLowerCase() : ""} orders found.`}
+                      <td colSpan={8} style={{ textAlign: "center", padding: "48px 16px", color: "#64748b", fontSize: "14px" }}>
+                        {loading ? (
+                          "Loading orders..."
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                            <span>
+                              No {activeFilter !== "All" ? activeFilter.toLowerCase() : ""} orders found
+                              {dateFilter !== "ALL" ? ` for ${dateFilter.toLowerCase().replace("_", " ")}` : ""}
+                              {searchQuery ? ` matching "${searchQuery}"` : ""}.
+                            </span>
+                            {(activeFilter !== "All" || dateFilter !== "ALL" || searchQuery || sortBy !== "NEWEST") && (
+                              <button
+                                type="button"
+                                onClick={resetFilters}
+                                style={{
+                                  padding: "6px 14px",
+                                  fontSize: "0.82rem",
+                                  fontWeight: 600,
+                                  color: "#F97316",
+                                  backgroundColor: "#FFF7ED",
+                                  border: "1px solid #FFEDD5",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Reset All Filters
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ) : (

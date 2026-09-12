@@ -52,6 +52,9 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({
   const dateOptions = [
     "All Time",
     "Today",
+    "Yesterday",
+    "This Week",
+    "This Month",
     "Last 7 Days",
     "Last 30 Days",
     "Last 3 Months",

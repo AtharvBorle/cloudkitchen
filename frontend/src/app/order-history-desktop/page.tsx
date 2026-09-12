@@ -101,21 +101,32 @@ export default function OrderHistoryDesktopPage() {
       // 2. Date Range Filter
       if (order.rawDate && selectedDateRange !== "All Time") {
         const orderTime = order.rawDate.getTime();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+        const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+        const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0).getTime();
+        const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999).getTime();
+        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0).getTime();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
 
         if (selectedDateRange === "Today") {
-          if (orderTime < startOfDay) return false;
+          if (orderTime < startOfToday || orderTime > endOfToday) return false;
+        } else if (selectedDateRange === "Yesterday") {
+          if (orderTime < startOfYesterday || orderTime > endOfYesterday) return false;
+        } else if (selectedDateRange === "This Week") {
+          if (orderTime < startOfWeek) return false;
+        } else if (selectedDateRange === "This Month") {
+          if (orderTime < startOfMonth) return false;
         } else if (selectedDateRange === "Last 7 Days") {
-          const sevenDaysAgo = startOfDay - 7 * 24 * 60 * 60 * 1000;
+          const sevenDaysAgo = startOfToday - 7 * 24 * 60 * 60 * 1000;
           if (orderTime < sevenDaysAgo) return false;
         } else if (selectedDateRange === "Last 30 Days") {
-          const thirtyDaysAgo = startOfDay - 30 * 24 * 60 * 60 * 1000;
+          const thirtyDaysAgo = startOfToday - 30 * 24 * 60 * 60 * 1000;
           if (orderTime < thirtyDaysAgo) return false;
         } else if (selectedDateRange === "Last 3 Months") {
-          const threeMonthsAgo = startOfDay - 90 * 24 * 60 * 60 * 1000;
+          const threeMonthsAgo = startOfToday - 90 * 24 * 60 * 60 * 1000;
           if (orderTime < threeMonthsAgo) return false;
         } else if (selectedDateRange === "This Year") {
-          const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+          const startOfYear = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
           if (orderTime < startOfYear) return false;
         }
       }
