@@ -179,9 +179,19 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   onNotificationClick,
 }) => {
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const effectivePartnerRole = partnerRole || seller.partnerRole;
-  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
+  const effectiveAvatarInitials =
+    avatarInitials && avatarInitials !== "JD" && avatarInitials !== "KP"
+      ? avatarInitials
+      : seller.avatarInitials;
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
@@ -268,6 +278,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
         activeItemId="support"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={effectiveOwnerName}
+        partnerRole={effectivePartnerRole}
+        avatarInitials={effectiveAvatarInitials}
       />
 
       {/* 2. Main Content Column */}

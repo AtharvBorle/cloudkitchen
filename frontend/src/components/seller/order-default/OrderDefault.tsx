@@ -271,7 +271,14 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
   if (loading && !order) {
     return (
       <div className={styles.container}>
-        <ConsoleSidebar activeItemId="orders" isMobileOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} />
+        <ConsoleSidebar
+          activeItemId="orders"
+          isMobileOpen={isMobileOpen}
+          onClose={() => setIsMobileOpen(false)}
+          ownerName={ownerName}
+          partnerRole={partnerRole}
+          avatarInitials={avatarInitials}
+        />
         <div className={styles.rightSection}>
           <Topbar title="Owner Operations Console" ownerName={ownerName} partnerRole={partnerRole} avatarInitials={avatarInitials} onSearch={onSearch} onNotificationClick={onNotificationClick} onMenuToggle={() => setIsMobileOpen((prev) => !prev)} />
           <main className={styles.mainContent} style={{ textAlign: "center", padding: "80px 20px", color: "#64748b" }}>
@@ -309,6 +316,9 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
         activeItemId="orders"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}

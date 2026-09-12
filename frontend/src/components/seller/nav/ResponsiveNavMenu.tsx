@@ -65,7 +65,14 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   onSyncDevices,
 }) => {
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const pathname = usePathname();
 
   // Close drawer on Esc key

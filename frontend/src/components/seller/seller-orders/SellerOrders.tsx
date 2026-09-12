@@ -391,6 +391,9 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
         activeItemId="orders"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}

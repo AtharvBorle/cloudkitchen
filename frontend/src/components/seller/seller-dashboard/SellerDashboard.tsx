@@ -143,6 +143,9 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         activeItemId="dashboard"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}

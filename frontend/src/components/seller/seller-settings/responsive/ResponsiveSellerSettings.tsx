@@ -188,7 +188,14 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const router = useRouter();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);

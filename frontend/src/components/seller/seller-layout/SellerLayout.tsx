@@ -48,9 +48,19 @@ export const SellerLayout: React.FC<SellerLayoutProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
-  const effectiveUserName = userName && userName !== "John Doe" ? userName : seller.ownerName;
+  const effectiveUserName =
+    userName &&
+    userName !== "Rahul Sharma" &&
+    userName !== "Rahul" &&
+    userName !== "John Doe" &&
+    userName !== "Kitchen Owner"
+      ? userName
+      : seller.ownerName;
   const effectiveUserRole = userRole || seller.partnerRole;
-  const effectiveUserInitials = userInitials && userInitials !== "JD" ? userInitials : seller.avatarInitials;
+  const effectiveUserInitials =
+    userInitials && userInitials !== "JD" && userInitials !== "KP"
+      ? userInitials
+      : seller.avatarInitials;
 
   const handleBack = () => {
     if (onBack) {

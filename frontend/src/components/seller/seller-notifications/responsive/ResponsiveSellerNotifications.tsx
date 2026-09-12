@@ -58,7 +58,14 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   onSyncDevices,
 }) => {
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [notifications, setNotifications] = useState<SellerNotificationItem[]>(
     INITIAL_SELLER_NOTIFICATIONS
   );

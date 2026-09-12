@@ -141,6 +141,9 @@ export default function Profile({
         activeItemId="profile"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={profileData.ownerName}
+        partnerRole={profileData.partnerRole}
+        avatarInitials={profileData.avatarInitials}
       />
 
       {/* 2. Right Canvas Area calling Topbar and MainCanvas */}

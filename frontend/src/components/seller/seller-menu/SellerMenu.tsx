@@ -242,6 +242,9 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         activeItemId="menu"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}

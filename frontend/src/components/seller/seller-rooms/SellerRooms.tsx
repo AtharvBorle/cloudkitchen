@@ -203,6 +203,9 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
         activeItemId="rooms"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}

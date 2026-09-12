@@ -63,7 +63,14 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<PlanStatus>("All");
   const [tierFilter, setTierFilter] = useState<PlanTier>("All");

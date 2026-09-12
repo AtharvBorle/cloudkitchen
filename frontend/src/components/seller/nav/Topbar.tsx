@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Search, Bell, Menu, X } from "lucide-react";
 import styles from "./Topbar.module.css";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
 
 export interface TopbarProps {
   title?: string;
@@ -34,9 +34,20 @@ export default function Topbar({
   const seller = useSellerProfile();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
-  const effectivePartnerRole = partnerRole && partnerRole !== "Neo Cloud Partner" ? partnerRole : seller.partnerRole;
-  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
+  const effectivePartnerRole =
+    partnerRole && partnerRole !== "Neo Cloud Partner" ? partnerRole : seller.partnerRole;
+  const effectiveAvatarInitials =
+    avatarInitials && avatarInitials !== "JD" && avatarInitials !== "KP"
+      ? avatarInitials
+      : (seller.avatarInitials || computeInitials(effectiveOwnerName));
 
   const getDynamicPlaceholder = () => {
     if (searchPlaceholder && searchPlaceholder !== "Search order, room, dish...") {

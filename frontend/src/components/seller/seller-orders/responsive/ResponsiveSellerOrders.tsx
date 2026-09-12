@@ -60,7 +60,14 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "Rahul Sharma" && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<OrderFilterTab>("New");
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);
