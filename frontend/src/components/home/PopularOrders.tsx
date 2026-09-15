@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Ticket } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface OfferCardData {
   id: string;
@@ -83,7 +84,34 @@ export default function PopularOrders({
 }: PopularOrdersProps) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const displayOffers = offers && offers.length > 0 ? offers : OFFERS;
+  const [activeSeller, setActiveSeller] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    async function loadActiveSeller() {
+      try {
+        const res = await fetchApi("/api/public/explore");
+        if (res.ok) {
+          const data = await res.json();
+          const sellers = data.data?.sellers || data.sellers || [];
+          if (Array.isArray(sellers) && sellers.length > 0) {
+            setActiveSeller({
+              id: sellers[0].id || sellers[0].trackingId,
+              name: sellers[0].name || sellers[0].businessName || "Verified Cloud Kitchen",
+            });
+          }
+        }
+      } catch {
+        // Continue
+      }
+    }
+    loadActiveSeller();
+  }, []);
+
+  const displayOffers = (offers && offers.length > 0 ? offers : OFFERS).map((off) => ({
+    ...off,
+    sellerId: activeSeller ? activeSeller.id : off.sellerId,
+    sellerName: activeSeller ? activeSeller.name : off.sellerName,
+  }));
 
   const handleOrderNow = (offer: OfferCardData) => {
     addToCart({
@@ -92,8 +120,8 @@ export default function PopularOrders({
       name: offer.title,
       price: offer.price || 199,
       quantity: 1,
-      sellerId: offer.sellerId || "k-1",
-      sellerName: offer.sellerName || "Verified Cloud Kitchen",
+      sellerId: offer.sellerId || (activeSeller ? activeSeller.id : "k-1"),
+      sellerName: offer.sellerName || (activeSeller ? activeSeller.name : "Verified Cloud Kitchen"),
       image: offer.imageUrl,
     });
     router.push("/user/cart");

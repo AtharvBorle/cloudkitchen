@@ -73,7 +73,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);
 
   useEffect(() => {
-    if (orders && orders !== EMPTY_ORDERS) {
+    if (orders) {
       setOrdersList(orders);
     }
   }, [orders]);

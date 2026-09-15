@@ -174,41 +174,62 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
     setIsSubmitting(true);
     try {
-      const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
-      const orderItems = (cartItems.length > 0 ? cartItems : items).map((ci: any) => ({
-        id: ci.id,
+      let sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
+
+      // If sellerId is missing or default, resolve an active seller
+      if (!sellerId) {
+        try {
+          const expRes = await fetchApi("/api/public/explore");
+          if (expRes.ok) {
+            const expData = await expRes.json();
+            const sellers = expData.data?.sellers || expData.sellers || [];
+            if (sellers.length > 0) {
+              sellerId = sellers[0].id || sellers[0].trackingId;
+            }
+          }
+        } catch {
+          // Continue
+        }
+      }
+
+      const rawItems = cartItems.length > 0 ? cartItems : items;
+      const orderItems = rawItems.map((ci: any) => ({
+        id: ci.foodItemId || ci.id,
         name: ci.name,
         price: ci.price,
         quantity: ci.quantity || ci.qty || 1,
-        image: ci.image,
-        variant: ci.variant,
+        image: ci.image || ci.imageUrl,
+        variant: ci.variantName || ci.variant,
       }));
 
       const fullDeliveryAddress = `${streetAddress}, ${city} - ${postalCode}${
         deliveryInstructions ? ` (Note: ${deliveryInstructions})` : ""
       }`;
 
-      let finalOrderId = "NCB-" + Math.floor(100000 + Math.random() * 900000);
+      const res = await fetchApi("/api/user/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sellerId: sellerId || "seller",
+          items: orderItems,
+          totalAmount: grandTotal,
+          deliveryAddress: fullDeliveryAddress,
+          customerPhone: phoneNumber,
+          paymentMethod: paymentMethod === "UPI" ? "ONLINE" : "COD",
+        }),
+      });
 
-      if (sellerId && cartItems.length > 0) {
-        const res = await fetchApi("/api/user/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sellerId,
-            items: orderItems,
-            totalAmount: grandTotal,
-            deliveryAddress: fullDeliveryAddress,
-            customerPhone: phoneNumber,
-            paymentMethod,
-          }),
-        });
+      const resData = await res.json().catch(() => ({}));
 
-        if (res.ok) {
-          const resData = await res.json().catch(() => ({}));
-          finalOrderId = resData.data?.id || resData.id || finalOrderId;
-        }
+      if (!res.ok) {
+        const errorMsg = resData.message || resData.error || "Failed to place order. Please try again.";
+        showToast(errorMsg);
+        setIsSubmitting(false);
+        return;
       }
+
+      const createdOrder = resData.data?.order || resData.order || resData.data;
+      const finalOrderId = createdOrder?.id || resData.data?.id || resData.id || ("NCR-" + Math.floor(100000 + Math.random() * 900000));
 
       setPlacedOrderNumber(finalOrderId);
 
@@ -253,17 +274,11 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       showToast("Order Placed Successfully!");
 
       setTimeout(() => {
-        router.push(`/order-confirmation?orderId=${finalOrderId}`);
+        router.push(`/order-confirmation?orderId=${encodeURIComponent(finalOrderId)}`);
       }, 700);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error placing order:", err);
-      const fallbackId = `NCB-${Math.floor(100000 + Math.random() * 900000)}`;
-      setPlacedOrderNumber(fallbackId);
-      setIsOrderPlaced(true);
-      clearCart();
-      setTimeout(() => {
-        router.push(`/order-confirmation?orderId=${fallbackId}`);
-      }, 700);
+      showToast(err?.message || "Failed to place order. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

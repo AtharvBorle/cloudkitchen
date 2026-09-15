@@ -60,10 +60,17 @@ export const getSellerOrderById = async (orderId: string) => {
         throw new ApiError("Seller profile not found", 404);
     }
 
+    const cleanId = orderId.replace("#NCR-", "").replace("#ncr-", "").replace("#", "").trim();
+
     const order = await db.order.findFirst({
         where: {
-            id: orderId,
-            sellerId: sellerProfile.id
+            sellerId: sellerProfile.id,
+            OR: [
+                { id: orderId },
+                { id: cleanId },
+                { id: { startsWith: cleanId } },
+                { id: { mode: 'insensitive', equals: cleanId } }
+            ]
         },
         include: {
             user: {
@@ -121,11 +128,17 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
     }
 
     const { status, isPaid, deliveryPersonId } = await req.json();
+    const cleanId = orderId.replace("#NCR-", "").replace("#ncr-", "").replace("#", "").trim();
 
     const existingOrder = await db.order.findFirst({
         where: {
-            id: orderId,
-            sellerId: sellerProfile.id
+            sellerId: sellerProfile.id,
+            OR: [
+                { id: orderId },
+                { id: cleanId },
+                { id: { startsWith: cleanId } },
+                { id: { mode: 'insensitive', equals: cleanId } }
+            ]
         }
     });
 

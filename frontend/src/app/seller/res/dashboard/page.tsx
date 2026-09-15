@@ -41,9 +41,11 @@ export default function ResponsiveSellerDashboardPage() {
     }
 
     loadDashboard();
+    const interval = setInterval(loadDashboard, 4000);
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 
