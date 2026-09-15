@@ -4,6 +4,7 @@ import React from "react";
 import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
 import { SupportHeader, FaqAccordion } from "@/components/support-desktop";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./SupportPage.module.css";
 
 export default function HelpFaqPage() {
@@ -36,6 +37,9 @@ export default function HelpFaqPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

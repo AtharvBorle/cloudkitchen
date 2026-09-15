@@ -4,6 +4,7 @@ import React from "react";
 import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
 import { PrivacyHeader, PrivacyContent } from "@/components/privacy-desktop";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./PrivacyPage.module.css";
 
 export default function PrivacyPolicyPage() {
@@ -36,6 +37,9 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

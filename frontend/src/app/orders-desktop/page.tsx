@@ -8,6 +8,7 @@ import { OrdersHeader } from "@/components/orders-desktop/orders-header";
 import { ActiveOrders, DynamicActiveFoodOrder, DynamicActiveBooking } from "@/components/orders-desktop/active-orders";
 import { PastOrders, PastOrderItem } from "@/components/orders-desktop/past-orders";
 import { fetchApi } from "@/lib/fetch-api";
+import { Footer } from "@/components/explore-desktop/footer";
 
 import styles from "./OrdersPage.module.css";
 
@@ -274,6 +275,9 @@ function OrdersDesktopContent() {
           />
         )}
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

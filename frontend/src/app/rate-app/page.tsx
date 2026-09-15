@@ -4,6 +4,7 @@ import React from "react";
 import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
 import { RateAppHeader, RatingExperience } from "@/components/rate-app-desktop";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./RateAppPage.module.css";
 
 export default function RateAppPage() {
@@ -36,6 +37,9 @@ export default function RateAppPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

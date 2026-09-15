@@ -16,6 +16,7 @@ import {
 import type { ActiveHomeFilters } from "@/components/home/FilterRow";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useHomeData } from "@/lib/useHomeData";
+import { Footer } from "@/components/explore-desktop/footer";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
@@ -312,6 +313,9 @@ export default function Home() {
         {/* 9. Recommended For You */}
         <RecommendedForYou />
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       <style jsx>{`
         @media (max-width: 1024px) {

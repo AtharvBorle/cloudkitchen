@@ -23,6 +23,7 @@ import {
 import { Navbar, NavbarProps } from "@/components/room-booking-desktop/navbar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { Menu, ArrowLeft } from "lucide-react";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./RoomDetailDesktop.module.css";
 import roomGalleryBanner from "./room-gallery-banner.png";
 import roomImg1 from "../featured-colivings/neo-living-room.jpg";
@@ -455,25 +456,8 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
         {children}
       </main>
 
-      {/* 3. Bottom Footer */}
-      <footer className={styles.footerContainer}>
-        <div className={styles.footerInner}>
-          <p className={styles.copyrightText}>
-            © 2026 Cloud Bites Rooms. All rights reserved.
-          </p>
-          <div className={styles.footerLinks}>
-            <Link href="/privacy" className={styles.footerLink}>
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className={styles.footerLink}>
-              Terms of Service
-            </Link>
-            <Link href="/support" className={styles.footerLink}>
-              Contact Support
-            </Link>
-          </div>
-        </div>
-      </footer>
+      {/* 3. Global Responsive Footer */}
+      <Footer />
     </div>
   );
 };

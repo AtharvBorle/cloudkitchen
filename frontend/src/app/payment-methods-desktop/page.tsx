@@ -8,6 +8,7 @@ import { SavedCards } from "@/components/payment-methods-desktop/saved-cards";
 import { UpiIds } from "@/components/payment-methods-desktop/upi-ids";
 import { OtherPaymentMethods } from "@/components/payment-methods-desktop/other-payment-methods";
 import { AddPaymentButton } from "@/components/payment-methods-desktop/add-payment-button";
+import { Footer } from "@/components/explore-desktop/footer";
 
 import styles from "./PaymentMethodsPage.module.css";
 
@@ -50,6 +51,9 @@ export default function PaymentMethodsDesktopPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

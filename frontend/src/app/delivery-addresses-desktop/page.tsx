@@ -6,6 +6,7 @@ import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar"
 import { AddressesHeader } from "@/components/delivery-addresses-desktop/addresses-header";
 import { SavedAddresses } from "@/components/delivery-addresses-desktop/saved-addresses";
 import { AddAddressButton } from "@/components/delivery-addresses-desktop/add-address-button";
+import { Footer } from "@/components/explore-desktop/footer";
 
 import styles from "./DeliveryAddressesPage.module.css";
 
@@ -42,6 +43,9 @@ export default function DeliveryAddressesDesktopPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

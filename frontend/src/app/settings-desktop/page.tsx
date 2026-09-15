@@ -8,6 +8,7 @@ import { PersonalProfile } from "@/components/settings-desktop/personal-profile"
 import { ActiveSubscriptionsNotifications } from "@/components/settings-desktop/active-subscriptions-notifications";
 import { DeliveryAddresses } from "@/components/settings-desktop/delivery-addresses";
 import { PaymentMethods } from "@/components/settings-desktop/payment-methods";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./SettingsPage.module.css";
 
 export default function SettingsDesktopPage() {
@@ -49,6 +50,9 @@ export default function SettingsDesktopPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

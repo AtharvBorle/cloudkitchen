@@ -10,6 +10,7 @@ import { useLocation, LocationProvider } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
+import { Footer } from "@/components/explore-desktop/footer";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -1069,6 +1070,7 @@ export default function ExploreLayout({ children }: { children: React.ReactNode 
                 <main style={{ flex: 1, padding: "var(--spacing-8) var(--spacing-6)", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
                     {children}
                 </main>
+                <Footer />
             </div>
         </LocationProvider>
     );

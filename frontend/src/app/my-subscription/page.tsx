@@ -9,6 +9,7 @@ import { PauseSubscription } from "@/components/my-subscription/pause-subscripti
 import { DeliveryTimes } from "@/components/my-subscription/delivery-times";
 import { SubscriptionBenefits } from "@/components/my-subscription/subscription-benefits";
 import { SubscriptionActions } from "@/components/my-subscription/subscription-actions";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./MySubscriptionPage.module.css";
 
 export default function MySubscriptionPage() {
@@ -53,6 +54,9 @@ export default function MySubscriptionPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

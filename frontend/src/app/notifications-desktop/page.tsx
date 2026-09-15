@@ -7,6 +7,7 @@ import { NotificationsHeader } from "@/components/notifications-desktop/notifica
 import { PushNotifications } from "@/components/notifications-desktop/push-notifications";
 import { EmailNotifications } from "@/components/notifications-desktop/email-notifications";
 import { SmsNotifications } from "@/components/notifications-desktop/sms-notifications";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./NotificationsPage.module.css";
 
 export default function NotificationsDesktopPage() {
@@ -45,6 +46,9 @@ export default function NotificationsDesktopPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }
