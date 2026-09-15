@@ -313,6 +313,7 @@ function ExploreDesktopContent() {
       {/* 2. Mobile View (<=768px) matching exact mobile design */}
       <div className={styles.mobileOnly}>
         <ExploreMobileView />
+        <Footer />
       </div>
     </div>
   );

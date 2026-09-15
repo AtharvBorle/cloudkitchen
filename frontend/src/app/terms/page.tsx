@@ -4,6 +4,7 @@ import React from "react";
 import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
 import { TermsHeader, TermsContent } from "@/components/terms-desktop";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./TermsPage.module.css";
 
 export default function TermsAndConditionsPage() {
@@ -28,6 +29,9 @@ export default function TermsAndConditionsPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { RestaurantMobileView } from "@/components/restaurant-desktop/restaurant
 import { getKitchenById, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
 import { useCart } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "../restaurant.module.css";
 
 interface RestaurantClientProps {
@@ -59,21 +60,29 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               restaurantName:
                 liveData.businessName || liveData.user?.name || prev.restaurantName,
               location:
-                `${liveData.addressLocality || ""} ${liveData.addressLandmark || ""} ${
-                  liveData.user?.city || ""
-                }`.trim() || prev.location,
-              rating: liveData.averageRating || prev.rating,
-              reviewsCount: liveData.totalReviews
-                ? `(${liveData.totalReviews}+ reviews)`
-                : prev.reviewsCount,
-              dietType: liveData.foodType === "VEG" ? "Pure Veg" : "Veg & Non-Veg",
-              categories: uniqueCats.length > 0 ? ["Popular", ...uniqueCats] : prev.categories,
+                liveData.addressLocality ||
+                liveData.addressCity ||
+                prev.location,
+              rating: liveData.rating
+                ? Number(liveData.rating).toFixed(1)
+                : prev.rating,
+              deliveryTime: liveData.deliveryTime || prev.deliveryTime,
+              deliveryFeeText: liveData.deliveryFeeText || prev.deliveryFeeText,
+              dietType:
+                liveData.foodType === "VEG"
+                  ? "Pure Veg 🥦"
+                  : liveData.foodType === "NON_VEG"
+                  ? "Non-Veg 🍗"
+                  : "Veg & Non-Veg 🍱",
+              offerText: liveData.offerText || prev.offerText,
+              categories:
+                uniqueCats.length > 0 ? ["All", ...uniqueCats] : prev.categories,
               items: liveItems.length > 0 ? liveItems : prev.items,
             }));
           }
         }
       } catch (err) {
-        // Fallback to rich registry data is automatic
+        console.error("Failed to load live seller data:", err);
       }
     }
 
@@ -85,10 +94,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   }, [kitchenId]);
 
   const handleAddItem = (item: FoodCardItem) => {
+    const rawPrice = parseInt(item.price.replace(/[^\d]/g, ""), 10) || 0;
     addToCart({
       id: item.id,
       name: item.title,
-      price: parseFloat(item.price.replace(/[^0-9.]/g, "")) || 199,
+      price: rawPrice,
       quantity: 1,
       sellerId: (kitchenData as any).sellerId || kitchenData.trackingId || kitchenId,
       sellerName: kitchenData.restaurantName,
@@ -100,14 +110,18 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   };
 
   const displayedItems = isVegOnly
-    ? kitchenData.items.filter((item) => item.isVeg !== false)
+    ? kitchenData.items.filter((item) => item.isVeg)
     : kitchenData.items;
 
   return (
-    <div className={styles.container}>
-      {/* 1. DESKTOP / WEB ONLY VIEW */}
+    <div className={styles.pageContainer}>
+      {/* 1. DESKTOP & TABLET VIEW (>768px) */}
       <div className={styles.desktopOnly}>
-        <Navbar initialActiveItem="Explore" />
+        <Navbar
+          initialActiveItem="Food"
+          isVegOnly={isVegOnly}
+          onVegToggle={(veg) => setIsVegOnly(veg)}
+        />
 
         <main className={styles.mainContent}>
           <FoodHeroBanner
@@ -136,6 +150,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             onDecreaseItem={handleDecreaseItem}
           />
         </main>
+        <Footer />
       </div>
 
       {/* 2. MOBILE / ANDROID RESPONSIVE VIEW */}
@@ -147,8 +162,8 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           onAddItem={handleAddItem}
           onDecreaseItem={handleDecreaseItem}
         />
+        <Footer />
       </div>
     </div>
   );
 }
-

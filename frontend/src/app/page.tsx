@@ -18,6 +18,7 @@ import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useHomeData } from "@/lib/useHomeData";
 import { useLocation } from "@/components/location-provider";
 import { MapPin } from "lucide-react";
+import { Footer } from "@/components/explore-desktop/footer";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
@@ -417,6 +418,9 @@ export default function Home() {
         {/* 9. Recommended For You */}
         <RecommendedForYou items={dynamicRecommended} />
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       <style jsx>{`
         @media (max-width: 1024px) {

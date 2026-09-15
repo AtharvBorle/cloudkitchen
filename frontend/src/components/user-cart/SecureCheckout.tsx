@@ -24,6 +24,7 @@ import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
 import { fetchApi } from "@/lib/fetch-api";
 import { useLocation } from "@/components/location-provider";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./SecureCheckout.module.css";
 
 export interface CheckoutSummaryItem {
@@ -956,6 +957,9 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 };

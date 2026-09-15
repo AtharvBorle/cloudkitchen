@@ -3,6 +3,7 @@
 import React, { Suspense } from "react";
 import { Navbar } from "@/components/navbar";
 import { MyOrdersView } from "@/components/orders-desktop/my-orders";
+import { Footer } from "@/components/explore-desktop/footer";
 
 export default function OrdersDesktopPage() {
   return (
@@ -16,6 +17,9 @@ export default function OrdersDesktopPage() {
           <MyOrdersView />
         </Suspense>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }
