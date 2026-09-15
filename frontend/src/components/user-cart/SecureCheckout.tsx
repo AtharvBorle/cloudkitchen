@@ -896,15 +896,18 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
               ? styles.toastSuccess
               : ""
           }`}
+          role="alert"
         >
-          {toast.type === "error" ? (
-            <XCircle size={19} color="#EF4444" strokeWidth={2.5} />
-          ) : toast.type === "info" ? (
-            <AlertCircle size={19} color="#3B82F6" strokeWidth={2.5} />
-          ) : (
-            <CheckCircle2 size={19} color="#10B981" strokeWidth={2.5} />
-          )}
-          <span>{toast.message}</span>
+          <div className={styles.toastIconWrapper}>
+            {toast.type === "error" ? (
+              <XCircle size={18} color="#EF4444" strokeWidth={2.5} />
+            ) : toast.type === "info" ? (
+              <AlertCircle size={18} color="#3B82F6" strokeWidth={2.5} />
+            ) : (
+              <CheckCircle2 size={18} color="#10B981" strokeWidth={2.5} />
+            )}
+          </div>
+          <span className={styles.toastText}>{toast.message}</span>
         </div>
       )}
     </div>
