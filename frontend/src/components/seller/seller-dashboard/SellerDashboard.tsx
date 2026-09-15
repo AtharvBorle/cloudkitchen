@@ -117,6 +117,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     }
 
     loadDashboard();
+    const interval = setInterval(loadDashboard, 4000);
+    return () => clearInterval(interval);
   }, [initialOrders]);
 
   const getStatusBadgeClass = (status: OrderItem["status"]) => {

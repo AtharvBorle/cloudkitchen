@@ -52,8 +52,9 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               )
             ) as string[];
 
-            setKitchenData((prev) => ({
+            setKitchenData((prev: any) => ({
               ...prev,
+              sellerId: liveData.id || liveData.trackingId || prev.sellerId,
               trackingId: liveData.trackingId || prev.trackingId,
               restaurantName:
                 liveData.businessName || liveData.user?.name || prev.restaurantName,
@@ -89,7 +90,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       name: item.title,
       price: parseFloat(item.price.replace(/[^0-9.]/g, "")) || 199,
       quantity: 1,
-      sellerId: kitchenData.trackingId || kitchenId,
+      sellerId: (kitchenData as any).sellerId || kitchenData.trackingId || kitchenId,
       sellerName: kitchenData.restaurantName,
     });
   };

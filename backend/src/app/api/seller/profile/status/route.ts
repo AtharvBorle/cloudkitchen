@@ -1,6 +1,17 @@
-import { updateSellerStatus } from "@/controllers/sellerProfileController";
+import { updateSellerStatus, getSellerStatus } from "@/controllers/sellerProfileController";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
+
+export async function GET() {
+    try {
+        const data = await getSellerStatus();
+        return successResponse(data, "Store status retrieved successfully");
+    } catch (error: any) {
+        if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
+        console.error("Error fetching store status:", error);
+        return errorResponse("Internal server error", 500);
+    }
+}
 
 export async function PUT(req: Request) {
     try {
@@ -12,3 +23,4 @@ export async function PUT(req: Request) {
         return errorResponse("Internal server error", 500);
     }
 }
+

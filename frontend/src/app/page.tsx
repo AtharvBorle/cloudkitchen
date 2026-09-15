@@ -218,6 +218,35 @@ export default function Home() {
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
+  // Dynamic Recommended Dishes for RecommendedForYou with fallback
+  const dynamicRecommended = useMemo(() => {
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    let list = homeData.foodItems;
+
+    if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
+      const catLower = selectedCategory.toLowerCase();
+      const filtered = list.filter((f) =>
+        f.categoryName?.toLowerCase().includes(catLower) ||
+        f.name.toLowerCase().includes(catLower)
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.dietary === "veg") {
+      const filtered = list.filter((f) => f.itemType === "VEG");
+      if (filtered.length > 0) list = filtered;
+    }
+
+    const items = list.length > 4 ? [...list].reverse() : list;
+    return items.slice(0, 4).map((f) => ({
+      id: f.id,
+      name: f.name,
+      time: `₹${f.price} • ${f.deliveryTime || "20-25 min"}`,
+      imageUrl: f.imageUrl || "/images/places/place-biryani.png",
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
+    }));
+  }, [homeData.foodItems, selectedCategory, activeFilters]);
+
   // Dynamic Promo Banner with fallback
   const promoProps = useMemo(() => {
     if (homeData.coupons && homeData.coupons.length > 0) {
@@ -314,7 +343,7 @@ export default function Home() {
         <DashboardBody items={dynamicTopRated} />
 
         {/* 9. Recommended For You */}
-        <RecommendedForYou />
+        <RecommendedForYou items={dynamicRecommended} />
       </main>
 
       <style jsx>{`
