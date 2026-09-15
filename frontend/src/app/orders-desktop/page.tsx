@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { Navbar } from "@/components/navbar";
 import { MyOrdersView } from "@/components/orders-desktop/my-orders";
 
@@ -12,7 +12,9 @@ export default function OrdersDesktopPage() {
 
       {/* 2. My Orders View (2-Column Layout matching design mockup) */}
       <main>
-        <MyOrdersView />
+        <Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Loading orders...</div>}>
+          <MyOrdersView />
+        </Suspense>
       </main>
     </div>
   );

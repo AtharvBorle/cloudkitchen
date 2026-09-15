@@ -61,15 +61,23 @@ const DEFAULT_ROOMS: AvailableRoomItem[] = [
 
 export interface AllAvailableRoomsProps {
   heading?: string;
-  rooms?: AvailableRoomItem[];
+  rooms?: any[];
   searchQuery?: string;
-  onBookNow?: (room: AvailableRoomItem) => void;
+  activeLocation?: string;
+  activeBudget?: string;
+  activeRoomType?: string;
+  onReset?: () => void;
+  onBookNow?: (room: any) => void;
 }
 
 export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
   heading = "All Available Rooms",
   rooms: propRooms,
   searchQuery: propQuery,
+  activeLocation = "all",
+  activeBudget = "all",
+  activeRoomType = "all",
+  onReset,
   onBookNow,
 }) => {
   const router = useRouter();
@@ -78,6 +86,45 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
   const [dynamicRooms, setDynamicRooms] = useState<AvailableRoomItem[]>([]);
 
   useEffect(() => {
+    if (propRooms !== undefined) {
+      const mapped: AvailableRoomItem[] = propRooms.map((r: any, idx: number) => {
+        let imgUrl: string | StaticImageData =
+          idx % 3 === 0
+            ? premiumSingleImg
+            : idx % 3 === 1
+            ? executiveDoubleImg
+            : standardHostelImg;
+
+        if (r.images) {
+          try {
+            const parsed = typeof r.images === "string" ? JSON.parse(r.images) : r.images;
+            if (Array.isArray(parsed) && parsed[0]) imgUrl = parsed[0];
+          } catch {
+            if (typeof r.images === "string" && r.images.startsWith("http")) {
+              imgUrl = r.images;
+            }
+          }
+        }
+
+        const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+        const city = r.sellerCity || r.seller?.user?.city || "Pune";
+
+        return {
+          id: r.id,
+          title: r.title || `Deluxe Room ${idx + 101}`,
+          rating: r.rating ? Number(r.rating).toFixed(1) : r.seller?.rating ? Number(r.seller.rating).toFixed(1) : "4.8",
+          location: `${locality}, ${city}`,
+          tags: ["Free Wi-Fi", `${r.capacity || 2} Guests`, "Daily Cleaning"],
+          startingLabel: "STARTING FROM",
+          price: `₹${Number(r.price || 2500).toLocaleString("en-IN")}/night`,
+          buttonText: "Book Now",
+          image: imgUrl,
+        };
+      });
+      setDynamicRooms(mapped);
+      return;
+    }
+
     async function loadPublicRooms() {
       try {
         const res = await fetchApi("/api/public/rooms");
@@ -104,13 +151,13 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
                 }
               }
 
-              const locality = r.seller?.addressLocality || "Kothrud";
-              const city = r.seller?.addressCity || "Pune";
+              const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+              const city = r.sellerCity || r.seller?.user?.city || "Pune";
 
               return {
                 id: r.id,
                 title: r.title || `Deluxe Room ${idx + 101}`,
-                rating: r.seller?.rating ? Number(r.seller.rating).toFixed(1) : "4.8",
+                rating: r.rating ? Number(r.rating).toFixed(1) : "4.8",
                 location: `${locality}, ${city}`,
                 tags: ["Free Wi-Fi", `${r.capacity || 2} Guests`, "Air Conditioned"],
                 startingLabel: "STARTING FROM",
@@ -127,10 +174,10 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
       }
     }
     loadPublicRooms();
-  }, []);
+  }, [propRooms]);
 
   const rawDisplayRooms =
-    propRooms || (dynamicRooms.length > 0 ? dynamicRooms : DEFAULT_ROOMS);
+    propRooms !== undefined ? dynamicRooms : (dynamicRooms.length > 0 ? dynamicRooms : DEFAULT_ROOMS);
 
   const displayRooms = useMemo(() => {
     if (!queryParam.trim()) return rawDisplayRooms;
@@ -152,60 +199,113 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
     }
   };
 
+  const isFiltered = activeLocation !== "all" || activeBudget !== "all" || activeRoomType !== "all" || Boolean(queryParam.trim());
+
   return (
-    <section className={styles.sectionContainer} aria-label={heading}>
-      {/* Active Search Filter Banner */}
-      {queryParam.trim() && (
+    <section id="available-rooms-grid" className={styles.sectionContainer} aria-label={heading}>
+      {/* Active Search & Filter Banner */}
+      {isFiltered && (
         <div
           style={{
             backgroundColor: "#FFFFFF",
             borderRadius: "16px",
-            padding: "18px 24px",
-            marginBottom: "28px",
+            padding: "16px 24px",
+            marginBottom: "24px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
             border: "1px solid #FFE4D3",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
-          <div>
-            <h3
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.95rem", fontWeight: "700", color: "#1E293B" }}>
+              Showing {displayRooms.length} room{displayRooms.length === 1 ? "" : "s"}
+            </span>
+            {activeLocation !== "all" && (
+              <span style={{ background: "#FFF7ED", color: "#EA580C", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "700" }}>
+                📍 {activeLocation}
+              </span>
+            )}
+            {activeBudget !== "all" && (
+              <span style={{ background: "#FFF7ED", color: "#EA580C", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "700" }}>
+                💰 Budget: {activeBudget}
+              </span>
+            )}
+            {activeRoomType !== "all" && (
+              <span style={{ background: "#FFF7ED", color: "#EA580C", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "700" }}>
+                👥 Type: {activeRoomType === "1" ? "Single" : activeRoomType === "2" ? "Double" : activeRoomType === "3" ? "Triple" : "Hostel"}
+              </span>
+            )}
+          </div>
+          {onReset && (
+            <button
+              type="button"
+              onClick={onReset}
               style={{
-                fontSize: "1.2rem",
+                background: "none",
+                border: "none",
+                color: "#EA580C",
+                fontSize: "0.9rem",
                 fontWeight: "700",
-                color: "#0F172A",
-                margin: "0 0 4px 0",
+                cursor: "pointer",
+                textDecoration: "underline",
               }}
             >
-              Rooms matching &quot;{queryParam}&quot;
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "#64748B", margin: 0 }}>
-              Found {displayRooms.length} available{" "}
-              {displayRooms.length === 1 ? "room" : "rooms"}
-            </p>
-          </div>
-          <Link
-            href="/room-booking"
-            style={{
-              fontSize: "0.85rem",
-              fontWeight: "600",
-              color: "#FF6B00",
-              textDecoration: "none",
-              padding: "6px 14px",
-              borderRadius: "8px",
-              backgroundColor: "#FFF3EB",
-            }}
-          >
-            Clear Search
-          </Link>
+              Clear all filters
+            </button>
+          )}
         </div>
       )}
 
       <h2 className={styles.heading}>{heading}</h2>
 
-      <div className={styles.cardsGrid}>
-        {displayRooms.map((room) => (
+      {displayRooms.length === 0 ? (
+        <div
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: "16px",
+            padding: "48px 24px",
+            textAlign: "center",
+            border: "1px dashed #CBD5E1",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem" }}>🏠</div>
+          <h3 style={{ fontSize: "1.2rem", fontWeight: "700", color: "#1E293B", margin: 0 }}>
+            No rooms found matching your criteria
+          </h3>
+          <p style={{ fontSize: "0.92rem", color: "#64748B", margin: 0, maxWidth: "420px" }}>
+            Try adjusting your location, budget, or room type filters to discover available stays.
+          </p>
+          {onReset && (
+            <button
+              type="button"
+              onClick={onReset}
+              style={{
+                marginTop: "12px",
+                background: "#EA580C",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "9999px",
+                padding: "10px 24px",
+                fontSize: "0.92rem",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className={styles.cardsGrid}>
+          {displayRooms.map((room) => (
           <article key={room.id} className={styles.roomCard}>
             {/* Top Room Image */}
             <div className={styles.imageWrapper}>
@@ -283,6 +383,7 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
           </article>
         ))}
       </div>
+      )}
     </section>
   );
 };

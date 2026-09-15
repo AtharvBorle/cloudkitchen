@@ -202,6 +202,38 @@ export const CloudKitchenReels: React.FC<CloudKitchenReelsProps> = ({
 }) => {
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
 
+  // Dynamically map reels into rich ReelModalData entries
+  const modalReels: ReelModalData[] = React.useMemo(() => {
+    return reels.map((r, idx) => {
+      const defaultMatch = REELS_MODAL_ITEMS.find(
+        (m) => m.id === r.id || m.author.toLowerCase() === r.name.toLowerCase()
+      );
+      if (defaultMatch) {
+        return {
+          ...defaultMatch,
+          author: r.name || defaultMatch.author,
+          authorAvatar: r.image || defaultMatch.authorAvatar,
+          thumbnail: r.image || defaultMatch.thumbnail,
+          kitchenId: r.kitchenId,
+        };
+      }
+      return {
+        id: r.id || `reel-${idx}`,
+        author: r.name || "Cloud Kitchen Partner",
+        authorAvatar: r.image || "/images/places/place-biryani.png",
+        thumbnail: r.image || "/images/places/place-biryani.png",
+        caption: `${r.subtitle || "Fresh gourmet preparation"} • Behind the scenes kitchen stream 🍳🔥`,
+        hashtags: "#cloudkitchen #culinaryart #foodie #freshpreparation",
+        partnerTitle: "Verified Kitchen Partner",
+        likes: `${(2.1 + ((idx * 0.7) % 4)).toFixed(1)}k`,
+        views: `${(11 + idx * 2.8).toFixed(1)}k views`,
+        audioTitle: `${r.name} • Original Audio`,
+        verified: true,
+        kitchenId: r.kitchenId,
+      };
+    });
+  }, [reels]);
+
   const handleItemClick = (index: number, reel: ReelItem) => {
     if (onReelClick) {
       onReelClick(reel);
@@ -212,13 +244,13 @@ export const CloudKitchenReels: React.FC<CloudKitchenReelsProps> = ({
 
   const handleNextReel = () => {
     setActiveReelIndex((prev) =>
-      prev !== null && prev < REELS_MODAL_ITEMS.length - 1 ? prev + 1 : 0
+      prev !== null && prev < modalReels.length - 1 ? prev + 1 : 0
     );
   };
 
   const handlePrevReel = () => {
     setActiveReelIndex((prev) =>
-      prev !== null && prev > 0 ? prev - 1 : REELS_MODAL_ITEMS.length - 1
+      prev !== null && prev > 0 ? prev - 1 : modalReels.length - 1
     );
   };
 
@@ -272,7 +304,7 @@ export const CloudKitchenReels: React.FC<CloudKitchenReelsProps> = ({
       <ReelModal
         isOpen={activeReelIndex !== null}
         onClose={() => setActiveReelIndex(null)}
-        reel={activeReelIndex !== null ? REELS_MODAL_ITEMS[activeReelIndex] : null}
+        reel={activeReelIndex !== null ? modalReels[activeReelIndex] : null}
         onNext={handleNextReel}
         onPrev={handlePrevReel}
       />

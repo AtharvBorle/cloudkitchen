@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import styles from "./MobileSidebar.module.css";
 import userAvatar from "../settings-desktop/settings-sidebar/rahul-sharma-avatar.jpg";
-import logoImg from "../room-booking-desktop/navbar/logo-nav.png";
+import logoImg from "@/components/navbar/logo-nav.png";
 
 export interface MobileSidebarProps {
   isOpen: boolean;

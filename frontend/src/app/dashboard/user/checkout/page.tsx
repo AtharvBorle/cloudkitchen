@@ -284,7 +284,9 @@ function CheckoutContent() {
     // For Room booking direct bypass
     const searchParams = useSearchParams();
     const isRoomBooking = searchParams?.get("type") === "room";
+    const roomIdParam = searchParams?.get("roomId");
     const [roomDetails, setRoomDetails] = useState<any>(null);
+    const [roomLoadingError, setRoomLoadingError] = useState("");
     const [bookingDates, setBookingDates] = useState({ start: "", end: "" });
 
     const [paymentMethod, setPaymentMethod] = useState("COD");
@@ -309,14 +311,82 @@ function CheckoutContent() {
     const [isFetchingSeller, setIsFetchingSeller] = useState(false);
     const [sellerDetails, setSellerDetails] = useState<any>(null);
 
-    // Hydration fix for localStorage contexts
+    // Hydration fix & dynamic room loading (from sessionStorage or /api/public/rooms/[id])
     useEffect(() => {
         setIsClient(true);
-        if (isRoomBooking) {
-            const savedRoom = sessionStorage.getItem("active_room_booking");
-            if (savedRoom) setRoomDetails(JSON.parse(savedRoom));
+        if (!isRoomBooking) return;
+
+        let loaded = false;
+        const savedRoom = sessionStorage.getItem("active_room_booking");
+        if (savedRoom) {
+            try {
+                const parsed = JSON.parse(savedRoom);
+                if (parsed && (!roomIdParam || parsed.id === roomIdParam)) {
+                    setRoomDetails(parsed);
+                    loaded = true;
+                }
+            } catch (e) {
+                console.error("Failed to parse saved room booking:", e);
+            }
         }
-    }, [isRoomBooking]);
+
+        if (!loaded && roomIdParam) {
+            const fetchRoomData = async () => {
+                try {
+                    const res = await fetchApi(`/api/public/rooms/${roomIdParam}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        const r = json.data || json;
+                        if (r && r.id) {
+                            const formatted = {
+                                id: r.id,
+                                title: r.title || "Deluxe Room",
+                                price: Number(r.price) || 2800,
+                                sellerId: r.sellerId || r.seller?.id,
+                                sellerName: r.seller?.restaurantName || r.sellerName || "Property Host",
+                                description: r.description || "",
+                                capacity: r.capacity || 1,
+                                images: r.images,
+                            };
+                            setRoomDetails(formatted);
+                            sessionStorage.setItem("active_room_booking", JSON.stringify(formatted));
+                        } else {
+                            setRoomLoadingError("Room details could not be found.");
+                        }
+                    } else {
+                        setRoomLoadingError("Failed to load room details. Please try again.");
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch room details for checkout:", err);
+                    setRoomLoadingError("An error occurred while loading room details.");
+                }
+            };
+            fetchRoomData();
+        }
+    }, [isRoomBooking, roomIdParam]);
+
+    // Set default check-in (tomorrow) and check-out (day after) for room bookings
+    useEffect(() => {
+        if (isRoomBooking && !bookingDates.start) {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dayAfter = new Date(tomorrow);
+            dayAfter.setDate(dayAfter.getDate() + 1);
+
+            const formatYMD = (d: Date) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                return `${y}-${m}-${day}`;
+            };
+
+            setBookingDates({
+                start: formatYMD(tomorrow),
+                end: formatYMD(dayAfter),
+            });
+        }
+    }, [isRoomBooking, bookingDates.start]);
 
     // Fetch User Profile for Phone & Addresses
     useEffect(() => {
@@ -482,8 +552,9 @@ function CheckoutContent() {
             try {
                 const res = await fetchApi(`/api/public/rooms/${roomDetails.id}/availability`);
                 if (res.ok) {
-                    const data = await res.json();
-                    setBookedDates(data);
+                    const json = await res.json();
+                    const list = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+                    setBookedDates(list);
                 }
             } catch (err) {
                 console.error("Failed to fetch room availability", err);
@@ -795,7 +866,22 @@ function CheckoutContent() {
     }
 
     if (isRoomBooking && !roomDetails) {
-        return <div style={{ textAlign: 'center', padding: '40px' }}>Loading Room Details...</div>;
+        if (roomLoadingError) {
+            return (
+                <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#DC2626', marginBottom: '15px' }}>Room Not Available</h2>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>{roomLoadingError}</p>
+                    <button onClick={() => router.push("/room-booking")} className="btn btn-primary">
+                        Browse Available Rooms
+                    </button>
+                </div>
+            );
+        }
+        return (
+            <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Loading Room Details...</div>
+            </div>
+        );
     }
 
     // Dynamic upi string construction
