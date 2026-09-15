@@ -24,7 +24,7 @@ function ForgotPasswordForm() {
         setTimeout(() => {
             alert("OTP Sent to " + email);
             setLoading(false);
-            router.push(isSeller ? "/auth/login/seller" : "/auth/login");
+            router.push(isSeller ? "/seller/login" : "/login");
         }, 1000);
     };
 
@@ -51,7 +51,7 @@ function ForgotPasswordForm() {
                 </form>
 
                 <div className="auth-footer-text" style={{ marginTop: '20px' }}>
-                    <Link href={isSeller ? "/auth/login/seller" : "/auth/login"} style={{ color: 'var(--text-muted)' }}>← Back to Login</Link>
+                    <Link href={isSeller ? "/seller/login" : "/login"} style={{ color: 'var(--text-muted)' }}>← Back to Login</Link>
                 </div>
             </div>
         </div>

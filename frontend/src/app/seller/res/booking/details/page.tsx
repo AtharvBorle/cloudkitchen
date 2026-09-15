@@ -60,13 +60,18 @@ function BookingDetailsContent() {
   };
 
   let dateRange = "Aug 28 – Sep 1";
-  let nights = 4;
-  if (booking?.startDate && booking?.endDate) {
-    const start = new Date(booking.startDate);
-    const end = new Date(booking.endDate);
-    dateRange = `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  let nights = 1;
+  const checkInRaw = booking?.startDate || booking?.checkInDate || booking?.checkIn;
+  const checkOutRaw = booking?.endDate || booking?.checkOutDate || booking?.checkOut;
+
+  if (checkInRaw && checkOutRaw) {
+    const start = new Date(checkInRaw);
+    const end = new Date(checkOutRaw);
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      dateRange = `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      nights = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+    }
   }
 
   return (
@@ -82,10 +87,10 @@ function BookingDetailsContent() {
           : "AM"
       }
       guestPhone={booking?.user?.phone || "+91 98765 43210"}
-      roomName={booking?.room?.title || "Deluxe Suite"}
-      roomCapacity="Sleeps 4 Guests"
+      roomName={booking?.room?.title || "Room"}
+      roomCapacity={booking?.room?.capacity ? `Sleeps ${booking.room.capacity} Guests` : "Sleeps 2 Guests"}
       dateRange={dateRange}
-      stayDuration={`${nights} Nights Stay`}
+      stayDuration={`${nights} ${nights === 1 ? "Night" : "Nights"} Stay`}
       ratePerNight={`₹${booking ? Math.round(booking.totalAmount / nights) : 2500}`}
       nightsCount={nights}
       roomChargeTotal={`₹${booking ? booking.totalAmount : 10000}`}

@@ -29,45 +29,45 @@ export interface ConfirmRegistrationData {
   };
 }
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface ConfirmRegistrationProps {
   data?: Partial<ConfirmRegistrationData>;
   onSubmit?: () => void;
   onBack?: () => void;
 }
 
-const DEFAULT_REVIEW_DATA = {
-  account: {
-    ownerName: "Rahul Sharma",
-    email: "rahul@neocloud.com",
-    phone: "+91 98765 43210",
-    sellerRole: "Owner",
-  },
-  business: {
-    name: "Neo Kitchens",
-    type: "Food",
-    cuisines: "North Indian, Biryani",
-    address: "12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102",
-  },
-  documents: {
-    identityProof: "Identity Proof (Aadhaar/PAN)",
-    fssaiLicense: "FSSAI License",
-    electricityBill: "Electricity Bill",
-  },
-  media: {
-    photosCount: 6,
-    previewThumbnails: [null, null, null],
-  },
-};
-
 export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   data,
   onSubmit,
   onBack,
 }) => {
-  const account = { ...DEFAULT_REVIEW_DATA.account, ...data?.account };
-  const business = { ...DEFAULT_REVIEW_DATA.business, ...data?.business };
-  const documents = { ...DEFAULT_REVIEW_DATA.documents, ...data?.documents };
-  const media = { ...DEFAULT_REVIEW_DATA.media, ...data?.media };
+  const seller = useSellerProfile();
+
+  const account = {
+    ownerName: data?.account?.ownerName || (seller.ownerName && seller.ownerName !== "Kitchen Owner" ? seller.ownerName : "Kitchen Owner"),
+    email: data?.account?.email || seller.email || "partner@neocloud.com",
+    phone: data?.account?.phone || seller.phone || "+91 98765 43210",
+    sellerRole: data?.account?.sellerRole || "Owner",
+  };
+
+  const business = {
+    name: data?.business?.name || (seller.businessName && seller.businessName !== "Cloud Kitchen" ? seller.businessName : "Neo Kitchens"),
+    type: data?.business?.type || "Food",
+    cuisines: data?.business?.cuisines || "North Indian, Biryani",
+    address: data?.business?.address || seller.address || "Cloud Kitchen Hub, Sector 6, Bangalore",
+  };
+
+  const documents = {
+    identityProof: data?.documents?.identityProof || "Identity Proof (Aadhaar/PAN)",
+    fssaiLicense: data?.documents?.fssaiLicense || "FSSAI License",
+    electricityBill: data?.documents?.electricityBill || "Electricity Bill",
+  };
+
+  const media = {
+    photosCount: data?.media?.photosCount ?? 0,
+    previewThumbnails: data?.media?.previewThumbnails || [null, null, null],
+  };
 
   return (
     <div className={styles.containerWrapper}>

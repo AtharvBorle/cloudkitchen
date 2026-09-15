@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -17,17 +17,18 @@ import {
   Bell,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./ResponsiveSellerSubscription.module.css";
 
 
 export type PlanStatus = "All" | "Active" | "Paused" | "Draft";
-export type PlanTier = "All" | "Starter" | "Professional" | "Enterprise";
+export type PlanTier = "All" | "Bronze" | "Silver" | "Gold" | "Starter" | "Professional" | "Enterprise";
 export type SortOption = "Newest" | "Subscribers" | "Price: Low to High" | "Price: High to Low";
 
 export interface ResponsiveSubscriptionPlan {
   id: string;
   title: string;
-  tier: "Starter" | "Professional" | "Enterprise";
+  tier: "Bronze" | "Silver" | "Gold" | "Starter" | "Professional" | "Enterprise" | string;
   tierVariant?: "orange" | "purple" | "indigo" | "blue";
   price: string;
   subscribersCount: number;
@@ -49,68 +50,11 @@ export interface ResponsiveSellerSubscriptionProps {
   onSyncDevices?: () => void;
 }
 
-const DEFAULT_PLANS: ResponsiveSubscriptionPlan[] = [
-  {
-    id: "1",
-    title: "Starter Weekly Basic",
-    tier: "Starter",
-    tierVariant: "orange",
-    price: "₹998",
-    subscribersCount: 142,
-    status: "Active",
-    createdAt: "Jun 15, 2024",
-    billingCycle: "Weekly",
-    mealsPerDay: 2,
-    mealTypes: ["Lunch", "Dinner"],
-    description: "Includes Lunch & Dinner (Mon-Fri) with fresh home-cooked meals.",
-  },
-  {
-    id: "2",
-    title: "Professional Monthly",
-    tier: "Professional",
-    tierVariant: "purple",
-    price: "₹998",
-    subscribersCount: 88,
-    status: "Active",
-    createdAt: "Feb 3, 2024",
-    billingCycle: "Monthly",
-    mealsPerDay: 3,
-    mealTypes: ["Breakfast", "Lunch", "Dinner"],
-    description: "Full meal plan with breakfast, lunch, and dinner + weekend specials.",
-  },
-  {
-    id: "3",
-    title: "Enterprise Premium",
-    tier: "Enterprise",
-    tierVariant: "indigo",
-    price: "₹998",
-    subscribersCount: 34,
-    status: "Active",
-    createdAt: "Mar 10, 2024",
-    billingCycle: "Monthly",
-    mealsPerDay: 3,
-    mealTypes: ["Breakfast", "Lunch", "Dinner", "Evening Snack"],
-    description: "Executive gourmet selection with custom diet and beverage options.",
-  },
-  {
-    id: "4",
-    title: "Starter Lite",
-    tier: "Starter",
-    tierVariant: "blue",
-    price: "₹998",
-    subscribersCount: 12,
-    status: "Paused",
-    createdAt: "Apr 2, 2024",
-    billingCycle: "Weekly",
-    mealsPerDay: 1,
-    mealTypes: ["Lunch Only"],
-    description: "Single meal subscription for busy working professionals.",
-  },
-];
+const EMPTY_PLANS: ResponsiveSubscriptionPlan[] = [];
 
 export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscriptionProps> = ({
-  ownerName = "Rahul Sharma",
-  plans = DEFAULT_PLANS,
+  ownerName,
+  plans,
   onCreatePlan,
   onEditPlan,
   onPreviewPlan,
@@ -118,11 +62,20 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<PlanStatus>("All");
   const [tierFilter, setTierFilter] = useState<PlanTier>("All");
   const [sortBy, setSortBy] = useState<SortOption>("Newest");
-  const [activePlans, setActivePlans] = useState<ResponsiveSubscriptionPlan[]>(plans);
+  const activePlans = plans || EMPTY_PLANS;
   const [selectedPlanPreview, setSelectedPlanPreview] = useState<ResponsiveSubscriptionPlan | null>(null);
 
   const handleBackClick = () => {
@@ -135,7 +88,6 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     }
   };
 
-
   const handleCreatePlan = () => {
     if (onCreatePlan) {
       onCreatePlan();
@@ -144,16 +96,14 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     }
   };
 
-
   const handleEditPlan = (plan: ResponsiveSubscriptionPlan, e: React.MouseEvent) => {
     e.stopPropagation();
     if (onEditPlan) {
       onEditPlan(plan);
     } else {
-      router.push("/seller/subscription/editPlan");
+      router.push(`/seller/subscription/editPlan?id=${plan.id}`);
     }
   };
-
 
   const handlePreviewPlan = (plan: ResponsiveSubscriptionPlan, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -189,11 +139,11 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
     });
 
   const getTierBadgeClass = (tierVariant?: string, tier?: string) => {
-    if (tierVariant === "orange" || tier === "Starter") return styles.tierStarter;
-    if (tierVariant === "blue") return styles.tierStarterBlue;
-    if (tierVariant === "purple" || tier === "Professional") return styles.tierProfessional;
-    if (tierVariant === "indigo" || tier === "Enterprise") return styles.tierEnterprise;
-    return styles.tierStarter;
+    const t = (tier || "").toLowerCase();
+    if (t === "bronze" || tierVariant === "orange" || tier === "Starter") return styles.tierBronze;
+    if (t === "silver" || tierVariant === "blue" || tier === "Professional") return styles.tierSilver;
+    if (t === "gold" || tierVariant === "purple" || tierVariant === "indigo" || tier === "Enterprise") return styles.tierGold;
+    return styles.tierBronze;
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -214,7 +164,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="subscription"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 
@@ -311,10 +261,13 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
               className={`${styles.filterChip} ${tierFilter !== "All" ? styles.filterChipActive : ""}`}
               onClick={() => {
                 const nextTier: Record<PlanTier, PlanTier> = {
-                  All: "Starter",
-                  Starter: "Professional",
-                  Professional: "Enterprise",
-                  Enterprise: "All",
+                  All: "Bronze",
+                  Bronze: "Silver",
+                  Silver: "Gold",
+                  Gold: "All",
+                  Starter: "Bronze",
+                  Professional: "Silver",
+                  Enterprise: "Gold",
                 };
                 setTierFilter(nextTier[tierFilter] || "All");
               }}
@@ -502,8 +455,9 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                 type="button"
                 className={styles.modalActionBtn}
                 onClick={() => {
+                  const targetId = selectedPlanPreview.id;
                   setSelectedPlanPreview(null);
-                  router.push("/seller/subscription/editPlan");
+                  router.push(`/seller/subscription/editPlan?id=${targetId}`);
                 }}
               >
                 Edit Full Configuration

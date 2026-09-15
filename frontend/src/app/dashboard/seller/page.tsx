@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { StoreStatusToggle } from "@/components/store-status-toggle";
 import { LogOut, AlertTriangle } from "lucide-react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import { fetchApi } from "@/lib/fetch-api";
 
 export default function SellerDashboardOverview() {
@@ -54,8 +55,8 @@ export default function SellerDashboardOverview() {
                         We couldn't find your seller profile. Your account might have been removed or the database was recently reset.
                     </p>
                     <button
-                        onClick={async () => {
-                            await signOut({ callbackUrl: window.location.origin + "/seller" });
+                        onClick={() => {
+                            performLogout({ role: "SELLER" });
                         }}
                         className="btn btn-coral"
                         style={{ width: '100%', padding: '14px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}

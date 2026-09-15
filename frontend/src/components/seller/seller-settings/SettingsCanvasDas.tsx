@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import SettingsCanvas, { SettingsCanvasProps, SettingsFormData } from "./SettingsCanvas";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface SettingsCanvasDasProps {
   topbarTitle?: string;
@@ -22,9 +23,9 @@ export interface SettingsCanvasDasProps {
 export default function SettingsCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, dish...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   activeSidebarId = "settings",
   initialData,
   onSave,
@@ -32,7 +33,12 @@ export default function SettingsCanvasDas({
   onSearch,
   onNotificationClick,
 }: SettingsCanvasDasProps) {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   return (
     <div
@@ -51,6 +57,9 @@ export default function SettingsCanvasDas({
         activeItemId={activeSidebarId}
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Main Area (Topbar + Settings Canvas) */}
@@ -89,11 +98,13 @@ export default function SettingsCanvasDas({
           }}
           className="settings-canvas-container"
         >
-          <SettingsCanvas
-            initialData={initialData}
-            onSave={onSave}
-            onCancel={onCancel}
-          />
+          <React.Suspense fallback={<div style={{ padding: "32px", color: "#64748B" }}>Loading settings...</div>}>
+            <SettingsCanvas
+              initialData={initialData}
+              onSave={onSave}
+              onCancel={onCancel}
+            />
+          </React.Suspense>
         </main>
       </div>
     </div>

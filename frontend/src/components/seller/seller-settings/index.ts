@@ -15,3 +15,26 @@ export type {
   SettingsTabType,
 } from "./responsive/ResponsiveSellerSettings";
 
+export { default as SellerNotificationChannels } from "./notification-channels/SellerNotificationChannels";
+export type {
+  SellerNotificationChannelsProps,
+  NotificationChannelsData,
+} from "./notification-channels/SellerNotificationChannels";
+export {
+  DEFAULT_NOTIFICATION_CHANNELS,
+  TIME_SLOT_OPTIONS,
+} from "./notification-channels/SellerNotificationChannels";
+
+export {
+  SellerSecuritySettings,
+  PasswordManagementCard,
+  ActiveLoginSessionsCard,
+  DEFAULT_LOGIN_SESSIONS,
+} from "./security-settings/SellerSecuritySettings";
+export type {
+  SellerSecuritySettingsProps,
+  PasswordManagementProps,
+  ActiveLoginSessionsProps,
+  LoginSessionItem,
+} from "./security-settings/SellerSecuritySettings";
+

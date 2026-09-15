@@ -16,6 +16,8 @@ import {
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveSellerDashboard.module.css";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface ResponsiveOrderSummary {
   id: string;
   orderNumber: string;
@@ -45,53 +47,32 @@ export interface ResponsiveSellerDashboardProps {
 }
 
 const DEFAULT_METRICS: ResponsiveDashboardMetrics = {
-  todayRevenue: "₹12,450",
-  ordersToday: 8,
-  pendingBookings: 3,
-  codOutstanding: "₹4,200",
+  todayRevenue: "₹0",
+  ordersToday: 0,
+  pendingBookings: 0,
+  codOutstanding: "₹0",
 };
 
-const DEFAULT_RECENT_ORDERS: ResponsiveOrderSummary[] = [
-  {
-    id: "1",
-    orderNumber: "#1234",
-    customerName: "Priya Mehta",
-    amount: "₹850",
-    timeAgo: "12 min ago",
-    status: "New",
-    href: "/seller/orders",
-  },
-  {
-    id: "2",
-    orderNumber: "#1233",
-    customerName: "Rohan Sharma",
-    amount: "₹420",
-    timeAgo: "24 min ago",
-    status: "Preparing",
-    href: "/seller/orders",
-  },
-  {
-    id: "3",
-    orderNumber: "#1232",
-    customerName: "Anjali Gupta",
-    amount: "₹1,150",
-    timeAgo: "1 hr ago",
-    status: "Delivered",
-    href: "/seller/orders",
-  },
-];
-
 export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps> = ({
-  ownerName = "Rahul",
+  ownerName,
   greetingSubtitle = "Here is your business summary today",
   metrics = DEFAULT_METRICS,
-  recentOrders = DEFAULT_RECENT_ORDERS,
+  recentOrders = [],
   hasUnreadNotifications = true,
   onNotificationClick,
   onOrderClick,
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
 
@@ -132,7 +113,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="dashboard"
-        ownerName={ownerName.includes(" ") ? ownerName : `${ownerName} Sharma`}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 
@@ -188,7 +169,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
         <main className={styles.contentArea}>
           {/* Greeting Section */}
           <section className={styles.greetingSection}>
-            <h2 className={styles.greetingTitle}>Hi, {ownerName}</h2>
+            <h2 className={styles.greetingTitle}>Hi, {effectiveOwnerName}</h2>
             <p className={styles.greetingSubtitle}>{greetingSubtitle}</p>
           </section>
 
@@ -250,56 +231,63 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
 
           {/* Recent Orders List */}
           <section className={styles.ordersList} aria-label="Recent Orders List">
-            {recentOrders.map((order) => {
-              const badgeClass = getStatusBadgeStyle(order.status);
-              const cardContent = (
-                <>
-                  <div className={styles.orderLeft}>
-                    <div className={styles.orderHeaderLine}>
-                      <span className={styles.orderNumber}>{order.orderNumber}</span>
-                      <span className={styles.customerName}>{order.customerName}</span>
+            {recentOrders.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 16px", color: "#64748b", backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>No recent orders yet</p>
+                <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>New orders from customers will appear here.</p>
+              </div>
+            ) : (
+              recentOrders.map((order) => {
+                const badgeClass = getStatusBadgeStyle(order.status);
+                const cardContent = (
+                  <>
+                    <div className={styles.orderLeft}>
+                      <div className={styles.orderHeaderLine}>
+                        <span className={styles.orderNumber}>{order.orderNumber}</span>
+                        <span className={styles.customerName}>{order.customerName}</span>
+                      </div>
+                      <div className={styles.orderMetaLine}>
+                        <span className={styles.orderAmount}>{order.amount}</span>
+                        <span className={styles.metaDot}>•</span>
+                        <span className={styles.orderTime}>{order.timeAgo}</span>
+                      </div>
                     </div>
-                    <div className={styles.orderMetaLine}>
-                      <span className={styles.orderAmount}>{order.amount}</span>
-                      <span className={styles.metaDot}>•</span>
-                      <span className={styles.orderTime}>{order.timeAgo}</span>
+
+                    <div className={styles.orderRight}>
+                      <span className={`${styles.statusBadge} ${badgeClass}`}>
+                        {order.status}
+                      </span>
+                      <ChevronRight size={18} className={styles.chevronIcon} />
                     </div>
-                  </div>
+                  </>
+                );
 
-                  <div className={styles.orderRight}>
-                    <span className={`${styles.statusBadge} ${badgeClass}`}>
-                      {order.status}
-                    </span>
-                    <ChevronRight size={18} className={styles.chevronIcon} />
-                  </div>
-                </>
-              );
+                if (order.href) {
+                  return (
+                    <Link
+                      key={order.id}
+                      href={order.href}
+                      className={styles.orderCard}
+                      onClick={(e) => handleOrderClick(order, e)}
+                    >
+                      {cardContent}
+                    </Link>
+                  );
+                }
 
-              if (order.href) {
                 return (
-                  <Link
+                  <div
                     key={order.id}
-                    href={order.href}
                     className={styles.orderCard}
                     onClick={(e) => handleOrderClick(order, e)}
+                    role="button"
+                    tabIndex={0}
                   >
                     {cardContent}
-                  </Link>
+                  </div>
                 );
-              }
-
-              return (
-                <div
-                  key={order.id}
-                  className={styles.orderCard}
-                  onClick={(e) => handleOrderClick(order, e)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {cardContent}
-                </div>
-              );
-            })}
+              })
+            )}
           </section>
         </main>
       </div>

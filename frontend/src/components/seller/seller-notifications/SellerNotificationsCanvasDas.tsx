@@ -7,6 +7,7 @@ import SellerNotificationsCanvas, {
   SellerNotificationsCanvasProps,
 } from "./SellerNotificationsCanvas";
 import { SellerNotificationItem } from "./notificationData";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface SellerNotificationsCanvasDasProps {
   topbarTitle?: string;
@@ -23,15 +24,20 @@ export interface SellerNotificationsCanvasDasProps {
 export default function SellerNotificationsCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search notifications, orders, alerts...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   activeSidebarId = "notifications",
   initialNotifications,
   onSearch,
   onNotificationAction,
 }: SellerNotificationsCanvasDasProps) {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   return (
     <div
@@ -50,6 +56,9 @@ export default function SellerNotificationsCanvasDas({
         activeItemId={activeSidebarId}
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Main Area (Topbar + Notifications Canvas) */}

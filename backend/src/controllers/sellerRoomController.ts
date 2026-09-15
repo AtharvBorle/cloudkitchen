@@ -126,8 +126,8 @@ export const getSellerRooms = async () => {
     const bookings = await db.booking.findMany({
         where: { roomId: { in: roomIds } },
         include: {
-            user: { select: { name: true, phone: true } },
-            room: { select: { title: true } }
+            user: { select: { name: true, phone: true, email: true } },
+            room: { select: { title: true, price: true, images: true, capacity: true } }
         },
         orderBy: { createdAt: 'desc' }
     });
@@ -135,7 +135,53 @@ export const getSellerRooms = async () => {
     return { rooms, bookings };
 };
 
-export const updateSellerRoom = async (req: Request) => {
+export const getSellerBookings = async () => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
+
+    const rooms = await db.room.findMany({
+        where: { sellerId: sellerProfile.id },
+        select: { id: true }
+    });
+
+    const roomIds = rooms.map(r => r.id);
+
+    const bookings = await db.booking.findMany({
+        where: { roomId: { in: roomIds } },
+        include: {
+            user: { select: { name: true, phone: true, email: true } },
+            room: { select: { title: true, price: true, images: true, capacity: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+
+    return { bookings };
+};
+
+export const getSellerRoomById = async (roomId: string) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await checkPropertyCategoryActive(session.user.id);
+
+    const room = await db.room.findUnique({
+        where: { id: roomId, sellerId: sellerProfile.id }
+    });
+
+    if (!room) {
+        throw new ApiError("Room not found or unauthorized", 404);
+    }
+
+    return { room };
+};
+
+export const updateSellerRoom = async (req: Request, roomIdOverride?: string) => {
     const session = await getAuthSession();
     if (!session?.user || session.user.role !== "SELLER") {
         throw new ApiError("Unauthorized", 401);
@@ -144,32 +190,38 @@ export const updateSellerRoom = async (req: Request) => {
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
 
     const contentType = req.headers.get("content-type") || "";
-    let roomId: string | null = null;
+    let roomId: string | null = roomIdOverride || null;
     let title: string | undefined;
     let price: number | undefined;
     let description: string | undefined;
     let capacity: number | undefined;
     let isAvailable: boolean | undefined;
     let imageFile: File | null = null;
+    let imageUrlField: string | null = null;
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
-        roomId = formData.get("roomId") as string;
+        roomId = roomId || (formData.get("roomId") as string) || (formData.get("id") as string);
         title = formData.get("title") as string;
         const priceStr = formData.get("price") as string;
         if (priceStr) price = parseFloat(priceStr);
         description = formData.get("description") as string;
         const capacityStr = formData.get("capacity") as string;
         if (capacityStr) capacity = parseInt(capacityStr);
+        if (formData.has("isAvailable")) {
+            isAvailable = formData.get("isAvailable") === "true";
+        }
         imageFile = formData.get("image") as File | null;
+        imageUrlField = formData.get("imageUrl") as string | null;
     } else {
         const body = await req.json();
-        roomId = body.roomId || body.id;
+        roomId = roomId || body.roomId || body.id;
         title = body.title;
         if (body.price !== undefined) price = parseFloat(body.price);
         description = body.description;
         if (body.capacity !== undefined) capacity = parseInt(body.capacity);
         if (body.isAvailable !== undefined) isAvailable = body.isAvailable;
+        if (body.imageUrl !== undefined) imageUrlField = body.imageUrl;
     }
 
     if (!roomId) {
@@ -201,6 +253,8 @@ export const updateSellerRoom = async (req: Request) => {
         const buffer = Buffer.from(bytes);
         const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "rooms");
         dataToUpdate.images = JSON.stringify([imageUrl]);
+    } else if (imageUrlField) {
+        dataToUpdate.images = JSON.stringify([imageUrlField]);
     }
 
     const updatedRoom = await db.room.update({

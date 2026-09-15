@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { CreditCard, Plus, Pencil, Trash2 } from "lucide-react";
 import styles from "./PaymentMethods.module.css";
 
@@ -15,7 +17,19 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   onEditPayment,
   onDeletePayment,
 }) => {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [selectedMethod, setSelectedMethod] = useState<string>("card-1");
+
+  const handleAction = (callback?: () => void) => {
+    if (callback) {
+      callback();
+    } else if (!session?.user) {
+      router.push("/login?callbackUrl=/payment-methods-desktop");
+    } else {
+      router.push("/payment-methods-desktop");
+    }
+  };
 
   return (
     <div className={styles.sectionCard}>
@@ -31,7 +45,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
         <button
           type="button"
           className={styles.addBtn}
-          onClick={onAddNewPayment}
+          onClick={() => handleAction(onAddNewPayment)}
           aria-label="Add New Payment Method"
         >
           <Plus size={15} strokeWidth={3} />
@@ -86,7 +100,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 className={styles.iconActionBtn}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEditPayment && onEditPayment("card-1");
+                  handleAction(onEditPayment ? () => onEditPayment("card-1") : undefined);
                 }}
                 aria-label="Edit Credit Card"
               >
@@ -97,7 +111,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 className={styles.deleteBtn}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDeletePayment && onDeletePayment("card-1");
+                  handleAction(onDeletePayment ? () => onDeletePayment("card-1") : undefined);
                 }}
                 aria-label="Delete Credit Card"
               >
@@ -143,7 +157,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 className={styles.iconActionBtn}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEditPayment && onEditPayment("upi-1");
+                  handleAction(onEditPayment ? () => onEditPayment("upi-1") : undefined);
                 }}
                 aria-label="Edit UPI"
               >
@@ -154,7 +168,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
                 className={styles.deleteBtn}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDeletePayment && onDeletePayment("upi-1");
+                  handleAction(onDeletePayment ? () => onDeletePayment("upi-1") : undefined);
                 }}
                 aria-label="Delete UPI"
               >

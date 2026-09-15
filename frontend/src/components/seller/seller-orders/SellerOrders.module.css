@@ -73,20 +73,24 @@
   padding: 4px 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .statusPillBtn {
   background: transparent;
   border: none;
-  padding: 8px 18px;
+  padding: 8px 14px;
   border-radius: 8px;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: #64748B;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .statusPillBtn:hover:not(.activePill) {
@@ -100,34 +104,180 @@
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.28);
 }
 
-/* Right Dropdown Filter Pills */
+.pillBadge {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background-color: #E2E8F0;
+  color: #475569;
+  font-weight: 700;
+}
+
+.activePill .pillBadge {
+  background-color: rgba(255, 255, 255, 0.3);
+  color: #FFFFFF;
+}
+
+/* Right Dropdown Filter Pills & Search */
 .rightFilters {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.filterBtn {
+.searchWrapper {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+}
+
+.searchInput {
+  padding: 8px 14px 8px 36px;
+  font-size: 0.86rem;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  color: #1E293B;
+  outline: none;
+  font-family: inherit;
+  width: 220px;
+  transition: border-color 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.searchInput:focus {
+  border-color: #F97316;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  color: #94A3B8;
+  pointer-events: none;
+}
+
+.filterSelect {
+  display: inline-flex;
+  align-items: center;
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
-  padding: 8px 16px;
-  font-size: 0.88rem;
+  padding: 8px 14px;
+  font-size: 0.86rem;
   font-weight: 600;
   color: #334155;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
   font-family: inherit;
-  white-space: nowrap;
+  outline: none;
 }
 
-.filterBtn:hover {
-  border-color: #CBD5E1;
-  background-color: #F8FAFC;
+.filterSelect:focus {
+  border-color: #F97316;
+}
+
+.liveSyncIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #10B981;
+  font-weight: 600;
+  padding: 6px 12px;
+  background-color: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  border-radius: 8px;
+}
+
+.liveSyncDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10B981;
+  animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+/* Action Buttons inside Table Rows */
+.actionBtnGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.acceptBtn {
+  background-color: #10B981;
+  color: #FFFFFF;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+}
+
+.acceptBtn:hover {
+  background-color: #059669;
+}
+
+.rejectBtn {
+  background-color: #EF4444;
+  color: #FFFFFF;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+}
+
+.rejectBtn:hover {
+  background-color: #DC2626;
+}
+
+.assignBtn {
+  background-color: #F97316;
+  color: #FFFFFF;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+}
+
+.assignBtn:hover {
+  background-color: #EA580C;
+}
+
+.detailsBtn {
+  background-color: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.detailsBtn:hover {
+  background-color: #E2E8F0;
+  color: #0F172A;
 }
 
 @media (max-width: 900px) {

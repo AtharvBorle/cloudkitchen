@@ -37,18 +37,33 @@ export const updateUserProfile = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { phone } = await req.json();
+    const body = await req.json();
+    const dataToUpdate: any = {};
 
-    if (!phone) {
-        throw new ApiError("Phone number is required", 400);
+    if (body.name && typeof body.name === "string") dataToUpdate.name = body.name.trim();
+    if (body.phone && typeof body.phone === "string") dataToUpdate.phone = body.phone.trim();
+    if (body.city && typeof body.city === "string") dataToUpdate.city = body.city.trim();
+    if (body.pincode && typeof body.pincode === "string") dataToUpdate.pincode = body.pincode.trim();
+
+    if (Object.keys(dataToUpdate).length === 0) {
+        throw new ApiError("No valid fields provided to update", 400);
     }
 
     const updatedUser = await db.user.update({
         where: { id: session.user.id },
-        data: { phone }
+        data: dataToUpdate,
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            city: true,
+            pincode: true,
+            role: true,
+        }
     });
 
-    return { user: { id: updatedUser.id, phone: updatedUser.phone } };
+    return { user: updatedUser };
 };
 
 export const getUserDashboard = async () => {

@@ -4,6 +4,8 @@ import React from "react";
 import { Search, Bell, Menu } from "lucide-react";
 import styles from "./SellerHeader.module.css";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface SellerHeaderProps {
   title?: string;
   userName?: string;
@@ -14,11 +16,26 @@ export interface SellerHeaderProps {
 
 export const SellerHeader: React.FC<SellerHeaderProps> = ({
   title = "Neo Cloud Room Onboarding",
-  userName = "John Doe",
-  userRole = "Owner Account",
-  userInitials = "JD",
+  userName,
+  userRole,
+  userInitials,
   onMenuToggle,
 }) => {
+  const seller = useSellerProfile();
+  const effectiveUserName =
+    userName &&
+    userName !== "Rahul Sharma" &&
+    userName !== "Rahul" &&
+    userName !== "John Doe" &&
+    userName !== "Kitchen Owner"
+      ? userName
+      : seller.ownerName;
+  const effectiveUserRole = userRole || seller.partnerRole;
+  const effectiveUserInitials =
+    userInitials && userInitials !== "JD" && userInitials !== "KP"
+      ? userInitials
+      : seller.avatarInitials;
+
   return (
     <header className={styles.header}>
       {/* Left: Menu toggle + Title */}
@@ -56,10 +73,10 @@ export const SellerHeader: React.FC<SellerHeaderProps> = ({
         </button>
 
         <div className={styles.profileSection}>
-          <div className={styles.avatar}>{userInitials}</div>
+          <div className={styles.avatar}>{effectiveUserInitials}</div>
           <div className={styles.profileInfo}>
-            <span className={styles.userName}>{userName}</span>
-            <span className={styles.userRole}>{userRole}</span>
+            <span className={styles.userName}>{effectiveUserName}</span>
+            <span className={styles.userRole}>{effectiveUserRole}</span>
           </div>
         </div>
       </div>

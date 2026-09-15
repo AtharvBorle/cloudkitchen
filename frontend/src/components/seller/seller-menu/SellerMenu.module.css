@@ -444,17 +444,25 @@
 }
 
 .typeVeg {
-  color: #D97706;
+  color: #16A34A;
 }
 
 .typeNonVeg {
   color: #DC2626;
 }
 
+.typeJain {
+  color: #D97706;
+}
+
+.typeVegan {
+  color: #059669;
+}
+
 .vegSymbol {
   width: 14px;
   height: 14px;
-  border: 1.5px solid #D97706;
+  border: 1.5px solid #16A34A;
   border-radius: 3px;
   display: flex;
   align-items: center;
@@ -466,7 +474,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #D97706;
+  background-color: #16A34A;
 }
 
 .nonVegSymbol {
@@ -485,6 +493,42 @@
   height: 6px;
   border-radius: 50%;
   background-color: #DC2626;
+}
+
+.jainSymbol {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #D97706;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.jainDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #D97706;
+}
+
+.veganSymbol {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #059669;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.veganDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #059669;
 }
 
 /* Stock Quantity */

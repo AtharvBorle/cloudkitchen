@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import styles from "./PauseSubscription.module.css";
 import { PauseCircle } from "lucide-react";
 
@@ -13,9 +15,15 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   initialPaused = false,
   onTogglePause,
 }) => {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [isPaused, setIsPaused] = useState<boolean>(initialPaused);
 
   const handleToggle = () => {
+    if (!session?.user) {
+      router.push("/login?callbackUrl=/my-subscriptions-desktop");
+      return;
+    }
     const nextState = !isPaused;
     setIsPaused(nextState);
     if (onTogglePause) {

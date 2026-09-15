@@ -1,0 +1,224 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Card Base */
+.card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 24px 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: #CBD5E1;
+}
+
+.cardHeader {
+  margin-bottom: 20px;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+/* ======================================================== */
+/* 1. Password Management Styles                            */
+/* ======================================================== */
+.passwordForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+}
+
+.inputWrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  height: 44px;
+  width: 100%;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 0 42px 0 14px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #0F172A;
+  background-color: #FFFFFF;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.input:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.eyeButton {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  padding: 4px;
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.eyeButton:hover {
+  color: #0F172A;
+}
+
+/* ======================================================== */
+/* 2. Active Login Sessions Styles                          */
+/* ======================================================== */
+.sessionsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.sessionItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.sessionItem:first-child {
+  padding-top: 0;
+}
+
+.sessionItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sessionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.deviceTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.activeBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #EA580C;
+  background-color: #FFF1E8;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.sessionMeta {
+  font-size: 13.5px;
+  font-weight: 400;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.logoutAllButton {
+  background: none;
+  border: none;
+  padding: 16px 0 0 0;
+  color: #EF4444;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease, opacity 0.15s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.logoutAllButton:hover {
+  color: #DC2626;
+  text-decoration: underline;
+}
+
+.logoutAllButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .card {
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .cardTitle {
+    font-size: 16.5px;
+  }
+
+  .deviceTitle {
+    font-size: 14px;
+  }
+
+  .sessionMeta {
+    font-size: 12.5px;
+  }
+
+  .label {
+    font-size: 13px;
+  }
+}

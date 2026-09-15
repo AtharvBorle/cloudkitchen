@@ -1,6 +1,7 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag, Bike } from "lucide-react";
@@ -113,7 +114,7 @@ export default function adminLayout({ children }: { children: React.ReactNode })
 
                 <div style={{ padding: "1.5rem 1rem", borderTop: "1px solid var(--surface-border)" }}>
                     <button
-                        onClick={() => signOut({ callbackUrl: window.location.origin + "/admin" })}
+                        onClick={() => performLogout({ role: "ADMIN" })}
                         style={{
                             width: "100%",
                             display: "flex",

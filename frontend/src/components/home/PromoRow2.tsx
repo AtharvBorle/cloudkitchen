@@ -39,7 +39,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "First 2 Orders",
     code: "FOOD30",
     buttonText: "Order Now",
-    link: "/explore-desktop",
+    link: "/explore",
     imageSrc: "/images/promo-scooter.png",
     imageType: "scooter",
   },
@@ -50,7 +50,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "on First Thali",
     code: "THALI30",
     buttonText: "Order Now",
-    link: "/explore-desktop?category=Mess/Tiffin",
+    link: "/explore?category=Mess/Tiffin",
     imageSrc:
       "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80",
     imageType: "food",
@@ -62,7 +62,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "on Cakes",
     code: "CAKE25",
     buttonText: "Order Now",
-    link: "/explore-desktop?category=Bakery",
+    link: "/explore?category=Bakery",
     imageSrc:
       "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80",
     imageType: "food",
@@ -74,7 +74,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "on Order",
     code: "HOME20",
     buttonText: "Explore Now",
-    link: "/explore-desktop?category=Homemade",
+    link: "/explore?category=Homemade",
     imageSrc:
       "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80",
     imageType: "food",
@@ -89,7 +89,7 @@ export default function PromoRow2({
   titleSuffix = "Your First 2",
   description = "Kickstart your meal plan with premium ingredients & fast delivery.",
   code = "FOOD30",
-  orderNowLink = "/explore-desktop",
+  orderNowLink = "/explore",
   imageSrc = "/images/promo-banner-food.png",
 }: PromoRow2Props) {
   const [activeIdx, setActiveIdx] = useState(0);

@@ -80,9 +80,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleProfileClick = () => {
     if (session?.user) {
-      router.push("/settings-desktop");
+      const role = (session.user as any)?.role;
+      if (role === "SELLER") {
+        router.push("/dashboard/seller");
+      } else if (role === "ADMIN" || role === "SUPERADMIN") {
+        router.push("/dashboard/admin");
+      } else {
+        router.push("/settings-desktop");
+      }
     } else {
-      router.push("/login?callbackUrl=/room-booking");
+      router.push("/settings-desktop");
     }
   };
 

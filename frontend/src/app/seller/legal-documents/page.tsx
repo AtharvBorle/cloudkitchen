@@ -23,9 +23,6 @@ export default function LegalDocumentsPage() {
       currentStep={3}
       activeSidebarItem="registration"
       pageTitle="Neo Cloud Room Onboarding"
-      userName="John Doe"
-      userRole="Owner Account"
-      userInitials="JD"
     >
       <LegalDocuments
         onContinue={handleContinue}

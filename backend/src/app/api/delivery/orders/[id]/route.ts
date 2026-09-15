@@ -13,3 +13,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         return errorResponse("An error occurred while updating order status", 500);
     }
 }
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    return PUT(req, { params });
+}
+

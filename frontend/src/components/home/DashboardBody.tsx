@@ -86,7 +86,7 @@ interface DashboardBodyProps {
 
 export default function DashboardBody({
   title = "Top Rated",
-  seeAllLink = "/explore-desktop?sort=top_rated",
+  seeAllLink = "/explore?sort=top_rated",
   items,
 }: DashboardBodyProps) {
   const displayItems = items && items.length > 0 ? items : TOP_RATED_ITEMS;
@@ -98,39 +98,40 @@ export default function DashboardBody({
         background: "transparent",
         padding: "0",
         boxSizing: "border-box",
+        marginBottom: "24px",
       }}
-      className="dashboard-body-wrapper"
+      aria-label={title}
     >
+      {/* Outer Card Wrapper */}
       <div
         style={{
-          maxWidth: "1280px",
           width: "100%",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
+          backgroundColor: "#FDFDFD",
+          borderRadius: "24px",
+          border: "1px solid #EFEFEF",
+          boxShadow: "0 6px 24px rgba(0, 0, 0, 0.03)",
+          padding: "24px 28px",
           boxSizing: "border-box",
         }}
+        className="top-rated-container-card"
       >
-        {/* Header Row: Title + See All */}
+        {/* Section Header */}
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            gap: "12px",
-            width: "100%",
-            boxSizing: "border-box",
+            justifyContent: "space-between",
+            marginBottom: "20px",
           }}
         >
           <h2
             style={{
-              fontSize: "clamp(1.2rem, 2.5vw, 1.55rem)",
+              fontSize: "1.45rem",
               fontWeight: "800",
               color: "#18181B",
               margin: 0,
-              letterSpacing: "-0.02em",
             }}
+            className="top-rated-title"
           >
             {title}
           </h2>
@@ -138,8 +139,8 @@ export default function DashboardBody({
           <Link
             href={seeAllLink}
             style={{
-              color: "#FF5500",
-              fontSize: "0.92rem",
+              color: "#FF6B00",
+              fontSize: "0.95rem",
               fontWeight: "700",
               textDecoration: "none",
               transition: "color 0.2s ease",
@@ -151,64 +152,55 @@ export default function DashboardBody({
           </Link>
         </div>
 
-        {/* Top Rated Grid */}
+        {/* 2x3 Grid Layout (Desktop) / 1-col (Mobile) */}
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: "16px",
+            columnGap: "24px",
+            rowGap: "16px",
             width: "100%",
-            maxWidth: "100%",
-            boxSizing: "border-box",
           }}
           className="top-rated-grid"
         >
-          {displayItems.map((item) => (
+          {displayItems.slice(0, 6).map((item) => (
             <div
               key={item.id}
               style={{
-                width: "100%",
-                maxWidth: "100%",
-                minWidth: 0,
-                minHeight: "90px",
-                borderRadius: "16px",
-                border: "1px solid #E2E8F0",
-                backgroundColor: "#FFFFFF",
-                padding: "10px 14px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: "10px",
-                boxSizing: "border-box",
+                backgroundColor: "#FFFFFF",
+                borderRadius: "16px",
+                padding: "12px 16px",
+                border: "1px solid #F1F5F9",
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                boxSizing: "border-box",
                 transition: "all 0.2s ease",
-                overflow: "hidden",
+                gap: "12px",
               }}
               className="top-rated-card"
             >
-              {/* Left Column: Food Thumbnail + Info */}
+              {/* Left Column: Image + Info */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "10px",
-                  flex: "1 1 0%",
+                  gap: "14px",
                   minWidth: 0,
-                  overflow: "hidden",
+                  flex: 1,
                 }}
               >
-                {/* Thumbnail Image */}
+                {/* Food Image */}
                 <div
                   style={{
-                    width: "66px",
-                    height: "66px",
-                    minWidth: "66px",
-                    borderRadius: "12px",
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "14px",
                     overflow: "hidden",
-                    backgroundColor: "#F1F5F9",
                     flexShrink: 0,
+                    backgroundColor: "#F8FAFC",
                   }}
-                  className="top-rated-thumb"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -222,68 +214,61 @@ export default function DashboardBody({
                   />
                 </div>
 
-                {/* Details */}
+                {/* Name, Rating & Subtitle */}
                 <div
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: "3px",
+                    gap: "4px",
                     minWidth: 0,
-                    flex: "1 1 0%",
-                    overflow: "hidden",
                   }}
                 >
-                  <h3
-                    style={{
-                      fontSize: "0.92rem",
-                      fontWeight: "700",
-                      color: "#18181B",
-                      margin: 0,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    className="top-rated-name"
-                  >
-                    {item.name}
-                  </h3>
-
-                  {/* Stars Row */}
+                  {/* Name + Star Rating Row */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "4px",
-                      minWidth: 0,
+                      gap: "8px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "1.5px", flexShrink: 0 }}>
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          size={11}
-                          fill="#F59E0B"
-                          color="#F59E0B"
-                        />
-                      ))}
-                    </div>
-
-                    <span
+                    <h3
                       style={{
-                        fontSize: "0.76rem",
-                        color: "#64748B",
-                        fontWeight: "600",
+                        fontSize: "0.95rem",
+                        fontWeight: "700",
+                        color: "#18181B",
+                        margin: 0,
                         whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
-                      {item.rating}
-                    </span>
+                      {item.name}
+                    </h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "3px",
+                      }}
+                    >
+                      <Star size={13} fill="#F59E0B" color="#F59E0B" />
+                      <span
+                        style={{
+                          fontSize: "0.8rem",
+                          fontWeight: "700",
+                          color: "#18181B",
+                        }}
+                      >
+                        {item.rating}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Category, Price & Time */}
+                  {/* Category • Price • Time Subtitle */}
                   <span
                     style={{
-                      fontSize: "0.74rem",
+                      fontSize: "0.78rem",
                       color: "#64748B",
                       fontWeight: "500",
                       whiteSpace: "nowrap",
@@ -298,13 +283,13 @@ export default function DashboardBody({
 
               {/* Right Column: Order Button */}
               <Link
-                href={item.link || "/explore-desktop"}
+                href={item.link || "/explore"}
                 style={{
                   backgroundColor: "#FF6B00",
                   color: "#FFFFFF",
                   fontSize: "0.82rem",
                   fontWeight: "700",
-                  padding: "6px 15px",
+                  padding: "6px 16px",
                   borderRadius: "9999px",
                   textDecoration: "none",
                   boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",

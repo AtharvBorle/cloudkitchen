@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, Plus, User, ChevronRight, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveRoom.module.css";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface ResponsiveRoomItem {
   id: string;
@@ -26,47 +27,34 @@ export interface ResponsiveRoomProps {
   onSyncDevices?: () => void;
 }
 
-const DEFAULT_ROOMS: ResponsiveRoomItem[] = [
-  {
-    id: "r1",
-    name: "Deluxe Suite",
-    sleepsCount: 4,
-    pricePerNight: "\u20B92,500/night",
-    isAvailable: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "r2",
-    name: "Standard Room",
-    sleepsCount: 2,
-    pricePerNight: "\u20B91,200/night",
-    isAvailable: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "r3",
-    name: "Family Suite",
-    sleepsCount: 6,
-    pricePerNight: "\u20B93,800/night",
-    isAvailable: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80",
-  },
-];
+const EMPTY_ROOMS: ResponsiveRoomItem[] = [];
 
 export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
-  ownerName = "Rahul Sharma",
-  rooms = DEFAULT_ROOMS,
+  ownerName,
+  rooms = EMPTY_ROOMS,
   onAddRoom,
   onToggleAvailability,
   onSelectRoom,
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [roomList, setRoomList] = useState<ResponsiveRoomItem[]>(rooms);
+
+  useEffect(() => {
+    if (rooms && rooms !== EMPTY_ROOMS) {
+      setRoomList(rooms);
+    }
+  }, [rooms]);
 
   const handleToggle = (roomId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -94,7 +82,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
     if (onSelectRoom) {
       onSelectRoom(room);
     } else {
-      router.push("/seller/rooms/config");
+      router.push(`/seller/rooms/config?id=${encodeURIComponent(room.id)}`);
     }
   };
 
@@ -105,7 +93,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="rooms"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 

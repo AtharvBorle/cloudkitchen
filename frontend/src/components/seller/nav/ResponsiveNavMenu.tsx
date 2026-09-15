@@ -18,7 +18,9 @@ import {
   Bell,
   RefreshCw,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
+import { performLogout } from "@/lib/logout";
 import styles from "./ResponsiveNavMenu.module.css";
 
 export interface NavItemConfig {
@@ -43,6 +45,8 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
 
 
 
+import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+
 export interface ResponsiveNavMenuProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,10 +60,15 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   isOpen,
   onClose,
   activeItemId,
-  ownerName = "Rahul Sharma",
+  ownerName,
   roleTagText = "OWNER ROLE",
   onSyncDevices,
 }) => {
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName && !isGenericFallbackName(ownerName)
+      ? ownerName
+      : (seller.businessName || seller.ownerName);
   const pathname = usePathname();
 
   // Close drawer on Esc key
@@ -228,9 +237,9 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
 
         {/* Profile Info Card */}
         <div className={styles.profileCard}>
-          <div className={styles.avatar}>{getInitials(ownerName)}</div>
+          <div className={styles.avatar}>{computeInitials(effectiveOwnerName)}</div>
           <div className={styles.profileDetails}>
-            <span className={styles.profileName}>{ownerName}</span>
+            <span className={styles.profileName}>{effectiveOwnerName}</span>
             <span className={styles.profileStatus}>
               <span className={styles.statusDot} />
               Store Online
@@ -260,7 +269,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         </nav>
 
         {/* Footer */}
-        <div className={styles.drawerFooter}>
+        <div className={styles.drawerFooter} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <button
             type="button"
             className={styles.syncButton}
@@ -271,6 +280,34 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
           >
             <RefreshCw size={14} />
             <span>Sync Live Orders</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              performLogout({ role: "SELLER" });
+            }}
+            style={{
+              width: "100%",
+              height: "40px",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              border: "1px solid #FEE2E2",
+              background: "#FEF2F2",
+              color: "#EF4444",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+              transition: "all 0.18s ease",
+            }}
+          >
+            <LogOut size={16} color="#EF4444" />
+            <span>Log Out</span>
           </button>
         </div>
       </aside>

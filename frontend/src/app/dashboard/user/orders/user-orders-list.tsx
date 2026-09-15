@@ -9,9 +9,11 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
     const [cancellingId, setCancellingId] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
 
-    // Search and Pagination States
+    // Search, Filter, Sort and Pagination States
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
+    const [dateFilter, setDateFilter] = useState("ALL");
+    const [sortBy, setSortBy] = useState("NEWEST");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(5);
 
@@ -21,7 +23,7 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, statusFilter]);
+    }, [searchQuery, statusFilter, dateFilter, sortBy]);
 
     // Modal state
     const [reviewingOrder, setReviewingOrder] = useState<any | null>(null);
@@ -196,8 +198,32 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
     };
 
     const filteredOrders = orders.filter((order: any) => {
+        // 1. Status Filter
         const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
+        if (!matchesStatus) return false;
+
+        // 2. Date Filter
+        if (dateFilter !== "ALL") {
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+            const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+            const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+            const orderDate = new Date(order.createdAt);
+            if (!isNaN(orderDate.getTime())) {
+                if (dateFilter === "TODAY" && (orderDate < startOfToday || orderDate > endOfToday)) return false;
+                if (dateFilter === "YESTERDAY" && (orderDate < startOfYesterday || orderDate > endOfYesterday)) return false;
+                if (dateFilter === "THIS_WEEK" && orderDate < startOfWeek) return false;
+                if (dateFilter === "THIS_MONTH" && orderDate < startOfMonth) return false;
+                if (dateFilter === "LAST_30_DAYS" && orderDate < thirtyDaysAgo) return false;
+            }
+        }
         
+        // 3. Search Query
         let items = [];
         try {
             items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
@@ -218,8 +244,26 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
             orderId.includes(searchLower) ||
             itemsString.includes(searchLower);
 
-        return matchesStatus && matchesSearch;
+        return matchesSearch;
+    }).sort((a: any, b: any) => {
+        const timeA = new Date(a.createdAt).getTime() || 0;
+        const timeB = new Date(b.createdAt).getTime() || 0;
+        const totalA = Number(a.totalAmount) || 0;
+        const totalB = Number(b.totalAmount) || 0;
+
+        if (sortBy === "NEWEST") return timeB - timeA;
+        if (sortBy === "OLDEST") return timeA - timeB;
+        if (sortBy === "AMOUNT_HIGH") return totalB - totalA;
+        if (sortBy === "AMOUNT_LOW") return totalA - totalB;
+        return 0;
     });
+
+    const resetFilters = () => {
+        setSearchQuery("");
+        setStatusFilter("ALL");
+        setDateFilter("ALL");
+        setSortBy("NEWEST");
+    };
 
     const totalPages = Math.ceil(filteredOrders.length / pageSize);
     const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -237,7 +281,7 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             
             {/* Filter controls */}
-            <div style={{ display: "flex", gap: "15px", backgroundColor: "white", padding: "15px", borderRadius: "12px", boxShadow: "var(--shadow-card)", flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "12px", backgroundColor: "white", padding: "15px", borderRadius: "12px", boxShadow: "var(--shadow-card)", flexWrap: "wrap", alignItems: "center" }}>
                 <div style={{ flex: 1, minWidth: "200px" }}>
                     <input
                         type="text"
@@ -254,7 +298,7 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                         }}
                     />
                 </div>
-                <div style={{ minWidth: "150px" }}>
+                <div style={{ minWidth: "140px" }}>
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -278,11 +322,75 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                         <option value="CANCELLED">Cancelled</option>
                     </select>
                 </div>
+                <div style={{ minWidth: "140px" }}>
+                    <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none",
+                            fontWeight: "600",
+                            backgroundColor: "white",
+                            color: "#334155"
+                        }}
+                    >
+                        <option value="ALL">All Time</option>
+                        <option value="TODAY">Filter: Today</option>
+                        <option value="YESTERDAY">Filter: Yesterday</option>
+                        <option value="THIS_WEEK">Filter: This Week</option>
+                        <option value="THIS_MONTH">Filter: This Month</option>
+                        <option value="LAST_30_DAYS">Last 30 Days</option>
+                    </select>
+                </div>
+                <div style={{ minWidth: "140px" }}>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.85rem",
+                            outline: "none",
+                            fontWeight: "600",
+                            backgroundColor: "white",
+                            color: "#334155"
+                        }}
+                    >
+                        <option value="NEWEST">Sort: Newest</option>
+                        <option value="OLDEST">Sort: Oldest</option>
+                        <option value="AMOUNT_HIGH">Amount: High to Low</option>
+                        <option value="AMOUNT_LOW">Amount: Low to High</option>
+                    </select>
+                </div>
             </div>
 
             {filteredOrders.length === 0 ? (
-                <div style={{ padding: "40px", textAlign: "center", backgroundColor: "white", borderRadius: "12px", boxShadow: "var(--shadow-card)" }}>
-                    <p style={{ color: "var(--text-muted)" }}>No orders match your search criteria.</p>
+                <div style={{ padding: "40px", textAlign: "center", backgroundColor: "white", borderRadius: "12px", boxShadow: "var(--shadow-card)", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                    <p style={{ color: "var(--text-muted)", margin: 0 }}>No orders match your filter criteria.</p>
+                    {(searchQuery || statusFilter !== "ALL" || dateFilter !== "ALL" || sortBy !== "NEWEST") && (
+                        <button
+                            type="button"
+                            onClick={resetFilters}
+                            style={{
+                                padding: "6px 14px",
+                                fontSize: "0.82rem",
+                                fontWeight: 600,
+                                color: "#F16F68",
+                                backgroundColor: "#FFF5F5",
+                                border: "1px solid #FED7D7",
+                                borderRadius: "6px",
+                                cursor: "pointer"
+                            }}
+                        >
+                            Reset Filters
+                        </button>
+                    )}
                 </div>
             ) : (
                 <>

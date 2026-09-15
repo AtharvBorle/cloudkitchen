@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import styles from "./SavedCards.module.css";
 import { Pencil } from "lucide-react";
 
@@ -33,6 +35,8 @@ const DEFAULT_CARDS: CardItem[] = [
 ];
 
 export const SavedCards: React.FC = () => {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [selectedCardId, setSelectedCardId] = useState<string>("hdfc-credit");
 
   return (
@@ -100,6 +104,9 @@ export const SavedCards: React.FC = () => {
                   className={styles.editBtn}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!session?.user) {
+                      router.push("/login?callbackUrl=/payment-methods-desktop");
+                    }
                   }}
                   aria-label={`Edit ${card.title}`}
                 >

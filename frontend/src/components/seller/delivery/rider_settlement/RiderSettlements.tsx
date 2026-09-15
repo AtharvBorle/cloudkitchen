@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   User,
@@ -10,17 +10,26 @@ import {
   Calendar,
   FileSpreadsheet,
   X,
+  CheckCircle2,
+  Loader2,
+  DollarSign,
+  CreditCard,
+  ChevronDown,
 } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface RiderProfileInfo {
+  id?: string;
   name: string;
   phone: string;
+  email?: string;
   vehicleNumber: string;
   status: string;
 }
 
 export interface CashCollectionBalanceInfo {
   balance: string | number;
+  rawBalance?: number;
   riderName: string;
   limitAmount?: string;
   warningMessage?: string;
@@ -36,14 +45,27 @@ export interface LedgerEntry {
   date?: string;
 }
 
+export interface RiderSummaryItem {
+  id: string;
+  name: string;
+  phone: string;
+  balance: number;
+  status: string;
+}
+
 export interface RiderSettlementsProps {
   title?: string;
   subtitle?: string;
   riderProfile?: RiderProfileInfo;
   cashBalance?: CashCollectionBalanceInfo;
   ledgerHistory?: LedgerEntry[];
+  allRiders?: RiderSummaryItem[];
+  selectedRiderId?: string;
+  onSelectRider?: (riderId: string) => void;
+  searchQuery?: string;
   onAddDeliveryAgent?: () => void;
   onRecordSettlement?: () => void;
+  onSettlementRecorded?: (amount: number, newBalance: number) => void;
 }
 
 const DEFAULT_RIDER_PROFILE: RiderProfileInfo = {
@@ -142,10 +164,125 @@ export default function RiderSettlements({
   riderProfile = DEFAULT_RIDER_PROFILE,
   cashBalance = DEFAULT_CASH_BALANCE,
   ledgerHistory = DEFAULT_LEDGER_HISTORY,
+  allRiders = [],
+  selectedRiderId,
+  onSelectRider,
+  searchQuery = "",
   onAddDeliveryAgent,
   onRecordSettlement,
+  onSettlementRecorded,
 }: RiderSettlementsProps) {
   const router = useRouter();
+
+  // Local state for interactive balance & ledger updates
+  const [currentBalance, setCurrentBalance] = useState<number>(() => {
+    if (typeof cashBalance.rawBalance === "number") return cashBalance.rawBalance;
+    if (typeof cashBalance.balance === "number") return cashBalance.balance;
+    const num = parseFloat(String(cashBalance.balance).replace(/[^0-9.]/g, ""));
+    return isNaN(num) ? 3200 : num;
+  });
+
+  const [currentLedger, setCurrentLedger] = useState<LedgerEntry[]>(ledgerHistory);
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [settleAmount, setSettleAmount] = useState<string>("");
+  const [settlePaymentMode, setSettlePaymentMode] = useState<string>("CASH");
+  const [settleNote, setSettleNote] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof cashBalance.rawBalance === "number") {
+      setCurrentBalance(cashBalance.rawBalance);
+    } else if (typeof cashBalance.balance === "number") {
+      setCurrentBalance(cashBalance.balance);
+    } else {
+      const num = parseFloat(String(cashBalance.balance).replace(/[^0-9.]/g, ""));
+      setCurrentBalance(isNaN(num) ? 0 : num);
+    }
+  }, [cashBalance]);
+
+  useEffect(() => {
+    setCurrentLedger(ledgerHistory);
+  }, [ledgerHistory]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
+
+  const handleOpenRecordModal = () => {
+    if (onRecordSettlement) {
+      onRecordSettlement();
+      return;
+    }
+    setSettleAmount(currentBalance > 0 ? currentBalance.toString() : "1000");
+    setSettlePaymentMode("CASH");
+    setSettleNote("");
+    setIsRecordModalOpen(true);
+  };
+
+  const handleConfirmSettlement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountVal = parseFloat(settleAmount);
+    if (isNaN(amountVal) || amountVal <= 0) {
+      alert("Please enter a valid settlement amount greater than ₹0");
+      return;
+    }
+
+    if (amountVal > currentBalance && currentBalance > 0) {
+      alert(`Settlement amount cannot exceed current outstanding balance of ₹${currentBalance.toLocaleString("en-IN")}`);
+      return;
+    }
+
+    const riderId = riderProfile.id || selectedRiderId;
+    setIsSubmitting(true);
+    try {
+      if (riderId) {
+        const res = await fetchApi(`/api/seller/delivery/${riderId}/collect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: amountVal,
+            description: settleNote ? `Cash settlement (${settlePaymentMode}) - ${settleNote}` : `Cash handover to owner console (${settlePaymentMode})`,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          alert(errData?.message || errData?.error || "Failed to record settlement");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const newBal = Math.max(0, currentBalance - amountVal);
+      setCurrentBalance(newBal);
+
+      const newEntry: LedgerEntry = {
+        id: `tx-settle-${Date.now()}`,
+        type: "Settlement",
+        description: settleNote ? `Cash handover (${settlePaymentMode}): ${settleNote}` : `Cash Handover to Owner Console (${settlePaymentMode})`,
+        amount: `-₹${amountVal.toLocaleString("en-IN")}`,
+        isPositive: false,
+        dateTime: new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric" }) + ", " + new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+        date: new Date().toISOString().slice(0, 10),
+      };
+
+      setCurrentLedger((prev) => [newEntry, ...prev]);
+      setIsRecordModalOpen(false);
+      showToast(`Settlement of ₹${amountVal.toLocaleString("en-IN")} recorded successfully for ${riderProfile.name}!`);
+      if (onSettlementRecorded) {
+        onSettlementRecorded(amountVal, newBal);
+      }
+    } catch (err) {
+      console.error("Settlement error:", err);
+      alert("Failed to submit settlement. Please check network connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Date Filter States (From Date -> To Date)
   const [fromDate, setFromDate] = useState<string>("");
@@ -165,9 +302,9 @@ export default function RiderSettlements({
     return "";
   };
 
-  // Filtered Ledger History by Date Range (From Date -> To Date)
+  // Filtered Ledger History by Date Range & Search Query
   const filteredLedger = useMemo(() => {
-    return ledgerHistory.filter((item) => {
+    return currentLedger.filter((item) => {
       const itemDateStr = getEntryDateString(item);
 
       if (fromDate && itemDateStr && itemDateStr < fromDate) {
@@ -177,9 +314,19 @@ export default function RiderSettlements({
         return false;
       }
 
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matches =
+          item.description.toLowerCase().includes(q) ||
+          item.type.toLowerCase().includes(q) ||
+          item.amount.toLowerCase().includes(q) ||
+          item.dateTime.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
       return true;
     });
-  }, [ledgerHistory, fromDate, toDate]);
+  }, [currentLedger, fromDate, toDate, searchQuery]);
 
   const handleClearDateFilter = () => {
     setFromDate("");
@@ -418,17 +565,43 @@ export default function RiderSettlements({
               }}
               className="rider-profile-card"
             >
-              <h2
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  color: "#0F172A",
-                  margin: 0,
-                  letterSpacing: "-0.2px",
-                }}
-              >
-                Primary Rider Profile
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "#0F172A",
+                    margin: 0,
+                    letterSpacing: "-0.2px",
+                  }}
+                >
+                  Primary Rider Profile
+                </h2>
+                {allRiders && allRiders.length > 1 && (
+                  <select
+                    value={riderProfile.id || selectedRiderId}
+                    onChange={(e) => onSelectRider && onSelectRider(e.target.value)}
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#FF5500",
+                      backgroundColor: "#FFF7ED",
+                      border: "1px solid #FFEDD5",
+                      borderRadius: "6px",
+                      padding: "4px 8px",
+                      cursor: "pointer",
+                      outline: "none",
+                      maxWidth: "150px",
+                    }}
+                  >
+                    {allRiders.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
               {/* Rider Avatar + Name + Phone */}
               <div
@@ -520,8 +693,8 @@ export default function RiderSettlements({
                   </span>
                   <span
                     style={{
-                      backgroundColor: "#FFF1E8",
-                      color: "#F97316",
+                      backgroundColor: riderProfile.status.toLowerCase().includes("on") ? "#FFF1E8" : "#F1F5F9",
+                      color: riderProfile.status.toLowerCase().includes("on") ? "#F97316" : "#64748B",
                       fontSize: "11px",
                       fontWeight: 700,
                       padding: "3px 8px",
@@ -571,9 +744,7 @@ export default function RiderSettlements({
                     lineHeight: 1.15,
                   }}
                 >
-                  {typeof cashBalance.balance === "number"
-                    ? `₹${cashBalance.balance.toLocaleString("en-IN")}`
-                    : cashBalance.balance}
+                  ₹{currentBalance.toLocaleString("en-IN")}
                 </span>
                 <span
                   style={{
@@ -582,15 +753,15 @@ export default function RiderSettlements({
                     fontWeight: 400,
                   }}
                 >
-                  COD Cash currently held by {cashBalance.riderName}
+                  COD Cash currently held by {cashBalance.riderName || riderProfile.name}
                 </span>
               </div>
 
               {/* Outstanding Warning Banner */}
               <div
                 style={{
-                  backgroundColor: "#FFFBEB",
-                  border: "1px solid #FEF08A",
+                  backgroundColor: currentBalance > 0 ? "#FFFBEB" : "#F0FDF4",
+                  border: `1px solid ${currentBalance > 0 ? "#FEF08A" : "#BBF7D0"}`,
                   borderRadius: "8px",
                   padding: "12px",
                   display: "flex",
@@ -603,26 +774,28 @@ export default function RiderSettlements({
                   style={{
                     fontSize: "12px",
                     fontWeight: 700,
-                    color: "#B45309",
+                    color: currentBalance > 0 ? "#B45309" : "#15803D",
                   }}
                 >
-                  Outstanding Warning
+                  {currentBalance > 0 ? "Outstanding Warning" : "Balance Settled"}
                 </span>
                 <span
                   style={{
                     fontSize: "11.5px",
-                    color: "#D97706",
+                    color: currentBalance > 0 ? "#D97706" : "#16A34A",
                     lineHeight: 1.4,
                   }}
                 >
-                  {cashBalance.warningMessage}
+                  {currentBalance > 0
+                    ? `Limit is ₹5,000. Collect cash soon to settle outstanding balance.`
+                    : `All cash collected by ${riderProfile.name} is fully settled.`}
                 </span>
               </div>
 
               {/* Record Settlement Button */}
               <button
                 type="button"
-                onClick={onRecordSettlement}
+                onClick={handleOpenRecordModal}
                 style={{
                   width: "100%",
                   height: "42px",
@@ -1062,6 +1235,331 @@ export default function RiderSettlements({
           </div>
         </div>
       </div>
+
+      {/* Record Settlement Modal */}
+      {isRecordModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setIsRecordModalOpen(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "480px",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              overflow: "hidden",
+              border: "1px solid #E2E8F0",
+              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #F1F5F9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#FFF9F5",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FFF1E8",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#FF5500",
+                  }}
+                >
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0F172A" }}>
+                    Record Cash Settlement
+                  </h3>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748B" }}>
+                    Handover COD cash from {riderProfile.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecordModalOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleConfirmSettlement} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "18px" }}>
+              {/* Rider Info Badge */}
+              <div
+                style={{
+                  backgroundColor: "#F8FAFC",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "10px",
+                  padding: "12px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#0F172A" }}>
+                    {riderProfile.name}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#64748B" }}>
+                    {riderProfile.phone}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>CURRENT DUE</div>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#EA580C" }}>
+                    ₹{currentBalance.toLocaleString("en-IN")}
+                  </div>
+                </div>
+              </div>
+
+              {/* Settlement Amount Input */}
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                  Settlement Amount (₹) *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={settleAmount}
+                  onChange={(e) => setSettleAmount(e.target.value)}
+                  required
+                  placeholder="Enter amount collected"
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    color: "#0F172A",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+                {/* Quick Select Amount Chips */}
+                <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setSettleAmount(currentBalance.toString())}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid #FFEDD5",
+                      backgroundColor: "#FFF7ED",
+                      color: "#EA580C",
+                      fontSize: "11.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Full Balance (₹{currentBalance.toLocaleString("en-IN")})
+                  </button>
+                  {currentBalance > 1000 && (
+                    <button
+                      type="button"
+                      onClick={() => setSettleAmount("1000")}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid #E2E8F0",
+                        backgroundColor: "#F8FAFC",
+                        color: "#475569",
+                        fontSize: "11.5px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ₹1,000
+                    </button>
+                  )}
+                  {currentBalance > 2000 && (
+                    <button
+                      type="button"
+                      onClick={() => setSettleAmount("2000")}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid #E2E8F0",
+                        backgroundColor: "#F8FAFC",
+                        color: "#475569",
+                        fontSize: "11.5px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ₹2,000
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Mode Selection */}
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                  Payment Mode
+                </label>
+                <select
+                  value={settlePaymentMode}
+                  onChange={(e) => setSettlePaymentMode(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "13.5px",
+                    color: "#0F172A",
+                    fontWeight: 600,
+                    backgroundColor: "#FFFFFF",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="CASH">Physical Cash Handover</option>
+                  <option value="UPI">Direct UPI Transfer</option>
+                  <option value="BANK_TRANSFER">Bank Deposit / IMPS</option>
+                </select>
+              </div>
+
+              {/* Reference Note */}
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                  Reference / Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={settleNote}
+                  onChange={(e) => setSettleNote(e.target.value)}
+                  placeholder="e.g. Received at kitchen counter"
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "13.5px",
+                    color: "#0F172A",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsRecordModalOpen(false)}
+                  style={{
+                    flex: 1,
+                    padding: "11px",
+                    borderRadius: "8px",
+                    border: "1px solid #CBD5E1",
+                    backgroundColor: "#FFFFFF",
+                    color: "#475569",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    flex: 2,
+                    padding: "11px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: "#FF5500",
+                    backgroundImage: "linear-gradient(135deg, #FF5500 0%, #F97316 100%)",
+                    color: "#FFFFFF",
+                    fontSize: "13.5px",
+                    fontWeight: 700,
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    boxShadow: "0 2px 8px rgba(249, 115, 22, 0.3)",
+                  }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <span>Confirm & Record Settlement</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            backgroundColor: "#0F172A",
+            color: "#FFFFFF",
+            padding: "12px 20px",
+            borderRadius: "10px",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "13.5px",
+            fontWeight: 600,
+            zIndex: 99999,
+          }}
+        >
+          <CheckCircle2 size={18} color="#10B981" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       <style jsx>{`
         .add-agent-btn:hover {

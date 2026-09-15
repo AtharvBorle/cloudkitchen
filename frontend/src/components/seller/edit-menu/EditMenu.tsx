@@ -7,9 +7,16 @@ import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check } from 'lucide
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
+import { useSellerProfile } from '@/hooks/useSellerProfile';
 import styles from './EditMenu.module.css';
 
 export interface VariantItem {
+  id: string;
+  name: string;
+  price: string;
+}
+
+export interface AddonItem {
   id: string;
   name: string;
   price: string;
@@ -31,15 +38,20 @@ export interface EditMenuProps {
 }
 
 function EditMenuInner({
-  ownerName = 'John Doe',
-  partnerRole = 'Neo Cloud Partner',
-  avatarInitials = 'JD',
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   onSearch,
   onNotificationClick,
 }: EditMenuProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const itemId = searchParams?.get('id');
+  const seller = useSellerProfile();
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,29 +64,27 @@ function EditMenuInner({
     { id: 'cat-6', name: 'Beverages' },
   ]);
 
-  // Form states
-  const [itemName, setItemName] = useState('Special Butter Chicken');
-  const [price, setPrice] = useState('380');
-  const [category, setCategory] = useState('North Indian');
-  const [description, setDescription] = useState(
-    'Tender chicken cubes simmered in a rich, buttery, spiced tomato gravy with fresh cream.'
-  );
+  // Form states (clean empty defaults for Add New Dish)
+  const [itemName, setItemName] = useState('');
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
 
   // Food type dropdown & multi-select
   const [isFoodTypeDropdownOpen, setIsFoodTypeDropdownOpen] = useState(false);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(['Veg']);
 
   // Stock
-  const [stockQty, setStockQty] = useState('24');
+  const [stockQty, setStockQty] = useState('10');
   const [isInStock, setIsInStock] = useState(true);
 
   // Variants & Add-ons
-  const [variants, setVariants] = useState<VariantItem[]>([
-    { id: '1', name: 'Extra Cheese', price: '40' },
-    { id: '2', name: 'Paneer with Corn', price: '60' },
-    { id: '3', name: 'Extra Pizza Slice', price: '80' },
-    { id: '4', name: 'Mushroom Topping', price: '50' },
-  ]);
+  const [variants, setVariants] = useState<VariantItem[]>([]);
+
+  // Themed Success Modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalActionType, setModalActionType] = useState<'add' | 'edit'>('add');
+  const [savedDishName, setSavedDishName] = useState('');
 
   // Day-wise Operational Hours
   const [schedules, setSchedules] = useState<DaySchedule[]>([
@@ -98,6 +108,9 @@ function EditMenuInner({
           const dataPayload = json.data || json;
           if (dataPayload.foodCategories && dataPayload.foodCategories.length > 0) {
             setCategoriesList(dataPayload.foodCategories);
+            if (!category) {
+              setCategory(dataPayload.foodCategories[0].name);
+            }
           }
           if (itemId && dataPayload.items) {
             const found = dataPayload.items.find((it: any) => it.id === itemId);
@@ -106,9 +119,35 @@ function EditMenuInner({
               setPrice(String(found.price || ''));
               if (found.foodCategory?.name) setCategory(found.foodCategory.name);
               setDescription(found.description || '');
-              setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 24));
+              setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 10));
               setIsInStock(found.isAvailable ?? true);
-              setSelectedFoodTypes(found.itemType === 'NON_VEG' ? ['Non Veg'] : ['Veg']);
+              if (found.itemType) {
+                const parts = String(found.itemType).split(',').map((s: string) => s.trim().toUpperCase());
+                if (parts.includes('NON_VEG') || parts.includes('NON-VEG') || parts.includes('NON VEG')) {
+                  setSelectedFoodTypes(['Non Veg']);
+                } else {
+                  const loadedTypes: string[] = [];
+                  if (parts.includes('VEG')) loadedTypes.push('Veg');
+                  if (parts.includes('VEGAN')) loadedTypes.push('Vegan');
+                  if (parts.includes('JAIN')) loadedTypes.push('Jain');
+                  setSelectedFoodTypes(loadedTypes.length > 0 ? loadedTypes : ['Veg']);
+                }
+              }
+
+              if (found.variants) {
+                try {
+                  const parsed = typeof found.variants === 'string' ? JSON.parse(found.variants) : found.variants;
+                  if (Array.isArray(parsed)) {
+                    setVariants(parsed.map((v: any, i: number) => ({
+                      id: v.id || String(i + 1),
+                      name: v.name || '',
+                      price: String(v.price ?? '')
+                    })));
+                  }
+                } catch (e) {
+                  console.error('Failed to parse item variants:', e);
+                }
+              }
             }
           }
         }
@@ -120,18 +159,31 @@ function EditMenuInner({
   }, [itemId]);
 
   const toggleFoodType = (type: string) => {
-    if (selectedFoodTypes.includes(type)) {
-      if (selectedFoodTypes.length > 1) {
-        setSelectedFoodTypes(selectedFoodTypes.filter((t) => t !== type));
+    setSelectedFoodTypes((prev) => {
+      const isAlreadySelected = prev.includes(type);
+
+      if (isAlreadySelected) {
+        // Unselect the clicked type
+        return prev.filter((t) => t !== type);
+      } else {
+        // Select the clicked type
+        if (type === 'Non Veg' || type === 'Non-Veg' || type === 'NON_VEG') {
+          // If Non Veg is selected: automatically unselect Veg, Vegan, and Jain
+          return ['Non Veg'];
+        } else {
+          // If Veg, Vegan, or Jain is selected: automatically unselect Non Veg
+          const withoutNonVeg = prev.filter(
+            (t) => t !== 'Non Veg' && t !== 'Non-Veg' && t !== 'NON_VEG'
+          );
+          return [...withoutNonVeg, type];
+        }
       }
-    } else {
-      setSelectedFoodTypes([...selectedFoodTypes, type]);
-    }
+    });
   };
 
   const handleAddVariant = () => {
-    const newId = (variants.length + 1).toString();
-    setVariants([...variants, { id: newId, name: '', price: '' }]);
+    const newId = (Date.now() + Math.floor(Math.random() * 1000)).toString();
+    setVariants([...variants, { id: newId, name: '', price: price || '0' }]);
   };
 
   const handleUpdateVariant = (id: string, field: 'name' | 'price', value: string) => {
@@ -156,6 +208,21 @@ function EditMenuInner({
     );
   };
 
+  const handleAddAnother = () => {
+    setItemName('');
+    setPrice('');
+    setDescription('');
+    setSelectedFoodTypes(['Veg']);
+    setStockQty('10');
+    setIsInStock(true);
+    setVariants([]);
+    setImageFile(null);
+    setShowSuccessModal(false);
+    if (itemId) {
+      router.push('/seller/edit-menu');
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -164,9 +231,30 @@ function EditMenuInner({
       formData.append('name', itemName);
       formData.append('price', price);
       formData.append('description', description || '');
-      formData.append('itemType', selectedFoodTypes.includes('Non Veg') ? 'NON_VEG' : 'VEG');
+
+      let itemTypeVal = 'VEG';
+      if (selectedFoodTypes.includes('Non Veg') || selectedFoodTypes.includes('Non-Veg')) {
+        itemTypeVal = 'NON_VEG';
+      } else {
+        const typesList: string[] = [];
+        if (selectedFoodTypes.includes('Veg')) typesList.push('VEG');
+        if (selectedFoodTypes.includes('Vegan')) typesList.push('VEGAN');
+        if (selectedFoodTypes.includes('Jain')) typesList.push('JAIN');
+        itemTypeVal = typesList.length > 0 ? typesList.join(',') : 'VEG';
+      }
+      formData.append('itemType', itemTypeVal);
+
       formData.append('stockQuantity', stockQty || '24');
       formData.append('isAvailable', String(isInStock));
+
+      const validVariants = variants
+        .filter(v => v.name.trim().length > 0)
+        .map(v => ({
+          id: v.id,
+          name: v.name.trim(),
+          price: Number(v.price) || Number(price) || 0
+        }));
+      formData.append('variants', JSON.stringify(validVariants));
 
       let matchedCatId = categoriesList[0]?.id || '';
       const matched = categoriesList.find((c) => c.name.toLowerCase() === category.toLowerCase());
@@ -199,7 +287,10 @@ function EditMenuInner({
         return;
       }
 
-      router.push('/seller/menu');
+      setSavedDishName(itemName);
+      setModalActionType(itemId ? 'edit' : 'add');
+      setShowSuccessModal(true);
+      setLoading(false);
     } catch (err: any) {
       console.error('Error saving menu item:', err);
       alert(err.message || 'Error saving menu item');
@@ -214,6 +305,9 @@ function EditMenuInner({
         activeItemId="menu"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}
@@ -326,27 +420,40 @@ function EditMenuInner({
                   </button>
 
                   {isFoodTypeDropdownOpen && (
-                    <div className={styles.dropdownMenu}>
-                      {['Veg', 'Non Veg', 'Vegan', 'Jain'].map((type) => {
-                        const isSelected = selectedFoodTypes.includes(type);
-                        return (
-                          <div
-                            key={type}
-                            className={styles.dropdownOption}
-                            onClick={() => toggleFoodType(type)}
-                          >
+                    <>
+                      <div
+                        style={{
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 40,
+                        }}
+                        onClick={() => setIsFoodTypeDropdownOpen(false)}
+                      />
+                      <div className={styles.dropdownMenu} style={{ zIndex: 45 }}>
+                        {['Veg', 'Non Veg', 'Vegan', 'Jain'].map((type) => {
+                          const isSelected = selectedFoodTypes.includes(type);
+                          return (
                             <div
-                              className={`${styles.checkboxBox} ${
-                                isSelected ? styles.checkboxBoxActive : ''
-                              }`}
+                              key={type}
+                              className={styles.dropdownOption}
+                              onClick={() => toggleFoodType(type)}
                             >
-                              {isSelected && <Check size={12} strokeWidth={3} />}
+                              <div
+                                className={`${styles.checkboxBox} ${
+                                  isSelected ? styles.checkboxBoxActive : ''
+                                }`}
+                              >
+                                {isSelected && <Check size={12} strokeWidth={3} />}
+                              </div>
+                              <span className={styles.optionLabel}>{type}</span>
                             </div>
-                            <span className={styles.optionLabel}>{type}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -402,14 +509,24 @@ function EditMenuInner({
                     <input
                       type="text"
                       className={styles.variantNameInput}
-                      placeholder="Variant / Add-on name"
+                      placeholder="Variant / Add-on name (e.g. Regular, Large)"
                       value={variant.name}
                       onChange={(e) =>
                         handleUpdateVariant(variant.id, 'name', e.target.value)
                       }
                     />
-                    <div className={styles.variantPriceBadge}>
-                      <span>₹{variant.price}</span>
+                    <div className={styles.variantPriceWrapper}>
+                      <span className={styles.currencyPrefix}>₹</span>
+                      <input
+                        type="number"
+                        className={styles.variantPriceInput}
+                        placeholder="Price"
+                        value={variant.price}
+                        onChange={(e) =>
+                          handleUpdateVariant(variant.id, 'price', e.target.value)
+                        }
+                        aria-label="Variant price"
+                      />
                     </div>
                     <button
                       type="button"
@@ -516,6 +633,39 @@ function EditMenuInner({
               </button>
             </div>
           </form>
+
+          {/* Themed Confirmation Modal Popup */}
+          {showSuccessModal && (
+            <div className={styles.modalOverlay} onClick={() => setShowSuccessModal(false)}>
+              <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.modalIconBadge}>
+                  <Check size={28} strokeWidth={3} color="#FFFFFF" />
+                </div>
+                <h3 className={styles.modalTitle}>
+                  {modalActionType === 'add' ? 'Dish Added Successfully!' : 'Dish Updated Successfully!'}
+                </h3>
+                <p className={styles.modalMessage}>
+                  &lsquo;<strong>{savedDishName}</strong>&rsquo; has been saved with active variants and pricing, and is now live in your menu.
+                </p>
+                <div className={styles.modalButtons}>
+                  <button
+                    type="button"
+                    className={styles.modalPrimaryBtn}
+                    onClick={() => router.push('/seller/menu')}
+                  >
+                    View Menu Inventory
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.modalSecondaryBtn}
+                    onClick={handleAddAnother}
+                  >
+                    {modalActionType === 'add' ? 'Add Another Dish' : 'Continue Editing'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

@@ -24,6 +24,28 @@ export const getDeliveryOrders = async () => {
             deliveryPersonId: deliveryProfile.id,
             status: { in: ["PENDING", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"] }
         },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    city: true,
+                    pincode: true
+                }
+            },
+            seller: {
+                select: {
+                    id: true,
+                    businessName: true,
+                    addressFlat: true,
+                    addressLocality: true,
+                    addressLandmark: true,
+                    trackingId: true
+                }
+            }
+        },
         orderBy: { createdAt: 'desc' }
     });
 

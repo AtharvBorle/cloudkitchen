@@ -10,18 +10,29 @@ export interface OrderFiltersProps {
   activeTab?: OrderFilterTab;
   onTabChange?: (tab: OrderFilterTab) => void;
   dateRangeText?: string;
+  onDateRangeChange?: (range: string) => void;
   onDateRangeClick?: () => void;
 }
 
 export const OrderFilters: React.FC<OrderFiltersProps> = ({
   activeTab = "all",
   onTabChange,
-  dateRangeText = "Aug 1, 2024 - Aug 31, 2024",
+  dateRangeText = "All Time",
+  onDateRangeChange,
   onDateRangeClick,
 }) => {
   const [selectedTab, setSelectedTab] = useState<OrderFilterTab>(activeTab);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState(dateRangeText);
+
+  // Sync state if props change
+  React.useEffect(() => {
+    setSelectedTab(activeTab);
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    setSelectedRange(dateRangeText);
+  }, [dateRangeText]);
 
   const handleTabClick = (tab: OrderFilterTab) => {
     setSelectedTab(tab);
@@ -33,7 +44,22 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({
   const handleRangeSelect = (range: string) => {
     setSelectedRange(range);
     setIsDropdownOpen(false);
+    if (onDateRangeChange) {
+      onDateRangeChange(range);
+    }
   };
+
+  const dateOptions = [
+    "All Time",
+    "Today",
+    "Yesterday",
+    "This Week",
+    "This Month",
+    "Last 7 Days",
+    "Last 30 Days",
+    "Last 3 Months",
+    "This Year",
+  ];
 
   return (
     <div className={styles.filterBar}>
@@ -92,30 +118,17 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({
 
         {isDropdownOpen && (
           <div className={styles.dropdownMenu}>
-            <div
-              className={styles.dropdownOption}
-              onClick={() => handleRangeSelect("Aug 1, 2024 - Aug 31, 2024")}
-            >
-              Aug 1, 2024 - Aug 31, 2024
-            </div>
-            <div
-              className={styles.dropdownOption}
-              onClick={() => handleRangeSelect("Last 30 Days")}
-            >
-              Last 30 Days
-            </div>
-            <div
-              className={styles.dropdownOption}
-              onClick={() => handleRangeSelect("Last 3 Months")}
-            >
-              Last 3 Months
-            </div>
-            <div
-              className={styles.dropdownOption}
-              onClick={() => handleRangeSelect("Year 2024")}
-            >
-              Year 2024
-            </div>
+            {dateOptions.map((option) => (
+              <div
+                key={option}
+                className={`${styles.dropdownOption} ${
+                  selectedRange === option ? styles.selectedOption : ""
+                }`}
+                onClick={() => handleRangeSelect(option)}
+              >
+                {option}
+              </div>
+            ))}
           </div>
         )}
       </div>

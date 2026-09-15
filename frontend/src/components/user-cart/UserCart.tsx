@@ -14,6 +14,7 @@ import {
   Minus,
   ShoppingBag,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
 import styles from "./UserCart.module.css";
@@ -88,7 +89,7 @@ const AVAILABLE_ADDRESSES = [
 ];
 
 export const UserCart: React.FC<UserCartProps> = ({
-  initialItems = DEFAULT_CART_ITEMS,
+  initialItems = [],
   defaultLocation = "Kothrud, Pune",
   defaultAddress = "Flat 402, Golden Crest Apartments, Kothrud",
   onProceedToCheckout,
@@ -115,7 +116,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
         price: ci.price,
         qty: ci.quantity,
-        image: "/images/places/place-pizza.png",
+        image: ci.image || "/images/places/place-pizza.png",
       }))
     : localCartItems;
 
@@ -197,13 +198,16 @@ export const UserCart: React.FC<UserCartProps> = ({
   const taxesAndCharges = subtotal > 0 ? 38 : 0;
   const grandTotal = Math.max(0, subtotal - discountAmount + deliveryFee + taxesAndCharges);
 
+  const { data: session, status } = useSession();
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   const handleCheckoutClick = () => {
     if (onProceedToCheckout) {
       onProceedToCheckout();
+    } else if (status === "unauthenticated") {
+      router.push(`/login?callbackUrl=${encodeURIComponent("/checkout")}`);
     } else {
-      router.push("/user/checkout");
+      router.push("/checkout");
     }
   };
 
@@ -227,7 +231,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           <div className={styles.stepperLine} />
 
           {/* Step 2: Checkout (Inactive) */}
-          <Link href="/user/checkout" style={{ textDecoration: "none" }}>
+          <Link href="/checkout" style={{ textDecoration: "none" }}>
             <div
               className={styles.stepPillInactive}
               title="Go to Checkout"

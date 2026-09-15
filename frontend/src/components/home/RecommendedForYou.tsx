@@ -17,28 +17,28 @@ const RECOMMENDED_DISHES: RecommendedDish[] = [
     name: "Creamy Pasta",
     time: "₹329 • 20 min",
     imageUrl: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop",
+    link: "/explore?category=Italian",
   },
   {
     id: "rec-2",
     name: "Chicken Wings",
     time: "₹119 • 20 min",
     imageUrl: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop",
+    link: "/explore?category=Snacks",
   },
   {
     id: "rec-3",
     name: "Iced Latte",
     time: "₹135 • 10 min",
     imageUrl: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop",
+    link: "/explore?category=Beverages",
   },
   {
     id: "rec-4",
     name: "Chocolate Brownie",
     time: "₹150 • 15 min",
     imageUrl: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=500&auto=format&fit=crop&q=80",
-    link: "/explore-desktop",
+    link: "/explore?category=Desserts",
   },
 ];
 
@@ -50,7 +50,7 @@ interface RecommendedForYouProps {
 
 export default function RecommendedForYou({
   title = "Recommended For You",
-  seeAllLink = "/explore-desktop",
+  seeAllLink = "/explore",
   items = RECOMMENDED_DISHES,
 }: RecommendedForYouProps) {
   return (

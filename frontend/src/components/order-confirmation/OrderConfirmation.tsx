@@ -24,6 +24,8 @@ import {
 import Navbar from "@/components/navbar/Navbar";
 import styles from "./OrderConfirmation.module.css";
 
+import { fetchApi } from "@/lib/fetch-api";
+
 interface ConfirmedOrderItem {
   id: string;
   name: string;
@@ -37,6 +39,7 @@ interface ConfirmedOrderItem {
 interface ConfirmedOrderData {
   orderId: string;
   orderTime: string;
+  status: string;
   estimatedDelivery: string;
   deliveryAddress: {
     fullName: string;
@@ -52,45 +55,32 @@ interface ConfirmedOrderData {
   deliveryFee: number;
   taxes: number;
   grandTotal: number;
+  sellerName?: string;
+  deliveryPerson?: {
+    name?: string;
+    phone?: string;
+  } | null;
 }
 
 const DEFAULT_DEMO_ORDER: ConfirmedOrderData = {
   orderId: "NCB-" + Math.floor(100000 + Math.random() * 900000),
   orderTime: "Just now",
+  status: "PREPARING",
   estimatedDelivery: "25-35 mins",
   deliveryAddress: {
-    fullName: "Yash Borle",
-    phoneNumber: "+91 98765 43210",
-    streetAddress: "Flat 402, Sunshine Heights, Paud Road",
-    city: "Kothrud, Pune",
-    pincode: "411038",
+    fullName: "Customer",
+    phoneNumber: "",
+    streetAddress: "Delivery Address",
+    city: "",
+    pincode: "",
   },
-  paymentMethod: "UPI (Paid Online)",
-  items: [
-    {
-      id: "demo-1",
-      name: "Paneer Butter Masala & Garlic Naan",
-      price: 249,
-      qty: 1,
-      image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&auto=format&fit=crop&q=80",
-      variant: "Serves 1 • Rich Gravy",
-      itemType: "VEG",
-    },
-    {
-      id: "demo-2",
-      name: "Hyderabadi Dum Biryani",
-      price: 299,
-      qty: 1,
-      image: "/images/places/place-biryani.png",
-      variant: "With Raita & Salan",
-      itemType: "NON_VEG",
-    },
-  ],
-  subtotal: 548,
-  discount: 109,
-  deliveryFee: 30,
-  taxes: 28,
-  grandTotal: 497,
+  paymentMethod: "Online / COD",
+  items: [],
+  subtotal: 0,
+  discount: 0,
+  deliveryFee: 0,
+  taxes: 0,
+  grandTotal: 0,
 };
 
 // Colors for the celebratory confetti
@@ -103,7 +93,6 @@ export default function OrderConfirmation() {
 
   const [orderData, setOrderData] = useState<ConfirmedOrderData>(DEFAULT_DEMO_ORDER);
   const [copied, setCopied] = useState(false);
-  const [activeStep, setActiveStep] = useState(2); // Step 2 = Kitchen preparing
   const [showConfetti, setShowConfetti] = useState(true);
 
   // Generate randomized confetti pieces once on mount
@@ -117,8 +106,76 @@ export default function OrderConfirmation() {
     }));
   }, []);
 
+  const parseAndSetOrder = (data: any) => {
+    if (!data) return;
+    const rawOrder = data.data || data;
+    if (!rawOrder || !rawOrder.id) return;
+
+    let parsedItems: ConfirmedOrderItem[] = [];
+    if (typeof rawOrder.items === "string") {
+      try {
+        const arr = JSON.parse(rawOrder.items);
+        if (Array.isArray(arr)) {
+          parsedItems = arr.map((item: any) => ({
+            id: item.id || String(Math.random()),
+            name: item.name || "Food Item",
+            price: item.price || 0,
+            qty: item.quantity || item.qty || 1,
+            image: item.image || "/images/places/place-pizza.png",
+            variant: item.variant,
+            itemType: item.itemType || "VEG",
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to parse order items:", e);
+      }
+    } else if (Array.isArray(rawOrder.items)) {
+      parsedItems = rawOrder.items.map((item: any) => ({
+        id: item.id || String(Math.random()),
+        name: item.name || "Food Item",
+        price: item.price || 0,
+        qty: item.quantity || item.qty || 1,
+        image: item.image || "/images/places/place-pizza.png",
+        variant: item.variant,
+        itemType: item.itemType || "VEG",
+      }));
+    }
+
+    const dateStr = rawOrder.createdAt
+      ? new Date(rawOrder.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+      : "Just now";
+
+    let rawAddress = rawOrder.deliveryAddress || "";
+    let street = rawAddress.split(" | Loc:")[0] || "Default Address";
+
+    setOrderData({
+      orderId: rawOrder.id,
+      orderTime: dateStr,
+      status: (rawOrder.status || "PENDING").toUpperCase(),
+      estimatedDelivery: rawOrder.status === "DELIVERED" ? "Delivered" : "25-35 mins",
+      deliveryAddress: {
+        fullName: rawOrder.user?.name || "Customer",
+        phoneNumber: rawOrder.customerPhone || rawOrder.user?.phone || "",
+        streetAddress: street,
+        city: "",
+        pincode: "",
+      },
+      paymentMethod: `${rawOrder.paymentMethod || "COD"} ${rawOrder.isPaid ? "(Paid Online)" : "(Pay on Delivery)"}`,
+      items: parsedItems,
+      subtotal: rawOrder.totalAmount || 0,
+      discount: 0,
+      deliveryFee: 0,
+      taxes: 0,
+      grandTotal: rawOrder.totalAmount || 0,
+      sellerName: rawOrder.seller?.businessName,
+      deliveryPerson: rawOrder.deliveryPerson,
+    });
+  };
+
   useEffect(() => {
-    // Read from sessionStorage if passed from SecureCheckout
+    let isMounted = true;
+
+    // First check sessionStorage for immediate render
     if (typeof window !== "undefined") {
       try {
         const storedOrder = sessionStorage.getItem("latestConfirmedOrder");
@@ -127,23 +184,49 @@ export default function OrderConfirmation() {
           if (parsed && parsed.orderId) {
             setOrderData(parsed);
           }
-        } else if (queryOrderId) {
-          setOrderData((prev) => ({
-            ...prev,
-            orderId: queryOrderId,
-          }));
         }
       } catch (err) {
         console.error("Error reading confirmed order data:", err);
       }
     }
 
-    // Auto fade confetti after 6 seconds to keep UI clean
+    const orderIdToFetch = queryOrderId || (typeof window !== "undefined" ? (() => {
+      try {
+        const s = sessionStorage.getItem("latestConfirmedOrder");
+        return s ? JSON.parse(s)?.orderId : null;
+      } catch { return null; }
+    })() : null);
+
+    async function fetchLiveOrder() {
+      if (!orderIdToFetch) return;
+      try {
+        const res = await fetchApi(`/api/user/orders/${orderIdToFetch}`);
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          parseAndSetOrder(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live order details:", err);
+      }
+    }
+
+    fetchLiveOrder();
+
+    // 4s polling for real-time live tracking
+    const interval = setInterval(() => {
+      fetchLiveOrder();
+    }, 4000);
+
+    // Auto fade confetti after 6 seconds
     const timer = setTimeout(() => {
-      setShowConfetti(false);
+      if (isMounted) setShowConfetti(false);
     }, 6000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
   }, [queryOrderId]);
 
   const handleCopyOrderId = () => {
@@ -154,38 +237,55 @@ export default function OrderConfirmation() {
     }
   };
 
+  const status = (orderData.status || "PENDING").toUpperCase();
+  const isPending = status === "PENDING";
+  const isPreparing = status === "PREPARING";
+  const isOutForDelivery = status === "OUT_FOR_DELIVERY";
+  const isDelivered = status === "DELIVERED";
+  const isCancelled = status === "CANCELLED";
+
   const timelineSteps = [
     {
       id: 1,
       title: "Order Placed & Confirmed",
       time: orderData.orderTime || "Just now",
-      desc: "Your order has been received and verified by Neo Cloud Bites.",
+      desc: isPending
+        ? `Order received and awaiting confirmation from ${orderData.sellerName || "the kitchen"}.`
+        : `Order verified and accepted by ${orderData.sellerName || "the kitchen"}.`,
       icon: CheckCircle2,
-      status: "done",
+      status: isCancelled ? "pending" : (isPending ? "active" : "done"),
     },
     {
       id: 2,
-      title: "Kitchen is Preparing Your Food",
-      time: "In Progress",
-      desc: "Fresh ingredients are being cooked with care & hygiene.",
+      title: "Kitchen Preparation",
+      time: isPreparing ? "In Progress 🍳" : (isOutForDelivery || isDelivered ? "Completed" : "Waiting"),
+      desc: isPreparing
+        ? "Fresh ingredients are currently being cooked with high hygiene standards."
+        : (isOutForDelivery || isDelivered ? "Food preparation was freshly completed." : "Kitchen will begin cooking shortly."),
       icon: ChefHat,
-      status: "active",
+      status: isCancelled ? "pending" : (isPreparing ? "active" : isOutForDelivery || isDelivered ? "done" : "pending"),
     },
     {
       id: 3,
-      title: "Delivery Partner Assignment",
-      time: "Next Step",
-      desc: "A nearby delivery valet will pick up your hot meal package.",
+      title: orderData.deliveryPerson?.name ? `Rider ${orderData.deliveryPerson.name}` : "Delivery Partner Assignment",
+      time: isOutForDelivery ? "On The Way 🛵" : (isDelivered ? "Delivered" : "Upcoming"),
+      desc: isOutForDelivery
+        ? (orderData.deliveryPerson?.name
+            ? `${orderData.deliveryPerson.name} (${orderData.deliveryPerson.phone || 'Partner'}) is heading to your delivery location.`
+            : "A delivery partner has picked up your package and is on the way.")
+        : (isDelivered ? "Order successfully arrived at destination." : "A nearby delivery partner will be dispatched once packed."),
       icon: Bike,
-      status: "pending",
+      status: isCancelled ? "pending" : (isOutForDelivery ? "active" : isDelivered ? "done" : "pending"),
     },
     {
       id: 4,
-      title: "Delivered to Your Doorstep",
-      time: `Expected in ${orderData.estimatedDelivery}`,
-      desc: `Handover at ${orderData.deliveryAddress.streetAddress}, ${orderData.deliveryAddress.city}`,
+      title: "Delivered to Doorstep",
+      time: isDelivered ? "Delivered 🎉" : `Est. ${orderData.estimatedDelivery}`,
+      desc: isDelivered
+        ? `Handover completed at ${orderData.deliveryAddress.streetAddress}.`
+        : `Will be delivered to ${orderData.deliveryAddress.streetAddress}.`,
       icon: MapPin,
-      status: "pending",
+      status: isCancelled ? "pending" : (isDelivered ? "done" : "pending"),
     },
   ];
 
@@ -244,12 +344,30 @@ export default function OrderConfirmation() {
           {/* Animated Success Checkmark Ring */}
           <div className={styles.successIconWrapper}>
             <div className={styles.pulsingRing} />
-            <CheckCircle2 size={54} strokeWidth={2.4} />
+            <CheckCircle2 size={54} strokeWidth={2.4} color={isCancelled ? "#EF4444" : "#22C55E"} />
           </div>
 
-          <h1 className={styles.heroTitle}>Woohoo! Order Confirmed</h1>
+          <h1 className={styles.heroTitle}>
+            {isCancelled
+              ? "Order Cancelled"
+              : isDelivered
+              ? "Order Delivered!"
+              : isOutForDelivery
+              ? "Your Food is on the Way!"
+              : isPreparing
+              ? "Kitchen is Cooking Your Food"
+              : "Woohoo! Order Confirmed"}
+          </h1>
           <p className={styles.heroSubtitle}>
-            Your delicious meal is now cooking in the cloud kitchen. Sit back, relax, and track your food live!
+            {isCancelled
+              ? "This order was cancelled. Any online payment has been submitted for instant refund processing."
+              : isDelivered
+              ? "Your meal has been successfully delivered to your doorstep. Bon Appétit!"
+              : isOutForDelivery
+              ? "Our delivery valet has picked up your order and is rushing towards your address!"
+              : isPreparing
+              ? "The chefs are freshly preparing your delicious items. Tracking live!"
+              : "Your order has been placed and transmitted to the kitchen. Sit back and relax!"}
           </p>
 
           {/* Quick Meta Pills */}
@@ -482,7 +600,7 @@ export default function OrderConfirmation() {
           </Link>
 
           {/* Secondary Continue Exploring Button */}
-          <Link href="/explore-desktop" className={styles.exploreBtn}>
+          <Link href="/explore" className={styles.exploreBtn}>
             <Compass size={18} color="#EA580C" />
             <span>Explore More Dishes</span>
           </Link>

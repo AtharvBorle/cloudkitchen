@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, Trash2, Edit2, Plus, ChevronLeft } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, Trash2, Edit2, Plus, ChevronLeft, CheckCircle2 } from "lucide-react";
+import {
+  fetchStoredMealPlans,
+  getStoredMealPlans,
+  updateMealPlan,
+  deleteMealPlan,
+  MealSubscriptionPlan,
+} from "@/lib/meal-subscriptions";
 
 
 export interface PlanFeatureItem {
@@ -68,8 +76,8 @@ const DEFAULT_MEAL_TIMINGS: MealTimingItem[] = [
 ];
 
 const DEFAULT_DATA: SubscriptionPlanData = {
-  planName: "Professional Plan",
-  planTier: "Professional",
+  planName: "Bronze Plan",
+  planTier: "Bronze",
   monthlyPrice: "₹ 999.00",
   quarterlyPrice: "₹ 2,699.00",
   yearlyPrice: "₹ 9,599.00",
@@ -87,7 +95,7 @@ const DEFAULT_DATA: SubscriptionPlanData = {
     planId: "PLN-7832",
     deployedDate: "Feb 10, 2024",
     taxCode: "GST 18% Extra",
-    tierBadgeText: "PROFESSIONAL TIER",
+    tierBadgeText: "BRONZE TIER",
   },
 };
 
@@ -99,12 +107,73 @@ export default function SubscriptionEditCanvas({
   onAddFeature,
   onAddTiming,
 }: SubscriptionEditCanvasProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const planIdParam = searchParams.get("id");
+
+  const [targetPlanId, setTargetPlanId] = useState<string | null>(planIdParam);
   const [formData, setFormData] = useState<SubscriptionPlanData>({
     ...DEFAULT_DATA,
     ...initialData,
     metrics: { ...DEFAULT_DATA.metrics, ...initialData?.metrics },
     metadata: { ...DEFAULT_DATA.metadata, ...initialData?.metadata },
   });
+
+  useEffect(() => {
+    const loadPlan = async () => {
+      let plans = getStoredMealPlans();
+      let found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam);
+      if (!found) {
+        const fetched = await fetchStoredMealPlans();
+        if (fetched?.plans) {
+          plans = fetched.plans;
+          found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
+        }
+      } else {
+        found = found || plans[0];
+      }
+
+      if (found) {
+        setTargetPlanId(found.id);
+        setFormData({
+          planName: found.name,
+          planTier: found.tier,
+          monthlyPrice: found.monthlyPrice,
+          quarterlyPrice: found.quarterlyPrice,
+          yearlyPrice: found.yearlyPrice,
+          includedFeatures: (found.features || []).map((feat, idx) => ({
+            id: `feat-${idx}`,
+            label: feat,
+            checked: true,
+          })),
+          customFeature: "",
+          planDuration: found.duration,
+          mealTimings: (found.mealTimings || []).map((t, idx) => {
+            const [mealName, timing] = t.includes(":") ? t.split(/:\s*(.+)/) : ["Meal", t];
+            return {
+              id: `time-${idx}`,
+              mealName: mealName || "Meal",
+              timing: timing || t,
+            };
+          }),
+          allowCancelSubscription: found.allowCancel ?? true,
+          allowPauseBilling: found.pauseBillingPeriod !== "None",
+          metrics: {
+            subscribers: found.subscribersCount,
+            monthlyRevenue: found.monthlyRevenue,
+          },
+          metadata: {
+            planId: found.planId,
+            deployedDate: found.deployedDate,
+            taxCode: "GST 18% Extra",
+            tierBadgeText: `${found.tier.toUpperCase()} TIER`,
+          },
+        });
+      }
+    };
+
+    loadPlan();
+  }, [planIdParam]);
 
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -129,46 +198,61 @@ export default function SubscriptionEditCanvas({
     }));
   };
 
-  const handleDeleteFeature = (id: string) => {
+  const handleFeatureDelete = (id: string) => {
     setFormData((prev) => ({
       ...prev,
       includedFeatures: prev.includedFeatures.filter((f) => f.id !== id),
     }));
   };
 
-  const handleAddFeatureItem = () => {
-    if (onAddFeature) {
-      onAddFeature();
-      return;
-    }
-    const newId = `feat-${Date.now()}`;
+  const handleAddCustomFeature = () => {
+    if (!formData.customFeature.trim()) return;
     const newFeature: PlanFeatureItem = {
-      id: newId,
-      label: "New Weekly Plan Item",
-      checked: false,
+      id: `feat-${Date.now()}`,
+      label: formData.customFeature.trim(),
+      checked: true,
+    };
+    setFormData((prev) => ({
+      ...prev,
+      includedFeatures: [...prev.includedFeatures, newFeature],
+      customFeature: "",
+    }));
+    if (onAddFeature) onAddFeature();
+  };
+
+  const handleAddFeatureDirect = () => {
+    const newFeature: PlanFeatureItem = {
+      id: `feat-${Date.now()}`,
+      label: "New Plan Feature",
+      checked: true,
     };
     setFormData((prev) => ({
       ...prev,
       includedFeatures: [...prev.includedFeatures, newFeature],
     }));
+    if (onAddFeature) onAddFeature();
   };
 
-  const handleDeleteTiming = (id: string) => {
+  const handleTimingChange = (id: string, newTiming: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      mealTimings: prev.mealTimings.map((t) =>
+        t.id === id ? { ...t, timing: newTiming } : t
+      ),
+    }));
+  };
+
+  const handleTimingDelete = (id: string) => {
     setFormData((prev) => ({
       ...prev,
       mealTimings: prev.mealTimings.filter((t) => t.id !== id),
     }));
   };
 
-  const handleAddTimingItem = () => {
-    if (onAddTiming) {
-      onAddTiming();
-      return;
-    }
-    const newId = `time-${Date.now()}`;
+  const handleAddMealTiming = () => {
     const newTiming: MealTimingItem = {
-      id: newId,
-      mealName: "New Meal Timing",
+      id: `time-${Date.now()}`,
+      mealName: "New Meal",
       timing: "10:00 AM – 11:00 AM",
     };
     setFormData((prev) => ({
@@ -177,35 +261,52 @@ export default function SubscriptionEditCanvas({
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (targetPlanId) {
+      await updateMealPlan(targetPlanId, {
+        name: formData.planName,
+        tier: formData.planTier,
+        monthlyPrice: formData.monthlyPrice,
+        quarterlyPrice: formData.quarterlyPrice,
+        yearlyPrice: formData.yearlyPrice,
+        duration: formData.planDuration,
+        features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
+        mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
+        allowCancel: formData.allowCancelSubscription,
+        pauseBillingPeriod: formData.allowPauseBilling ? "Monthly" : "None",
+      });
+    }
+
     if (onSave) {
       onSave(formData);
     }
-    setSaveStatus("Saved successfully!");
-    setTimeout(() => setSaveStatus(null), 3000);
+    setSaveStatus("Plan modifications saved successfully!");
+    setTimeout(() => {
+      setSaveStatus(null);
+      router.push("/seller/subscription");
+    }, 900);
   };
 
   const handleDiscard = () => {
     if (onDiscard) {
       onDiscard();
     } else {
-      setFormData({
-        ...DEFAULT_DATA,
-        ...initialData,
-      });
-      setSaveStatus("Modifications discarded");
-      setTimeout(() => setSaveStatus(null), 2500);
+      router.push("/seller/subscription");
     }
   };
 
-  const handleArchive = () => {
+  const handleArchive = async () => {
+    if (targetPlanId) {
+      await deleteMealPlan(targetPlanId);
+    }
     if (onArchive) {
       onArchive();
     } else {
-      if (window.confirm("Are you sure you want to archive this plan tier?")) {
-        setSaveStatus("Plan archived");
-        setTimeout(() => setSaveStatus(null), 2500);
-      }
+      setSaveStatus("Plan archived successfully");
+      setTimeout(() => {
+        setSaveStatus(null);
+        router.push("/seller/subscription");
+      }, 900);
     }
   };
 
@@ -319,8 +420,25 @@ export default function SubscriptionEditCanvas({
           </h1>
           <span
             style={{
-              backgroundColor: "#FFF1E8",
-              color: "#FF5500",
+              backgroundColor:
+                formData.planTier?.toLowerCase() === "gold"
+                  ? "#FEF9C3"
+                  : formData.planTier?.toLowerCase() === "silver"
+                  ? "#F1F5F9"
+                  : "#FEF3C7",
+              color:
+                formData.planTier?.toLowerCase() === "gold"
+                  ? "#A16207"
+                  : formData.planTier?.toLowerCase() === "silver"
+                  ? "#475569"
+                  : "#B45309",
+              border: `1px solid ${
+                formData.planTier?.toLowerCase() === "gold"
+                  ? "#FDE047"
+                  : formData.planTier?.toLowerCase() === "silver"
+                  ? "#CBD5E1"
+                  : "#FDE68A"
+              }`,
               fontSize: "10.5px",
               fontWeight: 700,
               padding: "3px 8px",
@@ -332,7 +450,7 @@ export default function SubscriptionEditCanvas({
               lineHeight: 1.2,
             }}
           >
-            {formData.metadata.tierBadgeText || "PROFESSIONAL TIER"}
+            {formData.metadata.tierBadgeText || `${(formData.planTier || "BRONZE").toUpperCase()} TIER`}
           </span>
         </div>
 
@@ -447,10 +565,19 @@ export default function SubscriptionEditCanvas({
                 >
                   Plan Tier
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.planTier}
-                  onChange={(e) => handleTextChange("planTier", e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      planTier: val,
+                      metadata: {
+                        ...prev.metadata,
+                        tierBadgeText: `${val.toUpperCase()} TIER`,
+                      },
+                    }));
+                  }}
                   style={{
                     width: "100%",
                     borderRadius: "8px",
@@ -463,8 +590,13 @@ export default function SubscriptionEditCanvas({
                     boxSizing: "border-box",
                     fontFamily: "inherit",
                     transition: "border-color 0.15s ease",
+                    cursor: "pointer",
                   }}
-                />
+                >
+                  <option value="Bronze">Bronze Tier</option>
+                  <option value="Silver">Silver Tier</option>
+                  <option value="Gold">Gold Tier</option>
+                </select>
               </div>
             </div>
           </div>

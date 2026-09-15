@@ -40,7 +40,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                 : "4.8",
               price: `₹${item.price}`,
               image: item.imageUrl || kitchenData.items[0]?.image,
-              isVeg: item.itemType ? item.itemType === "VEG" : item.isVeg !== false,
+              isVeg: item.itemType ? !item.itemType.toUpperCase().includes("NON_VEG") : item.isVeg !== false,
               category: item.foodCategory?.name || "Popular",
             }));
 

@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import {
   X,
   Home,
@@ -14,6 +15,7 @@ import {
   Settings,
   HelpCircle,
   LogOut,
+  LogIn,
   ChevronRight,
   ChevronDown,
   Star,
@@ -111,12 +113,12 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     };
   }, [isOpen, pathname, activeItem, isSettingsRoute]);
 
-  const handleLogout = () => {
+  const handleAuthAction = () => {
     onClose();
     if (session?.user) {
-      signOut({ callbackUrl: "/login" });
+      performLogout({ role: "USER" });
     } else {
-      router.push("/login");
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);
     }
   };
 
@@ -337,7 +339,17 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
         </div>
 
         {/* User Profile Card */}
-        <div className={styles.profileSection}>
+        <div
+          className={styles.profileSection}
+          onClick={() => {
+            onClose();
+            router.push("/settings-desktop");
+          }}
+          style={{ cursor: "pointer" }}
+          role="button"
+          tabIndex={0}
+          aria-label="View User Profile & Settings"
+        >
           <div className={styles.avatarWrapper}>
             <Image
               src={userAvatar}
@@ -471,9 +483,18 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 
         {/* Footer with Log Out & Version */}
         <div className={styles.drawerFooter}>
-          <button className={styles.logoutBtn} onClick={handleLogout}>
-            <LogOut className={styles.logoutIcon} size={18} strokeWidth={2.4} />
-            <span>Log Out</span>
+          <button className={styles.logoutBtn} onClick={handleAuthAction} aria-label={session?.user ? "Log Out" : "Sign In"}>
+            {session?.user ? (
+              <>
+                <LogOut className={styles.logoutIcon} size={18} strokeWidth={2.4} />
+                <span>Log Out</span>
+              </>
+            ) : (
+              <>
+                <LogIn className={styles.logoutIcon} size={18} strokeWidth={2.4} />
+                <span>Sign In</span>
+              </>
+            )}
           </button>
 
           <div className={styles.footerBrandRow}>

@@ -7,6 +7,8 @@ import { SellerNavbar } from "../seller-navbar";
 import { SellerStepper } from "../seller-stepper";
 import styles from "./SellerLayout.module.css";
 
+import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+
 export interface SellerLayoutProps {
   children: React.ReactNode;
   activeSidebarItem?: "registration" | "verification";
@@ -36,15 +38,25 @@ export const SellerLayout: React.FC<SellerLayoutProps> = ({
   pageTitle = "Neo Cloud Room Onboarding",
   mobileTitle,
   hideMobileHeader = false,
-  userName = "John Doe",
-  userRole = "Owner Account",
-  userInitials = "JD",
+  userName,
+  userRole,
+  userInitials,
   currentStep,
   totalSteps = 5,
   onBack,
   backHref,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveUserName =
+    userName && !isGenericFallbackName(userName)
+      ? userName
+      : (seller.businessName || seller.ownerName);
+  const effectiveUserRole = userRole || seller.partnerRole;
+  const effectiveUserInitials =
+    userInitials && !isGenericFallbackName(userInitials) && userInitials !== "JD" && userInitials !== "KP" && userInitials !== "SE"
+      ? userInitials
+      : (seller.avatarInitials || computeInitials(effectiveUserName));
 
   const handleBack = () => {
     if (onBack) {
@@ -74,9 +86,9 @@ export const SellerLayout: React.FC<SellerLayoutProps> = ({
         <div className={styles.desktopNavbar}>
           <SellerNavbar
             title={pageTitle}
-            userName={userName}
-            userRole={userRole}
-            userInitials={userInitials}
+            userName={effectiveUserName}
+            userRole={effectiveUserRole}
+            userInitials={effectiveUserInitials}
           />
         </div>
 

@@ -4,7 +4,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 
 const formatDisplayName = (name: string) => {
     return name
@@ -186,8 +186,8 @@ export default function SuperadminSellersPage() {
         }
     };
 
-    const handleLogout = async () => {
-        await signOut({ callbackUrl: window.location.origin + "/admin" });
+    const handleLogout = () => {
+        performLogout({ role: "SUPERADMIN" });
     };
 
     const getStatusBadge = (status: string) => {

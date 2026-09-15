@@ -9,6 +9,8 @@ import RiderCanvas, {
   RiderWalletRecord,
 } from "./RiderCanvas";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface RiderCanvasDasProps {
   topbarTitle?: string;
   searchPlaceholder?: string;
@@ -26,9 +28,9 @@ export interface RiderCanvasDasProps {
 export default function RiderCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, booking...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName,
+  partnerRole,
+  avatarInitials,
   activeSidebarId = "delivery",
   metrics,
   riders,
@@ -36,7 +38,13 @@ export default function RiderCanvasDas({
   onNotificationClick,
   onViewWallet,
 }: RiderCanvasDasProps) {
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectivePartnerRole = partnerRole || seller.partnerRole;
+  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <div
@@ -55,6 +63,9 @@ export default function RiderCanvasDas({
         activeItemId={activeSidebarId}
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Main Area (Width: 1200px / Flex 1) */}
@@ -73,10 +84,13 @@ export default function RiderCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
-          ownerName={ownerName}
-          partnerRole={partnerRole}
-          avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          ownerName={effectiveOwnerName}
+          partnerRole={effectivePartnerRole}
+          avatarInitials={effectiveAvatarInitials}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            if (onSearch) onSearch(q);
+          }}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -85,6 +99,7 @@ export default function RiderCanvasDas({
         <RiderCanvas
           metrics={metrics}
           riders={riders}
+          searchQuery={searchQuery}
           onViewWallet={onViewWallet}
         />
       </div>

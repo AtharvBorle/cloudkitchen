@@ -42,9 +42,33 @@ function MenuItemContent() {
       formData.append("name", data.itemName);
       formData.append("price", data.price);
       formData.append("description", data.description || "");
-      formData.append("itemType", data.type === "Non-Veg" ? "NON_VEG" : "VEG");
+
+      let itemType = "VEG";
+      const types = data.selectedFoodTypes || (data.type ? [data.type] : ["Veg"]);
+      if (types.includes("Non-Veg") || types.includes("Non Veg") || types.includes("NON_VEG")) {
+        itemType = "NON_VEG";
+      } else {
+        const mappedList: string[] = [];
+        if (types.includes("Veg")) mappedList.push("VEG");
+        if (types.includes("Vegan")) mappedList.push("VEGAN");
+        if (types.includes("Jain")) mappedList.push("JAIN");
+        itemType = mappedList.length > 0 ? mappedList.join(",") : "VEG";
+      }
+      formData.append("itemType", itemType);
+
       formData.append("stockQuantity", String(data.stockQty || 24));
       formData.append("isAvailable", String(data.isInStock));
+
+      if (data.variants && Array.isArray(data.variants)) {
+        const validVariants = data.variants
+          .filter((v: any) => v.name && v.name.trim().length > 0)
+          .map((v: any) => ({
+            id: v.id,
+            name: v.name.trim(),
+            price: Number(v.price) || Number(data.price) || 0
+          }));
+        formData.append("variants", JSON.stringify(validVariants));
+      }
 
       let foodCatId = categories[0]?.id || "";
       if (data.category && categories.length > 0) {
@@ -89,16 +113,47 @@ function MenuItemContent() {
     }
   };
 
+  let parsedVariants: any[] = [];
+  if (initialData?.variants) {
+    try {
+      const p = typeof initialData.variants === "string" ? JSON.parse(initialData.variants) : initialData.variants;
+      if (Array.isArray(p)) {
+        parsedVariants = p.map((v: any, idx: number) => ({
+          id: v.id || String(idx + 1),
+          name: v.name || "",
+          price: String(v.price ?? "")
+        }));
+      }
+    } catch {}
+  }
+
+  const parsedFoodTypes: string[] = (() => {
+    if (!initialData?.itemType) return ["Veg"];
+    const raw = String(initialData.itemType).split(",").map((s: string) => s.trim().toUpperCase());
+    if (raw.includes("NON_VEG") || raw.includes("NON-VEG") || raw.includes("NON VEG")) {
+      return ["Non-Veg"];
+    }
+    const res: string[] = [];
+    if (raw.includes("VEG")) res.push("Veg");
+    if (raw.includes("VEGAN")) res.push("Vegan");
+    if (raw.includes("JAIN")) res.push("Jain");
+    return res.length > 0 ? res : ["Veg"];
+  })();
+
+  const mappedType = parsedFoodTypes[0] || "Veg";
+
   return (
     <ResponsiveMenuItems
       key={initialData ? initialData.id : "new-item"}
       initialItemName={initialData?.name}
       initialPrice={initialData ? String(initialData.price) : undefined}
       initialCategory={initialData?.foodCategory?.name}
-      initialType={initialData?.itemType === "NON_VEG" ? "Non-Veg" : "Veg"}
+      initialType={mappedType}
+      initialSelectedFoodTypes={parsedFoodTypes}
       initialDescription={initialData?.description}
       initialStockQty={initialData?.stockQuantity}
       initialIsInStock={initialData?.isAvailable}
+      initialVariants={parsedVariants}
       initialImageUrl={initialData?.imageUrl}
       onSave={handleSave}
     />

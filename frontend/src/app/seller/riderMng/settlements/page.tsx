@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import RiderSettlementDas from "@/components/seller/delivery/rider_settlement/RiderSettlementDas";
+import { RiderSettlementDas, SellerResponsiveWrapper } from "@/components/seller";
+import ResponsiveCashHandoverPage from "@/app/seller/res/delivery/handover/page";
 
 export const metadata: Metadata = {
   title: "Rider Settlements & Ledger History | Neo Cloud Kitchen",
@@ -7,5 +8,11 @@ export const metadata: Metadata = {
 };
 
 export default function RiderSettlementsPage() {
-  return <RiderSettlementDas />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<RiderSettlementDas />}
+      mobile={<ResponsiveCashHandoverPage />}
+    />
+  );
 }
+

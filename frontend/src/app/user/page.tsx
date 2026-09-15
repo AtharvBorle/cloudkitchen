@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import LoginPage from "@/app/auth/login/page";
+import LoginPage from "@/app/login/page";
 
 export default function UserPortalRoot() {
     const { data: session, status } = useSession();

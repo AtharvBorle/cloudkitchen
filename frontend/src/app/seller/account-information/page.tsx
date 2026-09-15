@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -28,18 +28,8 @@ export default function AccountInformationPage() {
       currentStep={1}
       activeSidebarItem="registration"
       pageTitle="Neo Cloud Room Onboarding"
-      userName={accountData.ownerName || "John Doe"}
+      userName={accountData.ownerName || undefined}
       userRole="Owner Account"
-      userInitials={
-        accountData.ownerName
-          ? accountData.ownerName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)
-          : "JD"
-      }
     >
       <AccountInformation
         initialData={accountData}

@@ -26,6 +26,7 @@ export interface RiderCanvasProps {
   subtitle?: string;
   metrics?: RiderSummaryMetric[];
   riders?: RiderWalletRecord[];
+  searchQuery?: string;
   onViewWallet?: (rider: RiderWalletRecord) => void;
 }
 
@@ -96,6 +97,7 @@ export default function RiderCanvas({
   subtitle = "Audit outstanding cash collections and assign delivery routes to riders.",
   metrics: initialMetrics,
   riders: initialRiders,
+  searchQuery = "",
   onViewWallet,
 }: RiderCanvasProps) {
   const router = useRouter();
@@ -103,7 +105,7 @@ export default function RiderCanvas({
   const [metricsList, setMetricsList] = React.useState<RiderSummaryMetric[]>(initialMetrics || DEFAULT_METRICS);
 
   React.useEffect(() => {
-    if (initialRiders) {
+    if (initialRiders && initialRiders.length > 0) {
       setRiderList(initialRiders);
       return;
     }
@@ -161,7 +163,18 @@ export default function RiderCanvas({
   }, [initialRiders]);
 
   const metrics = metricsList;
-  const riders = riderList;
+  const filteredRiders = React.useMemo(() => {
+    if (!searchQuery.trim()) return riderList;
+    const q = searchQuery.toLowerCase().trim();
+    return riderList.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.phone.toLowerCase().includes(q) ||
+        r.dutyStatus.toLowerCase().includes(q) ||
+        r.codBalance.toString().toLowerCase().includes(q)
+    );
+  }, [riderList, searchQuery]);
+  const riders = filteredRiders;
 
   // Render Metric Icon Badge
   const renderMetricIcon = (type: "card" | "check" | "truck") => {
@@ -623,7 +636,11 @@ export default function RiderCanvas({
                             if (onViewWallet) {
                               onViewWallet(rider);
                             } else {
-                              router.push("/seller/riderMng/settlements");
+                              router.push(
+                                `/seller/delivery/settlements?riderId=${encodeURIComponent(
+                                  rider.id
+                                )}`
+                              );
                             }
                           }}
                           style={{

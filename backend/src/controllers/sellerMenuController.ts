@@ -36,6 +36,20 @@ const checkFoodCategoryActive = async (userId: string) => {
     return sellerProfile;
 };
 
+export const normalizeFoodItemType = (raw: string | null | undefined): string => {
+    if (!raw) return "VEG";
+    const valid = ["VEG", "NON_VEG", "JAIN", "VEGAN"];
+    const parts = String(raw)
+        .split(",")
+        .map(s => s.trim().toUpperCase().replace(/\s+/g, '_').replace(/-/g, '_'))
+        .map(s => (s === "NON-VEG" || s === "NON_VEG" || s === "NON VEG") ? "NON_VEG" : s)
+        .filter(s => valid.includes(s));
+
+    const unique = Array.from(new Set(parts));
+    if (unique.includes("NON_VEG")) return "NON_VEG";
+    return unique.length > 0 ? unique.join(",") : "VEG";
+};
+
 export const getMenuItems = async () => {
     const session = await getAuthSession();
     if (!session?.user || session.user.role !== "SELLER") {
@@ -131,7 +145,22 @@ export const createMenuItem = async (req: Request) => {
     const closeTime = formData.get("closeTime") as string | null;
     const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
-    const itemType = sellerProfile.foodType === "VEG" ? "VEG" : (formData.get("itemType") as string || "VEG");
+    const rawItemType = formData.get("itemType") as string | null;
+    const itemType = normalizeFoodItemType(rawItemType);
+
+    const rawVariants = formData.get("variants") as string | null;
+    let variantsStr = "[]";
+    if (rawVariants) {
+        try {
+            const parsed = typeof rawVariants === "string" ? JSON.parse(rawVariants) : rawVariants;
+            if (Array.isArray(parsed)) {
+                variantsStr = JSON.stringify(parsed);
+            }
+        } catch (e) {
+            console.error("Failed to parse variants JSON in createMenuItem:", e);
+        }
+    }
+
     let foodCategoryId = formData.get("foodCategoryId") as string | null;
     const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
@@ -170,6 +199,7 @@ export const createMenuItem = async (req: Request) => {
             operationalHours: operationalHours || null,
             imageUrl,
             itemType,
+            variants: variantsStr,
             foodCategoryId: foodCategoryId || null,
             foodSubCategoryId: foodSubCategoryId || null
         }
@@ -197,6 +227,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
 
     const contentType = req.headers.get("content-type") || "";
     const dataToUpdate: any = {};
+    const validItemTypes = ["VEG", "NON_VEG", "JAIN", "VEGAN"];
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -209,6 +240,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         const closeTime = formData.get("closeTime") as string | null;
         const operationalHours = formData.get("operationalHours") as string | null;
         const itemType = formData.get("itemType") as string | null;
+        const variants = formData.get("variants") as string | null;
         const isAvailable = formData.get("isAvailable") as string | null;
         const imageFile = formData.get("image") as File | null;
         const foodCategoryId = formData.get("foodCategoryId") as string | null;
@@ -226,7 +258,17 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (closeTime !== null) dataToUpdate.closeTime = closeTime;
         if (operationalHours !== null) dataToUpdate.operationalHours = operationalHours;
         if (itemType !== null) {
-            dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : itemType;
+            dataToUpdate.itemType = normalizeFoodItemType(itemType);
+        }
+        if (variants !== null) {
+            try {
+                const parsed = typeof variants === "string" ? JSON.parse(variants) : variants;
+                if (Array.isArray(parsed)) {
+                    dataToUpdate.variants = JSON.stringify(parsed);
+                }
+            } catch (e) {
+                console.error("Failed to parse variants in updateMenuItem:", e);
+            }
         }
         if (foodCategoryId !== null) dataToUpdate.foodCategoryId = foodCategoryId || null;
         if (foodSubCategoryId !== null) dataToUpdate.foodSubCategoryId = foodSubCategoryId || null;
@@ -250,7 +292,17 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
         if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
         if (body.itemType !== undefined) {
-            dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : body.itemType;
+            dataToUpdate.itemType = normalizeFoodItemType(body.itemType);
+        }
+        if (body.variants !== undefined) {
+            try {
+                const parsed = typeof body.variants === "string" ? JSON.parse(body.variants) : body.variants;
+                if (Array.isArray(parsed)) {
+                    dataToUpdate.variants = JSON.stringify(parsed);
+                }
+            } catch (e) {
+                console.error("Failed to parse variants JSON in updateMenuItem:", e);
+            }
         }
         if (body.foodCategoryId !== undefined) dataToUpdate.foodCategoryId = body.foodCategoryId || null;
         if (body.foodSubCategoryId !== undefined) dataToUpdate.foodSubCategoryId = body.foodSubCategoryId || null;

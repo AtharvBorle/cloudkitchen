@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, ChevronRight, Settings, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveDelivery.module.css";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface ResponsiveRiderItem {
   id: string;
@@ -24,52 +25,30 @@ export interface ResponsiveDeliveryProps {
   onSyncDevices?: () => void;
 }
 
-const DEFAULT_RIDERS: ResponsiveRiderItem[] = [
-  {
-    id: "r1",
-    name: "Rahul Kumar",
-    initials: "RK",
-    phone: "+91 98765 00101",
-    outstandingAmount: "\u20B94,200",
-  },
-  {
-    id: "r2",
-    name: "Amit Sharma",
-    initials: "AS",
-    phone: "+91 98765 00102",
-    outstandingAmount: "\u20B93,850",
-  },
-  {
-    id: "r3",
-    name: "Vikram Singh",
-    initials: "VS",
-    phone: "+91 98765 00103",
-    outstandingAmount: "\u20B93,150",
-  },
-  {
-    id: "r4",
-    name: "Suresh Raina",
-    initials: "SR",
-    phone: "+91 98765 00104",
-    outstandingAmount: "\u20B93,600",
-  },
-];
-
 export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
-  ownerName = "Rahul Sharma",
-  totalOutstanding = "\u20B914,800",
-  riders = DEFAULT_RIDERS,
+  ownerName,
+  totalOutstanding = "₹0",
+  riders = [],
   onSelectRider,
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   const handleRiderClick = (rider: ResponsiveRiderItem) => {
     if (onSelectRider) {
       onSelectRider(rider);
     } else {
-      router.push("/seller/delivery/handover");
+      router.push(`/seller/delivery/handover?riderId=${encodeURIComponent(rider.id)}`);
     }
   };
 
@@ -80,7 +59,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="delivery"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 

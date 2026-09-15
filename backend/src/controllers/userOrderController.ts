@@ -101,7 +101,8 @@ export const createOrder = async (req: Request) => {
 
     const itemUpdates = [];
     for (const cartItem of items) {
-        const foodItem = await db.foodItem.findUnique({ where: { id: cartItem.id } });
+        const foodItemId = cartItem.foodItemId || cartItem.id;
+        const foodItem = await db.foodItem.findUnique({ where: { id: foodItemId } });
         if (!foodItem) {
             throw new ApiError(`Item ${cartItem.name} no longer exists.`, 400);
         }
@@ -292,14 +293,15 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
             const itemsList = JSON.parse(order.items);
             if (Array.isArray(itemsList)) {
                 for (const item of itemsList) {
-                    if (item.id && item.quantity) {
+                    const itemId = item.foodItemId || item.id;
+                    if (itemId && item.quantity) {
                         const foodItem = await db.foodItem.findUnique({
-                            where: { id: item.id }
+                            where: { id: itemId }
                         });
                         if (foodItem && foodItem.stockQuantity !== -1) {
                             const newStock = foodItem.stockQuantity + item.quantity;
                             await db.foodItem.update({
-                                where: { id: item.id },
+                                where: { id: itemId },
                                 data: {
                                     stockQuantity: newStock,
                                     isAvailable: true // Ensure item is marked available again

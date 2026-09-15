@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SellerResponsiveWrapper } from "@/components/seller";
+import { Suspense } from "react";
+import { SellerResponsiveWrapper, OrderDefault } from "@/components/seller";
 import ResponsiveSellerOrdersDetailsPage from "@/app/seller/res/orders/details/page";
 
 export const metadata: Metadata = {
@@ -10,8 +11,13 @@ export const metadata: Metadata = {
 export default function SellerOrdersDetailsPage() {
   return (
     <SellerResponsiveWrapper
-      desktop={<ResponsiveSellerOrdersDetailsPage />}
+      desktop={
+        <Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "#64748B" }}>Loading order details...</div>}>
+          <OrderDefault />
+        </Suspense>
+      }
       mobile={<ResponsiveSellerOrdersDetailsPage />}
     />
   );
 }
+

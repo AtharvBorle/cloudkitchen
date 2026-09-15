@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Bell,
 } from "lucide-react";
+import { saveMealPlan } from "@/lib/meal-subscriptions";
 import styles from "./ResSellerSubPlan.module.css";
 
 export interface MealTimingSlot {
@@ -59,8 +60,8 @@ const DURATION_OPTIONS = [
 ];
 
 export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
-  initialPlanName = "Professional Plan",
-  initialPlanTier = "Pro",
+  initialPlanName = "Bronze Plan",
+  initialPlanTier = "Bronze",
   initialPrice = "499",
   initialFeatures = DEFAULT_FEATURES,
   initialDuration = "1 Week",
@@ -127,17 +128,23 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     setEditingTiming(null);
   };
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     const payload = {
-      planName: planName.trim() || "New Plan",
-      planTier: planTier.trim() || "Starter",
-      price: price.trim() || "0",
+      name: planName.trim() || "Bronze Plan",
+      tier: planTier.trim() || "Bronze",
+      weeklyPrice: price.trim() || "0",
+      monthlyPrice: `₹${((parseFloat(price) || 0) * 4).toFixed(0)}`,
+      quarterlyPrice: `₹${((parseFloat(price) || 0) * 12 * 0.9).toFixed(0)}`,
+      yearlyPrice: `₹${((parseFloat(price) || 0) * 52 * 0.8).toFixed(0)}`,
       duration,
       features,
-      mealTimings,
-      allowCancellation,
-      allowPauseBilling,
+      mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
+      allowCancel: allowCancellation,
+      pauseBillingPeriod: allowPauseBilling ? "Monthly" : "None",
+      status: "Live" as const,
     };
+
+    await saveMealPlan(payload);
 
     if (onDeployPlan) {
       onDeployPlan(payload);
@@ -145,7 +152,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       setToastMessage("Plan Created & Deployed Successfully!");
       setTimeout(() => {
         router.push("/seller/subscription");
-      }, 1200);
+      }, 900);
     }
   };
 
@@ -215,7 +222,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                 id="planName"
                 type="text"
                 className={styles.input}
-                placeholder="e.g. Starter, Enterprise, Growth"
+                placeholder="e.g. Bronze Plan, Silver Plan, Gold Plan"
                 value={planName}
                 onChange={(e) => setPlanName(e.target.value)}
               />
@@ -225,14 +232,17 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
               <label htmlFor="planTier" className={styles.label}>
                 Plan Tier
               </label>
-              <input
+              <select
                 id="planTier"
-                type="text"
                 className={styles.input}
-                placeholder="e.g. Starter, Pro, Enterprise"
                 value={planTier}
                 onChange={(e) => setPlanTier(e.target.value)}
-              />
+                style={{ cursor: "pointer" }}
+              >
+                <option value="Bronze">Bronze Tier</option>
+                <option value="Silver">Silver Tier</option>
+                <option value="Gold">Gold Tier</option>
+              </select>
             </div>
           </section>
 

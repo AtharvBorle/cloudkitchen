@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Trash2, Pencil } from 'lucide-react';
+import { Trash2, Pencil, CheckCircle2 } from 'lucide-react';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
+import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { saveMealPlan } from '@/lib/meal-subscriptions';
 import styles from './CreateSubscriptionPlan.module.css';
 
 export interface CreateSubscriptionPlanProps {
@@ -23,25 +25,33 @@ export interface PlanFeature {
 }
 
 export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
-  ownerName = 'John Doe',
-  partnerRole = 'Neo Cloud Partner',
-  avatarInitials = 'JD',
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   onSearch,
   onNotificationClick,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   // Form states
   const [planName, setPlanName] = useState('');
-  const [planTier, setPlanTier] = useState('');
+  const [planTier, setPlanTier] = useState('Bronze');
   const [weeklyPrice, setWeeklyPrice] = useState('');
 
   // Included in weekly plans feature list
   const [features, setFeatures] = useState<PlanFeature[]>([
-    { id: '1', label: '7 Meals per weeek', checked: false },
-    { id: '2', label: '1 Dal (Seasonal) + 1 Sabzi (Dry / Gravy)', checked: false },
-    { id: '3', label: 'Salad, Pickle & Papad', checked: false },
+    { id: '1', label: '7 Meals per week (Daily Lunch)', checked: true },
+    { id: '2', label: '1 Dal (Seasonal) + 1 Sabzi (Dry / Gravy)', checked: true },
+    { id: '3', label: 'Fresh Chapatis + Steamed Rice', checked: true },
+    { id: '4', label: 'Salad, Pickle & Roasted Papad', checked: false },
   ]);
 
   // Custom add field
@@ -51,9 +61,9 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   const [planDuration, setPlanDuration] = useState('1 Week');
   const [mealTimings, setMealTimings] = useState([
     { id: '1', name: 'Breakfast', time: '7:30 AM – 9:30 AM' },
-    { id: '2', name: 'Lunch', time: '12:30 AM – 1:30 AM' },
-    { id: '3', name: 'Evening Snacks', time: '5:30 AM – 6:30 AM' },
-    { id: '4', name: 'Dinner', time: '8:30 AM – 9:30 AM' },
+    { id: '2', name: 'Lunch', time: '12:30 PM – 2:00 PM' },
+    { id: '3', name: 'Evening Snacks', time: '5:30 PM – 6:30 PM' },
+    { id: '4', name: 'Dinner', time: '8:00 PM – 9:30 PM' },
   ]);
 
   // 5. Subscription Policies
@@ -181,13 +191,18 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   </div>
                   <div className={styles.fieldGroup}>
                     <label className={styles.fieldLabel}>Plan Tier</label>
-                    <input
-                      type="text"
-                      className={styles.textInput}
-                      placeholder="e.g. Starter, Pro, Enterprise"
-                      value={planTier}
-                      onChange={(e) => setPlanTier(e.target.value)}
-                    />
+                    <div className={styles.selectWrapper}>
+                      <select
+                        className={styles.selectInput}
+                        value={planTier}
+                        onChange={(e) => setPlanTier(e.target.value)}
+                      >
+                        <option value="Bronze">Bronze Tier</option>
+                        <option value="Silver">Silver Tier</option>
+                        <option value="Gold">Gold Tier</option>
+                      </select>
+                      <span className={styles.selectArrow}>▼</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -413,7 +428,23 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
                 {/* Inner Preview Box */}
                 <div className={styles.innerPreviewBox}>
-                  <span className={styles.previewModeLabel}>PREVIEW MODE</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                    <span className={styles.previewModeLabel}>PREVIEW MODE</span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.4px',
+                        backgroundColor: planTier === 'Bronze' ? '#FFFBEB' : planTier === 'Silver' ? '#F1F5F9' : '#FEF3C7',
+                        color: planTier === 'Bronze' ? '#B45309' : planTier === 'Silver' ? '#475569' : '#D97706',
+                      }}
+                    >
+                      {planTier} Tier
+                    </span>
+                  </div>
                   <h4 className={styles.previewPlanName}>
                     {planName.trim() ? planName : '[Plan Name Draft]'}
                   </h4>
@@ -455,17 +486,47 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   </div>
                 </div>
 
+                {errorMessage && (
+                  <div style={{ padding: "10px 14px", backgroundColor: "#FEF2F2", color: "#EF4444", borderRadius: "8px", fontSize: "13px", fontWeight: 600 }}>
+                    {errorMessage}
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 <button
                   type="button"
                   className={styles.deployBtn}
-                  onClick={() => {
+                  onClick={async () => {
                     if (!planName.trim()) {
-                      alert('Please enter a Plan Name before deploying.');
+                      setErrorMessage('Please enter a Plan Name before deploying.');
                       return;
                     }
-                    alert(`Subscription plan "${planName}" created & deployed successfully!`);
-                    router.push('/seller/subscription');
+                    if (!weeklyPrice.trim() || isNaN(parseFloat(weeklyPrice))) {
+                      setErrorMessage('Please enter a valid Weekly Price (₹).');
+                      return;
+                    }
+
+                    setErrorMessage(null);
+
+                    await saveMealPlan({
+                      name: planName.trim(),
+                      tier: planTier,
+                      weeklyPrice: weeklyPrice.trim(),
+                      monthlyPrice: `₹${((parseFloat(weeklyPrice) || 0) * 4).toFixed(0)}`,
+                      quarterlyPrice: `₹${((parseFloat(weeklyPrice) || 0) * 12 * 0.9).toFixed(0)}`,
+                      yearlyPrice: `₹${((parseFloat(weeklyPrice) || 0) * 52 * 0.8).toFixed(0)}`,
+                      duration: planDuration,
+                      features: enabledFeatures.map((f) => f.label),
+                      mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
+                      status: 'Live',
+                      allowCancel,
+                      pauseBillingPeriod,
+                    });
+
+                    setToastMessage(`Plan "${planName}" created & deployed successfully!`);
+                    setTimeout(() => {
+                      router.push('/seller/subscription');
+                    }, 900);
                   }}
                 >
                   Create & Deploy Plan
@@ -475,9 +536,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   type="button"
                   className={styles.discardBtn}
                   onClick={() => {
-                    if (confirm('Discard changes and return to Manage Subscriptions?')) {
-                      router.push('/seller/subscription');
-                    }
+                    router.push('/seller/subscription');
                   }}
                 >
                   Discard Draft
@@ -487,6 +546,30 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
           </div>
         </main>
       </div>
+
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "32px",
+            right: "32px",
+            backgroundColor: "#0F172A",
+            color: "#FFFFFF",
+            padding: "14px 24px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            fontWeight: 600,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <CheckCircle2 size={18} color="#22C55E" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
   MoreHorizontal,
@@ -15,6 +15,13 @@ import {
   AlertTriangle,
   Bell,
 } from "lucide-react";
+import {
+  fetchStoredMealPlans,
+  getStoredMealPlans,
+  updateMealPlan,
+  deleteMealPlan,
+  MealSubscriptionPlan,
+} from "@/lib/meal-subscriptions";
 import styles from "./ResSellerSubEdit.module.css";
 
 export interface MealServingTiming {
@@ -52,8 +59,8 @@ export interface ResSellerSubEditProps {
 }
 
 const DEFAULT_METRICS: PlanMetricsData = {
-  subscribers: 34,
-  monthlyRevenue: "₹30,000",
+  subscribers: 0,
+  monthlyRevenue: "₹0",
 };
 
 const DEFAULT_FEATURES = [
@@ -85,8 +92,8 @@ const DURATION_OPTIONS = [
 ];
 
 export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
-  initialPlanName = "Professional Plan",
-  initialPlanTier = "Professional",
+  initialPlanName = "Bronze Plan",
+  initialPlanTier = "Bronze",
   initialPrice = "499.00",
   initialMetrics = DEFAULT_METRICS,
   initialFeatures = DEFAULT_FEATURES,
@@ -101,9 +108,12 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   onArchivePlan,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planIdParam = searchParams.get("id");
 
   // Form State
-  const [metrics] = useState<PlanMetricsData>(initialMetrics);
+  const [targetPlanId, setTargetPlanId] = useState<string | null>(planIdParam);
+  const [metrics, setMetrics] = useState<PlanMetricsData>(initialMetrics);
   const [planName, setPlanName] = useState(initialPlanName);
   const [planTier, setPlanTier] = useState(initialPlanTier);
   const [price, setPrice] = useState(initialPrice);
@@ -114,7 +124,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   const [mealTimings, setMealTimings] = useState<MealServingTiming[]>(initialMealTimings);
   const [allowCancellation, setAllowCancellation] = useState(initialAllowCancellation);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
-  const [metadata] = useState<PlanMetadataData>(initialMetadata);
+  const [metadata, setMetadata] = useState<PlanMetadataData>(initialMetadata);
 
   // Edit Timing Modal State
   const [editingTiming, setEditingTiming] = useState<MealServingTiming | null>(null);
@@ -122,6 +132,54 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPlan = async () => {
+      let plans = getStoredMealPlans();
+      let found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam);
+      if (!found) {
+        const fetched = await fetchStoredMealPlans();
+        if (fetched?.plans) {
+          plans = fetched.plans;
+          found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
+        }
+      } else {
+        found = found || plans[0];
+      }
+
+      if (found) {
+        setTargetPlanId(found.id);
+        setPlanName(found.name);
+        setPlanTier(found.tier);
+        setPrice(found.weeklyPrice ? found.weeklyPrice.replace(/[^\d.]/g, "") : "499.00");
+        setFeatures(found.features || []);
+        setDuration(found.duration || "1 Week");
+        setMealTimings(
+          (found.mealTimings || []).map((t, idx) => {
+            const [mealName, time] = t.includes(":") ? t.split(/:\s*(.+)/) : [`Meal ${idx + 1}`, t];
+            return {
+              id: `time-${idx}`,
+              name: mealName || "Meal",
+              time: time || t,
+            };
+          })
+        );
+        setAllowCancellation(found.allowCancel ?? true);
+        setAllowPauseBilling(found.pauseBillingPeriod !== "None");
+        setMetrics({
+          subscribers: found.subscribersCount || 0,
+          monthlyRevenue: found.monthlyRevenue || "₹0",
+        });
+        setMetadata({
+          planId: found.planId,
+          deployedDate: found.deployedDate,
+          taxCode: "GST 18% Extra",
+        });
+      }
+    };
+
+    loadPlan();
+  }, [planIdParam]);
 
   const handleBack = () => {
     if (onBack) {
@@ -162,10 +220,27 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     setEditingTiming(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (targetPlanId) {
+      const numPrice = parseFloat(price.replace(/[^\d.]/g, "")) || 0;
+      await updateMealPlan(targetPlanId, {
+        name: planName.trim() || "Bronze Plan",
+        tier: planTier.trim() || "Bronze",
+        weeklyPrice: price.trim().startsWith("₹") ? price.trim() : `₹${price.trim()}`,
+        monthlyPrice: `₹${(numPrice * 4).toFixed(0)}`,
+        quarterlyPrice: `₹${(numPrice * 12 * 0.9).toFixed(0)}`,
+        yearlyPrice: `₹${(numPrice * 52 * 0.8).toFixed(0)}`,
+        duration,
+        features,
+        mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
+        allowCancel: allowCancellation,
+        pauseBillingPeriod: allowPauseBilling ? "Monthly" : "None",
+      });
+    }
+
     const payload = {
-      planName: planName.trim() || "Professional Plan",
-      planTier: planTier.trim() || "Professional",
+      planName: planName.trim() || "Bronze Plan",
+      planTier: planTier.trim() || "Bronze",
       price: price.trim() || "499.00",
       duration,
       features,
@@ -181,7 +256,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       setToastMessage("Changes Saved Successfully!");
       setTimeout(() => {
         router.push("/seller/subscription");
-      }, 1200);
+      }, 900);
     }
   };
 
@@ -193,16 +268,17 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     }
   };
 
-  const handleArchive = () => {
+  const handleArchive = async () => {
+    if (targetPlanId) {
+      await deleteMealPlan(targetPlanId);
+    }
     if (onArchivePlan) {
       onArchivePlan();
     } else {
-      if (typeof window !== "undefined" && window.confirm("Are you sure you want to archive this plan?")) {
-        setToastMessage("Plan Archived Successfully");
-        setTimeout(() => {
-          router.push("/seller/subscription");
-        }, 1200);
-      }
+      setToastMessage("Plan Archived Successfully");
+      setTimeout(() => {
+        router.push("/seller/subscription");
+      }, 900);
     }
   };
 
@@ -286,14 +362,17 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
               <label htmlFor="editPlanTier" className={styles.label}>
                 Plan Tier
               </label>
-              <input
+              <select
                 id="editPlanTier"
-                type="text"
                 className={styles.input}
-                placeholder="Plan Tier"
                 value={planTier}
                 onChange={(e) => setPlanTier(e.target.value)}
-              />
+                style={{ cursor: "pointer" }}
+              >
+                <option value="Bronze">Bronze Tier</option>
+                <option value="Silver">Silver Tier</option>
+                <option value="Gold">Gold Tier</option>
+              </select>
             </div>
           </section>
 

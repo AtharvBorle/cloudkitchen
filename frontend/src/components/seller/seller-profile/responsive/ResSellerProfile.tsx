@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { performLogout } from "@/lib/logout";
 import {
   ChevronLeft,
   Menu as MenuIcon,
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResSellerProfile.module.css";
+
+import { useSellerProfile, isGenericFallbackName, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 
 export interface PlanServiceItem {
   id: string;
@@ -38,25 +41,62 @@ export interface ResSellerProfileProps {
 }
 
 export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
-  initialOwnerName = "John Doe",
-  initialMobileNumber = "+91 98887 76655",
-  initialPrimaryEmail = "john.doe@neocloudroom.com",
-  initialOutletName = "Neo Cloud Room - Bangalore Central Hub",
-  initialRegisteredAddress = "45, 1st Main Rd, Koramangala 4th Block, Bangalore, Karnataka 560034",
+  initialOwnerName,
+  initialMobileNumber,
+  initialPrimaryEmail,
+  initialOutletName,
+  initialRegisteredAddress,
   onBack,
   onSaveProfile,
   onLogout,
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   // Form State
-  const [ownerName, setOwnerName] = useState(initialOwnerName);
-  const [mobileNumber, setMobileNumber] = useState(initialMobileNumber);
-  const [primaryEmail, setPrimaryEmail] = useState(initialPrimaryEmail);
-  const [outletName, setOutletName] = useState(initialOutletName);
-  const [registeredAddress, setRegisteredAddress] = useState(initialRegisteredAddress);
+  const [ownerName, setOwnerName] = useState(
+    initialOwnerName && !isGenericFallbackName(initialOwnerName)
+      ? initialOwnerName
+      : (seller.userFullName || seller.ownerName)
+  );
+  const [mobileNumber, setMobileNumber] = useState(
+    initialMobileNumber && initialMobileNumber !== "+91 98887 76655" ? initialMobileNumber : seller.phone
+  );
+  const [primaryEmail, setPrimaryEmail] = useState(
+    initialPrimaryEmail && initialPrimaryEmail !== "john.doe@neocloudroom.com"
+      ? initialPrimaryEmail
+      : seller.email
+  );
+  const [outletName, setOutletName] = useState(
+    initialOutletName && !isGenericFallbackName(initialOutletName)
+      ? initialOutletName
+      : (seller.businessName || seller.ownerName)
+  );
+  const [registeredAddress, setRegisteredAddress] = useState(
+    initialRegisteredAddress && !initialRegisteredAddress.includes("Koramangala")
+      ? initialRegisteredAddress
+      : seller.address
+  );
+
+  useEffect(() => {
+    if (seller.ownerName || seller.businessName) {
+      setOwnerName((prev) => (!prev || isGenericFallbackName(prev) ? (seller.userFullName || seller.ownerName) : prev));
+    }
+    if (seller.phone) {
+      setMobileNumber((prev) => (!prev || prev === "+91 98887 76655" ? seller.phone : prev));
+    }
+    if (seller.email) {
+      setPrimaryEmail((prev) => (!prev || prev === "john.doe@neocloudroom.com" ? seller.email : prev));
+    }
+    if (seller.businessName || seller.ownerName) {
+      setOutletName((prev) => (!prev || isGenericFallbackName(prev) ? (seller.businessName || seller.ownerName) : prev));
+    }
+    if (seller.address) {
+      setRegisteredAddress((prev) => (!prev || prev.includes("Koramangala") ? seller.address : prev));
+    }
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address]);
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -87,6 +127,16 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       registeredAddress,
     };
 
+    updateCachedProfile({
+      ownerName: outletName || ownerName,
+      businessName: outletName,
+      userFullName: ownerName,
+      email: primaryEmail,
+      phone: mobileNumber,
+      address: registeredAddress,
+      avatarInitials: computeInitials(outletName || ownerName),
+    });
+
     if (onSaveProfile) {
       onSaveProfile(payload);
     } else {
@@ -99,7 +149,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       onLogout();
     } else {
       if (typeof window !== "undefined" && window.confirm("Are you sure you want to log out?")) {
-        router.push("/auth/login/seller");
+        performLogout({ role: "SELLER" });
       }
     }
   };
@@ -117,6 +167,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     showToast("Kitchen QR Code downloaded!");
   };
 
+  const currentDisplayOutlet = outletName || seller.businessName || seller.ownerName;
+
   return (
     <div className={styles.screenWrapper}>
       {/* Slide-out Drawer Navigation Menu */}
@@ -124,7 +176,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="profile"
-        ownerName={ownerName}
+        ownerName={currentDisplayOutlet}
         onSyncDevices={onSyncDevices}
       />
 

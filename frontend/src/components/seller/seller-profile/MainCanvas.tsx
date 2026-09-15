@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { performLogout } from "@/lib/logout";
 import Topbar, { TopbarProps } from "../nav/Topbar";
+import { useSellerProfile, isGenericFallbackName, computeInitials } from "@/hooks/useSellerProfile";
 
 export interface SellerProfileData {
   ownerName: string;
@@ -36,17 +38,42 @@ export default function MainCanvas({
   onLogout,
   onDataChange,
 }: MainCanvasProps) {
-  const [internalFormData, setInternalFormData] = useState<SellerProfileData>({
-    ownerName: initialData?.ownerName || "John Doe",
-    mobileNumber: initialData?.mobileNumber || "+91 99887 76655",
-    email: initialData?.email || "john.doe@neocloudroom.com",
-    outletName: initialData?.outletName || "Neo Cloud Room - Bangalore Central Hub",
-    registeredAddress:
-      initialData?.registeredAddress ||
-      "45, 1st Main Rd, Koramangala 4th Block, Bangalore, Karnataka 560034",
-    partnerRole: initialData?.partnerRole || "Neo Cloud Partner",
-    avatarInitials: initialData?.avatarInitials || "JD",
+  const seller = useSellerProfile();
+  const [internalFormData, setInternalFormData] = useState<SellerProfileData>(() => {
+    const owner = initialData?.ownerName || (!isGenericFallbackName(seller.userFullName) ? seller.userFullName : "") || seller.ownerName;
+    const outlet = initialData?.outletName || seller.businessName || seller.ownerName;
+    return {
+      ownerName: owner,
+      mobileNumber: initialData?.mobileNumber || seller.phone || "",
+      email: initialData?.email || seller.email || "",
+      outletName: outlet,
+      registeredAddress: initialData?.registeredAddress || seller.address || "",
+      partnerRole: initialData?.partnerRole || seller.partnerRole,
+      avatarInitials: initialData?.avatarInitials || computeInitials(outlet || owner),
+    };
   });
+
+  useEffect(() => {
+    if (seller.ownerName || seller.businessName) {
+      setInternalFormData((prev) => {
+        const outlet = prev.outletName && !isGenericFallbackName(prev.outletName)
+          ? prev.outletName
+          : (seller.businessName || seller.ownerName);
+        const owner = prev.ownerName && !isGenericFallbackName(prev.ownerName)
+          ? prev.ownerName
+          : (seller.userFullName || seller.ownerName);
+        return {
+          ...prev,
+          ownerName: owner,
+          mobileNumber: seller.phone || prev.mobileNumber,
+          email: seller.email || prev.email,
+          outletName: outlet,
+          registeredAddress: seller.address || prev.registeredAddress,
+          avatarInitials: computeInitials(outlet || owner),
+        };
+      });
+    }
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address]);
 
   const formData = externalFormData || internalFormData;
 
@@ -415,7 +442,13 @@ export default function MainCanvas({
               {/* Logout Button */}
               <button
                 type="button"
-                onClick={onLogout}
+                onClick={() => {
+                  if (onLogout) {
+                    onLogout();
+                  } else {
+                    performLogout({ role: "SELLER" });
+                  }
+                }}
                 style={{
                   backgroundColor: "#FEE2E2",
                   color: "#DC2626",

@@ -23,7 +23,9 @@ export interface ResponsiveMenuItemsProps {
   initialPrice?: string;
   initialCategory?: string;
   initialType?: string;
+  initialSelectedFoodTypes?: string[];
   initialDescription?: string;
+  stockQty?: number | string;
   initialStockQty?: number | string;
   initialIsInStock?: boolean;
   initialVariants?: ResponsiveVariantItem[];
@@ -35,6 +37,7 @@ export interface ResponsiveMenuItemsProps {
     price: string;
     category: string;
     type: string;
+    selectedFoodTypes?: string[];
     description: string;
     stockQty: number | string;
     isInStock: boolean;
@@ -54,19 +57,15 @@ const DEFAULT_SCHEDULES: ResponsiveDaySchedule[] = [
   { day: "Sunday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
 ];
 
-const DEFAULT_VARIANTS: ResponsiveVariantItem[] = [
-  { id: "1", name: "Extra Cheese", price: "40" },
-  { id: "2", name: "Paneer with Corn", price: "60" },
-  { id: "3", name: "Extra Pizza Slice", price: "80" },
-  { id: "4", name: "Mushroom Topping", price: "50" },
-];
+const DEFAULT_VARIANTS: ResponsiveVariantItem[] = [];
 
 export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
-  initialItemName = "Butter Chicken",
-  initialPrice = "450",
+  initialItemName = "",
+  initialPrice = "",
   initialCategory = "Mains",
   initialType = "Veg",
-  initialDescription = "Rich and creamy tomato-based curry with succulent chicken tandoori pieces cooked in butter and aromatic spices.",
+  initialSelectedFoodTypes,
+  initialDescription = "",
   initialStockQty = "24",
   initialIsInStock = true,
   initialVariants = DEFAULT_VARIANTS,
@@ -83,9 +82,37 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   const [price, setPrice] = useState(initialPrice);
   const [category, setCategory] = useState(initialCategory);
   const [type, setType] = useState(initialType);
-  const [description, setDescription] = useState(initialDescription);
-  const [stockQty, setStockQty] = useState(initialStockQty);
-  const [isInStock, setIsInStock] = useState(initialIsInStock);
+  const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(() => {
+    if (initialSelectedFoodTypes && initialSelectedFoodTypes.length > 0) {
+      return initialSelectedFoodTypes;
+    }
+    if (initialType) return [initialType];
+    return ["Veg"];
+  });
+
+  const toggleFoodType = (foodType: string) => {
+    setSelectedFoodTypes((prev) => {
+      const isAlreadySelected = prev.includes(foodType);
+
+      if (isAlreadySelected) {
+        const next = prev.filter((t) => t !== foodType);
+        setType(next[0] || "Veg");
+        return next;
+      } else {
+        if (foodType === "Non-Veg" || foodType === "Non Veg") {
+          setType("Non-Veg");
+          return ["Non-Veg"];
+        } else {
+          const withoutNonVeg = prev.filter(
+            (t) => t !== "Non-Veg" && t !== "Non Veg"
+          );
+          const next = [...withoutNonVeg, foodType];
+          setType(next[0] || "Veg");
+          return next;
+        }
+      }
+    });
+  };
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
@@ -157,6 +184,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       price,
       category,
       type,
+      selectedFoodTypes,
       description,
       stockQty,
       isInStock,
@@ -304,24 +332,75 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
           </div>
 
-          {/* 5. Type */}
+          {/* 5. Food Type Multi-Select */}
           <div className={styles.formGroup}>
-            <label className={styles.fieldLabel} htmlFor="typeSelect">
-              Type
+            <label className={styles.fieldLabel}>
+              Food Type <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "normal" }}>(Multi-Select)</span>
             </label>
-            <div className={styles.selectWrapper}>
-              <select
-                id="typeSelect"
-                className={styles.selectInput}
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-              >
-                <option value="Veg">Veg</option>
-                <option value="Non-Veg">Non-Veg</option>
-                <option value="Egg">Egg</option>
-                <option value="Vegan">Vegan</option>
-              </select>
-              <ChevronDown size={18} className={styles.selectArrow} />
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
+              {["Veg", "Non-Veg", "Vegan", "Jain"].map((ft) => {
+                const isSelected = selectedFoodTypes.includes(ft);
+                const isNonVeg = ft === "Non-Veg";
+                const isVegan = ft === "Vegan";
+                const isJain = ft === "Jain";
+
+                let activeBg = "#ECFDF5";
+                let activeBorder = "#10B981";
+                let activeColor = "#065F46";
+                if (isNonVeg) {
+                  activeBg = "#FEF2F2";
+                  activeBorder = "#EF4444";
+                  activeColor = "#991B1B";
+                } else if (isVegan) {
+                  activeBg = "#F0FDF4";
+                  activeBorder = "#22C55E";
+                  activeColor = "#15803D";
+                } else if (isJain) {
+                  activeBg = "#FFFBEB";
+                  activeBorder = "#F59E0B";
+                  activeColor = "#92400E";
+                }
+
+                return (
+                  <button
+                    key={ft}
+                    type="button"
+                    onClick={() => toggleFoodType(ft)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 14px",
+                      borderRadius: "10px",
+                      border: isSelected ? `1.5px solid ${activeBorder}` : "1px solid #E2E8F0",
+                      backgroundColor: isSelected ? activeBg : "#FFFFFF",
+                      color: isSelected ? activeColor : "#475569",
+                      fontWeight: isSelected ? "700" : "500",
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        borderRadius: "4px",
+                        border: isSelected ? `1.5px solid ${activeBorder}` : "1px solid #CBD5E1",
+                        backgroundColor: isSelected ? activeBorder : "#FFFFFF",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        fontSize: "11px",
+                      }}
+                    >
+                      {isSelected ? "✓" : ""}
+                    </span>
+                    <span>{ft}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

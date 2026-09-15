@@ -1,0 +1,561 @@
+/* ==========================================================================
+   Seller / Owner Login Stylesheet
+   Pixel-perfect match for Neo Cloud Bites Owner Login
+   ========================================================================== */
+
+.pageContainer {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #FFFBF7;
+  font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   Left Hero Column
+   ========================================================================== */
+.heroColumn {
+  position: relative;
+  width: 48%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 56px;
+  overflow: hidden;
+  background-color: #0F172A;
+}
+
+.heroBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.heroBackgroundImage {
+  object-fit: cover;
+  object-position: center;
+  filter: brightness(0.9);
+}
+
+.heroOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 15, 28, 0.45) 0%,
+    rgba(10, 15, 28, 0.65) 50%,
+    rgba(10, 15, 28, 0.85) 100%
+  );
+  z-index: 2;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: calc(100vh - 96px);
+}
+
+/* Brand Logo Header */
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.brandBadge {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.badgeImg {
+  object-fit: contain;
+}
+
+.brandName {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #FFFFFF;
+  text-transform: uppercase;
+}
+
+/* Middle Narrative Content */
+.narrativeSection {
+  max-width: 520px;
+  margin-top: auto;
+  margin-bottom: auto;
+  padding: 40px 0 24px 0;
+}
+
+.heroHeading {
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+
+.heroSubtitle {
+  font-size: 0.975rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+  margin-bottom: 32px;
+}
+
+/* Testimonial Glassmorphic Card */
+.testimonialCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+  max-width: 500px;
+}
+
+.avatarWrapper {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.avatarImg {
+  object-fit: cover;
+}
+
+.testimonialText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quote {
+  font-size: 0.825rem;
+  font-style: italic;
+  line-height: 1.45;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.author {
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: #F97316;
+  margin: 0;
+}
+
+/* Hero Footer */
+.heroFooter {
+  padding-top: 24px;
+}
+
+.copyright {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* ==========================================================================
+   Right Form Column
+   ========================================================================== */
+.formColumn {
+  width: 52%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 36px 48px;
+  background-color: #FFFBF7;
+}
+
+/* Top Navigation Bar */
+.topNav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.topNavText {
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.onboardingBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 22px;
+  border: 1.5px solid #F97316;
+  background: transparent;
+  color: #F97316;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.onboardingBtn:hover {
+  background-color: #FFF7ED;
+  border-color: #EA580C;
+  color: #EA580C;
+  transform: translateY(-1px);
+}
+
+/* Center Form Area */
+.formCenterArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: auto 0;
+  padding: 24px 0;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 460px;
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 44px 38px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04), 0 20px 48px -12px rgba(249, 115, 22, 0.08);
+  border: 1px solid #F1F5F9;
+}
+
+.cardTitle {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px 0;
+}
+
+.cardSubtitle {
+  font-size: 0.875rem;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0 0 28px 0;
+}
+
+/* Form Styles */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.errorMessage {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inputLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  height: 48px;
+  padding: 0 14px;
+  transition: all 0.2s ease-in-out;
+}
+
+.inputWrapper:focus-within {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+
+.inputIcon {
+  color: #94A3B8;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.textInput {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.925rem;
+  color: #0F172A;
+  font-weight: 400;
+}
+
+.textInput::placeholder {
+  color: #94A3B8;
+  font-size: 0.875rem;
+}
+
+.eyeButton {
+  background: none;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.eyeButton:hover {
+  color: #475569;
+}
+
+/* Options Row (Remember Me & Forgot Password) */
+.optionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+
+.checkboxContainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hiddenCheckbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.customCheckbox {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.checkboxChecked {
+  background-color: #F97316;
+  border-color: #F97316;
+}
+
+.checkboxLabel {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.forgotPasswordLink {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #F97316;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.forgotPasswordLink:hover {
+  color: #EA580C;
+  text-decoration: underline;
+}
+
+/* Submit Sign In Button */
+.submitBtn {
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(135deg, #FF6B00 0%, #F97316 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+  transition: all 0.2s ease-in-out;
+  margin-top: 6px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #EA580C 0%, #D94E06 100%);
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.45);
+  transform: translateY(-1px);
+}
+
+.submitBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #FFFFFF;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Bottom Legal Footer */
+.formFooter {
+  text-align: center;
+  padding-top: 20px;
+}
+
+.legalText {
+  font-size: 0.785rem;
+  color: #94A3B8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.legalLink {
+  color: #F97316;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.legalLink:hover {
+  color: #EA580C;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .pageContainer {
+    flex-direction: column;
+  }
+
+  .heroColumn {
+    width: 100%;
+    min-height: auto;
+    padding: 36px 24px;
+  }
+
+  .heroContent {
+    min-height: auto;
+    gap: 32px;
+  }
+
+  .narrativeSection {
+    padding: 20px 0;
+  }
+
+  .heroHeading {
+    font-size: 2.25rem;
+  }
+
+  .formColumn {
+    width: 100%;
+    min-height: auto;
+    padding: 36px 20px;
+  }
+
+  .loginCard {
+    padding: 32px 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+}
+
+@media (max-width: 640px) {
+  .heroColumn {
+    padding: 28px 16px;
+  }
+
+  .heroHeading {
+    font-size: 1.85rem;
+  }
+
+  .topNav {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .loginCard {
+    padding: 28px 18px;
+    border-radius: 18px;
+  }
+
+  .cardTitle {
+    font-size: 1.65rem;
+  }
+
+  .formColumn {
+    padding: 24px 16px;
+  }
+}

@@ -11,9 +11,6 @@ export default function RegistrationSubmittedPage() {
     <SellerLayout
       activeSidebarItem="registration"
       pageTitle="Neo Cloud Room Onboarding"
-      userName="John Doe"
-      userRole="Owner Account"
-      userInitials="JD"
       hideMobileHeader={true}
     >
       {/* Registration Submitted Information Box (Navbar & Sidebar only) */}

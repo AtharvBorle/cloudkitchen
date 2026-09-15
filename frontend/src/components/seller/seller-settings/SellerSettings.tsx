@@ -49,6 +49,8 @@ const DEFAULT_SETTINGS: SellerSettingsData = {
   twoFactorAuth: false,
 };
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface SellerSettingsProps {
   initialSettings?: Partial<SellerSettingsData>;
   onSave?: (settings: SellerSettingsData) => void;
@@ -58,6 +60,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   initialSettings,
   onSave,
 }) => {
+  const seller = useSellerProfile();
   const [settings, setSettings] = useState<SellerSettingsData>({
     ...DEFAULT_SETTINGS,
     ...initialSettings,
@@ -66,31 +69,21 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleToggle = (field: keyof SellerSettingsData) => {
-    setSettings((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
+  const handleToggle = (key: keyof SellerSettingsData) => {
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleValueChange = (
-    field: keyof SellerSettingsData,
-    value: string | number
-  ) => {
-    setSettings((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  const handleNumberChange = (key: keyof SellerSettingsData, val: number) => {
+    setSettings((prev) => ({ ...prev, [key]: val }));
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleTextChange = (key: keyof SellerSettingsData, val: string) => {
+    setSettings((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleSave = () => {
     setSaving(true);
-    setSuccessMessage(null);
-
-    if (onSave) {
-      onSave(settings);
-    }
+    if (onSave) onSave(settings);
 
     // Simulate saving state
     setTimeout(() => {
@@ -103,11 +96,21 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   return (
     <div className={styles.container}>
       {/* 1. Left Desktop Sidebar */}
-      <SellerSidebar activeItemId="settings" />
+      <SellerSidebar
+        activeItemId="settings"
+        ownerName={seller.ownerName}
+        partnerRole={seller.partnerRole}
+        avatarInitials={seller.avatarInitials}
+      />
 
       {/* 2. Main Content Area */}
       <div className={styles.contentWrapper}>
-        <Topbar title="Seller Settings" />
+        <Topbar
+          title="Seller Settings"
+          ownerName={seller.ownerName}
+          partnerRole={seller.partnerRole}
+          avatarInitials={seller.avatarInitials}
+        />
 
         <main className={styles.mainCanvas}>
           {/* Header Title */}

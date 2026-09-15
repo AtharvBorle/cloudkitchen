@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { performLogout } from "@/lib/logout";
 import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import MainCanvas, { SellerProfileData } from "./MainCanvas";
+import { fetchApi } from "@/lib/fetch-api";
+import { useSellerProfile, computeInitials, isGenericFallbackName, updateCachedProfile } from "@/hooks/useSellerProfile";
 
 export interface SellerProfileProps {
   topbarTitle?: string;
@@ -20,26 +23,128 @@ export default function Profile({
   headerTitle = "Partner Profile Settings",
   headerDescription = "Manage operational credentials, personal contacts, and business workspace parameters.",
   initialData,
-  onSave,
-  onLogout,
+  onSave: customOnSave,
+  onLogout: customOnLogout,
   onSearch,
 }: SellerProfileProps) {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profileData, setProfileData] = useState<SellerProfileData>({
-    ownerName: initialData?.ownerName || "John Doe",
-    mobileNumber: initialData?.mobileNumber || "+91 99887 76655",
-    email: initialData?.email || "john.doe@neocloudroom.com",
-    outletName: initialData?.outletName || "Neo Cloud Room - Bangalore Central Hub",
-    registeredAddress:
-      initialData?.registeredAddress ||
-      "45, 1st Main Rd, Koramangala 4th Block, Bangalore, Karnataka 560034",
-    partnerRole: initialData?.partnerRole || "Neo Cloud Partner",
-    avatarInitials: initialData?.avatarInitials || "JD",
+  const [profileData, setProfileData] = useState<SellerProfileData>(() => {
+    const owner = initialData?.ownerName || (!isGenericFallbackName(seller.userFullName) ? seller.userFullName : "") || seller.ownerName;
+    const outlet = initialData?.outletName || seller.businessName || seller.ownerName;
+    return {
+      ownerName: owner,
+      mobileNumber: initialData?.mobileNumber || seller.phone || "",
+      email: initialData?.email || seller.email || "",
+      outletName: outlet,
+      registeredAddress: initialData?.registeredAddress || seller.address || "",
+      partnerRole: initialData?.partnerRole || seller.partnerRole,
+      avatarInitials: initialData?.avatarInitials || computeInitials(outlet || owner),
+    };
   });
+
+  useEffect(() => {
+    if (seller.ownerName || seller.businessName) {
+      setProfileData((prev) => {
+        const outlet = prev.outletName && !isGenericFallbackName(prev.outletName)
+          ? prev.outletName
+          : (seller.businessName || seller.ownerName);
+        const owner = prev.ownerName && !isGenericFallbackName(prev.ownerName)
+          ? prev.ownerName
+          : (seller.userFullName || seller.ownerName);
+        return {
+          ...prev,
+          ownerName: owner,
+          email: seller.email || prev.email,
+          mobileNumber: seller.phone || prev.mobileNumber,
+          outletName: outlet,
+          registeredAddress: seller.address || prev.registeredAddress,
+          avatarInitials: computeInitials(outlet || owner),
+        };
+      });
+    }
+  }, [seller.ownerName, seller.userFullName, seller.email, seller.phone, seller.businessName, seller.address]);
+
+  useEffect(() => {
+    async function loadSellerProfile() {
+      try {
+        const res = await fetchApi("/api/seller/profile");
+        if (res.ok) {
+          const data = await res.json();
+          const user = data.data?.user || data.user;
+          const profile = data.data?.profile || data.profile;
+          if (user) {
+            const rawUserName = user.name && !isGenericFallbackName(user.name) ? user.name : "";
+            const outlet = profile?.businessName || rawUserName || "Radha's Kitchen";
+            const owner = rawUserName || user.name || outlet;
+            const initials = computeInitials(outlet);
+
+            setProfileData((prev) => ({
+              ...prev,
+              ownerName: owner,
+              email: user.email || prev.email,
+              mobileNumber: user.phone || prev.mobileNumber,
+              outletName: outlet,
+              registeredAddress:
+                profile?.addressLocality ||
+                `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
+                user?.city ||
+                prev.registeredAddress,
+              avatarInitials: initials,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load seller profile:", err);
+      }
+    }
+    loadSellerProfile();
+  }, []);
 
   const handleDataChange = (data: SellerProfileData) => {
     setProfileData(data);
   };
+
+  const handleSave = async (data: SellerProfileData) => {
+    updateCachedProfile({
+      ownerName: data.outletName || data.ownerName,
+      businessName: data.outletName,
+      userFullName: data.ownerName,
+      email: data.email,
+      phone: data.mobileNumber,
+      address: data.registeredAddress,
+      avatarInitials: computeInitials(data.outletName || data.ownerName),
+    });
+
+    if (customOnSave) {
+      customOnSave(data);
+      return;
+    }
+    try {
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerName: data.ownerName,
+          mobileNumber: data.mobileNumber,
+          outletName: data.outletName,
+          registeredAddress: data.registeredAddress,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save seller profile:", err);
+    }
+  };
+
+  const handleLogout = () => {
+    if (customOnLogout) {
+      customOnLogout();
+      return;
+    }
+    performLogout({ role: "SELLER" });
+  };
+
+  const currentDisplayOutlet = profileData.outletName || seller.businessName || seller.ownerName;
 
   return (
     <div
@@ -59,6 +164,9 @@ export default function Profile({
         activeItemId="profile"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={currentDisplayOutlet}
+        partnerRole={profileData.partnerRole}
+        avatarInitials={computeInitials(currentDisplayOutlet)}
       />
 
       {/* 2. Right Canvas Area calling Topbar and MainCanvas */}
@@ -78,9 +186,9 @@ export default function Profile({
         {/* Standalone Topbar Component */}
         <Topbar
           title={topbarTitle}
-          ownerName={profileData.ownerName}
+          ownerName={currentDisplayOutlet}
           partnerRole={profileData.partnerRole}
-          avatarInitials={profileData.avatarInitials}
+          avatarInitials={computeInitials(currentDisplayOutlet)}
           onSearch={onSearch}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -91,8 +199,8 @@ export default function Profile({
             formData={profileData}
             headerTitle={headerTitle}
             headerDescription={headerDescription}
-            onSave={onSave}
-            onLogout={onLogout}
+            onSave={handleSave}
+            onLogout={handleLogout}
             onDataChange={handleDataChange}
           />
         </div>

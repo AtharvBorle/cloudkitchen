@@ -18,7 +18,9 @@ export interface ResponsiveRoomAddProps {
   initialAmenities?: ResponsiveAmenity[];
   initialIsAvailable?: boolean;
   initialImageUrl?: string;
+  isEditMode?: boolean;
   onBack?: () => void;
+  onDelete?: () => void;
   onSave?: (data: {
     roomName: string;
     capacity: string | number;
@@ -38,13 +40,15 @@ const DEFAULT_AMENITIES: ResponsiveAmenity[] = [
 ];
 
 export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
-  initialRoomName = "Deluxe Premium Suite",
-  initialCapacity = "4",
-  initialPricePerNight = "2,500",
-  initialAmenities = DEFAULT_AMENITIES,
+  initialRoomName = "",
+  initialCapacity = "",
+  initialPricePerNight = "",
+  initialAmenities = DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
   initialIsAvailable = true,
   initialImageUrl,
+  isEditMode = false,
   onBack,
+  onDelete,
   onSave,
 }) => {
   const router = useRouter();
@@ -60,6 +64,30 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
     initialImageUrl || null
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  React.useEffect(() => {
+    if (initialRoomName !== undefined) setRoomName(initialRoomName);
+  }, [initialRoomName]);
+
+  React.useEffect(() => {
+    if (initialCapacity !== undefined) setCapacity(initialCapacity);
+  }, [initialCapacity]);
+
+  React.useEffect(() => {
+    if (initialPricePerNight !== undefined) setPricePerNight(initialPricePerNight);
+  }, [initialPricePerNight]);
+
+  React.useEffect(() => {
+    if (initialAmenities && initialAmenities.length > 0) setAmenities(initialAmenities);
+  }, [initialAmenities]);
+
+  React.useEffect(() => {
+    if (initialIsAvailable !== undefined) setIsAvailable(initialIsAvailable);
+  }, [initialIsAvailable]);
+
+  React.useEffect(() => {
+    if (initialImageUrl !== undefined) setImagePreview(initialImageUrl || null);
+  }, [initialImageUrl]);
 
   const handleBackClick = () => {
     if (onBack) {
@@ -127,7 +155,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
             <ChevronLeft size={24} />
           </button>
 
-          <h1 className={styles.headerTitle}>Add room</h1>
+          <h1 className={styles.headerTitle}>{isEditMode ? "Edit room" : "Add room"}</h1>
 
           <button
             type="button"
@@ -210,7 +238,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
                 className={styles.textInput}
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                placeholder="4"
+                placeholder="e.g. 2"
                 required
               />
             </div>
@@ -227,7 +255,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
                   className={`${styles.textInput} ${styles.priceInput}`}
                   value={pricePerNight}
                   onChange={(e) => setPricePerNight(e.target.value)}
-                  placeholder="2,500"
+                  placeholder="e.g. 2,500"
                   required
                 />
               </div>
@@ -279,8 +307,30 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
 
           {/* 6. Save Room Button */}
           <button type="submit" className={styles.saveButton}>
-            Save room
+            {isEditMode ? "Update room" : "Save room"}
           </button>
+
+          {isEditMode && onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              style={{
+                marginTop: "12px",
+                width: "100%",
+                padding: "14px",
+                backgroundColor: "#FEF2F2",
+                color: "#EF4444",
+                border: "1.5px solid #FEE2E2",
+                borderRadius: "14px",
+                fontSize: "14.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Delete Room
+            </button>
+          )}
         </form>
       </div>
     </div>

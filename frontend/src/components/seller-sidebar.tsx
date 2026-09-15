@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 
 import { useState, useEffect } from "react";
 import { fetchApi, uploadWithProgress } from "@/lib/fetch-api";
@@ -362,9 +362,10 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
                 </Link>
 
                 <button
-                    onClick={async (e) => {
+                    onClick={(e) => {
                         e.preventDefault();
-                        await signOut({ callbackUrl: window.location.origin + "/seller" });
+                        if (onClose) onClose();
+                        performLogout({ role: "SELLER" });
                     }}
                     style={{
                         display: 'block',

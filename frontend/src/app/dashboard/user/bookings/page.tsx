@@ -243,16 +243,27 @@ export default function UserBookingsPage() {
                                             {booking.room.seller.user.city} - {booking.room.seller.user.pincode}
                                         </span>
                                     </div>
-                                    <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+                                    <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
                                         <div style={{ flex: 1, backgroundColor: "#F9FAFB", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
                                             <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check In</div>
-                                            <div style={{ fontWeight: "bold" }}>{new Date(booking.startDate).toLocaleDateString()}</div>
+                                            <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
+                                                {booking.startDate ? new Date(booking.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
+                                            </div>
                                         </div>
                                         <div style={{ flex: 1, backgroundColor: "#F9FAFB", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
                                             <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check Out</div>
-                                            <div style={{ fontWeight: "bold" }}>{new Date(booking.endDate).toLocaleDateString()}</div>
+                                            <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
+                                                {booking.endDate ? new Date(booking.endDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
+                                            </div>
                                         </div>
                                     </div>
+                                    {booking.startDate && booking.endDate && (
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                                            <span style={{ fontSize: "0.78rem", fontWeight: "700", backgroundColor: "#EFF6FF", color: "#1D4ED8", padding: "4px 12px", borderRadius: "12px", border: "1px solid #DBEAFE" }}>
+                                                {Math.max(1, Math.round(Math.abs(new Date(booking.endDate).getTime() - new Date(booking.startDate).getTime()) / (1000 * 60 * 60 * 24)))} {Math.max(1, Math.round(Math.abs(new Date(booking.endDate).getTime() - new Date(booking.startDate).getTime()) / (1000 * 60 * 60 * 24))) === 1 ? "Night" : "Nights"} Stay
+                                            </span>
+                                        </div>
+                                    )}
                                     <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
                                         <div style={{ fontSize: "0.85rem", margin: "5px 0", padding: "10px", borderRadius: "8px", backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0" }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>

@@ -7,6 +7,7 @@ import SubscriptionEditCanvas, {
   SubscriptionEditCanvasProps,
   SubscriptionPlanData,
 } from "./SubscriptionEditCanvas";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface SubscriptionEditCanvasDasProps extends SubscriptionEditCanvasProps {
   topbarTitle?: string;
@@ -22,15 +23,20 @@ export interface SubscriptionEditCanvasDasProps extends SubscriptionEditCanvasPr
 export default function SubscriptionEditCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, dish...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   activeSidebarId = "subscription",
   onSearch,
   onNotificationClick,
   ...canvasProps
 }: SubscriptionEditCanvasDasProps) {
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   return (
     <div
@@ -49,6 +55,9 @@ export default function SubscriptionEditCanvasDas({
         activeItemId={activeSidebarId}
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Main Area */}
@@ -77,7 +86,9 @@ export default function SubscriptionEditCanvasDas({
 
         {/* SubscriptionEditCanvas Main Body */}
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <SubscriptionEditCanvas {...canvasProps} />
+          <React.Suspense fallback={<div style={{ padding: "40px", color: "#64748B" }}>Loading plan configuration...</div>}>
+            <SubscriptionEditCanvas {...canvasProps} />
+          </React.Suspense>
         </div>
       </div>
     </div>

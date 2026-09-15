@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 
@@ -13,30 +14,28 @@ export default function SuperadminOverview() {
 
     useEffect(() => {
         if (status === "loading") return;
-
-        if (!session || session.user.role !== "SUPERADMIN") {
-            router.push("/admin");
+        if (status === "unauthenticated" || (session?.user as any)?.role !== "SUPERADMIN") {
+            router.push("/dashboard/admin");
             return;
         }
 
-        const fetchStats = async () => {
+        async function fetchStats() {
             try {
-                const res = await fetchApi("/api/superadmin/dashboard");
+                const res = await fetchApi("/api/superadmin/stats");
                 if (res.ok) {
                     const data = await res.json();
                     setStats(data);
                 }
-            } catch (error) {
-                console.error("Error fetching superadmin stats:", error);
+            } catch (err) {
+                console.error("Failed to fetch superadmin stats", err);
             } finally {
                 setLoading(false);
             }
-        };
-
+        }
         fetchStats();
-    }, [session, status, router]);
+    }, [status, session, router]);
 
-    if (status === "loading" || loading) {
+    if (loading || status === "loading") {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>Loading Superadmin Panel...</div>;
     }
 
@@ -48,7 +47,7 @@ export default function SuperadminOverview() {
         <div style={{ minHeight: '100vh', backgroundColor: '#F0F2F5', padding: '40px', fontFamily: "var(--font-sans)" }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>Super Admin Panel Overview</h1>
-                <button onClick={() => signOut({ callbackUrl: window.location.origin + "/admin" })} style={{ fontWeight: 'bold', color: 'var(--text-main)', border: '1px solid #CCC', borderRadius: '8px', backgroundColor: 'white', padding: '8px 16px', cursor: 'pointer' }}>
+                <button onClick={() => performLogout({ role: "SUPERADMIN" })} style={{ fontWeight: 'bold', color: 'var(--text-main)', border: '1px solid #CCC', borderRadius: '8px', backgroundColor: 'white', padding: '8px 16px', cursor: 'pointer' }}>
                     Logout
                 </button>
             </div>

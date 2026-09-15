@@ -5,7 +5,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 
 export default function SuperadminDashboard() {
     const router = useRouter();
@@ -175,8 +175,8 @@ export default function SuperadminDashboard() {
         }
     };
 
-    const handleLogout = async () => {
-        await signOut({ callbackUrl: window.location.origin + "/admin" });
+    const handleLogout = () => {
+        performLogout({ role: "SUPERADMIN" });
     };
 
     return (

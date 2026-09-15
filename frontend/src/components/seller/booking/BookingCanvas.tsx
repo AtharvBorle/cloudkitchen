@@ -2,16 +2,36 @@
 
 import React, { useState, useMemo } from "react";
 import { ArrowRight, X, Phone, Calendar, Bed, CheckCircle2, AlertCircle } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface BookingRecord {
   id: string;
   guestName: string;
   guestInitials?: string;
+  guestPhone?: string;
   room: string;
+  capacity?: string;
   checkIn: string;
   checkOut: string;
+  duration?: string;
   amount: string;
   status: "Confirmed" | "Paid" | "Requested" | "Cancelled" | string;
+}
+
+export function computeDuration(checkInStr?: string, checkOutStr?: string): string {
+  if (!checkInStr || !checkOutStr || checkInStr === "-" || checkOutStr === "-") return "";
+  try {
+    const d1 = new Date(checkInStr);
+    const d2 = new Date(checkOutStr);
+    if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+      const diffTime = Math.abs(d2.getTime() - d1.getTime());
+      const diffDays = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+      return `${diffDays} ${diffDays === 1 ? "Night" : "Nights"}`;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return "";
 }
 
 export type BookingFilterTab =
@@ -274,11 +294,13 @@ const DEFAULT_BOOKINGS: BookingRecord[] = [
   },
 ];
 
+const EMPTY_BOOKINGS: BookingRecord[] = [];
+
 export default function BookingCanvas({
-  title = "Reservations Ledger",
-  subtitle = "Track booking requests, check-in schedules, payment completion statuses, and cancellations.",
-  bookings = DEFAULT_BOOKINGS,
-  initialTab = "Requested",
+  title = "Room Bookings",
+  subtitle = "Manage room reservations, confirm bookings, and assign rooms to customers.",
+  bookings = EMPTY_BOOKINGS,
+  initialTab = "All",
   onViewDetails,
   onTabChange,
 }: BookingCanvasProps) {
@@ -286,6 +308,12 @@ export default function BookingCanvas({
   const [bookingList, setBookingList] = useState<BookingRecord[]>(bookings);
   const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (bookings && bookings !== EMPTY_BOOKINGS) {
+      setBookingList(bookings);
+    }
+  }, [bookings]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -334,7 +362,7 @@ export default function BookingCanvas({
     }
   };
 
-  const handleUpdateBookingStatus = (bookingId: string, nextStatus: string) => {
+  const handleUpdateBookingStatus = async (bookingId: string, nextStatus: string) => {
     setBookingList((prev) =>
       prev.map((b) => (b.id === bookingId ? { ...b, status: nextStatus } : b))
     );
@@ -342,6 +370,17 @@ export default function BookingCanvas({
       setSelectedBooking((prev) => (prev ? { ...prev, status: nextStatus } : null));
     }
     showToast(`Booking #${bookingId.toUpperCase()} updated to ${nextStatus}!`);
+
+    try {
+      const backendStatus = nextStatus.toUpperCase() === "CANCELLED" ? "CANCELLED" : "CONFIRMED";
+      await fetchApi("/api/seller/rooms/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: backendStatus }),
+      });
+    } catch (err) {
+      console.error("Failed to update booking status on backend:", err);
+    }
   };
 
   // Filtered Bookings based on active tab
@@ -845,7 +884,19 @@ export default function BookingCanvas({
                             color: "#0F172A",
                           }}
                         >
-                          {booking.checkOut}
+                          <div>{booking.checkOut}</div>
+                          {(booking.duration || computeDuration(booking.checkIn, booking.checkOut)) && (
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#64748B",
+                                fontWeight: 500,
+                                marginTop: "2px",
+                              }}
+                            >
+                              ({booking.duration || computeDuration(booking.checkIn, booking.checkOut)})
+                            </div>
+                          )}
                         </td>
 
                         {/* Amount */}
@@ -1076,7 +1127,7 @@ export default function BookingCanvas({
                       }}
                     >
                       <Phone size={13} />
-                      +91 98765 43210
+                      {selectedBooking.guestPhone || "+91 98765 43210"}
                     </span>
                   </div>
                 </div>
@@ -1125,6 +1176,11 @@ export default function BookingCanvas({
                   >
                     {selectedBooking.room}
                   </p>
+                  {selectedBooking.capacity && (
+                    <span style={{ fontSize: "11.5px", color: "#64748B", fontWeight: 500, display: "block", marginTop: "2px" }}>
+                      {selectedBooking.capacity}
+                    </span>
+                  )}
                 </div>
 
                 <div
@@ -1135,21 +1191,43 @@ export default function BookingCanvas({
                     padding: "12px 14px",
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      color: "#64748B",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
                       display: "flex",
                       alignItems: "center",
-                      gap: "6px",
+                      justifyContent: "space-between",
                     }}
                   >
-                    <Calendar size={14} color="#3B82F6" />
-                    Stay Duration
-                  </span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: "#64748B",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Calendar size={14} color="#3B82F6" />
+                      Stay Duration
+                    </span>
+                    {(selectedBooking.duration || computeDuration(selectedBooking.checkIn, selectedBooking.checkOut)) && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          backgroundColor: "#EFF6FF",
+                          color: "#1D4ED8",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                        }}
+                      >
+                        {selectedBooking.duration || computeDuration(selectedBooking.checkIn, selectedBooking.checkOut)}
+                      </span>
+                    )}
+                  </div>
                   <p
                     style={{
                       fontSize: "13px",

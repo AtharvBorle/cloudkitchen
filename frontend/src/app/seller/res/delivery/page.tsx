@@ -67,7 +67,6 @@ export default function ResponsiveDeliveryPage() {
 
   return (
     <ResponsiveDelivery
-      ownerName="Rahul Sharma"
       totalOutstanding={totalOutstandingStr}
       riders={mappedRiders}
       onSelectRider={(rider) => router.push(`/seller/delivery/handover?riderId=${rider.id}`)}

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   Menu as MenuIcon,
@@ -19,6 +19,11 @@ import {
   Shield,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
+import {
+  PasswordManagementCard,
+  ActiveLoginSessionsCard,
+} from "../security-settings/SellerSecuritySettings";
 import styles from "./ResponsiveSellerSettings.module.css";
 
 export type SettingsTabType = "General" | "Notifications" | "Security" | "Preferences";
@@ -44,6 +49,15 @@ export interface ResponsiveSellerSettingsData {
   language: string;
   timezone: string;
   currency: string;
+
+  // Notification Channels & Quiet Hours (Reference Image)
+  emailNotifications: boolean;
+  smsAlerts: boolean;
+  pushNotifications: boolean;
+  whatsappUpdates: boolean;
+  enableQuietHours: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
 
   // 1. Stock & Inventory Alerts
   lowStockAlert: boolean;
@@ -71,8 +85,6 @@ export interface ResponsiveSellerSettingsData {
   bookingRequestAlert: boolean;
   negativeReviewAlert: boolean;
   dailyDigest: boolean;
-  smsAlerts: boolean;
-  whatsappUpdates: boolean;
 
   // Security
   twoFactorAuth: boolean;
@@ -106,6 +118,15 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   timezone: "Asia/Kolkata (UTC+5:30)",
   currency: "INR (₹)",
 
+  // Notification Channels & Quiet Hours (Reference Image)
+  emailNotifications: true,
+  smsAlerts: true,
+  pushNotifications: true,
+  whatsappUpdates: false,
+  enableQuietHours: true,
+  quietHoursStart: "10:00 PM",
+  quietHoursEnd: "07:00 AM",
+
   // Stock
   lowStockAlert: true,
   outOfStockAlert: true,
@@ -132,8 +153,6 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   bookingRequestAlert: true,
   negativeReviewAlert: true,
   dailyDigest: true,
-  smsAlerts: true,
-  whatsappUpdates: true,
 
   // Security
   twoFactorAuth: false,
@@ -147,29 +166,71 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   allowCod: true,
 };
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface ResponsiveSellerSettingsProps {
   ownerName?: string;
   avatarInitials?: string;
+  initialTab?: SettingsTabType;
   initialData?: Partial<ResponsiveSellerSettingsData>;
   onSave?: (data: ResponsiveSellerSettingsData) => void;
   onSyncDevices?: () => void;
 }
 
 export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> = ({
-  ownerName = "Rahul Sharma",
-  avatarInitials = "JD",
+  ownerName,
+  avatarInitials,
+  initialTab = "General",
   initialData,
   onSave,
   onSyncDevices,
 }) => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<SettingsTabType>("General");
+  const searchParams = useSearchParams();
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
+  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({
     ...INITIAL_SETTINGS,
+    businessName: seller.businessName || INITIAL_SETTINGS.businessName,
+    phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
+    businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
+    address: seller.address || INITIAL_SETTINGS.address,
     ...initialData,
   });
+
+  useEffect(() => {
+    if (seller.businessName || seller.phone || seller.email || seller.address) {
+      setFormData((prev) => ({
+        ...prev,
+        businessName: prev.businessName === "Neo Cloud Kitchen & Rooms" && seller.businessName ? seller.businessName : prev.businessName,
+        phoneNumber: prev.phoneNumber === "+91 98765 43210" && seller.phone ? seller.phone : prev.phoneNumber,
+        businessEmail: prev.businessEmail === "hello@neocloudbite.com" && seller.email ? seller.email : prev.businessEmail,
+        address: prev.address.includes("Innovation Way") && seller.address ? seller.address : prev.address,
+      }));
+    }
+  }, [seller.businessName, seller.phone, seller.email, seller.address]);
+
+  useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam) {
+      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTabType[]).find(
+        (t) => t.toLowerCase() === tabParam.toLowerCase()
+      );
+      if (matched) {
+        setActiveTab(matched);
+      }
+    }
+  }, [searchParams]);
 
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -237,7 +298,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="settings"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 
@@ -419,6 +480,31 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
           {activeTab === "Notifications" && (
             <>
+              {/* Notification Channels & Quiet Hours (Exact Reference Image Design) */}
+              <SellerNotificationChannels
+                data={{
+                  emailNotifications: formData.emailNotifications,
+                  smsAlerts: formData.smsAlerts,
+                  pushNotifications: formData.pushNotifications,
+                  whatsappUpdates: formData.whatsappUpdates,
+                  enableQuietHours: formData.enableQuietHours,
+                  quietHoursStart: formData.quietHoursStart,
+                  quietHoursEnd: formData.quietHoursEnd,
+                }}
+                onChange={(field, value) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    [field]: value,
+                  }));
+                }}
+                onToggle={(field) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    [field]: !prev[field as keyof ResponsiveSellerSettingsData],
+                  }));
+                }}
+              />
+
               {/* 1. Stock & Inventory Alerts */}
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
@@ -786,7 +872,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
           {activeTab === "Security" && (
             <>
-              {/* Security & Access Card */}
+              {/* 1. Password Management Card (Matching Reference Image) */}
+              <PasswordManagementCard />
+
+              {/* 2. Security & Access Card */}
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
                   <Shield size={17} className={styles.cardHeaderIcon} />
@@ -845,7 +934,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
               </div>
 
-              {/* Danger Zone: Delete Account */}
+              {/* 3. Active Login Sessions Card (Matching Reference Image) */}
+              <ActiveLoginSessionsCard />
+
+              {/* 4. Danger Zone: Delete Account */}
               <div className={styles.dangerCard}>
                 <div className={styles.dangerHeader}>
                   <AlertTriangle size={18} />

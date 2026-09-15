@@ -10,10 +10,10 @@ export default function MobileBottomNav() {
 
   const navItems = [
     { label: "Home", href: "/", icon: Home },
-    { label: "Explore", href: "/explore-desktop", icon: Compass },
-    { label: "Orders", href: "/my-orders", icon: ShoppingBag },
-    { label: "Rooms", href: "/room-booking-desktop", icon: BedDouble },
-    { label: "Settings", href: "/profile-desktop", icon: Settings },
+    { label: "Explore", href: "/explore", icon: Compass },
+    { label: "Orders", href: "/orders-desktop", icon: ShoppingBag },
+    { label: "Rooms", href: "/room-booking", icon: BedDouble },
+    { label: "Settings", href: "/settings-desktop", icon: Settings },
   ];
 
   return (

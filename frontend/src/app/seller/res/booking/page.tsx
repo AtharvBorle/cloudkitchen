@@ -37,11 +37,47 @@ export default function ResponsiveBookingPage() {
     };
   }, []);
 
+  const handleConfirm = async (bookingId: string) => {
+    try {
+      await fetchApi("/api/seller/rooms/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: "CONFIRMED" }),
+      });
+    } catch (err) {
+      console.error("Failed to confirm booking:", err);
+    }
+  };
+
+  const handleDecline = async (bookingId: string) => {
+    try {
+      await fetchApi("/api/seller/rooms/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: "CANCELLED" }),
+      });
+    } catch (err) {
+      console.error("Failed to decline booking:", err);
+    }
+  };
+
   const mappedBookings: ResponsiveBookingItem[] | undefined = useMemo(() => {
     if (!bookings || bookings.length === 0) return undefined;
     return bookings.map((b: any) => {
-      const start = b.startDate ? new Date(b.startDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" }) : "Aug 28";
-      const end = b.endDate ? new Date(b.endDate).toLocaleDateString("en-IN", { month: "short", day: "numeric" }) : "Sep 01";
+      const checkInRaw = b.startDate || b.checkInDate || b.checkIn;
+      const checkOutRaw = b.endDate || b.checkOutDate || b.checkOut;
+      const start = checkInRaw ? new Date(checkInRaw).toLocaleDateString("en-IN", { month: "short", day: "numeric" }) : "-";
+      const end = checkOutRaw ? new Date(checkOutRaw).toLocaleDateString("en-IN", { month: "short", day: "numeric" }) : "-";
+
+      let durationStr = "";
+      if (checkInRaw && checkOutRaw) {
+        const d1 = new Date(checkInRaw);
+        const d2 = new Date(checkOutRaw);
+        if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+          const diffDays = Math.max(1, Math.round(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
+          durationStr = `${diffDays} ${diffDays === 1 ? "Night" : "Nights"}`;
+        }
+      }
 
       let statusVal: "Requested" | "Confirmed" | "Paid" | "Declined" = "Requested";
       const s = (b.status || "").toUpperCase();
@@ -50,11 +86,15 @@ export default function ResponsiveBookingPage() {
       else if (s === "CANCELLED" || s === "DECLINED") statusVal = "Declined";
       else statusVal = "Requested";
 
+      const dateDisplay = start !== "-" && end !== "-"
+        ? (durationStr ? `${start} – ${end} • ${durationStr}` : `${start} – ${end}`)
+        : "-";
+
       return {
         id: b.id,
         guestName: b.user?.name || "Guest",
-        roomName: b.room?.title || "Deluxe Suite",
-        dateRange: `${start} - ${end}`,
+        roomName: b.room?.title || "Room",
+        dateRange: dateDisplay,
         amount: `₹${b.totalAmount || 0}`,
         status: statusVal,
       };
@@ -63,8 +103,9 @@ export default function ResponsiveBookingPage() {
 
   return (
     <ResponsiveBooking
-      ownerName="Rahul Sharma"
       bookings={mappedBookings}
+      onConfirm={handleConfirm}
+      onDecline={handleDecline}
     />
   );
 }

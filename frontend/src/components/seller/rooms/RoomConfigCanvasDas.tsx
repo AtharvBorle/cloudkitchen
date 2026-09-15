@@ -8,6 +8,8 @@ import RoomConfigCanvas, {
   RoomConfigData,
 } from "./RoomConfigCanvas";
 
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+
 export interface RoomConfigCanvasDasProps extends RoomConfigCanvasProps {
   topbarTitle?: string;
   searchPlaceholder?: string;
@@ -22,14 +24,19 @@ export interface RoomConfigCanvasDasProps extends RoomConfigCanvasProps {
 export default function RoomConfigCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search order, room, booking...",
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName,
+  partnerRole,
+  avatarInitials,
   activeSidebarId = "rooms",
   onSearch,
   onNotificationClick,
   ...canvasProps
 }: RoomConfigCanvasDasProps) {
+  const seller = useSellerProfile();
+  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectivePartnerRole = partnerRole || seller.partnerRole;
+  const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
@@ -50,6 +57,9 @@ export default function RoomConfigCanvasDas({
         activeItemId={activeSidebarId}
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Main Area */}
@@ -68,9 +78,9 @@ export default function RoomConfigCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
-          ownerName={ownerName}
-          partnerRole={partnerRole}
-          avatarInitials={avatarInitials}
+          ownerName={effectiveOwnerName}
+          partnerRole={effectivePartnerRole}
+          avatarInitials={effectiveAvatarInitials}
           onSearch={onSearch}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
@@ -78,7 +88,9 @@ export default function RoomConfigCanvasDas({
 
         {/* RoomConfigCanvas Main Body */}
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <RoomConfigCanvas {...canvasProps} />
+          <React.Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "#64748B" }}>Loading Room Configurator...</div>}>
+            <RoomConfigCanvas {...canvasProps} />
+          </React.Suspense>
         </div>
       </div>
     </div>

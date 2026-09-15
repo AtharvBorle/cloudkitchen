@@ -392,7 +392,7 @@ export const FALLBACK_BANNERS: DynamicPromoBanner[] = [
     title: "Limited Welcome Offer - 30% OFF",
     desktopImageUrl: "/images/promo-banner-full.png",
     mobileImageUrl: "/images/promo-welcome-mobile-3d.png",
-    redirectUrl: "/explore-desktop",
+    redirectUrl: "/explore",
     displayOrder: 1,
   },
 ];
@@ -661,7 +661,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     if (!options) return true;
     const { searchQuery, category, vegOnly, pincode, minPrice, maxPrice, minRating } = options;
 
-    if (vegOnly && item.itemType !== "VEG") return false;
+    if (vegOnly && (item.itemType === "NON_VEG" || item.itemType?.includes("NON_VEG"))) return false;
 
     if (category && category !== "all" && category !== "food") {
       const c = category.toLowerCase();

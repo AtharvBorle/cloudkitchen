@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   Plus,
@@ -55,11 +55,11 @@ const DEFAULT_PHOTOS = [
 ];
 
 const DEFAULT_ROOM_DATA: RoomConfigData = {
-  roomName: "Deluxe Executive Suite 101",
-  capacity: "2 Guests",
-  pricePerNight: "2,800",
-  mediaPhotos: DEFAULT_PHOTOS,
-  amenities: DEFAULT_AMENITIES,
+  roomName: "",
+  capacity: "",
+  pricePerNight: "",
+  mediaPhotos: [],
+  amenities: DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
   isInstantlyBookable: true,
 };
 
@@ -69,6 +69,10 @@ export default function RoomConfigCanvas({
   onCancel,
 }: RoomConfigCanvasProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const roomId = searchParams ? searchParams.get("id") : null;
+  const isEditMode = Boolean(roomId);
+
   const [formData, setFormData] = useState<RoomConfigData>({
     ...DEFAULT_ROOM_DATA,
     ...initialData,
@@ -81,6 +85,44 @@ export default function RoomConfigCanvas({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const capacityOptions = ["1 Guest", "2 Guests", "3 Guests", "4 Guests", "5+ Guests"];
+
+  useEffect(() => {
+    if (!roomId) return;
+    async function loadRoom() {
+      try {
+        const res = await fetchApi(`/api/seller/rooms/${roomId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const room = data.data?.room || data.room;
+          if (room) {
+            let photos: string[] = [];
+            try {
+              const parsed = typeof room.images === "string" ? JSON.parse(room.images) : room.images;
+              if (Array.isArray(parsed)) photos = parsed;
+              else if (typeof parsed === "string") photos = [parsed];
+            } catch (e) {
+              if (room.images) photos = [room.images];
+            }
+
+            setFormData({
+              roomName: room.title || "",
+              capacity: `${room.capacity || 2} Guest${(room.capacity || 2) > 1 ? "s" : ""}`,
+              pricePerNight: String(room.price || ""),
+              mediaPhotos: photos,
+              amenities: DEFAULT_AMENITIES.map((a) => ({
+                ...a,
+                selected: room.description ? room.description.toLowerCase().includes(a.name.toLowerCase()) : false,
+              })),
+              isInstantlyBookable: room.isAvailable ?? true,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load room details:", err);
+      }
+    }
+    loadRoom();
+  }, [roomId]);
 
   const handleTextChange = (field: keyof RoomConfigData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -141,6 +183,16 @@ export default function RoomConfigCanvas({
       return;
     }
 
+    if (!formData.roomName.trim()) {
+      alert("Please enter a room name or identifier.");
+      return;
+    }
+
+    if (!formData.pricePerNight.trim()) {
+      alert("Please enter the price per night.");
+      return;
+    }
+
     setSaving(true);
     try {
       const parsedPrice = formData.pricePerNight.replace(/[^\d.]/g, "") || "2500";
@@ -148,9 +200,13 @@ export default function RoomConfigCanvas({
       const capacityNum = guestsMatch ? guestsMatch[0] : "2";
 
       const bodyFormData = new FormData();
-      bodyFormData.append("title", formData.roomName);
+      if (roomId) {
+        bodyFormData.append("roomId", roomId);
+      }
+      bodyFormData.append("title", formData.roomName.trim());
       bodyFormData.append("price", parsedPrice);
       bodyFormData.append("capacity", capacityNum);
+      bodyFormData.append("isAvailable", String(formData.isInstantlyBookable));
       bodyFormData.append(
         "description",
         `Amenities: ${formData.amenities
@@ -165,8 +221,11 @@ export default function RoomConfigCanvas({
         bodyFormData.append("imageUrl", formData.mediaPhotos[0]);
       }
 
-      const res = await fetchApi("/api/seller/rooms", {
-        method: "POST",
+      const endpoint = roomId ? `/api/seller/rooms/${roomId}` : "/api/seller/rooms";
+      const method = roomId ? "PATCH" : "POST";
+
+      const res = await fetchApi(endpoint, {
+        method,
         body: bodyFormData,
       });
 
@@ -177,7 +236,7 @@ export default function RoomConfigCanvas({
         return;
       }
 
-      setToastMessage("Room configuration saved successfully!");
+      setToastMessage(isEditMode ? "Room updated successfully!" : "Room configuration saved successfully!");
       setTimeout(() => {
         setToastMessage(null);
         router.push("/seller/rooms");
@@ -337,6 +396,7 @@ export default function RoomConfigCanvas({
               type="text"
               value={formData.roomName}
               onChange={(e) => handleTextChange("roomName", e.target.value)}
+              placeholder="e.g. Deluxe Executive Suite 101"
               style={{
                 width: "100%",
                 borderRadius: "8px",
@@ -391,12 +451,12 @@ export default function RoomConfigCanvas({
                   justifyContent: "space-between",
                   backgroundColor: "#FFFFFF",
                   fontSize: "13.5px",
-                  color: "#0F172A",
+                  color: formData.capacity ? "#0F172A" : "#94A3B8",
                   cursor: "pointer",
                   boxSizing: "border-box",
                 }}
               >
-                <span>{formData.capacity}</span>
+                <span>{formData.capacity || "Select capacity"}</span>
                 <ChevronDown
                   size={16}
                   color="#64748B"
@@ -464,6 +524,7 @@ export default function RoomConfigCanvas({
                 type="text"
                 value={formData.pricePerNight}
                 onChange={(e) => handleTextChange("pricePerNight", e.target.value)}
+                placeholder="e.g. 2,800"
                 style={{
                   width: "100%",
                   borderRadius: "8px",

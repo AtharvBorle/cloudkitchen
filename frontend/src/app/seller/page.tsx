@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import SellerLoginPage from "@/app/auth/login/seller/page";
+import { SellerLogin, SellerResponsiveWrapper, ResSellerLogin } from "@/components/seller";
 
 export default function SellerPortalRoot() {
     const { data: session, status } = useSession();
@@ -33,7 +33,12 @@ export default function SellerPortalRoot() {
     }
 
     if (status === "unauthenticated" || !session) {
-        return <SellerLoginPage />;
+        return (
+            <SellerResponsiveWrapper
+                desktop={<SellerLogin />}
+                mobile={<ResSellerLogin />}
+            />
+        );
     }
 
     return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -15,10 +15,22 @@ import {
   Search,
   SlidersHorizontal,
   Check,
+  LogIn,
+  LogOut,
+  Settings,
+  Package,
+  Calendar,
+  MapPin,
+  Store,
+  Bike,
+  HelpCircle,
+  Shield,
+  Sparkles,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
@@ -97,6 +109,7 @@ export interface NavbarProps {
   onLocationClick?: () => void;
   hideSearch?: boolean;
   hideVegToggle?: boolean;
+  onSearch?: (query: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -115,6 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLocationClick,
   hideSearch,
   hideVegToggle,
+  onSearch,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -199,7 +213,33 @@ export const Navbar: React.FC<NavbarProps> = ({
     currentActiveItem === "Settings"
   );
 
-  const shouldHideSearch = hideSearch !== undefined ? hideSearch : isSettingsPage;
+  const [isProfileHoverOpen, setIsProfileHoverOpen] = useState<boolean>(false);
+  const profileTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleProfileMouseEnter = () => {
+    if (profileTimeoutRef.current) {
+      clearTimeout(profileTimeoutRef.current);
+      profileTimeoutRef.current = null;
+    }
+    setIsProfileHoverOpen(true);
+  };
+
+  const handleProfileMouseLeave = () => {
+    profileTimeoutRef.current = setTimeout(() => {
+      setIsProfileHoverOpen(false);
+    }, 180);
+  };
+
+  const closeProfileMenu = () => {
+    if (profileTimeoutRef.current) {
+      clearTimeout(profileTimeoutRef.current);
+      profileTimeoutRef.current = null;
+    }
+    setIsProfileHoverOpen(false);
+  };
+
+  const isHomePage = pathname === "/";
+  const shouldHideSearch = hideSearch !== undefined ? hideSearch : (isHomePage || isSettingsPage);
   const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : isSettingsPage;
 
   const handleNavClick = (item: string) => {
@@ -242,8 +282,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         router.push("/settings-desktop");
       }
     } else {
-      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/")}`);
+      router.push("/login");
     }
+    closeProfileMenu();
   };
 
   const handleLocationClick = () => {
@@ -252,12 +293,61 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState<"cuisines" | "dietary" | "price">("cuisines");
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<string>("");
+
+  // Section-aware search target, placeholder, and label
+  const getSectionSearchConfig = () => {
+    if (pathname.startsWith("/room-booking") || currentActiveItem === "Rooms") {
+      return {
+        section: "Rooms",
+        placeholder: "Search rooms, stays, coliving...",
+        targetRoute: "/room-booking",
+      };
+    }
+    if (pathname.startsWith("/explore/furniture") || currentActiveItem === "Furniture") {
+      return {
+        section: "Furniture",
+        placeholder: "Search furniture, chairs, tables, beds...",
+        targetRoute: "/explore/furniture",
+      };
+    }
+    if (
+      pathname.startsWith("/orders-desktop") ||
+      pathname.startsWith("/order-history") ||
+      pathname.startsWith("/dashboard/user/orders") ||
+      currentActiveItem === "Orders"
+    ) {
+      return {
+        section: "Orders",
+        placeholder: "Search orders by ID, dish, kitchen...",
+        targetRoute: "/orders-desktop",
+      };
+    }
+    // Default to Food / Explore
+    return {
+      section: "Food",
+      placeholder: "Search home meals, cuisines, kitchens...",
+      targetRoute: "/explore-desktop",
+    };
+  };
+
+  // Sync search input with URL search parameters on mount or navigation
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("query");
+      if (q) {
+        setSearchQuery(q);
+        setMobileSearchQuery(q);
+      }
+    }
+  }, [pathname]);
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -266,9 +356,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const toggleDietary = (id: string) => {
-    setSelectedDietary((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setSelectedDietary((prev) => {
+      const isSelected = prev.includes(id);
+      if (isSelected) {
+        return prev.filter((item) => item !== id);
+      } else {
+        if (id === "non-veg" || id === "Non-Veg" || id === "NON_VEG") {
+          return [id];
+        } else {
+          const withoutNonVeg = prev.filter(
+            (item) => item !== "non-veg" && item !== "Non-Veg" && item !== "NON_VEG"
+          );
+          return [...withoutNonVeg, id];
+        }
+      }
+    });
   };
 
   const handlePriceSelect = (tier: string) => {
@@ -296,12 +398,41 @@ export const Navbar: React.FC<NavbarProps> = ({
     selectedDietary.length +
     (selectedPrice ? 1 : 0);
 
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const q = searchQuery.trim();
+    if (onSearch) {
+      onSearch(q);
+    }
+    const config = getSectionSearchConfig();
+    if (q) {
+      router.push(`${config.targetRoute}?query=${encodeURIComponent(q)}`);
+    } else {
+      router.push(config.targetRoute);
+    }
+  };
+
   const handleMobileSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (mobileSearchQuery.trim()) {
-      router.push(`/explore-desktop?query=${encodeURIComponent(mobileSearchQuery.trim())}`);
+    const q = mobileSearchQuery.trim();
+    if (onSearch) {
+      onSearch(q);
+    }
+    const config = getSectionSearchConfig();
+    if (q) {
+      router.push(`${config.targetRoute}?query=${encodeURIComponent(q)}`);
     } else {
-      router.push("/explore-desktop");
+      router.push(config.targetRoute);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setMobileSearchQuery("");
+    if (onSearch) onSearch("");
+    const config = getSectionSearchConfig();
+    if (pathname === config.targetRoute) {
+      router.push(config.targetRoute);
     }
   };
 
@@ -458,6 +589,35 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
+          {/* Desktop Section-Aware Search Bar */}
+          {!shouldHideSearch && (
+            <form onSubmit={handleSearchSubmit} className={styles.desktopSearchBar}>
+              <Search size={16} className={styles.desktopSearchIcon} strokeWidth={2.2} />
+              <input
+                type="text"
+                placeholder={getSectionSearchConfig().placeholder}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setMobileSearchQuery(e.target.value);
+                  if (onSearch) onSearch(e.target.value);
+                }}
+                className={styles.desktopSearchInput}
+                aria-label={`Search in ${getSectionSearchConfig().section}`}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className={styles.desktopClearBtn}
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </form>
+          )}
+
           {/* 3. RIGHT SECTION */}
           <div className={styles.rightSection}>
             {/* Desktop Diet / Veg Selector Pill + Dropdown Popover */}
@@ -613,42 +773,234 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Profile Avatar (Desktop Only) */}
-            <button
-              type="button"
-              className={styles.profileAvatar}
-              onClick={handleProfileClick}
-              aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
-              title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
+            {/* Profile Avatar with Hover Dropdown (Desktop Only) */}
+            <div
+              className={styles.profileWrapper}
+              onMouseEnter={handleProfileMouseEnter}
+              onMouseLeave={handleProfileMouseLeave}
             >
-              {session?.user?.name ? (
+              <button
+                type="button"
+                className={styles.profileAvatar}
+                onClick={handleProfileClick}
+                aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
+                title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
+                aria-expanded={isProfileHoverOpen}
+              >
+                {session?.user?.name ? (
+                  <div className={styles.avatarInitial}>
+                    {session.user.name.trim().charAt(0).toUpperCase()}
+                  </div>
+                ) : (
+                  <Image
+                    src={profilePic}
+                    alt="Sign In"
+                    width={38}
+                    height={38}
+                    style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                  />
+                )}
+              </button>
+
+              {/* Profile Hover Dropdown Popover */}
+              {isProfileHoverOpen && (
                 <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: "50%",
-                    backgroundColor: "#FF5500",
-                    color: "#FFFFFF",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 700,
-                    fontSize: "15px",
-                    userSelect: "none",
-                  }}
+                  className={styles.profileDropdown}
+                  role="menu"
+                  aria-orientation="vertical"
+                  onMouseEnter={handleProfileMouseEnter}
+                  onMouseLeave={handleProfileMouseLeave}
                 >
-                  {session.user.name.trim().charAt(0).toUpperCase()}
+                  {!session?.user ? (
+                    // ================= GUEST / UNAUTHENTICATED STATE =================
+                    <div className={styles.profileGuestCard}>
+                      <div className={styles.profileGuestHeader}>
+                        <div className={styles.profileGreeting}>
+                          <span className={styles.profileWelcomeTitle}>Welcome</span>
+                          <span className={styles.profileWelcomeSub}>To access orders & account</span>
+                        </div>
+                      </div>
+
+                      {/* Primary Login CTA */}
+                      <Link
+                        href="/login"
+                        className={styles.profileLoginBtn}
+                        onClick={closeProfileMenu}
+                        role="menuitem"
+                      >
+                        <LogIn size={16} strokeWidth={2.4} />
+                        <span>Login</span>
+                      </Link>
+
+                      <div className={styles.profileSignupPrompt}>
+                        <span>New customer?</span>{" "}
+                        <Link
+                          href="/signup"
+                          className={styles.profileSignupLink}
+                          onClick={closeProfileMenu}
+                        >
+                          Sign Up
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDivider} />
+
+                      {/* Quick Nav Links */}
+                      <div className={styles.profileNavList}>
+                        <Link
+                          href="/orders-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Package size={16} className={styles.profileNavIcon} />
+                          <span>Orders & Reorders</span>
+                        </Link>
+
+                        <Link
+                          href="/seller/login"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Store size={16} className={styles.profileNavIcon} />
+                          <span>Seller / Partner Login</span>
+                        </Link>
+
+                        <Link
+                          href="/auth/login/delivery"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Bike size={16} className={styles.profileNavIcon} />
+                          <span>Delivery Partner</span>
+                        </Link>
+
+                        <Link
+                          href="/support"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <HelpCircle size={16} className={styles.profileNavIcon} />
+                          <span>Help & Support</span>
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    // ================= AUTHENTICATED USER STATE =================
+                    <div className={styles.profileAuthCard}>
+                      <div className={styles.profileUserHeader}>
+                        <div className={styles.profileUserAvatarCircle}>
+                          {session.user.name?.trim().charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <div className={styles.profileUserDetails}>
+                          <span className={styles.profileUserName}>{session.user.name || "User"}</span>
+                          <span className={styles.profileUserEmail}>
+                            {session.user.email || "Active Account"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={styles.profileDivider} />
+
+                      {/* Auth Nav Links */}
+                      <div className={styles.profileNavList}>
+                        <Link
+                          href="/settings-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Settings size={16} className={styles.profileNavIcon} />
+                          <span>My Profile & Settings</span>
+                        </Link>
+
+                        <Link
+                          href="/orders-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Package size={16} className={styles.profileNavIcon} />
+                          <span>My Orders</span>
+                        </Link>
+
+                        <Link
+                          href="/my-subscription"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Calendar size={16} className={styles.profileNavIcon} />
+                          <span>My Subscriptions</span>
+                        </Link>
+
+                        <Link
+                          href="/delivery-addresses-desktop"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <MapPin size={16} className={styles.profileNavIcon} />
+                          <span>Delivery Addresses</span>
+                        </Link>
+
+                        {(session.user as any)?.role === "SELLER" && (
+                          <Link
+                            href="/dashboard/seller"
+                            className={styles.profileNavItem}
+                            onClick={closeProfileMenu}
+                            role="menuitem"
+                          >
+                            <Store size={16} className={styles.profileNavIcon} />
+                            <span>Seller Dashboard</span>
+                          </Link>
+                        )}
+
+                        {((session.user as any)?.role === "ADMIN" || (session.user as any)?.role === "SUPERADMIN") && (
+                          <Link
+                            href="/dashboard/admin"
+                            className={styles.profileNavItem}
+                            onClick={closeProfileMenu}
+                            role="menuitem"
+                          >
+                            <Shield size={16} className={styles.profileNavIcon} />
+                            <span>Admin Console</span>
+                          </Link>
+                        )}
+
+                        <Link
+                          href="/support"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <HelpCircle size={16} className={styles.profileNavIcon} />
+                          <span>Help & Support</span>
+                        </Link>
+                      </div>
+
+                      <div className={styles.profileDivider} />
+
+                      <button
+                        type="button"
+                        className={styles.profileLogoutBtn}
+                        onClick={() => {
+                          closeProfileMenu();
+                          performLogout({ role: (session.user as any)?.role });
+                        }}
+                        role="menuitem"
+                      >
+                        <LogOut size={16} strokeWidth={2.2} />
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <Image
-                  src={profilePic}
-                  alt="Sign In"
-                  width={38}
-                  height={38}
-                  style={{ objectFit: "cover", width: "100%", height: "100%" }}
-                />
               )}
-            </button>
+            </div>
           </div>
         </div>
 
@@ -660,22 +1012,40 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Search size={18} color="#FF5500" strokeWidth={2.5} />
                 <input
                   type="text"
-                  placeholder="near by home meals..."
+                  placeholder={getSectionSearchConfig().placeholder}
                   value={mobileSearchQuery}
-                  onChange={(e) => setMobileSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setMobileSearchQuery(e.target.value);
+                    setSearchQuery(e.target.value);
+                    if (onSearch) onSearch(e.target.value);
+                  }}
                   className={styles.mobileSearchInput}
+                  aria-label={`Search in ${getSectionSearchConfig().section}`}
                 />
-                <button
-                  type="button"
-                  className={styles.mobileFilterBtn}
-                  onClick={() => setIsFilterModalOpen(true)}
-                  aria-label="Open filter options"
-                >
-                  <SlidersHorizontal size={18} color="#FF5500" strokeWidth={2.2} />
-                  {activeFiltersCount > 0 && (
-                    <span className={styles.filterDotBadge} />
-                  )}
-                </button>
+                {mobileSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className={styles.desktopClearBtn}
+                    aria-label="Clear mobile search"
+                    style={{ marginRight: "4px" }}
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+                {getSectionSearchConfig().section === "Food" && (
+                  <button
+                    type="button"
+                    className={styles.mobileFilterBtn}
+                    onClick={() => setIsFilterModalOpen(true)}
+                    aria-label="Open filter options"
+                  >
+                    <SlidersHorizontal size={18} color="#FF5500" strokeWidth={2.2} />
+                    {activeFiltersCount > 0 && (
+                      <span className={styles.filterDotBadge} />
+                    )}
+                  </button>
+                )}
               </form>
             )}
 

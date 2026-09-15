@@ -6,81 +6,42 @@ import { Plus, Search, SquarePen, Sparkles, Trash2 } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./SellerMenu.module.css";
 
 export type MenuCategoryFilter =
   | "All Items"
-  | "Veg Only"
+  | "Veg"
   | "Non-Veg"
+  | "Jain"
+  | "Vegan"
   | "Desserts"
   | "Beverages";
+
+export function parseFoodTypes(itemTypeStr?: string): Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN"> {
+  if (!itemTypeStr) return ["VEG"];
+  const parts = String(itemTypeStr).split(",").map((s) => s.trim().toUpperCase());
+  if (parts.includes("NON_VEG") || parts.includes("NON-VEG") || parts.includes("NON VEG")) {
+    return ["NON-VEG"];
+  }
+  const result: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN"> = [];
+  if (parts.includes("VEG")) result.push("VEG");
+  if (parts.includes("VEGAN")) result.push("VEGAN");
+  if (parts.includes("JAIN")) result.push("JAIN");
+  return result.length > 0 ? result : ["VEG"];
+}
 
 export interface DishItem {
   id: string;
   name: string;
   category: string;
   price: string;
-  type: "VEG" | "NON-VEG";
+  type: "VEG" | "NON-VEG" | "JAIN" | "VEGAN";
+  types: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN">;
+  variantsCount?: number;
   stockQty: number;
   inStock: boolean;
 }
-
-const DEFAULT_DISHES: DishItem[] = [
-  {
-    id: "1",
-    name: "Special Butter Chicken",
-    category: "North Indian",
-    price: "₹380",
-    type: "NON-VEG",
-    stockQty: 24,
-    inStock: true,
-  },
-  {
-    id: "2",
-    name: "Veg Hakka Noodles",
-    category: "Chinese",
-    price: "₹220",
-    type: "VEG",
-    stockQty: 18,
-    inStock: true,
-  },
-  {
-    id: "3",
-    name: "Paneer Butter Masala",
-    category: "North Indian",
-    price: "₹310",
-    type: "VEG",
-    stockQty: 32,
-    inStock: true,
-  },
-  {
-    id: "4",
-    name: "Double Cheese Margherita Pizza",
-    category: "Italian",
-    price: "₹350",
-    type: "VEG",
-    stockQty: 0,
-    inStock: false,
-  },
-  {
-    id: "5",
-    name: "Moong Dal Halwa",
-    category: "Desserts",
-    price: "₹150",
-    type: "VEG",
-    stockQty: 4,
-    inStock: true,
-  },
-  {
-    id: "6",
-    name: "Spicy Chilli Chicken",
-    category: "Chinese",
-    price: "₹290",
-    type: "NON-VEG",
-    stockQty: 12,
-    inStock: true,
-  },
-];
 
 export interface SellerMenuProps {
   ownerName?: string;
@@ -97,11 +58,11 @@ export interface SellerMenuProps {
 }
 
 export const SellerMenu: React.FC<SellerMenuProps> = ({
-  ownerName = "John Doe",
-  partnerRole = "Neo Cloud Partner",
-  avatarInitials = "JD",
+  ownerName: initialOwnerName,
+  partnerRole: initialPartnerRole,
+  avatarInitials: initialAvatarInitials,
   storeTimings = "07:00 AM - 11:30 PM",
-  operationalPincodes = "110001, 110022, 110045",
+  operationalPincodes,
   initialIsOpen = true,
   dishes,
   onSearch,
@@ -110,14 +71,18 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   onToggleStore,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(initialIsOpen);
   const [selectedCategory, setSelectedCategory] = useState<MenuCategoryFilter>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dishList, setDishList] = useState<DishItem[]>(dishes || DEFAULT_DISHES);
-  const [pincodesStr, setPincodesStr] = useState(operationalPincodes);
-  const [sellerName, setSellerName] = useState(ownerName);
+  const [dishList, setDishList] = useState<DishItem[]>(dishes || []);
+  const [pincodesStr, setPincodesStr] = useState(operationalPincodes || seller.pincode || "Not configured");
   const [loading, setLoading] = useState(true);
+
+  const ownerName = initialOwnerName || seller.ownerName;
+  const partnerRole = initialPartnerRole || seller.partnerRole;
+  const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   // Fetch live menu items from DB
   useEffect(() => {
@@ -128,23 +93,35 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         if (res.ok) {
           const data = await res.json();
           if (data && data.items && Array.isArray(data.items) && isMounted) {
-            if (data.items.length > 0) {
-              const mapped: DishItem[] = data.items.map((item: any) => ({
+            const mapped: DishItem[] = data.items.map((item: any) => {
+              let variantsCount = 0;
+              if (item.variants) {
+                try {
+                  const parsed = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants;
+                  if (Array.isArray(parsed)) variantsCount = parsed.length;
+                } catch {}
+              }
+
+              const foodTypes = parseFoodTypes(item.itemType);
+
+              return {
                 id: item.id,
                 name: item.name,
                 category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
                 price: `₹${item.price}`,
-                type: item.itemType === "NON_VEG" ? "NON-VEG" : "VEG",
+                type: foodTypes[0] || "VEG",
+                types: foodTypes,
+                variantsCount,
                 stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
                 inStock: item.isAvailable,
-              }));
-              setDishList(mapped);
-            }
+              };
+            });
+            setDishList(mapped);
+
             if (data.servedPincodes && Array.isArray(data.servedPincodes) && data.servedPincodes.length > 0) {
               setPincodesStr(data.servedPincodes.map((sp: any) => sp.pincode).join(", "));
             }
             if (data.seller) {
-              if (data.seller.businessName) setSellerName(data.seller.businessName);
               if (typeof data.seller.isOnline === "boolean") setIsOpen(data.seller.isOnline);
             }
           }
@@ -163,8 +140,10 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
 
   const categories: MenuCategoryFilter[] = [
     "All Items",
-    "Veg Only",
+    "Veg",
     "Non-Veg",
+    "Jain",
+    "Vegan",
     "Desserts",
     "Beverages",
   ];
@@ -229,8 +208,10 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   // Filter Dishes by Category and Search
   const filteredDishes = dishList.filter((dish) => {
     // 1. Category Filter
-    if (selectedCategory === "Veg Only" && dish.type !== "VEG") return false;
-    if (selectedCategory === "Non-Veg" && dish.type !== "NON-VEG") return false;
+    if (selectedCategory === "Veg" && !dish.types?.includes("VEG")) return false;
+    if (selectedCategory === "Non-Veg" && !dish.types?.includes("NON-VEG")) return false;
+    if (selectedCategory === "Jain" && !dish.types?.includes("JAIN")) return false;
+    if (selectedCategory === "Vegan" && !dish.types?.includes("VEGAN")) return false;
     if (selectedCategory === "Desserts" && dish.category !== "Desserts") return false;
     if (selectedCategory === "Beverages" && dish.category !== "Beverages") return false;
 
@@ -261,6 +242,9 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         activeItemId="menu"
         isMobileOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        ownerName={ownerName}
+        partnerRole={partnerRole}
+        avatarInitials={avatarInitials}
       />
 
       {/* 2. Right Content Section */}
@@ -268,10 +252,13 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
         {/* Top Navbar */}
         <Topbar
           title="Owner Operations Console"
-          ownerName={sellerName}
+          ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            if (onSearch) onSearch(q);
+          }}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -322,47 +309,45 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
               </div>
             </div>
 
-            {/* Vertical Divider */}
-            <div className={styles.verticalDivider} />
+            <div className={styles.opDivider} />
 
             {/* Store Timings */}
-            <div className={styles.opMetaGroup}>
-              <span className={styles.opMetaHeader}>STORE TIMINGS</span>
-              <span className={styles.opMetaValue}>{storeTimings}</span>
+            <div className={styles.opItem}>
+              <span className={styles.opLabel}>Store Timings:</span>
+              <span className={styles.opValue}>{storeTimings}</span>
             </div>
 
-            {/* Vertical Divider */}
-            <div className={styles.verticalDivider} />
+            <div className={styles.opDivider} />
 
             {/* Operational Pincodes */}
-            <div className={styles.opMetaGroup}>
-              <span className={styles.opMetaHeader}>OPERATIONAL PINCODES</span>
-              <span className={styles.opMetaValue}>{pincodesStr}</span>
+            <div className={styles.opItem}>
+              <span className={styles.opLabel}>Operational Pincodes:</span>
+              <span className={styles.opValue}>{pincodesStr}</span>
             </div>
           </div>
 
-          {/* 3. Search and Category Filter Row */}
-          <div className={styles.searchFilterRow}>
-            {/* Search Input Box */}
-            <div className={styles.searchInputWrapper}>
-              <Search size={17} className={styles.searchIcon} />
+          {/* 3. Search Bar + Category Tabs Row */}
+          <div className={styles.filtersRow}>
+            {/* Search Input */}
+            <div className={styles.searchBox}>
+              <Search size={16} className={styles.searchIcon} />
               <input
                 type="text"
-                placeholder="Search food items..."
+                placeholder="Search dish by name..."
                 value={searchQuery}
-                onChange={handleSearchChange}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className={styles.searchInput}
               />
             </div>
 
-            {/* Category Filter Pills */}
-            <div className={styles.categoryPillsGroup}>
+            {/* Category Filter Tabs */}
+            <div className={styles.categoryTabs}>
               {categories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`${styles.categoryPill} ${selectedCategory === cat ? styles.activeCategoryPill : ""
+                  className={`${styles.categoryTab} ${selectedCategory === cat ? styles.categoryTabActive : ""
                     }`}
                 >
                   {cat}
@@ -386,7 +371,14 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDishes.map((dish) => (
+                  {filteredDishes.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b", fontSize: "14px" }}>
+                        {loading ? "Loading menu items..." : "No dishes found. Click '+ Add New Dish' to add dishes to your menu."}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDishes.map((dish) => (
                     <tr key={dish.id}>
                       {/* Dish Name with Edit & Delete Icon Buttons */}
                       <td>
@@ -410,7 +402,14 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                           >
                             <Trash2 size={16} strokeWidth={2.2} />
                           </button>
-                          <span className={styles.dishNameText}>{dish.name}</span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <span className={styles.dishNameText}>{dish.name}</span>
+                            {dish.variantsCount && dish.variantsCount > 0 ? (
+                              <span style={{ fontSize: "0.72rem", color: "#EA580C", fontWeight: 600 }}>
+                                {dish.variantsCount} {dish.variantsCount === 1 ? "variant" : "variants"} available
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
 
@@ -420,23 +419,42 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                       {/* Price */}
                       <td className={styles.priceText}>{dish.price}</td>
 
-                      {/* Type (VEG / NON-VEG badge) */}
+                      {/* Type (VEG / NON-VEG / JAIN / VEGAN badge) */}
                       <td>
-                        {dish.type === "VEG" ? (
-                          <div className={`${styles.typeBadge} ${styles.typeVeg}`}>
-                            <div className={styles.vegSymbol}>
-                              <div className={styles.vegDot} />
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                          {dish.types?.includes("VEG") && (
+                            <div className={`${styles.typeBadge} ${styles.typeVeg}`}>
+                              <div className={styles.vegSymbol}>
+                                <div className={styles.vegDot} />
+                              </div>
+                              <span>VEG</span>
                             </div>
-                            <span>VEG</span>
-                          </div>
-                        ) : (
-                          <div className={`${styles.typeBadge} ${styles.typeNonVeg}`}>
-                            <div className={styles.nonVegSymbol}>
-                              <div className={styles.nonVegDot} />
+                          )}
+                          {dish.types?.includes("NON-VEG") && (
+                            <div className={`${styles.typeBadge} ${styles.typeNonVeg}`}>
+                              <div className={styles.nonVegSymbol}>
+                                <div className={styles.nonVegDot} />
+                              </div>
+                              <span>NON-VEG</span>
                             </div>
-                            <span>NON-VEG</span>
-                          </div>
-                        )}
+                          )}
+                          {dish.types?.includes("VEGAN") && (
+                            <div className={`${styles.typeBadge} ${styles.typeVegan}`}>
+                              <div className={styles.veganSymbol}>
+                                <div className={styles.veganDot} />
+                              </div>
+                              <span>VEGAN</span>
+                            </div>
+                          )}
+                          {dish.types?.includes("JAIN") && (
+                            <div className={`${styles.typeBadge} ${styles.typeJain}`}>
+                              <div className={styles.jainSymbol}>
+                                <div className={styles.jainDot} />
+                              </div>
+                              <span>JAIN</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Stock Qty */}
@@ -479,10 +497,11 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
           </div>
         </main>
       </div>

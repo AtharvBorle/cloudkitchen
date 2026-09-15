@@ -519,7 +519,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <Store size={14} color="#EA580C" />
               <span>Partner with us?</span>
               <Link
-                href="/auth/login/seller"
+                href="/seller/login"
                 style={{
                   color: "#EA580C",
                   fontWeight: 600,

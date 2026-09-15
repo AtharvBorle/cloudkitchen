@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, Calendar, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveBooking.module.css";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export type BookingStatusTab = "Requested" | "Confirmed" | "Paid";
 
@@ -29,62 +30,12 @@ export interface ResponsiveBookingProps {
   onSyncDevices?: () => void;
 }
 
-const DEFAULT_BOOKINGS: ResponsiveBookingItem[] = [
-  {
-    id: "B-2047",
-    guestName: "Aarav Mehta",
-    roomName: "Deluxe Suite",
-    dateRange: "Aug 28 - Sep 1",
-    amount: "₹10,500",
-    status: "Requested",
-  },
-  {
-    id: "B-2048",
-    guestName: "Sneha Reddy",
-    roomName: "Superior Room",
-    dateRange: "Sep 03 - Sep 05",
-    amount: "₹9,200",
-    status: "Requested",
-  },
-  {
-    id: "B-2049",
-    guestName: "Dev Bajwa",
-    roomName: "Executive Suite",
-    dateRange: "Sep 12 - Sep 15",
-    amount: "₹24,000",
-    status: "Requested",
-  },
-  {
-    id: "B-2050",
-    guestName: "Vikram Malhotra",
-    roomName: "Presidential Suite",
-    dateRange: "Sep 18 - Sep 22",
-    amount: "₹35,000",
-    status: "Confirmed",
-  },
-  {
-    id: "B-2051",
-    guestName: "Ananya Deshmukh",
-    roomName: "Deluxe Suite",
-    dateRange: "Sep 25 - Sep 28",
-    amount: "₹16,500",
-    status: "Confirmed",
-  },
-  {
-    id: "B-2052",
-    guestName: "Kabir Singhania",
-    roomName: "Ocean View Studio",
-    dateRange: "Oct 01 - Oct 04",
-    amount: "₹21,000",
-    status: "Paid",
-  },
-];
-
 const TABS: BookingStatusTab[] = ["Requested", "Confirmed", "Paid"];
+const EMPTY_BOOKINGS: ResponsiveBookingItem[] = [];
 
 export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
-  ownerName = "Rahul Sharma",
-  bookings = DEFAULT_BOOKINGS,
+  ownerName,
+  bookings = EMPTY_BOOKINGS,
   initialTab = "Requested",
   onConfirm,
   onDecline,
@@ -92,9 +43,24 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
+      ? ownerName
+      : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<BookingStatusTab>(initialTab);
   const [bookingList, setBookingList] = useState<ResponsiveBookingItem[]>(bookings);
+
+  useEffect(() => {
+    if (bookings && bookings !== EMPTY_BOOKINGS) {
+      setBookingList(bookings);
+    }
+  }, [bookings]);
 
   const handleViewDetails = (booking: ResponsiveBookingItem) => {
     if (onViewDetails) {
@@ -157,7 +123,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeItemId="bookings"
-        ownerName={ownerName}
+        ownerName={effectiveOwnerName}
         onSyncDevices={onSyncDevices}
       />
 
