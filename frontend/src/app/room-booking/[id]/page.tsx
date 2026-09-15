@@ -12,6 +12,7 @@ export default async function RoomDetailPage({
 
   return (
     <RoomDetailDesktop
+      roomId={id}
       navbarProps={{
         initialActiveItem: "Rooms",
       }}

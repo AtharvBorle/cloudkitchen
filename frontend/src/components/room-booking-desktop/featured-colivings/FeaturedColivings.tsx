@@ -65,18 +65,49 @@ const DEFAULT_COLIVINGS: ColivingCardItem[] = [
 export interface FeaturedColivingsProps {
   heading?: string;
   cards?: ColivingCardItem[];
+  rooms?: any[];
   onBookRoom?: (card: ColivingCardItem) => void;
 }
 
 export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
   heading = "Featured Premium co-livings",
   cards: propCards,
+  rooms: propRooms,
   onBookRoom,
 }) => {
   const router = useRouter();
   const [dynamicCards, setDynamicCards] = useState<ColivingCardItem[]>([]);
 
   useEffect(() => {
+    if (propRooms && propRooms.length > 0) {
+      const mapped: ColivingCardItem[] = propRooms.slice(0, 4).map((r: any, idx: number) => {
+        let imgUrl: string | StaticImageData = idx % 2 === 0 ? neoLivingImg : comfortStayImg;
+        if (r.images) {
+          try {
+            const parsed = typeof r.images === "string" ? JSON.parse(r.images) : r.images;
+            if (Array.isArray(parsed) && parsed[0]) imgUrl = parsed[0];
+          } catch {
+            if (typeof r.images === "string" && r.images.startsWith("http")) imgUrl = r.images;
+          }
+        }
+        const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+        const city = r.sellerCity || r.seller?.user?.city || "Pune";
+
+        return {
+          id: r.id,
+          title: r.title || "Neo Luxury Living",
+          location: `${locality}, ${city}`,
+          startingLabel: "STARTING FROM",
+          price: `₹${Number(r.price || 5500).toLocaleString("en-IN")}/night`,
+          tags: ["WiFi", "AC", "Meals Included", `${r.capacity || 2} Guests`],
+          buttonText: "Book Room",
+          image: imgUrl,
+        };
+      });
+      setDynamicCards(mapped);
+      return;
+    }
+
     async function loadFeatured() {
       try {
         const res = await fetchApi("/api/public/rooms");
@@ -94,10 +125,13 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
                   if (typeof r.images === "string" && r.images.startsWith("http")) imgUrl = r.images;
                 }
               }
+              const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+              const city = r.sellerCity || r.seller?.user?.city || "Pune";
+
               return {
                 id: r.id,
                 title: r.title || "Neo Luxury Living",
-                location: `${r.seller?.addressLocality || "Kothrud"}, ${r.seller?.addressCity || "Pune"}`,
+                location: `${locality}, ${city}`,
                 startingLabel: "STARTING FROM",
                 price: `₹${Number(r.price || 5500).toLocaleString("en-IN")}/night`,
                 tags: ["WiFi", "AC", "Meals Included", `${r.capacity || 2} Guests`],
@@ -113,7 +147,7 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
       }
     }
     loadFeatured();
-  }, []);
+  }, [propRooms]);
 
   const displayCards =
     propCards || (dynamicCards.length > 0 ? dynamicCards : DEFAULT_COLIVINGS);

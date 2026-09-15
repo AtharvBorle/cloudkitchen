@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Menu,
   Bell,
@@ -116,18 +117,120 @@ const CATEGORIES = [
   { id: "flat", label: "1BHK Flat" },
 ];
 
-export const RoomBookingMobileView: React.FC = () => {
+export interface RoomBookingMobileViewProps {
+  rooms?: any[];
+}
+
+export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
+  rooms: propRooms,
+}) => {
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLang, setSelectedLang] = useState("en");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
-  const [favorites, setFavorites] = useState<Record<string, boolean>>({
-    "room-1": false,
-    "room-2": false,
-    "room-3": false,
-    "room-4": false,
-  });
+  const [dynamicRooms, setDynamicRooms] = useState<MobileRoomCard[]>([]);
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (propRooms && propRooms.length > 0) {
+      const mapped: MobileRoomCard[] = propRooms.map((r: any, idx: number) => {
+        let imgUrl: string | StaticImageData =
+          idx % 4 === 0
+            ? neoLivingImg
+            : idx % 4 === 1
+            ? comfortStayImg
+            : idx % 4 === 2
+            ? executiveDoubleImg
+            : premiumSingleImg;
+
+        if (r.images) {
+          try {
+            const parsed = typeof r.images === "string" ? JSON.parse(r.images) : r.images;
+            if (Array.isArray(parsed) && parsed[0]) imgUrl = parsed[0];
+          } catch {
+            if (typeof r.images === "string" && r.images.startsWith("http")) imgUrl = r.images;
+          }
+        }
+
+        const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+        const city = r.sellerCity || r.seller?.user?.city || "Pune";
+        const cap = Number(r.capacity) || 2;
+        const cat = cap === 1 ? "single" : cap === 2 ? "shared" : cap >= 4 ? "hostel" : "flat";
+
+        return {
+          id: r.id,
+          title: r.title || "Neo Luxury Living PG",
+          location: `${locality}, ${city}`,
+          rating: Number(r.rating || 4.8),
+          reviewCount: Number(r.reviewCount || 18),
+          overallScore: Number(r.rating || 4.8),
+          price: `₹${Number(r.price || 3500).toLocaleString("en-IN")}/night`,
+          tags: ["Wi-Fi", `${cap} Guests`, "Meals Available"],
+          image: imgUrl,
+          category: cat,
+        };
+      });
+      setDynamicRooms(mapped);
+      return;
+    }
+
+    async function loadRooms() {
+      try {
+        const res = await fetchApi("/api/public/rooms");
+        if (res.ok) {
+          const json = await res.json();
+          const list = json.data || json;
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: MobileRoomCard[] = list.map((r: any, idx: number) => {
+              let imgUrl: string | StaticImageData =
+                idx % 4 === 0
+                  ? neoLivingImg
+                  : idx % 4 === 1
+                  ? comfortStayImg
+                  : idx % 4 === 2
+                  ? executiveDoubleImg
+                  : premiumSingleImg;
+
+              if (r.images) {
+                try {
+                  const parsed = typeof r.images === "string" ? JSON.parse(r.images) : r.images;
+                  if (Array.isArray(parsed) && parsed[0]) imgUrl = parsed[0];
+                } catch {
+                  if (typeof r.images === "string" && r.images.startsWith("http")) imgUrl = r.images;
+                }
+              }
+
+              const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+              const city = r.sellerCity || r.seller?.user?.city || "Pune";
+              const cap = Number(r.capacity) || 2;
+              const cat = cap === 1 ? "single" : cap === 2 ? "shared" : cap >= 4 ? "hostel" : "flat";
+
+              return {
+                id: r.id,
+                title: r.title || "Neo Luxury Living PG",
+                location: `${locality}, ${city}`,
+                rating: Number(r.rating || 4.8),
+                reviewCount: Number(r.reviewCount || 18),
+                overallScore: Number(r.rating || 4.8),
+                price: `₹${Number(r.price || 3500).toLocaleString("en-IN")}/night`,
+                tags: ["Wi-Fi", `${cap} Guests`, "Meals Available"],
+                image: imgUrl,
+                category: cat,
+              };
+            });
+            setDynamicRooms(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load mobile rooms:", err);
+      }
+    }
+    loadRooms();
+  }, [propRooms]);
+
+  const rawRooms = dynamicRooms.length > 0 ? dynamicRooms : SAMPLE_ROOMS;
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -144,7 +247,7 @@ export const RoomBookingMobileView: React.FC = () => {
     return found ? found.code : "EN";
   };
 
-  const filteredRooms = SAMPLE_ROOMS.filter((room) => {
+  const filteredRooms = rawRooms.filter((room) => {
     const matchesCategory =
       selectedCategory === "all" || room.category === selectedCategory;
     const matchesSearch =
@@ -375,7 +478,12 @@ export const RoomBookingMobileView: React.FC = () => {
                     <span className={styles.priceValue}>{room.price}</span>
                   </div>
 
-                  <button className={styles.bookBtn}>Book Room</button>
+                  <button
+                    className={styles.bookBtn}
+                    onClick={() => router.push(`/room-booking/${room.id}`)}
+                  >
+                    Book Room
+                  </button>
                 </div>
               </div>
             </article>

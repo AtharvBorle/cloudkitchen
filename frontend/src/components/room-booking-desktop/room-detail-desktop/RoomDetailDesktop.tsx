@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,9 +20,10 @@ import {
   User,
   Info,
 } from "lucide-react";
-import { Navbar, NavbarProps } from "@/components/room-booking-desktop/navbar";
+import { Navbar, NavbarProps } from "@/components/navbar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { Menu, ArrowLeft } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./RoomDetailDesktop.module.css";
 import roomGalleryBanner from "./room-gallery-banner.png";
 import roomImg1 from "../featured-colivings/neo-living-room.jpg";
@@ -59,6 +60,7 @@ export interface RoomDetailData {
   amenities: { name: string; icon: string }[];
   houseRules?: string[];
   reviews?: ReviewItem[];
+  images?: string[];
   priceBreakdown: {
     roomCharges: string;
     serviceFee: string;
@@ -68,6 +70,7 @@ export interface RoomDetailData {
 }
 
 export interface RoomDetailDesktopProps {
+  roomId?: string;
   navbarProps?: NavbarProps;
   roomData?: RoomDetailData;
   children?: React.ReactNode;
@@ -133,8 +136,9 @@ const DEFAULT_ROOM_DATA: RoomDetailData = {
 };
 
 export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
+  roomId,
   navbarProps,
-  roomData = DEFAULT_ROOM_DATA,
+  roomData: propRoomData,
   children,
 }) => {
   const router = useRouter();
@@ -142,6 +146,80 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
   const [checkInDate, setCheckInDate] = useState("Oct 15, 2026");
   const [checkOutDate, setCheckOutDate] = useState("Oct 30, 2026");
   const [guestCount, setGuestCount] = useState("1 Guest");
+  const [fetchedRoomData, setFetchedRoomData] = useState<RoomDetailData | null>(null);
+  const [loading, setLoading] = useState(Boolean(roomId));
+
+  useEffect(() => {
+    if (!roomId) return;
+    async function loadRoomDetails() {
+      try {
+        setLoading(true);
+        const res = await fetchApi(`/api/public/rooms/${roomId}`);
+        if (res.ok) {
+          const json = await res.json();
+          const r = json.data || json;
+          if (r) {
+            const cap = Number(r.capacity) || 1;
+            const price = Number(r.price) || 2800;
+            const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+            const city = r.sellerCity || r.seller?.user?.city || "Pune";
+
+            setFetchedRoomData({
+              id: r.id,
+              name: r.title || "Deluxe AC Room",
+              roomTag: cap === 1 ? "Single Room" : cap === 2 ? "Double Sharing" : `${cap} Guests Sharing`,
+              rating: Number(r.rating || 4.8),
+              reviewsCount: `(${r.reviewCount || r.reviews?.length || 12} reviews)`,
+              location: `${locality}, ${city}`,
+              address: r.sellerLandmark ? `${locality} (Near ${r.sellerLandmark})` : locality,
+              city: city,
+              pricePerMonth: `₹${price.toLocaleString("en-IN")}`,
+              availableFrom: "Immediate / Today",
+              roomSize: `${cap * 120} sq ft`,
+              occupancy: cap === 1 ? "Single" : `${cap} Persons`,
+              floor: "1st Floor",
+              furnished: "Fully Furnished",
+              depositAmount: `₹${(price * 2).toLocaleString("en-IN")}`,
+              description:
+                r.description ||
+                "Comfortable, modern and secure living space with quality fittings, high-speed WiFi, dedicated desk, and power backup.",
+              amenities: [
+                { name: "WiFi", icon: "wifi" },
+                { name: "AC", icon: "ac" },
+                { name: "Daily Cleaning", icon: "kitchen" },
+                { name: "Hot Water", icon: "hotwater" },
+                { name: "Power Backup", icon: "power" },
+                { name: "CCTV Security", icon: "security" },
+              ],
+              houseRules: [
+                "No smoking inside room premises",
+                "Visitors allowed during daytime hours",
+                "Maintain cleanliness in common spaces",
+              ],
+              sellerId: r.sellerId || r.seller?.id,
+              sellerName: r.seller?.restaurantName || r.sellerName || "Host",
+              capacity: cap,
+              images: r.images,
+              reviews: r.reviews?.length > 0 ? r.reviews : DEFAULT_ROOM_DATA.reviews,
+              priceBreakdown: {
+                roomCharges: `₹${price.toLocaleString("en-IN")}`,
+                serviceFee: "₹150",
+                cleaningFee: "₹100",
+                total: `₹${(price + 250).toLocaleString("en-IN")}`,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load room details:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadRoomDetails();
+  }, [roomId]);
+
+  const roomData = propRoomData || fetchedRoomData || DEFAULT_ROOM_DATA;
 
   const renderAmenityIcon = (iconName: string) => {
     switch (iconName) {
@@ -166,6 +244,21 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
   };
 
   const handleBooking = () => {
+    try {
+      const activeData = {
+        id: roomData.id,
+        title: roomData.name,
+        price: Number(roomData.pricePerMonth.replace(/[^0-9]/g, "")) || 2800,
+        sellerId: (roomData as any).sellerId,
+        sellerName: (roomData as any).sellerName || roomData.name,
+        description: roomData.description,
+        capacity: (roomData as any).capacity || 1,
+        images: roomData.images,
+      };
+      sessionStorage.setItem("active_room_booking", JSON.stringify(activeData));
+    } catch (e) {
+      console.error(e);
+    }
     router.push(`/dashboard/user/checkout?type=room&roomId=${roomData.id}`);
   };
 
@@ -224,20 +317,30 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
         {/* Photo Gallery Grid Showcase */}
         <section aria-label="Room Photo Gallery" className={styles.galleryContainer}>
-          <Image
-            src={roomGalleryBanner}
-            alt={roomData.name}
-            priority
-            sizes="(max-width: 1400px) 100vw, 1400px"
-            className={styles.galleryBannerImg}
-          />
+          {roomData.images && roomData.images.length > 0 && typeof roomData.images[0] === "string" ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={roomData.images[0]}
+              alt={roomData.name}
+              className={styles.galleryBannerImg}
+              style={{ width: "100%", maxHeight: "420px", objectFit: "cover", borderRadius: "16px" }}
+            />
+          ) : (
+            <Image
+              src={roomGalleryBanner}
+              alt={roomData.name}
+              priority
+              sizes="(max-width: 1400px) 100vw, 1400px"
+              className={styles.galleryBannerImg}
+            />
+          )}
           <button
             type="button"
             className={styles.viewAllPhotosBtn}
-            onClick={() => alert("Opening full 18-photo high-res gallery")}
+            onClick={() => alert("Opening full photo gallery")}
           >
             <Grid size={15} />
-            <span>View all 18 photos</span>
+            <span>View all {roomData.images?.length || 4} photos</span>
           </button>
         </section>
 
