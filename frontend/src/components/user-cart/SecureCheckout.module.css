@@ -246,6 +246,14 @@
   font-weight: 700;
   color: #0F172A;
   margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.requiredStar {
+  color: #EF4444;
+  margin-left: 3px;
+  font-weight: 700;
 }
 
 .inputWrapper {
@@ -260,7 +268,7 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .inputWrapper:focus-within {
@@ -268,9 +276,20 @@
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
+.inputWrapperError {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
+}
+
+.inputWrapperError .fieldIcon {
+  color: #EF4444 !important;
+}
+
 .fieldIcon {
   color: #64748B;
   flex-shrink: 0;
+  transition: color 0.15s ease;
 }
 
 .fieldInput {
@@ -290,6 +309,12 @@
 .fieldInput::placeholder {
   color: #94A3B8;
   font-weight: 400;
+  transition: color 0.15s ease;
+}
+
+.fieldInputError::placeholder {
+  color: #DC2626 !important;
+  font-weight: 500 !important;
 }
 
 .fieldInputNoIcon {
@@ -306,12 +331,40 @@
   width: 100%;
   min-width: 0;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .fieldInputNoIcon:focus {
   border-color: #F97316;
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.fieldInputNoIcon::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+  transition: color 0.15s ease;
+}
+
+.fieldInputNoIconError {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
+}
+
+.fieldInputNoIconError::placeholder {
+  color: #DC2626 !important;
+  font-weight: 500 !important;
+}
+
+.errorMessage {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #DC2626;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  line-height: 1.2;
 }
 
 /* Payment Methods Stack */
@@ -746,6 +799,15 @@
   animation: slideUp 0.2s ease-out;
   max-width: 90vw;
   box-sizing: border-box;
+}
+
+.toastError {
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 8px 30px rgba(239, 68, 68, 0.25);
+}
+
+.toastSuccess {
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 @keyframes slideUp {

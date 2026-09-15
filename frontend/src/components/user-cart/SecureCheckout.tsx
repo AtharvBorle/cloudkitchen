@@ -14,6 +14,8 @@ import {
   Banknote,
   ArrowRight,
   CheckCircle2,
+  XCircle,
+  AlertCircle,
   Sparkles,
   ShoppingBag,
   Clock,
@@ -71,6 +73,13 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [city, setCity] = useState<string>(initialCity);
   const [postalCode, setPostalCode] = useState<string>(initialPincode);
   const [deliveryInstructions, setDeliveryInstructions] = useState<string>("");
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    phoneNumber?: string;
+    streetAddress?: string;
+    city?: string;
+    postalCode?: string;
+  }>({});
 
   useEffect(() => {
     if (session?.user) {
@@ -102,6 +111,69 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
   }, [status]);
 
+  const handleFieldChange = (
+    field: "fullName" | "phoneNumber" | "streetAddress" | "city" | "postalCode",
+    value: string,
+    setter: (v: string) => void
+  ) => {
+    setter(value);
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const validateFields = () => {
+    const newErrors: {
+      fullName?: string;
+      phoneNumber?: string;
+      streetAddress?: string;
+      city?: string;
+      postalCode?: string;
+    } = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = "Please enter your full name";
+    }
+
+    if (!phoneNumber.trim()) {
+      newErrors.phoneNumber = "Please enter your 10-digit mobile number";
+    } else if (!/^[0-9]{10}$/.test(phoneNumber.trim().replace(/\D/g, ""))) {
+      newErrors.phoneNumber = "Please enter a valid 10-digit mobile number";
+    }
+
+    if (!streetAddress.trim()) {
+      newErrors.streetAddress = "Please enter your complete street address";
+    }
+
+    if (!city.trim()) {
+      newErrors.city = "Please enter your city";
+    }
+
+    if (!postalCode.trim()) {
+      newErrors.postalCode = "Please enter your 6-digit postal code";
+    } else if (!/^[0-9]{6}$/.test(postalCode.trim().replace(/\D/g, ""))) {
+      newErrors.postalCode = "Please enter a valid 6-digit PIN code";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      const firstKey = Object.keys(newErrors)[0];
+      const element = document.getElementById(`${firstKey}Input`);
+      if (element) {
+        element.focus();
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return false;
+    }
+
+    return true;
+  };
+
   // Payment Method Selection ('UPI' | 'COD')
   const [paymentMethod, setPaymentMethod] = useState<"UPI" | "COD">("UPI");
 
@@ -119,13 +191,19 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Toast Notification
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "info" = "success"
+  ) => {
+    setToast({ message, type });
     setTimeout(() => {
-      setToastMessage(null);
-    }, 2800);
+      setToast(null);
+    }, 3000);
   };
 
   // Active items derived from CartContext if present
@@ -150,20 +228,20 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const handleApplyToggle = () => {
     if (isPromoApplied) {
       setIsPromoApplied(false);
-      showToast("Promo code removed");
+      showToast("Promo code removed", "info");
     } else {
       if (!promoCode.trim()) {
-        showToast("Please enter a promo code");
+        showToast("Please enter a promo code", "error");
         return;
       }
       setIsPromoApplied(true);
-      showToast(`Promo code "${promoCode}" applied! (20% Off)`);
+      showToast(`Promo code "${promoCode}" applied! (20% Off)`, "success");
     }
   };
 
   const handlePlaceOrderClick = async () => {
-    if (!fullName.trim() || !phoneNumber.trim() || !streetAddress.trim()) {
-      showToast("Please complete your delivery address details");
+    if (!validateFields()) {
+      showToast("Please fill in all mandatory delivery address fields.", "error");
       return;
     }
 
@@ -483,34 +561,58 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
                   <div className={styles.formRowTwoCol}>
                     <div className={styles.fieldGroup}>
                       <label className={styles.fieldLabel} htmlFor="fullNameInput">
-                        Full Name
+                        Full Name <span className={styles.requiredStar}>*</span>
                       </label>
-                      <div className={styles.inputWrapper}>
+                      <div
+                        className={`${styles.inputWrapper} ${
+                          errors.fullName ? styles.inputWrapperError : ""
+                        }`}
+                      >
                         <User size={18} className={styles.fieldIcon} />
                         <input
                           id="fullNameInput"
                           type="text"
                           value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Enter full name"
-                          className={styles.fieldInput}
+                          onChange={(e) =>
+                            handleFieldChange("fullName", e.target.value, setFullName)
+                          }
+                          placeholder={
+                            errors.fullName
+                              ? "Please enter your full name"
+                              : "e.g. Rahul Sharma"
+                          }
+                          className={`${styles.fieldInput} ${
+                            errors.fullName ? styles.fieldInputError : ""
+                          }`}
                         />
                       </div>
                     </div>
 
                     <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel} htmlFor="phoneInput">
-                        Phone Number
+                      <label className={styles.fieldLabel} htmlFor="phoneNumberInput">
+                        Phone Number <span className={styles.requiredStar}>*</span>
                       </label>
-                      <div className={styles.inputWrapper}>
+                      <div
+                        className={`${styles.inputWrapper} ${
+                          errors.phoneNumber ? styles.inputWrapperError : ""
+                        }`}
+                      >
                         <Phone size={18} className={styles.fieldIcon} />
                         <input
-                          id="phoneInput"
+                          id="phoneNumberInput"
                           type="tel"
                           value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          placeholder="Enter 10-digit mobile number"
-                          className={styles.fieldInput}
+                          onChange={(e) =>
+                            handleFieldChange("phoneNumber", e.target.value, setPhoneNumber)
+                          }
+                          placeholder={
+                            errors.phoneNumber
+                              ? "Please enter 10-digit mobile number"
+                              : "e.g. 9876543210"
+                          }
+                          className={`${styles.fieldInput} ${
+                            errors.phoneNumber ? styles.fieldInputError : ""
+                          }`}
                         />
                       </div>
                     </div>
@@ -518,18 +620,30 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
                   {/* Row 2: Complete Street Address */}
                   <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel} htmlFor="streetInput">
-                      Complete Street Address
+                    <label className={styles.fieldLabel} htmlFor="streetAddressInput">
+                      Complete Street Address <span className={styles.requiredStar}>*</span>
                     </label>
-                    <div className={styles.inputWrapper}>
+                    <div
+                      className={`${styles.inputWrapper} ${
+                        errors.streetAddress ? styles.inputWrapperError : ""
+                      }`}
+                    >
                       <MapPin size={18} className={styles.fieldIcon} />
                       <input
-                        id="streetInput"
+                        id="streetAddressInput"
                         type="text"
                         value={streetAddress}
-                        onChange={(e) => setStreetAddress(e.target.value)}
-                        placeholder="House / Flat No., Building Name, Street"
-                        className={styles.fieldInput}
+                        onChange={(e) =>
+                          handleFieldChange("streetAddress", e.target.value, setStreetAddress)
+                        }
+                        placeholder={
+                          errors.streetAddress
+                            ? "Please enter complete street address"
+                            : "Flat / House No., Building Name, Street / Locality"
+                        }
+                        className={`${styles.fieldInput} ${
+                          errors.streetAddress ? styles.fieldInputError : ""
+                        }`}
                       />
                     </div>
                   </div>
@@ -538,29 +652,41 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
                   <div className={styles.formRowTwoCol}>
                     <div className={styles.fieldGroup}>
                       <label className={styles.fieldLabel} htmlFor="cityInput">
-                        City
+                        City <span className={styles.requiredStar}>*</span>
                       </label>
                       <input
                         id="cityInput"
                         type="text"
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="e.g. Pune"
-                        className={styles.fieldInputNoIcon}
+                        onChange={(e) =>
+                          handleFieldChange("city", e.target.value, setCity)
+                        }
+                        placeholder={
+                          errors.city ? "Please enter your city" : "e.g. Pune"
+                        }
+                        className={`${styles.fieldInputNoIcon} ${
+                          errors.city ? styles.fieldInputNoIconError : ""
+                        }`}
                       />
                     </div>
 
                     <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel} htmlFor="postalInput">
-                        Postal Code
+                      <label className={styles.fieldLabel} htmlFor="postalCodeInput">
+                        Postal Code <span className={styles.requiredStar}>*</span>
                       </label>
                       <input
-                        id="postalInput"
+                        id="postalCodeInput"
                         type="text"
                         value={postalCode}
-                        onChange={(e) => setPostalCode(e.target.value)}
-                        placeholder="6-digit PIN"
-                        className={styles.fieldInputNoIcon}
+                        onChange={(e) =>
+                          handleFieldChange("postalCode", e.target.value, setPostalCode)
+                        }
+                        placeholder={
+                          errors.postalCode ? "Please enter 6-digit PIN" : "6-digit PIN"
+                        }
+                        className={`${styles.fieldInputNoIcon} ${
+                          errors.postalCode ? styles.fieldInputNoIconError : ""
+                        }`}
                       />
                     </div>
                   </div>
@@ -776,10 +902,24 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       </main>
 
       {/* Toast Feedback */}
-      {toastMessage && (
-        <div className={styles.toastMessage}>
-          <CheckCircle2 size={18} color="#10B981" />
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          className={`${styles.toastMessage} ${
+            toast.type === "error"
+              ? styles.toastError
+              : toast.type === "success"
+              ? styles.toastSuccess
+              : ""
+          }`}
+        >
+          {toast.type === "error" ? (
+            <XCircle size={19} color="#EF4444" strokeWidth={2.5} />
+          ) : toast.type === "info" ? (
+            <AlertCircle size={19} color="#3B82F6" strokeWidth={2.5} />
+          ) : (
+            <CheckCircle2 size={19} color="#10B981" strokeWidth={2.5} />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
     </div>
