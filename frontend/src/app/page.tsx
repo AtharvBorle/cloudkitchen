@@ -16,10 +16,13 @@ import {
 import type { ActiveHomeFilters } from "@/components/home/FilterRow";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useHomeData } from "@/lib/useHomeData";
+import { useLocation } from "@/components/location-provider";
+import { MapPin } from "lucide-react";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
   const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({});
+  const { openLocationModal, defaultAddress } = useLocation();
   const homeData = useHomeData();
 
   // Dynamic Categories with fallback
@@ -50,7 +53,12 @@ export default function Home() {
 
   // Dynamic Kitchens / Places with fallback (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
-    if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
+    if (!homeData.kitchens || homeData.kitchens.length === 0) {
+      if (homeData.activePincode && !homeData.isLoading) {
+        return [];
+      }
+      return undefined;
+    }
     let list = homeData.kitchens;
 
     // 1. Category Bar Filter
@@ -326,6 +334,70 @@ export default function Home() {
           onFilterChange={(newFilters) => setActiveFilters(newFilters)}
           availableCuisines={availableCuisines}
         />
+
+        {/* Out of Service Area Alert Banner */}
+        {homeData.activePincode && !homeData.isLoading && homeData.kitchens.length === 0 && (
+          <div
+            style={{
+              width: "100%",
+              backgroundColor: "#FFF8F2",
+              border: "1.5px solid #FED7AA",
+              borderRadius: "18px",
+              padding: "18px 24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "14px",
+              boxShadow: "0 4px 16px rgba(249, 115, 22, 0.06)",
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "12px",
+                  backgroundColor: "#FFEADB",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#FF6B00",
+                  flexShrink: 0,
+                }}
+              >
+                <MapPin size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>
+                  No Cloud Kitchens Delivering to PIN {homeData.activePincode}
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B" }}>
+                  We haven&apos;t expanded to this specific pincode yet. Choose a nearby area like Kothrud (411038), Baner (411045), or Aundh (411007) to explore delicious dishes.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={openLocationModal}
+              style={{
+                padding: "9px 18px",
+                borderRadius: "10px",
+                backgroundColor: "#FF6B00",
+                color: "#FFFFFF",
+                fontWeight: "700",
+                fontSize: "0.88rem",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Change Location
+            </button>
+          </div>
+        )}
 
         {/* 3. Promo Banner Row (Dynamic Full-Graphic Banner with Fallback) */}
         <PromoRow2 banners={homeData.promoBanners} {...promoProps} />

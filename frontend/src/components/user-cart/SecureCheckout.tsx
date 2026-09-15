@@ -23,6 +23,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
 import { fetchApi } from "@/lib/fetch-api";
+import { useLocation } from "@/components/location-provider";
 import styles from "./SecureCheckout.module.css";
 
 export interface CheckoutSummaryItem {
@@ -58,6 +59,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const router = useRouter();
   const { data: session, status } = useSession();
   const { cartItems, cartTotal, clearCart } = useCart();
+  const { defaultAddress, openLocationModal } = useLocation();
 
   // Authentication redirect guard
   useEffect(() => {
@@ -86,6 +88,16 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       if (!fullName && session.user.name) setFullName(session.user.name);
     }
   }, [session, fullName]);
+
+  useEffect(() => {
+    if (defaultAddress) {
+      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+      const formattedStreet = parts.join(", ");
+      if (formattedStreet) setStreetAddress(formattedStreet);
+      if (defaultAddress.city) setCity(defaultAddress.city);
+      if (defaultAddress.pincode) setPostalCode(defaultAddress.pincode);
+    }
+  }, [defaultAddress]);
 
   useEffect(() => {
     async function loadUserProfile() {
@@ -549,11 +561,33 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
             <div className={styles.leftFormsColumn}>
               {/* Card 1: Delivery Address */}
               <section className={styles.formCard}>
-                <div className={styles.cardHeaderRow}>
-                  <div className={styles.headerIconBox}>
-                    <MapPin size={20} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "18px" }}>
+                  <div className={styles.cardHeaderRow} style={{ margin: 0 }}>
+                    <div className={styles.headerIconBox}>
+                      <MapPin size={20} />
+                    </div>
+                    <h2 className={styles.cardTitle}>Delivery Address</h2>
                   </div>
-                  <h2 className={styles.cardTitle}>Delivery Address</h2>
+                  <button
+                    type="button"
+                    onClick={openLocationModal}
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: "700",
+                      color: "#FF6B00",
+                      backgroundColor: "#FFF3EB",
+                      border: "1px solid #FED7AA",
+                      borderRadius: "8px",
+                      padding: "6px 14px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "background-color 0.2s ease",
+                    }}
+                  >
+                    <span>Change / Saved Addresses</span>
+                  </button>
                 </div>
 
                 <div className={styles.formFieldsStack}>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { fetchApi } from './fetch-api';
+import { useLocation } from '@/components/location-provider';
 
 export interface DynamicCategory {
   id: string;
@@ -104,6 +105,11 @@ export interface HomeDataState {
   promoBanners: DynamicPromoBanner[];
   filteredFoodItems: DynamicFoodItem[];
   filteredKitchens: DynamicKitchen[];
+  allFoodItems: DynamicFoodItem[];
+  allKitchens: DynamicKitchen[];
+  activePincode: string | null;
+  hasMatchingKitchens: boolean;
+  totalKitchensCount: number;
   isLoading: boolean;
   error: string | null;
   isUsingFallback: boolean;
@@ -398,6 +404,7 @@ export const FALLBACK_BANNERS: DynamicPromoBanner[] = [
 ];
 
 export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
+  const { defaultAddress } = useLocation();
   const [categories, setCategories] = useState<DynamicCategory[]>(FALLBACK_CATEGORIES);
   const [foodItems, setFoodItems] = useState<DynamicFoodItem[]>(FALLBACK_FOOD_ITEMS);
   const [rooms, setRooms] = useState<DynamicRoom[]>([]);
@@ -656,93 +663,106 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     };
   }, []);
 
-  // Compute active filtered lists based on passed filter options
-  const filteredFoodItems = foodItems.filter((item) => {
-    if (!options) return true;
-    const { searchQuery, category, vegOnly, pincode, minPrice, maxPrice, minRating } = options;
+  // Compute active pincode from filter options or active location
+  const activePincode = (options?.pincode || defaultAddress?.pincode || '').trim() || null;
 
-    if (vegOnly && (item.itemType === "NON_VEG" || item.itemType?.includes("NON_VEG"))) return false;
+  // Compute filtered food items based on activePincode + passed filter options
+  const filteredFoodItems = useMemo(() => {
+    return foodItems.filter((item) => {
+      // 1. Pincode match check
+      if (activePincode) {
+        const itemPin = (item.sellerPincode || '').trim();
+        const servedPins = Array.isArray(item.servedPincodes) ? item.servedPincodes.map((p) => p.trim()) : [];
+        const matchPin = itemPin === activePincode || servedPins.includes(activePincode);
+        if (!matchPin) return false;
+      }
 
-    if (category && category !== "all" && category !== "food") {
-      const c = category.toLowerCase();
-      const matchCat =
-        item.categoryName?.toLowerCase().includes(c) ||
-        item.name.toLowerCase().includes(c) ||
-        item.description.toLowerCase().includes(c);
-      if (!matchCat) return false;
-    }
+      if (!options) return true;
+      const { searchQuery, category, vegOnly, minPrice, maxPrice, minRating } = options;
 
-    if (searchQuery && searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchQuery =
-        item.name.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        item.sellerName.toLowerCase().includes(q) ||
-        item.categoryName?.toLowerCase().includes(q);
-      if (!matchQuery) return false;
-    }
+      if (vegOnly && (item.itemType === "NON_VEG" || item.itemType?.includes("NON_VEG"))) return false;
 
-    if (pincode && pincode.trim()) {
-      const p = pincode.trim();
-      const matchPin =
-        item.sellerPincode === p ||
-        (Array.isArray(item.servedPincodes) && item.servedPincodes.includes(p));
-      if (!matchPin) return false;
-    }
+      if (category && category !== "all" && category !== "food") {
+        const c = category.toLowerCase();
+        const matchCat =
+          item.categoryName?.toLowerCase().includes(c) ||
+          item.name.toLowerCase().includes(c) ||
+          item.description.toLowerCase().includes(c);
+        if (!matchCat) return false;
+      }
 
-    if (minPrice !== undefined && item.price < minPrice) return false;
-    if (maxPrice !== undefined && item.price > maxPrice) return false;
-    if (minRating !== undefined && (item.rating || 0) < minRating) return false;
+      if (searchQuery && searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchQuery =
+          item.name.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
+          item.sellerName.toLowerCase().includes(q) ||
+          item.categoryName?.toLowerCase().includes(q);
+        if (!matchQuery) return false;
+      }
 
-    return true;
-  });
+      if (minPrice !== undefined && item.price < minPrice) return false;
+      if (maxPrice !== undefined && item.price > maxPrice) return false;
+      if (minRating !== undefined && (item.rating || 0) < minRating) return false;
 
-  const filteredKitchens = kitchens.filter((k) => {
-    if (!options) return true;
-    const { searchQuery, category, vegOnly, pincode, minRating } = options;
+      return true;
+    });
+  }, [foodItems, activePincode, options]);
 
-    if (vegOnly && k.foodType === "NON_VEG") return false;
+  // Compute filtered kitchens based on activePincode + passed filter options
+  const filteredKitchens = useMemo(() => {
+    return kitchens.filter((k) => {
+      // 1. Pincode match check
+      if (activePincode) {
+        const kPin = (k.pincode || '').trim();
+        const servedPins = Array.isArray(k.servedPincodes) ? k.servedPincodes.map((p) => p.trim()) : [];
+        const matchPin = kPin === activePincode || servedPins.includes(activePincode);
+        if (!matchPin) return false;
+      }
 
-    if (category && category !== "all" && category !== "food" && category !== "rooms") {
-      const c = category.toLowerCase();
-      const matchCat =
-        k.category?.toLowerCase().includes(c) ||
-        k.name.toLowerCase().includes(c);
-      if (!matchCat) return false;
-    }
+      if (!options) return true;
+      const { searchQuery, category, vegOnly, minRating } = options;
 
-    if (searchQuery && searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchQuery =
-        k.name.toLowerCase().includes(q) ||
-        k.category?.toLowerCase().includes(q) ||
-        k.locality?.toLowerCase().includes(q) ||
-        k.city?.toLowerCase().includes(q);
-      if (!matchQuery) return false;
-    }
+      if (vegOnly && k.foodType === "NON_VEG") return false;
 
-    if (pincode && pincode.trim()) {
-      const p = pincode.trim();
-      const matchPin =
-        k.pincode === p ||
-        (Array.isArray(k.servedPincodes) && k.servedPincodes.includes(p));
-      if (!matchPin) return false;
-    }
+      if (category && category !== "all" && category !== "food" && category !== "rooms") {
+        const c = category.toLowerCase();
+        const matchCat =
+          k.category?.toLowerCase().includes(c) ||
+          k.name.toLowerCase().includes(c);
+        if (!matchCat) return false;
+      }
 
-    if (minRating !== undefined && (k.rating || 0) < minRating) return false;
+      if (searchQuery && searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchQuery =
+          k.name.toLowerCase().includes(q) ||
+          k.category?.toLowerCase().includes(q) ||
+          k.locality?.toLowerCase().includes(q) ||
+          k.city?.toLowerCase().includes(q);
+        if (!matchQuery) return false;
+      }
 
-    return true;
-  });
+      if (minRating !== undefined && (k.rating || 0) < minRating) return false;
+
+      return true;
+    });
+  }, [kitchens, activePincode, options]);
 
   return {
     categories,
-    foodItems,
+    foodItems: activePincode || options ? filteredFoodItems : foodItems,
     rooms,
-    kitchens,
+    kitchens: activePincode || options ? filteredKitchens : kitchens,
     coupons,
     promoBanners,
-    filteredFoodItems: filteredFoodItems.length > 0 ? filteredFoodItems : foodItems,
-    filteredKitchens: filteredKitchens.length > 0 ? filteredKitchens : kitchens,
+    filteredFoodItems,
+    filteredKitchens,
+    allFoodItems: foodItems,
+    allKitchens: kitchens,
+    activePincode,
+    hasMatchingKitchens: activePincode ? filteredKitchens.length > 0 : kitchens.length > 0,
+    totalKitchensCount: kitchens.length,
     isLoading,
     error,
     isUsingFallback,

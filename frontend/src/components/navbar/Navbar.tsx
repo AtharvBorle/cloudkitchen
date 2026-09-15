@@ -133,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const { cartItems } = useCart();
-  const { defaultAddress } = useLocation();
+  const { defaultAddress, openLocationModal } = useLocation();
   const { data: session } = useSession();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -554,12 +554,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className={styles.mobileBrandTitle}>Cloud Kitchen</span>
                 <div
                   className={styles.locationContainer}
-                  title="Location"
+                  title="Choose Delivery Location"
                   onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     if (onLocationClick) {
-                      e.preventDefault();
-                      e.stopPropagation();
                       handleLocationClick();
+                    } else {
+                      openLocationModal();
                     }
                   }}
                 >

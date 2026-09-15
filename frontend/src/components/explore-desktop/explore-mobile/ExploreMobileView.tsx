@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import styles from "./ExploreMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
+import { useLocation } from "@/components/location-provider";
 import logoImg from "@/components/navbar/logo-nav.png";
 
 const LANG_OPTIONS = [
@@ -319,6 +320,7 @@ const SlidersIcon = () => (
 
 export const ExploreMobileView: React.FC = () => {
   const router = useRouter();
+  const { defaultAddress, openLocationModal } = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLang, setSelectedLang] = useState("en");
@@ -396,8 +398,25 @@ export const ExploreMobileView: React.FC = () => {
             </div>
             <div className={styles.brandInfo}>
               <span className={styles.brandTitle}>Cloud Kitchen</span>
-              <div className={styles.locationContainer}>
-                <span>Kothrud, Pune</span>
+              <div
+                className={styles.locationContainer}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openLocationModal();
+                }}
+                style={{ cursor: "pointer" }}
+                title="Choose Delivery Location"
+              >
+                <span>
+                  {defaultAddress?.locality || defaultAddress?.city
+                    ? `${defaultAddress.locality ? defaultAddress.locality + ", " : ""}${
+                        defaultAddress.city || defaultAddress.pincode
+                      }`
+                    : defaultAddress?.pincode
+                    ? `PIN: ${defaultAddress.pincode}`
+                    : "Kothrud, Pune"}
+                </span>
                 <ChevronDown size={14} />
               </div>
             </div>
