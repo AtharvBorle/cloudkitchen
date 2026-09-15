@@ -301,7 +301,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
       if (!res.ok) {
         const errorMsg = resData.message || resData.error || "Failed to place order. Please try again.";
-        showToast(errorMsg);
+        showToast(errorMsg, "error");
         setIsSubmitting(false);
         return;
       }
