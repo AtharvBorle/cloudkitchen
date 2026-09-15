@@ -14,10 +14,7 @@ import styles from "./MySubscriptionPage.module.css";
 export default function MySubscriptionPage() {
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. Shared Desktop Navbar with 'Settings' Active (hidden on mobile <=768px) */}
-      <div className={styles.desktopNavbar}>
-        <Navbar initialActiveItem="Settings" />
-      </div>
+      <Navbar initialActiveItem="Settings" />
 
       <main className={styles.mainContainer}>
         <div className={styles.layoutRow}>

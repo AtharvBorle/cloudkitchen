@@ -238,29 +238,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsProfileHoverOpen(false);
   };
 
-  const isHomePage = pathname === "/";
-  const isExplorePage =
-    pathname.startsWith("/explore-desktop") ||
-    pathname.startsWith("/explore") ||
-    currentActiveItem === "Explore" ||
-    currentActiveItem === "Food" ||
-    currentActiveItem === "Mess/Tiffin";
-  const isOrdersPage =
-    pathname.startsWith("/orders-desktop") ||
-    pathname.startsWith("/order-history") ||
-    currentActiveItem === "Orders" ||
-    currentActiveItem === "My Orders";
-  const isRoomsPage =
-    pathname.startsWith("/room-booking") || currentActiveItem === "Rooms";
-  const isCartOrCheckoutPage =
-    pathname.startsWith("/cart") ||
-    pathname.startsWith("/checkout") ||
-    pathname.startsWith("/user/cart") ||
-    pathname.startsWith("/user/user-cart") ||
-    pathname.startsWith("/user/checkout") ||
-    pathname.startsWith("/user/user-checkout") ||
-    pathname.startsWith("/dashboard/user/checkout");
-  const shouldHideSearch = hideSearch !== undefined ? hideSearch : true;
+  const shouldHideSearch = hideSearch !== undefined ? hideSearch : false;
   const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : false;
 
   const handleNavClick = (item: string) => {
@@ -507,8 +485,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         );
       case "jain":
         return (
-          <div className={styles.symbolSquare} style={{ border: "1.5px solid #16A34A" }}>
-            <span className={styles.symbolDot} style={{ backgroundColor: "#16A34A" }} />
+          <div className={styles.symbolSquare} style={{ border: "1.5px solid #EA580C" }}>
+            <span className={styles.symbolDot} style={{ backgroundColor: "#EA580C" }} />
           </div>
         );
       default:
@@ -528,7 +506,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       case "vegan":
         return "#15803D";
       case "jain":
-        return "#16A34A";
+        return "#F97316";
       default:
         return "#10B981";
     }
@@ -609,35 +587,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
           </nav>
-
-          {/* Desktop Section-Aware Search Bar */}
-          {!shouldHideSearch && (
-            <form onSubmit={handleSearchSubmit} className={styles.desktopSearchBar}>
-              <Search size={16} className={styles.desktopSearchIcon} strokeWidth={2.2} />
-              <input
-                type="text"
-                placeholder={getSectionSearchConfig().placeholder}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setMobileSearchQuery(e.target.value);
-                  if (onSearch) onSearch(e.target.value);
-                }}
-                className={styles.desktopSearchInput}
-                aria-label={`Search in ${getSectionSearchConfig().section}`}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className={styles.desktopClearBtn}
-                  aria-label="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </form>
-          )}
 
           {/* 3. RIGHT SECTION */}
           <div className={styles.rightSection}>

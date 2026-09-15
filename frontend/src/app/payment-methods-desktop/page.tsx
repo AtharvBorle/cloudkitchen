@@ -14,10 +14,7 @@ import styles from "./PaymentMethodsPage.module.css";
 export default function PaymentMethodsDesktopPage() {
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. Shared Desktop Navbar with Settings Active */}
-      <div className={styles.desktopNavbar}>
-        <Navbar initialActiveItem="Settings" />
-      </div>
+      <Navbar initialActiveItem="Settings" />
 
       <main className={styles.mainContainer}>
         <div className={styles.layoutRow}>

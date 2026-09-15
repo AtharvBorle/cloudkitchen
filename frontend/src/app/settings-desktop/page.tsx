@@ -13,9 +13,9 @@ import styles from "./SettingsPage.module.css";
 export default function SettingsDesktopPage() {
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. Shared Desktop Navbar with 'Settings' Active */}
+      {/* 1. Shared Desktop Navbar */}
       <div className={styles.desktopNavbar}>
-        <Navbar initialActiveItem="Settings" />
+        <Navbar />
       </div>
 
       <main className={styles.mainContainer}>

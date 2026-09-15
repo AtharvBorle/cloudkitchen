@@ -9,10 +9,7 @@ import styles from "./PrivacyPage.module.css";
 export default function PrivacyPolicyPage() {
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. Shared Top Navbar with Settings Active */}
-      <div className={styles.desktopNavbar}>
-        <Navbar initialActiveItem="Settings" />
-      </div>
+      <Navbar initialActiveItem="Settings" />
 
       <main className={styles.mainContainer}>
         <div className={styles.layoutRow}>

@@ -21,6 +21,8 @@ import {
   Info,
 } from "lucide-react";
 import { Navbar, NavbarProps } from "@/components/navbar";
+import { MobileSidebar } from "@/components/mobile-sidebar";
+import { Menu, ArrowLeft } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./RoomDetailDesktop.module.css";
 import roomGalleryBanner from "./room-gallery-banner.png";
@@ -140,6 +142,7 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
   children,
 }) => {
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [checkInDate, setCheckInDate] = useState("Oct 15, 2026");
   const [checkOutDate, setCheckOutDate] = useState("Oct 30, 2026");
   const [guestCount, setGuestCount] = useState("1 Guest");
@@ -261,14 +264,9 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* Unified Shared Navbar across all pages */}
-      <Navbar
-        initialActiveItem="Rooms"
-        location={roomData.city || "Pune"}
-        {...navbarProps}
-      />
+      <Navbar initialActiveItem="Rooms" />
 
-      {/* Main Desktop Content Shell */}
+      {/* 2. Main Desktop Content Shell */}
       <main className={styles.mainContent}>
         {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb" className={styles.breadcrumbsNav}>
