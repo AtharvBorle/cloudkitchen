@@ -58,7 +58,7 @@ export const getPublicExploreData = unstable_cache(
         const activeSellersList: any[] = [];
 
         const foodItems = sellers.flatMap(seller => {
-            const hasActiveFoodSub = seller.subscriptions.some(sub => 
+            const hasActiveFoodSub = seller.verificationStatus === "APPROVED" || seller.subscriptions.some(sub => 
                 sub.status === "ACTIVE" && 
                 (sub.validUntil === null || new Date(sub.validUntil) > now) &&
                 (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
@@ -117,7 +117,7 @@ export const getPublicExploreData = unstable_cache(
         });
 
         const availableRooms = sellers.flatMap(seller => {
-            const hasActivePropertySub = seller.subscriptions.some(sub => 
+            const hasActivePropertySub = seller.verificationStatus === "APPROVED" || seller.subscriptions.some(sub => 
                 sub.status === "ACTIVE" && 
                 (sub.validUntil === null || new Date(sub.validUntil) > now) &&
                 (sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH")

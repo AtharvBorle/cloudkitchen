@@ -65,6 +65,37 @@ export function updateCachedProfile(partial: Partial<SellerProfileData>) {
   notifyListeners();
 }
 
+export async function toggleSellerOnlineStatus(newStatus?: boolean): Promise<boolean> {
+  const currentStatus = cachedProfile?.isOnline ?? true;
+  const targetStatus = typeof newStatus === "boolean" ? newStatus : !currentStatus;
+  
+  // Optimistically update
+  updateCachedProfile({ isOnline: targetStatus });
+
+  try {
+    const res = await fetchApi("/api/seller/profile/status", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isOnline: targetStatus }),
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const confirmedStatus = json.data?.isOnline ?? targetStatus;
+      updateCachedProfile({ isOnline: confirmedStatus });
+      return confirmedStatus;
+    } else {
+      // Revert if error
+      updateCachedProfile({ isOnline: currentStatus });
+      return currentStatus;
+    }
+  } catch (err) {
+    console.error("Failed to update seller online status:", err);
+    updateCachedProfile({ isOnline: currentStatus });
+    return currentStatus;
+  }
+}
+
 export function useSellerProfile() {
   const { data: session, status } = useSession();
   const sessionName = session?.user?.name || "";

@@ -49,7 +49,7 @@ const DEFAULT_SETTINGS: SellerSettingsData = {
   twoFactorAuth: false,
 };
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
 
 export interface SellerSettingsProps {
   initialSettings?: Partial<SellerSettingsData>;
@@ -69,8 +69,18 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (typeof seller.isOnline === "boolean") {
+      setSettings((prev) => ({ ...prev, storeOnline: seller.isOnline }));
+    }
+  }, [seller.isOnline]);
+
   const handleToggle = (key: keyof SellerSettingsData) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+    const newVal = !settings[key];
+    setSettings((prev) => ({ ...prev, [key]: newVal }));
+    if (key === "storeOnline") {
+      toggleSellerOnlineStatus(newVal);
+    }
   };
 
   const handleNumberChange = (key: keyof SellerSettingsData, val: number) => {
@@ -81,16 +91,18 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
     setSettings((prev) => ({ ...prev, [key]: val }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    if (onSave) onSave(settings);
-
-    // Simulate saving state
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      await toggleSellerOnlineStatus(settings.storeOnline);
+      if (onSave) onSave(settings);
       setSuccessMessage("Settings updated successfully!");
       setTimeout(() => setSuccessMessage(null), 3500);
-    }, 600);
+    } catch (err) {
+      console.error("Error saving settings:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

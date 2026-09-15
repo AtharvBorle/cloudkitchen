@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Search, Bell, Menu, X } from "lucide-react";
 import styles from "./Topbar.module.css";
-import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { useSellerProfile, computeInitials, isGenericFallbackName, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
 
 export interface TopbarProps {
   title?: string;
@@ -144,6 +144,44 @@ export default function Topbar({
             </button>
           )}
         </div>
+
+        {/* Store Status Toggle */}
+        <button
+          type="button"
+          onClick={async () => {
+            await toggleSellerOnlineStatus(!seller.isOnline);
+          }}
+          className={`${styles.statusToggleBtn || ""} topbar-status-toggle`}
+          title={seller.isOnline ? "Store is ONLINE (Click to switch to Offline)" : "Store is OFFLINE (Click to switch to Online)"}
+          aria-label={seller.isOnline ? "Store is Online" : "Store is Offline"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "7px",
+            padding: "6px 12px",
+            borderRadius: "9999px",
+            border: `1px solid ${seller.isOnline ? "#BBF7D0" : "#FECACA"}`,
+            backgroundColor: seller.isOnline ? "#F0FDF4" : "#FEF2F2",
+            color: seller.isOnline ? "#15803D" : "#B91C1C",
+            fontSize: "12px",
+            fontWeight: "700",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              backgroundColor: seller.isOnline ? "#22C55E" : "#EF4444",
+              boxShadow: seller.isOnline ? "0 0 6px rgba(34, 197, 94, 0.7)" : "none",
+              display: "inline-block",
+            }}
+          />
+          <span>{seller.isOnline ? "Store Open" : "Store Closed"}</span>
+        </button>
 
         {/* Notification Button */}
         <button

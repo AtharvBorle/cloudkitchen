@@ -166,7 +166,7 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   allowCod: true,
 };
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
 
 export interface ResponsiveSellerSettingsProps {
   ownerName?: string;
@@ -205,8 +205,15 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
     businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
     address: seller.address || INITIAL_SETTINGS.address,
+    storeOnline: typeof seller.isOnline === "boolean" ? seller.isOnline : INITIAL_SETTINGS.storeOnline,
     ...initialData,
   });
+
+  useEffect(() => {
+    if (typeof seller.isOnline === "boolean") {
+      setFormData((prev) => ({ ...prev, storeOnline: seller.isOnline }));
+    }
+  }, [seller.isOnline]);
 
   useEffect(() => {
     if (seller.businessName || seller.phone || seller.email || seller.address) {
@@ -246,6 +253,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       ...prev,
       [field]: value,
     }));
+    if (field === "storeOnline") {
+      toggleSellerOnlineStatus(Boolean(value));
+    }
   };
 
   const handleDayToggle = (index: number) => {
@@ -262,19 +272,22 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     });
   };
 
-  const handleSave = (e?: React.FormEvent) => {
+  const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setSaving(true);
 
-    if (onSave) {
-      onSave(formData);
-    }
-
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      await toggleSellerOnlineStatus(formData.storeOnline);
+      if (onSave) {
+        onSave(formData);
+      }
       setToastMessage("Settings updated successfully!");
       setTimeout(() => setToastMessage(null), 3000);
-    }, 600);
+    } catch (err) {
+      console.error("Error saving settings:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleConfirmDeleteAccount = () => {

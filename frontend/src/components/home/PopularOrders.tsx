@@ -109,8 +109,8 @@ export default function PopularOrders({
 
   const displayOffers = (offers && offers.length > 0 ? offers : OFFERS).map((off) => ({
     ...off,
-    sellerId: activeSeller ? activeSeller.id : off.sellerId,
-    sellerName: activeSeller ? activeSeller.name : off.sellerName,
+    sellerId: off.sellerId && off.sellerId !== "k-1" && off.sellerId !== "k-3" ? off.sellerId : (activeSeller ? activeSeller.id : off.sellerId || "k-1"),
+    sellerName: off.sellerName && off.sellerName !== "Chef Anjali's Gourmet Kitchen" && off.sellerName !== "Urban Spice Cloud Kitchen" ? off.sellerName : (activeSeller ? activeSeller.name : off.sellerName || "Verified Cloud Kitchen"),
   }));
 
   const handleOrderNow = (offer: OfferCardData) => {

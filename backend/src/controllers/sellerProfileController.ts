@@ -102,6 +102,24 @@ export const updateSellerProfile = async (req: Request) => {
     return { user, profile: user?.sellerProfile };
 };
 
+export const getSellerStatus = async () => {
+    const session = await getAuthSession();
+    if (!session || !session.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const profile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id },
+        select: { isOnline: true }
+    });
+
+    if (!profile) {
+        throw new ApiError("Profile not found", 404);
+    }
+
+    return { isOnline: profile.isOnline };
+};
+
 export const updateSellerStatus = async (req: Request) => {
     const session = await getAuthSession();
     if (!session || !session.user || session.user.role !== "SELLER") {
