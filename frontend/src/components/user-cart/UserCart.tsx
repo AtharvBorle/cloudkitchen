@@ -89,7 +89,7 @@ const AVAILABLE_ADDRESSES = [
 ];
 
 export const UserCart: React.FC<UserCartProps> = ({
-  initialItems = DEFAULT_CART_ITEMS,
+  initialItems = [],
   defaultLocation = "Kothrud, Pune",
   defaultAddress = "Flat 402, Golden Crest Apartments, Kothrud",
   onProceedToCheckout,
@@ -116,7 +116,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
         price: ci.price,
         qty: ci.quantity,
-        image: "/images/places/place-pizza.png",
+        image: ci.image || "/images/places/place-pizza.png",
       }))
     : localCartItems;
 

@@ -129,11 +129,15 @@ export default function Home() {
 
     return list.slice(0, 4).map((f, idx) => ({
       id: f.id,
+      foodItemId: f.id,
       discount: idx % 2 === 0 ? "25% OFF" : "30% OFF",
       title: f.name,
       code: `Use code: FOOD${idx + 1}0`,
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
+      price: f.price || 199,
+      sellerId: f.sellerId || "k-1",
+      sellerName: f.sellerName || "Verified Cloud Kitchen",
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 

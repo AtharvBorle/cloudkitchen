@@ -2,7 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Ticket } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 export interface OfferCardData {
   id: string;
@@ -11,40 +13,60 @@ export interface OfferCardData {
   code: string;
   imageUrl: string;
   link: string;
+  price?: number;
+  sellerId?: string;
+  sellerName?: string;
+  foodItemId?: string;
 }
 
 const OFFERS: OfferCardData[] = [
   {
-    id: "offer-1",
+    id: "fb-4",
     discount: "30% OFF",
     title: "Biryani Bonanza",
     code: "Use code: BIRYANI30",
     imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
+    link: "/shop/urban-spice",
+    price: 349,
+    sellerId: "k-3",
+    sellerName: "Urban Spice Cloud Kitchen",
+    foodItemId: "fb-4",
   },
   {
-    id: "offer-2",
+    id: "fb-8",
     discount: "25% OFF",
     title: "Burger Bash",
     code: "Use code: BURGER25",
     imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/burger-bistro",
+    link: "/shop/urban-spice",
+    price: 149,
+    sellerId: "k-3",
+    sellerName: "Urban Spice Cloud Kitchen",
+    foodItemId: "fb-8",
   },
   {
-    id: "offer-3",
+    id: "fb-1",
     discount: "30% OFF",
     title: "Pizza Party",
     code: "Use code: PIZZA30",
     imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/pizza-palace",
+    link: "/shop/chef-anjali",
+    price: 289,
+    sellerId: "k-1",
+    sellerName: "Chef Anjali's Gourmet Kitchen",
+    foodItemId: "fb-1",
   },
   {
-    id: "offer-4",
+    id: "fb-5",
     discount: "20% OFF",
     title: "Noodle Fest",
     code: "Use code: NOODLE20",
     imageUrl: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/wok-station",
+    link: "/shop/chef-anjali",
+    price: 159,
+    sellerId: "k-1",
+    sellerName: "Chef Anjali's Gourmet Kitchen",
+    foodItemId: "fb-5",
   },
 ];
 
@@ -59,7 +81,23 @@ export default function PopularOrders({
   seeAllLink = "/explore?offers=true",
   offers,
 }: PopularOrdersProps) {
+  const router = useRouter();
+  const { addToCart } = useCart();
   const displayOffers = offers && offers.length > 0 ? offers : OFFERS;
+
+  const handleOrderNow = (offer: OfferCardData) => {
+    addToCart({
+      id: offer.id,
+      foodItemId: offer.foodItemId || offer.id,
+      name: offer.title,
+      price: offer.price || 199,
+      quantity: 1,
+      sellerId: offer.sellerId || "k-1",
+      sellerName: offer.sellerName || "Verified Cloud Kitchen",
+      image: offer.imageUrl,
+    });
+    router.push("/user/cart");
+  };
 
   return (
     <section
@@ -220,8 +258,9 @@ export default function PopularOrders({
               </div>
 
               {/* Action Button: Order Now */}
-              <Link
-                href={offer.link}
+              <button
+                type="button"
+                onClick={() => handleOrderNow(offer)}
                 style={{
                   marginTop: "auto",
                   backgroundColor: "#FF6B00",
@@ -231,15 +270,17 @@ export default function PopularOrders({
                   padding: "9px 0",
                   borderRadius: "12px",
                   textAlign: "center",
-                  textDecoration: "none",
+                  border: "none",
+                  cursor: "pointer",
                   boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
                   transition: "all 0.2s ease",
                   display: "block",
+                  width: "100%",
                 }}
                 className="offer-order-btn"
               >
                 Order Now
-              </Link>
+              </button>
             </div>
           ))}
         </div>
