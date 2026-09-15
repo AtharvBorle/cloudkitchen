@@ -20,9 +20,7 @@ import {
   User,
   Info,
 } from "lucide-react";
-import { Navbar, NavbarProps } from "@/components/room-booking-desktop/navbar";
-import { MobileSidebar } from "@/components/mobile-sidebar";
-import { Menu, ArrowLeft } from "lucide-react";
+import { Navbar, NavbarProps } from "@/components/navbar";
 import styles from "./RoomDetailDesktop.module.css";
 import roomGalleryBanner from "./room-gallery-banner.png";
 import roomImg1 from "../featured-colivings/neo-living-room.jpg";
@@ -138,7 +136,6 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
   children,
 }) => {
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [checkInDate, setCheckInDate] = useState("Oct 15, 2026");
   const [checkOutDate, setCheckOutDate] = useState("Oct 30, 2026");
   const [guestCount, setGuestCount] = useState("1 Guest");
@@ -171,40 +168,14 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* Mobile Sidebar Navigation Drawer */}
-      <MobileSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        activeItem="Rooms"
+      {/* Unified Shared Navbar across all pages */}
+      <Navbar
+        initialActiveItem="Rooms"
+        location={roomData.city || "Pune"}
+        {...navbarProps}
       />
 
-      {/* 1. Desktop Navbar (hidden on mobile <=768px) */}
-      <div className={styles.desktopNavbar}>
-        <Navbar
-          initialActiveItem="Rooms"
-          location={roomData.city || "Pune"}
-          {...navbarProps}
-        />
-      </div>
-
-      {/* 2. Mobile Top Navigation Bar (visible only on <=768px) */}
-      <div className={styles.mobileHeaderBar}>
-        <button
-          type="button"
-          className={styles.mobileMenuBtn}
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu size={24} strokeWidth={2.2} />
-        </button>
-
-        <Link href="/room-booking" className={styles.mobileBackBtn} aria-label="Back to rooms">
-          <ArrowLeft size={20} />
-          <span>Rooms</span>
-        </Link>
-      </div>
-
-      {/* 2. Main Desktop Content Shell */}
+      {/* Main Desktop Content Shell */}
       <main className={styles.mainContent}>
         {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb" className={styles.breadcrumbsNav}>

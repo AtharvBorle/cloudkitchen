@@ -8,11 +8,7 @@ export default function OrdersDesktopPage() {
   return (
     <div style={{ width: "100%", minHeight: "100vh", backgroundColor: "#FDF8F4", overflowX: "hidden" }}>
       {/* 1. Shared Desktop Navbar Component with active Orders tab */}
-      <Navbar
-        navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-        initialActiveItem="Orders"
-        hideVegToggle={true}
-      />
+      <Navbar initialActiveItem="Orders" />
 
       {/* 2. My Orders View (2-Column Layout matching design mockup) */}
       <main>

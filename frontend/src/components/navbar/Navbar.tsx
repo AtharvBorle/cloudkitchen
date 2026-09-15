@@ -239,8 +239,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const isHomePage = pathname === "/";
-  const shouldHideSearch = hideSearch !== undefined ? hideSearch : (isHomePage || isSettingsPage);
-  const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : isSettingsPage;
+  const isExplorePage =
+    pathname.startsWith("/explore-desktop") ||
+    pathname.startsWith("/explore") ||
+    currentActiveItem === "Explore" ||
+    currentActiveItem === "Food" ||
+    currentActiveItem === "Mess/Tiffin";
+  const isOrdersPage =
+    pathname.startsWith("/orders-desktop") ||
+    pathname.startsWith("/order-history") ||
+    currentActiveItem === "Orders" ||
+    currentActiveItem === "My Orders";
+  const isRoomsPage =
+    pathname.startsWith("/room-booking") || currentActiveItem === "Rooms";
+  const isCartOrCheckoutPage =
+    pathname.startsWith("/cart") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/user/cart") ||
+    pathname.startsWith("/user/user-cart") ||
+    pathname.startsWith("/user/checkout") ||
+    pathname.startsWith("/user/user-checkout") ||
+    pathname.startsWith("/dashboard/user/checkout");
+  const shouldHideSearch = hideSearch !== undefined ? hideSearch : true;
+  const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : false;
 
   const handleNavClick = (item: string) => {
     setInternalActiveItem(item);
@@ -486,8 +507,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         );
       case "jain":
         return (
-          <div className={styles.symbolSquare} style={{ border: "1.5px solid #EA580C" }}>
-            <span className={styles.symbolDot} style={{ backgroundColor: "#EA580C" }} />
+          <div className={styles.symbolSquare} style={{ border: "1.5px solid #16A34A" }}>
+            <span className={styles.symbolDot} style={{ backgroundColor: "#16A34A" }} />
           </div>
         );
       default:
@@ -507,7 +528,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       case "vegan":
         return "#15803D";
       case "jain":
-        return "#F97316";
+        return "#16A34A";
       default:
         return "#10B981";
     }

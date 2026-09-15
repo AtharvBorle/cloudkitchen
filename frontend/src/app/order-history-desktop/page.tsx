@@ -147,12 +147,7 @@ export default function OrderHistoryDesktopPage() {
     <div className={styles.pageWrapper}>
       {/* 1. Shared Desktop Navbar with Settings Active */}
       <div className={styles.desktopNavbar}>
-        <Navbar
-          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-          initialActiveItem="Settings"
-          hideSearch={true}
-          hideVegToggle={true}
-        />
+        <Navbar initialActiveItem="Settings" />
       </div>
 
       <main className={styles.mainContainer}>

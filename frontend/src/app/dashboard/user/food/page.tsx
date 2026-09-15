@@ -340,7 +340,7 @@ export default function UserFoodPage() {
                                                 fontSize: '0.7rem',
                                                 fontWeight: 'bold',
                                                 color: 'white',
-                                                backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : item.itemType === 'JAIN' ? '#F59E0B' : item.itemType === 'VEGAN' ? '#059669' : '#10B981'
+                                                backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : item.itemType === 'JAIN' ? '#10B981' : item.itemType === 'VEGAN' ? '#059669' : '#10B981'
                                             }}>
                                                 {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                             </span>
@@ -395,7 +395,7 @@ export default function UserFoodPage() {
                                                         fontSize: '0.7rem',
                                                         fontWeight: 'bold',
                                                         color: 'white',
-                                                        backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : item.itemType === 'JAIN' ? '#F59E0B' : item.itemType === 'VEGAN' ? '#059669' : '#10B981'
+                                                        backgroundColor: item.itemType === 'NON_VEG' ? '#EF4444' : item.itemType === 'JAIN' ? '#10B981' : item.itemType === 'VEGAN' ? '#059669' : '#10B981'
                                                     }}>
                                                         {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                                     </span>

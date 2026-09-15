@@ -255,21 +255,6 @@ export const RoomBookingMobileView: React.FC = () => {
         <p className={styles.subtitle}>Find your ideal PG, hostel or flat</p>
       </div>
 
-      {/* 3. Search Bar */}
-      <div className={styles.searchWrapper}>
-        <Search size={19} strokeWidth={2.2} className={styles.searchIcon} />
-        <input
-          type="text"
-          className={styles.searchInput}
-          placeholder="Search rooms, PG, hostels..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <button className={styles.filterBtn} aria-label="Filter listings">
-          <SlidersIcon />
-        </button>
-      </div>
-
       {/* 3. Horizontal Category Filters */}
       <div className={styles.categoryScroller}>
         {CATEGORIES.map((cat) => {

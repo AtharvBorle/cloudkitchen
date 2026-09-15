@@ -231,7 +231,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                         let activeBg = "#10B981";
                                         if (filter === "VEG") { label = "Veg 🌱"; activeBg = "#10B981"; }
                                         else if (filter === "NON_VEG") { label = "Non-Veg 🍖"; activeBg = "#EF4444"; }
-                                        else if (filter === "JAIN") { label = "Jain 🙏"; activeBg = "#F59E0B"; }
+                                        else if (filter === "JAIN") { label = "Jain 🙏"; activeBg = "#10B981"; }
                                         else if (filter === "VEGAN") { label = "Vegan 🌿"; activeBg = "#059669"; }
 
                                         const isActive = foodFilter === filter;
@@ -316,7 +316,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                             <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#059669' }}>Vegan 🌿</span>
                                         )}
                                         {raw.includes("JAIN") && (
-                                            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#F59E0B' }}>Jain 🙏</span>
+                                            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: 'white', backgroundColor: '#10B981' }}>Jain 🙏</span>
                                         )}
                                     </div>
                                 );

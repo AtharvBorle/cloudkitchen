@@ -465,21 +465,6 @@ export const ExploreMobileView: React.FC = () => {
         <p className={styles.subtitle}>Find your next favorite meal</p>
       </div>
 
-      {/* 3. Search Bar (Full Width, No Veg Toggle) */}
-      <form onSubmit={handleSearchSubmit} className={styles.searchWrapper}>
-        <Search size={19} strokeWidth={2.2} className={styles.searchIcon} />
-        <input
-          type="text"
-          className={styles.searchInput}
-          placeholder="Search cuisines, dishes..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <button type="submit" className={styles.filterBtn} aria-label="Filters">
-          <SlidersIcon />
-        </button>
-      </form>
-
       {/* 3. Cloud Kitchen Reels */}
       <section className={styles.reelsSection}>
         <div className={styles.sectionHeader}>
