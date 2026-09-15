@@ -378,7 +378,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   return (
     <div className={styles.secureCheckoutWrapper}>
       {/* Shared Desktop Navbar */}
-      <Navbar />
+      <Navbar hideSearch={true} />
 
       {/* =========================================================
           CHECKOUT LAYOUT CONTAINER
@@ -404,8 +404,12 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
           <div className={styles.stepperLine} />
 
-          {/* Step 3: Confirmation */}
-          <div className={isOrderPlaced ? styles.stepPillActive : styles.stepPillInactive}>
+          {/* Step 3: Confirmation (Direct click revoked until details valid & order placed) */}
+          <div
+            className={isOrderPlaced ? styles.stepPillActive : styles.stepPillInactive}
+            style={{ cursor: isOrderPlaced ? "default" : "not-allowed", opacity: isOrderPlaced ? 1 : 0.6 }}
+            title={isOrderPlaced ? "Order Confirmed" : "Fill required details and place order to proceed"}
+          >
             <span className={isOrderPlaced ? styles.activeDot : styles.inactiveDot} />
             <span>Confirmation</span>
           </div>
@@ -946,15 +950,18 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
               ? styles.toastSuccess
               : ""
           }`}
+          role="alert"
         >
-          {toast.type === "error" ? (
-            <XCircle size={19} color="#EF4444" strokeWidth={2.5} />
-          ) : toast.type === "info" ? (
-            <AlertCircle size={19} color="#3B82F6" strokeWidth={2.5} />
-          ) : (
-            <CheckCircle2 size={19} color="#10B981" strokeWidth={2.5} />
-          )}
-          <span>{toast.message}</span>
+          <div className={styles.toastIconWrapper}>
+            {toast.type === "error" ? (
+              <XCircle size={18} color="#EF4444" strokeWidth={2.5} />
+            ) : toast.type === "info" ? (
+              <AlertCircle size={18} color="#3B82F6" strokeWidth={2.5} />
+            ) : (
+              <CheckCircle2 size={18} color="#10B981" strokeWidth={2.5} />
+            )}
+          </div>
+          <span className={styles.toastText}>{toast.message}</span>
         </div>
       )}
 

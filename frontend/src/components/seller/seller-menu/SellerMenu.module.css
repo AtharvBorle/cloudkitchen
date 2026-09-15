@@ -452,7 +452,7 @@
 }
 
 .typeJain {
-  color: #D97706;
+  color: #16A34A;
 }
 
 .typeVegan {
@@ -498,7 +498,7 @@
 .jainSymbol {
   width: 14px;
   height: 14px;
-  border: 1.5px solid #D97706;
+  border: 1.5px solid #16A34A;
   border-radius: 3px;
   display: flex;
   align-items: center;
@@ -510,7 +510,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #D97706;
+  background-color: #16A34A;
 }
 
 .veganSymbol {

@@ -215,7 +215,7 @@ export const UserCart: React.FC<UserCartProps> = ({
   return (
     <div className={styles.userCartWrapper}>
       {/* Shared Desktop Navbar (matching Home page navbar) */}
-      <Navbar />
+      <Navbar hideSearch={true} />
 
       {/* =========================================================
           2. CHECKOUT LAYOUT CONTAINER (1440px x 974px)
@@ -224,10 +224,12 @@ export const UserCart: React.FC<UserCartProps> = ({
         {/* Stepper Progress Bar */}
         <section className={styles.stepperRow} aria-label="Checkout Progress">
           {/* Step 1: Cart (Active) */}
-          <div className={styles.stepPillActive}>
-            <span className={styles.activeDot} />
-            <span>Cart</span>
-          </div>
+          <Link href="/cart" style={{ textDecoration: "none" }}>
+            <div className={styles.stepPillActive} title="Cart">
+              <span className={styles.activeDot} />
+              <span>Cart</span>
+            </div>
+          </Link>
 
           <div className={styles.stepperLine} />
 
@@ -244,8 +246,12 @@ export const UserCart: React.FC<UserCartProps> = ({
 
           <div className={styles.stepperLine} />
 
-          {/* Step 3: Confirmation (Inactive) */}
-          <div className={styles.stepPillInactive}>
+          {/* Step 3: Confirmation (Direct click revoked) */}
+          <div
+            className={styles.stepPillInactive}
+            style={{ cursor: "not-allowed", opacity: 0.6 }}
+            title="Complete required details and place order to access confirmation"
+          >
             <span className={styles.inactiveDot} />
             <span>Confirmation</span>
           </div>

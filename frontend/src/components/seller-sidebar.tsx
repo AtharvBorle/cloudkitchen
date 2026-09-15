@@ -333,10 +333,6 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
                     Delivery Persons
                 </Link>
 
-                <Link href="/dashboard/seller/offers" style={getLinkStyle('/dashboard/seller/offers')} onClick={onClose}>
-                    Offers & Coupons
-                </Link>
-
                 <Link href="/dashboard/seller/reviews" style={getLinkStyle('/dashboard/seller/reviews')} onClick={onClose}>
                     Reviews & Feedback
                 </Link>
@@ -351,6 +347,10 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
 
                 <Link href="/dashboard/seller/profile" style={getLinkStyle('/dashboard/seller/profile')} onClick={onClose}>
                     Profile & QR
+                </Link>
+
+                <Link href="/dashboard/seller/offers" style={getLinkStyle('/dashboard/seller/offers')} onClick={onClose}>
+                    Offers & Coupons
                 </Link>
 
                 <Link href="/dashboard/seller/payment" style={getLinkStyle('/dashboard/seller/payment')} onClick={onClose}>

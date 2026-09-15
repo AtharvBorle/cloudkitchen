@@ -29,6 +29,7 @@ import {
   PanelLeftOpen,
   ChevronLeft,
   ChevronRight,
+  Percent,
 } from "lucide-react";
 import styles from "./ConsoleSidebar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -51,6 +52,7 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
   { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
+  { id: "offers", label: "Offers & Coupons", icon: Percent, href: "/seller/offers" },
   { id: "notifications", label: "Notifications", icon: Bell, href: "/seller/notifications" },
   { id: "settings", label: "Settings", icon: Settings, href: "/seller/settings" },
 ];
@@ -185,6 +187,13 @@ export default function SellerSidebar({
         pathname?.startsWith("/seller/profile") ||
         pathname?.startsWith("/seller/res/profile") ||
         pathname?.startsWith("/dashboard/seller/profile")
+      );
+    }
+    if (item.id === "offers") {
+      return (
+        pathname?.startsWith("/seller/offers") ||
+        pathname?.startsWith("/seller/res/offers") ||
+        pathname?.startsWith("/dashboard/seller/offers")
       );
     }
     if (item.id === "notifications") {
