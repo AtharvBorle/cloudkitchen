@@ -238,9 +238,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsProfileHoverOpen(false);
   };
 
-  const isHomePage = pathname === "/";
-  const shouldHideSearch = hideSearch !== undefined ? hideSearch : (isHomePage || isSettingsPage);
-  const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : isSettingsPage;
+  const shouldHideSearch = hideSearch !== undefined ? hideSearch : false;
+  const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : false;
 
   const handleNavClick = (item: string) => {
     setInternalActiveItem(item);
@@ -588,35 +587,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
           </nav>
-
-          {/* Desktop Section-Aware Search Bar */}
-          {!shouldHideSearch && (
-            <form onSubmit={handleSearchSubmit} className={styles.desktopSearchBar}>
-              <Search size={16} className={styles.desktopSearchIcon} strokeWidth={2.2} />
-              <input
-                type="text"
-                placeholder={getSectionSearchConfig().placeholder}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setMobileSearchQuery(e.target.value);
-                  if (onSearch) onSearch(e.target.value);
-                }}
-                className={styles.desktopSearchInput}
-                aria-label={`Search in ${getSectionSearchConfig().section}`}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className={styles.desktopClearBtn}
-                  aria-label="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </form>
-          )}
 
           {/* 3. RIGHT SECTION */}
           <div className={styles.rightSection}>

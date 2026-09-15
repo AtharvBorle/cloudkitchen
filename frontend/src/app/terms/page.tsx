@@ -9,15 +9,7 @@ import styles from "./TermsPage.module.css";
 export default function TermsAndConditionsPage() {
   return (
     <div className={styles.pageWrapper}>
-      {/* 1. Shared Top Navbar with Settings Active */}
-      <div className={styles.desktopNavbar}>
-        <Navbar
-          navItems={["Home", "Explore", "Orders", "Rooms", "Settings"]}
-          initialActiveItem="Settings"
-          hideSearch={true}
-          hideVegToggle={true}
-        />
-      </div>
+      <Navbar initialActiveItem="Settings" />
 
       <main className={styles.mainContainer}>
         <div className={styles.layoutRow}>

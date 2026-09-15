@@ -264,38 +264,7 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* Mobile Sidebar Navigation Drawer */}
-      <MobileSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        activeItem="Rooms"
-      />
-
-      {/* 1. Desktop Navbar (hidden on mobile <=768px) */}
-      <div className={styles.desktopNavbar}>
-        <Navbar
-          initialActiveItem="Rooms"
-          location={roomData.city || "Pune"}
-          {...navbarProps}
-        />
-      </div>
-
-      {/* 2. Mobile Top Navigation Bar (visible only on <=768px) */}
-      <div className={styles.mobileHeaderBar}>
-        <button
-          type="button"
-          className={styles.mobileMenuBtn}
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu size={24} strokeWidth={2.2} />
-        </button>
-
-        <Link href="/room-booking" className={styles.mobileBackBtn} aria-label="Back to rooms">
-          <ArrowLeft size={20} />
-          <span>Rooms</span>
-        </Link>
-      </div>
+      <Navbar initialActiveItem="Rooms" />
 
       {/* 2. Main Desktop Content Shell */}
       <main className={styles.mainContent}>
