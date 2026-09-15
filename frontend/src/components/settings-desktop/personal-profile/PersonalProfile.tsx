@@ -72,11 +72,11 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
     };
   }, [session]);
 
-  const fullName = customFullName || liveData.name || session?.user?.name || "Rahul Sharma";
-  const email = customEmail || liveData.email || session?.user?.email || "rahul.sharma@lumen.com";
-  const phone = customPhone || liveData.phone || "+91 98765 43210";
-  const city = liveData.city || "Mumbai";
-  const pincode = liveData.pincode || "400001";
+  const fullName = customFullName || liveData.name || session?.user?.name || "";
+  const email = customEmail || liveData.email || session?.user?.email || "";
+  const phone = customPhone || liveData.phone || "";
+  const city = liveData.city || "";
+  const pincode = liveData.pincode || "";
 
   const handleOpenEdit = () => {
     if (onEdit) {
@@ -88,7 +88,7 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
       return;
     }
     setEditName(fullName);
-    setEditPhone(phone.replace("+91 ", ""));
+    setEditPhone(phone.replace(/^\+91\s*/, ""));
     setEditCity(city);
     setEditPincode(pincode);
     setIsEditing(true);
@@ -192,6 +192,7 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter your full name"
                 required
                 style={{
                   padding: "10px 12px",
@@ -210,7 +211,7 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
                 type="tel"
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
-                required
+                placeholder="Enter 10-digit mobile number"
                 style={{
                   padding: "10px 12px",
                   borderRadius: "8px",
@@ -228,6 +229,7 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
                 type="text"
                 value={editCity}
                 onChange={(e) => setEditCity(e.target.value)}
+                placeholder="e.g. Pune, Mumbai"
                 style={{
                   padding: "10px 12px",
                   borderRadius: "8px",
@@ -243,8 +245,10 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748B" }}>PINCODE</label>
               <input
                 type="text"
+                maxLength={6}
                 value={editPincode}
-                onChange={(e) => setEditPincode(e.target.value)}
+                onChange={(e) => setEditPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="e.g. 411038"
                 style={{
                   padding: "10px 12px",
                   borderRadius: "8px",
@@ -302,27 +306,37 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
         <div className={styles.fieldsGrid}>
           <div className={styles.fieldItem}>
             <span className={styles.fieldLabel}>FULL NAME</span>
-            <p className={styles.fieldValue}>{fullName}</p>
+            <p className={styles.fieldValue} style={{ color: fullName ? "#0F172A" : "#94A3B8" }}>
+              {fullName || "Not provided"}
+            </p>
           </div>
 
           <div className={styles.fieldItem}>
             <span className={styles.fieldLabel}>EMAIL ADDRESS</span>
-            <p className={styles.fieldValue}>{email}</p>
+            <p className={styles.fieldValue} style={{ color: email ? "#0F172A" : "#94A3B8" }}>
+              {email || "Not provided"}
+            </p>
           </div>
 
           <div className={styles.fieldItem}>
             <span className={styles.fieldLabel}>PHONE NUMBER</span>
-            <p className={styles.fieldValue}>{phone}</p>
+            <p className={styles.fieldValue} style={{ color: phone ? "#0F172A" : "#94A3B8" }}>
+              {phone || "Not configured"}
+            </p>
           </div>
 
           <div className={styles.fieldItem}>
             <span className={styles.fieldLabel}>CITY / REGION</span>
-            <p className={styles.fieldValue}>{city}</p>
+            <p className={styles.fieldValue} style={{ color: city ? "#0F172A" : "#94A3B8" }}>
+              {city || "Not configured"}
+            </p>
           </div>
 
           <div className={styles.fieldItem}>
             <span className={styles.fieldLabel}>PINCODE</span>
-            <p className={styles.fieldValue}>{pincode}</p>
+            <p className={styles.fieldValue} style={{ color: pincode ? "#0F172A" : "#94A3B8" }}>
+              {pincode || "Not configured"}
+            </p>
           </div>
         </div>
       )}

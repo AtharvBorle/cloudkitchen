@@ -129,11 +129,11 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             )}
           </div>
           <div className={styles.userInfo}>
-            <h3 className={styles.userName} title={session?.user?.name || "Rahul Sharma"}>
-              {session?.user?.name || "Rahul Sharma"}
+            <h3 className={styles.userName} title={session?.user?.name || "Guest User"}>
+              {session?.user?.name || (session ? "User" : "Guest User")}
             </h3>
-            <p className={styles.userPhone} title={session?.user?.email || "+91 98765 43210"}>
-              {session?.user?.email || "+91 98765 43210"}
+            <p className={styles.userPhone} title={session?.user?.email || "Sign in to manage account"}>
+              {session?.user?.email || (session ? "" : "Sign in to manage account")}
             </p>
           </div>
         </div>

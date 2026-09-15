@@ -19,6 +19,9 @@ import {
   Calendar,
   User,
   Info,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import { Navbar, NavbarProps } from "@/components/navbar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
@@ -222,6 +225,37 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
   const roomData = propRoomData || fetchedRoomData || DEFAULT_ROOM_DATA;
 
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+
+  const allGalleryImages = React.useMemo(() => {
+    if (roomData.images && roomData.images.length > 0) {
+      return roomData.images.map((img: any) => (typeof img === "string" ? img : img?.src || ""));
+    }
+    return [
+      typeof roomGalleryBanner === "string" ? roomGalleryBanner : roomGalleryBanner.src,
+      typeof roomImg1 === "string" ? roomImg1 : roomImg1.src,
+      typeof roomImg2 === "string" ? roomImg2 : roomImg2.src,
+      typeof roomImg3 === "string" ? roomImg3 : roomImg3.src,
+      typeof roomImg4 === "string" ? roomImg4 : roomImg4.src,
+    ].filter(Boolean);
+  }, [roomData.images]);
+
+  useEffect(() => {
+    if (!isGalleryOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsGalleryOpen(false);
+      } else if (e.key === "ArrowLeft") {
+        setActivePhotoIdx((prev) => (prev === 0 ? allGalleryImages.length - 1 : prev - 1));
+      } else if (e.key === "ArrowRight") {
+        setActivePhotoIdx((prev) => (prev + 1) % allGalleryImages.length);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isGalleryOpen, allGalleryImages.length]);
+
   const renderAmenityIcon = (iconName: string) => {
     switch (iconName) {
       case "wifi":
@@ -286,7 +320,15 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
         </nav>
 
         {/* Photo Gallery Grid Showcase */}
-        <section aria-label="Room Photo Gallery" className={styles.galleryContainer}>
+        <section
+          aria-label="Room Photo Gallery"
+          className={styles.galleryContainer}
+          style={{ cursor: "pointer" }}
+          onClick={() => {
+            setActivePhotoIdx(0);
+            setIsGalleryOpen(true);
+          }}
+        >
           {roomData.images && roomData.images.length > 0 && typeof roomData.images[0] === "string" ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -307,10 +349,14 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
           <button
             type="button"
             className={styles.viewAllPhotosBtn}
-            onClick={() => alert("Opening full photo gallery")}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActivePhotoIdx(0);
+              setIsGalleryOpen(true);
+            }}
           >
             <Grid size={15} />
-            <span>View all {roomData.images?.length || 4} photos</span>
+            <span>View all {allGalleryImages.length} photos</span>
           </button>
         </section>
 
@@ -527,6 +573,105 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
         {children}
       </main>
+
+      {/* Interactive Lightbox Photo Gallery Modal */}
+      {isGalleryOpen && (
+        <div
+          className={styles.galleryModalOverlay}
+          onClick={() => setIsGalleryOpen(false)}
+        >
+          {/* Top Bar */}
+          <div
+            className={styles.galleryModalHeader}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className={styles.galleryModalTitle}>
+                {roomData.name}
+                <span className={styles.galleryModalCounter}>
+                  — Photo {activePhotoIdx + 1} of {allGalleryImages.length}
+                </span>
+              </h3>
+            </div>
+            <button
+              type="button"
+              className={styles.galleryCloseBtn}
+              onClick={() => setIsGalleryOpen(false)}
+              aria-label="Close Gallery"
+            >
+              <X size={20} strokeWidth={2.4} />
+            </button>
+          </div>
+
+          {/* Main Photo Display Area */}
+          <div
+            className={styles.galleryMainView}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {allGalleryImages.length > 1 && (
+              <button
+                type="button"
+                className={`${styles.galleryNavBtn} ${styles.galleryNavBtnLeft}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePhotoIdx((prev) =>
+                    prev === 0 ? allGalleryImages.length - 1 : prev - 1
+                  );
+                }}
+                aria-label="Previous photo"
+              >
+                <ChevronLeft size={28} strokeWidth={2.4} />
+              </button>
+            )}
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={allGalleryImages[activePhotoIdx]}
+              alt={`${roomData.name} photo ${activePhotoIdx + 1}`}
+              className={styles.galleryMainImg}
+            />
+
+            {allGalleryImages.length > 1 && (
+              <button
+                type="button"
+                className={`${styles.galleryNavBtn} ${styles.galleryNavBtnRight}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePhotoIdx((prev) => (prev + 1) % allGalleryImages.length);
+                }}
+                aria-label="Next photo"
+              >
+                <ChevronRight size={28} strokeWidth={2.4} />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Thumbnail Strip */}
+          <div
+            className={styles.galleryThumbnailStrip}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {allGalleryImages.map((imgUrl, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className={`${styles.galleryThumbBtn} ${
+                  activePhotoIdx === idx ? styles.galleryThumbBtnActive : ""
+                }`}
+                onClick={() => setActivePhotoIdx(idx)}
+                aria-label={`Jump to photo ${idx + 1}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imgUrl}
+                  alt={`Thumbnail ${idx + 1}`}
+                  className={styles.galleryThumbImg}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 3. Global Responsive Footer */}
       <Footer />

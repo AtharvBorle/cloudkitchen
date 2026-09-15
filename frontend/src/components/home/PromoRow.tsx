@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface PromoCardData {
   id: string;
@@ -19,22 +19,42 @@ export interface PromoCardData {
 const DEFAULT_PROMOS: PromoCardData[] = [
   {
     id: "promo-1",
-    title: "Save 30% OFF  First 2 Orders",
+    title: "Save 30% OFF First 2 Orders",
     code: "FOOD30",
     description: "Kickstart your meal plan with premium ingredients & fast delivery. Use code FOOD30 at checkout.",
     buttonText: "Order Now",
-    buttonLink: "/explore",
+    buttonLink: "/explore-desktop",
     badgeText: "Hurry - ends soon",
     imageSrc: "/images/promo-scooter.png",
   },
   {
     id: "promo-2",
-    title: "Save 30% OFF  First 2 Orders",
-    code: "FOOD30",
-    description: "Kickstart your meal plan with premium ingredients & fast delivery. Use code FOOD30 at checkout.",
+    title: "Flat 25% OFF on Daily Tiffin",
+    code: "TIFFIN25",
+    description: "Enjoy authentic home-style food cooked fresh every day. Use code TIFFIN25 to save.",
     buttonText: "Order Now",
-    buttonLink: "/explore",
-    badgeText: "Hurry - ends soon",
+    buttonLink: "/explore-desktop?category=Mess/Tiffin",
+    badgeText: "Popular Choice",
+    imageSrc: "/images/promo-scooter.png",
+  },
+  {
+    id: "promo-3",
+    title: "Get ₹100 Cashback on Biryani",
+    code: "BIRYANI100",
+    description: "Savor the rich aromas of Hyderabadi & Dum Biryani from top local cloud kitchens.",
+    buttonText: "Order Now",
+    buttonLink: "/explore-desktop?category=Biryani",
+    badgeText: "Chef's Special",
+    imageSrc: "/images/promo-scooter.png",
+  },
+  {
+    id: "promo-4",
+    title: "Save 20% on Healthy Salads & Bowls",
+    code: "HEALTH20",
+    description: "Nutritious and delicious meal bowls crafted with farm-fresh organic veggies.",
+    buttonText: "Explore",
+    buttonLink: "/explore-desktop",
+    badgeText: "Healthy Eats",
     imageSrc: "/images/promo-scooter.png",
   },
 ];
@@ -44,260 +64,369 @@ interface PromoRowProps {
 }
 
 export default function PromoRow({ promos = DEFAULT_PROMOS }: PromoRowProps) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  const displayPromos = promos && promos.length > 0 ? promos : DEFAULT_PROMOS;
+  const totalSlides = displayPromos.length;
+
+  const nextSlide = () => {
+    setActiveIdx((prev) => (prev + 1) % totalSlides);
+  };
+
+  const prevSlide = () => {
+    setActiveIdx((prev) => (prev === 0 ? totalSlides - 1 : prev - 1));
+  };
+
+  // Auto-scroll every 5 seconds (pauses when hovered)
+  useEffect(() => {
+    if (totalSlides <= 1 || isHovered) return;
+    const timer = setInterval(() => {
+      setActiveIdx((prev) => (prev + 1) % totalSlides);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [totalSlides, isHovered]);
+
+  // Touch Swipe Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diff = touchStartX.current - touchEndX.current;
+    if (diff > 45) {
+      nextSlide();
+    } else if (diff < -45) {
+      prevSlide();
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
+  const currentPromo = displayPromos[activeIdx] || displayPromos[0];
+
   return (
     <section
       style={{
         width: "100%",
         padding: "0",
         background: "transparent",
+        position: "relative",
       }}
       className="promo-row-section"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div
         style={{
           width: "100%",
           maxWidth: "1280px",
-          height: "324px",
+          minHeight: "324px",
           margin: "0 auto",
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "40px",
+          position: "relative",
           boxSizing: "border-box",
         }}
         className="promo-row-container"
       >
-        {promos.slice(0, 2).map((promo, idx) => (
+        <div
+          key={currentPromo.id || activeIdx}
+          style={{
+            width: "100%",
+            minHeight: "324px",
+            backgroundColor: "#F7C08A",
+            backgroundImage: "linear-gradient(108deg, #FDE6CE 0%, #F8C38F 50%, #F5B67B 100%)",
+            borderRadius: "28px",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "28px 36px 36px 36px",
+            position: "relative",
+            overflow: "hidden",
+            boxSizing: "border-box",
+            boxShadow: "0 8px 24px rgba(245, 182, 123, 0.22)",
+            transition: "all 0.4s ease-in-out",
+          }}
+          className="promo-card promoRow1"
+        >
+          {/* Left Content Area */}
           <div
-            key={promo.id || idx}
             style={{
-              width: "620px",
-              flex: "1 1 620px",
-              maxWidth: "620px",
-              height: "324px",
-              backgroundColor: "#F7C08A",
-              backgroundImage: "linear-gradient(108deg, #FDE6CE 0%, #F8C38F 50%, #F5B67B 100%)",
-              borderRadius: "28px",
+              flex: "1 1 450px",
+              maxWidth: "520px",
+              zIndex: 2,
               display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "24px 24px 24px 32px",
-              position: "relative",
-              overflow: "hidden",
+              flexDirection: "column",
+              justifyContent: "center",
+              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
               boxSizing: "border-box",
-              boxShadow: "0 8px 24px rgba(245, 182, 123, 0.22)",
             }}
-            className="promo-card promoRow1"
           >
-            {/* Left Content Area */}
-            <div
+            {/* Heading */}
+            <h2
               style={{
-                flex: "1 1 350px",
-                maxWidth: "355px",
-                zIndex: 2,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
+                width: "100%",
                 fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                fontWeight: 700,
+                fontSize: "30px",
+                lineHeight: "36px",
+                letterSpacing: "-0.02em",
+                background: "linear-gradient(90deg, #F97316 0%, #93440D 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                margin: "0 0 8px 0",
+                display: "flex",
+                alignItems: "center",
                 boxSizing: "border-box",
               }}
             >
-              {/* Heading: Save 30% OFF First 2 Orders */}
-              <h2
-                style={{
-                  width: "100%",
-                  maxWidth: "360px",
-                  minHeight: "64px",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  fontWeight: 600,
-                  fontSize: "28px",
-                  lineHeight: "33px",
-                  letterSpacing: "0px",
-                  background: "linear-gradient(90deg, #F97316 0%, #93440D 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  margin: "0 0 6px 0",
-                  display: "flex",
-                  alignItems: "center",
-                  boxSizing: "border-box",
-                }}
-              >
-                {promo.title}
-              </h2>
+              {currentPromo.title}
+            </h2>
 
-              {/* Code: Use code: FOOD30 */}
-              <div
-                style={{
-                  width: "100%",
-                  height: "24px",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  fontWeight: 600,
-                  fontSize: "15px",
-                  lineHeight: "100%",
-                  letterSpacing: "0%",
-                  color: "#0F172A",
-                  marginBottom: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  boxSizing: "border-box",
-                }}
-              >
-                Use code: <span style={{ marginLeft: "4px" }}>{promo.code}</span>
-              </div>
+            {/* Code */}
+            <div
+              style={{
+                width: "100%",
+                height: "24px",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: "15px",
+                lineHeight: "100%",
+                letterSpacing: "0%",
+                color: "#0F172A",
+                marginBottom: "10px",
+                display: "flex",
+                alignItems: "center",
+                boxSizing: "border-box",
+              }}
+            >
+              Use code: <span style={{ marginLeft: "6px", fontWeight: 800, color: "#EA580C" }}>{currentPromo.code}</span>
+            </div>
 
-              {/* Description body */}
-              <p
+            {/* Description body */}
+            <p
+              style={{
+                width: "100%",
+                maxWidth: "420px",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                fontWeight: 500,
+                fontSize: "14.5px",
+                lineHeight: "150%",
+                color: "#7C2D12",
+                margin: "0 0 20px 0",
+                boxSizing: "border-box",
+              }}
+            >
+              {currentPromo.description}
+            </p>
+
+            {/* Actions: Order Now + Hurry Badge */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                flexWrap: "wrap",
+              }}
+            >
+              <Link
+                href={currentPromo.buttonLink}
                 style={{
-                  width: "100%",
-                  maxWidth: "350px",
-                  minHeight: "44px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "auto",
+                  minWidth: "130px",
+                  height: "44px",
+                  borderRadius: "99px",
+                  padding: "10px 24px",
+                  backgroundColor: "#FFFFFF",
+                  color: "#FF6B00",
                   fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  fontWeight: 500,
+                  fontWeight: 700,
                   fontSize: "14.5px",
-                  lineHeight: "145%",
-                  letterSpacing: "0%",
-                  color: "#F97316",
-                  margin: "0 0 16px 0",
+                  textDecoration: "none",
+                  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.08)",
+                  transition: "all 0.2s ease",
                   boxSizing: "border-box",
+                  whiteSpace: "nowrap",
                 }}
+                className="promo-order-btn"
               >
-                {promo.description}
-              </p>
+                {currentPromo.buttonText}
+              </Link>
 
-              {/* Actions: Order Now + Hurry Badge */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  flexWrap: "nowrap",
-                }}
-              >
-                {/* Order Now button */}
-                <Link
-                  href={promo.buttonLink}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "auto",
-                    minWidth: "120px",
-                    height: "44px",
-                    borderRadius: "99px",
-                    padding: "10px 22px",
-                    backgroundColor: "#FFFFFF",
-                    color: "#FF6B00",
-                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                    fontWeight: 600,
-                    fontSize: "14.5px",
-                    textDecoration: "none",
-                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.06)",
-                    transition: "all 0.2s ease",
-                    boxSizing: "border-box",
-                    whiteSpace: "nowrap",
-                  }}
-                  className="promo-order-btn"
-                >
-                  {promo.buttonText}
-                </Link>
-
-                {/* Hurry - ends soon badge */}
+              {currentPromo.badgeText && (
                 <div
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
                     width: "auto",
-                    minWidth: "155px",
                     height: "40px",
                     borderRadius: "999px",
-                    border: "1px solid rgba(255, 255, 255, 0.149)",
-                    padding: "10px 12px",
-                    gap: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.0784)",
+                    border: "1px solid rgba(255, 255, 255, 0.4)",
+                    padding: "8px 14px",
+                    gap: "6px",
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
                     backdropFilter: "blur(6px)",
                     WebkitBackdropFilter: "blur(6px)",
-                    color: "#FFFFFF",
+                    color: "#7C2D12",
                     fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                    fontWeight: 500,
+                    fontWeight: 600,
                     fontSize: "12.5px",
                     boxSizing: "border-box",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  <Clock size={15} strokeWidth={2.2} color="#FFFFFF" />
-                  <span>{promo.badgeText}</span>
+                  <Clock size={15} strokeWidth={2.2} color="#EA580C" />
+                  <span>{currentPromo.badgeText}</span>
                 </div>
-              </div>
+              )}
             </div>
+          </div>
 
-            {/* Pagination Dots */}
+          {/* Right Graphic: 3D Scooter Rider */}
+          <div
+            style={{
+              flex: "0 0 240px",
+              width: "240px",
+              height: "270px",
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 2,
+              boxSizing: "border-box",
+            }}
+            className="promo-scooter-wrapper"
+          >
+            <Image
+              src={currentPromo.imageSrc}
+              alt="Delivery Rider on Scooter"
+              width={240}
+              height={260}
+              priority
+              style={{
+                width: "auto",
+                height: "100%",
+                maxHeight: "260px",
+                maxWidth: "100%",
+                objectFit: "contain",
+                filter: "drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15))",
+              }}
+            />
+          </div>
+
+          {/* Navigation Arrows */}
+          {totalSlides > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={prevSlide}
+                aria-label="Previous Promo"
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "38px",
+                  height: "38px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255, 255, 255, 0.85)",
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#0F172A",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                  zIndex: 10,
+                  transition: "all 0.2s ease",
+                }}
+                className="promo-arrow-btn"
+              >
+                <ChevronLeft size={20} strokeWidth={2.5} />
+              </button>
+              <button
+                type="button"
+                onClick={nextSlide}
+                aria-label="Next Promo"
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "38px",
+                  height: "38px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255, 255, 255, 0.85)",
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#0F172A",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                  zIndex: 10,
+                  transition: "all 0.2s ease",
+                }}
+                className="promo-arrow-btn"
+              >
+                <ChevronRight size={20} strokeWidth={2.5} />
+              </button>
+            </>
+          )}
+
+          {/* Interactive Pagination Dots */}
+          {totalSlides > 1 && (
             <div
               style={{
                 position: "absolute",
-                bottom: "12px",
-                left: "38%",
+                bottom: "14px",
+                left: "50%",
                 transform: "translateX(-50%)",
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
-                zIndex: 3,
+                gap: "8px",
+                zIndex: 4,
+                backgroundColor: "rgba(0, 0, 0, 0.15)",
+                padding: "4px 10px",
+                borderRadius: "999px",
+                backdropFilter: "blur(4px)",
               }}
             >
-              <span
-                style={{
-                  width: "6px",
-                  height: "6px",
-                  borderRadius: "50%",
-                  backgroundColor: "rgba(255, 255, 255, 0.9)",
-                }}
-              />
-              <span
-                style={{
-                  width: "18px",
-                  height: "6px",
-                  borderRadius: "3px",
-                  backgroundColor: "#FF6B00",
-                  transition: "all 0.3s ease",
-                }}
-              />
+              {displayPromos.map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  type="button"
+                  onClick={() => setActiveIdx(dotIdx)}
+                  aria-label={`Go to slide ${dotIdx + 1}`}
+                  style={{
+                    width: activeIdx === dotIdx ? "20px" : "8px",
+                    height: "8px",
+                    borderRadius: "4px",
+                    backgroundColor: activeIdx === dotIdx ? "#FF5500" : "rgba(255, 255, 255, 0.85)",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                />
+              ))}
             </div>
-
-            {/* Right Graphic: 3D Scooter Rider (Fitted securely in frame) */}
-            <div
-              style={{
-                flex: "0 0 190px",
-                width: "190px",
-                height: "270px",
-                position: "relative",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 2,
-                boxSizing: "border-box",
-              }}
-              className="promo-scooter-wrapper"
-            >
-              <Image
-                src={promo.imageSrc}
-                alt="Delivery Rider on Scooter"
-                width={190}
-                height={260}
-                priority
-                style={{
-                  width: "auto",
-                  height: "100%",
-                  maxHeight: "260px",
-                  maxWidth: "100%",
-                  objectFit: "contain",
-                  filter: "drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12))",
-                }}
-              />
-            </div>
-          </div>
-        ))}
+          )}
+        </div>
       </div>
 
       <style jsx>{`
@@ -306,28 +435,22 @@ export default function PromoRow({ promos = DEFAULT_PROMOS }: PromoRowProps) {
           box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12) !important;
           background-color: #FFFDF9 !important;
         }
-        @media (max-width: 1200px) {
-          .promo-row-container {
-            flex-direction: column !important;
-            height: auto !important;
-            gap: 24px !important;
-          }
-          .promo-card {
-            width: 100% !important;
-            max-width: 100% !important;
-          }
+        .promo-arrow-btn:hover {
+          background-color: #FFFFFF !important;
+          color: #FF5500 !important;
+          transform: translateY(-50%) scale(1.1) !important;
         }
-        @media (max-width: 640px) {
+        @media (max-width: 900px) {
           .promo-card {
             flex-direction: column !important;
             height: auto !important;
-            padding: 24px 20px 32px 20px !important;
+            padding: 28px 20px 48px 20px !important;
             text-align: left;
           }
           .promo-scooter-wrapper {
             margin-top: 16px;
-            width: 160px !important;
-            height: 160px !important;
+            width: 180px !important;
+            height: 180px !important;
           }
         }
       `}</style>

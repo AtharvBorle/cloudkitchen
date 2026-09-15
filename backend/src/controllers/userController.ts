@@ -15,6 +15,8 @@ export const getUserProfile = async () => {
             name: true,
             email: true,
             phone: true,
+            city: true,
+            pincode: true,
             role: true,
             addresses: {
                 orderBy: {
