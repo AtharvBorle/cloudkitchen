@@ -19,7 +19,6 @@ import {
   ChevronRight,
   LogOut,
   LogIn,
-  Pencil,
 } from "lucide-react";
 import styles from "./SettingsSidebar.module.css";
 import rahulAvatar from "./Rectangle.jpg";
@@ -84,14 +83,6 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     }
   };
 
-  const handleEditProfile = () => {
-    if (!session?.user) {
-      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);
-    } else {
-      router.push("/settings-desktop");
-    }
-  };
-
   const handleAuthAction = () => {
     if (session?.user) {
       if (onLogout) {
@@ -122,7 +113,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 700,
-                  fontSize: "20px",
+                  fontSize: "16px",
                 }}
               >
                 {session.user.name.trim().charAt(0).toUpperCase()}
@@ -132,18 +123,18 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 src={rahulAvatar}
                 alt="User Profile"
                 fill
-                sizes="56px"
+                sizes="40px"
                 className={styles.avatarImg}
               />
             )}
           </div>
           <div className={styles.userInfo}>
-            <h3 className={styles.userName}>{session?.user?.name || "Rahul Sharma"}</h3>
-            <p className={styles.userPhone}>{session?.user?.email || "+91 98765 43210"}</p>
-            <button type="button" className={styles.editProfileLink} onClick={handleEditProfile} aria-label="Edit Profile">
-              <span>Edit Profile</span>
-              <Pencil size={11} strokeWidth={2.5} />
-            </button>
+            <h3 className={styles.userName} title={session?.user?.name || "Rahul Sharma"}>
+              {session?.user?.name || "Rahul Sharma"}
+            </h3>
+            <p className={styles.userPhone} title={session?.user?.email || "+91 98765 43210"}>
+              {session?.user?.email || "+91 98765 43210"}
+            </p>
           </div>
         </div>
 
