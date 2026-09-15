@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from "react";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
@@ -30,6 +30,7 @@ export interface LocationContextType {
   refreshAddress: () => Promise<void>;
   selectAddress: (addressId: string) => Promise<void>;
   setGuestLocation: (pincode: string, locality?: string, city?: string) => void;
+  detectGpsLocation: () => Promise<boolean>;
 }
 
 const LocationContext = createContext<LocationContextType>({
@@ -42,6 +43,7 @@ const LocationContext = createContext<LocationContextType>({
   refreshAddress: async () => {},
   selectAddress: async () => {},
   setGuestLocation: () => {},
+  detectGpsLocation: async () => false,
 });
 
 export const useLocation = () => useContext(LocationContext);
@@ -56,118 +58,81 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const { data: session, status } = useSession();
+  const hasAttemptedGpsRef = useRef(false);
 
   const openLocationModal = () => setIsLocationModalOpen(true);
   const closeLocationModal = () => setIsLocationModalOpen(false);
 
-  const fetchAddress = useCallback(async () => {
-    if (status !== "authenticated") {
-      // User is a guest or session is loading
-      const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
-      const guestLocality = typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
-      const guestCity = typeof window !== "undefined" ? localStorage.getItem("guest-city") : null;
-
-      if (guestPin) {
-        setDefaultAddress({
-          id: "guest-location",
-          type: "Current Location",
-          pincode: guestPin,
-          locality: guestLocality || "Kothrud",
-          city: guestCity || "Pune",
-          isDefault: true,
-        });
-      } else {
-        // Default initial guest fallback
-        setDefaultAddress({
-          id: "guest-location",
-          type: "Current Location",
-          pincode: "411038",
-          locality: "Kothrud",
-          city: "Pune",
-          isDefault: true,
-        });
-      }
-      setSavedAddresses([]);
-      setIsLoading(status === "loading");
-      return;
+  // GPS Auto-Detection & Reverse Geocoding via Nominatim
+  const detectGpsLocation = useCallback(async (): Promise<boolean> => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      return false;
     }
 
-    setIsLoading(true);
-    try {
-      // 1. Fetch Default / Active location
-      const defRes = await fetchApi("/api/user/location/default");
-      let activeAddr: Address | null = null;
-      if (defRes.ok) {
-        const defData = await defRes.json();
-        if (defData && defData.pincode) {
-          activeAddr = defData;
-        }
-      }
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              const addr = data.address || {};
+              const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+              const locality =
+                addr.suburb ||
+                addr.neighbourhood ||
+                addr.residential ||
+                addr.city_district ||
+                addr.road ||
+                addr.town ||
+                addr.city ||
+                "Current Location";
+              const city = addr.city || addr.town || addr.state_district || addr.state || "Pune";
 
-      // 2. Fetch all saved addresses for the user
-      const addrRes = await fetchApi("/api/user/addresses");
-      let addressList: Address[] = [];
-      if (addrRes.ok) {
-        const addrData = await addrRes.json();
-        const list = addrData.data?.addresses || addrData.addresses || addrData.data || [];
-        if (Array.isArray(list)) {
-          addressList = list;
-          setSavedAddresses(list);
-        }
-      }
+              if (pin && pin.length === 6) {
+                const detectedAddress: Address = {
+                  id: "gps-location",
+                  type: "Current Location",
+                  pincode: pin,
+                  locality,
+                  city,
+                  latitude,
+                  longitude,
+                  isDefault: true,
+                };
+                setDefaultAddress(detectedAddress);
+                localStorage.setItem("guest-pincode", pin);
+                localStorage.setItem("guest-locality", locality);
+                localStorage.setItem("guest-city", city);
 
-      // If active address wasn't resolved by location/default, pick the default or first saved address
-      if (!activeAddr && addressList.length > 0) {
-        const defaultOne = addressList.find((a) => a.isDefault) || addressList[0];
-        activeAddr = defaultOne;
-      }
+                if (status === "authenticated") {
+                  fetchApi("/api/user/location", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ pincode: pin, lat: latitude, lng: longitude }),
+                  }).catch(() => {});
+                }
 
-      if (activeAddr) {
-        setDefaultAddress(activeAddr);
-      } else {
-        const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
-        setDefaultAddress({
-          id: "default-pune",
-          type: "Current Location",
-          pincode: guestPin || "411038",
-          locality: "Kothrud",
-          city: "Pune",
-          isDefault: true,
-        });
-      }
-    } catch (err) {
-      console.error("Failed to fetch address for LocationProvider", err);
-      setDefaultAddress({
-        id: "offline-fallback",
-        type: "Current Location",
-        pincode: "411038",
-        locality: "Kothrud",
-        city: "Pune",
-        isDefault: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+                resolve(true);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error("GPS Reverse Geocoding failed:", err);
+          }
+          resolve(false);
+        },
+        (error) => {
+          console.warn("Browser GPS permission error / denied:", error.message);
+          resolve(false);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+      );
+    });
   }, [status]);
-
-  const selectAddress = async (addressId: string) => {
-    try {
-      const res = await fetchApi(`/api/user/addresses/${addressId}/default`, {
-        method: "PATCH",
-      });
-      if (res.ok) {
-        await fetchAddress();
-      } else {
-        // Optimistically set if saved
-        const target = savedAddresses.find((a) => a.id === addressId);
-        if (target) {
-          setDefaultAddress({ ...target, isDefault: true });
-        }
-      }
-    } catch (err) {
-      console.error("Error setting default address:", err);
-    }
-  };
 
   const setGuestLocation = (pincode: string, locality?: string, city?: string) => {
     if (typeof window !== "undefined") {
@@ -179,11 +144,126 @@ export function LocationProvider({ children }: LocationProviderProps) {
       id: "guest-location",
       type: "Current Location",
       pincode: pincode,
-      locality: locality || "Delivery Area",
+      locality: locality || `PIN ${pincode}`,
       city: city || "Pune",
       isDefault: true,
     });
   };
+
+  const selectAddress = async (addressId: string) => {
+    try {
+      const res = await fetchApi(`/api/user/addresses/${addressId}/default`, {
+        method: "PATCH",
+      });
+      if (res.ok) {
+        await fetchAddress();
+      } else {
+        const target = savedAddresses.find((a) => a.id === addressId);
+        if (target) {
+          setDefaultAddress({ ...target, isDefault: true });
+        }
+      }
+    } catch (err) {
+      console.error("Error setting default address:", err);
+    }
+  };
+
+  const fetchAddress = useCallback(async () => {
+    if (status !== "authenticated") {
+      // Guest / Non-logged in flow
+      const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
+      const guestLocality = typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
+      const guestCity = typeof window !== "undefined" ? localStorage.getItem("guest-city") : null;
+
+      if (guestPin) {
+        setDefaultAddress({
+          id: "guest-location",
+          type: "Current Location",
+          pincode: guestPin,
+          locality: guestLocality || "Current Location",
+          city: guestCity || "Pune",
+          isDefault: true,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // If user has NO location set, request GPS permission directly
+      setIsLoading(true);
+      if (!hasAttemptedGpsRef.current) {
+        hasAttemptedGpsRef.current = true;
+        const success = await detectGpsLocation();
+        if (!success) {
+          // If GPS was denied/unavailable and this is first arrival, open modal so user is prompted to pick/enter
+          const modalPrompted = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("location-modal-shown") : null;
+          if (!modalPrompted) {
+            sessionStorage.setItem("location-modal-shown", "true");
+            setIsLocationModalOpen(true);
+          }
+        }
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    // Authenticated user flow
+    setIsLoading(true);
+    try {
+      // 1. Fetch Default Address / active location
+      const defRes = await fetchApi("/api/user/location/default");
+      let activeAddr: Address | null = null;
+      if (defRes.ok) {
+        const defData = await defRes.json();
+        const payload = defData.data || defData;
+        if (payload && payload.pincode) {
+          activeAddr = payload;
+        }
+      }
+
+      // 2. Fetch all saved addresses
+      const addrRes = await fetchApi("/api/user/addresses");
+      let addressList: Address[] = [];
+      if (addrRes.ok) {
+        const addrData = await addrRes.json();
+        const list = addrData.data?.addresses || addrData.addresses || addrData.data || [];
+        if (Array.isArray(list)) {
+          addressList = list;
+          setSavedAddresses(list);
+        }
+      }
+
+      if (!activeAddr && addressList.length > 0) {
+        activeAddr = addressList.find((a) => a.isDefault) || addressList[0];
+      }
+
+      if (activeAddr) {
+        setDefaultAddress(activeAddr);
+      } else {
+        // Logged-in user has no addresses yet
+        const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
+        if (guestPin) {
+          setDefaultAddress({
+            id: "guest-location",
+            type: "Current Location",
+            pincode: guestPin,
+            locality: typeof window !== "undefined" ? localStorage.getItem("guest-locality") || "Current Location" : "Current Location",
+            city: typeof window !== "undefined" ? localStorage.getItem("guest-city") || "Pune" : "Pune",
+            isDefault: true,
+          });
+        } else if (!hasAttemptedGpsRef.current) {
+          hasAttemptedGpsRef.current = true;
+          const success = await detectGpsLocation();
+          if (!success) {
+            setIsLocationModalOpen(true);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch address for LocationProvider", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [status, detectGpsLocation]);
 
   useEffect(() => {
     fetchAddress();
@@ -201,6 +281,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         refreshAddress: fetchAddress,
         selectAddress,
         setGuestLocation,
+        detectGpsLocation,
       }}
     >
       {children}

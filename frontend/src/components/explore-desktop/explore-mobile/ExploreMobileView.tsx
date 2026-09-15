@@ -415,7 +415,7 @@ export const ExploreMobileView: React.FC = () => {
                       }`
                     : defaultAddress?.pincode
                     ? `PIN: ${defaultAddress.pincode}`
-                    : "Kothrud, Pune"}
+                    : "Select Location"}
                 </span>
                 <ChevronDown size={14} />
               </div>

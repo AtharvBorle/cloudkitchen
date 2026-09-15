@@ -125,29 +125,41 @@ export const LocationModal: React.FC = () => {
           if (res.ok) {
             const data = await res.json();
             const addr = data.address || {};
-            const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6) || "411038";
-            const locality = addr.suburb || addr.neighbourhood || addr.city_district || addr.road || "Current Location";
-            const city = addr.city || addr.town || addr.state_district || "Pune";
+            const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+            const locality =
+              addr.suburb ||
+              addr.neighbourhood ||
+              addr.residential ||
+              addr.city_district ||
+              addr.road ||
+              addr.town ||
+              addr.city ||
+              "Current Location";
+            const city = addr.city || addr.town || addr.state_district || addr.state || "Pune";
 
-            if (session?.user) {
-              await fetchApi("/api/user/location", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pincode: pin, lat, lng }),
-              });
-              await refreshAddress();
+            if (pin && pin.length === 6) {
+              if (session?.user) {
+                await fetchApi("/api/user/location", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ pincode: pin, lat, lng }),
+                });
+                await refreshAddress();
+              } else {
+                setGuestLocation(pin, locality, city);
+              }
+
+              showNotification("success", `GPS Location Detected: ${locality} (${pin})`);
+              setTimeout(() => closeLocationModal(), 800);
             } else {
-              setGuestLocation(pin, locality, city);
+              showNotification("error", "Could not detect a 6-digit postal pincode for your GPS coordinates. Please enter your pincode below.");
             }
-
-            showNotification("success", `GPS Location Detected: ${locality} (${pin})`);
-            setTimeout(() => closeLocationModal(), 800);
           } else {
-            handleApplyPincode("411038", "Kothrud, Pune");
+            showNotification("error", "Failed to retrieve address from GPS. Please enter your pincode manually.");
           }
         } catch (err) {
           console.error("GPS Reverse Geocode Error:", err);
-          handleApplyPincode("411038", "Kothrud, Pune");
+          showNotification("error", "Error connecting to location service. Please enter pincode manually.");
         } finally {
           setIsLocatingGps(false);
         }

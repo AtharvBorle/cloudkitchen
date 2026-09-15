@@ -45,11 +45,11 @@ const PRESET_LOCATIONS = [
 
 export default function HeroSection({ onSearch, availableItems = [] }: HeroSectionProps) {
   const router = useRouter();
-  const { defaultAddress, setGuestLocation } = useLocation();
+  const { defaultAddress, setGuestLocation, openLocationModal } = useLocation();
   const { recentSearches, addSearch, removeSearch, clearSearches, trendingSearches } = useRecentSearches();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("Kothrud, Pune");
+  const [selectedLocation, setSelectedLocation] = useState("Select Location");
   const [activeTag, setActiveTag] = useState("pizza");
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -71,8 +71,10 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
         ? `${defaultAddress.locality ? defaultAddress.locality + ", " : ""}${defaultAddress.city || ""}`.trim()
         : defaultAddress.pincode
         ? `PIN: ${defaultAddress.pincode}`
-        : "Kothrud, Pune";
-      setSelectedLocation(locStr || "Kothrud, Pune");
+        : "Select Location";
+      setSelectedLocation(locStr || "Select Location");
+    } else {
+      setSelectedLocation("Select Location");
     }
   }, [defaultAddress]);
 
@@ -418,7 +420,7 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
                 userSelect: "none",
               }}
               className="hero-location-picker"
-              onClick={() => setIsLocationOpen(!isLocationOpen)}
+              onClick={() => openLocationModal()}
             >
               <MapPin size={17} color="#FF6B00" />
               <span

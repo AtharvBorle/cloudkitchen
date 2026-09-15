@@ -193,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       ? `${defaultAddress.locality ? defaultAddress.locality + ", " : ""}${defaultAddress.city || defaultAddress.pincode}`
       : defaultAddress?.pincode
         ? `PIN: ${defaultAddress.pincode}`
-        : "Kothrud, Pune"
+        : "Select Location"
   );
 
   const currentVegOnly = controlledVegOnly !== undefined ? controlledVegOnly : internalVegOnly;
