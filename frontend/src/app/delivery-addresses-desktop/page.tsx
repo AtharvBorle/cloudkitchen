@@ -3,9 +3,7 @@
 import React from "react";
 import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
-import { AddressesHeader } from "@/components/delivery-addresses-desktop/addresses-header";
-import { SavedAddresses } from "@/components/delivery-addresses-desktop/saved-addresses";
-import { AddAddressButton } from "@/components/delivery-addresses-desktop/add-address-button";
+import { DeliveryAddresses } from "@/components/settings-desktop/delivery-addresses";
 
 import styles from "./DeliveryAddressesPage.module.css";
 
@@ -31,14 +29,7 @@ export default function DeliveryAddressesDesktopPage() {
 
           {/* Right Column: Delivery Addresses Content Sections */}
           <div className={styles.contentWrapper}>
-            {/* 2. Delivery Addresses Header */}
-            <AddressesHeader />
-
-            {/* 3. Saved Delivery Addresses Grid */}
-            <SavedAddresses />
-
-            {/* 4. Add New Address Button */}
-            <AddAddressButton />
+            <DeliveryAddresses />
           </div>
         </div>
       </main>
