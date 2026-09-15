@@ -12,7 +12,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Sparkles,
 } from "lucide-react";
 import styles from "./Footer.module.css";
 import logoImg from "@/components/navbar/logo-nav.png";
@@ -45,11 +44,6 @@ export const Footer: React.FC = () => {
             <p className={styles.brandDesc}>
               Crafting premium dining experiences directly inside verified community kitchens. Order wholesome home meals or discover curated co-living stays with transparent quality.
             </p>
-
-            <div className={styles.brandPillBadge}>
-              <Sparkles size={14} color="#EA580C" />
-              <span>100% Hygienic &amp; FSSAI Certified</span>
-            </div>
           </div>
 
           {/* Column 2: Explore */}
