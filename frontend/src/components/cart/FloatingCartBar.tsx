@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -26,9 +26,10 @@ export default function FloatingCartBar() {
     .filter((item) => Boolean(item.image))
     .slice(0, 3);
 
-  // Hidden on specific pages where user is already viewing cart or checking out
+  // Hidden on specific pages where user is already viewing cart, checking out, or on auth / portal pages
   const isHiddenPage =
     !pathname ||
+    // Cart & Checkout routes
     pathname === "/cart" ||
     pathname.startsWith("/cart/") ||
     pathname === "/user/cart" ||
@@ -44,12 +45,20 @@ export default function FloatingCartBar() {
     pathname === "/user/user-checkout" ||
     pathname.startsWith("/user/user-checkout/") ||
     pathname.startsWith("/order-confirmation") ||
+    pathname.startsWith("/invoice") ||
+    // Auth & Login / Register routes
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/signup" ||
+    pathname.startsWith("/signup/") ||
+    pathname === "/auth" ||
+    pathname.startsWith("/auth/") ||
+    // Seller / Admin / Delivery / Dashboard portals
     pathname.startsWith("/seller") ||
+    pathname.startsWith("/seller-onboarding") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/dashboard/admin") ||
-    pathname.startsWith("/dashboard/seller") ||
-    pathname.startsWith("/dashboard/superadmin") ||
-    pathname.startsWith("/dashboard/delivery");
+    pathname.startsWith("/delivery") ||
+    pathname.startsWith("/dashboard");
 
   if (!mounted || totalCount === 0 || isHiddenPage) {
     return null;
