@@ -300,17 +300,24 @@ model Coupon {
   id                 String    @id @default(uuid())
   code               String    @unique
   description        String    @default("")
+  discountType       String    @default("PERCENTAGE")
   discountPercentage Float?
   discountAmount     Float?
   creatorId          String    @default("SYSTEM")
   appliesToSellerId  String?
   appliesToProductId String?
+  appliesTo          String    @default("ALL")
+  customerEligibility String   @default("ALL")
+  usageLimit         Int?
+  perUserLimit       Int?      @default(1)
+  noExpiry           Boolean   @default(false)
   validFrom          DateTime  @default(now())
   validUntil         DateTime?
   maxUsagesPerUser   Int?
   maxUsers           Int?
   currentUsersCount  Int       @default(0)
   minimumCartValue   Float?
+  maxDiscountAmount  Float?
   isActive           Boolean   @default(true)
   approvalStatus     String    @default("APPROVED")
   adminNote          String?
@@ -390,6 +397,8 @@ model Review {
   sellerId    String
   rating      Int
   comment     String?
+  sellerReply String?
+  repliedAt   DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   itemRatings ItemRating[]

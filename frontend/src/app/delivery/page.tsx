@@ -21,7 +21,7 @@ export default function DeliveryPortalRoot() {
             } else if (role === "SUPPORT") {
                 router.push("/dashboard/support");
             } else if (role === "SELLER") {
-                router.push("/dashboard/seller");
+                router.push("/seller/dashboard");
             } else {
                 router.push("/dashboard/user");
             }

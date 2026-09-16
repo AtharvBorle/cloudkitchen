@@ -90,13 +90,86 @@ export const getSellerReviews = async () => {
         };
     });
 
+    const formattedReviews = reviews.map((r) => ({
+        ...r,
+        managerResponse: r.sellerReply ? {
+            text: r.sellerReply,
+            createdAt: r.repliedAt || r.updatedAt,
+            date: r.repliedAt || r.updatedAt
+        } : null
+    }));
+
     return {
         stats: {
             averageRating,
             totalReviews,
             ratingDistribution
         },
-        reviews,
+        reviews: formattedReviews,
         foodItemStats
+    };
+};
+
+export const replyToReview = async (reviewId: string, req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id }
+    });
+
+    if (!sellerProfile) {
+        throw new ApiError("Seller profile not found", 404);
+    }
+
+    const review = await db.review.findUnique({
+        where: { id: reviewId }
+    });
+
+    if (!review) {
+        throw new ApiError("Review not found", 404);
+    }
+
+    if (review.sellerId !== sellerProfile.id) {
+        throw new ApiError("Forbidden: Cannot reply to review for another seller", 403);
+    }
+
+    const body = await req.json();
+    const { replyText, response, text, comment } = body;
+    const finalReply = replyText || response || text || comment;
+
+    if (!finalReply || !finalReply.trim()) {
+        throw new ApiError("Reply content is required", 400);
+    }
+
+    const updated = await db.review.update({
+        where: { id: reviewId },
+        data: {
+            sellerReply: finalReply.trim(),
+            repliedAt: new Date()
+        },
+        include: {
+            user: {
+                select: { name: true, email: true }
+            },
+            itemRatings: {
+                include: {
+                    foodItem: {
+                        select: { name: true }
+                    }
+                }
+            }
+        }
+    });
+
+    return {
+        ...updated,
+        managerResponse: {
+            text: updated.sellerReply,
+            createdAt: updated.repliedAt,
+            date: updated.repliedAt
+        }
     };
 };

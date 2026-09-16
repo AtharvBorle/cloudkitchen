@@ -344,27 +344,25 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleOpenSubscriptionModal}
+                  <Link
+                    href="/seller/payment"
                     style={{
                       padding: "10px 18px",
                       backgroundColor: "#FF5500",
                       color: "#FFFFFF",
-                      border: "none",
                       borderRadius: "10px",
                       fontSize: "13px",
                       fontWeight: 600,
-                      cursor: "pointer",
+                      textDecoration: "none",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "6px",
                       boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
                     }}
                   >
-                    <span>Activate Subscription</span>
+                    <span>Pay Subscription</span>
                     <ArrowRight size={14} />
-                  </button>
+                  </Link>
                 </div>
               )}
 

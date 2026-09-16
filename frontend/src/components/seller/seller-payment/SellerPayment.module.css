@@ -1,0 +1,687 @@
+/* =========================================================
+   Seller Subscription & Payment Modern UI Styles
+   ========================================================= */
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseHighlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.25);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(249, 115, 22, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+}
+
+.pageLayout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  background-color: #F8FAFC;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.rightSection {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 32px 40px;
+  max-width: 1400px;
+  width: 100%;
+  box-sizing: border-box;
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.headerRow {
+  display: flex;
+  justifyContent: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mainTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subTitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0;
+}
+
+.categoryTagApproved {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: #DCFCE7;
+  color: #15803D;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Active Subscriptions Banner */
+.activeSubsCard {
+  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+  border: 1px solid #BBF7D0;
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.06);
+}
+
+.activeSubsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.activeSubsTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #15803D;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.activeSubsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.activeSubItem {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.activeSubItemTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.activeSubName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.activeSubPrice {
+  font-size: 13px;
+  font-weight: 700;
+  color: #16A34A;
+}
+
+.activeSubDates {
+  font-size: 12px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.expiryBadge {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #15803D;
+  background-color: #DCFCE7;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+/* Category Filter Tabs */
+.filterTabsWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filterTabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #FFFFFF;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+}
+
+.filterTabBtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+  color: #64748B;
+  font-family: inherit;
+}
+
+.filterTabBtnActive {
+  background-color: #FF5500;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(255, 85, 0, 0.25);
+}
+
+/* Two-column layout: Left Plans Grid, Right Checkout Summary */
+.checkoutLayout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Plan Card */
+.planCard {
+  background-color: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justifyContent: space-between;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.planCard:hover {
+  border-color: #FFB394;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 85, 0, 0.08);
+}
+
+.planCardSelected {
+  border-color: #FF5500;
+  background-color: #FFFDFB;
+  box-shadow: 0 10px 28px rgba(255, 85, 0, 0.14);
+  animation: pulseHighlight 1.5s ease-out;
+}
+
+.planTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.planIconCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.planIconFood {
+  background-color: #FFF1E8;
+  color: #FF5500;
+}
+
+.planIconProperty {
+  background-color: #EFF6FF;
+  color: #3B82F6;
+}
+
+.planIconBoth {
+  background-color: #F3E8FF;
+  color: #8B5CF6;
+}
+
+.radioIndicator {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #CBD5E1;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.radioIndicatorSelected {
+  border-color: #FF5500;
+  background-color: #FF5500;
+  color: #FFFFFF;
+}
+
+.planTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+}
+
+.planDuration {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.planPriceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.planPriceAmount {
+  font-size: 28px;
+  font-weight: 900;
+  color: #0F172A;
+  line-height: 1;
+}
+
+.planPriceDuration {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+.planFeaturesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planFeatureItem {
+  font-size: 12.5px;
+  color: #475569;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+/* Right-side Checkout Summary Card */
+.summaryCard {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 90px;
+}
+
+.summaryTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selectedPlanBox {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.selectedPlanRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.selectedPlanName {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.selectedPlanPrice {
+  font-size: 16px;
+  font-weight: 800;
+  color: #FF5500;
+}
+
+.selectedPlanMeta {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 4px;
+}
+
+/* Coupon Section */
+.couponBox {
+  margin-bottom: 20px;
+  padding: 14px;
+  background-color: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 12px;
+}
+
+.couponLabel {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.couponInputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.couponInput {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  font-size: 13.5px;
+  font-family: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.couponInput:focus {
+  border-color: #FF5500;
+}
+
+.couponBtnApply {
+  padding: 0 16px;
+  background-color: #0F172A;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.couponBtnApply:hover {
+  opacity: 0.9;
+}
+
+.couponBtnRemove {
+  padding: 0 14px;
+  background-color: #EF4444;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.couponError {
+  color: #DC2626;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.couponAppliedCard {
+  margin-top: 10px;
+  background-color: #DCFCE7;
+  border: 1px solid #86EFAC;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #166534;
+  font-size: 12.5px;
+}
+
+.couponAppliedRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+/* Price Breakdown */
+.priceBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 16px;
+}
+
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: #64748B;
+}
+
+.breakdownDiscount {
+  color: #15803D;
+  font-weight: 700;
+}
+
+.breakdownTotal {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0F172A;
+  border-top: 1.5px dashed #E2E8F0;
+  padding-top: 10px;
+  margin-top: 2px;
+}
+
+/* Checkout Button */
+.checkoutBtn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #FF5500 0%, #F97316 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(255, 85, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.checkoutBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 85, 0, 0.4);
+}
+
+.checkoutBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.secureNote {
+  font-size: 11.5px;
+  color: #94A3B8;
+  text-align: center;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Empty State */
+.emptyState {
+  background-color: #FFFFFF;
+  border: 1.5px dashed #CBD5E1;
+  border-radius: 16px;
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.emptyIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background-color: #FFF1E8;
+  color: #FF5500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Success Modal Overlay */
+.successModalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.successModalCard {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  padding: 32px 24px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.successIconCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #DCFCE7;
+  color: #16A34A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.successTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 8px;
+}
+
+.successSubtitle {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.successActionBtn {
+  width: 100%;
+  padding: 12px;
+  background-color: #FF5500;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .checkoutLayout {
+    grid-template-columns: 1fr;
+  }
+  .summaryCard {
+    position: static;
+  }
+  .mainContent {
+    padding: 24px 20px;
+  }
+}

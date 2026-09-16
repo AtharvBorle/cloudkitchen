@@ -40,8 +40,8 @@ export default function SettingsDesktopPage() {
             {/* 5. Delivery Addresses Section */}
             <DeliveryAddresses />
 
-            {/* 6. Payment Methods Section */}
-            <PaymentMethods />
+            {/* 6. Payment Methods Section (Commented out) */}
+            {/* <PaymentMethods /> */}
           </div>
         </div>
       </main>

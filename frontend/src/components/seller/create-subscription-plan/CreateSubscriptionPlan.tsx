@@ -46,16 +46,8 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   const [planTier, setPlanTier] = useState('Bronze');
   const [weeklyPrice, setWeeklyPrice] = useState('');
 
-  // Included in weekly plans feature list
-  const [features, setFeatures] = useState<PlanFeature[]>([
-    { id: '1', label: '7 Meals per week (Daily Lunch)', checked: true },
-    { id: '2', label: '1 Dal (Seasonal) + 1 Sabzi (Dry / Gravy)', checked: true },
-    { id: '3', label: 'Fresh Chapatis + Steamed Rice', checked: true },
-    { id: '4', label: 'Salad, Pickle & Roasted Papad', checked: false },
-  ]);
-
-  // Custom add field
-  const [customFeatureInput, setCustomFeatureInput] = useState('');
+  // Included in weekly plans feature list (starts empty for user to add)
+  const [features, setFeatures] = useState<PlanFeature[]>([]);
 
   // 4. Plan Timing & Schedule
   const [planDuration, setPlanDuration] = useState('1 Week');
@@ -68,7 +60,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
   // 5. Subscription Policies
   const [allowCancel, setAllowCancel] = useState(true);
-  const [pauseBillingPeriod, setPauseBillingPeriod] = useState('Monthly');
+  const [pauseBillingPeriod, setPauseBillingPeriod] = useState('30 Days');
 
   const handleRemoveMealTiming = (id: string) => {
     setMealTimings((prev) => prev.filter((m) => m.id !== id));
@@ -80,24 +72,27 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
     );
   };
 
+  const handleUpdateFeatureLabel = (id: string, label: string) => {
+    setFeatures((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, label } : f))
+    );
+  };
+
   const handleRemoveFeature = (id: string) => {
     setFeatures((prev) =>
       prev.filter((f) => f.id !== id));
   };
 
   const handleAddFeature = () => {
-    if (customFeatureInput.trim()) {
-      const newFeature: PlanFeature = {
-        id: Date.now().toString(),
-        label: customFeatureInput.trim(),
-        checked: true,
-      };
-      setFeatures((prev) => [...prev, newFeature]);
-      setCustomFeatureInput('');
-    }
+    const newFeature: PlanFeature = {
+      id: `feat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      label: '',
+      checked: true,
+    };
+    setFeatures((prev) => [...prev, newFeature]);
   };
 
-  const enabledFeatures = features.filter((f) => f.checked);
+  const enabledFeatures = features.filter((f) => f.checked && f.label.trim().length > 0);
 
   const formattedPrice = weeklyPrice
     ? parseFloat(weeklyPrice).toLocaleString('en-IN', {
@@ -238,64 +233,60 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   </button>
                 </div>
 
-                {/* Features Checkbox List */}
+                {/* Features List */}
                 <div className={styles.featuresList}>
-                  {features.map((feature) => (
-                    <div key={feature.id} className={styles.featureItem}>
-                      <label
-                        className={styles.checkboxLabel}
-                        onClick={() => handleToggleFeature(feature.id)}
+                  {features.length === 0 ? (
+                    <div className={styles.emptyFeaturesState}>
+                      <span>No features added yet.</span>
+                      <button
+                        type="button"
+                        className={styles.addBtn}
+                        onClick={handleAddFeature}
+                        style={{ padding: '6px 12px', border: '1px solid #FED7AA', borderRadius: '6px', backgroundColor: '#FFF7ED' }}
                       >
-                        <div
-                          className={`${styles.checkboxBox} ${
-                            feature.checked ? styles.checkboxBoxActive : ''
-                          }`}
+                        + Add First Feature
+                      </button>
+                    </div>
+                  ) : (
+                    features.map((feature) => (
+                      <div key={feature.id} className={styles.featureItem}>
+                        <label
+                          className={styles.checkboxLabel}
+                          onClick={() => handleToggleFeature(feature.id)}
                         >
-                          {feature.checked && <span className={styles.checkmark}>✓</span>}
-                        </div>
-                        <span className={styles.featureText}>{feature.label}</span>
-                      </label>
-                      <button
-                        type="button"
-                        className={styles.deleteBtn}
-                        onClick={() => handleRemoveFeature(feature.id)}
-                        aria-label="Remove feature"
-                      >
-                        <Trash2 size={16} strokeWidth={2.2} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Custom Features Subsection */}
-                <div className={styles.customFeaturesSection}>
-                  <span className={styles.customFeaturesHeading}>CUSTOM FEATURES</span>
-                  <div className={styles.customAddCard}>
-                    <span className={styles.customAddLabel}>Custom Add</span>
-                    <div className={styles.customAddInputRow}>
-                      <input
-                        type="text"
-                        className={styles.customTextInput}
-                        placeholder="e.g. Dedicated Account Manager"
-                        value={customFeatureInput}
-                        onChange={(e) => setCustomFeatureInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddFeature();
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.customAddDeleteBtn}
-                        onClick={() => setCustomFeatureInput('')}
-                        aria-label="Clear custom add"
-                      >
-                        <Trash2 size={16} strokeWidth={2.2} />
-                      </button>
-                    </div>
-                  </div>
+                          <div
+                            className={`${styles.checkboxBox} ${
+                              feature.checked ? styles.checkboxBoxActive : ''
+                            }`}
+                          >
+                            {feature.checked && <span className={styles.checkmark}>✓</span>}
+                          </div>
+                        </label>
+                        <input
+                          type="text"
+                          className={styles.featureInput}
+                          placeholder="e.g. 7 Meals per week, 1 Dal + 1 Sabzi..."
+                          value={feature.label}
+                          onChange={(e) => handleUpdateFeatureLabel(feature.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddFeature();
+                            }
+                          }}
+                          autoFocus={!feature.label}
+                        />
+                        <button
+                          type="button"
+                          className={styles.deleteBtn}
+                          onClick={() => handleRemoveFeature(feature.id)}
+                          aria-label="Remove feature"
+                        >
+                          <Trash2 size={16} strokeWidth={2.2} />
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -411,9 +402,15 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       value={pauseBillingPeriod}
                       onChange={(e) => setPauseBillingPeriod(e.target.value)}
                     >
-                      <option value="Weekly">Weekly</option>
-                      <option value="Monthly">Monthly</option>
-                      <option value="Quarterly">Quarterly</option>
+                      {Array.from({ length: 30 }, (_, i) => {
+                        const day = i + 1;
+                        const label = `${day} ${day === 1 ? 'Day' : 'Days'}`;
+                        return (
+                          <option key={label} value={label}>
+                            {label}
+                          </option>
+                        );
+                      })}
                     </select>
                     <span className={styles.selectArrow}>▼</span>
                   </div>

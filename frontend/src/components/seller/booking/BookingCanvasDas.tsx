@@ -10,6 +10,8 @@ import BookingCanvas, {
 } from "./BookingCanvas";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { Lock, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export interface BookingCanvasDasProps {
   topbarTitle?: string;
@@ -54,7 +56,43 @@ export default function BookingCanvasDas({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
+  const [statusChecked, setStatusChecked] = useState(false);
+  const [isPropertyActive, setIsPropertyActive] = useState<boolean | null>(null);
+  const [propertyVerification, setPropertyVerification] = useState<string>("NONE");
+
   useEffect(() => {
+    async function checkCategoryAccess() {
+      try {
+        const res = await fetchApi("/api/seller/dashboard/status");
+        if (res.ok) {
+          const data = await res.json();
+          const status = data.data || data;
+          const active = Boolean(status.isPropertyActive);
+          const verif = status.sellerProfile?.propertyVerificationStatus || "NONE";
+          setIsPropertyActive(active);
+          setPropertyVerification(verif);
+          setStatusChecked(true);
+
+          if (!active) {
+            window.dispatchEvent(
+              new CustomEvent(verif === "APPROVED" ? "open-subscription-modal" : "open-category-upgrade", {
+                detail: { category: "PROPERTY" },
+              })
+            );
+          }
+        } else {
+          setStatusChecked(true);
+        }
+      } catch (e) {
+        setStatusChecked(true);
+      }
+    }
+    checkCategoryAccess();
+  }, []);
+
+  useEffect(() => {
+    if (isPropertyActive === false) return; // Do not load bookings if property category is not active
+
     if (initialBookings && initialBookings.length > 0) {
       setBookingList(initialBookings);
       return;
@@ -112,7 +150,7 @@ export default function BookingCanvasDas({
       }
     }
     loadBookings();
-  }, [initialBookings]);
+  }, [initialBookings, isPropertyActive]);
 
   const displayedBookings = React.useMemo(() => {
     if (!searchQuery.trim()) return bookingList;
@@ -176,15 +214,115 @@ export default function BookingCanvasDas({
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
 
-        {/* Booking Canvas Component (1200px Canvas containing Header, Filter Tabs & Ledger Table) */}
-        <BookingCanvas
-          title={title}
-          subtitle={subtitle}
-          bookings={displayedBookings}
-          initialTab={initialTab}
-          onViewDetails={onViewDetails}
-          onTabChange={onTabChange}
-        />
+        {/* Booking Canvas Component or Locked Upgrade View */}
+        {statusChecked && isPropertyActive === false ? (
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              border: "1px solid #FED7AA",
+              padding: "48px 24px",
+              textAlign: "center",
+              maxWidth: "600px",
+              margin: "40px auto",
+              boxShadow: "0 10px 25px rgba(249, 115, 22, 0.08)",
+            }}
+          >
+            <div
+              style={{
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                backgroundColor: "#FFF1E8",
+                color: "#F97316",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+              }}
+            >
+              <Lock size={28} />
+            </div>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0F172A", marginBottom: "8px" }}>
+              Room Bookings Ledger Locked
+            </h2>
+            <p style={{ color: "#64748B", fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "24px" }}>
+              {propertyVerification === "APPROVED"
+                ? "Your property verification is approved! Please subscribe to the Rooms & Stay category plan to view guest bookings, check-in schedules, and room payments."
+                : "Your seller account is currently configured for Food Services only. To list rooms and receive hotel bookings, please apply for the Property category upgrade."}
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+              {propertyVerification === "APPROVED" ? (
+                <Link
+                  href="/seller/payment?category=PROPERTY"
+                  style={{
+                    padding: "12px 24px",
+                    backgroundColor: "#F97316",
+                    color: "#FFFFFF",
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <span>Subscribe to Rooms Plan</span>
+                  <ArrowRight size={16} />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } })
+                    );
+                  }}
+                  style={{
+                    padding: "12px 24px",
+                    backgroundColor: "#F97316",
+                    color: "#FFFFFF",
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <span>Apply for Category Upgrade</span>
+                  <ArrowRight size={16} />
+                </button>
+              )}
+              <Link
+                href="/seller/dashboard"
+                style={{
+                  padding: "12px 20px",
+                  backgroundColor: "#F1F5F9",
+                  color: "#475569",
+                  borderRadius: "10px",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
+              >
+                Return to Dashboard
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <BookingCanvas
+            title={title}
+            subtitle={subtitle}
+            bookings={displayedBookings}
+            initialTab={initialTab}
+            onViewDetails={onViewDetails}
+            onTabChange={onTabChange}
+          />
+        )}
       </div>
     </div>
   );

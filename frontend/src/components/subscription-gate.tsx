@@ -16,7 +16,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
     const pathname = usePathname();
 
     const isRevisionPage = pathname && pathname.includes("/revision");
-    const isPaymentPage = pathname && pathname.includes("/payment");
+    const isPaymentPage = pathname && (pathname.includes("/payment") || pathname.includes("/subscription"));
 
     // 1. Pending Gate
     if (verificationStatus === "PENDING") {
@@ -103,7 +103,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         Your profile is approved! Just one last step: activate your subscription to unlock your professional kitchen dashboard.
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <Link href="/dashboard/seller/payment" className="btn btn-coral" style={{ padding: "14px", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <Link href="/seller/payment" className="btn btn-coral" style={{ padding: "14px", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                             Pay Subscription & Finish
                         </Link>
                         <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px", color: "#94a3b8", backgroundColor: "transparent", border: "none", fontFamily: "inherit", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600" }}>

@@ -150,6 +150,18 @@ export const registerUser = async (req: Request) => {
         throw new ApiError("Missing required fields: Name, email and password are required", 400);
     }
 
+    if (typeof finalPassword !== "string" || finalPassword.length < 6) {
+        throw new ApiError("Password must be at least 6 characters long", 400);
+    }
+
+    if (finalPhone) {
+        const phoneDigits = String(finalPhone).replace(/\D/g, "");
+        if (phoneDigits.length !== 10) {
+            throw new ApiError("Please provide a valid 10-digit phone number", 400);
+        }
+        finalPhone = phoneDigits;
+    }
+
     finalEmail = finalEmail.toLowerCase().trim();
 
     const existingUser = await db.user.findUnique({

@@ -189,7 +189,8 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               <ChevronRight size={16} className={styles.chevronIcon} />
             </button>
 
-            <button
+            {/* Commented out Payment Details / Methods tab as requested */}
+            {/* <button
               type="button"
               className={`${styles.navItem} ${
                 currentTab === "payment-methods" ? styles.navItemActive : ""
@@ -201,7 +202,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 <span>Payment Methods</span>
               </div>
               <ChevronRight size={16} className={styles.chevronIcon} />
-            </button>
+            </button> */}
 
             <button
               type="button"

@@ -49,6 +49,7 @@ export interface SubscriptionPlanData {
   mealTimings: MealTimingItem[];
   allowCancelSubscription: boolean;
   allowPauseBilling: boolean;
+  pauseBillingPeriod?: string;
   metrics: PlanMetrics;
   metadata: PlanMetadata;
 }
@@ -62,11 +63,7 @@ export interface SubscriptionEditCanvasProps {
   onAddTiming?: () => void;
 }
 
-const DEFAULT_INCLUDED_FEATURES: PlanFeatureItem[] = [
-  { id: "feat-1", label: "7 Meals per weeek", checked: false },
-  { id: "feat-2", label: "1 Dal (Seasonal) + 1 Sabzi (Dry / Gravy)", checked: false },
-  { id: "feat-3", label: "Salad, Pickle & Papad", checked: false },
-];
+const DEFAULT_INCLUDED_FEATURES: PlanFeatureItem[] = [];
 
 const DEFAULT_MEAL_TIMINGS: MealTimingItem[] = [
   { id: "time-1", mealName: "Breakfast", timing: "7:30 AM – 9:30 AM" },
@@ -158,6 +155,7 @@ export default function SubscriptionEditCanvas({
           }),
           allowCancelSubscription: found.allowCancel ?? true,
           allowPauseBilling: found.pauseBillingPeriod !== "None",
+          pauseBillingPeriod: found.pauseBillingPeriod || "30 Days",
           metrics: {
             subscribers: found.subscribersCount,
             monthlyRevenue: found.monthlyRevenue,
@@ -198,6 +196,15 @@ export default function SubscriptionEditCanvas({
     }));
   };
 
+  const handleFeatureUpdateLabel = (id: string, label: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      includedFeatures: prev.includedFeatures.map((f) =>
+        f.id === id ? { ...f, label } : f
+      ),
+    }));
+  };
+
   const handleFeatureDelete = (id: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -205,25 +212,10 @@ export default function SubscriptionEditCanvas({
     }));
   };
 
-  const handleAddCustomFeature = () => {
-    if (!formData.customFeature.trim()) return;
-    const newFeature: PlanFeatureItem = {
-      id: `feat-${Date.now()}`,
-      label: formData.customFeature.trim(),
-      checked: true,
-    };
-    setFormData((prev) => ({
-      ...prev,
-      includedFeatures: [...prev.includedFeatures, newFeature],
-      customFeature: "",
-    }));
-    if (onAddFeature) onAddFeature();
-  };
-
   const handleAddFeatureDirect = () => {
     const newFeature: PlanFeatureItem = {
-      id: `feat-${Date.now()}`,
-      label: "New Plan Feature",
+      id: `feat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      label: "",
       checked: true,
     };
     setFormData((prev) => ({
@@ -273,7 +265,7 @@ export default function SubscriptionEditCanvas({
         features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
         mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
         allowCancel: formData.allowCancelSubscription,
-        pauseBillingPeriod: formData.allowPauseBilling ? "Monthly" : "None",
+        pauseBillingPeriod: formData.pauseBillingPeriod || (formData.allowPauseBilling ? "30 Days" : "None"),
       });
     }
 
@@ -757,7 +749,7 @@ export default function SubscriptionEditCanvas({
               </h2>
               <button
                 type="button"
-                onClick={handleAddFeatureItem}
+                onClick={handleAddFeatureDirect}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -768,7 +760,8 @@ export default function SubscriptionEditCanvas({
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: 0,
+                  padding: "4px 8px",
+                  borderRadius: "6px",
                   fontFamily: "inherit",
                 }}
               >
@@ -782,175 +775,135 @@ export default function SubscriptionEditCanvas({
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "12px",
+                gap: "10px",
               }}
             >
-              {formData.includedFeatures.map((feature) => (
+              {formData.includedFeatures.length === 0 ? (
                 <div
-                  key={feature.id}
                   style={{
+                    padding: "20px 16px",
+                    backgroundColor: "#F8FAFC",
+                    border: "1.5px dashed #CBD5E1",
+                    borderRadius: "8px",
+                    textAlign: "center",
+                    fontSize: "13px",
+                    color: "#64748B",
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "6px 0",
+                    gap: "8px",
                   }}
                 >
+                  <span>No features added yet.</span>
+                  <button
+                    type="button"
+                    onClick={handleAddFeatureDirect}
+                    style={{
+                      padding: "6px 14px",
+                      border: "1px solid #FED7AA",
+                      borderRadius: "6px",
+                      backgroundColor: "#FFF7ED",
+                      color: "#FF5500",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    + Add First Feature
+                  </button>
+                </div>
+              ) : (
+                formData.includedFeatures.map((feature) => (
                   <div
+                    key={feature.id}
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "12px",
-                      cursor: "pointer",
+                      gap: "10px",
+                      padding: "2px 0",
                     }}
-                    onClick={() => handleFeatureToggle(feature.id)}
                   >
                     <div
                       style={{
-                        width: "18px",
-                        height: "18px",
-                        borderRadius: "4px",
-                        border: feature.checked ? "1.5px solid #FF5500" : "1.5px solid #CBD5E1",
-                        backgroundColor: feature.checked ? "#FF5500" : "#FFFFFF",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                      onClick={() => handleFeatureToggle(feature.id)}
+                    >
+                      <div
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "4px",
+                          border: feature.checked ? "1.5px solid #FF5500" : "1.5px solid #CBD5E1",
+                          backgroundColor: feature.checked ? "#FF5500" : "#FFFFFF",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {feature.checked && (
+                          <span style={{ color: "#FFFFFF", fontSize: "11px", fontWeight: "bold" }}>
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="e.g. 7 Meals per week, 1 Dal + 1 Sabzi..."
+                      value={feature.label}
+                      onChange={(e) => handleFeatureUpdateLabel(feature.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddFeatureDirect();
+                        }
+                      }}
+                      autoFocus={!feature.label}
+                      style={{
+                        flex: 1,
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "6px",
+                        padding: "8px 12px",
+                        fontSize: "13px",
+                        color: "#0F172A",
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    />
+
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => handleFeatureDelete(feature.id)}
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "6px",
+                        border: "1px solid #FEE2E2",
+                        backgroundColor: "#FFF5F5",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        color: "#EF4444",
+                        cursor: "pointer",
+                        padding: 0,
                         flexShrink: 0,
-                        transition: "all 0.15s ease",
+                        transition: "background-color 0.15s ease",
                       }}
+                      title="Delete item"
                     >
-                      {feature.checked && (
-                        <span style={{ color: "#FFFFFF", fontSize: "11px", fontWeight: "bold" }}>
-                          ✓
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "13px",
-                        color: "#334155",
-                        fontWeight: 400,
-                      }}
-                    >
-                      {feature.label}
-                    </span>
+                      <Trash2 size={15} />
+                    </button>
                   </div>
-
-                  {/* Delete button */}
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteFeature(feature.id)}
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "6px",
-                      border: "1px solid #FEE2E2",
-                      backgroundColor: "#FFF5F5",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#EF4444",
-                      cursor: "pointer",
-                      padding: 0,
-                      transition: "background-color 0.15s ease",
-                    }}
-                    title="Delete item"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* CUSTOM FEATURES Section */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                marginTop: "6px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: "#64748B",
-                  letterSpacing: "0.6px",
-                  textTransform: "uppercase",
-                }}
-              >
-                CUSTOM FEATURES
-              </span>
-
-              <div
-                style={{
-                  backgroundColor: "#F8FAFC",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "8px",
-                  padding: "16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                  boxSizing: "border-box",
-                }}
-              >
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "#0F172A",
-                  }}
-                >
-                  Custom Add
-                </label>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
-                >
-                  <input
-                    type="text"
-                    placeholder="e.g. Dedicated Account Manager"
-                    value={formData.customFeature}
-                    onChange={(e) => handleTextChange("customFeature", e.target.value)}
-                    style={{
-                      flex: 1,
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "6px",
-                      padding: "10px 14px",
-                      fontSize: "13px",
-                      color: "#0F172A",
-                      outline: "none",
-                      boxSizing: "border-box",
-                      fontFamily: "inherit",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleTextChange("customFeature", "")}
-                    style={{
-                      width: "38px",
-                      height: "38px",
-                      borderRadius: "6px",
-                      border: "1px solid #FEE2E2",
-                      backgroundColor: "#FFF5F5",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#FF5500",
-                      cursor: "pointer",
-                      padding: 0,
-                      flexShrink: 0,
-                    }}
-                    title="Clear Custom Add"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -1299,7 +1252,7 @@ export default function SubscriptionEditCanvas({
                 gap: "16px",
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1, minWidth: 0 }}>
                 <span
                   style={{
                     fontSize: "13px",
@@ -1320,36 +1273,50 @@ export default function SubscriptionEditCanvas({
                 </span>
               </div>
 
-              {/* Toggle switch */}
-              <div
-                onClick={() => handleToggle("allowPauseBilling")}
-                style={{
-                  width: "42px",
-                  height: "24px",
-                  borderRadius: "12px",
-                  backgroundColor: formData.allowPauseBilling ? "#FF5500" : "#CBD5E1",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "2px",
-                  cursor: "pointer",
-                  boxSizing: "border-box",
-                  transition: "background-color 0.2s ease",
-                  flexShrink: 0,
-                }}
-              >
-                <div
+              {/* Days Dropdown (1-30 Days) */}
+              <div style={{ position: "relative", minWidth: "130px", flexShrink: 0 }}>
+                <select
+                  value={formData.pauseBillingPeriod || "30 Days"}
+                  onChange={(e) => handleInputChange("pauseBillingPeriod", e.target.value)}
                   style={{
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "50%",
+                    width: "100%",
+                    height: "38px",
                     backgroundColor: "#FFFFFF",
-                    transform: formData.allowPauseBilling
-                      ? "translateX(18px)"
-                      : "translateX(0px)",
-                    transition: "transform 0.2s ease",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "8px",
+                    padding: "0 28px 0 12px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#0F172A",
+                    outline: "none",
+                    cursor: "pointer",
+                    appearance: "none",
+                    boxSizing: "border-box",
                   }}
-                />
+                >
+                  {Array.from({ length: 30 }, (_, i) => {
+                    const day = i + 1;
+                    const val = `${day} ${day === 1 ? "Day" : "Days"}`;
+                    return (
+                      <option key={val} value={val}>
+                        {val}
+                      </option>
+                    );
+                  })}
+                </select>
+                <span
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: "10px",
+                    color: "#64748B",
+                    pointerEvents: "none",
+                  }}
+                >
+                  ▼
+                </span>
               </div>
             </div>
           </div>

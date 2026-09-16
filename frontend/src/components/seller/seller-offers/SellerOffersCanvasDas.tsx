@@ -5,7 +5,7 @@ import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
-import SellerOffersClient from "@/app/dashboard/seller/offers/client-page";
+import SellerOffersClient from "./SellerOffersClient";
 import { ResponsiveNavMenu } from "../nav/ResponsiveNavMenu";
 
 export interface SellerOffersCanvasDasProps {

@@ -37,11 +37,7 @@ export interface ResSellerSubPlanProps {
   onDiscard?: () => void;
 }
 
-const DEFAULT_FEATURES = [
-  "7 Meals per week",
-  "1 Dal (Seasonal) + 1 Sabzi",
-  "Salad, Pickle & Papad",
-];
+const DEFAULT_FEATURES: string[] = [];
 
 const DEFAULT_MEAL_TIMINGS: MealTimingSlot[] = [
   { id: "1", name: "Breakfast", time: "7:30 AM - 9:30 AM" },
@@ -79,12 +75,12 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   const [planTier, setPlanTier] = useState(initialPlanTier);
   const [price, setPrice] = useState(initialPrice);
   const [features, setFeatures] = useState<string[]>(initialFeatures);
-  const [customFeatureInput, setCustomFeatureInput] = useState("");
   const [duration, setDuration] = useState(initialDuration);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
   const [mealTimings, setMealTimings] = useState<MealTimingSlot[]>(initialMealTimings);
   const [allowCancellation, setAllowCancellation] = useState(initialAllowCancellation);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
+  const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
 
   // Edit Timing Modal State
   const [editingTiming, setEditingTiming] = useState<MealTimingSlot | null>(null);
@@ -104,9 +100,15 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   };
 
   const handleAddFeature = () => {
-    if (!customFeatureInput.trim()) return;
-    setFeatures((prev) => [...prev, customFeatureInput.trim()]);
-    setCustomFeatureInput("");
+    setFeatures((prev) => [...prev, ""]);
+  };
+
+  const handleUpdateFeature = (index: number, value: string) => {
+    setFeatures((prev) => {
+      const updated = [...prev];
+      updated[index] = value;
+      return updated;
+    });
   };
 
   const handleDeleteFeature = (index: number) => {
@@ -128,7 +130,16 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     setEditingTiming(null);
   };
 
+  const handleDiscard = () => {
+    if (onDiscard) {
+      onDiscard();
+    } else {
+      router.push("/seller/subscription");
+    }
+  };
+
   const handleDeploy = async () => {
+    const validFeatures = features.map((f) => f.trim()).filter((f) => f.length > 0);
     const payload = {
       name: planName.trim() || "Bronze Plan",
       tier: planTier.trim() || "Bronze",
@@ -137,10 +148,10 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       quarterlyPrice: `₹${((parseFloat(price) || 0) * 12 * 0.9).toFixed(0)}`,
       yearlyPrice: `₹${((parseFloat(price) || 0) * 52 * 0.8).toFixed(0)}`,
       duration,
-      features,
+      features: validFeatures,
       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
       allowCancel: allowCancellation,
-      pauseBillingPeriod: allowPauseBilling ? "Monthly" : "None",
+      pauseBillingPeriod: pauseBillingPeriod || "30 Days",
       status: "Live" as const,
     };
 
@@ -153,14 +164,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       setTimeout(() => {
         router.push("/seller/subscription");
       }, 900);
-    }
-  };
-
-  const handleDiscard = () => {
-    if (onDiscard) {
-      onDiscard();
-    } else {
-      router.push("/seller/subscription");
     }
   };
 
@@ -285,42 +288,47 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
 
             {/* List of features */}
             <div className={styles.featuresList}>
-              {features.map((feature, idx) => (
-                <div key={idx} className={styles.featureItem}>
-                  <div className={styles.featureLeft}>
-                    <Check size={16} strokeWidth={2.5} className={styles.checkIcon} />
-                    <span className={styles.featureText}>{feature}</span>
-                  </div>
+              {features.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span>No features added yet.</span>
                   <button
                     type="button"
-                    className={styles.deleteFeatureBtn}
-                    onClick={() => handleDeleteFeature(idx)}
-                    aria-label={`Delete feature ${feature}`}
+                    className={styles.addFeatureBtn}
+                    onClick={handleAddFeature}
+                    style={{ marginTop: "4px" }}
                   >
-                    <Trash2 size={16} />
+                    + Add First Feature
                   </button>
                 </div>
-              ))}
-            </div>
-
-            {/* Custom Feature Add Input */}
-            <div className={styles.customAddBlock}>
-              <span className={styles.customAddLabel}>CUSTOM ADD</span>
-              <div className={styles.customAddRow}>
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="e.g. Premium Dessert on Sunday"
-                  value={customFeatureInput}
-                  onChange={(e) => setCustomFeatureInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddFeature();
-                    }
-                  }}
-                />
-              </div>
+              ) : (
+                features.map((feature, idx) => (
+                  <div key={idx} className={styles.featureItem}>
+                    <Check size={16} strokeWidth={2.5} className={styles.checkIcon} />
+                    <input
+                      type="text"
+                      className={styles.featureInput}
+                      placeholder="e.g. 7 Meals per week, 1 Dal + 1 Sabzi..."
+                      value={feature}
+                      onChange={(e) => handleUpdateFeature(idx, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddFeature();
+                        }
+                      }}
+                      autoFocus={!feature}
+                    />
+                    <button
+                      type="button"
+                      className={styles.deleteFeatureBtn}
+                      onClick={() => handleDeleteFeature(idx)}
+                      aria-label={`Delete feature`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -395,11 +403,11 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             <h2 className={styles.cardTitle}>Subscription Policies</h2>
 
             <div className={styles.policyList}>
-              {/* Allow Cancellation */}
+              {/* Allow User to Cancel Subscription */}
               <div className={styles.policyRow}>
                 <div className={styles.policyInfo}>
-                  <h3 className={styles.policyTitle}>Allow Cancellation</h3>
-                  <p className={styles.policyDesc}>Users can cancel anytime from dashboard.</p>
+                  <h3 className={styles.policyTitle}>Allow User to Cancel Subscription</h3>
+                  <p className={styles.policyDesc}>Partners can cancel anytime directly from their cloud merchant dashboard.</p>
                 </div>
                 <button
                   type="button"
@@ -414,23 +422,55 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                 </button>
               </div>
 
-              {/* Allow Pause Billing */}
+              {/* Allow User to Pause Billing */}
               <div className={styles.policyRow}>
                 <div className={styles.policyInfo}>
-                  <h3 className={styles.policyTitle}>Allow Pause Billing</h3>
-                  <p className={styles.policyDesc}>Temporary pause instead of termination.</p>
+                  <h3 className={styles.policyTitle}>Allow User to Pause Billing</h3>
+                  <p className={styles.policyDesc}>Enable temporary pause states instead of absolute subscription termination.</p>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={allowPauseBilling}
-                  className={`${styles.toggleSwitch} ${
-                    allowPauseBilling ? styles.toggleSwitchActive : ""
-                  }`}
-                  onClick={() => setAllowPauseBilling((prev) => !prev)}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
+                <div style={{ position: "relative", minWidth: "115px", flexShrink: 0 }}>
+                  <select
+                    value={pauseBillingPeriod}
+                    onChange={(e) => setPauseBillingPeriod(e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: "36px",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: "8px",
+                      padding: "0 24px 0 10px",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      color: "#0F172A",
+                      outline: "none",
+                      cursor: "pointer",
+                      appearance: "none",
+                    }}
+                  >
+                    {Array.from({ length: 30 }, (_, i) => {
+                      const day = i + 1;
+                      const val = `${day} ${day === 1 ? "Day" : "Days"}`;
+                      return (
+                        <option key={val} value={val}>
+                          {val}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <span
+                    style={{
+                      position: "absolute",
+                      right: "8px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      fontSize: "9px",
+                      color: "#64748B",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    ▼
+                  </span>
+                </div>
               </div>
             </div>
           </section>

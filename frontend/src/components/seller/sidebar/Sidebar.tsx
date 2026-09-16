@@ -282,7 +282,12 @@ export default function SellerSidebar({
         }
         if (!isFoodActive) {
           e.preventDefault();
-          openCategoryUpgradeModal("FOOD");
+          const foodVerification = statusData?.sellerProfile?.foodVerificationStatus;
+          if (foodVerification === "APPROVED") {
+            openSubscriptionModal("FOOD");
+          } else {
+            openCategoryUpgradeModal("FOOD");
+          }
           return;
         }
       } else if (isPropertyTab) {
@@ -293,7 +298,12 @@ export default function SellerSidebar({
         }
         if (!isPropertyActive) {
           e.preventDefault();
-          openCategoryUpgradeModal("PROPERTY");
+          const propVerification = statusData?.sellerProfile?.propertyVerificationStatus;
+          if (propVerification === "APPROVED") {
+            openSubscriptionModal("PROPERTY");
+          } else {
+            openCategoryUpgradeModal("PROPERTY");
+          }
           return;
         }
       }
@@ -324,82 +334,73 @@ export default function SellerSidebar({
       return (
         pathname?.startsWith("/seller/dashboard") ||
         pathname?.startsWith("/seller/res/dashboard") ||
-        pathname === "/dashboard/seller" ||
-        pathname === "/dashboard/seller/"
+        pathname === "/seller" ||
+        pathname === "/seller/"
       );
     }
     if (item.id === "orders") {
       return (
         pathname?.startsWith("/seller/orders") ||
         pathname?.startsWith("/seller/order-default") ||
-        pathname?.startsWith("/seller/res/orders") ||
-        pathname?.startsWith("/dashboard/seller/orders")
+        pathname?.startsWith("/seller/res/orders")
       );
     }
     if (item.id === "menu") {
       return (
         pathname?.startsWith("/seller/menu") ||
         pathname?.startsWith("/seller/edit-menu") ||
-        pathname?.startsWith("/seller/res/menu") ||
-        pathname?.startsWith("/dashboard/seller/menu") ||
-        pathname?.startsWith("/dashboard/seller/edit-menu")
+        pathname?.startsWith("/seller/res/menu")
       );
     }
     if (item.id === "rooms-seller") {
       return (
         pathname?.startsWith("/seller/rooms") ||
-        pathname?.startsWith("/seller/res/rooms") ||
-        pathname?.startsWith("/dashboard/seller/rooms")
+        pathname?.startsWith("/seller/res/rooms")
       );
     }
     if (item.id === "bookings") {
       return (
         pathname?.startsWith("/seller/booking") ||
-        pathname?.startsWith("/seller/res/booking") ||
-        pathname?.startsWith("/dashboard/seller/bookings")
+        pathname?.startsWith("/seller/res/booking")
       );
     }
     if (item.id === "delivery") {
       return (
         pathname?.startsWith("/seller/delivery") ||
         pathname?.startsWith("/seller/riderMng") ||
-        pathname?.startsWith("/seller/res/delivery") ||
-        pathname?.startsWith("/dashboard/seller/delivery")
+        pathname?.startsWith("/seller/res/delivery")
       );
     }
     if (item.id === "subscription") {
       return (
         pathname?.startsWith("/seller/subscription") ||
+        pathname?.startsWith("/seller/payment") ||
+        pathname?.startsWith("/seller/res/payment") ||
         pathname?.startsWith("/seller/create-subscription-plan") ||
-        pathname?.startsWith("/seller/res/subscription") ||
-        pathname?.startsWith("/dashboard/seller/payment")
+        pathname?.startsWith("/seller/res/subscription")
       );
     }
     if (item.id === "support") {
       return (
-        pathname?.startsWith("/seller/support") ||
-        pathname?.startsWith("/dashboard/seller/support")
+        pathname?.startsWith("/seller/support")
       );
     }
     if (item.id === "profile") {
       return (
         pathname?.startsWith("/seller/profile") ||
-        pathname?.startsWith("/seller/res/profile") ||
-        pathname?.startsWith("/dashboard/seller/profile")
+        pathname?.startsWith("/seller/res/profile")
       );
     }
     if (item.id === "offers") {
       return (
         pathname?.startsWith("/seller/offers") ||
-        pathname?.startsWith("/seller/res/offers") ||
-        pathname?.startsWith("/dashboard/seller/offers")
+        pathname?.startsWith("/seller/res/offers")
       );
     }
     if (item.id === "reviews") {
       return (
         pathname?.startsWith("/seller/reviews") ||
-        pathname?.startsWith("/seller/res/reviews") ||
-        pathname?.startsWith("/dashboard/seller/reviews")
+        pathname?.startsWith("/seller/res/reviews")
       );
     }
     if (item.id === "notifications") {
@@ -411,8 +412,7 @@ export default function SellerSidebar({
     if (item.id === "settings") {
       return (
         pathname?.startsWith("/seller/settings") ||
-        pathname?.startsWith("/seller/res/settings") ||
-        pathname?.startsWith("/dashboard/seller/settings")
+        pathname?.startsWith("/seller/res/settings")
       );
     }
     return Boolean(pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)));
@@ -820,7 +820,7 @@ export default function SellerSidebar({
                         )}
 
                         <Link
-                          href={`/dashboard/seller/payment?planId=${plan.id}&category=${modalCategory}`}
+                          href={`/seller/payment?planId=${plan.id}&category=${modalCategory}`}
                           onClick={() => setModalOpen(false)}
                           className={styles.planSelectBtn}
                         >
@@ -841,7 +841,7 @@ export default function SellerSidebar({
                     Close
                   </button>
                   <Link
-                    href={`/dashboard/seller/payment?category=${modalCategory}`}
+                    href={`/seller/payment?category=${modalCategory}`}
                     onClick={() => setModalOpen(false)}
                     className={styles.modalPrimaryBtn}
                   >

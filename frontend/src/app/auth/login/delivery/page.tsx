@@ -63,7 +63,7 @@ export default function DeliveryLoginPage() {
                     } else if (role === "AGENT") {
                         redirectPath = "/dashboard/admin";
                     } else if (role === "SELLER") {
-                        redirectPath = "/dashboard/seller";
+                        redirectPath = "/seller/dashboard";
                     } else if (role === "USER") {
                         redirectPath = "/dashboard/user";
                     }

@@ -340,7 +340,13 @@ export type { EditOfferCanvasDasProps } from "./seller-offers/EditOfferCanvasDas
 export { default as SellerReviewsCanvasDas, default as SellerReviewsDashboard } from "./seller-reviews/SellerReviewsCanvasDas";
 export type { SellerReviewsCanvasDasProps } from "./seller-reviews/SellerReviewsCanvasDas";
 
+// Seller Platform Subscription & Payment components
+export * from "./seller-payment";
+export { default as SellerPaymentCanvasDas } from "./seller-payment/SellerPaymentCanvasDas";
+export { default as ResponsiveSellerPayment } from "./seller-payment/responsive/ResponsiveSellerPayment";
+
 export { default as SellerResponsiveWrapper } from "./SellerResponsiveWrapper";
 export type { SellerResponsiveWrapperProps } from "./SellerResponsiveWrapper";
 
 export { default } from "./seller-profile/Profile";
+

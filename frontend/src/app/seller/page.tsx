@@ -13,7 +13,7 @@ export default function SellerPortalRoot() {
         if (status === "authenticated" && session?.user) {
             const role = session.user.role;
             if (role === "SELLER") {
-                router.push("/dashboard/seller");
+                router.push("/seller/dashboard");
             } else if (role === "SUPERADMIN") {
                 router.push("/dashboard/superadmin");
             } else if (role === "AGENT") {

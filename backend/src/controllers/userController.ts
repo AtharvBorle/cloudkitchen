@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import bcrypt from "bcryptjs";
 
 export const getUserProfile = async () => {
     const session = await getAuthSession();
@@ -43,9 +44,47 @@ export const updateUserProfile = async (req: Request) => {
     const dataToUpdate: any = {};
 
     if (body.name && typeof body.name === "string") dataToUpdate.name = body.name.trim();
-    if (body.phone && typeof body.phone === "string") dataToUpdate.phone = body.phone.trim();
-    if (body.city && typeof body.city === "string") dataToUpdate.city = body.city.trim();
-    if (body.pincode && typeof body.pincode === "string") dataToUpdate.pincode = body.pincode.trim();
+    
+    if (body.phone !== undefined) {
+        const rawPhone = String(body.phone).trim();
+        const digitsOnly = rawPhone.replace(/\D/g, "");
+        if (rawPhone !== "" && digitsOnly.length !== 10) {
+            throw new ApiError("Please provide a valid 10-digit phone number", 400);
+        }
+        dataToUpdate.phone = digitsOnly;
+    }
+
+    if (body.city !== undefined && typeof body.city === "string") dataToUpdate.city = body.city.trim();
+    if (body.pincode !== undefined && typeof body.pincode === "string") {
+        const rawPincode = body.pincode.trim();
+        if (rawPincode !== "" && rawPincode.length !== 6) {
+            throw new ApiError("Pincode must be exactly 6 digits", 400);
+        }
+        dataToUpdate.pincode = rawPincode;
+    }
+
+    // Password Update & Validation
+    if (body.newPassword) {
+        if (typeof body.newPassword !== "string" || body.newPassword.length < 6) {
+            throw new ApiError("New password must be at least 6 characters long", 400);
+        }
+        if (!body.currentPassword) {
+            throw new ApiError("Current password is required to set a new password", 400);
+        }
+
+        const currentUser = await db.user.findUnique({
+            where: { id: session.user.id },
+        });
+
+        if (currentUser?.passwordHash) {
+            const isMatch = await bcrypt.compare(body.currentPassword, currentUser.passwordHash);
+            if (!isMatch) {
+                throw new ApiError("Current password is incorrect", 400);
+            }
+        }
+
+        dataToUpdate.passwordHash = await bcrypt.hash(body.newPassword, 10);
+    }
 
     if (Object.keys(dataToUpdate).length === 0) {
         throw new ApiError("No valid fields provided to update", 400);

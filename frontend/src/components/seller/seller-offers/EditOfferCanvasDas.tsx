@@ -185,6 +185,8 @@ function EditOfferForm({
   const [perUserLimit, setPerUserLimit] = useState("1");
   const [status, setStatus] = useState<"Active" | "Pending" | "Expired">("Active");
 
+  const [resolvedId, setResolvedId] = useState(offerId);
+
   // Load offer details dynamically based on offerId or codeParam
   useEffect(() => {
     // 1. First check local demo dictionary for immediate exact match
@@ -224,6 +226,7 @@ function EditOfferForm({
           );
 
           if (matched) {
+            setResolvedId(matched.id);
             setCouponCode(matched.code || "");
             setInternalDescription(matched.description || "");
             if (matched.discountPercentage) {
@@ -234,21 +237,31 @@ function EditOfferForm({
               setDiscountValue(matched.discountAmount.toString());
             }
 
-            if (matched.minOrderAmount) {
-              setMinOrderValue(matched.minOrderAmount.toString());
+            if (matched.minimumCartValue || matched.minOrderAmount) {
+              setMinOrderValue((matched.minimumCartValue || matched.minOrderAmount).toString());
             }
             if (matched.maxDiscountAmount) {
               setMaxDiscountCap(matched.maxDiscountAmount.toString());
             }
 
-            if (matched.appliesToProductId) {
+            if (matched.appliesTo) {
+              setAppliesTo(matched.appliesTo);
+            } else if (matched.appliesToProductId) {
               setAppliesTo("ITEMS");
             } else {
               setAppliesTo("ALL");
             }
 
-            if (matched.usageLimit) {
-              setUsageLimit(matched.usageLimit.toString());
+            if (matched.customerEligibility) {
+              setCustomerEligibility(matched.customerEligibility);
+            }
+
+            if (matched.usageLimit || matched.maxUsers) {
+              setUsageLimit((matched.usageLimit || matched.maxUsers).toString());
+            }
+
+            if (matched.perUserLimit || matched.maxUsagesPerUser) {
+              setPerUserLimit((matched.perUserLimit || matched.maxUsagesPerUser).toString());
             }
 
             if (matched.validUntil) {
@@ -281,7 +294,7 @@ function EditOfferForm({
     setSubmitting(true);
     try {
       const payload = {
-        id: offerId,
+        id: resolvedId || offerId,
         code: couponCode.trim().toUpperCase(),
         description: internalDescription.trim(),
         discountType: discountType,
@@ -296,18 +309,41 @@ function EditOfferForm({
         status: isDraft ? "Pending" : status,
       };
 
-      await fetchApi(`/api/seller/dashboard/offers`, {
+      const res = await fetchApi(`/api/seller/dashboard/offers`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      router.push("/seller/offers");
-    } catch (err) {
+      if (res.ok) {
+        router.push("/seller/offers");
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.message || "Failed to update offer.");
+      }
+    } catch (err: any) {
       console.error("Update offer error:", err);
-      router.push("/seller/offers");
+      alert(err.message || "An error occurred while updating offer.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteOffer = async () => {
+    if (!confirm("Are you sure you want to delete this offer?")) return;
+    try {
+      const res = await fetchApi(`/api/seller/dashboard/offers?id=${encodeURIComponent(resolvedId || offerId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        router.push("/seller/offers");
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.message || "Failed to delete offer.");
+      }
+    } catch (err: any) {
+      console.error("Delete offer error:", err);
+      alert(err.message || "Failed to delete offer.");
     }
   };
 
