@@ -330,6 +330,16 @@ export type { FAQProps, FAQItem } from "./FAQ_TC/responsive/FAQ";
 export { default as TC, default as ResponsiveTC, default as SellerTCResponsive } from "./FAQ_TC/responsive/TC";
 export type { TCProps, TCSection, TCTab as ResponsiveTCTab } from "./FAQ_TC/responsive/TC";
 
+// Offers & Coupons components
+export { default as CreateOfferCanvasDas, default as SellerCreateOfferCanvasDas } from "./seller-offers/CreateOfferCanvasDas";
+export type { CreateOfferCanvasDasProps } from "./seller-offers/CreateOfferCanvasDas";
+export { default as EditOfferCanvasDas, default as SellerEditOfferCanvasDas } from "./seller-offers/EditOfferCanvasDas";
+export type { EditOfferCanvasDasProps } from "./seller-offers/EditOfferCanvasDas";
+
+// Reviews & Feedback components
+export { default as SellerReviewsCanvasDas, default as SellerReviewsDashboard } from "./seller-reviews/SellerReviewsCanvasDas";
+export type { SellerReviewsCanvasDasProps } from "./seller-reviews/SellerReviewsCanvasDas";
+
 export { default as SellerResponsiveWrapper } from "./SellerResponsiveWrapper";
 export type { SellerResponsiveWrapperProps } from "./SellerResponsiveWrapper";
 

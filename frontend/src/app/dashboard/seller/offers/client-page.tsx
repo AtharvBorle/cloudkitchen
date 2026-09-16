@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import { Plus, Tag, Calendar, Check, X, Percent, DollarSign, Store, Box, Trash2, Edit2, Copy, Pencil } from "lucide-react";
 
@@ -108,6 +110,7 @@ type CouponType = {
 };
 
 export default function SellerOffersClient({ sellerId, products }: { sellerId: string, products: ProductType[] }) {
+    const router = useRouter();
     const [coupons, setCoupons] = useState<CouponType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -439,16 +442,14 @@ export default function SellerOffersClient({ sellerId, products }: { sellerId: s
                     })}
                 </div>
 
-                {!isCreating && (
-                    <button
-                        type="button"
-                        className="offers-create-btn"
-                        onClick={() => setIsCreating(true)}
-                    >
-                        <Plus size={16} strokeWidth={2.5} />
-                        Create New Plan
-                    </button>
-                )}
+                <Link
+                    href="/seller/offers/create"
+                    className="offers-create-btn"
+                    style={{ textDecoration: "none" }}
+                >
+                    <Plus size={16} strokeWidth={2.5} />
+                    Create New Plan
+                </Link>
             </div>
 
 
@@ -780,13 +781,7 @@ export default function SellerOffersClient({ sellerId, products }: { sellerId: s
                                                         type="button"
                                                         title="Edit Offer"
                                                         onClick={() => {
-                                                            if (item.rawCoupon) {
-                                                                handleEdit(item.rawCoupon);
-                                                            } else {
-                                                                setCode(item.code);
-                                                                setDescription(item.description);
-                                                                setIsCreating(true);
-                                                            }
+                                                            router.push(`/seller/offers/edit?id=${item.id}&code=${encodeURIComponent(item.code)}`);
                                                         }}
                                                         style={{
                                                             background: "none",
@@ -897,13 +892,7 @@ export default function SellerOffersClient({ sellerId, products }: { sellerId: s
                                                 type="button"
                                                 title="Edit Offer"
                                                 onClick={() => {
-                                                    if (item.rawCoupon) {
-                                                        handleEdit(item.rawCoupon);
-                                                    } else {
-                                                        setCode(item.code);
-                                                        setDescription(item.description);
-                                                        setIsCreating(true);
-                                                    }
+                                                    router.push(`/seller/offers/edit?id=${item.id}&code=${encodeURIComponent(item.code)}`);
                                                 }}
                                                 style={{
                                                     background: "none",

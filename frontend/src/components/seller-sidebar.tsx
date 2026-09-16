@@ -333,7 +333,7 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
                     Delivery Persons
                 </Link>
 
-                <Link href="/dashboard/seller/reviews" style={getLinkStyle('/dashboard/seller/reviews')} onClick={onClose}>
+                <Link href="/seller/reviews" style={getLinkStyle('/seller/reviews')} onClick={onClose}>
                     Reviews & Feedback
                 </Link>
 

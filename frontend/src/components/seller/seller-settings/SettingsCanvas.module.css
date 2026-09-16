@@ -393,20 +393,61 @@
 
 .toast {
   position: fixed;
-  bottom: 28px;
-  right: 28px;
-  background-color: #0F172A;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(15, 23, 42, 0.95);
   color: #FFFFFF;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 13.5px;
+  padding: 14px 24px;
+  border-radius: 9999px;
+  font-size: 14px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  gap: 14px;
+  box-shadow: 0 12px 36px -4px rgba(15, 23, 42, 0.35), 0 0 0 1.5px rgba(255, 255, 255, 0.12);
   z-index: 9999;
-  animation: slideUp 0.2s ease;
+  animation: toastTopPopIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  backdrop-filter: blur(16px);
+  letter-spacing: -0.1px;
+  pointer-events: none;
+}
+
+.toastStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.toastStatusOn {
+  background-color: rgba(16, 185, 129, 0.22);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.toastStatusOff {
+  background-color: rgba(239, 68, 68, 0.22);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+@keyframes toastTopPopIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.9);
+  }
+  60% {
+    transform: translate(-50%, 4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
 
 /* Notification Item & Group Styles */
@@ -676,5 +717,28 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+.backupSection {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.exportBtn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.exportBtn:hover {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
 }
 

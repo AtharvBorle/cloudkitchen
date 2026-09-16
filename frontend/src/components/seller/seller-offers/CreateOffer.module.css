@@ -1,0 +1,498 @@
+/* =========================================================
+   Create New Offer Page Styling (Responsive & Clean UI)
+   ========================================================= */
+
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #64748B;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  width: fit-content;
+}
+
+.backLink:hover {
+  color: #0F172A;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mainTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subTitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+}
+
+.actionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.draftBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid #FED7AA;
+  background-color: #FFF7ED;
+  color: #EA580C;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.draftDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #EA580C;
+}
+
+.saveDraftBtn {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.saveDraftBtn:hover {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+.publishBtn {
+  background-color: #EA580C;
+  border: 1px solid #EA580C;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(234, 88, 12, 0.2);
+}
+
+.publishBtn:hover {
+  background-color: #C2410C;
+  border-color: #C2410C;
+}
+
+/* White Form Container */
+.formCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 32px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Section Common Styles */
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sectionBadge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #F97316;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.fieldLabel {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+  margin-bottom: 8px;
+}
+
+.requiredStar {
+  color: #EF4444;
+  margin-left: 2px;
+}
+
+.helpText {
+  font-size: 12px;
+  color: #94A3B8;
+  margin-top: 6px;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inputField {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  font-size: 14px;
+  color: #0F172A;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.inputField:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.inputField::placeholder {
+  color: #94A3B8;
+}
+
+.uppercaseInput {
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Grids */
+.formGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  width: 100%;
+}
+
+.formGrid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+/* Prefix Addon Input */
+.prefixInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.prefixIconBox {
+  position: absolute;
+  left: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748B;
+  pointer-events: none;
+}
+
+.prefixInputField {
+  width: 100%;
+  padding: 11px 14px 11px 32px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  font-size: 14px;
+  color: #0F172A;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.prefixInputField:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+/* Suffix Icon Input */
+.suffixInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.suffixInputField {
+  width: 100%;
+  padding: 11px 36px 11px 14px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  font-size: 14px;
+  color: #0F172A;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.suffixInputField:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.suffixInputField:disabled {
+  background-color: #F8FAFC;
+  color: #64748B;
+  cursor: not-allowed;
+}
+
+.suffixIconBox {
+  position: absolute;
+  right: 12px;
+  color: #94A3B8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* Radio Cards (Selectable options) */
+.selectableRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.selectableRow3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.selectCard {
+  border-radius: 10px;
+  padding: 14px 18px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.selectCard:hover {
+  border-color: #CBD5E1;
+  background-color: #F8FAFC;
+}
+
+.selectCardActive {
+  border: 1.5px solid #F97316 !important;
+  background-color: #FFF7ED !important;
+}
+
+.radioCircle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #CBD5E1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background-color: #FFFFFF;
+}
+
+.radioCircleActive {
+  border-color: #EA580C;
+}
+
+.radioDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #EA580C;
+}
+
+.selectCardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.selectCardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.selectCardTitleActive {
+  color: #EA580C;
+}
+
+.selectCardSub {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.selectCardSubActive {
+  color: #EA580C;
+}
+
+/* Expiry Header with Switch Toggle */
+.labelWithToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.toggleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switchTrack {
+  width: 34px;
+  height: 18px;
+  border-radius: 9999px;
+  background-color: #E2E8F0;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.switchTrackActive {
+  background-color: #F97316;
+}
+
+.switchThumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.switchThumbActive {
+  transform: translateX(16px);
+}
+
+.toggleLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #EA580C;
+}
+
+/* Footer Ready Status Bar */
+.formFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 20px;
+  border-top: 1px solid #F1F5F9;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.successIcon {
+  color: #10B981;
+  flex-shrink: 0;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 900px) {
+  .formGrid3, .selectableRow3 {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .formGrid2, .selectableRow {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .headerRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mainTitle {
+    font-size: 22px;
+  }
+
+  .formCard {
+    padding: 20px;
+    gap: 24px;
+  }
+}

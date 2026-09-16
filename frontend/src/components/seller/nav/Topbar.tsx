@@ -16,6 +16,7 @@ export interface TopbarProps {
   onSearch?: (query: string) => void;
   onNotificationClick?: () => void;
   onMenuToggle?: () => void;
+  onMenuClick?: () => void;
 }
 
 export default function Topbar({
@@ -28,11 +29,13 @@ export default function Topbar({
   onSearch,
   onNotificationClick,
   onMenuToggle,
+  onMenuClick,
 }: TopbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const seller = useSellerProfile();
   const [searchQuery, setSearchQuery] = useState("");
+  const handleMenu = onMenuToggle || onMenuClick;
 
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
@@ -70,6 +73,9 @@ export default function Topbar({
     if (pathname?.startsWith("/seller/support")) {
       return "Search support tickets, queries...";
     }
+    if (pathname?.startsWith("/seller/reviews") || pathname?.startsWith("/seller/res/reviews")) {
+      return "Search reviews, feedback, ratings...";
+    }
     return "Search orders, rooms, dishes...";
   };
 
@@ -95,12 +101,12 @@ export default function Topbar({
     <header className={`${styles.sellerTopbar} seller-topbar`}>
       {/* Left: Title + Mobile Menu Trigger */}
       <div className={styles.leftSection}>
-        {onMenuToggle && (
+        {handleMenu && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onMenuToggle();
+              handleMenu();
             }}
             className={styles.mobileMenuTrigger}
             aria-label="Open sidebar navigation"

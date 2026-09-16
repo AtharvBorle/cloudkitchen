@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Percent,
+  Star,
 } from "lucide-react";
 import styles from "./ConsoleSidebar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -49,6 +50,7 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "rooms-seller", label: "Rooms", icon: BedDouble, href: "/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/delivery" },
+  { id: "reviews", label: "Reviews & Feedback", icon: Star, href: "/seller/reviews" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
   { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
@@ -194,6 +196,13 @@ export default function SellerSidebar({
         pathname?.startsWith("/seller/offers") ||
         pathname?.startsWith("/seller/res/offers") ||
         pathname?.startsWith("/dashboard/seller/offers")
+      );
+    }
+    if (item.id === "reviews") {
+      return (
+        pathname?.startsWith("/seller/reviews") ||
+        pathname?.startsWith("/seller/res/reviews") ||
+        pathname?.startsWith("/dashboard/seller/reviews")
       );
     }
     if (item.id === "notifications") {
