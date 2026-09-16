@@ -1,8 +1,9 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { ShoppingBag, ChevronRight, X } from "lucide-react";
+import Image from "next/image";
+import { ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import styles from "./FloatingCartBar.module.css";
 
@@ -10,23 +11,18 @@ export default function FloatingCartBar() {
   const router = useRouter();
   const pathname = usePathname();
   const { cartItems, cartTotal } = useCart();
-  const [isDismissed, setIsDismissed] = useState(false);
-  const [prevCount, setPrevCount] = useState(0);
 
-  // Total item count in cart
+  // Total items and price
   const totalCount = cartItems.reduce((acc, item) => acc + (item.quantity || 1), 0);
   const totalPrice = cartTotal || cartItems.reduce((acc, item) => acc + item.price * (item.quantity || 1), 0);
   const sellerName = cartItems[0]?.sellerName || "Verified Cloud Kitchen";
 
-  // Re-open if user adds more items
-  useEffect(() => {
-    if (totalCount > prevCount) {
-      setIsDismissed(false);
-    }
-    setPrevCount(totalCount);
-  }, [totalCount, prevCount]);
+  // Filter out items with images for stacked display
+  const itemsWithImages = cartItems
+    .filter((item) => Boolean(item.image))
+    .slice(0, 3);
 
-  // Determine if on checkout/cart/admin pages where the floating bar should not appear
+  // Hidden on specific pages where user is already viewing cart or checking out
   const isHiddenPage =
     !pathname ||
     pathname === "/cart" ||
@@ -51,17 +47,12 @@ export default function FloatingCartBar() {
     pathname.startsWith("/dashboard/superadmin") ||
     pathname.startsWith("/dashboard/delivery");
 
-  if (totalCount === 0 || isDismissed || isHiddenPage) {
+  if (totalCount === 0 || isHiddenPage) {
     return null;
   }
 
   const handleBarClick = () => {
     router.push("/user/cart");
-  };
-
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDismissed(true);
   };
 
   return (
@@ -81,47 +72,64 @@ export default function FloatingCartBar() {
           }
         }}
       >
-        {/* Left Section: Icon + Items Count + Price + Kitchen Name */}
+        {/* Left Section: Thumbnails Stack or Icon + Summary */}
         <div className={styles.leftSection}>
-          <div className={styles.iconWrapper}>
-            <ShoppingBag size={22} strokeWidth={2.4} />
-          </div>
+          {itemsWithImages.length > 0 ? (
+            <div className={styles.thumbsStack}>
+              {itemsWithImages.map((it, idx) => (
+                <div
+                  key={it.id || idx}
+                  className={styles.cartMiniThumb}
+                  style={{ zIndex: 3 - idx, position: "relative" }}
+                >
+                  <Image
+                    src={it.image || "/images/places/place-biryani.png"}
+                    alt={it.name || "Food item"}
+                    fill
+                    sizes="44px"
+                    style={{ objectFit: "cover", borderRadius: "10px" }}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.iconBoxFallback}>
+              <ShoppingBag size={20} strokeWidth={2.4} />
+            </div>
+          )}
 
           <div className={styles.infoCol}>
             <div className={styles.topRow}>
               <span className={styles.itemCountBadge}>
                 {totalCount} {totalCount === 1 ? "ITEM" : "ITEMS"}
               </span>
+              <span className={styles.priceDivider}>•</span>
               <span className={styles.priceText}>
                 ₹{totalPrice.toLocaleString("en-IN")}
               </span>
             </div>
-            <p className={styles.sellerSubtitle} title={`From ${sellerName}`}>
-              From {sellerName}
-            </p>
+            <div className={styles.bottomRow}>
+              <p className={styles.sellerSubtitle} title={`From ${sellerName}`}>
+                From {sellerName}
+              </p>
+              <span className={styles.perkDot}>●</span>
+              <span className={styles.perkText}>Freshly Prepared</span>
+            </div>
           </div>
         </div>
 
-        {/* Right Section: "View Cart" CTA + Dismiss button */}
+        {/* Right Section: View Cart Action */}
         <div className={styles.rightSection}>
           <button
             type="button"
             className={styles.viewCartBtn}
             onClick={handleBarClick}
-            aria-label="View Cart and Proceed"
+            aria-label="View Cart and Proceed to Order"
           >
             <span>View Cart</span>
-            <ChevronRight size={17} strokeWidth={2.8} />
-          </button>
-
-          <button
-            type="button"
-            className={styles.dismissBtn}
-            onClick={handleDismiss}
-            aria-label="Dismiss cart bar"
-            title="Dismiss"
-          >
-            <X size={14} strokeWidth={2.6} />
+            <span className={styles.arrowIconWrapper}>
+              <ArrowRight size={17} strokeWidth={2.6} />
+            </span>
           </button>
         </div>
       </div>
