@@ -623,7 +623,14 @@ function EditMenuInner({
                   className={styles.fileInputHidden}
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
-                      setImageFile(e.target.files[0]);
+                      const file = e.target.files[0];
+                      if (file.size > 5 * 1024 * 1024) {
+                        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                        alert(`Dish image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
+                        e.target.value = "";
+                        return;
+                      }
+                      setImageFile(file);
                     }
                   }}
                 />

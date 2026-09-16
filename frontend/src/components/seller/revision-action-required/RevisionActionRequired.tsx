@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Upload, AlertCircle } from "lucide-react";
+import { ArrowRight, Upload, AlertCircle, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import styles from "./RevisionActionRequired.module.css";
+import { validateFileSize } from "@/lib/file-validation";
 
 export interface RevisionActionRequiredProps {
   initialAddress?: string;
@@ -21,14 +22,32 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
   const [address, setAddress] = useState(initialAddress);
   const [fssaiFile, setFssaiFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState(initialFssaiFile);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [fileSizeFormatted, setFileSizeFormatted] = useState<string>("");
+  const [showOversizeModal, setShowOversizeModal] = useState(false);
 
   const [isDragging, setIsDragging] = useState(false);
 
+  const processFile = (file: File | undefined) => {
+    if (!file) return;
+    const result = validateFileSize(file);
+    if (!result.isValid) {
+      setFileError(result.errorMessage || "File exceeds 5MB size limit.");
+      setFileSizeFormatted(result.sizeFormatted);
+      setShowOversizeModal(true);
+      const inputEl = document.getElementById("fssai-reupload-input") as HTMLInputElement;
+      if (inputEl) inputEl.value = "";
+      return;
+    }
+    setFileError(null);
+    setFssaiFile(file);
+    setFileName(file.name);
+    setFileSizeFormatted(result.sizeFormatted);
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setFssaiFile(file);
-      setFileName(file.name);
+      processFile(e.target.files[0]);
     }
   };
 
@@ -49,10 +68,7 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
     e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      setFssaiFile(file);
-      setFileName(file.name);
-    }
+    processFile(file);
   };
 
   const handleTriggerUpload = () => {
@@ -116,13 +132,27 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
                 FSSAI Certificate Re-upload <span className={styles.requiredStar}>*</span>
               </label>
               <div
-                className={`${styles.flaggedUploadBox} ${isDragging ? styles.flaggedUploadBoxDragging : ""}`}
+                className={`${styles.flaggedUploadBox} ${
+                  fssaiFile
+                    ? styles.flaggedUploadBoxSuccess
+                    : fileError
+                    ? styles.flaggedUploadBoxError
+                    : isDragging
+                    ? styles.flaggedUploadBoxDragging
+                    : ""
+                }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
                 <div className={styles.flaggedFileText}>
-                  <span className={styles.flagTag}>[FLAGGED_BLURRY]</span>
+                  {fssaiFile ? (
+                    <span className={styles.successTag}>
+                      <CheckCircle2 size={13} /> READY ({fileSizeFormatted})
+                    </span>
+                  ) : (
+                    <span className={styles.flagTag}>[FLAGGED_BLURRY]</span>
+                  )}
                   <span className={styles.fileName}>{fileName}</span>
                 </div>
                 <button
@@ -130,12 +160,16 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
                   className={styles.reuploadBtn}
                   onClick={handleTriggerUpload}
                 >
-                  Re-upload
+                  {fssaiFile ? "Change" : "Re-upload"}
                 </button>
               </div>
-              <p className={styles.helperText}>
-                FSSAI certificate document must be a high-resolution scanned PDF or JPG under 5MB.
-              </p>
+              {fileError ? (
+                <p className={styles.errorHelperText}>{fileError}</p>
+              ) : (
+                <p className={styles.helperText}>
+                  FSSAI certificate document must be a high-resolution scanned PDF or JPG under 5MB.
+                </p>
+              )}
             </div>
 
             {/* Field 2: Correct Business Address */}
@@ -191,7 +225,15 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
             FSSAI License <span className={styles.mobileRequiredStar}>*</span>
           </label>
           <div
-            className={`${styles.mobileDropzoneBox} ${isDragging ? styles.mobileDropzoneBoxDragging : ""}`}
+            className={`${styles.mobileDropzoneBox} ${
+              fssaiFile
+                ? styles.mobileDropzoneSuccess
+                : fileError
+                ? styles.mobileDropzoneError
+                : isDragging
+                ? styles.mobileDropzoneBoxDragging
+                : ""
+            }`}
             onClick={handleTriggerUpload}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -199,17 +241,25 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
             role="button"
             tabIndex={0}
           >
-            <Upload size={28} strokeWidth={1.7} className={styles.mobileUploadIcon} />
+            {fssaiFile ? (
+              <CheckCircle2 size={28} className={styles.mobileSuccessIcon} />
+            ) : (
+              <Upload size={28} strokeWidth={1.7} className={styles.mobileUploadIcon} />
+            )}
             <span className={styles.mobileUploadTitle}>
               {fssaiFile ? fssaiFile.name : "Click to re-upload license"}
             </span>
             <span className={styles.mobileUploadSubtitle}>
-              {fssaiFile ? "File selected • Click to change" : "PDF, PNG or JPG (Max 5MB)"}
+              {fssaiFile ? `Valid File (${fileSizeFormatted}) • Click to change` : "PDF, PNG or JPG (Max 5MB)"}
             </span>
           </div>
-          <p className={styles.mobileErrorHelper}>
-            File is blurry. Please capture document under clear light.
-          </p>
+          {fileError ? (
+            <p className={styles.mobileErrorHelper}>{fileError}</p>
+          ) : (
+            <p className={styles.mobileErrorHelper}>
+              File is blurry. Please capture document under clear light.
+            </p>
+          )}
         </div>
 
         {/* Mobile Field 2: Business Address */}
@@ -237,6 +287,56 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Oversize warning modal popup */}
+      {showOversizeModal && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowOversizeModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalIconWrap}>
+                <AlertTriangle className={styles.modalAlertIcon} size={28} />
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setShowOversizeModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <h3 className={styles.modalTitle}>File Size Limit Exceeded</h3>
+              <p className={styles.modalText}>
+                The selected FSSAI certificate is larger than the 5MB upload limit.
+              </p>
+              <div className={styles.fileDetailCard}>
+                <div className={styles.fileDetailRow}>
+                  <span className={styles.fileDetailLabel}>Detected Size:</span>
+                  <span className={styles.fileSizeExceeded}>{fileSizeFormatted}</span>
+                </div>
+                <div className={styles.fileDetailRow}>
+                  <span className={styles.fileDetailLabel}>Max Allowed:</span>
+                  <span className={styles.fileSizeLimit}>5.00 MB</span>
+                </div>
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+              <button
+                type="button"
+                className={styles.modalPrimaryBtn}
+                onClick={() => setShowOversizeModal(false)}
+              >
+                Choose Another File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

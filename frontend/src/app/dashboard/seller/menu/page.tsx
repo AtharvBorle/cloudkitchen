@@ -618,7 +618,23 @@ export default function ManageMenuPage() {
                             <div className="input-group" style={{ marginTop: '20px' }}>
                                 <label style={{ fontSize: '0.9rem', marginBottom: '5px', display: 'block', fontWeight: 'bold' }}>Image {!editingItemId && <span style={{ color: '#EF4444' }}>*</span>}</label>
                                 {editingItemId && <span style={{ fontSize: '0.8rem', color: '#666', display: 'block', marginBottom: '5px' }}>Leave empty to keep the current image</span>}
-                                <input type="file" onChange={e => setImageFile(e.target.files?.[0] || null)} className="input-field" accept="image/*" required={!editingItemId} />
+                                <input
+                                    type="file"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0] || null;
+                                        if (file && file.size > 5 * 1024 * 1024) {
+                                            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                            alert(`Image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please choose a smaller photo.`);
+                                            e.target.value = "";
+                                            setImageFile(null);
+                                            return;
+                                        }
+                                        setImageFile(file);
+                                    }}
+                                    className="input-field"
+                                    accept="image/*"
+                                    required={!editingItemId}
+                                />
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '30px' }}>

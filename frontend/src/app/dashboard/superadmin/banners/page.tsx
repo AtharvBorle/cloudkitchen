@@ -109,6 +109,12 @@ export default function SuperadminBannersPage() {
   const handleDesktopFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        alert(`Desktop banner image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
+        e.target.value = "";
+        return;
+      }
       setDesktopFile(file);
       setDesktopPreview(URL.createObjectURL(file));
     }
@@ -117,6 +123,12 @@ export default function SuperadminBannersPage() {
   const handleMobileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        alert(`Mobile banner image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
+        e.target.value = "";
+        return;
+      }
       setMobileFile(file);
       setMobilePreview(URL.createObjectURL(file));
     }

@@ -86,14 +86,31 @@ export default function RevisionPage() {
 
     const handleMultiFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<File[]>>) => {
         if (e.target.files) {
-            const files = Array.from(e.target.files).slice(0, 3);
-            setter(files);
+            const rawFiles = Array.from(e.target.files).slice(0, 3);
+            const validFiles: File[] = [];
+            for (const file of rawFiles) {
+                if (file.size > 5 * 1024 * 1024) {
+                    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                    alert(`"${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please choose a smaller photo.`);
+                    e.target.value = "";
+                    return;
+                }
+                validFiles.push(file);
+            }
+            setter(validFiles);
         }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<File | null>>) => {
         if (e.target.files && e.target.files.length > 0) {
-            setter(e.target.files[0]);
+            const file = e.target.files[0];
+            if (file.size > 5 * 1024 * 1024) {
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                alert(`File "${file.name}" (${sizeMB} MB) exceeds the 5MB limit. Please upload a document or image under 5MB.`);
+                e.target.value = "";
+                return;
+            }
+            setter(file);
         }
     };
 

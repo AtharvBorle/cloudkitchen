@@ -258,7 +258,17 @@ export default function AdminPopupBannersClient({ sellers }: { sellers: SellerTy
                                 <input
                                     type="file"
                                     accept="image/*"
-                                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        if (file && file.size > 5 * 1024 * 1024) {
+                                            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                            alert(`Banner image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
+                                            e.target.value = "";
+                                            setImageFile(null);
+                                            return;
+                                        }
+                                        setImageFile(file);
+                                    }}
                                     style={{ flex: 1, padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", backgroundColor: "white" }}
                                     required={!editingBanner}
                                     disabled={!canManage}

@@ -278,7 +278,22 @@ export default function ProfileAndQRPage() {
                                 </div>
                             )}
                             {isEditing && (
-                                <input type="file" onChange={e => setBannerFile(e.target.files?.[0] || null)} className="input-field" accept="image/*" />
+                                <input
+                                    type="file"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0] || null;
+                                        if (file && file.size > 5 * 1024 * 1024) {
+                                            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                            alert(`Banner image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
+                                            e.target.value = "";
+                                            setBannerFile(null);
+                                            return;
+                                        }
+                                        setBannerFile(file);
+                                    }}
+                                    className="input-field"
+                                    accept="image/*"
+                                />
                             )}
                         </div>
 

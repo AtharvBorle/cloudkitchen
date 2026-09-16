@@ -535,7 +535,16 @@ export default function ManageRoomsPage() {
                                             <input
                                                 type="file"
                                                 accept="image/*"
-                                                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0] || null;
+                                                    if (file && file.size > 5 * 1024 * 1024) {
+                                                        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                                        alert(`Photo "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
+                                                        e.target.value = "";
+                                                        return;
+                                                    }
+                                                    setImageFile(file);
+                                                }}
                                                 style={{ display: "none" }}
                                             />
                                         </label>
@@ -555,7 +564,16 @@ export default function ManageRoomsPage() {
                                                 <input
                                                     type="file"
                                                     accept="image/*"
-                                                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0] || null;
+                                                        if (file && file.size > 5 * 1024 * 1024) {
+                                                            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                                            alert(`Photo "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
+                                                            e.target.value = "";
+                                                            return;
+                                                        }
+                                                        setImageFile(file);
+                                                    }}
                                                     style={{ display: "none" }}
                                                 />
                                             </label>

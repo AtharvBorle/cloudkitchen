@@ -107,7 +107,16 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
                             <input
                                 type="file"
                                 accept="image/*,application/pdf"
-                                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                onChange={(e) => {
+                                    const selected = e.target.files?.[0] || null;
+                                    if (selected && selected.size > 5 * 1024 * 1024) {
+                                        const sizeMB = (selected.size / (1024 * 1024)).toFixed(2);
+                                        alert(`File "${selected.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select a file under 5MB.`);
+                                        e.target.value = "";
+                                        return;
+                                    }
+                                    setFile(selected);
+                                }}
                                 style={{ display: "none" }}
                             />
                         </label>
@@ -130,7 +139,16 @@ export default function SellerSidebar({ isMobileOpen, onClose, isCollapsed }: { 
                                 <input
                                     type="file"
                                     accept="image/*,application/pdf"
-                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                    onChange={(e) => {
+                                        const selected = e.target.files?.[0] || null;
+                                        if (selected && selected.size > 5 * 1024 * 1024) {
+                                            const sizeMB = (selected.size / (1024 * 1024)).toFixed(2);
+                                            alert(`File "${selected.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select a file under 5MB.`);
+                                            e.target.value = "";
+                                            return;
+                                        }
+                                        setFile(selected);
+                                    }}
                                     style={{ display: "none" }}
                                 />
                             </label>
