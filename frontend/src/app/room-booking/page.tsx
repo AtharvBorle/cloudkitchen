@@ -9,6 +9,7 @@ import { FeaturedColivings } from "@/components/room-booking-desktop/featured-co
 import { AllAvailableRooms } from "@/components/room-booking-desktop/all-available-rooms";
 import { RoomBookingMobileView } from "@/components/room-booking-desktop/room-booking-mobile";
 import { fetchApi } from "@/lib/fetch-api";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./page.module.css";
 
 function RoomBookingContent() {
@@ -156,11 +157,13 @@ function RoomBookingContent() {
             onReset={handleResetFilters}
           />
         </main>
+        <Footer />
       </div>
 
       {/* 2. Mobile View (<=768px) matching native mobile design */}
       <div className={styles.mobileOnly}>
         <RoomBookingMobileView rooms={filteredRooms} />
+        <Footer />
       </div>
     </div>
   );

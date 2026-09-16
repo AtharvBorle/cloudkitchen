@@ -1,6 +1,10 @@
 .sidebarContainer {
   width: 290px;
   flex-shrink: 0;
+  position: sticky;
+  top: 96px;
+  align-self: flex-start;
+  z-index: 10;
 }
 
 .sidebarCard {
@@ -12,6 +16,9 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 /* 1. User Profile Section */

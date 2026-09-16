@@ -17,6 +17,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./UserCart.module.css";
 
 export interface UserCartItem {
@@ -528,6 +529,9 @@ export const UserCart: React.FC<UserCartProps> = ({
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
+import { FloatingCartBar } from '@/components/cart';
 import { Providers } from '@/components/Providers';
 import { LocationProvider } from '@/components/location-provider';
 import ChatbotWidget from '@/components/chatbot-widget';
@@ -38,6 +39,7 @@ export default function RootLayout({
           <LocationProvider>
             <CartProvider>
               <main>{children}</main>
+              <FloatingCartBar />
               <ChatbotWidget />
             </CartProvider>
           </LocationProvider>

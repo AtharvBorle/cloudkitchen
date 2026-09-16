@@ -1,0 +1,316 @@
+﻿.floatingBarContainer {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 860px;
+  z-index: 99999;
+  animation: slideUpFloating 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  pointer-events: none; /* Allows click-through outside the bar */
+}
+
+.floatingBar {
+  pointer-events: auto;
+  background: linear-gradient(135deg, #18181B 0%, #09090B 100%);
+  border: 1.5px solid rgba(255, 107, 0, 0.5);
+  border-radius: 22px;
+  padding: 12px 18px 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #FFFFFF;
+  box-shadow: 
+    0 20px 45px -8px rgba(0, 0, 0, 0.5),
+    0 0 25px rgba(255, 85, 0, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.floatingBar:hover {
+  transform: translateY(-4px) scale(1.008);
+  border-color: #FF6B00;
+  box-shadow: 
+    0 24px 50px -6px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(255, 85, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+
+.floatingBar:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+/* Shimmer Line */
+.floatingBar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.12),
+    rgba(255, 107, 0, 0.2),
+    transparent
+  );
+  transform: skewX(-25deg);
+  animation: shimmerLight 4.5s infinite;
+}
+
+/* Left Section: Thumbnails + Item details */
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Thumbnail Stack Group */
+.thumbsStack {
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cartMiniThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 2px solid #27272A;
+  object-fit: cover;
+  background-color: #27272A;
+  margin-left: -14px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.cartMiniThumb:first-child {
+  margin-left: 0;
+}
+
+.cartMiniThumb:hover {
+  transform: translateY(-2px) scale(1.08);
+  z-index: 5;
+}
+
+.iconBoxFallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FF5500 0%, #EA580C 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(255, 85, 0, 0.35);
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.itemCountBadge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: rgba(255, 107, 0, 0.18);
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  color: #FF8A3D;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.priceDivider {
+  color: #52525B;
+  font-size: 0.8rem;
+}
+
+.priceText {
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+.bottomRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sellerSubtitle {
+  font-size: 0.78rem;
+  color: #A1A1AA;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.perkDot {
+  color: #10B981;
+  font-size: 0.65rem;
+}
+
+.perkText {
+  font-size: 0.74rem;
+  color: #34D399;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Right Section: View Cart CTA */
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.viewCartBtn {
+  background: linear-gradient(135deg, #FF6B00 0%, #FF5500 100%);
+  color: #FFFFFF;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(255, 107, 0, 0.45);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.viewCartBtn:hover {
+  background: linear-gradient(135deg, #FF7A1A 0%, #FF6600 100%);
+  transform: translateX(2px);
+  box-shadow: 0 6px 22px rgba(255, 107, 0, 0.6);
+}
+
+.viewCartBtn:active {
+  transform: scale(0.97);
+}
+
+.arrowIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.viewCartBtn:hover .arrowIconWrapper {
+  transform: translateX(3px);
+}
+
+@keyframes slideUpFloating {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes shimmerLight {
+  0% {
+    left: -120%;
+  }
+  25% {
+    left: 180%;
+  }
+  100% {
+    left: 180%;
+  }
+}
+
+/* Mobile Devices */
+@media (max-width: 640px) {
+  .floatingBarContainer {
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 20px);
+    max-width: 100%;
+  }
+
+  .floatingBar {
+    padding: 10px 14px;
+    border-radius: 16px;
+    gap: 8px;
+  }
+
+  .cartMiniThumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    margin-left: -10px;
+  }
+
+  .iconBoxFallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .priceText {
+    font-size: 1.05rem;
+  }
+
+  .itemCountBadge {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+  }
+
+  .sellerSubtitle {
+    font-size: 0.72rem;
+  }
+
+  .perkText {
+    display: none;
+  }
+
+  .perkDot {
+    display: none;
+  }
+
+  .viewCartBtn {
+    padding: 9px 15px;
+    font-size: 0.85rem;
+    border-radius: 12px;
+    gap: 4px;
+  }
+}

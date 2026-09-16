@@ -166,7 +166,7 @@ export default function Properties({ places }: PropertiesProps) {
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
-  const basePlaces = places && places.length > 0 ? places : SAMPLE_PLACES;
+  const basePlaces = places !== undefined ? places : SAMPLE_PLACES;
 
   // Compute dynamic cuisine counts from available places
   const dynamicCuisines = React.useMemo(() => {
@@ -694,40 +694,96 @@ export default function Properties({ places }: PropertiesProps) {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gridTemplateColumns: displayPlaces.length > 0 ? "repeat(4, minmax(0, 1fr))" : "1fr",
               gap: "24px",
               width: "100%",
               boxSizing: "border-box",
             }}
             className="places-grid-layout PlacesGrid"
           >
-            {displayPlaces.map((place) => (
-              <Link
-                href={place.trackingId ? `/shop/${place.trackingId}` : `/restaurant/${place.kitchenId || "7-12-kitchen"}`}
-                key={place.id}
+            {displayPlaces.length === 0 ? (
+              <div
                 style={{
-                  width: "100%",
-                  height: "250px",
+                  gridColumn: "1 / -1",
                   backgroundColor: "#FFFFFF",
                   borderRadius: "20px",
-                  overflow: "hidden",
-                  border: "1px solid #F1F5F9",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
+                  padding: "48px 24px",
+                  textAlign: "center",
+                  border: "1px dashed #CBD5E1",
                   display: "flex",
                   flexDirection: "column",
-                  cursor: "pointer",
-                  transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                  textDecoration: "none",
-                  color: "inherit",
-                  boxSizing: "border-box",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "12px",
                 }}
-                className="place-card"
               >
-                {/* Card Food Image */}
                 <div
                   style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    backgroundColor: "#FFF4E6",
+                    color: "#FF6B00",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "26px",
+                  }}
+                >
+                  🍽️
+                </div>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "#1E293B" }}>
+                  No Kitchens Found
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.88rem", color: "#64748B", maxWidth: "380px" }}>
+                  No cloud kitchens match your selected criteria or location. Try clearing filters or changing your delivery address.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  style={{
+                    marginTop: "8px",
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FF6B00",
+                    color: "#FFFFFF",
+                    fontWeight: "600",
+                    fontSize: "0.85rem",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              displayPlaces.map((place) => (
+                <Link
+                  href={place.trackingId ? `/shop/${place.trackingId}` : `/restaurant/${place.kitchenId || "7-12-kitchen"}`}
+                  key={place.id}
+                  style={{
                     width: "100%",
-                    height: "155px",
+                    height: "250px",
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: "20px",
+                    overflow: "hidden",
+                    border: "1px solid #F1F5F9",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
+                    display: "flex",
+                    flexDirection: "column",
+                    cursor: "pointer",
+                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                    textDecoration: "none",
+                    color: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                  className="place-card"
+                >
+                  {/* Card Food Image */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "155px",
                     position: "relative",
                     overflow: "hidden",
                     backgroundColor: "#F8FAFC",
@@ -815,7 +871,8 @@ export default function Properties({ places }: PropertiesProps) {
                   </div>
                 </div>
               </Link>
-            ))}
+            ))
+          )}
           </div>
         </div>
       </div>

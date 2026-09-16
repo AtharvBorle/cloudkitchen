@@ -65,7 +65,7 @@
 /* 2-Column Addresses Grid */
 .addressesGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -79,6 +79,7 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 180px;
+  min-width: 0;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
 }
 
@@ -138,6 +139,7 @@
   display: flex;
   gap: 14px;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .mapThumb {
@@ -152,6 +154,8 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0;
+  flex: 1;
 }
 
 .recipientName {
@@ -159,6 +163,8 @@
   font-weight: 600;
   color: #0f172a;
   margin: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .recipientPhone {
@@ -166,6 +172,8 @@
   color: #64748b;
   margin: 0;
   font-weight: 500;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .addressText {
@@ -173,6 +181,9 @@
   color: #64748b;
   margin: 2px 0 0 0;
   line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 /* Address Bottom Actions */

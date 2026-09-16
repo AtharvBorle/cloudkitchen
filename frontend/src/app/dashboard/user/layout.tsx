@@ -13,6 +13,7 @@ import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { LocationProvider, useLocation } from "@/components/location-provider";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/explore-desktop/footer";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -1110,6 +1111,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 <main style={{ flex: 1, padding: "var(--spacing-8) var(--spacing-6)", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
                     {children}
                 </main>
+                <Footer />
             </div>
         </LocationProvider>
     );

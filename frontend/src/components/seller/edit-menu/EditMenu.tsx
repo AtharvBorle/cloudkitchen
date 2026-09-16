@@ -435,6 +435,14 @@ function EditMenuInner({
                       <div className={styles.dropdownMenu} style={{ zIndex: 45 }}>
                         {['Veg', 'Non Veg', 'Vegan', 'Jain'].map((type) => {
                           const isSelected = selectedFoodTypes.includes(type);
+                          const dotColor =
+                            type === 'Non Veg'
+                              ? '#EF4444'
+                              : type === 'Jain'
+                              ? '#16A34A'
+                              : type === 'Vegan'
+                              ? '#059669'
+                              : '#16A34A';
                           return (
                             <div
                               key={type}
@@ -448,6 +456,16 @@ function EditMenuInner({
                               >
                                 {isSelected && <Check size={12} strokeWidth={3} />}
                               </div>
+                              <span
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: dotColor,
+                                  display: 'inline-block',
+                                  marginRight: '6px',
+                                }}
+                              />
                               <span className={styles.optionLabel}>{type}</span>
                             </div>
                           );

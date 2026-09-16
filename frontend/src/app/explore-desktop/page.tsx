@@ -11,16 +11,18 @@ import { WhatsOnYourMind } from "@/components/explore-desktop/whats-on-your-mind
 import { Footer } from "@/components/explore-desktop/footer";
 import { ExploreMobileView } from "@/components/explore-desktop/explore-mobile";
 import { useHomeData } from "@/lib/useHomeData";
+import { useLocation } from "@/components/location-provider";
 import styles from "./page.module.css";
 import momentStyles from "@/components/explore-desktop/whats-on-your-mind/WhatsOnYourMind.module.css";
 import Link from "next/link";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 
 function ExploreDesktopContent() {
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get("category");
   const searchQuery = searchParams.get("query");
+  const { openLocationModal } = useLocation();
   const homeData = useHomeData();
 
   // Dynamic Reels from approved kitchens
@@ -114,6 +116,71 @@ function ExploreDesktopContent() {
       <div className={styles.desktopOnly}>
         <Navbar initialActiveItem="Explore" />
         <main className={styles.desktopMain}>
+          {/* Out of Service Area Alert Banner */}
+          {homeData.activePincode && !homeData.isLoading && homeData.kitchens.length === 0 && (
+            <div
+              style={{
+                width: "100%",
+                backgroundColor: "#FFF8F2",
+                border: "1.5px solid #FED7AA",
+                borderRadius: "18px",
+                padding: "18px 24px",
+                marginBottom: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "14px",
+                boxShadow: "0 4px 16px rgba(249, 115, 22, 0.06)",
+                boxSizing: "border-box",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "12px",
+                    backgroundColor: "#FFEADB",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#FF6B00",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MapPin size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>
+                    No Cloud Kitchens Delivering to PIN {homeData.activePincode}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B" }}>
+                    We haven&apos;t expanded to this specific pincode yet. Choose a nearby area like Kothrud (411038), Baner (411045), or Aundh (411007).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={openLocationModal}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "10px",
+                  backgroundColor: "#FF6B00",
+                  color: "#FFFFFF",
+                  fontWeight: "700",
+                  fontSize: "0.88rem",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Change Location
+              </button>
+            </div>
+          )}
+
           {/* Active Filter Banner if filtered */}
           {(categoryFilter || searchQuery) && (
             <div
@@ -246,6 +313,7 @@ function ExploreDesktopContent() {
       {/* 2. Mobile View (<=768px) matching exact mobile design */}
       <div className={styles.mobileOnly}>
         <ExploreMobileView />
+        <Footer />
       </div>
     </div>
   );

@@ -25,7 +25,11 @@ export default function SellerOffersPage() {
                 const res = await fetchApi("/api/seller/dashboard/offers");
                 if (res.ok) {
                     const result = await res.json();
-                    setData(result);
+                    const parsed = result.data || result;
+                    setData({
+                        sellerId: parsed.sellerId || "seller",
+                        products: Array.isArray(parsed.products) ? parsed.products : [],
+                    });
                 } else {
                     router.push("/dashboard/seller");
                 }

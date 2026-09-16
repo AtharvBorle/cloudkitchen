@@ -257,7 +257,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
   };
 
   const userName = session?.user?.name || "Registered User";
-  const userPhone = (session?.user as any)?.phone || "+91 98765 43210";
+  const userPhone = (session?.user as any)?.phone || "";
 
   return (
     <div className={styles.sectionCard}>

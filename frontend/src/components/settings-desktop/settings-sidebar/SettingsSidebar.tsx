@@ -46,8 +46,8 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     if (pathname?.startsWith("/payment-methods-desktop") || pathname?.startsWith("/payment-methods")) return "payment-methods";
     if (pathname?.startsWith("/delivery-addresses-desktop") || pathname?.startsWith("/delivery-addresses")) return "delivery-addresses";
     if (pathname?.startsWith("/order-history-desktop") || pathname?.startsWith("/order-history")) return "order-history";
-    if (pathname?.startsWith("/support")) return "help-faq";
-    if (pathname?.startsWith("/terms")) return "terms";
+    if (pathname?.startsWith("/support") || pathname?.startsWith("/faq")) return "help-faq";
+    if (pathname?.startsWith("/terms") || pathname?.startsWith("/tc") || pathname?.startsWith("/terms-and-conditions")) return "terms";
     if (pathname?.startsWith("/privacy")) return "privacy";
     if (pathname?.startsWith("/rate")) return "rate";
     return "general-overview";
@@ -129,11 +129,11 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             )}
           </div>
           <div className={styles.userInfo}>
-            <h3 className={styles.userName} title={session?.user?.name || "Rahul Sharma"}>
-              {session?.user?.name || "Rahul Sharma"}
+            <h3 className={styles.userName} title={session?.user?.name || "Guest User"}>
+              {session?.user?.name || (session ? "User" : "Guest User")}
             </h3>
-            <p className={styles.userPhone} title={session?.user?.email || "+91 98765 43210"}>
-              {session?.user?.email || "+91 98765 43210"}
+            <p className={styles.userPhone} title={session?.user?.email || "Sign in to manage account"}>
+              {session?.user?.email || (session ? "" : "Sign in to manage account")}
             </p>
           </div>
         </div>

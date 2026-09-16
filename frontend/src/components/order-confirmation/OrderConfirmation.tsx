@@ -22,6 +22,7 @@ import {
   Receipt,
 } from "lucide-react";
 import Navbar from "@/components/navbar/Navbar";
+import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./OrderConfirmation.module.css";
 
 import { fetchApi } from "@/lib/fetch-api";
@@ -606,6 +607,9 @@ export default function OrderConfirmation() {
           </Link>
         </section>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

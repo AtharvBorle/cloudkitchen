@@ -7,6 +7,7 @@ import { OrderHistoryHeader } from "@/components/order-history-desktop/order-his
 import { OrderFilters, OrderFilterTab } from "@/components/order-history-desktop/order-filters";
 import { OrderList, OrderItemData, SAMPLE_ORDERS } from "@/components/order-history-desktop/order-list";
 import { fetchApi } from "@/lib/fetch-api";
+import { Footer } from "@/components/explore-desktop/footer";
 
 import styles from "./OrderHistoryPage.module.css";
 
@@ -182,6 +183,9 @@ export default function OrderHistoryDesktopPage() {
           </div>
         </div>
       </main>
+
+      {/* Global Responsive Footer */}
+      <Footer />
     </div>
   );
 }

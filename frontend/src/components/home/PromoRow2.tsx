@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DynamicPromoBanner } from "@/lib/useHomeData";
 import styles from "./PromoRow2.module.css";
 
@@ -39,7 +40,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "First 2 Orders",
     code: "FOOD30",
     buttonText: "Order Now",
-    link: "/explore",
+    link: "/explore-desktop",
     imageSrc: "/images/promo-scooter.png",
     imageType: "scooter",
   },
@@ -50,7 +51,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "on First Thali",
     code: "THALI30",
     buttonText: "Order Now",
-    link: "/explore?category=Mess/Tiffin",
+    link: "/explore-desktop?category=Mess/Tiffin",
     imageSrc:
       "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80",
     imageType: "food",
@@ -62,7 +63,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "on Cakes",
     code: "CAKE25",
     buttonText: "Order Now",
-    link: "/explore?category=Bakery",
+    link: "/explore-desktop?category=Bakery",
     imageSrc:
       "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80",
     imageType: "food",
@@ -74,7 +75,7 @@ const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
     titleSuffix: "on Order",
     code: "HOME20",
     buttonText: "Explore Now",
-    link: "/explore?category=Homemade",
+    link: "/explore-desktop?category=Homemade",
     imageSrc:
       "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80",
     imageType: "food",
@@ -89,7 +90,7 @@ export default function PromoRow2({
   titleSuffix = "Your First 2",
   description = "Kickstart your meal plan with premium ingredients & fast delivery.",
   code = "FOOD30",
-  orderNowLink = "/explore",
+  orderNowLink = "/explore-desktop",
   imageSrc = "/images/promo-banner-food.png",
 }: PromoRow2Props) {
   const [activeIdx, setActiveIdx] = useState(0);
@@ -99,6 +100,15 @@ export default function PromoRow2({
 
   const hasDynamicBanners = banners && banners.length > 0;
   const bannerList = hasDynamicBanners ? banners : null;
+  const totalCount = bannerList ? bannerList.length : DEFAULT_PROMO_SLIDES.length;
+
+  const nextSlide = () => {
+    setActiveIdx((prev) => (prev + 1) % totalCount);
+  };
+
+  const prevSlide = () => {
+    setActiveIdx((prev) => (prev === 0 ? totalCount - 1 : prev - 1));
+  };
 
   // Auto rotate if multiple dynamic banners
   useEffect(() => {
@@ -134,11 +144,10 @@ export default function PromoRow2({
   const handleTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const diff = touchStartX.current - touchEndX.current;
-    const totalCount = bannerList ? bannerList.length : DEFAULT_PROMO_SLIDES.length;
     if (diff > 45) {
-      setActiveIdx((prev) => (prev + 1) % totalCount);
+      nextSlide();
     } else if (diff < -45) {
-      setActiveIdx((prev) => (prev === 0 ? totalCount - 1 : prev - 1));
+      prevSlide();
     }
     touchStartX.current = null;
     touchEndX.current = null;
@@ -155,6 +164,7 @@ export default function PromoRow2({
           width: "100%",
           padding: "0",
           background: "transparent",
+          position: "relative",
         }}
         className="promo-banner-wrapper"
         onMouseEnter={() => setIsHovered(true)}
@@ -210,6 +220,72 @@ export default function PromoRow2({
               />
             </picture>
           </Link>
+
+          {/* Navigation Arrows */}
+          {bannerList.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  prevSlide();
+                }}
+                aria-label="Previous banner"
+                style={{
+                  position: "absolute",
+                  left: "14px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255, 255, 255, 0.85)",
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#0F172A",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  zIndex: 10,
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <ChevronLeft size={20} strokeWidth={2.5} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextSlide();
+                }}
+                aria-label="Next banner"
+                style={{
+                  position: "absolute",
+                  right: "14px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255, 255, 255, 0.85)",
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#0F172A",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  zIndex: 10,
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <ChevronRight size={20} strokeWidth={2.5} />
+              </button>
+            </>
+          )}
 
           {bannerList.length > 1 && (
             <div
@@ -298,12 +374,18 @@ export default function PromoRow2({
   const currentSlide = DEFAULT_PROMO_SLIDES[activeIdx] || DEFAULT_PROMO_SLIDES[0];
 
   return (
-    <section className={styles.promoWrapper}>
+    <section
+      className={styles.promoWrapper}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ position: "relative" }}
+    >
       <div
         className={styles.promoCard}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        style={{ position: "relative" }}
       >
         <div key={currentSlide.id} className={styles.slideContent}>
           <div className={styles.leftContent}>
@@ -350,6 +432,68 @@ export default function PromoRow2({
             )}
           </div>
         </div>
+
+        {/* Navigation Arrows for Fallback Slides */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            prevSlide();
+          }}
+          aria-label="Previous slide"
+          style={{
+            position: "absolute",
+            left: "14px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#0F172A",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            zIndex: 10,
+            transition: "all 0.2s ease",
+          }}
+        >
+          <ChevronLeft size={20} strokeWidth={2.5} />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            nextSlide();
+          }}
+          aria-label="Next slide"
+          style={{
+            position: "absolute",
+            right: "14px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#0F172A",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            zIndex: 10,
+            transition: "all 0.2s ease",
+          }}
+        >
+          <ChevronRight size={20} strokeWidth={2.5} />
+        </button>
 
         <div className={styles.dotsContainer}>
           {DEFAULT_PROMO_SLIDES.map((slide, index) => {

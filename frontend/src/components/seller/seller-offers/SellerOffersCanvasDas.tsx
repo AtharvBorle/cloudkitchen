@@ -30,7 +30,11 @@ export default function SellerOffersCanvasDas({
         const res = await fetchApi("/api/seller/dashboard/offers");
         if (res.ok) {
           const result = await res.json();
-          setData(result);
+          const parsed = result.data || result;
+          setData({
+            sellerId: parsed.sellerId || seller.id || "seller",
+            products: Array.isArray(parsed.products) ? parsed.products : [],
+          });
         } else {
           setData({
             sellerId: seller.id || "seller",
