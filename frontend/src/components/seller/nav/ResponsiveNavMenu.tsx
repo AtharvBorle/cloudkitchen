@@ -20,6 +20,7 @@ import {
   ChevronRight,
   LogOut,
   Percent,
+  Star,
 } from "lucide-react";
 import { performLogout } from "@/lib/logout";
 import styles from "./ResponsiveNavMenu.module.css";
@@ -38,6 +39,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
   { id: "rooms", label: "Rooms Config", icon: Bed, href: "/seller/rooms" },
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/delivery" },
+  { id: "reviews", label: "Reviews & Feedback", icon: Star, href: "/seller/reviews" },
   { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
   { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/profile" },
   { id: "offers", label: "Offers & Coupons", icon: Percent, href: "/seller/offers" },
@@ -172,6 +174,14 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         pathname?.startsWith("/seller/res/offers") ||
         pathname?.startsWith("/seller/offers") ||
         pathname?.startsWith("/dashboard/seller/offers")
+      );
+    }
+    if (item.id === "reviews") {
+      return (
+        pathname === "/seller/res/reviews" ||
+        pathname?.startsWith("/seller/res/reviews") ||
+        pathname?.startsWith("/seller/reviews") ||
+        pathname?.startsWith("/dashboard/seller/reviews")
       );
     }
     if (item.id === "notifications") {

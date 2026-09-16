@@ -78,7 +78,11 @@ export interface SettingsFormData {
   deliveryDelayAlert: boolean;
   orderDeliveredAlert: boolean;
 
-  // 5. Bookings, Reviews & Summaries
+  // Marketing & Growth Alerts (Reference Image)
+  weeklyGrowthPerformance: boolean;
+  promotionsProductBeta: boolean;
+
+  // Bookings, Reviews & Summaries
   bookingRequestAlert: boolean;
   negativeReviewAlert: boolean;
   dailyDigest: boolean;
@@ -87,11 +91,15 @@ export interface SettingsFormData {
   twoFactorAuth: boolean;
   pinRequiredForCancel: boolean;
   sessionTimeout: boolean;
+  unfamiliarLoginAlerts: boolean;
+  passwordResetSafetyCheck: boolean;
 
   // Preferences
   soundChimes: boolean;
   autoAcceptOrders: boolean;
   defaultPrepTime: string;
+  shareAnonymizedData: boolean;
+  autoDeleteSessionHistory: boolean;
 }
 
 const DEFAULT_HOURS: OperatingHoursItem[] = [
@@ -151,6 +159,10 @@ const DEFAULT_DATA: SettingsFormData = {
   deliveryDelayAlert: true,
   orderDeliveredAlert: true,
 
+  // Marketing & Growth Alerts (Reference Image)
+  weeklyGrowthPerformance: true,
+  promotionsProductBeta: false,
+
   // Bookings & Reports
   bookingRequestAlert: true,
   negativeReviewAlert: true,
@@ -160,11 +172,15 @@ const DEFAULT_DATA: SettingsFormData = {
   twoFactorAuth: false,
   pinRequiredForCancel: true,
   sessionTimeout: true,
+  unfamiliarLoginAlerts: true,
+  passwordResetSafetyCheck: true,
 
   // Preferences
   soundChimes: true,
   autoAcceptOrders: false,
   defaultPrepTime: "25 mins",
+  shareAnonymizedData: true,
+  autoDeleteSessionHistory: false,
 };
 
 export interface SettingsCanvasProps {
@@ -220,11 +236,46 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   }, [searchParams]);
 
   const [saving, setSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastData, setToastData] = useState<{ title: string; status: "ON" | "OFF" | null } | null>(null);
+
+  const NOTIFICATION_TITLES: Partial<Record<keyof SettingsFormData, string>> = {
+    emailNotifications: "Email Notifications",
+    smsAlerts: "SMS Alerts",
+    pushNotifications: "Push Notifications",
+    whatsappUpdates: "WhatsApp Updates",
+    enableQuietHours: "Quiet Hours & Do Not Disturb",
+    orderAlerts: "New Order Incoming",
+    orderCancellationAlerts: "Order Cancellation",
+    bookingRequestAlert: "Room Bookings",
+    deliveryDelayAlert: "Delayed Deliveries",
+    weeklyGrowthPerformance: "Weekly Growth Performance",
+    promotionsProductBeta: "Promotions & Product Beta",
+    twoFactorAuth: "Two-Factor Authentication (2FA)",
+    pinRequiredForCancel: "Manager PIN for Cancellations",
+    sessionTimeout: "Auto Session Timeout",
+    unfamiliarLoginAlerts: "Unfamiliar Login Alerts",
+    passwordResetSafetyCheck: "Password Reset Safety Check",
+    autoAcceptOrders: "Auto-Accept Paid Orders",
+    soundChimes: "Sound Chimes",
+    shareAnonymizedData: "Share Anonymized Usage Data",
+    autoDeleteSessionHistory: "Auto-Delete Session History",
+  };
+
+  const showNotificationToast = (title: string, isOn: boolean) => {
+    setToastData({ title, status: isOn ? "ON" : "OFF" });
+  };
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  useEffect(() => {
+    if (!toastData) return;
+    const timer = setTimeout(() => {
+      setToastData(null);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [toastData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -239,10 +290,13 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const handleToggleOperatingDay = (index: number) => {
     setFormData((prev) => {
       const updatedHours = [...prev.operatingHours];
+      const targetDay = updatedHours[index];
+      const nextIsOpen = !targetDay.isOpen;
       updatedHours[index] = {
-        ...updatedHours[index],
-        isOpen: !updatedHours[index].isOpen,
+        ...targetDay,
+        isOpen: nextIsOpen,
       };
+      showNotificationToast(`${targetDay.day} Schedule`, nextIsOpen);
       return { ...prev, operatingHours: updatedHours };
     });
   };
@@ -254,19 +308,29 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   ) => {
     setFormData((prev) => {
       const updatedHours = [...prev.operatingHours];
+      const targetDay = updatedHours[index];
       updatedHours[index] = {
-        ...updatedHours[index],
+        ...targetDay,
         [field]: value,
       };
+      const label = field === "openTime" ? "Opens at" : "Closes at";
+      setToastData({ title: `${targetDay.day} ${label} ${value}`, status: "ON" });
       return { ...prev, operatingHours: updatedHours };
     });
   };
 
   const handleCheckboxToggle = (field: keyof SettingsFormData) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
+    setFormData((prev) => {
+      const nextVal = !prev[field];
+      const title = NOTIFICATION_TITLES[field];
+      if (title) {
+        showNotificationToast(title, nextVal);
+      }
+      return {
+        ...prev,
+        [field]: nextVal,
+      };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -554,28 +618,34 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   }));
                 }}
                 onToggle={(field) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    [field]: !prev[field as keyof SettingsFormData],
-                  }));
+                  setFormData((prev) => {
+                    const nextVal = !prev[field as keyof SettingsFormData];
+                    const title = NOTIFICATION_TITLES[field as keyof SettingsFormData];
+                    if (title) {
+                      showNotificationToast(title, nextVal);
+                    }
+                    return {
+                      ...prev,
+                      [field]: nextVal,
+                    };
+                  });
                 }}
               />
             </div>
 
             {/* Right Column: Order, Stock & Delivery Operational Alerts */}
             <div className={styles.rightColumn}>
-              {/* 1. Order & Kitchen Notifications */}
+              {/* 1. Order & Booking Alerts */}
               <div className={styles.card}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <Bell size={18} color="#F97316" />
-                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Order &amp; Kitchen Alerts</h2>
-                </div>
+                <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
+                  Order &amp; Booking Alerts
+                </h2>
 
                 <div className={styles.notificationGroup}>
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>New Incoming Order Chime</span>
-                      <span className={styles.notificationDesc}>Play sound notification &amp; show popup on incoming orders</span>
+                      <span className={styles.notificationLabel}>New Order Incoming</span>
+                      <span className={styles.notificationDesc}>Trigger alarm and print invoice instantly upon receiving customer orders.</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
@@ -589,8 +659,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Order Cancellation &amp; Voids</span>
-                      <span className={styles.notificationDesc}>Instant alert when an order is cancelled or refunded by customer</span>
+                      <span className={styles.notificationLabel}>Order Cancellation</span>
+                      <span className={styles.notificationDesc}>Immediate SMS and push ping when a customer cancels an order.</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
@@ -604,14 +674,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Special Cooking &amp; Allergy Notes</span>
-                      <span className={styles.notificationDesc}>Highlight custom preparation notes and dietary instructions</span>
+                      <span className={styles.notificationLabel}>Room Bookings</span>
+                      <span className={styles.notificationDesc}>Alert when a customer books a cloud dining space or workspace.</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
                         type="checkbox"
-                        checked={formData.specialInstructionsAlerts}
-                        onChange={() => handleCheckboxToggle("specialInstructionsAlerts")}
+                        checked={formData.bookingRequestAlert}
+                        onChange={() => handleCheckboxToggle("bookingRequestAlert")}
                       />
                       <span className={styles.toggleSlider} />
                     </label>
@@ -619,69 +689,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>High-Value Order Alerts</span>
-                      <span className={styles.notificationDesc}>Special alert for large catering or party orders exceeding ₹2,000</span>
+                      <span className={styles.notificationLabel}>Delayed Deliveries</span>
+                      <span className={styles.notificationDesc}>Ping when a rider hasn&apos;t picked up an order within 15 minutes.</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
                         type="checkbox"
-                        checked={formData.highValueOrderAlerts}
-                        onChange={() => handleCheckboxToggle("highValueOrderAlerts")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. Stock & Inventory Alerts */}
-              <div className={styles.card}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <Package size={18} color="#F97316" />
-                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Stock &amp; Inventory Alerts</h2>
-                </div>
-
-                <div className={styles.notificationGroup}>
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Low Stock Alert</span>
-                      <span className={styles.notificationDesc}>Notify immediately when item inventory drops below 5 units</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.lowStockAlert}
-                        onChange={() => handleCheckboxToggle("lowStockAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Out of Stock Critical Alert</span>
-                      <span className={styles.notificationDesc}>Push critical sound alert when an ingredient reaches zero</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.outOfStockAlert}
-                        onChange={() => handleCheckboxToggle("outOfStockAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Auto-Pause Sold Out Items</span>
-                      <span className={styles.notificationDesc}>Automatically mark depleted dishes as unavailable on online menus</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.autoPauseOutOfStock}
-                        onChange={() => handleCheckboxToggle("autoPauseOutOfStock")}
+                        checked={formData.deliveryDelayAlert}
+                        onChange={() => handleCheckboxToggle("deliveryDelayAlert")}
                       />
                       <span className={styles.toggleSlider} />
                     </label>
@@ -689,24 +704,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                 </div>
               </div>
 
-              {/* 3. Delivery & Logistics Status */}
+              {/* 2. Marketing & Growth Alerts */}
               <div className={styles.card}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <Truck size={18} color="#F97316" />
-                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Delivery &amp; Rider Tracking</h2>
-                </div>
+                <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
+                  Marketing &amp; Growth Alerts
+                </h2>
 
                 <div className={styles.notificationGroup}>
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Rider Assigned &amp; Arrival</span>
-                      <span className={styles.notificationDesc}>Alert when delivery rider accepts trip and arrives at store</span>
+                      <span className={styles.notificationLabel}>Weekly Growth Performance</span>
+                      <span className={styles.notificationDesc}>Receive analytics detailing revenue, popular items, and rider performance.</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
                         type="checkbox"
-                        checked={formData.riderAssignedAlert}
-                        onChange={() => handleCheckboxToggle("riderAssignedAlert")}
+                        checked={formData.weeklyGrowthPerformance}
+                        onChange={() => handleCheckboxToggle("weeklyGrowthPerformance")}
                       />
                       <span className={styles.toggleSlider} />
                     </label>
@@ -714,29 +728,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Out for Delivery</span>
-                      <span className={styles.notificationDesc}>Notify when rider picks up package and leaves for destination</span>
+                      <span className={styles.notificationLabel}>Promotions &amp; Product Beta</span>
+                      <span className={styles.notificationDesc}>Receive updates regarding new cloud kitchen features, partner promos, and discounts.</span>
                     </div>
                     <label className={styles.toggleSwitch}>
                       <input
                         type="checkbox"
-                        checked={formData.outForDeliveryAlert}
-                        onChange={() => handleCheckboxToggle("outForDeliveryAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Order Delivered Confirmation</span>
-                      <span className={styles.notificationDesc}>Live confirmation when customer receives order successfully</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.orderDeliveredAlert}
-                        onChange={() => handleCheckboxToggle("orderDeliveredAlert")}
+                        checked={formData.promotionsProductBeta}
+                        onChange={() => handleCheckboxToggle("promotionsProductBeta")}
                       />
                       <span className={styles.toggleSlider} />
                     </label>
@@ -814,29 +813,42 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               {/* 3. Active Login Sessions Card (Matching Reference Image) */}
               <ActiveLoginSessionsCard />
 
-              {/* 4. Danger Zone: Delete Account */}
-              <div className={styles.dangerCard}>
-                <div className={styles.dangerHeader}>
-                  <AlertTriangle size={20} />
-                  <h2 className={styles.dangerTitle}>Danger Zone: Delete Account</h2>
-                </div>
+              {/* 4. Login & Recovery Controls Card */}
+              <div className={styles.card}>
+                <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
+                  Login &amp; Recovery Controls
+                </h2>
 
-                <p className={styles.dangerDesc}>
-                  Permanently delete your seller account, cloud kitchen profile, dish listings, room configurations, order records, and merchant subscriptions. Once deleted, this account cannot be restored.
-                </p>
+                <div className={styles.notificationGroup}>
+                  <div className={styles.notificationRow}>
+                    <div className={styles.notificationInfo}>
+                      <span className={styles.notificationLabel}>Unfamiliar Login Alerts</span>
+                      <span className={styles.notificationDesc}>Send instant email alerts upon logins from new browsers/locations.</span>
+                    </div>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.unfamiliarLoginAlerts}
+                        onChange={() => handleCheckboxToggle("unfamiliarLoginAlerts")}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
 
-                <div className={styles.dangerActionRow}>
-                  <button
-                    type="button"
-                    className={styles.deleteAccountBtn}
-                    onClick={() => {
-                      setDeleteConfirmationText("");
-                      setIsDeleteModalOpen(true);
-                    }}
-                  >
-                    <Trash2 size={16} />
-                    <span>Delete Seller Account</span>
-                  </button>
+                  <div className={styles.notificationRow}>
+                    <div className={styles.notificationInfo}>
+                      <span className={styles.notificationLabel}>Password Reset Safety Check</span>
+                      <span className={styles.notificationDesc}>Require recovery email confirmation before allowing password resets.</span>
+                    </div>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.passwordResetSafetyCheck}
+                        onChange={() => handleCheckboxToggle("passwordResetSafetyCheck")}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -846,50 +858,140 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {/* Tab 4: Preferences */}
         {activeTab === "Preferences" && (
           <div className={styles.mainGrid}>
+            {/* Left Column: Localization */}
             <div className={styles.leftColumn}>
+              {/* Localization */}
               <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Kitchen &amp; Console Preferences</h2>
-                
-                <div className={styles.notificationRow}>
-                  <div className={styles.notificationInfo}>
-                    <span className={styles.notificationLabel}>Auto-Accept Paid Orders</span>
-                    <span className={styles.notificationDesc}>Automatically push incoming orders to kitchen display system</span>
+                <h2 className={styles.cardTitle}>Localization</h2>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.label}>Default Interface Language</label>
+                  <div className={styles.selectWrapper}>
+                    <select
+                      name="language"
+                      value={formData.language}
+                      onChange={handleInputChange}
+                      className={styles.select}
+                    >
+                      <option value="English (United States)">English (United States)</option>
+                      <option value="English (India)">English (India)</option>
+                      <option value="Hindi">Hindi</option>
+                      <option value="Marathi">Marathi</option>
+                    </select>
+                    <ChevronDown size={18} className={styles.selectChevron} />
                   </div>
-                  <label className={styles.toggleSwitch}>
-                    <input
-                      type="checkbox"
-                      checked={formData.autoAcceptOrders}
-                      onChange={() => handleCheckboxToggle("autoAcceptOrders")}
-                    />
-                    <span className={styles.toggleSlider} />
-                  </label>
                 </div>
 
-                <div className={styles.notificationRow}>
-                  <div className={styles.notificationInfo}>
-                    <span className={styles.notificationLabel}>Sound Chimes</span>
-                    <span className={styles.notificationDesc}>Play chime on general status updates</span>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.label}>Console Timezone</label>
+                  <div className={styles.selectWrapper}>
+                    <select
+                      name="timezone"
+                      value={formData.timezone}
+                      onChange={handleInputChange}
+                      className={styles.select}
+                    >
+                      <option value="Asia/Kolkata (GMT+05:30)">Asia/Kolkata (GMT+05:30)</option>
+                      <option value="Asia/Dubai (GMT+04:00)">Asia/Dubai (GMT+04:00)</option>
+                      <option value="UTC (GMT+00:00)">UTC (GMT+00:00)</option>
+                    </select>
+                    <ChevronDown size={18} className={styles.selectChevron} />
                   </div>
-                  <label className={styles.toggleSwitch}>
-                    <input
-                      type="checkbox"
-                      checked={formData.soundChimes}
-                      onChange={() => handleCheckboxToggle("soundChimes")}
-                    />
-                    <span className={styles.toggleSlider} />
-                  </label>
                 </div>
 
-                <div className={styles.fieldGroup} style={{ marginTop: "14px" }}>
-                  <label className={styles.label}>Default Estimated Prep Window</label>
-                  <input
-                    type="text"
-                    name="defaultPrepTime"
-                    value={formData.defaultPrepTime}
-                    onChange={handleInputChange}
-                    className={styles.input}
-                    placeholder="e.g. 25 mins"
-                  />
+                <div className={styles.fieldGroup}>
+                  <label className={styles.label}>Primary Business Currency</label>
+                  <div className={styles.selectWrapper}>
+                    <select
+                      name="currency"
+                      value={formData.currency}
+                      onChange={handleInputChange}
+                      className={styles.select}
+                    >
+                      <option value="INR (₹) - Indian Rupee">INR (₹) - Indian Rupee</option>
+                      <option value="USD ($) - US Dollar">USD ($) - US Dollar</option>
+                      <option value="AED (AED) - UAE Dirham">AED (AED) - UAE Dirham</option>
+                    </select>
+                    <ChevronDown size={18} className={styles.selectChevron} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Privacy & Data Options */}
+            <div className={styles.rightColumn}>
+              <div className={styles.card}>
+                <h2 className={styles.cardTitle}>Privacy &amp; Data Options</h2>
+
+                <div className={styles.notificationGroup}>
+                  <div className={styles.notificationRow}>
+                    <div className={styles.notificationInfo}>
+                      <span className={styles.notificationLabel}>Share Anonymized Usage Data</span>
+                      <span className={styles.notificationDesc}>Help us build better cloud operations by sharing aggregated diagnostic reports.</span>
+                    </div>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.shareAnonymizedData}
+                        onChange={() => handleCheckboxToggle("shareAnonymizedData")}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+
+                  <div className={styles.notificationRow}>
+                    <div className={styles.notificationInfo}>
+                      <span className={styles.notificationLabel}>Auto-Delete Session History</span>
+                      <span className={styles.notificationDesc}>Remove logs and activity metrics older than 30 days automatically.</span>
+                    </div>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.autoDeleteSessionHistory}
+                        onChange={() => handleCheckboxToggle("autoDeleteSessionHistory")}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Backup and Archival */}
+                <div className={styles.backupSection}>
+                  <span className={styles.label} style={{ display: "block", marginBottom: "10px", fontSize: "13px", fontWeight: 700 }}>
+                    Backup and Archival
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className={styles.exportBtn}
+                      onClick={() => {
+                        setToastData({ title: "Exporting Business Data...", status: "ON" });
+                      }}
+                    >
+                      Export My Business Data
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        padding: "9px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        backgroundColor: "#FEE2E2",
+                        color: "#DC2626",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "all 0.15s ease",
+                      }}
+                      onClick={() => {
+                        setDeleteConfirmationText("");
+                        setIsDeleteModalOpen(true);
+                      }}
+                    >
+                      Delete Account Permanently
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -989,10 +1091,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       )}
 
       {/* Toast Confirmation */}
-      {toastMessage && (
-        <div className={styles.toast}>
-          <CheckCircle2 size={18} color="#10B981" />
-          <span>{toastMessage}</span>
+      {toastData && (
+        <div key={`${toastData.title}-${toastData.status}`} className={styles.toast}>
+          <div style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            backgroundColor: toastData.status === "ON" ? "#10B981" : "#EF4444",
+            boxShadow: toastData.status === "ON" ? "0 0 10px #10B981" : "0 0 10px #EF4444",
+          }} />
+          <span style={{ color: "#F8FAFC" }}>{toastData.title}</span>
+          <span
+            className={`${styles.toastStatusBadge} ${
+              toastData.status === "ON" ? styles.toastStatusOn : styles.toastStatusOff
+            }`}
+          >
+            {toastData.status}
+          </span>
         </div>
       )}
     </div>

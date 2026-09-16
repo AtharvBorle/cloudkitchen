@@ -1,0 +1,657 @@
+"use client";
+
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import SellerSidebar from "../sidebar/Sidebar";
+import Topbar from "../nav/Topbar";
+import { ResponsiveNavMenu } from "../nav/ResponsiveNavMenu";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { fetchApi } from "@/lib/fetch-api";
+import { Star, Utensils, ChevronDown, Check } from "lucide-react";
+import styles from "./SellerReviews.module.css";
+
+export interface ReviewItem {
+  id: string;
+  customerName: string;
+  orderId: string;
+  date: string;
+  rating: number;
+  comment?: string;
+  itemsOrdered: string[];
+  managerResponse?: {
+    date: string;
+    text: string;
+  };
+}
+
+export interface SellerReviewsCanvasDasProps {
+  topbarTitle?: string;
+  searchPlaceholder?: string;
+  activeSidebarId?: string;
+}
+
+const DEFAULT_REVIEWS: ReviewItem[] = [
+  {
+    id: "rev-1",
+    customerName: "John Customer",
+    orderId: "7024453f",
+    date: "7 July 2026",
+    rating: 4,
+    comment: "No comment left for this order.",
+    itemsOrdered: ["Gourmet Truffle Burger", "Crispy Rosemary Fries"],
+  },
+  {
+    id: "rev-2",
+    customerName: "Anita Sharma",
+    orderId: "8932711d",
+    date: "6 July 2026",
+    rating: 5,
+    comment: "The Butter Chicken was absolutely phenomenal! Perfectly spiced, rich creamy texture, and hot on arrival. Will definitely order again this week!",
+    itemsOrdered: ["Classic Butter Chicken", "Garlic Butter Naan"],
+    managerResponse: {
+      date: "6 July 2026",
+      text: "Thank you so much for the glowing review, Anita! We take pride in our family recipes and are thrilled you enjoyed it.",
+    },
+  },
+  {
+    id: "rev-3",
+    customerName: "Rahul Malhotra",
+    orderId: "6438201b",
+    date: "4 July 2026",
+    rating: 3,
+    comment: "Food quality was good, but delivery was delayed by almost 25 minutes. Fries were slightly soggy because of the delay.",
+    itemsOrdered: ["BBQ Chicken Pizza", "Crispy Rosemary Fries"],
+    managerResponse: {
+      date: "5 July 2026",
+      text: "Apologies for the delivery hiccup, Rahul. We've spoken to our dispatch team to ensure thermal bags are optimized for future orders.",
+    },
+  },
+];
+
+const DEFAULT_RATINGS_DISTRIBUTION = [
+  { label: "5 Stars", count: 842, percentage: "67.5%" },
+  { label: "4 Stars", count: 284, percentage: "22.7%" },
+  { label: "3 Stars", count: 82, percentage: "6.6%" },
+  { label: "2 Stars", count: 24, percentage: "1.9%" },
+  { label: "1 Star", count: 16, percentage: "1.3%" },
+];
+
+const DEFAULT_BREAKDOWN_BARS = [
+  { label: "5 Star", count: 842, percentage: 67.5, color: "#334155" },
+  { label: "4 Star", count: 284, percentage: 22.7, color: "#EF4444" },
+  { label: "3 Star", count: 82, percentage: 6.6, color: "#475569" },
+  { label: "2 Star", count: 24, percentage: 1.9, color: "#475569" },
+  { label: "1 Star", count: 16, percentage: 1.3, color: "#475569" },
+];
+
+/* Helper Component: Smooth Numeric Counter with EaseOut */
+function AnimatedCounter({
+  value,
+  decimals = 0,
+  duration = 1100,
+}: {
+  value: number;
+  decimals?: number;
+  duration?: number;
+}) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp: number | null = null;
+    let animationFrameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const elapsed = timestamp - startTimestamp;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const current = value * easeOut;
+
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(step);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [value, duration]);
+
+  if (decimals > 0) {
+    return <>{displayValue.toFixed(decimals)}</>;
+  }
+  return <>{Math.round(displayValue).toLocaleString()}</>;
+}
+
+/* Helper Component: Staggered Star Pop-In */
+function AnimatedStarRating({
+  rating,
+  maxStars = 5,
+  size = 16,
+  baseDelay = 0.05,
+}: {
+  rating: number;
+  maxStars?: number;
+  size?: number;
+  baseDelay?: number;
+}) {
+  return (
+    <div className={styles.starsRow}>
+      {Array.from({ length: maxStars }).map((_, idx) => {
+        const isFilled = idx < Math.floor(rating);
+        const delay = baseDelay + idx * 0.07;
+
+        return (
+          <span
+            key={idx}
+            className={styles.animatedStar}
+            style={{ animationDelay: `${delay}s` }}
+          >
+            <Star
+              size={size}
+              fill={isFilled ? "#F97316" : "none"}
+              color={isFilled ? "#F97316" : "#CBD5E1"}
+            />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function SellerReviewsCanvasDas({
+  topbarTitle = "Owner Operations Console",
+  searchPlaceholder = "Search reviews, ratings, customer feedback...",
+  activeSidebarId = "reviews",
+}: SellerReviewsCanvasDasProps) {
+  const seller = useSellerProfile();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Live Data / API States
+  const [reviewsList, setReviewsList] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
+  const [overallRating, setOverallRating] = useState(4.8);
+  const [totalReviewsCount, setTotalReviewsCount] = useState(1248);
+  const [ratingsDistribution, setRatingsDistribution] = useState(DEFAULT_RATINGS_DISTRIBUTION);
+  const [breakdownBars, setBreakdownBars] = useState(DEFAULT_BREAKDOWN_BARS);
+
+  // Filter & Sort state
+  const [selectedFilter, setSelectedFilter] = useState("All Ratings");
+  const [selectedSort, setSelectedSort] = useState("Newest First");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filterRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
+      }
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setIsSortOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Trigger progress bar animations after mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Live data integration
+  useEffect(() => {
+    async function loadSellerReviews() {
+      try {
+        const res = await fetchApi("/api/seller/reviews");
+        if (res.ok) {
+          const json = await res.json();
+          const apiData = json.data || json;
+
+          if (apiData?.reviews && apiData.reviews.length > 0) {
+            const mapped: ReviewItem[] = apiData.reviews.map((r: any) => ({
+              id: r.id,
+              customerName: r.user?.name || "Customer",
+              orderId: r.orderId ? r.orderId.slice(-8) : r.id.slice(-8),
+              date: new Date(r.createdAt).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+              rating: r.rating || 5,
+              comment: r.comment || "No comment left for this order.",
+              itemsOrdered: r.itemRatings?.map((ir: any) => ir.foodItem?.name || "Item") || [],
+              managerResponse: r.managerResponse
+                ? {
+                    date: new Date(r.managerResponse.createdAt || Date.now()).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    }),
+                    text: r.managerResponse.comment || r.managerResponse.text,
+                  }
+                : undefined,
+            }));
+            setReviewsList(mapped);
+
+            if (apiData.stats) {
+              const stats = apiData.stats;
+              if (stats.averageRating) setOverallRating(stats.averageRating);
+              if (stats.totalReviews) setTotalReviewsCount(stats.totalReviews);
+
+              if (stats.ratingDistribution) {
+                const total = stats.totalReviews || 1;
+                const dist = [5, 4, 3, 2, 1].map((star) => {
+                  const count = stats.ratingDistribution[star] || 0;
+                  const pct = ((count / total) * 100).toFixed(1);
+                  return {
+                    label: star === 1 ? "1 Star" : `${star} Stars`,
+                    count,
+                    percentage: `${pct}%`,
+                  };
+                });
+                setRatingsDistribution(dist);
+
+                const bars = [
+                  { label: "5 Star", count: stats.ratingDistribution[5] || 0, percentage: Number(((stats.ratingDistribution[5] || 0) / total * 100).toFixed(1)), color: "#334155" },
+                  { label: "4 Star", count: stats.ratingDistribution[4] || 0, percentage: Number(((stats.ratingDistribution[4] || 0) / total * 100).toFixed(1)), color: "#EF4444" },
+                  { label: "3 Star", count: stats.ratingDistribution[3] || 0, percentage: Number(((stats.ratingDistribution[3] || 0) / total * 100).toFixed(1)), color: "#475569" },
+                  { label: "2 Star", count: stats.ratingDistribution[2] || 0, percentage: Number(((stats.ratingDistribution[2] || 0) / total * 100).toFixed(1)), color: "#475569" },
+                  { label: "1 Star", count: stats.ratingDistribution[1] || 0, percentage: Number(((stats.ratingDistribution[1] || 0) / total * 100).toFixed(1)), color: "#475569" },
+                ];
+                setBreakdownBars(bars);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback gracefully to default showcase reviews
+        console.log("Using default demo reviews data:", err);
+      }
+    }
+
+    loadSellerReviews();
+  }, []);
+
+  // Filter and Sort Processing
+  const filteredAndSortedReviews = useMemo(() => {
+    let list = [...reviewsList];
+
+    // Search query filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.customerName.toLowerCase().includes(q) ||
+          r.orderId.toLowerCase().includes(q) ||
+          (r.comment && r.comment.toLowerCase().includes(q)) ||
+          r.itemsOrdered.some((item) => item.toLowerCase().includes(q))
+      );
+    }
+
+    // Rating filter
+    if (selectedFilter === "5 Stars") {
+      list = list.filter((r) => r.rating === 5);
+    } else if (selectedFilter === "4 Stars") {
+      list = list.filter((r) => r.rating === 4);
+    } else if (selectedFilter === "3 Stars") {
+      list = list.filter((r) => r.rating === 3);
+    } else if (selectedFilter === "2 Stars") {
+      list = list.filter((r) => r.rating === 2);
+    } else if (selectedFilter === "1 Star") {
+      list = list.filter((r) => r.rating === 1);
+    } else if (selectedFilter === "With Comments") {
+      list = list.filter((r) => r.comment && !r.comment.toLowerCase().includes("no comment left"));
+    }
+
+    // Sort
+    if (selectedSort === "Newest First") {
+      // already in natural latest sequence
+    } else if (selectedSort === "Oldest First") {
+      list.reverse();
+    } else if (selectedSort === "Highest Rating") {
+      list.sort((a, b) => b.rating - a.rating);
+    } else if (selectedSort === "Lowest Rating") {
+      list.sort((a, b) => a.rating - b.rating);
+    }
+
+    return list;
+  }, [reviewsList, selectedFilter, selectedSort, searchQuery]);
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "flex-start",
+        backgroundColor: "#F7F8FB",
+        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+      }}
+      className="reviews-canvas-das-layout"
+    >
+      {/* 1. Left Side Menu Component */}
+      <SellerSidebar
+        activeItemId={activeSidebarId}
+        isMobileOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
+        ownerName={seller.ownerName}
+        partnerRole={seller.partnerRole}
+        avatarInitials={seller.avatarInitials}
+      />
+
+      {/* 2. Responsive Mobile Drawer */}
+      <ResponsiveNavMenu
+        isOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
+        activeItemId={activeSidebarId}
+        ownerName={seller.ownerName}
+        roleTagText={seller.partnerRole}
+      />
+
+      {/* 3. Main Workspace Area */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "100vh",
+          backgroundColor: "#F7F8FB",
+        }}
+      >
+        {/* Top Header Navigation */}
+        <Topbar
+          title={topbarTitle}
+          searchPlaceholder={searchPlaceholder}
+          onMenuToggle={() => setIsMobileOpen(true)}
+          onMenuClick={() => setIsMobileOpen(true)}
+          ownerName={seller.ownerName}
+          partnerRole={seller.partnerRole}
+          avatarInitials={seller.avatarInitials}
+          onSearch={(query) => setSearchQuery(query)}
+        />
+
+        {/* Content Body */}
+        <main
+          style={{
+            flex: 1,
+            padding: "28px 32px",
+            boxSizing: "border-box",
+            maxWidth: "1400px",
+            width: "100%",
+            margin: "0 auto",
+          }}
+        >
+          <div className={styles.container}>
+            {/* Page Header */}
+            <div className={styles.headerSection}>
+              <h1 className={styles.mainTitle}>Customer Reviews & Ratings</h1>
+              <p className={styles.subTitle}>
+                Monitor service satisfaction, analyze item feedback, and manage customer relations.
+              </p>
+            </div>
+
+            {/* Overview Stats Cards */}
+            <div className={styles.statsGrid}>
+              {/* Card 1: Overall Rating */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>Overall Rating</div>
+                <div className={styles.ratingBody}>
+                  <div className={styles.bigRatingNumber}>
+                    <AnimatedCounter value={overallRating} decimals={1} duration={1200} />
+                  </div>
+                  <div className={styles.starsAndBased}>
+                    <AnimatedStarRating rating={overallRating} size={17} baseDelay={0.05} />
+                    <div className={styles.basedText}>
+                      Based on <AnimatedCounter value={totalReviewsCount} duration={1200} /><br />reviews
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.trendGreen}>+0.2 from last month</div>
+              </div>
+
+              {/* Card 2: Review Count */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>Review Count</div>
+                <div className={styles.bigCountNumber}>
+                  <AnimatedCounter value={totalReviewsCount} duration={1400} />
+                </div>
+                <div className={styles.countSubtext}>Total customer feedback received</div>
+              </div>
+
+              {/* Card 3: Ratings Distribution */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>Ratings Distribution</div>
+                <div className={styles.distList}>
+                  {ratingsDistribution.map((item) => (
+                    <div key={item.label} className={styles.distRow}>
+                      <span className={styles.distLabel}>{item.label}</span>
+                      <span className={styles.distValue}>
+                        <AnimatedCounter value={item.count} duration={1000} /> ({item.percentage})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content Split: Left Review List & Right Breakdown/Activity/Alerts */}
+            <div className={styles.contentRow}>
+              {/* Left Column: Reviews List */}
+              <div className={styles.reviewsListCol}>
+                {/* Filter and Sort Controls Bar */}
+                <div className={styles.controlsBar}>
+                  <div className={styles.filterSortGroup}>
+                    {/* Filter Dropdown */}
+                    <div className={styles.controlDropdownWrapper} ref={filterRef}>
+                      <button
+                        type="button"
+                        className={`${styles.pillButton} ${isFilterOpen ? styles.activeDropdown : ""}`}
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                      >
+                        <span>Filter: {selectedFilter}</span>
+                        <ChevronDown size={14} color="#64748B" />
+                      </button>
+
+                      {isFilterOpen && (
+                        <div className={styles.dropdownMenu}>
+                          {["All Ratings", "5 Stars", "4 Stars", "3 Stars", "2 Stars", "1 Star", "With Comments"].map(
+                            (option) => (
+                              <button
+                                key={option}
+                                type="button"
+                                className={`${styles.dropdownItem} ${
+                                  selectedFilter === option ? styles.dropdownItemActive : ""
+                                }`}
+                                onClick={() => {
+                                  setSelectedFilter(option);
+                                  setIsFilterOpen(false);
+                                }}
+                              >
+                                <span>{option}</span>
+                                {selectedFilter === option && <Check size={14} color="#EA580C" />}
+                              </button>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <div className={styles.controlDropdownWrapper} ref={sortRef}>
+                      <button
+                        type="button"
+                        className={`${styles.pillButton} ${isSortOpen ? styles.activeDropdown : ""}`}
+                        onClick={() => setIsSortOpen(!isSortOpen)}
+                      >
+                        <span>Sort: {selectedSort}</span>
+                        <ChevronDown size={14} color="#64748B" />
+                      </button>
+
+                      {isSortOpen && (
+                        <div className={styles.dropdownMenu}>
+                          {["Newest First", "Oldest First", "Highest Rating", "Lowest Rating"].map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              className={`${styles.dropdownItem} ${
+                                selectedSort === option ? styles.dropdownItemActive : ""
+                              }`}
+                              onClick={() => {
+                                setSelectedSort(option);
+                                setIsSortOpen(false);
+                              }}
+                            >
+                              <span>{option}</span>
+                              {selectedSort === option && <Check size={14} color="#EA580C" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <span className={styles.showingCount}>
+                    Showing {filteredAndSortedReviews.length > 0 ? `1-${filteredAndSortedReviews.length}` : "0"} of{" "}
+                    {totalReviewsCount.toLocaleString()} reviews
+                  </span>
+                </div>
+
+                {/* Reviews List Cards */}
+                <div className={styles.reviewsList}>
+                  {filteredAndSortedReviews.length === 0 ? (
+                    <div className={styles.emptyReviewsState}>
+                      No reviews found matching the selected filter criteria.
+                    </div>
+                  ) : (
+                    filteredAndSortedReviews.map((review, index) => {
+                      const isNoComment =
+                        !review.comment ||
+                        review.comment.toLowerCase().includes("no comment left");
+
+                      return (
+                        <div
+                          key={review.id}
+                          className={styles.reviewCard}
+                          style={{ animationDelay: `${0.1 + index * 0.08}s` }}
+                        >
+                          <div className={styles.reviewHeader}>
+                            <div className={styles.reviewerInfo}>
+                              <div className={styles.nameAndBadge}>
+                                <span className={styles.customerName}>{review.customerName}</span>
+                                <span className={styles.orderIdPill}>Order ID: {review.orderId}</span>
+                              </div>
+                              <span className={styles.reviewDate}>{review.date}</span>
+                            </div>
+
+                            <AnimatedStarRating
+                              rating={review.rating}
+                              size={16}
+                              baseDelay={0.08 + index * 0.05}
+                            />
+                          </div>
+
+                          {review.comment && (
+                            <div className={styles.commentQuoteBox}>
+                              <p className={isNoComment ? styles.italicComment : styles.commentText}>
+                                {review.comment}
+                              </p>
+                            </div>
+                          )}
+
+                          {review.itemsOrdered && review.itemsOrdered.length > 0 && (
+                            <div className={styles.tagList}>
+                              {review.itemsOrdered.map((item, i) => (
+                                <div key={i} className={styles.itemTag}>
+                                  <Utensils size={13} color="#475569" />
+                                  <span>{item}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {review.managerResponse && (
+                            <div className={styles.managerResponseBox}>
+                              <div className={styles.managerResponseHeader}>
+                                <span className={styles.managerResponseTitle}>Manager Response</span>
+                                <span className={styles.managerResponseDate}>
+                                  {review.managerResponse.date}
+                                </span>
+                              </div>
+                              <p className={styles.managerResponseText}>
+                                {review.managerResponse.text}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Rating Breakdown, Recent Activity & Alerts */}
+              <div className={styles.sidebarCol}>
+                {/* Rating Breakdown Card */}
+                <div className={styles.breakdownCard}>
+                  <h2 className={styles.breakdownHeader}>Rating Breakdown</h2>
+                  <p className={styles.breakdownSubtitle}>
+                    Distribution across all customer scores
+                  </p>
+
+                  <div className={styles.breakdownList}>
+                    {breakdownBars.map((item) => (
+                      <div key={item.label} className={styles.breakdownRow}>
+                        <span className={styles.breakdownStarLabel}>{item.label}</span>
+                        <div className={styles.progressTrack}>
+                          <div
+                            className={styles.progressBarFill}
+                            style={{
+                              width: isMounted ? `${item.percentage}%` : "0%",
+                              backgroundColor: item.color,
+                            }}
+                          />
+                        </div>
+                        <span className={styles.breakdownCountValue}>
+                          <AnimatedCounter value={item.count} duration={1100} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className={styles.breakdownInsight}>
+                    High proportion of 4 & 5 star ratings indicates strong core culinary performance.
+                  </p>
+                </div>
+
+                {/* Recent Activity Card */}
+                <div className={styles.recentActivityCard}>
+                  <h2 className={styles.recentActivityHeader}>Recent Activity</h2>
+                  <p className={styles.recentActivityEmpty}>No new customer feedback in the last 24 hours.</p>
+                </div>
+
+                {/* Alerts Card */}
+                <div className={styles.alertsCard}>
+                  <h2 className={styles.alertsHeader}>Alerts</h2>
+                  <p className={styles.alertsText}>Need immediate manager response.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
