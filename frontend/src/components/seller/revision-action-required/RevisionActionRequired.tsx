@@ -348,7 +348,6 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
           </div>
 
           <div className={styles.formSection}>
-<<<<<<< HEAD
             {/* Field: FSSAI Certificate */}
             {needsFssai && (
               <div className={styles.fieldGroup}>
@@ -360,7 +359,7 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
                     className={`${styles.flaggedUploadBox} ${isDragging === "fssai" ? styles.flaggedUploadBoxDragging : ""}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging("fssai"); }}
                     onDragLeave={() => setIsDragging(null)}
-                    onDrop={(e) => handleDropSingle(e, setFssaiFile)}
+                    onDrop={(e) => handleDropSingle(e, setFssaiFile, "FSSAI Certificate")}
                   >
                     <div className={styles.flaggedFileText}>
                       <span className={styles.flagTag}>[ACTION_REQUIRED]</span>
@@ -397,53 +396,6 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
                 </p>
               </div>
             )}
-=======
-            {/* Field 1: FSSAI Certificate Re-upload */}
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>
-                FSSAI Certificate Re-upload <span className={styles.requiredStar}>*</span>
-              </label>
-              <div
-                className={`${styles.flaggedUploadBox} ${
-                  fssaiFile
-                    ? styles.flaggedUploadBoxSuccess
-                    : fileError
-                    ? styles.flaggedUploadBoxError
-                    : isDragging
-                    ? styles.flaggedUploadBoxDragging
-                    : ""
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className={styles.flaggedFileText}>
-                  {fssaiFile ? (
-                    <span className={styles.successTag}>
-                      <CheckCircle2 size={13} /> READY ({fileSizeFormatted})
-                    </span>
-                  ) : (
-                    <span className={styles.flagTag}>[FLAGGED_BLURRY]</span>
-                  )}
-                  <span className={styles.fileName}>{fileName}</span>
-                </div>
-                <button
-                  type="button"
-                  className={styles.reuploadBtn}
-                  onClick={handleTriggerUpload}
-                >
-                  {fssaiFile ? "Change" : "Re-upload"}
-                </button>
-              </div>
-              {fileError ? (
-                <p className={styles.errorHelperText}>{fileError}</p>
-              ) : (
-                <p className={styles.helperText}>
-                  FSSAI certificate document must be a high-resolution scanned PDF or JPG under 5MB.
-                </p>
-              )}
-            </div>
->>>>>>> origin/yash_dev
 
             {/* Field: Aadhaar / Identity Proof */}
             {needsAadhaar && (
@@ -799,24 +751,17 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
             FSSAI License <span className={styles.mobileRequiredStar}>*</span>
           </label>
           <div
-<<<<<<< HEAD
-            className={styles.mobileDropzoneBox}
-            onClick={() => document.getElementById("fssai-reupload-input")?.click()}
-=======
             className={`${styles.mobileDropzoneBox} ${
               fssaiFile
                 ? styles.mobileDropzoneSuccess
-                : fileError
-                ? styles.mobileDropzoneError
-                : isDragging
+                : isDragging === "fssai"
                 ? styles.mobileDropzoneBoxDragging
                 : ""
             }`}
-            onClick={handleTriggerUpload}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
->>>>>>> origin/yash_dev
+            onClick={() => document.getElementById("fssai-reupload-input")?.click()}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging("fssai"); }}
+            onDragLeave={() => setIsDragging(null)}
+            onDrop={(e) => handleDropSingle(e, setFssaiFile, "FSSAI License")}
             role="button"
             tabIndex={0}
           >
@@ -829,19 +774,12 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
               {fssaiFile ? fssaiFile.name : "Click to re-upload license"}
             </span>
             <span className={styles.mobileUploadSubtitle}>
-              {fssaiFile ? `Valid File (${fileSizeFormatted}) • Click to change` : "PDF, PNG or JPG (Max 5MB)"}
+              {fssaiFile ? `Valid File • Click to change` : "PDF, PNG or JPG (Max 5MB)"}
             </span>
           </div>
-<<<<<<< HEAD
-=======
-          {fileError ? (
-            <p className={styles.mobileErrorHelper}>{fileError}</p>
-          ) : (
-            <p className={styles.mobileErrorHelper}>
-              File is blurry. Please capture document under clear light.
-            </p>
-          )}
->>>>>>> origin/yash_dev
+          <p className={styles.mobileErrorHelper}>
+            File must be clear and under 5MB.
+          </p>
         </div>
 
         {/* Mobile Field: Aadhaar Front / Back */}
