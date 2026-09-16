@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Eye, EyeOff, CheckCircle2, Loader2, Bell } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./ResponsiveAddAgent.module.css";
 
 export interface ResponsiveAddAgentFormData {
@@ -204,15 +205,15 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
 
             {/* Field 2: Phone Number */}
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>Phone Number</label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                placeholder="e.g. +91 98765 43210"
+              <PhoneInput
+                id="res-agent-phone"
+                label="Phone Number"
+                placeholder="98765 43210"
                 value={formData.phoneNumber}
-                onChange={handleInputChange}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, phoneNumber: val }))
+                }
                 required
-                className={styles.inputField}
               />
             </div>
 

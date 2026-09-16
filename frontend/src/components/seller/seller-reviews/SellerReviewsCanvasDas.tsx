@@ -163,7 +163,7 @@ function AnimatedStarRating({
 }
 
 export default function SellerReviewsCanvasDas({
-  topbarTitle = "Owner Operations Console",
+  topbarTitle = "Reviews & Feedback",
   searchPlaceholder = "Search reviews, ratings, customer feedback...",
   activeSidebarId = "reviews",
 }: SellerReviewsCanvasDasProps) {

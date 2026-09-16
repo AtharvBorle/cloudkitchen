@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  ShieldCheck,
   Info,
 } from "lucide-react";
 import styles from "./CreateOffer.module.css";
@@ -430,22 +431,24 @@ function EditOfferForm({
                   />
                   <span>{status}</span>
                 </div>
-                <button
-                  type="button"
-                  className={styles.saveDraftBtn}
-                  disabled={submitting}
-                  onClick={() => handleUpdate(true)}
-                >
-                  Save Draft
-                </button>
-                <button
-                  type="button"
-                  className={styles.publishBtn}
-                  disabled={submitting}
-                  onClick={() => handleUpdate(false)}
-                >
-                  {submitting ? "Saving..." : "Update Offer"}
-                </button>
+                <div className={styles.desktopActions}>
+                  <button
+                    type="button"
+                    className={styles.saveDraftBtn}
+                    disabled={submitting}
+                    onClick={() => handleUpdate(true)}
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.publishBtn}
+                    disabled={submitting}
+                    onClick={() => handleUpdate(false)}
+                  >
+                    {submitting ? "Saving..." : "Update Offer"}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -881,14 +884,35 @@ function EditOfferForm({
                 </div>
               </div>
 
-              {/* Form Footer Ready State */}
-              <div className={styles.formFooter}>
-                <CheckCircle2 size={16} className={styles.successIcon} />
-                <span>
-                  {isFormValid
-                    ? "All required fields are filled. Ready to update."
-                    : "Please fill in all required fields marked with *."}
-                </span>
+              {/* Form Footer Ready State & Mobile Actions */}
+              <div className={styles.formFooterContainer}>
+                <div className={styles.formFooter}>
+                  <ShieldCheck size={18} className={styles.successIcon} />
+                  <span>
+                    {isFormValid
+                      ? "All required fields are filled. Ready to update."
+                      : "Please fill in all required fields marked with *."}
+                  </span>
+                </div>
+
+                <div className={styles.mobileFormActions}>
+                  <button
+                    type="button"
+                    className={styles.mobileSaveDraftBtn}
+                    disabled={submitting}
+                    onClick={() => handleUpdate(true)}
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.mobilePublishBtn}
+                    disabled={submitting}
+                    onClick={() => handleUpdate(false)}
+                  >
+                    {submitting ? "Saving..." : "Update Offer"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

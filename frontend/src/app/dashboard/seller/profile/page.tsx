@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import QRCode from "react-qr-code";
 import { Sparkles, Calendar, CheckCircle2, AlertTriangle } from "lucide-react";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 export default function ProfileAndQRPage() {
     const [loading, setLoading] = useState(false);
@@ -233,8 +234,14 @@ export default function ProfileAndQRPage() {
                         </div>
 
                         <div className="input-group">
-                            <label style={{ fontSize: '0.9rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number</label>
-                            <input type="text" inputMode="numeric" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} className="input-field" disabled={!isEditing} required />
+                            <PhoneInput
+                                label="Phone Number"
+                                value={phone}
+                                onChange={(val) => setPhone(val)}
+                                disabled={!isEditing}
+                                placeholder="98765 43210"
+                                required
+                            />
                         </div>
 
                         <div className="input-group">

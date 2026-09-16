@@ -451,21 +451,87 @@
   color: #EA580C;
 }
 
-/* Footer Ready Status Bar */
+.desktopActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Footer Ready Status Bar & Mobile Actions Container */
+.formFooterContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid #F1F5F9;
+  width: 100%;
+}
+
 .formFooter {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-top: 20px;
-  border-top: 1px solid #F1F5F9;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   color: #475569;
 }
 
 .successIcon {
-  color: #10B981;
+  color: #059669;
   flex-shrink: 0;
+}
+
+.mobileFormActions {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.mobileSaveDraftBtn {
+  width: 100%;
+  background-color: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.mobileSaveDraftBtn:active {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+.mobilePublishBtn {
+  width: 100%;
+  background-color: #EA580C;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+  box-sizing: border-box;
+}
+
+.mobilePublishBtn:active {
+  background-color: #C2410C;
 }
 
 /* Responsive Media Queries */
@@ -485,6 +551,25 @@
   .headerRow {
     flex-direction: column;
     align-items: flex-start;
+    gap: 12px;
+  }
+
+  .actionsGroup {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .desktopActions {
+    display: none !important;
+  }
+
+  .mobileFormActions {
+    display: flex !important;
+  }
+
+  .formFooterContainer {
+    padding-top: 16px;
+    gap: 14px;
   }
 
   .mainTitle {
@@ -496,3 +581,4 @@
     gap: 24px;
   }
 }
+

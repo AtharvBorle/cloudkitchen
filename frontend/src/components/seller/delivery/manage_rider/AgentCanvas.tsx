@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, X, Eye, EyeOff, Loader2 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 export interface AgentFormData {
   fullName: string;
@@ -309,37 +310,16 @@ export default function AgentCanvas({
             </div>
 
             {/* Field 2: Phone Number */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#334155",
-                }}
-              >
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                placeholder="e.g. +91 98765 43210"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
+            <div>
+              <PhoneInput
+                id="agent-phone"
+                label="Phone Number"
                 required
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  border: "1px solid #E2E8F0",
-                  backgroundColor: "#FFFFFF",
-                  fontSize: "13.5px",
-                  color: "#0F172A",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  transition: "all 0.15s ease",
-                  fontFamily: "inherit",
-                }}
-                className="agent-input"
+                placeholder="98765 43210"
+                value={formData.phoneNumber}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, phoneNumber: val }))
+                }
               />
             </div>
 

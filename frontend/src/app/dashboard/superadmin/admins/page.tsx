@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 export default function SuperadminDashboard() {
     const router = useRouter();
@@ -214,7 +215,15 @@ export default function SuperadminDashboard() {
                 <form onSubmit={handleCreateAdmin} style={{ display: 'flex', gap: '15px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <input type="text" value={newName} onChange={e => setNewName(e.target.value)} className="input-field" placeholder="Admin Name" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
                     <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="input-field" placeholder="Email" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
-                    <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="input-field" placeholder="Phone" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                        <PhoneInput
+                            value={newPhone}
+                            onChange={(val) => setNewPhone(val)}
+                            placeholder="98765 43210"
+                            showHelperText={false}
+                            required
+                        />
+                    </div>
                     <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="Password" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
                     <select value={newRole} onChange={e => setNewRole(e.target.value)} className="input-field" style={{ flex: 1, minWidth: '150px', marginBottom: 0, appearance: 'auto', border: '1px solid #cbd5e1' }} required>
                         <option value="AGENT">Regional Agent</option>
@@ -297,8 +306,13 @@ export default function SuperadminDashboard() {
                                     </div>
 
                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Phone</label>
-                                        <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input-field" style={{ marginBottom: 0 }} required />
+                                        <PhoneInput
+                                            label="Phone"
+                                            value={editPhone}
+                                            onChange={(val) => setEditPhone(val)}
+                                            placeholder="98765 43210"
+                                            required
+                                        />
                                     </div>
 
                                     <div className="input-group" style={{ marginBottom: 0 }}>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import styles from "./LoginForm.module.css";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import {
   Mail,
   Lock,
@@ -364,40 +365,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 <div key="otp-fields" className={styles.slideLeft}>
                   {/* Mobile Number Field with Send OTP Button */}
                   <div className={styles.inputGroup}>
-                    <label htmlFor="phone" className={styles.inputLabel}>
-                      Enter Mobile Number
-                    </label>
-                    <div className={styles.phoneInputWrapper}>
-                      <Phone size={18} className={styles.fieldIcon} />
-                      <span className={styles.countryCode}>+91</span>
-                      <input
-                        id="phone"
-                        type="tel"
-                        maxLength={10}
-                        placeholder="Enter 10-digit number"
-                        value={phoneNumber}
-                        onChange={(e) =>
-                          setPhoneNumber(e.target.value.replace(/\D/g, ""))
-                        }
-                        className={`${styles.textInput} ${styles.phoneTextInput}`}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className={styles.sendOtpBtn}
-                        onClick={handleSendOtp}
-                        disabled={
-                          phoneNumber.length < 10 ||
-                          (otpSent && resendTimer > 0)
-                        }
-                      >
-                        {otpSent
-                          ? resendTimer > 0
-                            ? `Resend (${resendTimer}s)`
-                            : "Resend OTP"
-                          : "Send OTP"}
-                      </button>
-                    </div>
+                    <PhoneInput
+                      id="phone"
+                      label="Enter Mobile Number"
+                      required
+                      placeholder="98765 43210"
+                      value={phoneNumber}
+                      onChange={(val) => setPhoneNumber(val)}
+                      rightAction={
+                        <button
+                          type="button"
+                          className={styles.sendOtpBtn}
+                          onClick={handleSendOtp}
+                          disabled={
+                            phoneNumber.length < 10 ||
+                            (otpSent && resendTimer > 0)
+                          }
+                        >
+                          {otpSent
+                            ? resendTimer > 0
+                              ? `Resend (${resendTimer}s)`
+                              : "Resend OTP"
+                            : "Send OTP"}
+                        </button>
+                      }
+                    />
                   </div>
 
                   {/* 6-box OTP Input */}

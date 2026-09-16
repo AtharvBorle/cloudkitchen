@@ -3,6 +3,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Phone, Mail, User, Trash2, Edit2, Plus, ArrowLeft, X, Download } from "lucide-react";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 export default function DeliveryPersonsPage() {
     const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
@@ -398,11 +399,12 @@ export default function DeliveryPersonsPage() {
                                 />
                             </div>
                             <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', fontWeight: '500' }}>Phone Number</label>
-                                <input
-                                    type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} required
-                                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '1rem' }}
-                                    placeholder="e.g. 9876543210"
+                                <PhoneInput
+                                    label="Phone Number"
+                                    value={phone}
+                                    onChange={(val) => setPhone(val)}
+                                    placeholder="98765 43210"
+                                    required
                                 />
                             </div>
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { User, Pencil, Check, X } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./PersonalProfile.module.css";
 
 export interface PersonalProfileProps {
@@ -205,21 +206,13 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748B" }}>PHONE NUMBER</label>
-              <input
-                type="tel"
+            <div>
+              <PhoneInput
+                label="PHONE NUMBER"
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-                placeholder="Enter 10-digit mobile number"
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  border: "1.5px solid #CBD5E1",
-                  fontSize: "0.9rem",
-                  color: "#0F172A",
-                  outline: "none",
-                }}
+                onChange={(val) => setEditPhone(val)}
+                placeholder="98765 43210"
+                required
               />
             </div>
 

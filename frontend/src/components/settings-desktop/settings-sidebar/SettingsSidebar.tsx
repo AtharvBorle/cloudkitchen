@@ -189,6 +189,8 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               <ChevronRight size={16} className={styles.chevronIcon} />
             </button>
 
+            {/* 
+              PAYMENT METHODS (Disabled via comment - uncomment to re-enable in future)
             <button
               type="button"
               className={`${styles.navItem} ${
@@ -202,6 +204,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               </div>
               <ChevronRight size={16} className={styles.chevronIcon} />
             </button>
+            */}
 
             <button
               type="button"

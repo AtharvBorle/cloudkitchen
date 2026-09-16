@@ -15,7 +15,7 @@ export interface SellerOffersCanvasDasProps {
 }
 
 export default function SellerOffersCanvasDas({
-  topbarTitle = "Owner Operations Console",
+  topbarTitle = "Offers & Coupons",
   searchPlaceholder = "Search coupons, offers, discounts...",
   activeSidebarId = "offers",
 }: SellerOffersCanvasDasProps) {

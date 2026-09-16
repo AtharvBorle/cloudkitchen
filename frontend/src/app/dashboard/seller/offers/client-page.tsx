@@ -1078,13 +1078,15 @@ export default function SellerOffersClient({ sellerId, products }: { sellerId: s
 
                 @media (max-width: 768px) {
                     .offers-header-container {
-                        margin-bottom: 1.25rem !important;
+                        margin-bottom: 1rem !important;
                     }
                     .offers-main-title {
-                        font-size: 20px !important;
+                        display: none !important;
                     }
                     .offers-main-subtitle {
-                        font-size: 13px !important;
+                        font-size: 13.5px !important;
+                        color: #64748B !important;
+                        line-height: 1.4 !important;
                     }
                     .offers-stat-grid {
                         grid-template-columns: 1fr;

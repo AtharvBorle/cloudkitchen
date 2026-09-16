@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Edit3,
 } from "lucide-react";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { fetchApi } from "@/lib/fetch-api";
 
 export interface SignUpRightComponentProps {
@@ -537,73 +538,18 @@ export default function SignUpRightComponent({
                 )}
               </div>
 
-              <div
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "center",
+              <PhoneInput
+                id="signup-phone"
+                value={phone}
+                onChange={(val) => {
+                  setPhone(val);
+                  setOtpSent(false);
                 }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    pointerEvents: "none",
-                  }}
-                >
-                  <Phone size={18} color="#94A3B8" />
-                </span>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "40px",
-                    fontSize: "13.5px",
-                    fontWeight: 600,
-                    color: "#64748B",
-                    pointerEvents: "none",
-                  }}
-                >
-                  +91
-                </span>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="98765 43210"
-                  value={phone}
-                  onChange={handlePhoneChange}
-                  disabled={otpVerified}
-                  maxLength={10}
-                  required
-                  style={{
-                    width: "100%",
-                    height: "46px",
-                    padding: "0 100px 0 74px",
-                    borderRadius: "12px",
-                    border: otpVerified ? "1.5px solid #10B981" : "1px solid #E2E8F0",
-                    backgroundColor: otpVerified ? "#F0FDF4" : "#FFFFFF",
-                    fontSize: "14px",
-                    color: "#0F172A",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    letterSpacing: "0.5px",
-                    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  }}
-                  className="form-input"
-                />
-
-                {/* Right Action Button Inside Input */}
-                <div
-                  style={{
-                    position: "absolute",
-                    right: "6px",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  {otpVerified ? (
+                disabled={otpVerified}
+                required
+                placeholder="98765 43210"
+                rightAction={
+                  otpVerified ? (
                     <button
                       type="button"
                       onClick={handleEditPhone}
@@ -651,9 +597,9 @@ export default function SignUpRightComponent({
                     >
                       {otpSending ? "Sending..." : otpSent ? "Resend" : "Verify"}
                     </button>
-                  )}
-                </div>
-              </div>
+                  )
+                }
+              />
             </div>
 
             {/* 6-Digit OTP Verification Drawer */}

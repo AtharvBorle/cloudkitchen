@@ -17,6 +17,7 @@ import {
   Bell,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./ResSellerProfile.module.css";
 
 import { useSellerProfile, isGenericFallbackName, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
@@ -256,15 +257,12 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="ownerMobile" className={styles.label}>
-                Mobile Number
-              </label>
-              <input
+              <PhoneInput
                 id="ownerMobile"
-                type="tel"
-                className={styles.input}
+                label="Mobile Number"
                 value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
+                onChange={(val) => setMobileNumber(val)}
+                placeholder="98765 43210"
               />
             </div>
 

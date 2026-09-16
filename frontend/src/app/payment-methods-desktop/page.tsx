@@ -26,20 +26,14 @@ export default function PaymentMethodsDesktopPage() {
 
           {/* Right Column: Payment Methods Content Sections */}
           <div className={styles.contentWrapper}>
-            {/* 2. Payment Methods Header */}
+            {/* 
+              PAYMENT METHODS CONTENT SECTIONS (Disabled via comment - uncomment to re-enable in future)
             <PaymentHeader />
-
-            {/* 3. Saved Cards Section */}
             <SavedCards />
-
-            {/* 4. UPI IDs Section */}
             <UpiIds />
-
-            {/* 5. Other Payment Methods Section */}
             <OtherPaymentMethods />
-
-            {/* 6. Add New Payment Method Full Width Button */}
             <AddPaymentButton />
+            */}
           </div>
         </div>
       </main>

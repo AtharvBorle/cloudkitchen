@@ -24,6 +24,7 @@ import {
   PasswordManagementCard,
   ActiveLoginSessionsCard,
 } from "../security-settings/SellerSecuritySettings";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./ResponsiveSellerSettings.module.css";
 
 export type SettingsTabType = "General" | "Notifications" | "Security" | "Preferences";
@@ -465,13 +466,12 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Phone Number</label>
-                  <input
-                    type="tel"
-                    className={styles.input}
+                  <PhoneInput
+                    id="res-settings-phone"
+                    label="Phone Number"
                     value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                    placeholder="e.g. +91 98765 43210"
+                    onChange={(val) => handleInputChange("phoneNumber", val)}
+                    placeholder="98765 43210"
                   />
                 </div>
 
