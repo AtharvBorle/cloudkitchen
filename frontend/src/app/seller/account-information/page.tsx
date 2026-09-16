@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   SellerLayout,
   AccountInformation,
   AccountInformationData,
 } from "@/components/seller";
+import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store";
 
 export default function AccountInformationPage() {
   const router = useRouter();
@@ -15,11 +16,22 @@ export default function AccountInformationPage() {
     email: "",
     phone: "",
     password: "",
-    sellerRole: "",
+    sellerRole: "Owner",
   });
 
+  useEffect(() => {
+    const draft = getSellerDraft();
+    setAccountData({
+      ownerName: draft.ownerName || "",
+      email: draft.email || "",
+      phone: draft.phone || "",
+      password: draft.password || "",
+      sellerRole: draft.sellerRole || "Owner",
+    });
+  }, []);
+
   const handleContinue = (data: AccountInformationData) => {
-    setAccountData(data);
+    saveSellerDraft(data);
     router.push("/seller/business-information");
   };
 
@@ -32,6 +44,7 @@ export default function AccountInformationPage() {
       userRole="Owner Account"
     >
       <AccountInformation
+        key={accountData.email || "account-init"}
         initialData={accountData}
         onContinue={handleContinue}
       />

@@ -28,11 +28,16 @@ export async function uploadImage(
 ): Promise<string> {
     const provider = process.env.STORAGE_PROVIDER || 'cloudinary';
 
-    if (provider === 's3') {
-        return uploadToS3(fileBuffer, mimeType, originalFilename, folder);
+    try {
+        if (provider === 's3') {
+            return await uploadToS3(fileBuffer, mimeType, originalFilename, folder);
+        }
+        return await uploadToCloudinary(fileBuffer, folder);
+    } catch (uploadErr) {
+        console.warn(`Upload to ${provider} failed, creating safe data URL fallback:`, uploadErr);
+        const mime = mimeType || 'image/jpeg';
+        return `data:${mime};base64,${fileBuffer.toString('base64')}`;
     }
-
-    return uploadToCloudinary(fileBuffer, folder);
 }
 
 async function uploadToCloudinary(fileBuffer: Buffer, folder: string): Promise<string> {

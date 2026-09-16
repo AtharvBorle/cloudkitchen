@@ -12,10 +12,15 @@ import {
 } from "lucide-react";
 import styles from "./LegalDocuments.module.css";
 
+import { readFileAsDataUrl } from "@/lib/seller-registration-store";
+
 export interface LegalDocumentsData {
   identityProofFile?: string;
+  identityProofDataUrl?: string;
   fssaiLicenseFile?: string;
+  fssaiLicenseDataUrl?: string;
   utilityBillFile?: string;
+  utilityBillDataUrl?: string;
   bankAccountNumber: string;
   ifscCode: string;
 }
@@ -33,10 +38,13 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
 }) => {
   const [formData, setFormData] = useState<LegalDocumentsData>({
     identityProofFile: initialData?.identityProofFile || "",
+    identityProofDataUrl: initialData?.identityProofDataUrl || "",
     fssaiLicenseFile: initialData?.fssaiLicenseFile || "",
+    fssaiLicenseDataUrl: initialData?.fssaiLicenseDataUrl || "",
     utilityBillFile: initialData?.utilityBillFile || "",
-    bankAccountNumber: initialData?.bankAccountNumber || "9876543210123",
-    ifscCode: initialData?.ifscCode || "HDFC0001234",
+    utilityBillDataUrl: initialData?.utilityBillDataUrl || "",
+    bankAccountNumber: initialData?.bankAccountNumber || "",
+    ifscCode: initialData?.ifscCode || "",
   });
 
   const [dragActiveField, setDragActiveField] = useState<string | null>(null);
@@ -45,17 +53,35 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
   const fssaiInputRef = useRef<HTMLInputElement>(null);
   const utilityInputRef = useRef<HTMLInputElement>(null);
 
+  const processFile = async (
+    field: "identityProof" | "fssaiLicense" | "utilityBill",
+    file: File
+  ) => {
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setFormData((prev) => ({
+        ...prev,
+        [`${field}File`]: file.name,
+        [`${field}DataUrl`]: dataUrl,
+      }));
+    } catch (err) {
+      console.error("Error reading file:", err);
+      setFormData((prev) => ({
+        ...prev,
+        [`${field}File`]: file.name,
+      }));
+    }
+  };
+
   const handleFileSelect = (
-    fileField: "identityProofFile" | "fssaiLicenseFile" | "utilityBillFile",
+    fileField: "identityProof" | "fssaiLicense" | "utilityBill",
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData((prev) => ({
-        ...prev,
-        [fileField]: file.name,
-      }));
+      processFile(fileField, file);
     }
+    e.target.value = "";
   };
 
   const handleDragOver = (e: React.DragEvent, field: string) => {
@@ -72,17 +98,14 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
 
   const handleDrop = (
     e: React.DragEvent,
-    field: "identityProofFile" | "fssaiLicenseFile" | "utilityBillFile"
+    field: "identityProof" | "fssaiLicense" | "utilityBill"
   ) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActiveField(null);
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: file.name,
-      }));
+      processFile(field, file);
     }
   };
 
@@ -119,7 +142,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             <input
               type="file"
               ref={identityInputRef}
-              onChange={(e) => handleFileSelect("identityProofFile", e)}
+              onChange={(e) => handleFileSelect("identityProof", e)}
               accept=".pdf,.png,.jpg,.jpeg"
               className={styles.hiddenFileInput}
             />
@@ -156,7 +179,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             <input
               type="file"
               ref={fssaiInputRef}
-              onChange={(e) => handleFileSelect("fssaiLicenseFile", e)}
+              onChange={(e) => handleFileSelect("fssaiLicense", e)}
               accept=".pdf,.png,.jpg,.jpeg"
               className={styles.hiddenFileInput}
             />
@@ -191,7 +214,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             <input
               type="file"
               ref={utilityInputRef}
-              onChange={(e) => handleFileSelect("utilityBillFile", e)}
+              onChange={(e) => handleFileSelect("utilityBill", e)}
               accept=".pdf,.png,.jpg,.jpeg"
               className={styles.hiddenFileInput}
             />
@@ -234,12 +257,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             </label>
             <div
               className={`${styles.dropzone} ${
-                dragActiveField === "identityProofFile" ? styles.dropzoneActive : ""
+                dragActiveField === "identityProof" ? styles.dropzoneActive : ""
               }`}
               onClick={() => identityInputRef.current?.click()}
-              onDragOver={(e) => handleDragOver(e, "identityProofFile")}
+              onDragOver={(e) => handleDragOver(e, "identityProof")}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, "identityProofFile")}
+              onDrop={(e) => handleDrop(e, "identityProof")}
             >
               <UploadCloud className={styles.dropzoneIcon} />
               <p className={styles.dropzoneMainText}>
@@ -261,12 +284,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             <label className={styles.label}>FSSAI License</label>
             <div
               className={`${styles.dropzone} ${
-                dragActiveField === "fssaiLicenseFile" ? styles.dropzoneActive : ""
+                dragActiveField === "fssaiLicense" ? styles.dropzoneActive : ""
               }`}
               onClick={() => fssaiInputRef.current?.click()}
-              onDragOver={(e) => handleDragOver(e, "fssaiLicenseFile")}
+              onDragOver={(e) => handleDragOver(e, "fssaiLicense")}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, "fssaiLicenseFile")}
+              onDrop={(e) => handleDrop(e, "fssaiLicense")}
             >
               <UploadCloud className={styles.dropzoneIcon} />
               <p className={styles.dropzoneMainText}>
@@ -297,12 +320,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             </label>
             <div
               className={`${styles.dropzone} ${
-                dragActiveField === "utilityBillFile" ? styles.dropzoneActive : ""
+                dragActiveField === "utilityBill" ? styles.dropzoneActive : ""
               }`}
               onClick={() => utilityInputRef.current?.click()}
-              onDragOver={(e) => handleDragOver(e, "utilityBillFile")}
+              onDragOver={(e) => handleDragOver(e, "utilityBill")}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, "utilityBillFile")}
+              onDrop={(e) => handleDrop(e, "utilityBill")}
             >
               <UploadCloud className={styles.dropzoneIcon} />
               <p className={styles.dropzoneMainText}>

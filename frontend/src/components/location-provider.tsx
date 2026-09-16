@@ -214,7 +214,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       let activeAddr: Address | null = null;
       if (defRes.ok) {
         const defData = await defRes.json();
-        const payload = defData.data || defData;
+        const payload = defData?.data || defData;
         if (payload && payload.pincode) {
           activeAddr = payload;
         }
@@ -225,7 +225,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       let addressList: Address[] = [];
       if (addrRes.ok) {
         const addrData = await addrRes.json();
-        const list = addrData.data?.addresses || addrData.addresses || addrData.data || [];
+        const list = addrData?.data?.addresses || addrData?.addresses || addrData?.data || [];
         if (Array.isArray(list)) {
           addressList = list;
           setSavedAddresses(list);

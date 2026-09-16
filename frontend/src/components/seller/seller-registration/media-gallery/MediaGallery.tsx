@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { Plus, X, ArrowRight, ImageIcon } from "lucide-react";
 import styles from "./MediaGallery.module.css";
+import { readFileAsDataUrl } from "@/lib/seller-registration-store";
 
 export interface MediaGalleryData {
   kitchenPhotos: (string | null)[];
@@ -22,62 +23,77 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   onBack,
 }) => {
   const [kitchenPhotos, setKitchenPhotos] = useState<(string | null)[]>(
-    initialData?.kitchenPhotos || [null, null, null, null]
+    initialData?.kitchenPhotos && initialData.kitchenPhotos.length === 4
+      ? initialData.kitchenPhotos
+      : [null, null, null, null]
   );
   const [cuisinePhotos, setCuisinePhotos] = useState<(string | null)[]>(
-    initialData?.cuisinePhotos || [null, null, null, null]
+    initialData?.cuisinePhotos && initialData.cuisinePhotos.length === 4
+      ? initialData.cuisinePhotos
+      : [null, null, null, null]
   );
   const [roomPhotos, setRoomPhotos] = useState<(string | null)[]>(
-    initialData?.roomPhotos || [null, null]
+    initialData?.roomPhotos && initialData.roomPhotos.length === 2
+      ? initialData.roomPhotos
+      : [null, null]
   );
-
-  const kitchenRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-  const cuisineRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-  const roomRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
 
   const [dragTarget, setDragTarget] = useState<string | null>(null);
 
-  const handleFileUpload = (
+  const triggerUpload = (category: "kitchen" | "cuisine" | "room", index: number) => {
+    const el = document.getElementById(`${category}-media-input-${index}`) as HTMLInputElement;
+    if (el) el.click();
+  };
+
+  const processFiles = async (
+    category: "kitchen" | "cuisine" | "room",
+    startIndex: number,
+    files: FileList | File[]
+  ) => {
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (fileArray.length === 0) return;
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const targetIdx = startIndex + i;
+      const maxSlots = category === "room" ? 2 : 4;
+      if (targetIdx >= maxSlots) break;
+
+      try {
+        const dataUrl = await readFileAsDataUrl(fileArray[i]);
+        if (category === "kitchen") {
+          setKitchenPhotos((prev) => {
+            const next = [...prev];
+            next[targetIdx] = dataUrl;
+            return next;
+          });
+        } else if (category === "cuisine") {
+          setCuisinePhotos((prev) => {
+            const next = [...prev];
+            next[targetIdx] = dataUrl;
+            return next;
+          });
+        } else {
+          setRoomPhotos((prev) => {
+            const next = [...prev];
+            next[targetIdx] = dataUrl;
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error("Error reading media image:", err);
+      }
+    }
+  };
+
+  const handleInputChange = (
     category: "kitchen" | "cuisine" | "room",
     index: number,
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      if (category === "kitchen") {
-        setKitchenPhotos((prev) => {
-          const next = [...prev];
-          next[index] = url;
-          return next;
-        });
-      } else if (category === "cuisine") {
-        setCuisinePhotos((prev) => {
-          const next = [...prev];
-          next[index] = url;
-          return next;
-        });
-      } else {
-        setRoomPhotos((prev) => {
-          const next = [...prev];
-          next[index] = url;
-          return next;
-        });
-      }
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(category, index, e.target.files);
     }
+    e.target.value = "";
   };
 
   const handleDragOver = (e: React.DragEvent, targetKey: string) => {
@@ -92,7 +108,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     setDragTarget(null);
   };
 
-  const handleDropFile = (
+  const handleDrop = (
     category: "kitchen" | "cuisine" | "room",
     index: number,
     e: React.DragEvent
@@ -100,31 +116,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setDragTarget(null);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      const url = URL.createObjectURL(file);
-      if (category === "kitchen") {
-        setKitchenPhotos((prev) => {
-          const next = [...prev];
-          next[index] = url;
-          return next;
-        });
-      } else if (category === "cuisine") {
-        setCuisinePhotos((prev) => {
-          const next = [...prev];
-          next[index] = url;
-          return next;
-        });
-      } else {
-        setRoomPhotos((prev) => {
-          const next = [...prev];
-          next[index] = url;
-          return next;
-        });
-      }
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(category, index, e.dataTransfer.files);
     }
   };
-
 
   const removePhoto = (
     category: "kitchen" | "cuisine" | "room",
@@ -138,27 +133,18 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
         next[index] = null;
         return next;
       });
-      if (kitchenRefs[index].current) {
-        kitchenRefs[index].current.value = "";
-      }
     } else if (category === "cuisine") {
       setCuisinePhotos((prev) => {
         const next = [...prev];
         next[index] = null;
         return next;
       });
-      if (cuisineRefs[index].current) {
-        cuisineRefs[index].current.value = "";
-      }
     } else {
       setRoomPhotos((prev) => {
         const next = [...prev];
         next[index] = null;
         return next;
       });
-      if (roomRefs[index].current) {
-        roomRefs[index].current.value = "";
-      }
     }
   };
 
@@ -175,6 +161,36 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
   return (
     <div className={styles.cardContainer}>
+      {/* Top Level Hidden File Inputs */}
+      {[0, 1, 2, 3].map((idx) => (
+        <React.Fragment key={`inputs-k-c-${idx}`}>
+          <input
+            id={`kitchen-media-input-${idx}`}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => handleInputChange("kitchen", idx, e)}
+          />
+          <input
+            id={`cuisine-media-input-${idx}`}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => handleInputChange("cuisine", idx, e)}
+          />
+        </React.Fragment>
+      ))}
+      {[0, 1].map((idx) => (
+        <input
+          key={`input-room-${idx}`}
+          id={`room-media-input-${idx}`}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => handleInputChange("room", idx, e)}
+        />
+      ))}
+
       {/* Desktop Header (Desktop only) */}
       <div className={styles.desktopHeaderGroup}>
         <h2 className={styles.title}>Media Assets & Gallery</h2>
@@ -193,19 +209,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             <span className={styles.mobileSectionHeader}>KITCHEN PHOTOS</span>
             <div className={styles.mobilePhotoGrid}>
               {[0, 1, 2, 3].map((idx) => (
-                <div key={`kitchen-${idx}`} className={styles.slotWrapper}>
-                  <input
-                    type="file"
-                    ref={kitchenRefs[idx]}
-                    onChange={(e) => handleFileUpload("kitchen", idx, e)}
-                    accept="image/*"
-                    className={styles.hiddenInput}
-                  />
+                <div key={`mob-kitchen-${idx}`} className={styles.slotWrapper}>
                   <div
                     className={`${styles.mobileSlot} ${
                       idx === 0 && !kitchenPhotos[idx] ? styles.slotUploadActive : ""
                     }`}
-                    onClick={() => kitchenRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("kitchen", idx)}
                   >
                     {kitchenPhotos[idx] ? (
                       <>
@@ -242,17 +251,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             <span className={styles.mobileSectionHeader}>CUISINE PHOTOS</span>
             <div className={styles.mobilePhotoGrid}>
               {[0, 1, 2, 3].map((idx) => (
-                <div key={`cuisine-${idx}`} className={styles.slotWrapper}>
-                  <input
-                    type="file"
-                    ref={cuisineRefs[idx]}
-                    onChange={(e) => handleFileUpload("cuisine", idx, e)}
-                    accept="image/*"
-                    className={styles.hiddenInput}
-                  />
+                <div key={`mob-cuisine-${idx}`} className={styles.slotWrapper}>
                   <div
                     className={styles.mobileSlot}
-                    onClick={() => cuisineRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("cuisine", idx)}
                   >
                     {cuisinePhotos[idx] ? (
                       <>
@@ -284,17 +286,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             <span className={styles.mobileSectionHeader}>ROOM PHOTOS</span>
             <div className={styles.mobilePhotoGrid}>
               {[0, 1].map((idx) => (
-                <div key={`room-${idx}`} className={styles.slotWrapper}>
-                  <input
-                    type="file"
-                    ref={roomRefs[idx]}
-                    onChange={(e) => handleFileUpload("room", idx, e)}
-                    accept="image/*"
-                    className={styles.hiddenInput}
-                  />
+                <div key={`mob-room-${idx}`} className={styles.slotWrapper}>
                   <div
                     className={styles.mobileSlot}
-                    onClick={() => roomRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("room", idx)}
                   >
                     {roomPhotos[idx] ? (
                       <>
@@ -338,10 +333,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                     className={`${styles.desktopPhotoBox} ${
                       dragTarget === key ? styles.photoBoxDragging : ""
                     }`}
-                    onClick={() => kitchenRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("kitchen", idx)}
                     onDragOver={(e) => handleDragOver(e, key)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDropFile("kitchen", idx, e)}
+                    onDrop={(e) => handleDrop("kitchen", idx, e)}
                   >
                     {kitchenPhotos[idx] ? (
                       <>
@@ -383,10 +378,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                     className={`${styles.desktopPhotoBox} ${
                       dragTarget === key ? styles.photoBoxDragging : ""
                     }`}
-                    onClick={() => cuisineRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("cuisine", idx)}
                     onDragOver={(e) => handleDragOver(e, key)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDropFile("cuisine", idx, e)}
+                    onDrop={(e) => handleDrop("cuisine", idx, e)}
                   >
                     {cuisinePhotos[idx] ? (
                       <>
@@ -428,10 +423,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                     className={`${styles.desktopPhotoBox} ${
                       dragTarget === key ? styles.photoBoxDragging : ""
                     }`}
-                    onClick={() => roomRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("room", idx)}
                     onDragOver={(e) => handleDragOver(e, key)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDropFile("room", idx, e)}
+                    onDrop={(e) => handleDrop("room", idx, e)}
                   >
                     {roomPhotos[idx] ? (
                       <>
@@ -461,7 +456,6 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             </div>
           </div>
         </div>
-
 
         {/* Action Controls */}
         <div className={styles.actionRow}>

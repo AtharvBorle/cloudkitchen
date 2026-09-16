@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./RegistrationSubmitted.module.css";
 
 export interface RegistrationSubmittedProps {
@@ -12,10 +13,17 @@ export interface RegistrationSubmittedProps {
 }
 
 export const RegistrationSubmitted: React.FC<RegistrationSubmittedProps> = ({
-  trackingId = "NCR-2026-0847",
+  trackingId: propTrackingId,
   statusText = "Pending",
   onTrackStatus,
 }) => {
+  const seller = useSellerProfile();
+  const trackingId = propTrackingId || seller.profile?.trackingId || "";
+
+  const verificationUrl = trackingId
+    ? `/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}`
+    : "/seller/verification-status";
+
   return (
     <div className={styles.container}>
       {/* Centered Content Block */}
@@ -29,8 +37,16 @@ export const RegistrationSubmitted: React.FC<RegistrationSubmittedProps> = ({
         <h1 className={styles.title}>Submitted!</h1>
 
         {/* Tracking ID */}
-        <span className={styles.trackingLabel}>TRACKING ID</span>
-        <div className={styles.trackingBadge}>{trackingId}</div>
+        {trackingId ? (
+          <>
+            <span className={styles.trackingLabel}>TRACKING ID</span>
+            <div className={styles.trackingBadge}>{trackingId}</div>
+          </>
+        ) : (
+          <div style={{ margin: "8px 0 16px" }}>
+            <span className={styles.trackingLabel}>Application Received</span>
+          </div>
+        )}
 
         {/* Status Badge */}
         <div>
@@ -48,7 +64,7 @@ export const RegistrationSubmitted: React.FC<RegistrationSubmittedProps> = ({
       {/* Action Button: Desktop Inline / Mobile Fixed Bottom */}
       <div className={styles.actionWrapper}>
         <Link
-          href="/seller/verification-status"
+          href={verificationUrl}
           className={styles.trackButton}
           onClick={onTrackStatus}
         >

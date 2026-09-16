@@ -31,9 +31,14 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         Your seller profile is currently under review. Our admins will verify your FSSAI and Adhaar documents shortly.
                         Once approved, you will be able to access your dashboard and start receiving orders.
                     </p>
-                    <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
-                        Sign Out
-                    </button>
+                    <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                        <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
+                            Sign Out
+                        </button>
+                        <Link href="/seller/verification-status" style={{ padding: "12px 24px", backgroundColor: "#f97316", color: "white", borderRadius: "8px", textDecoration: "none", fontWeight: "600", display: "inline-block" }}>
+                            View Status
+                        </Link>
+                    </div>
                 </div>
             </div>
         );
@@ -55,7 +60,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
                             Sign Out
                         </button>
-                        <Link href="/dashboard/seller/revision" style={{ padding: "12px 24px", backgroundColor: "#d97706", color: "white", borderRadius: "8px", textDecoration: "none", fontWeight: "600", display: "inline-block" }}>
+                        <Link href="/seller/revision" style={{ padding: "12px 24px", backgroundColor: "#f97316", color: "white", borderRadius: "8px", textDecoration: "none", fontWeight: "600", display: "inline-block" }}>
                             Update Documents
                         </Link>
                     </div>

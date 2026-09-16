@@ -2,75 +2,80 @@
 
 import React from "react";
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import styles from "./ConfirmRegistration.module.css";
-
-export interface ConfirmRegistrationData {
-  account?: {
-    ownerName?: string;
-    email?: string;
-    phone?: string;
-    sellerRole?: string;
-  };
-  business?: {
-    name?: string;
-    type?: string;
-    cuisines?: string;
-    address?: string;
-  };
-  documents?: {
-    identityProof?: string;
-    fssaiLicense?: string;
-    electricityBill?: string;
-  };
-  media?: {
-    photosCount?: number;
-    previewThumbnails?: (string | null)[];
-  };
-}
-
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { SellerRegistrationDraft } from "@/lib/seller-registration-store";
 
 export interface ConfirmRegistrationProps {
-  data?: Partial<ConfirmRegistrationData>;
+  draft?: Partial<SellerRegistrationDraft>;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
   onSubmit?: () => void;
   onBack?: () => void;
 }
 
 export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
-  data,
+  draft,
+  isSubmitting = false,
+  errorMessage = null,
   onSubmit,
   onBack,
 }) => {
-  const seller = useSellerProfile();
-
   const account = {
-    ownerName: data?.account?.ownerName || (seller.ownerName && seller.ownerName !== "Kitchen Owner" ? seller.ownerName : "Kitchen Owner"),
-    email: data?.account?.email || seller.email || "partner@neocloud.com",
-    phone: data?.account?.phone || seller.phone || "+91 98765 43210",
-    sellerRole: data?.account?.sellerRole || "Owner",
+    ownerName: draft?.ownerName || "Not provided",
+    email: draft?.email || "Not provided",
+    phone: draft?.phone || "Not provided",
+    sellerRole: draft?.sellerRole || "Owner",
   };
 
   const business = {
-    name: data?.business?.name || (seller.businessName && seller.businessName !== "Cloud Kitchen" ? seller.businessName : "Neo Kitchens"),
-    type: data?.business?.type || "Food",
-    cuisines: data?.business?.cuisines || "North Indian, Biryani",
-    address: data?.business?.address || seller.address || "Cloud Kitchen Hub, Sector 6, Bangalore",
+    name: draft?.businessName || "Not provided",
+    type: draft?.sellerType === "FOOD" ? "Food" : draft?.sellerType === "PROPERTY" ? "Property" : "Both (Food & Property)",
+    cuisines: draft?.categories && draft.categories.length > 0 ? draft.categories.join(", ") : "Not provided",
+    foodType: draft?.foodType === "BOTH" ? "Both (Veg & Non-veg)" : draft?.foodType === "PURE_VEG" ? "Pure Veg" : "Non-veg",
+    address: draft?.address || "Not provided",
   };
 
   const documents = {
-    identityProof: data?.documents?.identityProof || "Identity Proof (Aadhaar/PAN)",
-    fssaiLicense: data?.documents?.fssaiLicense || "FSSAI License",
-    electricityBill: data?.documents?.electricityBill || "Electricity Bill",
+    identityProof: draft?.identityProofFileName || (draft?.identityProofDataUrl ? "Uploaded Identity Proof" : "Pending Upload"),
+    fssaiLicense: draft?.fssaiLicenseFileName || (draft?.fssaiLicenseDataUrl ? "Uploaded FSSAI License" : "Not Provided (Optional for Rooms)"),
+    electricityBill: draft?.utilityBillFileName || (draft?.utilityBillDataUrl ? "Uploaded Electricity Bill" : "Pending Upload"),
+    bankAccount: draft?.bankAccountNumber ? `••••${draft.bankAccountNumber.slice(-4)} (${draft?.ifscCode || "IFSC"})` : "Not provided",
   };
 
-  const media = {
-    photosCount: data?.media?.photosCount ?? 0,
-    previewThumbnails: data?.media?.previewThumbnails || [null, null, null],
-  };
+  // Collect all real uploaded preview images
+  const allImages = [
+    ...(draft?.kitchenPhotos || []),
+    ...(draft?.cuisinePhotos || []),
+    ...(draft?.roomPhotos || []),
+  ].filter(Boolean) as string[];
+
+  const previewImages = allImages.slice(0, 3);
+  const remainingCount = Math.max(0, allImages.length - 3);
 
   return (
     <div className={styles.containerWrapper}>
+      {errorMessage && (
+        <div
+          style={{
+            backgroundColor: "#FEF2F2",
+            border: "1px solid #F87171",
+            borderRadius: "12px",
+            padding: "14px 18px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            color: "#991B1B",
+            fontSize: "0.9rem",
+            fontWeight: 500,
+          }}
+        >
+          <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* ========================================================= */}
       {/* MOBILE VIEW: Distinct 4 Cards Stack with Submit Button    */}
       {/* ========================================================= */}
@@ -150,16 +155,22 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         {/* Card 4: Media */}
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>Media</h3>
+            <h3 className={styles.cardTitle}>Media ({allImages.length} Photos)</h3>
             <Link href="/seller/media-gallery" className={styles.editLink}>
               Edit
             </Link>
           </div>
           <div className={styles.thumbnailsRow}>
-            <div className={styles.thumbPlaceholder} />
-            <div className={styles.thumbPlaceholder} />
-            <div className={styles.thumbPlaceholder} />
-            <div className={styles.thumbMoreSlot}>+3</div>
+            {previewImages.map((src, idx) => (
+              <img
+                key={idx}
+                src={src}
+                alt={`Media thumbnail ${idx + 1}`}
+                style={{ width: "48px", height: "48px", borderRadius: "8px", objectFit: "cover" }}
+              />
+            ))}
+            {remainingCount > 0 && <div className={styles.thumbMoreSlot}>+{remainingCount}</div>}
+            {allImages.length === 0 && <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>No photos uploaded</span>}
           </div>
         </div>
       </div>
@@ -218,6 +229,10 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.value}>{business.type}</span>
               </div>
               <div className={styles.row}>
+                <span className={styles.key}>Food Type</span>
+                <span className={styles.value}>{business.foodType}</span>
+              </div>
+              <div className={styles.row}>
                 <span className={styles.key}>Cuisines / Categories</span>
                 <span className={styles.value}>{business.cuisines}</span>
               </div>
@@ -231,7 +246,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           {/* 3. Legal Documents */}
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Legal Documents</h3>
+              <h3 className={styles.sectionTitle}>Legal Documents & Payout</h3>
               <Link href="/seller/legal-documents" className={styles.editBtn}>
                 Edit
               </Link>
@@ -249,22 +264,40 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.key}>Electricity Bill</span>
                 <span className={styles.value}>{documents.electricityBill}</span>
               </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Bank Account</span>
+                <span className={styles.value}>{documents.bankAccount}</span>
+              </div>
             </div>
           </div>
 
           {/* 4. Media */}
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Media Assets</h3>
+              <h3 className={styles.sectionTitle}>Media Assets ({allImages.length} Photos)</h3>
               <Link href="/seller/media-gallery" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
-            <div className={styles.thumbnailsRow}>
-              <div className={styles.thumbPlaceholder} />
-              <div className={styles.thumbPlaceholder} />
-              <div className={styles.thumbPlaceholder} />
-              <div className={styles.thumbMoreSlot}>+3</div>
+            <div className={styles.thumbnailsRow} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {previewImages.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt={`Media asset ${idx + 1}`}
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "10px",
+                    objectFit: "cover",
+                    border: "1.5px solid #e2e8f0",
+                  }}
+                />
+              ))}
+              {remainingCount > 0 && <div className={styles.thumbMoreSlot}>+{remainingCount}</div>}
+              {allImages.length === 0 && (
+                <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>No photos uploaded yet</span>
+              )}
             </div>
           </div>
         </div>
@@ -275,7 +308,12 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
       {/* ========================================================= */}
       <div className={styles.actionRow}>
         {onBack && (
-          <button type="button" onClick={onBack} className={styles.backBtn}>
+          <button
+            type="button"
+            onClick={onBack}
+            className={styles.backBtn}
+            disabled={isSubmitting}
+          >
             Back
           </button>
         )}
@@ -284,9 +322,27 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           type="button"
           onClick={onSubmit}
           className={styles.submitBtn}
+          disabled={isSubmitting}
+          style={{
+            opacity: isSubmitting ? 0.7 : 1,
+            cursor: isSubmitting ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          }}
         >
-          <span>Submit for verification</span>
-          <ArrowRight className={styles.btnArrow} />
+          {isSubmitting ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              <span>Submitting Application...</span>
+            </>
+          ) : (
+            <>
+              <span>Submit for verification</span>
+              <ArrowRight className={styles.btnArrow} />
+            </>
+          )}
         </button>
       </div>
     </div>

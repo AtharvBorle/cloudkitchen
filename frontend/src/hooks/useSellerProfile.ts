@@ -17,6 +17,7 @@ export interface SellerProfileData {
   partnerRole: string;
   isOnline: boolean;
   isLoading: boolean;
+  authStatus: "loading" | "authenticated" | "unauthenticated";
   user: any;
   profile: any;
 }
@@ -45,7 +46,7 @@ export function isGenericFallbackName(name?: string): boolean {
 }
 
 export function computeInitials(name?: string): string {
-  if (!name || !name.trim()) return "RK";
+  if (!name || !name.trim()) return "SK";
   const clean = name.trim().replace(/[^a-zA-Z0-9\s]/g, "");
   const parts = clean.split(/\s+/).filter(Boolean);
   if (parts.length > 1) {
@@ -54,7 +55,7 @@ export function computeInitials(name?: string): string {
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase();
   }
-  return "RK";
+  return "SK";
 }
 
 export function updateCachedProfile(partial: Partial<SellerProfileData>) {
@@ -118,44 +119,14 @@ export function useSellerProfile() {
       partnerRole: cachedProfile?.partnerRole || "Neo Cloud Partner",
       isOnline: cachedProfile?.isOnline ?? true,
       isLoading: !cachedProfile,
+      authStatus: status,
       user: cachedProfile?.user || null,
       profile: cachedProfile?.profile || null,
     };
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const pathname = window.location.pathname;
-    const isPublicSellerPath =
-      pathname === "/seller/login" ||
-      pathname === "/seller/res/login" ||
-      pathname === "/auth/login/seller" ||
-      pathname.startsWith("/seller/registration") ||
-      pathname.startsWith("/seller/account-information") ||
-      pathname.startsWith("/seller/business-information") ||
-      pathname.startsWith("/seller/confirm-information") ||
-      pathname.startsWith("/seller/confirm-registration") ||
-      pathname.startsWith("/seller/legal-documents") ||
-      pathname.startsWith("/seller/legal-information") ||
-      pathname.startsWith("/seller/media-gallery") ||
-      pathname.startsWith("/seller/media-information") ||
-      pathname.startsWith("/seller/verification") ||
-      pathname.startsWith("/seller/faq") ||
-      pathname.startsWith("/seller/res/faq") ||
-      pathname.startsWith("/seller/tc") ||
-      pathname.startsWith("/seller/res/tc");
-
-    const isSellerRoute =
-      pathname === "/seller" ||
-      pathname.startsWith("/seller/") ||
-      pathname === "/dashboard/seller" ||
-      pathname.startsWith("/dashboard/seller/");
-
-    if (isSellerRoute && !isPublicSellerPath && status === "unauthenticated") {
-      const callbackUrl = encodeURIComponent(pathname + window.location.search);
-      window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
-    }
+    setProfileState((prev) => ({ ...prev, authStatus: status }));
   }, [status]);
 
   useEffect(() => {
@@ -164,6 +135,7 @@ export function useSellerProfile() {
         setProfileState((prev) => ({
           ...prev,
           ...cachedProfile,
+          authStatus: status,
           isLoading: false,
         }));
       }
@@ -172,12 +144,42 @@ export function useSellerProfile() {
     return () => {
       listeners.delete(handleUpdate);
     };
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function fetchProfile() {
+      if (typeof window === "undefined") return;
+
+      const pathname = window.location.pathname;
+      const isPublicSellerPath =
+        pathname === "/seller/login" ||
+        pathname === "/seller/res/login" ||
+        pathname === "/auth/login/seller" ||
+        pathname.startsWith("/seller/registration") ||
+        pathname.startsWith("/seller/account-information") ||
+        pathname.startsWith("/seller/business-information") ||
+        pathname.startsWith("/seller/confirm-information") ||
+        pathname.startsWith("/seller/confirm-registration") ||
+        pathname.startsWith("/seller/legal-documents") ||
+        pathname.startsWith("/seller/legal-information") ||
+        pathname.startsWith("/seller/media-gallery") ||
+        pathname.startsWith("/seller/media-information") ||
+        pathname.startsWith("/seller/registration-submitted") ||
+        pathname.startsWith("/seller/faq") ||
+        pathname.startsWith("/seller/res/faq") ||
+        pathname.startsWith("/seller/tc") ||
+        pathname.startsWith("/seller/res/tc");
+
+      // Don't fetch profile if unauthenticated or on public onboarding pages
+      if (status === "unauthenticated" || isPublicSellerPath) {
+        if (isMounted) {
+          setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
+        }
+        return;
+      }
+
       try {
         const res = await fetchApi("/api/seller/profile");
         if (res.ok) {
@@ -188,7 +190,7 @@ export function useSellerProfile() {
           const validUserName = user?.name && !isGenericFallbackName(user.name) ? user.name : "";
           const validSessionName = sessionName && !isGenericFallbackName(sessionName) ? sessionName : "";
           const rawBusinessName =
-            profile?.businessName || validUserName || validSessionName || "Radha's Kitchen";
+            profile?.businessName || validUserName || validSessionName || user?.name || "Kitchen Owner";
           const rawOwnerName = rawBusinessName;
           const rawFullName = validUserName || validSessionName || user?.name || rawBusinessName;
           const rawEmail = user?.email || sessionEmail || "";
@@ -235,29 +237,18 @@ export function useSellerProfile() {
               partnerRole: "Neo Cloud Partner",
               isOnline: rawOnline,
               isLoading: false,
+              authStatus: status,
               user,
               profile,
             });
           }
-        } else if (res.status === 401) {
-          if (typeof window !== "undefined") {
-            const pathname = window.location.pathname;
-            const isPublicSellerPath =
-              pathname === "/seller/login" ||
-              pathname === "/seller/res/login" ||
-              pathname === "/auth/login/seller" ||
-              pathname.startsWith("/seller/registration") ||
-              pathname.startsWith("/seller/faq") ||
-              pathname.startsWith("/seller/tc");
-
-            if (!isPublicSellerPath && (pathname.startsWith("/seller") || pathname.startsWith("/dashboard/seller"))) {
-              const callbackUrl = encodeURIComponent(pathname + window.location.search);
-              window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
-            }
-          }
         }
       } catch (e) {
         console.error("useSellerProfile fetch error:", e);
+      } finally {
+        if (isMounted) {
+          setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
+        }
       }
     }
 
@@ -266,7 +257,7 @@ export function useSellerProfile() {
     return () => {
       isMounted = false;
     };
-  }, [sessionName, sessionEmail]);
+  }, [sessionName, sessionEmail, status]);
 
   return profileState;
 }

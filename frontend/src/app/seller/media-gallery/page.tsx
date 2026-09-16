@@ -1,16 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   SellerLayout,
   MediaGallery,
+  MediaGalleryData,
 } from "@/components/seller";
+import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store";
 
 export default function MediaGalleryPage() {
   const router = useRouter();
+  const [initialMedia, setInitialMedia] = useState<Partial<MediaGalleryData>>({
+    kitchenPhotos: [null, null, null, null],
+    cuisinePhotos: [null, null, null, null],
+    roomPhotos: [null, null],
+  });
 
-  const handleContinue = () => {
+  useEffect(() => {
+    const draft = getSellerDraft();
+    setInitialMedia({
+      kitchenPhotos: draft.kitchenPhotos || [null, null, null, null],
+      cuisinePhotos: draft.cuisinePhotos || [null, null, null, null],
+      roomPhotos: draft.roomPhotos || [null, null],
+    });
+  }, []);
+
+  const handleContinue = (data: MediaGalleryData) => {
+    saveSellerDraft({
+      kitchenPhotos: data.kitchenPhotos,
+      cuisinePhotos: data.cuisinePhotos,
+      roomPhotos: data.roomPhotos,
+    });
     router.push("/seller/confirm-registration");
   };
 
@@ -24,8 +45,9 @@ export default function MediaGalleryPage() {
       activeSidebarItem="registration"
       pageTitle="Neo Cloud Room Onboarding"
     >
-      {/* 5-Step Stepper Wizard (Step 4 Active, Steps 1, 2, 3 Completed with Orange Tick) */}
       <MediaGallery
+        key={initialMedia.kitchenPhotos?.filter(Boolean).length ? "media-loaded" : "media-init"}
+        initialData={initialMedia}
         onContinue={handleContinue}
         onBack={handleBack}
       />

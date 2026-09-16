@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import {
@@ -11,9 +12,13 @@ import {
   CreditCard,
   AlertTriangle,
   ArrowRight,
+  ShieldAlert,
+  Sparkles,
+  Lock,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { performLogout } from "@/lib/logout";
 import styles from "./SellerDashboard.module.css";
 
 export interface OrderItem {
@@ -47,14 +52,42 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   onSyncDevices,
   onRenewPlan,
 }) => {
+  const router = useRouter();
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [orders, setOrders] = useState<OrderItem[]>(initialOrders || []);
   const [overview, setOverview] = useState<any>(null);
+  const [statusData, setStatusData] = useState<any>(null);
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
+
+  // Verification status routing protection:
+  // If seller is PENDING or REVISION, redirect them to the verification status page.
+  useEffect(() => {
+    if (seller.authStatus === "authenticated") {
+      const vStatus = seller.profile?.verificationStatus;
+      if (vStatus === "PENDING" || vStatus === "REVISION") {
+        router.replace("/seller/verification-status");
+      }
+    }
+  }, [seller.authStatus, seller.profile?.verificationStatus, router]);
+
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        const res = await fetchApi("/api/seller/dashboard/status");
+        if (res.ok) {
+          const d = await res.json();
+          setStatusData(d.data || d);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard status:", err);
+      }
+    }
+    loadStatus();
+  }, []);
 
   useEffect(() => {
     if (initialOrders && initialOrders.length > 0) {
@@ -138,6 +171,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     }
   };
 
+  const isRejected = seller.profile?.verificationStatus === "REJECTED";
+  const hasActiveSub = statusData ? Boolean(statusData.hasActiveSub) : true;
+
+  const handleOpenSubscriptionModal = () => {
+    window.dispatchEvent(
+      new CustomEvent("open-subscription-modal", {
+        detail: { category: seller.profile?.businessCategory || "FOOD" },
+      })
+    );
+  };
+
   return (
     <div className={styles.dashboardContainer}>
       {/* 1. Left Sidebar Component with active Dashboard tab */}
@@ -165,169 +209,330 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         {/* Main Canvas Area */}
         <main className={styles.mainContent}>
-          {/* Header Row: Title & Subtitle + Sync Devices Button */}
-          <div className={styles.headerRow}>
-            <div className={styles.headerGroup}>
-              <h1 className={styles.title}>Operations Dashboard</h1>
-              <p className={styles.subtitle}>
-                Real-time tracking of Neo Cloud Room revenue and food delivery metrics.
+          {isRejected ? (
+            <div style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "20px",
+              border: "1px solid #FEE2E2",
+              padding: "48px 24px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              maxWidth: "540px",
+              margin: "40px auto",
+              boxShadow: "0 10px 30px rgba(220, 38, 38, 0.06)",
+              gap: "14px",
+            }}>
+              <div style={{
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                backgroundColor: "#FEF2F2",
+                color: "#DC2626",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <ShieldAlert size={36} />
+              </div>
+              <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#991B1B", margin: 0 }}>
+                Application Declined
+              </h2>
+              <p style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.5, margin: 0 }}>
+                Your seller application has been declined by the administration team. Dashboard operations are currently disabled.
               </p>
-            </div>
-            <button
-              type="button"
-              className={styles.syncBtn}
-              onClick={onSyncDevices}
-            >
-              Sync Devices
-            </button>
-          </div>
-
-          {/* 4-Stat Cards Row */}
-          <div className={styles.statsGrid}>
-            {/* Card 1: Revenue Today */}
-            <div className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardLabel}>Revenue Today</span>
-                <div className={styles.iconBadge}>
-                  <ShoppingBag size={18} strokeWidth={2.4} />
+              {seller.profile?.verificationNote && (
+                <div style={{
+                  backgroundColor: "#FFF5F5",
+                  border: "1px solid #FECACA",
+                  borderRadius: "10px",
+                  padding: "14px 18px",
+                  fontSize: "13px",
+                  color: "#991B1B",
+                  textAlign: "left",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}>
+                  <strong style={{ display: "block", marginBottom: "4px" }}>Admin Feedback:</strong>
+                  <p style={{ margin: 0, color: "#7F1D1D" }}>{seller.profile.verificationNote}</p>
                 </div>
-              </div>
-              <h2 className={styles.cardValue}>
-                {overview ? `₹${(overview.totalRevenue || 0).toLocaleString("en-IN")}` : "₹0"}
-              </h2>
-              <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>Live</span>
-                <span className={styles.footerMuted}>total revenue</span>
+              )}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", marginTop: "10px" }}>
+                <Link
+                  href="/seller/registration"
+                  style={{
+                    padding: "11px 20px",
+                    background: "linear-gradient(135deg, #EA580C, #F97316)",
+                    color: "#FFFFFF",
+                    borderRadius: "10px",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Reapply for Registration
+                </Link>
+                <Link
+                  href="/seller/support"
+                  style={{
+                    padding: "11px 20px",
+                    backgroundColor: "#F1F5F9",
+                    color: "#334155",
+                    borderRadius: "10px",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Contact Support
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => performLogout({ role: "SELLER" })}
+                  style={{
+                    padding: "11px 20px",
+                    background: "none",
+                    border: "1px solid #CBD5E1",
+                    color: "#64748B",
+                    borderRadius: "10px",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Sign Out
+                </button>
               </div>
             </div>
-
-            {/* Card 2: Orders Today */}
-            <div className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardLabel}>Orders Today</span>
-                <div className={styles.iconBadge}>
-                  <Truck size={18} strokeWidth={2.4} />
+          ) : (
+            <>
+              {/* Inactive Subscription Notice Banner */}
+              {!hasActiveSub && (
+                <div style={{
+                  backgroundColor: "#FFF1E8",
+                  border: "1.5px solid #FFD4C2",
+                  borderRadius: "16px",
+                  padding: "16px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                  marginBottom: "20px",
+                  flexWrap: "wrap",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "10px",
+                      backgroundColor: "#FF5500",
+                      color: "#FFFFFF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}>
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: "14.5px", fontWeight: "700", color: "#0F172A", margin: "0 0 2px 0" }}>
+                        Account Verified — Subscription Plan Required
+                      </h3>
+                      <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0 }}>
+                        Activate your partner subscription to unlock live order processing, menu management, and room booking tools.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenSubscriptionModal}
+                    style={{
+                      padding: "10px 18px",
+                      backgroundColor: "#FF5500",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: "10px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
+                    }}
+                  >
+                    <span>Activate Subscription</span>
+                    <ArrowRight size={14} />
+                  </button>
                 </div>
-              </div>
-              <h2 className={styles.cardValue}>
-                {overview?.todayOrdersCount !== undefined ? overview.todayOrdersCount : 0}
-              </h2>
-              <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>Active</span>
-                <span className={styles.footerMuted}>orders today</span>
-              </div>
-            </div>
+              )}
 
-            {/* Card 3: Pending Bookings */}
-            <div className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardLabel}>Rooms & Bookings</span>
-                <div className={styles.iconBadge}>
-                  <Calendar size={18} strokeWidth={2.4} />
-                </div>
-              </div>
-              <h2 className={styles.cardValue}>
-                {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "0 Rooms"}
-              </h2>
-              <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>Inventory</span>
-                <span className={styles.footerMuted}>configured units</span>
-              </div>
-            </div>
-
-            {/* Card 4: COD Outstanding */}
-            <div className={styles.statCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardLabel}>COD Outstanding</span>
-                <div className={styles.iconBadge}>
-                  <CreditCard size={18} strokeWidth={2.4} />
-                </div>
-              </div>
-              <h2 className={styles.cardValue}>
-                {overview?.codOutstanding !== undefined ? `₹${(overview.codOutstanding || 0).toLocaleString("en-IN")}` : "₹0"}
-              </h2>
-              <div className={styles.cardFooter}>
-                <span className={styles.badgeOrange}>Audit</span>
-                <span className={styles.footerMuted}>rider cash balance</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Subscription Warning Banner (only if validUntilDate is approaching or present) */}
-          {overview?.validUntilDate && new Date(overview.validUntilDate).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 && (
-            <div className={styles.warningBanner}>
-              <div className={styles.warningLeft}>
-                <AlertTriangle className={styles.warningIcon} size={22} strokeWidth={2.2} />
-                <div className={styles.warningTextGroup}>
-                  <h3 className={styles.warningTitle}>Subscription Renewing Soon!</h3>
-                  <p className={styles.warningDescription}>
-                    Your Partner Plan expires on {new Date(overview.validUntilDate).toLocaleDateString("en-IN")}. Renew to avoid interruption.
+              {/* Header Row: Title & Subtitle + Sync Devices Button */}
+              <div className={styles.headerRow}>
+                <div className={styles.headerGroup}>
+                  <h1 className={styles.title}>Operations Dashboard</h1>
+                  <p className={styles.subtitle}>
+                    Real-time tracking of Neo Cloud Room revenue and food delivery metrics.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  className={styles.syncBtn}
+                  onClick={onSyncDevices}
+                >
+                  Sync Devices
+                </button>
               </div>
-              <button
-                type="button"
-                className={styles.renewBtn}
-                onClick={onRenewPlan}
-              >
-                Renew Plan
-              </button>
-            </div>
-          )}
 
-          {/* 4. Recent Food & Room Orders Table Card */}
-          <div className={styles.tableCard}>
-            <div className={styles.tableHeader}>
-              <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
-              <Link href="/seller/orders" className={styles.viewAllLink}>
-                <span>View All Orders</span>
-                <ArrowRight size={16} strokeWidth={2.4} />
-              </Link>
-            </div>
+              {/* 4-Stat Cards Row */}
+              <div className={styles.statsGrid}>
+                {/* Card 1: Revenue Today */}
+                <div className={styles.statCard}>
+                  <div className={styles.cardHeader}>
+                    <span className={styles.cardLabel}>Revenue Today</span>
+                    <div className={styles.iconBadge}>
+                      <ShoppingBag size={18} strokeWidth={2.4} />
+                    </div>
+                  </div>
+                  <h2 className={styles.cardValue}>
+                    {overview ? `₹${(overview.totalRevenue || 0).toLocaleString("en-IN")}` : "₹0"}
+                  </h2>
+                  <div className={styles.cardFooter}>
+                    <span className={styles.badgeOrange}>Live</span>
+                    <span className={styles.footerMuted}>total revenue</span>
+                  </div>
+                </div>
 
-            <div className={styles.tableContainer}>
-              <table className={styles.ordersTable}>
-                <thead>
-                  <tr>
-                    <th>ORDER ID</th>
-                    <th>CUSTOMER</th>
-                    <th>ROOM NO</th>
-                    <th>ITEMS</th>
-                    <th>TOTAL</th>
-                    <th>STATUS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: "center", padding: "36px 16px", color: "#64748b", fontSize: "14px" }}>
-                        No recent orders received yet today.
-                      </td>
-                    </tr>
-                  ) : (
-                    orders.map((order) => (
-                      <tr key={order.id}>
-                        <td className={styles.orderIdText}>{order.orderId}</td>
-                        <td className={styles.customerText}>{order.customer}</td>
-                        <td className={styles.roomNoText}>{order.roomNo}</td>
-                        <td className={styles.itemsText}>{order.items}</td>
-                        <td className={styles.totalPriceText}>{order.total}</td>
-                        <td>
-                          <span
-                            className={`${styles.statusBadge} ${getStatusBadgeClass(
-                              order.status
-                            )}`}
-                          >
-                            {order.status}
-                          </span>
-                        </td>
+                {/* Card 2: Orders Today */}
+                <div className={styles.statCard}>
+                  <div className={styles.cardHeader}>
+                    <span className={styles.cardLabel}>Orders Today</span>
+                    <div className={styles.iconBadge}>
+                      <Truck size={18} strokeWidth={2.4} />
+                    </div>
+                  </div>
+                  <h2 className={styles.cardValue}>
+                    {overview?.todayOrdersCount !== undefined ? overview.todayOrdersCount : 0}
+                  </h2>
+                  <div className={styles.cardFooter}>
+                    <span className={styles.badgeOrange}>Active</span>
+                    <span className={styles.footerMuted}>orders today</span>
+                  </div>
+                </div>
+
+                {/* Card 3: Pending Bookings */}
+                <div className={styles.statCard}>
+                  <div className={styles.cardHeader}>
+                    <span className={styles.cardLabel}>Rooms & Bookings</span>
+                    <div className={styles.iconBadge}>
+                      <Calendar size={18} strokeWidth={2.4} />
+                    </div>
+                  </div>
+                  <h2 className={styles.cardValue}>
+                    {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "0 Rooms"}
+                  </h2>
+                  <div className={styles.cardFooter}>
+                    <span className={styles.badgeOrange}>Inventory</span>
+                    <span className={styles.footerMuted}>configured units</span>
+                  </div>
+                </div>
+
+                {/* Card 4: COD Outstanding */}
+                <div className={styles.statCard}>
+                  <div className={styles.cardHeader}>
+                    <span className={styles.cardLabel}>COD Outstanding</span>
+                    <div className={styles.iconBadge}>
+                      <CreditCard size={18} strokeWidth={2.4} />
+                    </div>
+                  </div>
+                  <h2 className={styles.cardValue}>
+                    {overview?.codOutstanding !== undefined ? `₹${(overview.codOutstanding || 0).toLocaleString("en-IN")}` : "₹0"}
+                  </h2>
+                  <div className={styles.cardFooter}>
+                    <span className={styles.badgeOrange}>Audit</span>
+                    <span className={styles.footerMuted}>rider cash balance</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Subscription Warning Banner (only if validUntilDate is approaching or present) */}
+              {overview?.validUntilDate && new Date(overview.validUntilDate).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 && (
+                <div className={styles.warningBanner}>
+                  <div className={styles.warningLeft}>
+                    <AlertTriangle className={styles.warningIcon} size={22} strokeWidth={2.2} />
+                    <div className={styles.warningTextGroup}>
+                      <h3 className={styles.warningTitle}>Subscription Renewing Soon!</h3>
+                      <p className={styles.warningDescription}>
+                        Your Partner Plan expires on {new Date(overview.validUntilDate).toLocaleDateString("en-IN")}. Renew to avoid interruption.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.renewBtn}
+                    onClick={onRenewPlan}
+                  >
+                    Renew Plan
+                  </button>
+                </div>
+              )}
+
+              {/* 4. Recent Food & Room Orders Table Card */}
+              <div className={styles.tableCard}>
+                <div className={styles.tableHeader}>
+                  <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
+                  <Link href="/seller/orders" className={styles.viewAllLink}>
+                    <span>View All Orders</span>
+                    <ArrowRight size={16} strokeWidth={2.4} />
+                  </Link>
+                </div>
+
+                <div className={styles.tableContainer}>
+                  <table className={styles.ordersTable}>
+                    <thead>
+                      <tr>
+                        <th>ORDER ID</th>
+                        <th>CUSTOMER</th>
+                        <th>ROOM NO</th>
+                        <th>ITEMS</th>
+                        <th>TOTAL</th>
+                        <th>STATUS</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    </thead>
+                    <tbody>
+                      {orders.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: "center", padding: "36px 16px", color: "#64748b", fontSize: "14px" }}>
+                            No recent orders received yet today.
+                          </td>
+                        </tr>
+                      ) : (
+                        orders.map((order) => (
+                          <tr key={order.id}>
+                            <td className={styles.orderIdText}>{order.orderId}</td>
+                            <td className={styles.customerText}>{order.customer}</td>
+                            <td className={styles.roomNoText}>{order.roomNo}</td>
+                            <td className={styles.itemsText}>{order.items}</td>
+                            <td className={styles.totalPriceText}>{order.total}</td>
+                            <td>
+                              <span
+                                className={`${styles.statusBadge} ${getStatusBadgeClass(
+                                  order.status
+                                )}`}
+                              >
+                                {order.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </main>
       </div>
     </div>
