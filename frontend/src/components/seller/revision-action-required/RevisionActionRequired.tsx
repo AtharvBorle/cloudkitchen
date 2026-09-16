@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Upload, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Loader2, Image as ImageIcon, FileText, AlertTriangle, X } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
