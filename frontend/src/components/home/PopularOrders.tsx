@@ -113,6 +113,8 @@ export default function PopularOrders({
     sellerName: off.sellerName && off.sellerName !== "Chef Anjali's Gourmet Kitchen" && off.sellerName !== "Urban Spice Cloud Kitchen" ? off.sellerName : (activeSeller ? activeSeller.name : off.sellerName || "Verified Cloud Kitchen"),
   }));
 
+  const [addedId, setAddedId] = useState<string | null>(null);
+
   const handleOrderNow = (offer: OfferCardData) => {
     addToCart({
       id: offer.id,
@@ -124,7 +126,8 @@ export default function PopularOrders({
       sellerName: offer.sellerName || (activeSeller ? activeSeller.name : "Verified Cloud Kitchen"),
       image: offer.imageUrl,
     });
-    router.push("/user/cart");
+    setAddedId(offer.id);
+    setTimeout(() => setAddedId(null), 1800);
   };
 
   return (
@@ -291,7 +294,7 @@ export default function PopularOrders({
                 onClick={() => handleOrderNow(offer)}
                 style={{
                   marginTop: "auto",
-                  backgroundColor: "#FF6B00",
+                  backgroundColor: addedId === offer.id ? "#10B981" : "#FF6B00",
                   color: "#FFFFFF",
                   fontSize: "0.92rem",
                   fontWeight: "700",
@@ -300,14 +303,17 @@ export default function PopularOrders({
                   textAlign: "center",
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
+                  boxShadow: addedId === offer.id ? "0 4px 12px rgba(16, 185, 129, 0.3)" : "0 4px 12px rgba(255, 107, 0, 0.25)",
                   transition: "all 0.2s ease",
-                  display: "block",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
                   width: "100%",
                 }}
                 className="offer-order-btn"
               >
-                Order Now
+                {addedId === offer.id ? "✓ Added to Cart" : "Order Now"}
               </button>
             </div>
           ))}
