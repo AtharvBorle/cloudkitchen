@@ -26,6 +26,7 @@ import {
   ActiveLoginSessionsCard,
 } from "./security-settings/SellerSecuritySettings";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./SettingsCanvas.module.css";
 
 export type SettingsTab = "General" | "Notifications" | "Security" | "Preferences";
@@ -437,14 +438,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                 {/* Phone Number */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
+                  <PhoneInput
+                    id="settings-phone"
+                    label="Phone Number"
                     value={formData.phoneNumber}
-                    onChange={handleInputChange}
-                    className={styles.input}
-                    placeholder="Enter phone number"
+                    onChange={(val) =>
+                      setFormData((prev) => ({ ...prev, phoneNumber: val }))
+                    }
+                    placeholder="98765 43210"
                   />
                 </div>
 

@@ -7,6 +7,7 @@ import { Banknote, ShieldCheck, Tag, Zap, ChevronLeft, ChevronRight, Calendar as
 import Script from "next/script";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -937,14 +938,12 @@ function CheckoutContent() {
                         <div style={{ marginBottom: "25px" }}>
                             <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "15px" }}>Contact Details</h3>
                             <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Phone Number</label>
-                                <input
-                                    type="tel"
-                                    readOnly
+                                <PhoneInput
+                                    label="Phone Number"
                                     value={phone}
-                                    className="input-field"
-                                    style={{ backgroundColor: '#F9FAFB', color: 'var(--text-muted)', cursor: 'not-allowed' }}
-                                    placeholder="Phone missing - update in profile"
+                                    onChange={(val) => setPhone(val)}
+                                    placeholder="98765 43210"
+                                    required
                                 />
                                 <p style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '5px' }}><a href="/dashboard/user/profile" style={{ textDecoration: 'underline' }}>Update phone number in Profile</a></p>
                             </div>

@@ -151,8 +151,15 @@ export default function RoomConfigCanvas({
     const newPhotoUrls: string[] = [];
     const addedFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
-      newPhotoUrls.push(URL.createObjectURL(files[i]));
-      addedFiles.push(files[i]);
+      const file = files[i];
+      if (file.size > 5 * 1024 * 1024) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        alert(`Photo "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select images under 5MB.`);
+        e.target.value = "";
+        return;
+      }
+      newPhotoUrls.push(URL.createObjectURL(file));
+      addedFiles.push(file);
     }
 
     setRawFiles((prev) => [...prev, ...addedFiles]);

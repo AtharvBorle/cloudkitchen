@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Eye, EyeOff, CheckCircle2, Loader2, Bell } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./ResponsiveAddAgent.module.css";
 
 export interface ResponsiveAddAgentFormData {
@@ -204,15 +206,15 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
 
             {/* Field 2: Phone Number */}
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>Phone Number</label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                placeholder="e.g. +91 98765 43210"
+              <PhoneInput
+                id="res-agent-phone"
+                label="Phone Number"
+                placeholder="98765 43210"
                 value={formData.phoneNumber}
-                onChange={handleInputChange}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, phoneNumber: val }))
+                }
                 required
-                className={styles.inputField}
               />
             </div>
 
@@ -232,50 +234,36 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
 
             {/* Field 4: Password */}
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>Password</label>
-              <div className={styles.inputWrapper}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Enter password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  className={`${styles.inputField} ${styles.inputFieldWithToggle}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className={styles.toggleEyeBtn}
-                  title={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <PasswordInput
+                id="res-agent-password"
+                label="Password"
+                placeholder="Enter password"
+                value={formData.password}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, password: val }))
+                }
+                required
+                autoComplete="new-password"
+                minLength={6}
+              />
             </div>
 
             {/* Field 5: Confirm Password */}
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>Confirm Password</label>
-              <div className={styles.inputWrapper}>
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  placeholder="Re-enter password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
-                  className={`${styles.inputField} ${styles.inputFieldWithToggle}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className={styles.toggleEyeBtn}
-                  title={showConfirmPassword ? "Hide password" : "Show password"}
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <PasswordInput
+                id="res-agent-confirm-password"
+                label="Confirm Password"
+                placeholder="Re-enter password"
+                value={formData.confirmPassword || ""}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, confirmPassword: val }))
+                }
+                required
+                isConfirm
+                matchValue={formData.password}
+                autoComplete="new-password"
+                minLength={6}
+              />
             </div>
 
             {/* Buttons */}

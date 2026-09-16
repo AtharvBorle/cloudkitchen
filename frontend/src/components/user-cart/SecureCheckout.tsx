@@ -25,6 +25,7 @@ import { Navbar } from "@/components/navbar";
 import { fetchApi } from "@/lib/fetch-api";
 import { useLocation } from "@/components/location-provider";
 import { Footer } from "@/components/explore-desktop/footer";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./SecureCheckout.module.css";
 
 export interface CheckoutSummaryItem {
@@ -628,32 +629,19 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
                     </div>
 
                     <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel} htmlFor="phoneNumberInput">
-                        Phone Number <span className={styles.requiredStar}>*</span>
-                      </label>
-                      <div
-                        className={`${styles.inputWrapper} ${
-                          errors.phoneNumber ? styles.inputWrapperError : ""
-                        }`}
-                      >
-                        <Phone size={18} className={styles.fieldIcon} />
-                        <input
-                          id="phoneNumberInput"
-                          type="tel"
-                          value={phoneNumber}
-                          onChange={(e) =>
-                            handleFieldChange("phoneNumber", e.target.value, setPhoneNumber)
+                      <PhoneInput
+                        id="phoneNumberInput"
+                        label="Phone Number"
+                        required
+                        placeholder="98765 43210"
+                        value={phoneNumber}
+                        onChange={(val) => {
+                          setPhoneNumber(val);
+                          if (errors.phoneNumber) {
+                            setErrors((prev) => ({ ...prev, phoneNumber: undefined }));
                           }
-                          placeholder={
-                            errors.phoneNumber
-                              ? "Please enter 10-digit mobile number"
-                              : "e.g. 9876543210"
-                          }
-                          className={`${styles.fieldInput} ${
-                            errors.phoneNumber ? styles.fieldInputError : ""
-                          }`}
-                        />
-                      </div>
+                        }}
+                      />
                     </div>
                   </div>
 

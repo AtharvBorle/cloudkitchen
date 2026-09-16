@@ -97,6 +97,34 @@ export async function toggleSellerOnlineStatus(newStatus?: boolean): Promise<boo
   }
 }
 
+export function isPublicSellerRoute(pathname?: string): boolean {
+  if (!pathname) return false;
+  return (
+    pathname === "/seller/login" ||
+    pathname === "/seller/res/login" ||
+    pathname === "/auth/login/seller" ||
+    pathname === "/seller-onboarding" ||
+    pathname.startsWith("/seller-onboarding") ||
+    pathname.startsWith("/seller/registration") ||
+    pathname.startsWith("/seller/registration-submitted") ||
+    pathname.startsWith("/seller/account-information") ||
+    pathname.startsWith("/seller/business-information") ||
+    pathname.startsWith("/seller/confirm-information") ||
+    pathname.startsWith("/seller/confirm-registration") ||
+    pathname.startsWith("/seller/legal-documents") ||
+    pathname.startsWith("/seller/legal-information") ||
+    pathname.startsWith("/seller/media-gallery") ||
+    pathname.startsWith("/seller/media-information") ||
+    pathname.startsWith("/seller/verification") ||
+    pathname.startsWith("/seller/verification-status") ||
+    pathname.startsWith("/seller/revision") ||
+    pathname.startsWith("/seller/faq") ||
+    pathname.startsWith("/seller/res/faq") ||
+    pathname.startsWith("/seller/tc") ||
+    pathname.startsWith("/seller/res/tc")
+  );
+}
+
 export function useSellerProfile() {
   const { data: session, status } = useSession();
   const sessionName = session?.user?.name || "";
@@ -127,6 +155,22 @@ export function useSellerProfile() {
 
   useEffect(() => {
     setProfileState((prev) => ({ ...prev, authStatus: status }));
+
+    if (typeof window === "undefined") return;
+
+    const pathname = window.location.pathname;
+    const isPublicSellerPath = isPublicSellerRoute(pathname);
+
+    const isSellerRoute =
+      pathname === "/seller" ||
+      pathname.startsWith("/seller/") ||
+      pathname === "/dashboard/seller" ||
+      pathname.startsWith("/dashboard/seller/");
+
+    if (isSellerRoute && !isPublicSellerPath && status === "unauthenticated") {
+      const callbackUrl = encodeURIComponent(pathname + window.location.search);
+      window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
+    }
   }, [status]);
 
   useEffect(() => {
@@ -150,30 +194,7 @@ export function useSellerProfile() {
     let isMounted = true;
 
     async function fetchProfile() {
-      if (typeof window === "undefined") return;
-
-      const pathname = window.location.pathname;
-      const isPublicSellerPath =
-        pathname === "/seller/login" ||
-        pathname === "/seller/res/login" ||
-        pathname === "/auth/login/seller" ||
-        pathname.startsWith("/seller/registration") ||
-        pathname.startsWith("/seller/account-information") ||
-        pathname.startsWith("/seller/business-information") ||
-        pathname.startsWith("/seller/confirm-information") ||
-        pathname.startsWith("/seller/confirm-registration") ||
-        pathname.startsWith("/seller/legal-documents") ||
-        pathname.startsWith("/seller/legal-information") ||
-        pathname.startsWith("/seller/media-gallery") ||
-        pathname.startsWith("/seller/media-information") ||
-        pathname.startsWith("/seller/registration-submitted") ||
-        pathname.startsWith("/seller/faq") ||
-        pathname.startsWith("/seller/res/faq") ||
-        pathname.startsWith("/seller/tc") ||
-        pathname.startsWith("/seller/res/tc");
-
-      // Don't fetch profile if unauthenticated or on public onboarding pages
-      if (status === "unauthenticated" || isPublicSellerPath) {
+      if (typeof window !== "undefined" && isPublicSellerRoute(window.location.pathname) && status === "unauthenticated") {
         if (isMounted) {
           setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
         }
@@ -241,6 +262,16 @@ export function useSellerProfile() {
               user,
               profile,
             });
+          }
+        } else if (res.status === 401) {
+          if (typeof window !== "undefined") {
+            const pathname = window.location.pathname;
+            const isPublicSellerPath = isPublicSellerRoute(pathname);
+
+            if (!isPublicSellerPath && (pathname.startsWith("/seller") || pathname.startsWith("/dashboard/seller"))) {
+              const callbackUrl = encodeURIComponent(pathname + window.location.search);
+              window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
+            }
           }
         }
       } catch (e) {

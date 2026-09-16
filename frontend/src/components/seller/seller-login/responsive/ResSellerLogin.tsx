@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./ResSellerLogin.module.css";
 
 export interface ResSellerLoginProps {
@@ -130,30 +131,16 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
 
           {/* Password Field */}
           <div className={styles.fieldGroup}>
-            <label htmlFor="resOwnerPassword" className={styles.label}>
-              Password
-            </label>
-            <div className={styles.inputWrapper}>
-              <Lock size={18} className={styles.fieldIcon} />
-              <input
-                id="resOwnerPassword"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className={styles.input}
-                required
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className={styles.togglePasswordBtn}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
+            <PasswordInput
+              id="resOwnerPassword"
+              label="Password"
+              required
+              showLeftIcon
+              placeholder="••••••••"
+              value={password}
+              onChange={(val) => setPassword(val)}
+              autoComplete="current-password"
+            />
           </div>
 
           {/* Remember Me & Forgot Password Row */}

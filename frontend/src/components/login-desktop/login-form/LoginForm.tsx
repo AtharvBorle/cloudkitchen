@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import styles from "./LoginForm.module.css";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import {
   Mail,
   Lock,
@@ -295,35 +297,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
                   {/* Password Field */}
                   <div className={styles.inputGroup}>
-                    <label htmlFor="password" className={styles.inputLabel}>
-                      Password
-                    </label>
-                    <div className={styles.inputWrapper}>
-                      <Lock size={18} className={styles.fieldIcon} />
-                      <input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className={styles.textInput}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className={styles.eyeBtn}
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                      >
-                        {showPassword ? (
-                          <Eye size={18} className={styles.eyeIcon} />
-                        ) : (
-                          <EyeOff size={18} className={styles.eyeIcon} />
-                        )}
-                      </button>
-                    </div>
+                    <PasswordInput
+                      id="password"
+                      label="Password"
+                      required
+                      showLeftIcon
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(val) => setPassword(val)}
+                      autoComplete="current-password"
+                    />
                   </div>
 
                   {/* Remember Me & Forgot Password Row */}
@@ -364,40 +347,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 <div key="otp-fields" className={styles.slideLeft}>
                   {/* Mobile Number Field with Send OTP Button */}
                   <div className={styles.inputGroup}>
-                    <label htmlFor="phone" className={styles.inputLabel}>
-                      Enter Mobile Number
-                    </label>
-                    <div className={styles.phoneInputWrapper}>
-                      <Phone size={18} className={styles.fieldIcon} />
-                      <span className={styles.countryCode}>+91</span>
-                      <input
-                        id="phone"
-                        type="tel"
-                        maxLength={10}
-                        placeholder="Enter 10-digit number"
-                        value={phoneNumber}
-                        onChange={(e) =>
-                          setPhoneNumber(e.target.value.replace(/\D/g, ""))
-                        }
-                        className={`${styles.textInput} ${styles.phoneTextInput}`}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className={styles.sendOtpBtn}
-                        onClick={handleSendOtp}
-                        disabled={
-                          phoneNumber.length < 10 ||
-                          (otpSent && resendTimer > 0)
-                        }
-                      >
-                        {otpSent
-                          ? resendTimer > 0
-                            ? `Resend (${resendTimer}s)`
-                            : "Resend OTP"
-                          : "Send OTP"}
-                      </button>
-                    </div>
+                    <PhoneInput
+                      id="phone"
+                      label="Enter Mobile Number"
+                      required
+                      placeholder="98765 43210"
+                      value={phoneNumber}
+                      onChange={(val) => setPhoneNumber(val)}
+                      rightAction={
+                        <button
+                          type="button"
+                          className={styles.sendOtpBtn}
+                          onClick={handleSendOtp}
+                          disabled={
+                            phoneNumber.length < 10 ||
+                            (otpSent && resendTimer > 0)
+                          }
+                        >
+                          {otpSent
+                            ? resendTimer > 0
+                              ? `Resend (${resendTimer}s)`
+                              : "Resend OTP"
+                            : "Send OTP"}
+                        </button>
+                      }
+                    />
                   </div>
 
                   {/* 6-box OTP Input */}

@@ -209,7 +209,14 @@ export default function CameraCaptureModal({ onCapture, onClose, skipWatermark =
                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
                             onChange={(e) => {
                                 if (e.target.files && e.target.files.length > 0) {
-                                    onCapture(e.target.files[0]);
+                                    const file = e.target.files[0];
+                                    if (file.size > 5 * 1024 * 1024) {
+                                        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                        alert(`Selected photo "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
+                                        e.target.value = "";
+                                        return;
+                                    }
+                                    onCapture(file);
                                     onClose();
                                 }
                             }}

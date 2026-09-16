@@ -97,6 +97,27 @@ export default function Topbar({
     if (onSearch) onSearch("");
   };
 
+  const getEffectiveTitle = () => {
+    if (title && title !== "Owner Operations Console") {
+      return title;
+    }
+    if (pathname?.startsWith("/seller/reviews") || pathname?.startsWith("/seller/res/reviews") || pathname?.startsWith("/dashboard/seller/reviews")) {
+      return "Reviews & Feedback";
+    }
+    if (pathname?.startsWith("/seller/offers/create") || pathname?.startsWith("/seller/res/offers/create") || pathname?.startsWith("/dashboard/seller/offers/create")) {
+      return "Create New Offer";
+    }
+    if (pathname?.startsWith("/seller/offers/edit") || pathname?.startsWith("/seller/res/offers/edit") || pathname?.startsWith("/dashboard/seller/offers/edit")) {
+      return "Edit Offer";
+    }
+    if (pathname?.startsWith("/seller/offers") || pathname?.startsWith("/seller/res/offers") || pathname?.startsWith("/dashboard/seller/offers")) {
+      return "Offers & Coupons";
+    }
+    return title || "Owner Operations Console";
+  };
+
+  const displayTitle = getEffectiveTitle();
+
   return (
     <header className={`${styles.sellerTopbar} seller-topbar`}>
       {/* Left: Title + Mobile Menu Trigger */}
@@ -112,10 +133,10 @@ export default function Topbar({
             aria-label="Open sidebar navigation"
             title="Open Menu"
           >
-            <Menu size={24} />
+            <Menu size={24} strokeWidth={2.2} />
           </button>
         )}
-        <h2 className={`${styles.title} topbar-title`}>{title}</h2>
+        <h2 className={`${styles.title} topbar-title`}>{displayTitle}</h2>
       </div>
 
       {/* Right Controls: Search + Notification + User Pill */}
@@ -197,7 +218,7 @@ export default function Topbar({
           title="Notifications"
           aria-label="Notifications"
         >
-          <Bell size={18} />
+          <Bell size={22} strokeWidth={2.2} />
           {unreadCount > 0 && (
             <span className={styles.notificationBadge}>
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -217,22 +238,25 @@ export default function Topbar({
       </div>
 
       <style jsx>{`
-        .notification-btn:hover {
-          background-color: #F1F5F9 !important;
-          color: #0F172A !important;
-        }
         @media (max-width: 900px) {
           .seller-topbar {
             padding: 0 16px !important;
+            height: 56px !important;
+            min-height: 56px !important;
           }
           .topbar-title {
-            font-size: 15px !important;
-            max-width: 220px !important;
+            font-size: 16.5px !important;
+            font-weight: 700 !important;
+            color: #0F172A !important;
+            max-width: none !important;
             white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
           }
           .topbar-search {
+            display: none !important;
+          }
+          .topbar-status-toggle {
             display: none !important;
           }
           .topbar-user-pill {
@@ -241,11 +265,13 @@ export default function Topbar({
         }
         @media (max-width: 480px) {
           .seller-topbar {
-            padding: 0 12px !important;
+            padding: 0 14px !important;
+            height: 56px !important;
+            min-height: 56px !important;
           }
           .topbar-title {
-            font-size: 14px !important;
-            max-width: 180px !important;
+            font-size: 16px !important;
+            max-width: none !important;
           }
         }
       `}</style>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, X, ArrowRight, ImageIcon } from "lucide-react";
+import { Plus, X, ArrowRight, ImageIcon, AlertTriangle } from "lucide-react";
 import styles from "./MediaGallery.module.css";
 import { readFileAsDataUrl } from "@/lib/seller-registration-store";
 
@@ -15,6 +15,15 @@ export interface MediaGalleryProps {
   initialData?: Partial<MediaGalleryData>;
   onContinue?: (data: MediaGalleryData) => void;
   onBack?: () => void;
+}
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+interface OversizeModalState {
+  isOpen: boolean;
+  fileName: string;
+  fileSizeFormatted: string;
+  categoryLabel: string;
 }
 
 export const MediaGallery: React.FC<MediaGalleryProps> = ({
@@ -38,7 +47,14 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       : [null, null]
   );
 
+  const [oversizeModal, setOversizeModal] = useState<OversizeModalState | null>(null);
   const [dragTarget, setDragTarget] = useState<string | null>(null);
+
+  const getCategoryLabel = (category: "kitchen" | "cuisine" | "room") => {
+    if (category === "kitchen") return "Kitchen Photos";
+    if (category === "cuisine") return "Cuisine Photos";
+    return "Room Photos";
+  };
 
   const triggerUpload = (category: "kitchen" | "cuisine" | "room", index: number) => {
     const el = document.getElementById(`${category}-media-input-${index}`) as HTMLInputElement;
@@ -54,12 +70,26 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     if (fileArray.length === 0) return;
 
     for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
       const targetIdx = startIndex + i;
       const maxSlots = category === "room" ? 2 : 4;
       if (targetIdx >= maxSlots) break;
 
+      const sizeInMB = file.size / (1024 * 1024);
+      const sizeFormatted = `${sizeInMB.toFixed(2)} MB`;
+
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setOversizeModal({
+          isOpen: true,
+          fileName: file.name,
+          fileSizeFormatted: sizeFormatted,
+          categoryLabel: getCategoryLabel(category),
+        });
+        continue;
+      }
+
       try {
-        const dataUrl = await readFileAsDataUrl(fileArray[i]);
+        const dataUrl = await readFileAsDataUrl(file);
         if (category === "kitchen") {
           setKitchenPhotos((prev) => {
             const next = [...prev];
@@ -471,6 +501,78 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Oversize warning modal popup */}
+      {oversizeModal?.isOpen && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setOversizeModal(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div className={styles.modalIconWrap}>
+                <AlertTriangle className={styles.modalAlertIcon} size={28} />
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setOversizeModal(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <h3 className={styles.modalTitle}>Image Size Limit Exceeded</h3>
+              <p className={styles.modalText}>
+                The selected photo for{" "}
+                <span className={styles.highlightText}>
+                  {oversizeModal.categoryLabel}
+                </span>{" "}
+                is too large to upload.
+              </p>
+
+              <div className={styles.fileDetailCard}>
+                <div className={styles.fileDetailRow}>
+                  <span className={styles.fileDetailLabel}>Selected Image:</span>
+                  <span className={styles.fileDetailValue} title={oversizeModal.fileName}>
+                    {oversizeModal.fileName}
+                  </span>
+                </div>
+                <div className={styles.fileDetailRow}>
+                  <span className={styles.fileDetailLabel}>Detected Size:</span>
+                  <span className={styles.fileSizeExceeded}>
+                    {oversizeModal.fileSizeFormatted}
+                  </span>
+                </div>
+                <div className={styles.fileDetailRow}>
+                  <span className={styles.fileDetailLabel}>Max Allowed:</span>
+                  <span className={styles.fileSizeLimit}>5.00 MB</span>
+                </div>
+              </div>
+
+              <p className={styles.modalTip}>
+                Please compress your image or select a photo under 5MB (PNG, JPG, WebP).
+              </p>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                type="button"
+                className={styles.modalPrimaryBtn}
+                onClick={() => setOversizeModal(null)}
+              >
+                Choose Another Photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

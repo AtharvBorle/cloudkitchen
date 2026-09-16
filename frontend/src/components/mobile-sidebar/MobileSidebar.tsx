@@ -204,11 +204,14 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       href: "/notifications-desktop",
       icon: <Bell className={styles.subnavIcon} size={15} />,
     },
+    /*
+    // PAYMENT METHODS (Disabled via comment - uncomment to re-enable in future)
     {
       label: "Payment Methods",
       href: "/payment-methods-desktop",
       icon: <CreditCard className={styles.subnavIcon} size={15} />,
     },
+    */
     {
       label: "Delivery Addresses",
       href: "/delivery-addresses-desktop",

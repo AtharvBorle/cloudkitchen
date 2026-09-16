@@ -183,22 +183,24 @@ export default function CreateOfferCanvasDas({
                   <span className={styles.draftDot} />
                   <span>Draft</span>
                 </div>
-                <button
-                  type="button"
-                  className={styles.saveDraftBtn}
-                  disabled={submitting}
-                  onClick={() => handlePublish(true)}
-                >
-                  Save Draft
-                </button>
-                <button
-                  type="button"
-                  className={styles.publishBtn}
-                  disabled={submitting}
-                  onClick={() => handlePublish(false)}
-                >
-                  {submitting ? "Publishing..." : "Publish Offer"}
-                </button>
+                <div className={styles.desktopActions}>
+                  <button
+                    type="button"
+                    className={styles.saveDraftBtn}
+                    disabled={submitting}
+                    onClick={() => handlePublish(true)}
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.publishBtn}
+                    disabled={submitting}
+                    onClick={() => handlePublish(false)}
+                  >
+                    {submitting ? "Publishing..." : "Publish Offer"}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -634,14 +636,35 @@ export default function CreateOfferCanvasDas({
                 </div>
               </div>
 
-              {/* Form Footer Ready State */}
-              <div className={styles.formFooter}>
-                <CheckCircle2 size={16} className={styles.successIcon} />
-                <span>
-                  {isFormValid
-                    ? "All required fields are filled. Ready to publish."
-                    : "Please fill in all required fields marked with *."}
-                </span>
+              {/* Form Footer Ready State & Mobile Actions */}
+              <div className={styles.formFooterContainer}>
+                <div className={styles.formFooter}>
+                  <ShieldCheck size={18} className={styles.successIcon} />
+                  <span>
+                    {isFormValid
+                      ? "All required fields are filled. Ready to publish."
+                      : "Please fill in all required fields marked with *."}
+                  </span>
+                </div>
+
+                <div className={styles.mobileFormActions}>
+                  <button
+                    type="button"
+                    className={styles.mobileSaveDraftBtn}
+                    disabled={submitting}
+                    onClick={() => handlePublish(true)}
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.mobilePublishBtn}
+                    disabled={submitting}
+                    onClick={() => handlePublish(false)}
+                  >
+                    {submitting ? "Publishing..." : "Publish Offer"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

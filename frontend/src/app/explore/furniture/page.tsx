@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { PhoneInput } from '@/components/common/PhoneInput/PhoneInput';
 
 export default function FurnitureQueryPage() {
     const [formData, setFormData] = useState({
@@ -135,14 +136,14 @@ export default function FurnitureQueryPage() {
 
                         <div className="form-grid">
                             <div className="form-group">
-                                <label>Mobile Number</label>
-                                <input
-                                    type="tel"
-                                    name="mobile"
+                                <PhoneInput
+                                    label="Mobile Number"
                                     required
                                     value={formData.mobile}
-                                    onChange={handleChange}
-                                    placeholder="+91 9876543210"
+                                    onChange={(val) =>
+                                        setFormData((prev) => ({ ...prev, mobile: val }))
+                                    }
+                                    placeholder="98765 43210"
                                 />
                             </div>
                             <div className="form-group">

@@ -4,6 +4,7 @@ import { signIn, getSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 
 export default function AdminLoginPage() {
     const router = useRouter();
@@ -102,15 +103,15 @@ export default function AdminLoginPage() {
                         />
                     </div>
 
-                    <div className="input-group">
-                        <input
+                    <div className="input-group" style={{ marginBottom: "16px" }}>
+                        <PasswordInput
                             id="password"
-                            type="password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="input-field"
+                            onChange={(val) => setPassword(val)}
                             placeholder="Password"
                             required
+                            autoComplete="current-password"
+                            minLength={6}
                         />
                     </div>
 

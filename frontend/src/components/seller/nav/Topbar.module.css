@@ -191,10 +191,61 @@
 @media (max-width: 1024px) {
   .sellerTopbar {
     padding: 0 16px;
+    height: 56px;
+    min-height: 56px;
+  }
+
+  .leftSection {
+    gap: 14px;
   }
 
   .mobileMenuTrigger {
     display: flex;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    color: #0F172A;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileMenuTrigger:hover {
+    background-color: transparent;
+    color: #0F172A;
+    border-color: transparent;
+  }
+
+  .title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0F172A;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .notificationBtn {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    color: #0F172A;
+  }
+
+  .notificationBtn:hover {
+    background-color: transparent;
+    color: #0F172A;
+  }
+
+  .notificationBadge {
+    display: none;
   }
 
   .searchWrapper {
@@ -204,15 +255,26 @@
   .partnerRole {
     display: none;
   }
+
+  .profilePill {
+    display: none;
+  }
 }
 
 @media (max-width: 520px) {
+  .sellerTopbar {
+    padding: 0 16px;
+    height: 56px;
+    min-height: 56px;
+  }
+
   .title {
-    font-size: 15px;
-    max-width: 140px;
+    font-size: 17px;
+    max-width: none;
   }
 
   .ownerName {
     display: none;
   }
 }
+

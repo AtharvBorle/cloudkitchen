@@ -2,6 +2,7 @@
 import { fetchApi } from "@/lib/fetch-api";
 
 import { useState, useEffect } from "react";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 export default function DeliveryProfilePage() {
     const [loading, setLoading] = useState(false);
@@ -130,8 +131,14 @@ export default function DeliveryProfilePage() {
                         </div>
 
                         <div className="input-group">
-                            <label style={{ fontSize: '0.9rem', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Phone Number</label>
-                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="input-field" disabled={!isEditing} required />
+                            <PhoneInput
+                                label="Phone Number"
+                                value={phone}
+                                onChange={(val) => setPhone(val)}
+                                disabled={!isEditing}
+                                placeholder="98765 43210"
+                                required
+                            />
                         </div>
 
                         <div className="input-group">
