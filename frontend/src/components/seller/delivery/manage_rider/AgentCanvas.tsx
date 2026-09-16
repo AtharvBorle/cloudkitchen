@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, X, Eye, EyeOff, Loader2 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 
 export interface AgentFormData {
   fullName: string;
@@ -367,119 +368,37 @@ export default function AgentCanvas({
             </div>
 
             {/* Field 4: Password */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#334155",
-                }}
-              >
-                Password
-              </label>
-              <div style={{ position: "relative", width: "100%" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Enter password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "10px 40px 10px 14px",
-                    borderRadius: "10px",
-                    border: "1px solid #E2E8F0",
-                    backgroundColor: "#FFFFFF",
-                    fontSize: "13.5px",
-                    color: "#0F172A",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    transition: "all 0.15s ease",
-                    fontFamily: "inherit",
-                  }}
-                  className="agent-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  style={{
-                    position: "absolute",
-                    right: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#94A3B8",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  title={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+            <div>
+              <PasswordInput
+                id="agent-password"
+                label="Password"
+                placeholder="Enter password"
+                value={formData.password}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, password: val }))
+                }
+                required
+                autoComplete="new-password"
+                minLength={6}
+              />
             </div>
 
             {/* Field 5: Confirm Password */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#334155",
-                }}
-              >
-                Confirm Password
-              </label>
-              <div style={{ position: "relative", width: "100%" }}>
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  placeholder="Re-enter password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "10px 40px 10px 14px",
-                    borderRadius: "10px",
-                    border: "1px solid #E2E8F0",
-                    backgroundColor: "#FFFFFF",
-                    fontSize: "13.5px",
-                    color: "#0F172A",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    transition: "all 0.15s ease",
-                    fontFamily: "inherit",
-                  }}
-                  className="agent-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  style={{
-                    position: "absolute",
-                    right: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#94A3B8",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  title={showConfirmPassword ? "Hide password" : "Show password"}
-                >
-                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+            <div>
+              <PasswordInput
+                id="agent-confirm-password"
+                label="Confirm Password"
+                placeholder="Re-enter password"
+                value={formData.confirmPassword || ""}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, confirmPassword: val }))
+                }
+                required
+                isConfirm
+                matchValue={formData.password}
+                autoComplete="new-password"
+                minLength={6}
+              />
             </div>
           </div>
         </div>

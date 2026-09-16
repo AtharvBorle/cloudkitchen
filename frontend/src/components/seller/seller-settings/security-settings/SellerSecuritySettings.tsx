@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./SellerSecuritySettings.module.css";
 
 export interface LoginSessionItem {
@@ -100,80 +101,43 @@ export const PasswordManagementCard: React.FC<PasswordManagementProps> = ({
       <div className={styles.passwordForm}>
         {/* Current Password */}
         <div className={styles.fieldGroup}>
-          <label htmlFor="current-password-input" className={styles.label}>
-            Current Password
-          </label>
-          <div className={styles.inputWrapper}>
-            <input
-              id="current-password-input"
-              type={showCurrent ? "text" : "password"}
-              value={current}
-              onChange={(e) => handleCurrentChange(e.target.value)}
-              placeholder="••••••••••••"
-              className={styles.input}
-              autoComplete="current-password"
-            />
-            <button
-              type="button"
-              className={styles.eyeButton}
-              onClick={() => setShowCurrent((prev) => !prev)}
-              aria-label={showCurrent ? "Hide current password" : "Show current password"}
-            >
-              {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <PasswordInput
+            id="current-password-input"
+            label="Current Password"
+            value={current}
+            onChange={(val) => handleCurrentChange(val)}
+            placeholder="••••••••••••"
+            autoComplete="current-password"
+            minLength={6}
+          />
         </div>
 
         {/* New Password */}
         <div className={styles.fieldGroup}>
-          <label htmlFor="new-password-input" className={styles.label}>
-            New Password
-          </label>
-          <div className={styles.inputWrapper}>
-            <input
-              id="new-password-input"
-              type={showNew ? "text" : "password"}
-              value={newPass}
-              onChange={(e) => handleNewPassChange(e.target.value)}
-              placeholder="At least 8 characters long"
-              className={styles.input}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              className={styles.eyeButton}
-              onClick={() => setShowNew((prev) => !prev)}
-              aria-label={showNew ? "Hide new password" : "Show new password"}
-            >
-              {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <PasswordInput
+            id="new-password-input"
+            label="New Password"
+            value={newPass}
+            onChange={(val) => handleNewPassChange(val)}
+            placeholder="At least 8 characters long"
+            autoComplete="new-password"
+            minLength={8}
+          />
         </div>
 
         {/* Confirm New Password */}
         <div className={styles.fieldGroup}>
-          <label htmlFor="confirm-password-input" className={styles.label}>
-            Confirm New Password
-          </label>
-          <div className={styles.inputWrapper}>
-            <input
-              id="confirm-password-input"
-              type={showConfirm ? "text" : "password"}
-              value={confirm}
-              onChange={(e) => handleConfirmChange(e.target.value)}
-              placeholder="Re-enter your new password"
-              className={styles.input}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              className={styles.eyeButton}
-              onClick={() => setShowConfirm((prev) => !prev)}
-              aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
-            >
-              {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <PasswordInput
+            id="confirm-password-input"
+            label="Confirm New Password"
+            isConfirm
+            matchValue={newPass}
+            value={confirm}
+            onChange={(val) => handleConfirmChange(val)}
+            placeholder="Re-enter your new password"
+            autoComplete="new-password"
+            minLength={8}
+          />
         </div>
       </div>
     </section>

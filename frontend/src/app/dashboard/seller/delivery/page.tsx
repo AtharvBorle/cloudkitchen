@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Phone, Mail, User, Trash2, Edit2, Plus, ArrowLeft, X, Download } from "lucide-react";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 
 export default function DeliveryPersonsPage() {
     const [deliveryPersons, setDeliveryPersons] = useState<any[]>([]);
@@ -419,11 +420,13 @@ export default function DeliveryPersonsPage() {
                                         />
                                     </div>
                                     <div style={{ marginBottom: '15px' }}>
-                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', fontWeight: '500' }}>Password</label>
-                                        <input
-                                            type="password" value={password} onChange={e => setPassword(e.target.value)} required
-                                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '1rem' }}
+                                        <PasswordInput
+                                            label="Password"
+                                            value={password}
+                                            onChange={(val) => setPassword(val)}
                                             placeholder="Min 6 characters"
+                                            required
+                                            minLength={6}
                                         />
                                     </div>
                                 </>

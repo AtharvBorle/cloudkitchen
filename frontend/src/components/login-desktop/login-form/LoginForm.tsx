@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import styles from "./LoginForm.module.css";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import {
   Mail,
   Lock,
@@ -296,35 +297,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
                   {/* Password Field */}
                   <div className={styles.inputGroup}>
-                    <label htmlFor="password" className={styles.inputLabel}>
-                      Password
-                    </label>
-                    <div className={styles.inputWrapper}>
-                      <Lock size={18} className={styles.fieldIcon} />
-                      <input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className={styles.textInput}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className={styles.eyeBtn}
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                      >
-                        {showPassword ? (
-                          <Eye size={18} className={styles.eyeIcon} />
-                        ) : (
-                          <EyeOff size={18} className={styles.eyeIcon} />
-                        )}
-                      </button>
-                    </div>
+                    <PasswordInput
+                      id="password"
+                      label="Password"
+                      required
+                      showLeftIcon
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(val) => setPassword(val)}
+                      autoComplete="current-password"
+                    />
                   </div>
 
                   {/* Remember Me & Forgot Password Row */}

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./AccountInformation.module.css";
 
 export interface AccountStepData {
@@ -294,52 +295,16 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
 
         {/* Password */}
         <div className={styles.fieldGroup}>
-          <label className={styles.label} htmlFor="password">
-            Password <span className={styles.required}>*</span>
-          </label>
-          <div className={styles.inputWrapper}>
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              required
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              onBlur={() => handleBlur("password")}
-              className={`${styles.input} ${
-                isPasswordValid
-                  ? styles.inputSuccess
-                  : isPasswordError
-                  ? styles.inputError
-                  : ""
-              }`}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className={styles.togglePasswordBtn}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-          {isPasswordValid ? (
-            <div className={styles.helperTextSuccess}>
-              <CheckCircle2 size={13} />
-              <span>Password meets length requirement</span>
-            </div>
-          ) : isPasswordError ? (
-            <div className={styles.helperTextError}>
-              <AlertCircle size={13} />
-              <span>Must be at least 8 characters ({8 - formData.password.length} more needed)</span>
-            </div>
-          ) : (
-            <span className={styles.helperText}>
-              Must be at least 8 characters
-            </span>
-          )}
+          <PasswordInput
+            id="password"
+            name="password"
+            label="Password"
+            required
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={(val) => setFormData((prev) => ({ ...prev, password: val }))}
+            autoComplete="new-password"
+          />
         </div>
 
         {/* Seller Role */}

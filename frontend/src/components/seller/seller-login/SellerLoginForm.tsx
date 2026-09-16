@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./SellerLogin.module.css";
 
 export interface SellerLoginFormProps {
@@ -122,30 +123,16 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
 
             {/* Password Field */}
             <div className={styles.inputGroup}>
-              <label htmlFor="ownerPassword" className={styles.inputLabel}>
-                Password
-              </label>
-              <div className={styles.inputWrapper}>
-                <Lock size={18} className={styles.inputIcon} />
-                <input
-                  id="ownerPassword"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className={styles.textInput}
-                  required
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className={styles.eyeButton}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <PasswordInput
+                id="ownerPassword"
+                label="Password"
+                required
+                showLeftIcon
+                placeholder="••••••••"
+                value={password}
+                onChange={(val) => setPassword(val)}
+                autoComplete="current-password"
+              />
             </div>
 
             {/* Options Row: Remember Me & Forgot Password */}
