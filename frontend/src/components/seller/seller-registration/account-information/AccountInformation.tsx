@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { saveSellerRegistrationDraft } from "@/utils/sellerRegistrationDraft";
 import styles from "./AccountInformation.module.css";
 
 export interface AccountStepData {
@@ -70,12 +71,20 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      saveSellerRegistrationDraft({ account: next });
+      return next;
+    });
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
-    setFormData((prev) => ({ ...prev, phone: digitsOnly }));
+    setFormData((prev) => {
+      const next = { ...prev, phone: digitsOnly };
+      saveSellerRegistrationDraft({ account: next });
+      return next;
+    });
     setTouched((prev) => ({ ...prev, phone: true }));
   };
 

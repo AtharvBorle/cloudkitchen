@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ChevronDown, MapPin, ArrowRight, X } from "lucide-react";
+import { saveSellerRegistrationDraft } from "@/utils/sellerRegistrationDraft";
 import styles from "./BusinessInformation.module.css";
 
 export interface BusinessInformationData {
@@ -26,16 +27,14 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   onBack,
 }) => {
   const [formData, setFormData] = useState<BusinessInformationData>({
-    businessName: initialData?.businessName || "Neo Kitchens",
+    businessName: initialData?.businessName || "",
     sellerType: initialData?.sellerType || "FOOD",
     categories:
       initialData?.categories && initialData.categories.length > 0
         ? initialData.categories
         : ["North Indian", "Biryani"],
     foodType: initialData?.foodType || "BOTH",
-    address:
-      initialData?.address ||
-      "12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102",
+    address: initialData?.address || "",
     locationCoordinates: initialData?.locationCoordinates || {
       lat: 12.9121,
       lng: 77.6446,
@@ -50,27 +49,43 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      saveSellerRegistrationDraft({ business: next });
+      return next;
+    });
   };
 
   const handleSellerTypeSelect = (type: string) => {
-    setFormData((prev) => ({ ...prev, sellerType: type }));
+    setFormData((prev) => {
+      const next = { ...prev, sellerType: type };
+      saveSellerRegistrationDraft({ business: next });
+      return next;
+    });
   };
 
   const removeCategory = (catToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      categories: prev.categories.filter((cat) => cat !== catToRemove),
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        categories: prev.categories.filter((cat) => cat !== catToRemove),
+      };
+      saveSellerRegistrationDraft({ business: next });
+      return next;
+    });
   };
 
   const handleAddCategory = () => {
     const trimmed = newCategoryInput.trim();
     if (trimmed && !formData.categories.includes(trimmed)) {
-      setFormData((prev) => ({
-        ...prev,
-        categories: [...prev.categories, trimmed],
-      }));
+      setFormData((prev) => {
+        const next = {
+          ...prev,
+          categories: [...prev.categories, trimmed],
+        };
+        saveSellerRegistrationDraft({ business: next });
+        return next;
+      });
       setNewCategoryInput("");
       setShowAddCategory(false);
     }

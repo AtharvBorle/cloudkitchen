@@ -13,6 +13,7 @@ import {
   X,
   RefreshCw,
 } from "lucide-react";
+import { saveSellerRegistrationDraft } from "@/utils/sellerRegistrationDraft";
 import styles from "./LegalDocuments.module.css";
 
 export interface LegalDocumentsData {
@@ -129,10 +130,14 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
       [fileField]: sizeFormatted,
     }));
 
-    setFormData((prev) => ({
-      ...prev,
-      [fileField]: file.name,
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [fileField]: file.name,
+      };
+      saveSellerRegistrationDraft({ documents: next });
+      return next;
+    });
   };
 
   const handleFileSelect = (
@@ -175,10 +180,14 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     if (inputRef.current) {
       inputRef.current.value = "";
     }
-    setFormData((prev) => ({
-      ...prev,
-      [field]: "",
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [field]: "",
+      };
+      saveSellerRegistrationDraft({ documents: next });
+      return next;
+    });
     setFieldErrors((prev) => ({
       ...prev,
       [field]: null,
@@ -192,13 +201,21 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
 
   const handleBankAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/\D/g, "").slice(0, 18);
-    setFormData((prev) => ({ ...prev, bankAccountNumber: rawValue }));
+    setFormData((prev) => {
+      const next = { ...prev, bankAccountNumber: rawValue };
+      saveSellerRegistrationDraft({ documents: next });
+      return next;
+    });
     setBankTouched(true);
   };
 
   const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    setFormData((prev) => ({ ...prev, ifscCode: rawValue }));
+    setFormData((prev) => {
+      const next = { ...prev, ifscCode: rawValue };
+      saveSellerRegistrationDraft({ documents: next });
+      return next;
+    });
     setIfscTouched(true);
   };
 

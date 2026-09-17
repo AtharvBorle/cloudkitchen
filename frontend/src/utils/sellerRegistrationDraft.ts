@@ -40,11 +40,11 @@ export const DEFAULT_REGISTRATION_DRAFT: SellerRegistrationDraft = {
     sellerRole: "Owner",
   },
   business: {
-    businessName: "Neo Kitchens",
+    businessName: "",
     sellerType: "FOOD",
     categories: ["North Indian", "Biryani"],
     foodType: "BOTH",
-    address: "12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102",
+    address: "",
     locationCoordinates: { lat: 12.9121, lng: 77.6446 },
     isLocationPinned: true,
   },

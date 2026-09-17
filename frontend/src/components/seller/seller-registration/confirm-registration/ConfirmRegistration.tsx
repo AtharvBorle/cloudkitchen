@@ -31,7 +31,10 @@ export interface ConfirmRegistrationData {
   };
 }
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import {
+  getSellerRegistrationDraft,
+  SellerRegistrationDraft,
+} from "@/utils/sellerRegistrationDraft";
 
 export interface ConfirmRegistrationProps {
   data?: Partial<ConfirmRegistrationData>;
@@ -44,45 +47,66 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   onSubmit,
   onBack,
 }) => {
-  const seller = useSellerProfile();
+  const [draft, setDraft] = React.useState<SellerRegistrationDraft>(() =>
+    getSellerRegistrationDraft()
+  );
+
+  React.useEffect(() => {
+    setDraft(getSellerRegistrationDraft());
+  }, [data]);
 
   const account = {
-    ownerName:
-      data?.account?.ownerName ||
-      (seller.ownerName && seller.ownerName !== "Kitchen Owner"
-        ? seller.ownerName
-        : "Kitchen Owner"),
-    email: data?.account?.email || seller.email || "partner@neocloud.com",
-    phone: data?.account?.phone || seller.phone || "+91 98765 43210",
-    sellerRole: data?.account?.sellerRole || "Owner",
+    ownerName: data?.account?.ownerName || draft.account.ownerName || "—",
+    email: data?.account?.email || draft.account.email || "—",
+    phone:
+      data?.account?.phone ||
+      (draft.account.phone
+        ? draft.account.phone.startsWith("+91")
+          ? draft.account.phone
+          : `+91 ${draft.account.phone}`
+        : "—"),
+    sellerRole: data?.account?.sellerRole || draft.account.sellerRole || "Owner",
   };
 
   const business = {
-    name:
-      data?.business?.name ||
-      (seller.businessName && seller.businessName !== "Cloud Kitchen"
-        ? seller.businessName
-        : "Neo Kitchens"),
-    type: data?.business?.type || "Food",
-    cuisines: data?.business?.cuisines || "North Indian, Biryani",
-    address:
-      data?.business?.address ||
-      seller.address ||
-      "Cloud Kitchen Hub, Sector 6, Bangalore",
+    name: data?.business?.name || draft.business.businessName || "—",
+    type: data?.business?.type || draft.business.sellerType || "FOOD",
+    cuisines:
+      data?.business?.cuisines ||
+      (draft.business.categories && draft.business.categories.length > 0
+        ? draft.business.categories.join(", ")
+        : "—"),
+    address: data?.business?.address || draft.business.address || "—",
   };
 
   const documents = {
     identityProof:
-      data?.documents?.identityProof || "Identity Proof (Aadhaar/PAN)",
-    fssaiLicense: data?.documents?.fssaiLicense || "FSSAI License",
-    electricityBill: data?.documents?.electricityBill || "Electricity Bill",
-    bankAccountNumber: data?.documents?.bankAccountNumber || "",
-    ifscCode: data?.documents?.ifscCode || "",
+      data?.documents?.identityProof ||
+      draft.documents.identityProofFile ||
+      "Identity Proof (Aadhaar/PAN)",
+    fssaiLicense:
+      data?.documents?.fssaiLicense ||
+      draft.documents.fssaiLicenseFile ||
+      "FSSAI License",
+    electricityBill:
+      data?.documents?.electricityBill ||
+      draft.documents.utilityBillFile ||
+      "Electricity Bill",
+    bankAccountNumber:
+      data?.documents?.bankAccountNumber ||
+      draft.documents.bankAccountNumber ||
+      "",
+    ifscCode:
+      data?.documents?.ifscCode ||
+      draft.documents.ifscCode ||
+      "",
   };
 
   const media = {
-    photosCount: data?.media?.photosCount ?? 0,
-    previewThumbnails: data?.media?.previewThumbnails || [null, null, null],
+    photosCount: data?.media?.photosCount ?? draft.media.photosCount ?? 0,
+    previewThumbnails:
+      data?.media?.previewThumbnails ||
+      draft.media.previewThumbnails || [null, null, null],
   };
 
   return (
