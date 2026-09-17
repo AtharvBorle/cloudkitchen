@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import styles from "./SellerNavbar.module.css";
 
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -71,7 +71,7 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
         </h1>
       </div>
 
-      {/* 2. Right Side: Search -> Bell -> Avatar Circle -> Name & Designation */}
+      {/* 2. Right Side: Bell -> Avatar Circle -> Name & Designation */}
       <div
         className={styles.rightSection}
         style={{
@@ -82,41 +82,6 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
           flexShrink: 0,
         }}
       >
-        {/* Search Bar */}
-        <div
-          className={styles.searchWrapper}
-          style={{ position: "relative", display: "flex", alignItems: "center" }}
-        >
-          <Search
-            className={styles.searchIcon}
-            style={{
-              position: "absolute",
-              left: 12,
-              width: 16,
-              height: 16,
-              color: "#94a3b8",
-              pointerEvents: "none",
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search properties..."
-            className={styles.searchInput}
-            style={{
-              height: 40,
-              width: 240,
-              padding: "0 14px 0 38px",
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              backgroundColor: "#f8fafc",
-              fontSize: "0.88rem",
-              color: "#1e293b",
-              outline: "none",
-            }}
-            onChange={(e) => onSearch?.(e.target.value)}
-          />
-        </div>
-
         {/* Bell Notification Icon */}
         <button
           type="button"

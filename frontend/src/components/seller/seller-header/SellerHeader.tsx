@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Bell, Menu } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import styles from "./SellerHeader.module.css";
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -53,17 +53,8 @@ export const SellerHeader: React.FC<SellerHeaderProps> = ({
         <h1 className={styles.pageTitle}>{title}</h1>
       </div>
 
-      {/* Right: Search + Notifications + Profile */}
+      {/* Right: Notifications + Profile */}
       <div className={styles.rightSection}>
-        <div className={styles.searchWrapper}>
-          <Search className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder="Search properties..."
-            className={styles.searchInput}
-          />
-        </div>
-
         <button
           type="button"
           className={styles.notificationBtn}
