@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Upload, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Loader2, Image as ImageIcon, FileText, AlertTriangle, X } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, updateCachedProfile } from "@/hooks/useSellerProfile";
 import styles from "./RevisionActionRequired.module.css";
 import { validateFileSize } from "@/lib/file-validation";
 
@@ -228,6 +228,30 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
       });
 
       if (res.ok) {
+        try {
+          const profRes = await fetchApi("/api/seller/profile");
+          if (profRes.ok) {
+            const profData = await profRes.json();
+            const usr = profData.data?.user || profData.user;
+            const prof = profData.data?.profile || profData.profile;
+            updateCachedProfile({
+              user: usr,
+              profile: prof,
+              isOnline: prof?.isOnline ?? true,
+            });
+          }
+        } catch {
+          updateCachedProfile({
+            profile: {
+              ...seller.profile,
+              verificationStatus: "PENDING",
+              verificationNote: null,
+              foodVerificationStatus: "PENDING",
+              propertyVerificationStatus: "PENDING",
+            },
+          });
+        }
+
         alert("Documents resubmitted successfully! Your application is now back under review.");
         router.push("/seller/verification-status");
       } else {

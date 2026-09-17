@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { fetchApi } from "@/lib/fetch-api";
+import { updateCachedProfile } from "@/hooks/useSellerProfile";
 import styles from "./ResSellerLogin.module.css";
 
 export interface ResSellerLoginProps {
@@ -66,8 +68,48 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
         if (onSuccess) {
           onSuccess();
         } else {
-          const callbackUrl = searchParams?.get("callbackUrl") || "/seller/res/dashboard";
-          router.push(callbackUrl);
+          try {
+            const profRes = await fetchApi("/api/seller/profile");
+            if (profRes.ok) {
+              const profJson = await profRes.json();
+              const user = profJson.data?.user || profJson.user;
+              const profile = profJson.data?.profile || profJson.profile;
+              const vStatus = profile?.verificationStatus;
+
+              updateCachedProfile({
+                user,
+                profile,
+                isOnline: profile?.isOnline ?? true,
+              });
+
+              const explicitCallback = searchParams?.get("callbackUrl");
+
+              if (vStatus === "APPROVED") {
+                router.push(explicitCallback || "/seller/res/dashboard");
+              } else if (vStatus === "REVISION") {
+                router.push(
+                  explicitCallback && explicitCallback.startsWith("/seller/revision")
+                    ? explicitCallback
+                    : "/seller/revision"
+                );
+              } else if (vStatus === "REJECTED" || vStatus === "PENDING") {
+                router.push(
+                  explicitCallback &&
+                    (explicitCallback.startsWith("/seller/verification") ||
+                      explicitCallback.startsWith("/seller/registration"))
+                    ? explicitCallback
+                    : "/seller/verification-status"
+                );
+              } else {
+                router.push(explicitCallback || "/seller/verification-status");
+              }
+            } else {
+              router.push("/seller/registration");
+            }
+          } catch (routeErr) {
+            console.error("Post-login status check error:", routeErr);
+            router.push("/seller/verification-status");
+          }
         }
       }
     } catch (err) {
