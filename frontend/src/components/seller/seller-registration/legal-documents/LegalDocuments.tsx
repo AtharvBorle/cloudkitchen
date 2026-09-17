@@ -47,9 +47,15 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     identityProofFile: initialData?.identityProofFile || "",
     fssaiLicenseFile: initialData?.fssaiLicenseFile || "",
     utilityBillFile: initialData?.utilityBillFile || "",
-    bankAccountNumber: initialData?.bankAccountNumber || "9876543210123",
-    ifscCode: initialData?.ifscCode || "HDFC0001234",
+    bankAccountNumber: initialData?.bankAccountNumber || "",
+    ifscCode: initialData?.ifscCode || "",
   });
+
+  const [bankTouched, setBankTouched] = useState(!!initialData?.bankAccountNumber);
+  const [ifscTouched, setIfscTouched] = useState(!!initialData?.ifscCode);
+
+  const isBankValid = formData.bankAccountNumber.length >= 9 && formData.bankAccountNumber.length <= 18;
+  const isIfscValid = /^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode.trim().toUpperCase());
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({
     identityProofFile: null,
@@ -184,13 +190,32 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleBankAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, "").slice(0, 18);
+    setFormData((prev) => ({ ...prev, bankAccountNumber: rawValue }));
+    setBankTouched(true);
+  };
+
+  const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
+    setFormData((prev) => ({ ...prev, ifscCode: rawValue }));
+    setIfscTouched(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setBankTouched(true);
+    setIfscTouched(true);
+
+    if (!isBankValid) {
+      document.getElementById("bankAccountNumber")?.focus();
+      return;
+    }
+    if (!isIfscValid) {
+      document.getElementById("ifscCode")?.focus();
+      return;
+    }
+
     if (onContinue) {
       onContinue(formData);
     }
@@ -724,41 +749,153 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
         <div className={styles.bankingSection}>
           {/* Bank Account Number */}
           <div className={styles.fieldGroup}>
-            <label className={styles.label} htmlFor="bankAccountNumber">
-              Bank account number <span className={styles.required}>*</span>
-            </label>
-            <div className={styles.inputWrapper}>
+            <div className={styles.labelRow}>
+              <label className={styles.label} htmlFor="bankAccountNumber">
+                Bank account number <span className={styles.required}>*</span>
+              </label>
+              <span
+                className={`${styles.digitCounter} ${
+                  formData.bankAccountNumber.length === 0
+                    ? bankTouched
+                      ? styles.digitCounterIncomplete
+                      : styles.digitCounterNeutral
+                    : isBankValid
+                    ? styles.digitCounterComplete
+                    : styles.digitCounterIncomplete
+                }`}
+              >
+                {formData.bankAccountNumber.length > 0
+                  ? isBankValid
+                    ? `${formData.bankAccountNumber.length} digits`
+                    : `${formData.bankAccountNumber.length}/9-18 digits`
+                  : bankTouched
+                  ? "Required"
+                  : "9-18 digits (numbers only)"}
+              </span>
+            </div>
+            <div
+              className={`${styles.inputWrapper} ${
+                bankTouched
+                  ? isBankValid
+                    ? styles.inputSuccess
+                    : styles.inputError
+                  : ""
+              }`}
+            >
               <input
                 id="bankAccountNumber"
                 name="bankAccountNumber"
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={18}
                 required
-                placeholder="9876543210123"
+                placeholder="e.g. 987654321012 (numbers only)"
                 value={formData.bankAccountNumber}
-                onChange={handleInputChange}
+                onChange={handleBankAccountChange}
+                onBlur={() => setBankTouched(true)}
                 className={styles.input}
               />
+              <div className={styles.statusIconBox}>
+                {isBankValid ? (
+                  <CheckCircle2 size={18} className={styles.validCheckIcon} />
+                ) : bankTouched ? (
+                  <AlertCircle size={18} className={styles.invalidAlertIcon} />
+                ) : null}
+              </div>
             </div>
+            {bankTouched && (
+              isBankValid ? (
+                <div className={styles.helperTextSuccess}>
+                  <CheckCircle2 size={13} />
+                  <span>Valid bank account number (digits only)</span>
+                </div>
+              ) : formData.bankAccountNumber.length === 0 ? (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>Bank account number cannot be empty (numbers only, no symbols or letters)</span>
+                </div>
+              ) : (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>Bank account must be between 9 and 18 digits (numbers only)</span>
+                </div>
+              )
+            )}
           </div>
 
           {/* IFSC Code */}
           <div className={styles.fieldGroup}>
-            <label className={styles.label} htmlFor="ifscCode">
-              IFSC code <span className={styles.required}>*</span>
-            </label>
-            <div className={styles.inputWrapper}>
+            <div className={styles.labelRow}>
+              <label className={styles.label} htmlFor="ifscCode">
+                IFSC code <span className={styles.required}>*</span>
+              </label>
+              <span
+                className={`${styles.digitCounter} ${
+                  formData.ifscCode.length === 0
+                    ? ifscTouched
+                      ? styles.digitCounterIncomplete
+                      : styles.digitCounterNeutral
+                    : isIfscValid
+                    ? styles.digitCounterComplete
+                    : styles.digitCounterIncomplete
+                }`}
+              >
+                {formData.ifscCode.length > 0
+                  ? `${formData.ifscCode.length}/11 chars`
+                  : ifscTouched
+                  ? "Required"
+                  : "11 chars (no symbols)"}
+              </span>
+            </div>
+            <div
+              className={`${styles.inputWrapper} ${
+                ifscTouched
+                  ? isIfscValid
+                    ? styles.inputSuccess
+                    : styles.inputError
+                  : ""
+              }`}
+            >
               <input
                 id="ifscCode"
                 name="ifscCode"
                 type="text"
+                maxLength={11}
                 required
-                placeholder="HDFC0001234"
+                placeholder="e.g. HDFC0001234"
                 value={formData.ifscCode}
-                onChange={handleInputChange}
+                onChange={handleIfscChange}
+                onBlur={() => setIfscTouched(true)}
                 className={styles.input}
                 style={{ textTransform: "uppercase" }}
               />
+              <div className={styles.statusIconBox}>
+                {isIfscValid ? (
+                  <CheckCircle2 size={18} className={styles.validCheckIcon} />
+                ) : ifscTouched ? (
+                  <AlertCircle size={18} className={styles.invalidAlertIcon} />
+                ) : null}
+              </div>
             </div>
+            {ifscTouched && (
+              isIfscValid ? (
+                <div className={styles.helperTextSuccess}>
+                  <CheckCircle2 size={13} />
+                  <span>Valid IFSC code format</span>
+                </div>
+              ) : formData.ifscCode.length === 0 ? (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>IFSC code cannot be empty (no symbols allowed)</span>
+                </div>
+              ) : (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>11 chars: 4 letters + 0 + 6 alphanumeric (e.g. HDFC0001234, no symbols)</span>
+                </div>
+              )
+            )}
           </div>
         </div>
 
