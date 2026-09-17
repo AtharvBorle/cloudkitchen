@@ -196,26 +196,28 @@ export function saveSellerDraft(partial: Partial<SellerRegistrationDraft>): Sell
   // 2. Persist in IndexedDB for heavy image data
   saveToIDB(updated);
 
-  // 3. Persist in sessionStorage & localStorage
+  // 3. Persist in sessionStorage & localStorage safely
   if (typeof window !== "undefined") {
     try {
       const serialized = JSON.stringify(updated);
       sessionStorage.setItem(STORAGE_KEY, serialized);
       localStorage.setItem(STORAGE_KEY, serialized);
-    } catch (err) {
-      console.warn("Storage quota warning, saving lightweight draft without large data URLs:", err);
+    } catch {
+      // Storage quota reached: save lightweight metadata-only draft (in-memory & IndexedDB preserve data URLs)
       try {
-        // Fallback: strip heavy images for localStorage, rely on in-memory & IndexedDB for images
         const lightweight = {
           ...updated,
-          kitchenPhotos: updated.kitchenPhotos.map((p) => (p ? "data:image/present" : null)),
-          cuisinePhotos: updated.cuisinePhotos.map((p) => (p ? "data:image/present" : null)),
-          roomPhotos: updated.roomPhotos.map((p) => (p ? "data:image/present" : null)),
+          identityProofDataUrl: undefined,
+          fssaiLicenseDataUrl: undefined,
+          utilityBillDataUrl: undefined,
+          kitchenPhotos: updated.kitchenPhotos?.map(() => null) || [null, null, null, null],
+          cuisinePhotos: updated.cuisinePhotos?.map(() => null) || [null, null, null, null],
+          roomPhotos: updated.roomPhotos?.map(() => null) || [null, null],
         };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(lightweight));
-      } catch (innerErr) {
-        console.warn("localStorage save failed completely", innerErr);
-      }
+        const lightSerialized = JSON.stringify(lightweight);
+        try { sessionStorage.setItem(STORAGE_KEY, lightSerialized); } catch {}
+        try { localStorage.setItem(STORAGE_KEY, lightSerialized); } catch {}
+      } catch {}
     }
   }
 

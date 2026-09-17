@@ -111,14 +111,34 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
             marginBottom: "20px",
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
             gap: "10px",
             color: "#991B1B",
             fontSize: "0.9rem",
             fontWeight: 500,
           }}
         >
-          <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
-          <span>{errorMessage}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+            <span>{errorMessage}</span>
+          </div>
+          {(errorMessage.includes("exists") || errorMessage.includes("sign in") || errorMessage.includes("login")) && (
+            <Link
+              href="/seller/login"
+              style={{
+                backgroundColor: "#DC2626",
+                color: "#FFFFFF",
+                padding: "6px 14px",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+              }}
+            >
+              Sign In Now
+            </Link>
+          )}
         </div>
       )}
 

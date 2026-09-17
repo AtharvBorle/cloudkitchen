@@ -203,11 +203,15 @@ export const registerUser = async (req: Request) => {
 
     const existingUser = await db.user.findUnique({
         where: { email: finalEmail },
+        include: { sellerProfile: true },
     });
 
     if (existingUser) {
-        console.error("User already exists:", finalEmail);
-        throw new ApiError("User already exists with this email", 409);
+        if (existingUser.sellerProfile) {
+            console.error("User and seller profile already exists:", finalEmail);
+            throw new ApiError("An account with this email already exists. Please login instead.", 409);
+        }
+        console.log("Incomplete prior registration found for:", finalEmail, "- updating user and completing registration...");
     }
 
     const passwordHash = await bcrypt.hash(finalPassword, 10);
@@ -227,65 +231,85 @@ export const registerUser = async (req: Request) => {
     }
 
     try {
-        const user = await db.user.create({
-            data: {
-                name: finalName,
-                email: finalEmail,
-                phone: finalPhone || "",
-                city: finalCity || "",
-                pincode: finalPincode || "",
-                passwordHash,
-                role: finalRole as any,
-                isActive: true,
-            },
+        const result = await db.$transaction(async (tx) => {
+            let user;
+            if (existingUser) {
+                user = await tx.user.update({
+                    where: { id: existingUser.id },
+                    data: {
+                        name: finalName,
+                        phone: finalPhone || existingUser.phone,
+                        city: finalCity || existingUser.city,
+                        pincode: finalPincode || existingUser.pincode,
+                        passwordHash,
+                        role: finalRole as any,
+                        isActive: true,
+                    },
+                });
+            } else {
+                user = await tx.user.create({
+                    data: {
+                        name: finalName,
+                        email: finalEmail,
+                        phone: finalPhone || "",
+                        city: finalCity || "",
+                        pincode: finalPincode || "",
+                        passwordHash,
+                        role: finalRole as any,
+                        isActive: true,
+                    },
+                });
+            }
+
+            console.log("User record ready:", user.id);
+            let createdSellerProfile: any = null;
+
+            if (finalRole === "SELLER") {
+                console.log("Creating seller profile...");
+                const generatedTrackingId = `SHOP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                createdSellerProfile = await tx.sellerProfile.create({
+                    data: {
+                        userId: user.id,
+                        type: finalSellerType || "FOOD",
+                        businessName: finalBusinessName || `${finalName}'s Kitchen`,
+                        addressFlat: finalAddressFlat || "",
+                        addressLocality: finalAddressArea || "",
+                        addressLandmark: finalAddressLandmark || null,
+                        latitude: finalLatitude,
+                        longitude: finalLongitude,
+                        isLocationPinned: finalIsLocationPinned,
+                        kitchenImages: Array.isArray(kitchenImages) ? JSON.stringify(kitchenImages) : "[]",
+                        cuisineImages: Array.isArray(cuisineImages) ? JSON.stringify(cuisineImages) : "[]",
+                        roomImages: Array.isArray(roomImages) ? JSON.stringify(roomImages) : "[]",
+                        adhaarUrl: adhaarUrl || "pending_url",
+                        fssaiUrl: fssaiUrl || null,
+                        lightBillUrl: lightBillUrl || null,
+                        passbookUrl: passbookUrl || null,
+                        trackingId: generatedTrackingId,
+                        businessCategory: finalBusinessCategory || "FOOD",
+                        foodType: finalFoodType || "BOTH",
+                        foodVerificationStatus: (finalBusinessCategory === "PROPERTY") ? "NONE" : "PENDING",
+                        propertyVerificationStatus: (finalBusinessCategory === "PROPERTY" || finalBusinessCategory === "BOTH") ? "PENDING" : "NONE",
+                    }
+                });
+                console.log("Seller profile created successfully with tracking ID:", generatedTrackingId);
+            }
+
+            return {
+                user: { id: user.id, email: user.email, name: user.name, role: user.role },
+                sellerProfile: createdSellerProfile ? {
+                    id: createdSellerProfile.id,
+                    trackingId: createdSellerProfile.trackingId,
+                    businessName: createdSellerProfile.businessName,
+                    verificationStatus: createdSellerProfile.verificationStatus,
+                    latitude: createdSellerProfile.latitude,
+                    longitude: createdSellerProfile.longitude,
+                    isLocationPinned: createdSellerProfile.isLocationPinned,
+                } : undefined
+            };
         });
 
-        console.log("User created:", user.id);
-        let createdSellerProfile: any = null;
-
-        if (finalRole === "SELLER") {
-            console.log("Creating seller profile...");
-            const generatedTrackingId = `SHOP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            createdSellerProfile = await db.sellerProfile.create({
-                data: {
-                    userId: user.id,
-                    type: finalSellerType || "FOOD",
-                    businessName: finalBusinessName || `${finalName}'s Kitchen`,
-                    addressFlat: finalAddressFlat || "",
-                    addressLocality: finalAddressArea || "",
-                    addressLandmark: finalAddressLandmark || null,
-                    latitude: finalLatitude,
-                    longitude: finalLongitude,
-                    isLocationPinned: finalIsLocationPinned,
-                    kitchenImages: JSON.stringify(kitchenImages),
-                    cuisineImages: JSON.stringify(cuisineImages),
-                    roomImages: JSON.stringify(roomImages),
-                    adhaarUrl: adhaarUrl,
-                    fssaiUrl: fssaiUrl,
-                    lightBillUrl: lightBillUrl,
-                    passbookUrl: passbookUrl,
-                    trackingId: generatedTrackingId,
-                    businessCategory: finalBusinessCategory || "FOOD",
-                    foodType: finalFoodType || "BOTH",
-                    foodVerificationStatus: (finalBusinessCategory === "PROPERTY") ? "NONE" : "PENDING",
-                    propertyVerificationStatus: (finalBusinessCategory === "PROPERTY" || finalBusinessCategory === "BOTH") ? "PENDING" : "NONE",
-                }
-            });
-            console.log("Seller profile created successfully with tracking ID:", generatedTrackingId);
-        }
-
-        return {
-            user: { id: user.id, email: user.email, name: user.name, role: user.role },
-            sellerProfile: createdSellerProfile ? {
-                id: createdSellerProfile.id,
-                trackingId: createdSellerProfile.trackingId,
-                businessName: createdSellerProfile.businessName,
-                verificationStatus: createdSellerProfile.verificationStatus,
-                latitude: createdSellerProfile.latitude,
-                longitude: createdSellerProfile.longitude,
-                isLocationPinned: createdSellerProfile.isLocationPinned,
-            } : undefined
-        };
+        return result;
     } catch (dbError: any) {
         console.error("Database registration error:", dbError);
         throw dbError;

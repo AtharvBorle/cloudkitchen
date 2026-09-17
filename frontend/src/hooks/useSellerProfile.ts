@@ -194,15 +194,11 @@ export function useSellerProfile() {
     let isMounted = true;
 
     async function fetchProfile() {
-      if (typeof window !== "undefined" && (isPublicSellerRoute(window.location.pathname) || status !== "authenticated")) {
-        if (status !== "authenticated" || isPublicSellerRoute(window.location.pathname)) {
-          if (status !== "authenticated") {
-            if (isMounted) {
-              setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
-            }
-            return;
-          }
+      if (status !== "authenticated" || (typeof window !== "undefined" && isPublicSellerRoute(window.location.pathname))) {
+        if (isMounted) {
+          setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
         }
+        return;
       }
 
       try {
