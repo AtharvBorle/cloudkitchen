@@ -266,8 +266,14 @@ export default function SellerSidebar({
   };
 
   const handleNavItemClick = (e: React.MouseEvent, item: NavItem) => {
-    const isFoodTab = item.id === "orders" || item.id === "menu" || item.id === "delivery";
-    const isPropertyTab = item.id === "rooms-seller" || item.id === "bookings";
+    const isFoodTab =
+      item.id === "orders" ||
+      item.id === "menu" ||
+      item.id === "delivery" ||
+      item.id === "subscription" ||
+      item.id === "offers" ||
+      item.id === "reviews";
+    const isPropertyTab = item.id === "rooms-seller" || item.id === "rooms" || item.id === "bookings";
 
     if (statusData) {
       const hasActiveSub = Boolean(statusData.hasActiveSub);
@@ -620,13 +626,26 @@ export default function SellerSidebar({
           {SELLER_NAV_ITEMS.map((item) => {
             const active = isItemActive(item);
             const IconComponent = item.icon;
+            const isFood =
+              item.id === "orders" ||
+              item.id === "menu" ||
+              item.id === "delivery" ||
+              item.id === "subscription" ||
+              item.id === "offers" ||
+              item.id === "reviews";
+            const isProp = item.id === "rooms-seller" || item.id === "rooms" || item.id === "bookings";
+            const isLocked = Boolean(
+              statusData &&
+                ((isFood && !statusData.isFoodActive) ||
+                  (isProp && !statusData.isPropertyActive))
+            );
 
             return (
               <Link
                 key={item.id}
                 href={item.href}
                 onClick={(e) => handleNavItemClick(e, item)}
-                title={item.label}
+                title={isLocked ? `${item.label} (Requires active subscription)` : item.label}
                 style={{
                   width: "100%",
                   height: "40px",
@@ -639,21 +658,25 @@ export default function SellerSidebar({
                   textDecoration: "none",
                   boxSizing: "border-box",
                   backgroundColor: active ? "#FFF1E8" : "transparent",
-                  color: active ? "#F97316" : "#475569",
+                  color: active ? "#F97316" : isLocked ? "#94A3B8" : "#475569",
                   fontWeight: active ? 700 : 500,
                   fontSize: "13.5px",
                   transition: "all 0.18s ease",
+                  position: "relative",
                 }}
                 className={`nav-item ${active ? "active" : ""}`}
               >
                 <IconComponent
                   size={18}
-                  color={active ? "#F97316" : "#64748B"}
+                  color={active ? "#F97316" : isLocked ? "#94A3B8" : "#64748B"}
                 />
                 {!isEffectiveCollapsed && (
-                  <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>
+                  <span style={{ lineHeight: 1, whiteSpace: "nowrap", flex: 1 }}>
                     {item.label}
                   </span>
+                )}
+                {!isEffectiveCollapsed && isLocked && (
+                  <Lock size={13} color="#CBD5E1" style={{ marginLeft: "auto", flexShrink: 0 }} />
                 )}
               </Link>
             );

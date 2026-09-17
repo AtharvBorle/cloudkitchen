@@ -21,6 +21,8 @@ import {
   LogOut,
   Percent,
   Star,
+  Headphones,
+  Lock,
 } from "lucide-react";
 import { performLogout } from "@/lib/logout";
 import styles from "./ResponsiveNavMenu.module.css";
@@ -40,7 +42,8 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/delivery" },
   { id: "reviews", label: "Reviews & Feedback", icon: Star, href: "/seller/reviews" },
-  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
+  { id: "subscription", label: "Meal Subscriptions", icon: CreditCard, href: "/seller/subscription" },
+  { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/profile" },
   { id: "offers", label: "Offers & Coupons", icon: Percent, href: "/seller/offers" },
   { id: "notifications", label: "Notifications", icon: Bell, href: "/seller/notifications" },
@@ -93,8 +96,14 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   }, []);
 
   const handleNavItemClick = (e: React.MouseEvent, item: NavItemConfig) => {
-    const isFoodTab = item.id === "orders" || item.id === "menu" || item.id === "delivery";
-    const isPropertyTab = item.id === "rooms" || item.id === "bookings";
+    const isFoodTab =
+      item.id === "orders" ||
+      item.id === "menu" ||
+      item.id === "delivery" ||
+      item.id === "subscription" ||
+      item.id === "offers" ||
+      item.id === "reviews";
+    const isPropertyTab = item.id === "rooms" || item.id === "rooms-seller" || item.id === "bookings";
 
     if (statusData) {
       const hasActiveSub = Boolean(statusData.hasActiveSub);
@@ -231,6 +240,13 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         pathname?.startsWith("/seller/profile")
       );
     }
+    if (item.id === "support") {
+      return (
+        pathname === "/seller/res/support" ||
+        pathname?.startsWith("/seller/res/support") ||
+        pathname?.startsWith("/seller/support")
+      );
+    }
     if (item.id === "offers") {
       return (
         pathname === "/seller/res/offers" ||
@@ -333,6 +349,19 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
           {RESPONSIVE_SELLER_NAV_ITEMS.map((item) => {
             const active = isItemActive(item);
             const IconComponent = item.icon;
+            const isFood =
+              item.id === "orders" ||
+              item.id === "menu" ||
+              item.id === "delivery" ||
+              item.id === "subscription" ||
+              item.id === "offers" ||
+              item.id === "reviews";
+            const isProp = item.id === "rooms" || item.id === "rooms-seller" || item.id === "bookings";
+            const isLocked = Boolean(
+              statusData &&
+                ((isFood && !statusData.isFoodActive) ||
+                  (isProp && !statusData.isPropertyActive))
+            );
 
             return (
               <Link
@@ -340,9 +369,11 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
                 href={item.href}
                 className={`${styles.navItem} ${active ? styles.active : ""}`}
                 onClick={(e) => handleNavItemClick(e, item)}
+                style={isLocked ? { color: "#94A3B8" } : undefined}
               >
                 <IconComponent size={19} />
-                <span>{item.label}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {isLocked && <Lock size={14} color="#CBD5E1" style={{ marginLeft: "auto" }} />}
               </Link>
             );
           })}

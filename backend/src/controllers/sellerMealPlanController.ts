@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { getCategoryExpiries } from "@/lib/subscription";
 
 export const getAuthenticatedSellerProfile = async () => {
     const session = await getAuthSession();
@@ -14,6 +15,26 @@ export const getAuthenticatedSellerProfile = async () => {
 
     if (!sellerProfile) {
         throw new ApiError("Seller profile not found", 404);
+    }
+
+    const activeSubs = await db.subscription.findMany({
+        where: {
+            sellerId: sellerProfile.id,
+            status: "ACTIVE",
+            validUntil: {
+                gt: new Date()
+            }
+        },
+        include: {
+            plan: true
+        }
+    });
+
+    const { foodExpiry } = getCategoryExpiries(activeSubs);
+    const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
+
+    if (!isFoodActive && sellerProfile.verificationStatus !== "APPROVED") {
+        throw new ApiError("Active Food Subscription required to manage meal plans", 403);
     }
 
     return { session, sellerProfile };
