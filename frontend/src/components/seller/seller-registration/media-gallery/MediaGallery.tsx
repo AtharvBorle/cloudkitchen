@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, X, ArrowRight, ImageIcon, AlertTriangle } from "lucide-react";
 import styles from "./MediaGallery.module.css";
+import {
+  compressImageFile,
+  saveSellerDraft,
+  getSellerDraft,
+} from "@/lib/seller-registration-store";
 
 export interface MediaGalleryData {
   kitchenPhotos: (string | null)[];
@@ -30,36 +35,44 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   onContinue,
   onBack,
 }) => {
-  const [kitchenPhotos, setKitchenPhotos] = useState<(string | null)[]>(
-    initialData?.kitchenPhotos || [null, null, null, null]
-  );
-  const [cuisinePhotos, setCuisinePhotos] = useState<(string | null)[]>(
-    initialData?.cuisinePhotos || [null, null, null, null]
-  );
-  const [roomPhotos, setRoomPhotos] = useState<(string | null)[]>(
-    initialData?.roomPhotos || [null, null]
-  );
+  const [kitchenPhotos, setKitchenPhotos] = useState<(string | null)[]>(() => {
+    const fromInit = initialData?.kitchenPhotos;
+    if (fromInit && fromInit.length === 4) return fromInit;
+    const fromDraft = getSellerDraft()?.kitchenPhotos;
+    if (fromDraft && fromDraft.length === 4) return fromDraft;
+    return [null, null, null, null];
+  });
+
+  const [cuisinePhotos, setCuisinePhotos] = useState<(string | null)[]>(() => {
+    const fromInit = initialData?.cuisinePhotos;
+    if (fromInit && fromInit.length === 4) return fromInit;
+    const fromDraft = getSellerDraft()?.cuisinePhotos;
+    if (fromDraft && fromDraft.length === 4) return fromDraft;
+    return [null, null, null, null];
+  });
+
+  const [roomPhotos, setRoomPhotos] = useState<(string | null)[]>(() => {
+    const fromInit = initialData?.roomPhotos;
+    if (fromInit && fromInit.length === 2) return fromInit;
+    const fromDraft = getSellerDraft()?.roomPhotos;
+    if (fromDraft && fromDraft.length === 2) return fromDraft;
+    return [null, null];
+  });
 
   const [oversizeModal, setOversizeModal] = useState<OversizeModalState | null>(null);
-
-  const kitchenRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-  const cuisineRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-  const roomRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-
   const [dragTarget, setDragTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialData?.kitchenPhotos && initialData.kitchenPhotos.some(Boolean)) {
+      setKitchenPhotos(initialData.kitchenPhotos);
+    }
+    if (initialData?.cuisinePhotos && initialData.cuisinePhotos.some(Boolean)) {
+      setCuisinePhotos(initialData.cuisinePhotos);
+    }
+    if (initialData?.roomPhotos && initialData.roomPhotos.some(Boolean)) {
+      setRoomPhotos(initialData.roomPhotos);
+    }
+  }, [initialData]);
 
   const getCategoryLabel = (category: "kitchen" | "cuisine" | "room") => {
     if (category === "kitchen") return "Kitchen Photos";
@@ -67,60 +80,77 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     return "Room Photos";
   };
 
-  const validateAndSetPhoto = (
+  const triggerUpload = (category: "kitchen" | "cuisine" | "room", index: number) => {
+    const el = document.getElementById(`${category}-media-input-${index}`) as HTMLInputElement;
+    if (el) el.click();
+  };
+
+  const processFiles = async (
     category: "kitchen" | "cuisine" | "room",
-    index: number,
-    file: File | undefined
+    startIndex: number,
+    files: FileList | File[]
   ) => {
-    if (!file) return;
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (fileArray.length === 0) return;
 
-    const sizeInMB = file.size / (1024 * 1024);
-    const sizeFormatted = `${sizeInMB.toFixed(2)} MB`;
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const targetIdx = startIndex + i;
+      const maxSlots = category === "room" ? 2 : 4;
+      if (targetIdx >= maxSlots) break;
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      // Clear input
-      if (category === "kitchen" && kitchenRefs[index].current) kitchenRefs[index].current.value = "";
-      if (category === "cuisine" && cuisineRefs[index].current) cuisineRefs[index].current.value = "";
-      if (category === "room" && roomRefs[index].current) roomRefs[index].current.value = "";
+      const sizeInMB = file.size / (1024 * 1024);
+      const sizeFormatted = `${sizeInMB.toFixed(2)} MB`;
 
-      setOversizeModal({
-        isOpen: true,
-        fileName: file.name,
-        fileSizeFormatted: sizeFormatted,
-        categoryLabel: getCategoryLabel(category),
-      });
-      return;
-    }
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setOversizeModal({
+          isOpen: true,
+          fileName: file.name,
+          fileSizeFormatted: sizeFormatted,
+          categoryLabel: getCategoryLabel(category),
+        });
+        continue;
+      }
 
-    const url = URL.createObjectURL(file);
-    if (category === "kitchen") {
-      setKitchenPhotos((prev) => {
-        const next = [...prev];
-        next[index] = url;
-        return next;
-      });
-    } else if (category === "cuisine") {
-      setCuisinePhotos((prev) => {
-        const next = [...prev];
-        next[index] = url;
-        return next;
-      });
-    } else {
-      setRoomPhotos((prev) => {
-        const next = [...prev];
-        next[index] = url;
-        return next;
-      });
+      try {
+        const { dataUrl } = await compressImageFile(file, 1600, 1600, 0.85);
+        if (category === "kitchen") {
+          setKitchenPhotos((prev) => {
+            const next = [...prev];
+            next[targetIdx] = dataUrl;
+            saveSellerDraft({ kitchenPhotos: next });
+            return next;
+          });
+        } else if (category === "cuisine") {
+          setCuisinePhotos((prev) => {
+            const next = [...prev];
+            next[targetIdx] = dataUrl;
+            saveSellerDraft({ cuisinePhotos: next });
+            return next;
+          });
+        } else {
+          setRoomPhotos((prev) => {
+            const next = [...prev];
+            next[targetIdx] = dataUrl;
+            saveSellerDraft({ roomPhotos: next });
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error("Error compressing media photo:", err);
+      }
     }
   };
 
-  const handleFileUpload = (
+  const handleInputChange = (
     category: "kitchen" | "cuisine" | "room",
     index: number,
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = e.target.files?.[0];
-    validateAndSetPhoto(category, index, file);
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(category, index, e.target.files);
+    }
+    e.target.value = "";
   };
 
   const handleDragOver = (e: React.DragEvent, targetKey: string) => {
@@ -135,7 +165,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     setDragTarget(null);
   };
 
-  const handleDropFile = (
+  const handleDrop = (
     category: "kitchen" | "cuisine" | "room",
     index: number,
     e: React.DragEvent
@@ -143,12 +173,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setDragTarget(null);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      validateAndSetPhoto(category, index, file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(category, index, e.dataTransfer.files);
     }
   };
-
 
   const removePhoto = (
     category: "kitchen" | "cuisine" | "room",
@@ -160,45 +188,71 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       setKitchenPhotos((prev) => {
         const next = [...prev];
         next[index] = null;
+        saveSellerDraft({ kitchenPhotos: next });
         return next;
       });
-      if (kitchenRefs[index].current) {
-        kitchenRefs[index].current.value = "";
-      }
     } else if (category === "cuisine") {
       setCuisinePhotos((prev) => {
         const next = [...prev];
         next[index] = null;
+        saveSellerDraft({ cuisinePhotos: next });
         return next;
       });
-      if (cuisineRefs[index].current) {
-        cuisineRefs[index].current.value = "";
-      }
     } else {
       setRoomPhotos((prev) => {
         const next = [...prev];
         next[index] = null;
+        saveSellerDraft({ roomPhotos: next });
         return next;
       });
-      if (roomRefs[index].current) {
-        roomRefs[index].current.value = "";
-      }
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const mediaPayload: MediaGalleryData = {
+      kitchenPhotos,
+      cuisinePhotos,
+      roomPhotos,
+    };
+    saveSellerDraft(mediaPayload);
     if (onContinue) {
-      onContinue({
-        kitchenPhotos,
-        cuisinePhotos,
-        roomPhotos,
-      });
+      onContinue(mediaPayload);
     }
   };
 
   return (
     <div className={styles.cardContainer}>
+      {/* Top Level Hidden File Inputs */}
+      {[0, 1, 2, 3].map((idx) => (
+        <React.Fragment key={`inputs-k-c-${idx}`}>
+          <input
+            id={`kitchen-media-input-${idx}`}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => handleInputChange("kitchen", idx, e)}
+          />
+          <input
+            id={`cuisine-media-input-${idx}`}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => handleInputChange("cuisine", idx, e)}
+          />
+        </React.Fragment>
+      ))}
+      {[0, 1].map((idx) => (
+        <input
+          key={`input-room-${idx}`}
+          id={`room-media-input-${idx}`}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => handleInputChange("room", idx, e)}
+        />
+      ))}
+
       {/* Desktop Header (Desktop only) */}
       <div className={styles.desktopHeaderGroup}>
         <h2 className={styles.title}>Media Assets & Gallery</h2>
@@ -217,19 +271,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             <span className={styles.mobileSectionHeader}>KITCHEN PHOTOS</span>
             <div className={styles.mobilePhotoGrid}>
               {[0, 1, 2, 3].map((idx) => (
-                <div key={`kitchen-${idx}`} className={styles.slotWrapper}>
-                  <input
-                    type="file"
-                    ref={kitchenRefs[idx]}
-                    onChange={(e) => handleFileUpload("kitchen", idx, e)}
-                    accept="image/*"
-                    className={styles.hiddenInput}
-                  />
+                <div key={`mob-kitchen-${idx}`} className={styles.slotWrapper}>
                   <div
                     className={`${styles.mobileSlot} ${
                       idx === 0 && !kitchenPhotos[idx] ? styles.slotUploadActive : ""
                     }`}
-                    onClick={() => kitchenRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("kitchen", idx)}
                   >
                     {kitchenPhotos[idx] ? (
                       <>
@@ -266,17 +313,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             <span className={styles.mobileSectionHeader}>CUISINE PHOTOS</span>
             <div className={styles.mobilePhotoGrid}>
               {[0, 1, 2, 3].map((idx) => (
-                <div key={`cuisine-${idx}`} className={styles.slotWrapper}>
-                  <input
-                    type="file"
-                    ref={cuisineRefs[idx]}
-                    onChange={(e) => handleFileUpload("cuisine", idx, e)}
-                    accept="image/*"
-                    className={styles.hiddenInput}
-                  />
+                <div key={`mob-cuisine-${idx}`} className={styles.slotWrapper}>
                   <div
                     className={styles.mobileSlot}
-                    onClick={() => cuisineRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("cuisine", idx)}
                   >
                     {cuisinePhotos[idx] ? (
                       <>
@@ -308,17 +348,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             <span className={styles.mobileSectionHeader}>ROOM PHOTOS</span>
             <div className={styles.mobilePhotoGrid}>
               {[0, 1].map((idx) => (
-                <div key={`room-${idx}`} className={styles.slotWrapper}>
-                  <input
-                    type="file"
-                    ref={roomRefs[idx]}
-                    onChange={(e) => handleFileUpload("room", idx, e)}
-                    accept="image/*"
-                    className={styles.hiddenInput}
-                  />
+                <div key={`mob-room-${idx}`} className={styles.slotWrapper}>
                   <div
                     className={styles.mobileSlot}
-                    onClick={() => roomRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("room", idx)}
                   >
                     {roomPhotos[idx] ? (
                       <>
@@ -362,10 +395,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                     className={`${styles.desktopPhotoBox} ${
                       dragTarget === key ? styles.photoBoxDragging : ""
                     }`}
-                    onClick={() => kitchenRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("kitchen", idx)}
                     onDragOver={(e) => handleDragOver(e, key)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDropFile("kitchen", idx, e)}
+                    onDrop={(e) => handleDrop("kitchen", idx, e)}
                   >
                     {kitchenPhotos[idx] ? (
                       <>
@@ -407,10 +440,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                     className={`${styles.desktopPhotoBox} ${
                       dragTarget === key ? styles.photoBoxDragging : ""
                     }`}
-                    onClick={() => cuisineRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("cuisine", idx)}
                     onDragOver={(e) => handleDragOver(e, key)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDropFile("cuisine", idx, e)}
+                    onDrop={(e) => handleDrop("cuisine", idx, e)}
                   >
                     {cuisinePhotos[idx] ? (
                       <>
@@ -452,10 +485,10 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                     className={`${styles.desktopPhotoBox} ${
                       dragTarget === key ? styles.photoBoxDragging : ""
                     }`}
-                    onClick={() => roomRefs[idx].current?.click()}
+                    onClick={() => triggerUpload("room", idx)}
                     onDragOver={(e) => handleDragOver(e, key)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDropFile("room", idx, e)}
+                    onDrop={(e) => handleDrop("room", idx, e)}
                   >
                     {roomPhotos[idx] ? (
                       <>
@@ -485,7 +518,6 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             </div>
           </div>
         </div>
-
 
         {/* Action Controls */}
         <div className={styles.actionRow}>

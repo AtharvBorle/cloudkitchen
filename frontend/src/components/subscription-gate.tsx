@@ -16,7 +16,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
     const pathname = usePathname();
 
     const isRevisionPage = pathname && pathname.includes("/revision");
-    const isPaymentPage = pathname && pathname.includes("/payment");
+    const isPaymentPage = pathname && (pathname.includes("/payment") || pathname.includes("/subscription"));
 
     // 1. Pending Gate
     if (verificationStatus === "PENDING") {
@@ -31,9 +31,14 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         Your seller profile is currently under review. Our admins will verify your FSSAI and Adhaar documents shortly.
                         Once approved, you will be able to access your dashboard and start receiving orders.
                     </p>
-                    <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
-                        Sign Out
-                    </button>
+                    <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                        <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
+                            Sign Out
+                        </button>
+                        <Link href="/seller/verification-status" style={{ padding: "12px 24px", backgroundColor: "#f97316", color: "white", borderRadius: "8px", textDecoration: "none", fontWeight: "600", display: "inline-block" }}>
+                            View Status
+                        </Link>
+                    </div>
                 </div>
             </div>
         );
@@ -55,7 +60,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px 24px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "8px", border: "none", fontFamily: "inherit", fontWeight: "600", cursor: "pointer", display: "inline-block" }}>
                             Sign Out
                         </button>
-                        <Link href="/dashboard/seller/revision" style={{ padding: "12px 24px", backgroundColor: "#d97706", color: "white", borderRadius: "8px", textDecoration: "none", fontWeight: "600", display: "inline-block" }}>
+                        <Link href="/seller/revision" style={{ padding: "12px 24px", backgroundColor: "#f97316", color: "white", borderRadius: "8px", textDecoration: "none", fontWeight: "600", display: "inline-block" }}>
                             Update Documents
                         </Link>
                     </div>
@@ -98,7 +103,7 @@ export default function SubscriptionGate({ children, verificationStatus, hasActi
                         Your profile is approved! Just one last step: activate your subscription to unlock your professional kitchen dashboard.
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <Link href="/dashboard/seller/payment" className="btn btn-coral" style={{ padding: "14px", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <Link href="/seller/payment" className="btn btn-coral" style={{ padding: "14px", borderRadius: "12px", textDecoration: "none", fontWeight: "700", fontSize: "1.05rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                             Pay Subscription & Finish
                         </Link>
                         <button onClick={() => performLogout({ role: "SELLER" })} style={{ padding: "12px", color: "#94a3b8", backgroundColor: "transparent", border: "none", fontFamily: "inherit", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600" }}>

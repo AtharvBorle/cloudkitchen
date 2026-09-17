@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
@@ -58,14 +59,36 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const hasAttemptedGpsRef = useRef(false);
 
-  const openLocationModal = () => setIsLocationModalOpen(true);
+  const isStaffOrSeller = Boolean(
+    session?.user?.role &&
+      ["SELLER", "ADMIN", "SUPERADMIN", "AGENT", "DELIVERY", "DELIVERY_PARTNER"].includes(session.user.role)
+  );
+
+  const isNonCustomerRoute = Boolean(
+    pathname?.startsWith("/seller") ||
+      pathname?.startsWith("/dashboard/seller") ||
+      pathname?.startsWith("/admin") ||
+      pathname?.startsWith("/dashboard/admin") ||
+      pathname?.startsWith("/superadmin") ||
+      pathname?.startsWith("/dashboard/superadmin") ||
+      pathname?.startsWith("/delivery") ||
+      pathname?.startsWith("/dashboard/delivery")
+  );
+
+  const shouldDisableLocation = isStaffOrSeller || isNonCustomerRoute;
+
+  const openLocationModal = () => {
+    if (shouldDisableLocation) return;
+    setIsLocationModalOpen(true);
+  };
   const closeLocationModal = () => setIsLocationModalOpen(false);
 
   // GPS Auto-Detection & Reverse Geocoding via Nominatim
   const detectGpsLocation = useCallback(async (): Promise<boolean> => {
-    if (typeof window === "undefined" || !navigator.geolocation) {
+    if (shouldDisableLocation || typeof window === "undefined" || !navigator.geolocation) {
       return false;
     }
 
@@ -108,7 +131,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
                 localStorage.setItem("guest-locality", locality);
                 localStorage.setItem("guest-city", city);
 
-                if (status === "authenticated") {
+                if (status === "authenticated" && !isStaffOrSeller) {
                   fetchApi("/api/user/location", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -132,7 +155,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
       );
     });
-  }, [status]);
+  }, [status, shouldDisableLocation, isStaffOrSeller]);
 
   const setGuestLocation = (pincode: string, locality?: string, city?: string) => {
     if (typeof window !== "undefined") {
@@ -169,6 +192,13 @@ export function LocationProvider({ children }: LocationProviderProps) {
   };
 
   const fetchAddress = useCallback(async () => {
+    // If on seller/admin panel or logged in as seller/admin, bypass location modal and address fetch
+    if (shouldDisableLocation) {
+      setIsLoading(false);
+      setIsLocationModalOpen(false);
+      return;
+    }
+
     if (status !== "authenticated") {
       // Guest / Non-logged in flow
       const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
@@ -193,8 +223,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
       if (!hasAttemptedGpsRef.current) {
         hasAttemptedGpsRef.current = true;
         const success = await detectGpsLocation();
-        if (!success) {
-          // If GPS was denied/unavailable and this is first arrival, open modal so user is prompted to pick/enter
+        if (!success && !shouldDisableLocation) {
+          // If GPS was denied/unavailable and this is first arrival on user customer pages
           const modalPrompted = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("location-modal-shown") : null;
           if (!modalPrompted) {
             sessionStorage.setItem("location-modal-shown", "true");
@@ -214,7 +244,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       let activeAddr: Address | null = null;
       if (defRes.ok) {
         const defData = await defRes.json();
-        const payload = defData.data || defData;
+        const payload = defData?.data || defData;
         if (payload && payload.pincode) {
           activeAddr = payload;
         }
@@ -225,7 +255,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       let addressList: Address[] = [];
       if (addrRes.ok) {
         const addrData = await addrRes.json();
-        const list = addrData.data?.addresses || addrData.addresses || addrData.data || [];
+        const list = addrData?.data?.addresses || addrData?.addresses || addrData?.data || [];
         if (Array.isArray(list)) {
           addressList = list;
           setSavedAddresses(list);
@@ -239,7 +269,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       if (activeAddr) {
         setDefaultAddress(activeAddr);
       } else {
-        // Logged-in user has no addresses yet
+        // Logged-in customer has no addresses yet
         const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
         if (guestPin) {
           setDefaultAddress({
@@ -253,7 +283,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         } else if (!hasAttemptedGpsRef.current) {
           hasAttemptedGpsRef.current = true;
           const success = await detectGpsLocation();
-          if (!success) {
+          if (!success && !shouldDisableLocation) {
             setIsLocationModalOpen(true);
           }
         }
@@ -263,7 +293,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [status, detectGpsLocation]);
+  }, [status, detectGpsLocation, shouldDisableLocation]);
 
   useEffect(() => {
     fetchAddress();
@@ -285,7 +315,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       }}
     >
       {children}
-      <LocationModal />
+      {!shouldDisableLocation && <LocationModal />}
     </LocationContext.Provider>
   );
 }

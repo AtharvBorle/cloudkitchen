@@ -1,116 +1,127 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import styles from "./ConfirmRegistration.module.css";
-
-export interface ConfirmRegistrationData {
-  account?: {
-    ownerName?: string;
-    email?: string;
-    phone?: string;
-    sellerRole?: string;
-  };
-  business?: {
-    name?: string;
-    type?: string;
-    cuisines?: string;
-    address?: string;
-  };
-  documents?: {
-    identityProof?: string;
-    fssaiLicense?: string;
-    electricityBill?: string;
-    bankAccountNumber?: string;
-    ifscCode?: string;
-  };
-  media?: {
-    photosCount?: number;
-    previewThumbnails?: (string | null)[];
-  };
-}
-
 import {
-  getSellerRegistrationDraft,
+  getSellerDraft,
+  hydrateSellerDraftAsync,
   SellerRegistrationDraft,
-} from "@/utils/sellerRegistrationDraft";
+} from "@/lib/seller-registration-store";
 
 export interface ConfirmRegistrationProps {
-  data?: Partial<ConfirmRegistrationData>;
+  draft?: Partial<SellerRegistrationDraft>;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
   onSubmit?: () => void;
   onBack?: () => void;
 }
 
 export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
-  data,
+  draft: propDraft,
+  isSubmitting = false,
+  errorMessage = null,
   onSubmit,
   onBack,
 }) => {
-  const [draft, setDraft] = React.useState<SellerRegistrationDraft>(() =>
-    getSellerRegistrationDraft()
-  );
+  const [liveDraft, setLiveDraft] = useState<SellerRegistrationDraft>(() => getSellerDraft());
 
-  React.useEffect(() => {
-    setDraft(getSellerRegistrationDraft());
-  }, [data]);
+  useEffect(() => {
+    const current = getSellerDraft();
+    setLiveDraft(current);
 
+    hydrateSellerDraftAsync().then((hydrated) => {
+      setLiveDraft((prev) => ({
+        ...prev,
+        ...hydrated,
+      }));
+    });
+  }, [propDraft]);
+
+  const activeDraft = { ...liveDraft, ...(propDraft || {}) };
+
+  const cleanPhone = (activeDraft.phone || "").replace(/\D/g, "").slice(-10);
   const account = {
-    ownerName: data?.account?.ownerName || draft.account.ownerName || "—",
-    email: data?.account?.email || draft.account.email || "—",
-    phone:
-      data?.account?.phone ||
-      (draft.account.phone
-        ? draft.account.phone.startsWith("+91")
-          ? draft.account.phone
-          : `+91 ${draft.account.phone}`
-        : "—"),
-    sellerRole: data?.account?.sellerRole || draft.account.sellerRole || "Owner",
+    ownerName: activeDraft.ownerName || "—",
+    email: activeDraft.email || "—",
+    phone: cleanPhone ? `+91 ${cleanPhone}` : "—",
   };
 
   const business = {
-    name: data?.business?.name || draft.business.businessName || "—",
-    type: data?.business?.type || draft.business.sellerType || "FOOD",
+    name: activeDraft.businessName || "—",
+    type:
+      activeDraft.sellerType === "FOOD"
+        ? "Food"
+        : activeDraft.sellerType === "PROPERTY"
+        ? "Property"
+        : activeDraft.sellerType === "BOTH"
+        ? "Both (Food & Property)"
+        : "Food",
     cuisines:
-      data?.business?.cuisines ||
-      (draft.business.categories && draft.business.categories.length > 0
-        ? draft.business.categories.join(", ")
-        : "—"),
-    address: data?.business?.address || draft.business.address || "—",
+      activeDraft.categories && activeDraft.categories.length > 0
+        ? activeDraft.categories.join(", ")
+        : "—",
+    foodType:
+      activeDraft.foodType === "BOTH"
+        ? "Both (Veg & Non-veg)"
+        : activeDraft.foodType === "PURE_VEG"
+        ? "Pure Veg"
+        : "Non-veg",
+    address: activeDraft.address || "—",
+    deliveryPin:
+      activeDraft.locationCoordinates?.lat && activeDraft.locationCoordinates?.lng
+        ? `📍 Pinned (${activeDraft.locationCoordinates.lat.toFixed(4)}, ${activeDraft.locationCoordinates.lng.toFixed(4)})`
+        : "Standard Location",
   };
 
   const documents = {
     identityProof:
-      data?.documents?.identityProof ||
-      draft.documents.identityProofFile ||
-      "Identity Proof (Aadhaar/PAN)",
+      activeDraft.identityProofFileName ||
+      (activeDraft.identityProofDataUrl ? "Uploaded Identity Proof" : "Pending Upload"),
     fssaiLicense:
-      data?.documents?.fssaiLicense ||
-      draft.documents.fssaiLicenseFile ||
-      "FSSAI License",
+      activeDraft.fssaiLicenseFileName ||
+      (activeDraft.fssaiLicenseDataUrl ? "Uploaded FSSAI License" : "Optional / Pending"),
     electricityBill:
-      data?.documents?.electricityBill ||
-      draft.documents.utilityBillFile ||
-      "Electricity Bill",
-    bankAccountNumber:
-      data?.documents?.bankAccountNumber ||
-      draft.documents.bankAccountNumber ||
-      "",
-    ifscCode:
-      data?.documents?.ifscCode ||
-      draft.documents.ifscCode ||
-      "",
+      activeDraft.utilityBillFileName ||
+      (activeDraft.utilityBillDataUrl ? "Uploaded Electricity Bill" : "Pending Upload"),
+    bankAccountFull: activeDraft.bankAccountNumber || "—",
+    ifscCode: activeDraft.ifscCode || "—",
   };
 
-  const media = {
-    photosCount: data?.media?.photosCount ?? draft.media.photosCount ?? 0,
-    previewThumbnails:
-      data?.media?.previewThumbnails ||
-      draft.media.previewThumbnails || [null, null, null],
-  };
+  // Collect all real uploaded preview images
+  const allImages = [
+    ...(activeDraft.kitchenPhotos || []),
+    ...(activeDraft.cuisinePhotos || []),
+    ...(activeDraft.roomPhotos || []),
+  ].filter((src) => Boolean(src && src !== "data:image/present")) as string[];
+
+  const previewImages = allImages.slice(0, 3);
+  const remainingCount = Math.max(0, allImages.length - 3);
 
   return (
     <div className={styles.containerWrapper}>
+      {errorMessage && (
+        <div
+          style={{
+            backgroundColor: "#FEF2F2",
+            border: "1px solid #F87171",
+            borderRadius: "12px",
+            padding: "14px 18px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            color: "#991B1B",
+            fontSize: "0.9rem",
+            fontWeight: 500,
+          }}
+        >
+          <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* ========================================================= */}
       {/* MOBILE VIEW: Distinct 4 Cards Stack with Submit Button    */}
       {/* ========================================================= */}
@@ -119,7 +130,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>Account</h3>
-            <Link href="/seller/account-information" className={styles.editLink}>
+            <Link href="/seller/account-information?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
@@ -143,7 +154,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>Business</h3>
-            <Link href="/seller/business-information" className={styles.editLink}>
+            <Link href="/seller/business-information?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
@@ -160,14 +171,18 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               <span className={styles.rowKey}>Cuisines</span>
               <span className={styles.rowValue}>{business.cuisines}</span>
             </div>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Delivery Pin</span>
+              <span className={styles.rowValue}>{business.deliveryPin}</span>
+            </div>
           </div>
         </div>
 
         {/* Card 3: Documents */}
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>Legal Documents & Payout</h3>
-            <Link href="/seller/legal-documents" className={styles.editLink}>
+            <h3 className={styles.cardTitle}>Documents & Bank</h3>
+            <Link href="/seller/legal-documents?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
@@ -184,15 +199,15 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               <Check className={styles.checkIcon} size={15} strokeWidth={2.6} />
               <span className={styles.docCheckText}>{documents.electricityBill}</span>
             </div>
-            {documents.bankAccountNumber && (
+            {documents.bankAccountFull !== "—" && (
               <div className={styles.mobileRow} style={{ marginTop: "4px" }}>
-                <span className={styles.rowKey}>A/C:</span>
-                <span className={styles.rowValue}>{documents.bankAccountNumber}</span>
+                <span className={styles.rowKey}>Bank A/C</span>
+                <span className={styles.rowValue}>{documents.bankAccountFull}</span>
               </div>
             )}
-            {documents.ifscCode && (
+            {documents.ifscCode !== "—" && (
               <div className={styles.mobileRow}>
-                <span className={styles.rowKey}>IFSC:</span>
+                <span className={styles.rowKey}>IFSC Code</span>
                 <span className={styles.rowValue}>{documents.ifscCode}</span>
               </div>
             )}
@@ -202,27 +217,22 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         {/* Card 4: Media */}
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>Media</h3>
-            <Link href="/seller/media-gallery" className={styles.editLink}>
+            <h3 className={styles.cardTitle}>Media ({allImages.length} Photos)</h3>
+            <Link href="/seller/media-gallery?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
           <div className={styles.thumbnailsRow}>
-            {media.previewThumbnails.map((thumb, idx) =>
-              thumb ? (
-                <img
-                  key={idx}
-                  src={thumb}
-                  alt="Upload thumbnail"
-                  className={styles.thumbImage}
-                />
-              ) : (
-                <div key={idx} className={styles.thumbPlaceholder} />
-              )
-            )}
-            <div className={styles.thumbMoreSlot}>
-              +{media.photosCount > 3 ? media.photosCount - 3 : 0}
-            </div>
+            {previewImages.map((src, idx) => (
+              <img
+                key={idx}
+                src={src}
+                alt={`Media thumbnail ${idx + 1}`}
+                className={styles.thumbImage}
+              />
+            ))}
+            {remainingCount > 0 && <div className={styles.thumbMoreSlot}>+{remainingCount}</div>}
+            {allImages.length === 0 && <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>No photos uploaded</span>}
           </div>
         </div>
       </div>
@@ -243,7 +253,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Account Details</h3>
-              <Link href="/seller/account-information" className={styles.editBtn}>
+              <Link href="/seller/account-information?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
@@ -267,7 +277,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Business Details</h3>
-              <Link href="/seller/business-information" className={styles.editBtn}>
+              <Link href="/seller/business-information?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
@@ -281,6 +291,10 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.value}>{business.type}</span>
               </div>
               <div className={styles.row}>
+                <span className={styles.key}>Food Type</span>
+                <span className={styles.value}>{business.foodType}</span>
+              </div>
+              <div className={styles.row}>
                 <span className={styles.key}>Cuisines / Categories</span>
                 <span className={styles.value}>{business.cuisines}</span>
               </div>
@@ -288,14 +302,18 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.key}>Address</span>
                 <span className={styles.value}>{business.address}</span>
               </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Delivery Pin</span>
+                <span className={styles.value}>{business.deliveryPin}</span>
+              </div>
             </div>
           </div>
 
-          {/* 3. Legal Documents */}
+          {/* 3. Legal Documents & Payout */}
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Legal Documents & Bank Details</h3>
-              <Link href="/seller/legal-documents" className={styles.editBtn}>
+              <h3 className={styles.sectionTitle}>Legal Documents & Payout</h3>
+              <Link href="/seller/legal-documents?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
@@ -312,45 +330,38 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.key}>Electricity Bill</span>
                 <span className={styles.value}>{documents.electricityBill}</span>
               </div>
-              {documents.bankAccountNumber && (
-                <div className={styles.row}>
-                  <span className={styles.key}>Bank Account</span>
-                  <span className={styles.value}>{documents.bankAccountNumber}</span>
-                </div>
-              )}
-              {documents.ifscCode && (
-                <div className={styles.row}>
-                  <span className={styles.key}>IFSC Code</span>
-                  <span className={styles.value}>{documents.ifscCode}</span>
-                </div>
-              )}
+              <div className={styles.row}>
+                <span className={styles.key}>Bank Account</span>
+                <span className={styles.value}>{documents.bankAccountFull}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>IFSC Code</span>
+                <span className={styles.value}>{documents.ifscCode}</span>
+              </div>
             </div>
           </div>
 
           {/* 4. Media */}
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Media Assets</h3>
-              <Link href="/seller/media-gallery" className={styles.editBtn}>
+              <h3 className={styles.sectionTitle}>Media Assets ({allImages.length} Photos)</h3>
+              <Link href="/seller/media-gallery?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
-            <div className={styles.thumbnailsRow}>
-              {media.previewThumbnails.map((thumb, idx) =>
-                thumb ? (
-                  <img
-                    key={idx}
-                    src={thumb}
-                    alt="Upload thumbnail"
-                    className={styles.thumbImage}
-                  />
-                ) : (
-                  <div key={idx} className={styles.thumbPlaceholder} />
-                )
+            <div className={styles.thumbnailsRow} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {previewImages.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt={`Media asset ${idx + 1}`}
+                  className={styles.thumbImage}
+                />
+              ))}
+              {remainingCount > 0 && <div className={styles.thumbMoreSlot}>+{remainingCount}</div>}
+              {allImages.length === 0 && (
+                <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>No photos uploaded yet</span>
               )}
-              <div className={styles.thumbMoreSlot}>
-                +{media.photosCount > 3 ? media.photosCount - 3 : 0}
-              </div>
             </div>
           </div>
         </div>
@@ -361,7 +372,12 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
       {/* ========================================================= */}
       <div className={styles.actionRow}>
         {onBack && (
-          <button type="button" onClick={onBack} className={styles.backBtn}>
+          <button
+            type="button"
+            onClick={onBack}
+            className={styles.backBtn}
+            disabled={isSubmitting}
+          >
             Back
           </button>
         )}
@@ -370,9 +386,27 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           type="button"
           onClick={onSubmit}
           className={styles.submitBtn}
+          disabled={isSubmitting}
+          style={{
+            opacity: isSubmitting ? 0.7 : 1,
+            cursor: isSubmitting ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          }}
         >
-          <span>Submit for verification</span>
-          <ArrowRight className={styles.btnArrow} />
+          {isSubmitting ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              <span>Submitting Application...</span>
+            </>
+          ) : (
+            <>
+              <span>Submit for verification</span>
+              <ArrowRight className={styles.btnArrow} />
+            </>
+          )}
         </button>
       </div>
     </div>

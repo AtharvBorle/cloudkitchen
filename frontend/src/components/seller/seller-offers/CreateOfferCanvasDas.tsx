@@ -87,12 +87,12 @@ export default function CreateOfferCanvasDas({
       if (res.ok) {
         router.push("/seller/offers");
       } else {
-        // Redirect back on client state
-        router.push("/seller/offers");
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.message || "Failed to create offer. Please check your inputs.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Publish offer error:", err);
-      router.push("/seller/offers");
+      alert(err.message || "An error occurred while creating offer.");
     } finally {
       setSubmitting(false);
     }

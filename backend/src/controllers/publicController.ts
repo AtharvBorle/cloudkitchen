@@ -215,12 +215,19 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             id: c.id,
             code: c.code,
             description: c.description,
+            discountType: c.discountType || (c.discountPercentage ? "PERCENTAGE" : "FLAT"),
             discountPercentage: c.discountPercentage,
             discountAmount: c.discountAmount,
             minimumCartValue: c.minimumCartValue,
-            maxUsagesPerUser: c.maxUsagesPerUser,
-            maxUsers: c.maxUsers,
-            currentUsersCount: c.currentUsersCount
+            maxDiscountAmount: c.maxDiscountAmount,
+            customerEligibility: c.customerEligibility || "ALL",
+            appliesTo: c.appliesTo || "ALL",
+            appliesToProductId: c.appliesToProductId || null,
+            maxUsagesPerUser: c.maxUsagesPerUser || c.perUserLimit || 1,
+            maxUsers: c.maxUsers || c.usageLimit || null,
+            currentUsersCount: c.currentUsersCount,
+            noExpiry: c.noExpiry,
+            validUntil: c.validUntil
         }));
 
         return safeCoupons;

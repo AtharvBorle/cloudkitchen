@@ -50,6 +50,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
 
 
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface ResponsiveNavMenuProps {
   isOpen: boolean;
@@ -74,6 +75,73 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
       ? ownerName
       : (seller.businessName || seller.ownerName);
   const pathname = usePathname();
+  const [statusData, setStatusData] = React.useState<any>(null);
+
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        const res = await fetchApi("/api/seller/dashboard/status");
+        if (res.ok) {
+          const data = await res.json();
+          setStatusData(data.data || data);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    loadStatus();
+  }, []);
+
+  const handleNavItemClick = (e: React.MouseEvent, item: NavItemConfig) => {
+    const isFoodTab = item.id === "orders" || item.id === "menu" || item.id === "delivery";
+    const isPropertyTab = item.id === "rooms" || item.id === "bookings";
+
+    if (statusData) {
+      const hasActiveSub = Boolean(statusData.hasActiveSub);
+      const isFoodActive = Boolean(statusData.isFoodActive);
+      const isPropertyActive = Boolean(statusData.isPropertyActive);
+
+      if (isFoodTab) {
+        if (!hasActiveSub) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "FOOD" } }));
+          onClose();
+          return;
+        }
+        if (!isFoodActive) {
+          e.preventDefault();
+          const foodVerification = statusData?.sellerProfile?.foodVerificationStatus;
+          if (foodVerification === "APPROVED") {
+            window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "FOOD" } }));
+          } else {
+            window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "FOOD" } }));
+          }
+          onClose();
+          return;
+        }
+      } else if (isPropertyTab) {
+        if (!hasActiveSub) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "PROPERTY" } }));
+          onClose();
+          return;
+        }
+        if (!isPropertyActive) {
+          e.preventDefault();
+          const propVerification = statusData?.sellerProfile?.propertyVerificationStatus;
+          if (propVerification === "APPROVED") {
+            window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "PROPERTY" } }));
+          } else {
+            window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } }));
+          }
+          onClose();
+          return;
+        }
+      }
+    }
+
+    onClose();
+  };
 
   // Close drawer on Esc key
   useEffect(() => {
@@ -106,7 +174,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
       return (
         pathname === "/seller/res/dashboard" ||
         pathname?.startsWith("/seller/dashboard") ||
-        pathname === "/dashboard/seller"
+        pathname === "/seller"
       );
     }
     if (item.id === "orders") {
@@ -114,8 +182,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         pathname === "/seller/res/orders" ||
         pathname?.startsWith("/seller/res/orders") ||
         pathname?.startsWith("/seller/orders") ||
-        pathname?.startsWith("/seller/order-default") ||
-        pathname?.startsWith("/dashboard/seller/orders")
+        pathname?.startsWith("/seller/order-default")
       );
     }
     if (item.id === "menu") {
@@ -123,24 +190,21 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         pathname === "/seller/res/menu" ||
         pathname?.startsWith("/seller/res/menu") ||
         pathname?.startsWith("/seller/menu") ||
-        pathname?.startsWith("/seller/edit-menu") ||
-        pathname?.startsWith("/dashboard/seller/menu")
+        pathname?.startsWith("/seller/edit-menu")
       );
     }
     if (item.id === "rooms") {
       return (
         pathname === "/seller/res/rooms" ||
         pathname?.startsWith("/seller/res/rooms") ||
-        pathname?.startsWith("/seller/rooms") ||
-        pathname?.startsWith("/dashboard/seller/rooms")
+        pathname?.startsWith("/seller/rooms")
       );
     }
     if (item.id === "bookings") {
       return (
         pathname === "/seller/res/booking" ||
         pathname?.startsWith("/seller/res/booking") ||
-        pathname?.startsWith("/seller/booking") ||
-        pathname?.startsWith("/dashboard/seller/bookings")
+        pathname?.startsWith("/seller/booking")
       );
     }
     if (item.id === "delivery") {
@@ -148,15 +212,15 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         pathname === "/seller/res/delivery" ||
         pathname?.startsWith("/seller/res/delivery") ||
         pathname?.startsWith("/seller/delivery") ||
-        pathname?.startsWith("/seller/riderMng") ||
-        pathname?.startsWith("/dashboard/seller/delivery")
+        pathname?.startsWith("/seller/riderMng")
       );
     }
     if (item.id === "subscription") {
       return (
         pathname === "/seller/res/subscription" ||
         pathname?.startsWith("/seller/res/subscription") ||
-        pathname?.startsWith("/dashboard/seller/payment") ||
+        pathname?.startsWith("/seller/payment") ||
+        pathname?.startsWith("/seller/res/payment") ||
         pathname?.startsWith("/seller/subscription")
       );
     }
@@ -164,24 +228,21 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
       return (
         pathname === "/seller/res/profile" ||
         pathname?.startsWith("/seller/res/profile") ||
-        pathname?.startsWith("/seller/profile") ||
-        pathname?.startsWith("/dashboard/seller/profile")
+        pathname?.startsWith("/seller/profile")
       );
     }
     if (item.id === "offers") {
       return (
         pathname === "/seller/res/offers" ||
         pathname?.startsWith("/seller/res/offers") ||
-        pathname?.startsWith("/seller/offers") ||
-        pathname?.startsWith("/dashboard/seller/offers")
+        pathname?.startsWith("/seller/offers")
       );
     }
     if (item.id === "reviews") {
       return (
         pathname === "/seller/res/reviews" ||
         pathname?.startsWith("/seller/res/reviews") ||
-        pathname?.startsWith("/seller/reviews") ||
-        pathname?.startsWith("/dashboard/seller/reviews")
+        pathname?.startsWith("/seller/reviews")
       );
     }
     if (item.id === "notifications") {
@@ -195,8 +256,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
       return (
         pathname === "/seller/res/settings" ||
         pathname?.startsWith("/seller/res/settings") ||
-        pathname?.startsWith("/seller/settings") ||
-        pathname?.startsWith("/dashboard/seller/settings")
+        pathname?.startsWith("/seller/settings")
       );
     }
 
@@ -279,7 +339,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
                 key={item.id}
                 href={item.href}
                 className={`${styles.navItem} ${active ? styles.active : ""}`}
-                onClick={onClose}
+                onClick={(e) => handleNavItemClick(e, item)}
               >
                 <IconComponent size={19} />
                 <span>{item.label}</span>

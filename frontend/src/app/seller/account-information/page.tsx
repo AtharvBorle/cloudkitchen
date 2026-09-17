@@ -1,31 +1,45 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   SellerLayout,
   AccountInformation,
   AccountInformationData,
 } from "@/components/seller";
-import {
-  getSellerRegistrationDraft,
-  saveSellerRegistrationDraft,
-} from "@/utils/sellerRegistrationDraft";
+import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store";
 
-export default function AccountInformationPage() {
+function AccountInfoContent() {
   const router = useRouter();
-  const [accountData, setAccountData] = useState<AccountInformationData>(() => {
-    return getSellerRegistrationDraft().account;
+  const searchParams = useSearchParams();
+  const isFromReview = searchParams?.get("from") === "review";
+
+  const [accountData, setAccountData] = useState<AccountInformationData>({
+    ownerName: "",
+    email: "",
+    phone: "",
+    password: "",
+    sellerRole: "Owner",
   });
 
   useEffect(() => {
-    setAccountData(getSellerRegistrationDraft().account);
+    const draft = getSellerDraft();
+    setAccountData({
+      ownerName: draft.ownerName || "",
+      email: draft.email || "",
+      phone: draft.phone || "",
+      password: draft.password || "",
+      sellerRole: draft.sellerRole || "Owner",
+    });
   }, []);
 
   const handleContinue = (data: AccountInformationData) => {
-    setAccountData(data);
-    saveSellerRegistrationDraft({ account: data });
-    router.push("/seller/business-information");
+    saveSellerDraft(data);
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/business-information");
+    }
   };
 
   return (
@@ -37,10 +51,18 @@ export default function AccountInformationPage() {
       userRole="Owner Account"
     >
       <AccountInformation
-        key={accountData.ownerName + accountData.email + accountData.phone}
+        key={accountData.email || "account-init"}
         initialData={accountData}
         onContinue={handleContinue}
       />
     </SellerLayout>
+  );
+}
+
+export default function AccountInformationPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>}>
+      <AccountInfoContent />
+    </Suspense>
   );
 }

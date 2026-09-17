@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
+import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import styles from "./LocationModal.module.css";
 
@@ -32,6 +33,7 @@ const POPULAR_AREAS = [
 
 export const LocationModal: React.FC = () => {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const {
     defaultAddress,
     isLocationModalOpen,
@@ -41,6 +43,22 @@ export const LocationModal: React.FC = () => {
     refreshAddress,
     savedAddresses,
   } = useLocation();
+
+  const isStaffOrSeller = Boolean(
+    session?.user?.role &&
+      ["SELLER", "ADMIN", "SUPERADMIN", "AGENT", "DELIVERY", "DELIVERY_PARTNER"].includes(session.user.role)
+  );
+
+  const isNonCustomerRoute = Boolean(
+    pathname?.startsWith("/seller") ||
+      pathname?.startsWith("/dashboard/seller") ||
+      pathname?.startsWith("/admin") ||
+      pathname?.startsWith("/dashboard/admin") ||
+      pathname?.startsWith("/superadmin") ||
+      pathname?.startsWith("/dashboard/superadmin") ||
+      pathname?.startsWith("/delivery") ||
+      pathname?.startsWith("/dashboard/delivery")
+  );
 
   const [pincodeInput, setPincodeInput] = useState("");
   const [isLocatingGps, setIsLocatingGps] = useState(false);
@@ -58,14 +76,14 @@ export const LocationModal: React.FC = () => {
   const [longitude, setLongitude] = useState<number | null>(73.8567);
 
   useEffect(() => {
-    if (isLocationModalOpen) {
+    if (isLocationModalOpen && !isStaffOrSeller && !isNonCustomerRoute) {
       setPincodeInput(defaultAddress?.pincode || "");
       setShowAddForm(false);
       setFeedback(null);
     }
-  }, [isLocationModalOpen, defaultAddress]);
+  }, [isLocationModalOpen, defaultAddress, isStaffOrSeller, isNonCustomerRoute]);
 
-  if (!isLocationModalOpen) return null;
+  if (!isLocationModalOpen || isStaffOrSeller || isNonCustomerRoute) return null;
 
   const showNotification = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });

@@ -3,7 +3,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 
 import { useState } from "react";
-import { CheckCircle, XCircle, FileText, ExternalLink, Loader2, User, Phone, Mail, MapPin, AlertCircle, ZoomIn, ZoomOut } from "lucide-react";
+import { CheckCircle, XCircle, FileText, ExternalLink, Loader2, User, Phone, Mail, MapPin, AlertCircle, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
 import Image from "next/image";
 
 type ApplicationType = {
@@ -30,6 +30,22 @@ type ApplicationType = {
 export default function RegistrationsClient({ initialApplications }: { initialApplications: ApplicationType[] }) {
     const [applications, setApplications] = useState<ApplicationType[]>(initialApplications);
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            const res = await fetchApi("/api/admin/registrations");
+            if (res.ok) {
+                const data = await res.json();
+                setApplications(data);
+            }
+        } catch (err) {
+            console.error("Refresh error:", err);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     // Revision State
     const [revisionAppId, setRevisionAppId] = useState<string | null>(null);
@@ -105,11 +121,34 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
 
     return (
         <div style={{ animation: "fadeIn 0.5s ease-out" }}>
-            <div style={{ marginBottom: "2rem" }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#0f172a", marginBottom: "0.5rem" }}>
-                    Seller Applications
-                </h2>
-                <p style={{ color: "#64748b" }}>Review and verify documentation for new seller registrations.</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                    <h2 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#0f172a", marginBottom: "0.5rem" }}>
+                        Seller Applications
+                    </h2>
+                    <p style={{ color: "#64748b" }}>Review and verify documentation for new seller registrations.</p>
+                </div>
+                <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "9px 16px",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "10px",
+                        fontSize: "0.88rem",
+                        fontWeight: "600",
+                        color: "#0F172A",
+                        cursor: isRefreshing ? "not-allowed" : "pointer",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                    }}
+                >
+                    <RotateCw size={15} className={isRefreshing ? "animate-spin" : ""} />
+                    <span>{isRefreshing ? "Refreshing..." : "Refresh List"}</span>
+                </button>
             </div>
 
             {applications.length === 0 ? (

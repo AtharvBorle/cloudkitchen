@@ -274,7 +274,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     } else if (session?.user) {
       const role = (session.user as any)?.role;
       if (role === "SELLER") {
-        router.push("/dashboard/seller");
+        router.push("/seller/dashboard");
       } else if (role === "ADMIN" || role === "SUPERADMIN") {
         router.push("/dashboard/admin");
       } else {
@@ -921,7 +921,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                         {(session.user as any)?.role === "SELLER" && (
                           <Link
-                            href="/dashboard/seller"
+                            href="/seller/dashboard"
                             className={styles.profileNavItem}
                             onClick={closeProfileMenu}
                             role="menuitem"

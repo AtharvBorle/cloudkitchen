@@ -17,6 +17,7 @@ export interface SellerProfileData {
   partnerRole: string;
   isOnline: boolean;
   isLoading: boolean;
+  authStatus: "loading" | "authenticated" | "unauthenticated";
   user: any;
   profile: any;
 }
@@ -45,7 +46,7 @@ export function isGenericFallbackName(name?: string): boolean {
 }
 
 export function computeInitials(name?: string): string {
-  if (!name || !name.trim()) return "RK";
+  if (!name || !name.trim()) return "SK";
   const clean = name.trim().replace(/[^a-zA-Z0-9\s]/g, "");
   const parts = clean.split(/\s+/).filter(Boolean);
   if (parts.length > 1) {
@@ -54,7 +55,7 @@ export function computeInitials(name?: string): string {
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase();
   }
-  return "RK";
+  return "SK";
 }
 
 export function updateCachedProfile(partial: Partial<SellerProfileData>) {
@@ -105,6 +106,7 @@ export function isPublicSellerRoute(pathname?: string): boolean {
     pathname === "/seller-onboarding" ||
     pathname.startsWith("/seller-onboarding") ||
     pathname.startsWith("/seller/registration") ||
+    pathname.startsWith("/seller/registration-submitted") ||
     pathname.startsWith("/seller/account-information") ||
     pathname.startsWith("/seller/business-information") ||
     pathname.startsWith("/seller/confirm-information") ||
@@ -145,12 +147,15 @@ export function useSellerProfile() {
       partnerRole: cachedProfile?.partnerRole || "Neo Cloud Partner",
       isOnline: cachedProfile?.isOnline ?? true,
       isLoading: !cachedProfile,
+      authStatus: status,
       user: cachedProfile?.user || null,
       profile: cachedProfile?.profile || null,
     };
   });
 
   useEffect(() => {
+    setProfileState((prev) => ({ ...prev, authStatus: status }));
+
     if (typeof window === "undefined") return;
 
     const pathname = window.location.pathname;
@@ -174,6 +179,7 @@ export function useSellerProfile() {
         setProfileState((prev) => ({
           ...prev,
           ...cachedProfile,
+          authStatus: status,
           isLoading: false,
         }));
       }
@@ -182,14 +188,21 @@ export function useSellerProfile() {
     return () => {
       listeners.delete(handleUpdate);
     };
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function fetchProfile() {
-      if (typeof window !== "undefined" && isPublicSellerRoute(window.location.pathname) && status === "unauthenticated") {
-        return;
+      if (typeof window !== "undefined" && (isPublicSellerRoute(window.location.pathname) || status !== "authenticated")) {
+        if (status !== "authenticated" || isPublicSellerRoute(window.location.pathname)) {
+          if (status !== "authenticated") {
+            if (isMounted) {
+              setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
+            }
+            return;
+          }
+        }
       }
 
       try {
@@ -202,7 +215,7 @@ export function useSellerProfile() {
           const validUserName = user?.name && !isGenericFallbackName(user.name) ? user.name : "";
           const validSessionName = sessionName && !isGenericFallbackName(sessionName) ? sessionName : "";
           const rawBusinessName =
-            profile?.businessName || validUserName || validSessionName || "Radha's Kitchen";
+            profile?.businessName || validUserName || validSessionName || user?.name || "Kitchen Owner";
           const rawOwnerName = rawBusinessName;
           const rawFullName = validUserName || validSessionName || user?.name || rawBusinessName;
           const rawEmail = user?.email || sessionEmail || "";
@@ -249,6 +262,7 @@ export function useSellerProfile() {
               partnerRole: "Neo Cloud Partner",
               isOnline: rawOnline,
               isLoading: false,
+              authStatus: status,
               user,
               profile,
             });
@@ -266,6 +280,10 @@ export function useSellerProfile() {
         }
       } catch (e) {
         console.error("useSellerProfile fetch error:", e);
+      } finally {
+        if (isMounted) {
+          setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
+        }
       }
     }
 

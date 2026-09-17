@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, MapPin, ArrowRight, X } from "lucide-react";
-import { saveSellerRegistrationDraft } from "@/utils/sellerRegistrationDraft";
+import { ChevronDown, ArrowRight, X } from "lucide-react";
 import styles from "./BusinessInformation.module.css";
+import { SellerMapPicker, AddressDetails } from "./SellerMapPicker";
+import { saveSellerDraft } from "@/lib/seller-registration-store";
 
 export interface BusinessInformationData {
   businessName: string;
@@ -11,6 +12,8 @@ export interface BusinessInformationData {
   categories: string[];
   foodType: string; // 'BOTH' | 'PURE_VEG' | 'NON_VEG'
   address: string;
+  city?: string;
+  pincode?: string;
   locationCoordinates?: { lat: number; lng: number };
   isLocationPinned?: boolean;
 }
@@ -35,9 +38,11 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
         : ["North Indian", "Biryani"],
     foodType: initialData?.foodType || "BOTH",
     address: initialData?.address || "",
+    city: initialData?.city || "Pune",
+    pincode: initialData?.pincode || "411038",
     locationCoordinates: initialData?.locationCoordinates || {
-      lat: 12.9121,
-      lng: 77.6446,
+      lat: 18.5204,
+      lng: 73.8567,
     },
     isLocationPinned: initialData?.isLocationPinned ?? true,
   });
@@ -51,7 +56,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
-      saveSellerRegistrationDraft({ business: next });
+      saveSellerDraft({ [name]: value });
       return next;
     });
   };
@@ -59,18 +64,19 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   const handleSellerTypeSelect = (type: string) => {
     setFormData((prev) => {
       const next = { ...prev, sellerType: type };
-      saveSellerRegistrationDraft({ business: next });
+      saveSellerDraft({ sellerType: type as any });
       return next;
     });
   };
 
   const removeCategory = (catToRemove: string) => {
     setFormData((prev) => {
+      const nextCategories = prev.categories.filter((cat) => cat !== catToRemove);
       const next = {
         ...prev,
-        categories: prev.categories.filter((cat) => cat !== catToRemove),
+        categories: nextCategories,
       };
-      saveSellerRegistrationDraft({ business: next });
+      saveSellerDraft({ categories: nextCategories });
       return next;
     });
   };
@@ -78,12 +84,13 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   const handleAddCategory = () => {
     const trimmed = newCategoryInput.trim();
     if (trimmed && !formData.categories.includes(trimmed)) {
+      const nextCategories = [...formData.categories, trimmed];
       setFormData((prev) => {
         const next = {
           ...prev,
-          categories: [...prev.categories, trimmed],
+          categories: nextCategories,
         };
-        saveSellerRegistrationDraft({ business: next });
+        saveSellerDraft({ categories: nextCategories });
         return next;
       });
       setNewCategoryInput("");
@@ -91,37 +98,45 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     }
   };
 
-  const togglePinLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setFormData((prev) => ({
-            ...prev,
-            isLocationPinned: true,
-            locationCoordinates: {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-            },
-          }));
-        },
-        () => {
-          setFormData((prev) => ({
-            ...prev,
-            isLocationPinned: true,
-            locationCoordinates: { lat: 12.9121, lng: 77.6446 },
-          }));
-        }
-      );
-    } else {
-      setFormData((prev) => ({
+  const handleLocationChange = (
+    lat: number,
+    lng: number,
+    formattedAddress?: string,
+    details?: AddressDetails
+  ) => {
+    setFormData((prev) => {
+      const next = {
         ...prev,
-        isLocationPinned: !prev.isLocationPinned,
-      }));
-    }
+        isLocationPinned: true,
+        locationCoordinates: { lat, lng },
+        address: formattedAddress ? formattedAddress : prev.address,
+        city: details?.city || prev.city || "Pune",
+        pincode: details?.pincode || prev.pincode || "411038",
+      };
+      saveSellerDraft({
+        locationCoordinates: { lat, lng },
+        isLocationPinned: true,
+        address: next.address,
+        city: next.city,
+        pincode: next.pincode,
+      });
+      return next;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    saveSellerDraft({
+      businessName: formData.businessName,
+      sellerType: formData.sellerType as any,
+      categories: formData.categories,
+      foodType: formData.foodType as any,
+      address: formData.address,
+      city: formData.city,
+      pincode: formData.pincode,
+      locationCoordinates: formData.locationCoordinates,
+      isLocationPinned: formData.isLocationPinned,
+    });
     if (onContinue) {
       onContinue(formData);
     }
@@ -295,26 +310,17 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
           />
         </div>
 
-        {/* 6. Pin Location */}
+        {/* 6. Pin Location on Map */}
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            Pin location
+            Pin Location on Map <span className={styles.required}>*</span>
           </label>
-          <div
-            className={styles.pinLocationCard}
-            onClick={togglePinLocation}
-            role="button"
-            tabIndex={0}
-          >
-            <div className={styles.pinIconWrapper}>
-              <MapPin className={styles.pinIcon} />
-            </div>
-            <span className={styles.pinTitle}>
-              {formData.isLocationPinned
-                ? "Location pinned successfully"
-                : "Tap to pin current location"}
-            </span>
-          </div>
+          <SellerMapPicker
+            latitude={formData.locationCoordinates?.lat || null}
+            longitude={formData.locationCoordinates?.lng || null}
+            isPinned={formData.isLocationPinned}
+            onChange={handleLocationChange}
+          />
         </div>
 
         {/* Action Row / Bottom Button */}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
+import { fetchApi } from "@/lib/fetch-api";
 import {
   ChevronLeft,
   Menu as MenuIcon,
@@ -15,6 +16,10 @@ import {
   QrCode,
   Sparkles,
   Bell,
+  AlertTriangle,
+  Calendar,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
@@ -81,6 +86,28 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       : seller.address
   );
 
+  // Subscription Status Data
+  const [statusData, setStatusData] = useState<any>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        setLoadingStatus(true);
+        const res = await fetchApi("/api/seller/dashboard/status");
+        if (res.ok) {
+          const data = await res.json();
+          setStatusData(data.data || data);
+        }
+      } catch (err) {
+        console.error("Failed to load subscription status:", err);
+      } finally {
+        setLoadingStatus(false);
+      }
+    }
+    loadStatus();
+  }, []);
+
   useEffect(() => {
     if (seller.ownerName || seller.businessName) {
       setOwnerName((prev) => (!prev || isGenericFallbackName(prev) ? (seller.userFullName || seller.ownerName) : prev));
@@ -98,6 +125,59 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       setRegisteredAddress((prev) => (!prev || prev.includes("Koramangala") ? seller.address : prev));
     }
   }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address]);
+
+  // Stacked active subscriptions calculation
+  const getStackedSubs = (subsList: any[]) => {
+    const sorted = [...subsList].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    const result = [];
+    let currentEnd: Date | null = null;
+
+    for (let i = 0; i < sorted.length; i++) {
+      const sub = sorted[i];
+      const duration = sub.plan?.durationMonths || 1;
+      const created = new Date(sub.createdAt);
+
+      let start: Date;
+      if (currentEnd && currentEnd > created) {
+        start = new Date(currentEnd);
+      } else {
+        start = created;
+      }
+
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + duration);
+
+      result.push({
+        ...sub,
+        startDate: start,
+        endDate: end,
+      });
+
+      currentEnd = end;
+    }
+    return result;
+  };
+
+  const activeSubs = statusData?.activeSubs || [];
+  const foodSubs = activeSubs.filter(
+    (s: any) => s.plan?.category === "FOOD" || s.plan?.category === "BOTH"
+  );
+  const propertySubs = activeSubs.filter(
+    (s: any) => s.plan?.category === "PROPERTY" || s.plan?.category === "BOTH"
+  );
+
+  const stackedFood = getStackedSubs(foodSubs);
+  const foodExpiry = stackedFood.length > 0 ? stackedFood[stackedFood.length - 1].endDate : null;
+
+  const stackedProperty = getStackedSubs(propertySubs);
+  const propertyExpiry =
+    stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
+
+  const hasAnyActiveSub = Boolean(statusData?.hasActiveSub);
+  const isFoodVerified = statusData?.sellerProfile?.foodVerificationStatus === "APPROVED";
+  const isPropertyVerified = statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED";
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -444,143 +524,176 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
               <h2 className={styles.subTitle}>Subscription &amp; Plan</h2>
             </div>
 
-            <div className={styles.activeSubBadge}>
-              <span className={styles.subDot} />
-              <span>Active Subscription</span>
-            </div>
+            {hasAnyActiveSub ? (
+              <div className={styles.activeSubBadge}>
+                <span className={styles.subDot} />
+                <span>Active Subscription</span>
+              </div>
+            ) : (
+              <div className={styles.inactiveSubBadge}>
+                <span className={styles.subDotRed} />
+                <span>No Active Subscription</span>
+              </div>
+            )}
 
             {/* Food Services Group */}
             <div className={styles.planGroup}>
               <div className={styles.planGroupHeader}>
                 <span className={styles.planGroupTitle}>FOOD SERVICES</span>
+                <span className={`${styles.categoryTag} ${stackedFood.length > 0 ? styles.categoryTagActiveFood : styles.categoryTagInactive}`}>
+                  {stackedFood.length > 0 ? "FOOD ACTIVE" : isFoodVerified ? "NOT SUBSCRIBED" : "UNVERIFIED"}
+                </span>
               </div>
               <p className={styles.planGroupSubtitle}>
                 Cloud kitchen &amp; food management tools
               </p>
 
-              {/* 1. Monthly Bolt */}
-              <div className={styles.planItemBox}>
-                <div className={styles.planItemTop}>
-                  <h3 className={styles.planItemName}>1. Monthly Bolt</h3>
+              {stackedFood.length > 0 ? (
+                <>
+                  {stackedFood.map((sub: any, idx: number) => (
+                    <div key={sub.id || idx} className={styles.planItemBox}>
+                      <div className={styles.planItemTop}>
+                        <h3 className={styles.planItemName}>
+                          {idx + 1}. {sub.plan?.name || "Food Subscription"}
+                        </h3>
+                        <button
+                          type="button"
+                          className={styles.renewSmallBtn}
+                          onClick={() => router.push(`/seller/payment?category=FOOD&planId=${sub.planId || sub.plan?.id || ""}`)}
+                        >
+                          Renew
+                        </button>
+                      </div>
+                      <div className={styles.planItemDetailRow}>
+                        <span className={styles.planItemDetailKey}>Amount:</span>
+                        <span className={styles.planItemDetailVal}>₹{sub.amount || sub.plan?.price} / {sub.plan?.durationMonths || 1} mo</span>
+                      </div>
+                      <div className={styles.planItemDetailRow}>
+                        <span className={styles.planItemDetailKey}>Validity:</span>
+                        <span className={styles.planItemDetailVal}>
+                          {new Date(sub.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} –{" "}
+                          {new Date(sub.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className={styles.expiryRow}>
+                    <span className={styles.expiryKey}>Final Food Expiry</span>
+                    <span className={styles.expiryValRed}>
+                      {foodExpiry?.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.noPlanBox}>
+                  <p className={styles.noPlanText}>
+                    {isFoodVerified
+                      ? "No active food subscription. Subscribe to unlock kitchen orders and dispatch."
+                      : "Food category not verified. Apply for food category verification to start selling."}
+                  </p>
                   <button
                     type="button"
-                    className={styles.editPlanLink}
-                    onClick={() => router.push("/seller/res/subscription/editPlan")}
+                    className={`${styles.categoryBtn} ${styles.foodBtn}`}
+                    onClick={() => {
+                      if (isFoodVerified) {
+                        router.push("/seller/payment?category=FOOD");
+                      } else {
+                        window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "FOOD" } }));
+                      }
+                    }}
                   >
-                    Edit
+                    {isFoodVerified ? "Get Food Subscription" : "Upgrade Food Category"}
                   </button>
                 </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Current Plan:</span>
-                  <span className={styles.planItemDetailVal}>Monthly Bolt</span>
-                </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Validity:</span>
-                  <span className={styles.planItemDetailVal}>7/6 – 8/5/2025</span>
-                </div>
-              </div>
-
-              {/* 2. Monthly Gold */}
-              <div className={styles.planItemBox}>
-                <div className={styles.planItemTop}>
-                  <h3 className={styles.planItemName}>2. Monthly Gold</h3>
-                  <button
-                    type="button"
-                    className={styles.editPlanLink}
-                    onClick={() => router.push("/seller/res/subscription/editPlan")}
-                  >
-                    Edit
-                  </button>
-                </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Current Plan:</span>
-                  <span className={styles.planItemDetailVal}>Monthly Gold</span>
-                </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Validity:</span>
-                  <span className={styles.planItemDetailVal}>7/6 – 8/5/2025</span>
-                </div>
-              </div>
-
-              <div className={styles.expiryRow}>
-                <span className={styles.expiryKey}>Final Expiry</span>
-                <span className={styles.expiryValRed}>Oct 5, 2025</span>
-              </div>
+              )}
             </div>
 
             {/* Property Bookings Group */}
             <div className={styles.planGroup}>
               <div className={styles.planGroupHeader}>
                 <span className={styles.planGroupTitle}>PROPERTY BOOKINGS</span>
-                <Link href="/seller/res/subscription" className={styles.upgradeLink}>
-                  Upgrade
-                </Link>
+                <span className={`${styles.categoryTag} ${stackedProperty.length > 0 ? styles.categoryTagActiveProperty : styles.categoryTagInactive}`}>
+                  {stackedProperty.length > 0 ? "PROPERTY ACTIVE" : isPropertyVerified ? "NOT SUBSCRIBED" : "UNVERIFIED"}
+                </span>
               </div>
               <p className={styles.planGroupSubtitle}>
                 Listing, info &amp; reservation tools
               </p>
 
-              {/* 1. Monthly Bolt */}
-              <div className={styles.planItemBox}>
-                <div className={styles.planItemTop}>
-                  <h3 className={styles.planItemName}>1. Monthly Bolt</h3>
+              {stackedProperty.length > 0 ? (
+                <>
+                  {stackedProperty.map((sub: any, idx: number) => (
+                    <div key={sub.id || idx} className={styles.planItemBox}>
+                      <div className={styles.planItemTop}>
+                        <h3 className={styles.planItemName}>
+                          {idx + 1}. {sub.plan?.name || "Property Subscription"}
+                        </h3>
+                        <button
+                          type="button"
+                          className={styles.renewSmallBtn}
+                          onClick={() => router.push(`/seller/payment?category=PROPERTY&planId=${sub.planId || sub.plan?.id || ""}`)}
+                        >
+                          Renew
+                        </button>
+                      </div>
+                      <div className={styles.planItemDetailRow}>
+                        <span className={styles.planItemDetailKey}>Amount:</span>
+                        <span className={styles.planItemDetailVal}>₹{sub.amount || sub.plan?.price} / {sub.plan?.durationMonths || 1} mo</span>
+                      </div>
+                      <div className={styles.planItemDetailRow}>
+                        <span className={styles.planItemDetailKey}>Validity:</span>
+                        <span className={styles.planItemDetailVal}>
+                          {new Date(sub.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} –{" "}
+                          {new Date(sub.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className={styles.expiryRow}>
+                    <span className={styles.expiryKey}>Final Property Expiry</span>
+                    <span className={styles.expiryValBlue}>
+                      {propertyExpiry?.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.noPlanBox}>
+                  <p className={styles.noPlanText}>
+                    {isPropertyVerified
+                      ? "No active property subscription. Subscribe to unlock room listings and bookings."
+                      : "Room & Property category not verified. Apply for property category verification."}
+                  </p>
                   <button
                     type="button"
-                    className={styles.editPlanLink}
-                    onClick={() => router.push("/seller/res/subscription/editPlan")}
+                    className={`${styles.categoryBtn} ${styles.propertyBtn}`}
+                    onClick={() => {
+                      if (isPropertyVerified) {
+                        router.push("/seller/payment?category=PROPERTY");
+                      } else {
+                        window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } }));
+                      }
+                    }}
                   >
-                    Edit
+                    {isPropertyVerified ? "Get Property Subscription" : "Upgrade Rooms Category"}
                   </button>
                 </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Current Plan:</span>
-                  <span className={styles.planItemDetailVal}>Monthly Bolt</span>
-                </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Validity:</span>
-                  <span className={styles.planItemDetailVal}>7/6 – 8/5/2025</span>
-                </div>
-              </div>
-
-              {/* 2. Monthly Property Gold */}
-              <div className={styles.planItemBox}>
-                <div className={styles.planItemTop}>
-                  <h3 className={styles.planItemName}>2. Monthly Property Gold</h3>
-                  <button
-                    type="button"
-                    className={styles.editPlanLink}
-                    onClick={() => router.push("/seller/res/subscription/editPlan")}
-                  >
-                    Edit
-                  </button>
-                </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Current Plan:</span>
-                  <span className={styles.planItemDetailVal}>Monthly Property Gold</span>
-                </div>
-                <div className={styles.planItemDetailRow}>
-                  <span className={styles.planItemDetailKey}>Validity:</span>
-                  <span className={styles.planItemDetailVal}>7/6 – 8/5/2025</span>
-                </div>
-              </div>
-
-              <div className={styles.expiryRow}>
-                <span className={styles.expiryKey}>Final Expiry</span>
-                <span className={styles.expiryValBlue}>Sep 20, 2025</span>
-              </div>
+              )}
             </div>
 
             {/* Upgrade Plan Button */}
             <button
               type="button"
               className={styles.upgradePlanBtn}
-              onClick={() => router.push("/seller/res/subscription/newPlan")}
+              onClick={() => router.push("/seller/payment")}
             >
               <Sparkles size={18} />
-              <span>Upgrade Plan</span>
+              <span>{hasAnyActiveSub ? "Upgrade / Change Plan" : "Get Subscription Plan"}</span>
             </button>
           </section>
         </main>
+
 
         {/* Toast Notification */}
         {toastMessage && (

@@ -663,10 +663,17 @@ function CheckoutContent() {
         }
 
         if (appliedCoupon.discountPercentage) {
-            setDiscountAmount(Math.round((baseTotal * appliedCoupon.discountPercentage) / 100));
+            let calcDiscount = Math.round((baseTotal * appliedCoupon.discountPercentage) / 100);
+            if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
+                calcDiscount = appliedCoupon.maxDiscountAmount;
+            }
+            setDiscountAmount(Math.min(calcDiscount, baseTotal));
         } else if (appliedCoupon.discountAmount) {
-            // Don't discount more than the order value
-            setDiscountAmount(Math.min(appliedCoupon.discountAmount, baseTotal));
+            let calcDiscount = appliedCoupon.discountAmount;
+            if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
+                calcDiscount = appliedCoupon.maxDiscountAmount;
+            }
+            setDiscountAmount(Math.min(calcDiscount, baseTotal));
         }
     }, [appliedCoupon, cartTotal, isRoomBooking, roomDetails, bookingDates]);
 

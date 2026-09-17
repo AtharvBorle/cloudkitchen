@@ -76,19 +76,52 @@ export const createOrder = async (req: Request) => {
         if (!coupon) throw new ApiError("Invalid coupon selected", 400);
         if (!coupon.isActive) throw new ApiError("This coupon is no longer active", 400);
 
+        // Expiry check
+        if (!coupon.noExpiry && coupon.validUntil && new Date(coupon.validUntil) < new Date()) {
+            throw new ApiError("This coupon has expired", 400);
+        }
+
+        // Seller match check
+        if (coupon.appliesToSellerId && coupon.appliesToSellerId !== sellerProfile.id) {
+            throw new ApiError("This coupon is not valid for this store", 400);
+        }
+
+        // Specific Item check
+        if (coupon.appliesToProductId) {
+            const hasProduct = items.some((it: any) => it.id === coupon.appliesToProductId || it.foodItemId === coupon.appliesToProductId);
+            if (!hasProduct) {
+                throw new ApiError("This coupon is only valid on specific items not found in your cart", 400);
+            }
+        }
+
+        // Customer Eligibility check (NEW_ONLY)
+        if (coupon.customerEligibility === "NEW_ONLY") {
+            const previousOrdersCount = await db.order.count({
+                where: {
+                    userId: session.user.id,
+                    status: { not: "CANCELLED" }
+                }
+            });
+            if (previousOrdersCount > 0) {
+                throw new ApiError("This coupon is exclusively for first-time customers", 400);
+            }
+        }
+
         // 1. Minimum Cart Value check
-        if (coupon.minimumCartValue) {
+        const minCart = coupon.minimumCartValue || (coupon as any).minOrderAmount;
+        if (minCart) {
             let baseTotal = 0;
             for (const item of items) {
                 baseTotal += (item.price || 0) * (item.quantity || 1);
             }
-            if (baseTotal < coupon.minimumCartValue) {
-                throw new ApiError(`This coupon requires a minimum cart value of ₹${coupon.minimumCartValue}`, 400);
+            if (baseTotal < minCart) {
+                throw new ApiError(`This coupon requires a minimum cart value of ₹${minCart}`, 400);
             }
         }
 
         // 2. Max Usages Per User check
-        if (coupon.maxUsagesPerUser) {
+        const userLimit = coupon.perUserLimit || coupon.maxUsagesPerUser;
+        if (userLimit) {
             const usageCount = await db.order.count({
                 where: {
                     userId: session.user.id,
@@ -96,14 +129,15 @@ export const createOrder = async (req: Request) => {
                     status: { not: "CANCELLED" }
                 }
             });
-            if (usageCount >= coupon.maxUsagesPerUser) {
-                throw new ApiError(`You've reached the maximum usage limit (${coupon.maxUsagesPerUser}) for this coupon.`, 400);
+            if (usageCount >= userLimit) {
+                throw new ApiError(`You've reached the maximum usage limit (${userLimit}) for this coupon.`, 400);
             }
         }
 
         // 3. Max Users check
-        if (coupon.maxUsers) {
-            if (coupon.currentUsersCount >= coupon.maxUsers) {
+        const totalLimit = coupon.usageLimit || coupon.maxUsers;
+        if (totalLimit) {
+            if (coupon.currentUsersCount >= totalLimit) {
                 throw new ApiError(`This coupon has reached its maximum users limit across the platform.`, 400);
             }
         }

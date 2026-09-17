@@ -1,1 +1,0 @@
-export { default } from '@/app/seller/create-subscription-plan/page';

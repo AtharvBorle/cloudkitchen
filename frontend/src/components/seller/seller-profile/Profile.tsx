@@ -75,7 +75,7 @@ export default function Profile({
           const profile = data.data?.profile || data.profile;
           if (user) {
             const rawUserName = user.name && !isGenericFallbackName(user.name) ? user.name : "";
-            const outlet = profile?.businessName || rawUserName || "Radha's Kitchen";
+            const outlet = profile?.businessName || rawUserName || user?.name || "Kitchen Owner";
             const owner = rawUserName || user.name || outlet;
             const initials = computeInitials(outlet);
 

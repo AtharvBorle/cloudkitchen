@@ -6,7 +6,7 @@ import Topbar from "../nav/Topbar";
 import { ResponsiveNavMenu } from "../nav/ResponsiveNavMenu";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
-import { Star, Utensils, ChevronDown, Check } from "lucide-react";
+import { Star, Utensils, ChevronDown, Check, MessageSquare, X, Send } from "lucide-react";
 import styles from "./SellerReviews.module.css";
 
 export interface ReviewItem {
@@ -177,6 +177,59 @@ export default function SellerReviewsCanvasDas({
   const [totalReviewsCount, setTotalReviewsCount] = useState(1248);
   const [ratingsDistribution, setRatingsDistribution] = useState(DEFAULT_RATINGS_DISTRIBUTION);
   const [breakdownBars, setBreakdownBars] = useState(DEFAULT_BREAKDOWN_BARS);
+
+  // Reply Modal State
+  const [replyModalReview, setReplyModalReview] = useState<ReviewItem | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  const handleOpenReplyModal = (review: ReviewItem) => {
+    setReplyModalReview(review);
+    setReplyText(review.managerResponse ? review.managerResponse.text : "");
+  };
+
+  const handleSendReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyModalReview || !replyText.trim()) return;
+    setSubmittingReply(true);
+    try {
+      const res = await fetchApi(`/api/seller/reviews/${replyModalReview.id}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ replyText: replyText.trim() }),
+      });
+      if (res.ok) {
+        const todayFormatted = new Date().toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        setReviewsList((prev) =>
+          prev.map((r) =>
+            r.id === replyModalReview.id
+              ? {
+                  ...r,
+                  managerResponse: {
+                    date: todayFormatted,
+                    text: replyText.trim(),
+                  },
+                }
+              : r
+          )
+        );
+        setReplyModalReview(null);
+        setReplyText("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || "Failed to submit reply.");
+      }
+    } catch (err) {
+      console.error("Reply error:", err);
+      alert("An error occurred while submitting reply.");
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
 
   // Filter & Sort state
   const [selectedFilter, setSelectedFilter] = useState("All Ratings");
@@ -595,6 +648,32 @@ export default function SellerReviewsCanvasDas({
                               </p>
                             </div>
                           )}
+
+                          {/* Reply Action Button */}
+                          <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReplyModal(review)}
+                              style={{
+                                background: "none",
+                                border: "1px solid #FED7AA",
+                                borderRadius: "8px",
+                                padding: "6px 14px",
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                color: "#EA580C",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                backgroundColor: "#FFF7ED",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <MessageSquare size={13} />
+                              <span>{review.managerResponse ? "Edit Response" : "Reply to Customer"}</span>
+                            </button>
+                          </div>
                         </div>
                       );
                     })
@@ -652,6 +731,147 @@ export default function SellerReviewsCanvasDas({
           </div>
         </main>
       </div>
+
+      {/* Manager Reply Modal */}
+      {replyModalReview && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: "20px",
+          }}
+          onClick={() => setReplyModalReview(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "28px",
+              maxWidth: "540px",
+              width: "100%",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+              <div>
+                <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#0F172A", margin: "0 0 4px 0" }}>
+                  Respond to {replyModalReview.customerName}
+                </h3>
+                <p style={{ fontSize: "13px", color: "#64748B", margin: 0 }}>
+                  Order ID: {replyModalReview.orderId} • Rated {replyModalReview.rating} Stars
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyModalReview(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94A3B8",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Original Customer Review Snippet */}
+            <div
+              style={{
+                backgroundColor: "#F8FAFC",
+                border: "1px solid #E2E8F0",
+                borderRadius: "10px",
+                padding: "12px 16px",
+                marginBottom: "20px",
+                fontSize: "13px",
+                color: "#475569",
+                fontStyle: "italic",
+              }}
+            >
+              &ldquo;{replyModalReview.comment || "No comment left for this order."}&rdquo;
+            </div>
+
+            <form onSubmit={handleSendReply}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "8px" }}>
+                Your Response:
+              </label>
+              <textarea
+                required
+                rows={4}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Thank you for your feedback! We're glad you enjoyed..."
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "12px",
+                  borderRadius: "10px",
+                  border: "1px solid #CBD5E1",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  marginBottom: "20px",
+                  outline: "none",
+                }}
+              />
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setReplyModalReview(null)}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: "8px",
+                    border: "1px solid #E2E8F0",
+                    backgroundColor: "#FFFFFF",
+                    color: "#64748B",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReply || !replyText.trim()}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: "#EA580C",
+                    color: "#FFFFFF",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: submittingReply || !replyText.trim() ? "not-allowed" : "pointer",
+                    opacity: submittingReply || !replyText.trim() ? 0.7 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Send size={14} />
+                  <span>{submittingReply ? "Submitting..." : "Send Response"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

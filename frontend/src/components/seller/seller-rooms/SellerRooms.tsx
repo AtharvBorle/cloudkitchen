@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Plus, User, Pencil, X, Check, Upload, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Plus, User, Pencil, X, Check, Upload, Sparkles, Image as ImageIcon, Lock, ArrowRight, ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
@@ -62,7 +63,44 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   const [editImage, setEditImage] = useState('');
   const [editAvailable, setEditAvailable] = useState(true);
 
+  const [statusChecked, setStatusChecked] = useState(false);
+  const [isPropertyActive, setIsPropertyActive] = useState<boolean | null>(null);
+  const [propertyVerification, setPropertyVerification] = useState<string>("NONE");
+
   useEffect(() => {
+    async function checkCategoryAccess() {
+      try {
+        const res = await fetchApi("/api/seller/dashboard/status");
+        if (res.ok) {
+          const data = await res.json();
+          const status = data.data || data;
+          const active = Boolean(status.isPropertyActive);
+          const verif = status.sellerProfile?.propertyVerificationStatus || "NONE";
+          setIsPropertyActive(active);
+          setPropertyVerification(verif);
+          setStatusChecked(true);
+
+          if (!active) {
+            // Trigger upgrade popup immediately
+            window.dispatchEvent(
+              new CustomEvent(verif === "APPROVED" ? "open-subscription-modal" : "open-category-upgrade", {
+                detail: { category: "PROPERTY" },
+              })
+            );
+          }
+        } else {
+          setStatusChecked(true);
+        }
+      } catch (e) {
+        setStatusChecked(true);
+      }
+    }
+    checkCategoryAccess();
+  }, []);
+
+  useEffect(() => {
+    if (isPropertyActive === false) return; // Do not load rooms if property category is not active
+
     if (rooms && rooms.length > 0) {
       setRoomList(rooms);
       return;
@@ -105,7 +143,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
     }
 
     loadRooms();
-  }, [rooms]);
+  }, [rooms, isPropertyActive]);
 
   const handleToggleRoom = async (id: string) => {
     const targetRoom = roomList.find((r) => r.id === id);
@@ -226,23 +264,123 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
 
         {/* Main Content Canvas */}
         <main className={styles.mainContent}>
-          {/* Header Row: Title & Subtitle + Add Room Button */}
-          <div className={styles.headerRow}>
-            <div className={styles.headerGroup}>
-              <h1 className={styles.title}>Rooms Directory</h1>
-              <p className={styles.subtitle}>
-                View, edit, and control live availability status of all Neo Cloud Rooms.
-              </p>
-            </div>
-            <button
-              type="button"
-              className={styles.addRoomBtn}
-              onClick={handleAddRoomClick}
+          {statusChecked && isPropertyActive === false ? (
+            <div
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: "16px",
+                border: "1px solid #FED7AA",
+                padding: "48px 24px",
+                textAlign: "center",
+                maxWidth: "600px",
+                margin: "40px auto",
+                boxShadow: "0 10px 25px rgba(249, 115, 22, 0.08)",
+              }}
             >
-              <Plus size={18} strokeWidth={2.8} />
-              <span>Add Room</span>
-            </button>
-          </div>
+              <div
+                style={{
+                  width: "64px",
+                  height: "64px",
+                  borderRadius: "50%",
+                  backgroundColor: "#FFF1E8",
+                  color: "#F97316",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 16px",
+                }}
+              >
+                <Lock size={28} />
+              </div>
+              <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0F172A", marginBottom: "8px" }}>
+                Stay & Room Services Locked
+              </h2>
+              <p style={{ color: "#64748B", fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "24px" }}>
+                {propertyVerification === "APPROVED"
+                  ? "Your property verification is approved! Please subscribe to the Rooms & Stay category plan to activate guest booking management and room configuration."
+                  : "Your seller account is currently configured for Food Services only. To list rooms and receive hotel bookings, please apply for the Property category upgrade."}
+              </p>
+              <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+                {propertyVerification === "APPROVED" ? (
+                  <Link
+                    href="/seller/payment?category=PROPERTY"
+                    style={{
+                      padding: "12px 24px",
+                      backgroundColor: "#F97316",
+                      color: "#FFFFFF",
+                      borderRadius: "10px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <span>Subscribe to Rooms Plan</span>
+                    <ArrowRight size={16} />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.dispatchEvent(
+                        new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } })
+                      );
+                    }}
+                    style={{
+                      padding: "12px 24px",
+                      backgroundColor: "#F97316",
+                      color: "#FFFFFF",
+                      borderRadius: "10px",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <span>Apply for Category Upgrade</span>
+                    <ArrowRight size={16} />
+                  </button>
+                )}
+                <Link
+                  href="/seller/dashboard"
+                  style={{
+                    padding: "12px 20px",
+                    backgroundColor: "#F1F5F9",
+                    color: "#475569",
+                    borderRadius: "10px",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  Return to Dashboard
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Header Row: Title & Subtitle + Add Room Button */}
+              <div className={styles.headerRow}>
+                <div className={styles.headerGroup}>
+                  <h1 className={styles.title}>Rooms Directory</h1>
+                  <p className={styles.subtitle}>
+                    View, edit, and control live availability status of all Neo Cloud Rooms.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.addRoomBtn}
+                  onClick={handleAddRoomClick}
+                >
+                  <Plus size={18} strokeWidth={2.8} />
+                  <span>Add Room</span>
+                </button>
+              </div>
 
           {/* Rooms Grid Cards */}
           <div className={styles.roomsGrid}>
@@ -347,6 +485,8 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
               </div>
             )))}
           </div>
+            </>
+          )}
         </main>
       </div>
 

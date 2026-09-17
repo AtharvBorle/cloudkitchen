@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neo Cloud Kitchen & Rooms — Swagger API Console</title>
+  <link rel="stylesheet" type="text/css" href="/swagger/swagger-ui.css" />
+  <style>
+    html {
+      box-sizing: border-box;
+      overflow-y: scroll;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+    body {
+      margin: 0;
+      background: #0f172a;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .custom-header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid #334155;
+      padding: 16px 28px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: #f8fafc;
+    }
+    .custom-auth-bar {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 14px 28px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: #cbd5e1;
+    }
+    .auth-input {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 0.85rem;
+      min-width: 320px;
+    }
+    .auth-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      background: #10b981;
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+    .swagger-container {
+      background: #ffffff;
+      min-height: 80vh;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="custom-header">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 26px;">🚀</span>
+      <div>
+        <h1 style="margin: 0; font-size: 1.3rem; font-weight: 700;">Neo Cloud Kitchen & Rooms — API Console</h1>
+        <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #94a3b8;">OpenAPI 3.0.3 • Bearer JWT Authentication • 100+ Live Endpoints</p>
+      </div>
+    </div>
+    <div>
+      <a href="/api/docs" target="_blank" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.85rem; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; background: #1e293b;">Raw JSON Spec ↗</a>
+    </div>
+  </div>
+
+  <div class="custom-auth-bar">
+    <div>
+      <span style="color: #38bdf8; font-weight: 600;">🔑 Quick JWT Token Injector:</span>
+      <span style="font-size: 0.8rem; margin-left: 6px; color: #cbd5e1;">Login via <strong style="color: #facc15;">POST /api/auth/login</strong>, paste token here:</span>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <input id="quickToken" class="auth-input" placeholder="Paste JWT token (eyJhbGci...)" />
+      <button class="auth-btn" onclick="applyToken()">Authorize Token 🔓</button>
+    </div>
+  </div>
+
+  <div class="swagger-container">
+    <div id="swagger-ui"></div>
+  </div>
+
+  <script src="/swagger/swagger-ui-bundle.js"></script>
+  <script src="/swagger/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      window.ui = SwaggerUIBundle({
+        url: "/api/docs",
+        dom_id: '#swagger-ui',
+        deepLinking: false,
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        docExpansion: "none",
+        filter: true,
+        defaultModelsExpandDepth: 1,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "BaseLayout"
+      });
+    };
+
+    function applyToken() {
+      var raw = document.getElementById("quickToken").value.trim();
+      if (!raw) return;
+      var clean = raw.startsWith("Bearer ") ? raw.substring(7).trim() : raw;
+      if (window.ui && window.ui.authActions) {
+        window.ui.authActions.authorize({
+          BearerAuth: {
+            name: "BearerAuth",
+            schema: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+            value: clean
+          }
+        });
+        alert("✅ Token applied to Swagger session successfully!");
+      }
+    }
+  </script>
+</body>
+</html>

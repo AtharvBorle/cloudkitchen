@@ -201,6 +201,189 @@
   background-color: #fecaca;
 }
 
+.filePreviewRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.previewThumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.previewPdfBadge {
+  width: 48px;
+  height: 48px;
+  background-color: #fee2e2;
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  flex-shrink: 0;
+}
+
+.previewFileName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.fileActionBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.changeBtn {
+  background-color: #e2e8f0;
+  color: #334155;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.changeBtn:hover {
+  background-color: #cbd5e1;
+}
+
+.removeBtn {
+  background-color: #fee2e2;
+  color: #ef4444;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.removeBtn:hover {
+  background-color: #fecaca;
+}
+
+/* ID Proof Type Toggle */
+.idProofToggleGroup {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.idToggleBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.idToggleBtnActive {
+  border: 2px solid #f97316;
+  background-color: #fff7ed;
+  color: #ea580c;
+  font-weight: 700;
+}
+
+/* Photo Upload & Gallery Grid */
+.photoGrid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.photoThumbWrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.photoThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.photoRemoveBtn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  line-height: 1;
+}
+
+/* Expandable Optional Documents */
+.accordionToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.accordionToggle:hover {
+  background-color: #f1f5f9;
+}
+
+.optionalDocsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 16px;
+  background-color: #fafbfc;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  box-sizing: border-box;
+}
+
 .flaggedInput {
   border: 1.5px solid #f87171;
   background-color: #ffffff;
@@ -274,10 +457,15 @@
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
 }
 
-.submitBtn:hover {
+.submitBtn:hover:not(:disabled) {
   background-color: #ea580c;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
   transform: translateY(-1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 /* ========================================================================= */

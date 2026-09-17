@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { User, Pencil, Check, X } from "lucide-react";
+import { User, Pencil, Check, X, AlertCircle, Lock, Eye, EyeOff } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./PersonalProfile.module.css";
@@ -95,39 +95,85 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
     setIsEditing(true);
   };
 
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
+    const cleanPhone = editPhone.replace(/\D/g, "");
+    if (cleanPhone && cleanPhone.length !== 10) {
+      setErrorMessage("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    const cleanPincode = editPincode.replace(/\D/g, "");
+    if (cleanPincode && cleanPincode.length !== 6) {
+      setErrorMessage("Pincode must be exactly 6 digits.");
+      return;
+    }
+
+    if (changePasswordOpen) {
+      if (!currentPassword) {
+        setErrorMessage("Please enter your current password.");
+        return;
+      }
+      if (newPassword.length < 6) {
+        setErrorMessage("New password must be at least 6 characters long.");
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        setErrorMessage("New password and confirm password do not match.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
+      const payload: any = {
+        name: editName.trim(),
+        phone: cleanPhone,
+        city: editCity.trim(),
+        pincode: cleanPincode,
+      };
+
+      if (changePasswordOpen && newPassword) {
+        payload.currentPassword = currentPassword;
+        payload.newPassword = newPassword;
+      }
+
       const res = await fetchApi("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName.trim(),
-          phone: editPhone.trim(),
-          city: editCity.trim(),
-          pincode: editPincode.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         setLiveData((prev) => ({
           ...prev,
           name: editName.trim(),
-          phone: editPhone.trim(),
+          phone: cleanPhone,
           city: editCity.trim(),
-          pincode: editPincode.trim(),
+          pincode: cleanPincode,
         }));
         setIsEditing(false);
+        setChangePasswordOpen(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
         setFeedbackMsg("Profile updated successfully!");
         setTimeout(() => setFeedbackMsg(null), 3000);
       } else {
         const data = await res.json().catch(() => ({}));
-        alert(data.message || "Failed to update profile");
+        setErrorMessage(data.message || "Failed to update profile");
       }
     } catch (err) {
       console.error("Failed to update profile:", err);
-      alert("Error updating profile");
+      setErrorMessage("Error updating profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -153,6 +199,27 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
         >
           <Check size={16} />
           <span>{feedbackMsg}</span>
+        </div>
+      )}
+
+      {/* Error Toast */}
+      {errorMessage && (
+        <div
+          style={{
+            backgroundColor: "#FDE8E8",
+            color: "#9B1C1C",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            fontSize: "0.88rem",
+            fontWeight: 600,
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <AlertCircle size={16} />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -235,7 +302,7 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748B" }}>PINCODE</label>
+              <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748B" }}>PINCODE (6 DIGITS)</label>
               <input
                 type="text"
                 maxLength={6}
@@ -254,10 +321,105 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
             </div>
           </div>
 
+          {/* Change Password Toggle */}
+          <div style={{ marginTop: "8px", borderTop: "1px dashed #E2E8F0", paddingTop: "14px" }}>
+            <button
+              type="button"
+              onClick={() => setChangePasswordOpen(!changePasswordOpen)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#FF5500",
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                padding: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <Lock size={14} />
+              <span>{changePasswordOpen ? "Cancel Password Change" : "Change Account Password"}</span>
+            </button>
+
+            {changePasswordOpen && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: "12px",
+                  marginTop: "12px",
+                  padding: "14px",
+                  backgroundColor: "#F8FAFC",
+                  borderRadius: "10px",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748B" }}>CURRENT PASSWORD</label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: "6px",
+                      border: "1.5px solid #CBD5E1",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748B" }}>NEW PASSWORD (MIN 6 CHARS)</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: "6px",
+                      border: "1.5px solid #CBD5E1",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748B" }}>CONFIRM NEW PASSWORD</label>
+                  <input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: "6px",
+                      border: "1.5px solid #CBD5E1",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
             <button
               type="button"
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                setIsEditing(false);
+                setChangePasswordOpen(false);
+                setErrorMessage(null);
+              }}
               disabled={saving}
               style={{
                 padding: "8px 18px",

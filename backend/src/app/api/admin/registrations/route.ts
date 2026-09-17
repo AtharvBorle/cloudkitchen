@@ -25,6 +25,17 @@ export async function GET() {
             }
         });
 
+        const safeParseArray = (val: any) => {
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            try {
+                const parsed = JSON.parse(val);
+                return Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+                return typeof val === 'string' && val.length > 0 ? [val] : [];
+            }
+        };
+
         const applications = pendingProfiles.map(profile => ({
             id: profile.id,
             businessName: profile.businessName || profile.user.name,
@@ -32,14 +43,14 @@ export async function GET() {
             ownerName: profile.user.name,
             email: profile.user.email,
             phone: profile.user.phone,
-            kitchenAddress: `${profile.addressFlat || ""}, ${profile.addressLocality || ""}${profile.addressLandmark ? `, ${profile.addressLandmark}` : ""}`,
+            kitchenAddress: `${profile.addressFlat || ""}, ${profile.addressLocality || ""}${profile.addressLandmark ? `, ${profile.addressLandmark}` : ""}`.trim().replace(/^,\s*/, ""),
             adhaarUrl: profile.adhaarUrl,
             fssaiUrl: profile.fssaiUrl,
             lightBillUrl: profile.lightBillUrl,
             passbookUrl: profile.passbookUrl,
-            kitchenImages: (profile as any).kitchenImages ? JSON.parse((profile as any).kitchenImages) : [],
-            cuisineImages: (profile as any).cuisineImages ? JSON.parse((profile as any).cuisineImages) : [],
-            roomImages: (profile as any).roomImages ? JSON.parse((profile as any).roomImages) : [],
+            kitchenImages: safeParseArray((profile as any).kitchenImages),
+            cuisineImages: safeParseArray((profile as any).cuisineImages),
+            roomImages: safeParseArray((profile as any).roomImages),
             createdAt: profile.user.createdAt.toISOString(),
             verificationStatus: profile.verificationStatus,
             foodVerificationStatus: profile.foodVerificationStatus,

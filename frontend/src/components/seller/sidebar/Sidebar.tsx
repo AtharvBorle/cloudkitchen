@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
 import { usePathname } from "next/navigation";
 import { performLogout } from "@/lib/logout";
+import { fetchApi, uploadWithProgress } from "@/lib/fetch-api";
+import CameraCaptureModal from "@/app/components/CameraCaptureModal";
 import navLogoImg from "@/components/navbar/logo-nav.png";
 import {
   LayoutGrid,
@@ -31,6 +33,16 @@ import {
   ChevronRight,
   Percent,
   Star,
+  CheckCircle2,
+  Lock,
+  Clock,
+  Sparkles,
+  UploadCloud,
+  Camera as CameraIcon,
+  Trash2,
+  Check,
+  Loader2,
+  ArrowRight,
 } from "lucide-react";
 import styles from "./ConsoleSidebar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -105,6 +117,201 @@ export default function SellerSidebar({
 
   const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
 
+  // Status & gating states
+  const [statusData, setStatusData] = useState<any>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"SUBSCRIPTION" | "UPGRADE" | null>(null);
+  const [modalCategory, setModalCategory] = useState<"FOOD" | "PROPERTY">("FOOD");
+  const [categoryPlans, setCategoryPlans] = useState<any[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+
+  // Category Upgrade Upload Form State
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [fssaiFile, setFssaiFile] = useState<File | null>(null);
+  const [kitchenImages, setKitchenImages] = useState<(File | null)[]>([null, null, null]);
+  const [cuisineImages, setCuisineImages] = useState<(File | null)[]>([null, null, null]);
+  const [roomImages, setRoomImages] = useState<(File | null)[]>([null, null, null]);
+  const [cameraMode, setCameraMode] = useState<
+    "fssai" | "kitchen0" | "kitchen1" | "kitchen2" | "cuisine0" | "cuisine1" | "cuisine2" | "room0" | "room1" | "room2" | null
+  >(null);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetchApi("/api/seller/dashboard/status");
+      if (res.ok) {
+        const data = await res.json();
+        setStatusData(data.data || data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard status in sidebar:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  useEffect(() => {
+    const handleOpenUpgrade = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const category = customEvent.detail?.category || "FOOD";
+      openCategoryUpgradeModal(category);
+    };
+
+    const handleOpenSubscription = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const category = customEvent.detail?.category || "FOOD";
+      openSubscriptionModal(category);
+    };
+
+    window.addEventListener("open-category-upgrade", handleOpenUpgrade);
+    window.addEventListener("open-subscription-modal", handleOpenSubscription);
+    return () => {
+      window.removeEventListener("open-category-upgrade", handleOpenUpgrade);
+      window.removeEventListener("open-subscription-modal", handleOpenSubscription);
+    };
+  }, [statusData]);
+
+  const openSubscriptionModal = async (category: "FOOD" | "PROPERTY") => {
+    setModalCategory(category);
+    setModalType("SUBSCRIPTION");
+    setModalOpen(true);
+    setLoadingPlans(true);
+    try {
+      const res = await fetchApi(`/api/seller/subscription/plans?category=${category}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCategoryPlans(data.data || data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load subscription plans:", err);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const openCategoryUpgradeModal = (category: "FOOD" | "PROPERTY") => {
+    setModalCategory(category);
+    setModalType("UPGRADE");
+    setModalOpen(true);
+  };
+
+  const handleCameraCapture = (file: File) => {
+    if (cameraMode === "fssai") {
+      setFssaiFile(file);
+    } else if (cameraMode?.startsWith("kitchen")) {
+      const idx = parseInt(cameraMode.replace("kitchen", ""));
+      const copy = [...kitchenImages];
+      copy[idx] = file;
+      setKitchenImages(copy);
+    } else if (cameraMode?.startsWith("cuisine")) {
+      const idx = parseInt(cameraMode.replace("cuisine", ""));
+      const copy = [...cuisineImages];
+      copy[idx] = file;
+      setCuisineImages(copy);
+    } else if (cameraMode?.startsWith("room")) {
+      const idx = parseInt(cameraMode.replace("room", ""));
+      const copy = [...roomImages];
+      copy[idx] = file;
+      setRoomImages(copy);
+    }
+    setCameraMode(null);
+  };
+
+  const handleCategoryFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("category", modalCategory);
+
+      if (modalCategory === "FOOD") {
+        if (fssaiFile) formData.append("fssaiFile", fssaiFile);
+        kitchenImages.forEach((img, idx) => {
+          if (img) formData.append(`kitchenImage_${idx}`, img);
+        });
+        cuisineImages.forEach((img, idx) => {
+          if (img) formData.append(`cuisineImage_${idx}`, img);
+        });
+      } else if (modalCategory === "PROPERTY") {
+        roomImages.forEach((img, idx) => {
+          if (img) formData.append(`roomImage_${idx}`, img);
+        });
+      }
+
+      setUploadProgress(0);
+      const res = await uploadWithProgress("/api/seller/category-application", formData, (pct) => {
+        setUploadProgress(pct);
+      });
+
+      if (res.ok) {
+        alert(`Successfully submitted application for ${modalCategory === "FOOD" ? "Food" : "Property"} verification!`);
+        setFssaiFile(null);
+        setKitchenImages([null, null, null]);
+        setCuisineImages([null, null, null]);
+        setRoomImages([null, null, null]);
+        setModalOpen(false);
+        await fetchStatus();
+      } else {
+        const errData = await res.json();
+        alert(errData.message || "Failed to submit application");
+      }
+    } catch (error) {
+      console.error("Error applying for category:", error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleNavItemClick = (e: React.MouseEvent, item: NavItem) => {
+    const isFoodTab = item.id === "orders" || item.id === "menu" || item.id === "delivery";
+    const isPropertyTab = item.id === "rooms-seller" || item.id === "bookings";
+
+    if (statusData) {
+      const hasActiveSub = Boolean(statusData.hasActiveSub);
+      const isFoodActive = Boolean(statusData.isFoodActive);
+      const isPropertyActive = Boolean(statusData.isPropertyActive);
+
+      if (isFoodTab) {
+        if (!hasActiveSub) {
+          e.preventDefault();
+          openSubscriptionModal("FOOD");
+          return;
+        }
+        if (!isFoodActive) {
+          e.preventDefault();
+          const foodVerification = statusData?.sellerProfile?.foodVerificationStatus;
+          if (foodVerification === "APPROVED") {
+            openSubscriptionModal("FOOD");
+          } else {
+            openCategoryUpgradeModal("FOOD");
+          }
+          return;
+        }
+      } else if (isPropertyTab) {
+        if (!hasActiveSub) {
+          e.preventDefault();
+          openSubscriptionModal("PROPERTY");
+          return;
+        }
+        if (!isPropertyActive) {
+          e.preventDefault();
+          const propVerification = statusData?.sellerProfile?.propertyVerificationStatus;
+          if (propVerification === "APPROVED") {
+            openSubscriptionModal("PROPERTY");
+          } else {
+            openCategoryUpgradeModal("PROPERTY");
+          }
+          return;
+        }
+      }
+    }
+
+    if (onClose) onClose();
+  };
+
   // Controlled or uncontrolled collapse state
   const isEffectiveCollapsed = isCollapsed !== undefined ? isCollapsed : internalCollapsed;
 
@@ -127,82 +334,73 @@ export default function SellerSidebar({
       return (
         pathname?.startsWith("/seller/dashboard") ||
         pathname?.startsWith("/seller/res/dashboard") ||
-        pathname === "/dashboard/seller" ||
-        pathname === "/dashboard/seller/"
+        pathname === "/seller" ||
+        pathname === "/seller/"
       );
     }
     if (item.id === "orders") {
       return (
         pathname?.startsWith("/seller/orders") ||
         pathname?.startsWith("/seller/order-default") ||
-        pathname?.startsWith("/seller/res/orders") ||
-        pathname?.startsWith("/dashboard/seller/orders")
+        pathname?.startsWith("/seller/res/orders")
       );
     }
     if (item.id === "menu") {
       return (
         pathname?.startsWith("/seller/menu") ||
         pathname?.startsWith("/seller/edit-menu") ||
-        pathname?.startsWith("/seller/res/menu") ||
-        pathname?.startsWith("/dashboard/seller/menu") ||
-        pathname?.startsWith("/dashboard/seller/edit-menu")
+        pathname?.startsWith("/seller/res/menu")
       );
     }
     if (item.id === "rooms-seller") {
       return (
         pathname?.startsWith("/seller/rooms") ||
-        pathname?.startsWith("/seller/res/rooms") ||
-        pathname?.startsWith("/dashboard/seller/rooms")
+        pathname?.startsWith("/seller/res/rooms")
       );
     }
     if (item.id === "bookings") {
       return (
         pathname?.startsWith("/seller/booking") ||
-        pathname?.startsWith("/seller/res/booking") ||
-        pathname?.startsWith("/dashboard/seller/bookings")
+        pathname?.startsWith("/seller/res/booking")
       );
     }
     if (item.id === "delivery") {
       return (
         pathname?.startsWith("/seller/delivery") ||
         pathname?.startsWith("/seller/riderMng") ||
-        pathname?.startsWith("/seller/res/delivery") ||
-        pathname?.startsWith("/dashboard/seller/delivery")
+        pathname?.startsWith("/seller/res/delivery")
       );
     }
     if (item.id === "subscription") {
       return (
         pathname?.startsWith("/seller/subscription") ||
+        pathname?.startsWith("/seller/payment") ||
+        pathname?.startsWith("/seller/res/payment") ||
         pathname?.startsWith("/seller/create-subscription-plan") ||
-        pathname?.startsWith("/seller/res/subscription") ||
-        pathname?.startsWith("/dashboard/seller/payment")
+        pathname?.startsWith("/seller/res/subscription")
       );
     }
     if (item.id === "support") {
       return (
-        pathname?.startsWith("/seller/support") ||
-        pathname?.startsWith("/dashboard/seller/support")
+        pathname?.startsWith("/seller/support")
       );
     }
     if (item.id === "profile") {
       return (
         pathname?.startsWith("/seller/profile") ||
-        pathname?.startsWith("/seller/res/profile") ||
-        pathname?.startsWith("/dashboard/seller/profile")
+        pathname?.startsWith("/seller/res/profile")
       );
     }
     if (item.id === "offers") {
       return (
         pathname?.startsWith("/seller/offers") ||
-        pathname?.startsWith("/seller/res/offers") ||
-        pathname?.startsWith("/dashboard/seller/offers")
+        pathname?.startsWith("/seller/res/offers")
       );
     }
     if (item.id === "reviews") {
       return (
         pathname?.startsWith("/seller/reviews") ||
-        pathname?.startsWith("/seller/res/reviews") ||
-        pathname?.startsWith("/dashboard/seller/reviews")
+        pathname?.startsWith("/seller/res/reviews")
       );
     }
     if (item.id === "notifications") {
@@ -214,8 +412,7 @@ export default function SellerSidebar({
     if (item.id === "settings") {
       return (
         pathname?.startsWith("/seller/settings") ||
-        pathname?.startsWith("/seller/res/settings") ||
-        pathname?.startsWith("/dashboard/seller/settings")
+        pathname?.startsWith("/seller/res/settings")
       );
     }
     return Boolean(pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)));
@@ -428,7 +625,7 @@ export default function SellerSidebar({
               <Link
                 key={item.id}
                 href={item.href}
-                onClick={onClose}
+                onClick={(e) => handleNavItemClick(e, item)}
                 title={item.label}
                 style={{
                   width: "100%",
@@ -557,6 +754,420 @@ export default function SellerSidebar({
         </div>
       </aside>
 
+      {/* Category Upgrade & Subscription Modals */}
+      {modalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setModalOpen(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            {modalType === "SUBSCRIPTION" ? (
+              <>
+                <div className={styles.modalHeader}>
+                  <div className={styles.modalTitleWrapper}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#fff1e8", color: "#f97316", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Lock size={18} />
+                      </div>
+                      <h3 className={styles.modalTitle}>
+                        {modalCategory === "FOOD" ? "Activate Food Services" : "Activate Room Bookings"}
+                      </h3>
+                    </div>
+                    <p className={styles.modalSubtitle}>
+                      An active subscription plan is required to access orders, menu management, and operations.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className={styles.modalCloseBtn}
+                    aria-label="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className={styles.plansList}>
+                  {loadingPlans ? (
+                    <div style={{ padding: "30px", textAlign: "center", color: "#64748b" }}>
+                      <Loader2 size={24} className="animate-spin" color="#f97316" style={{ margin: "0 auto 8px" }} />
+                      <p style={{ fontSize: "13px" }}>Loading available plans...</p>
+                    </div>
+                  ) : categoryPlans.length === 0 ? (
+                    <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "13px" }}>
+                      No active subscription plans found for this category. Please check back shortly.
+                    </div>
+                  ) : (
+                    categoryPlans.map((plan) => (
+                      <div key={plan.id} className={styles.planCard}>
+                        <div className={styles.planTopRow}>
+                          <div>
+                            <div className={styles.planName}>{plan.name}</div>
+                            <div className={styles.planMeta}>
+                              <Clock size={13} />
+                              <span>{plan.durationMonths} Months Duration</span>
+                            </div>
+                          </div>
+                          <div className={styles.planPrice}>₹{plan.price.toLocaleString("en-IN")}</div>
+                        </div>
+
+                        {Array.isArray(plan.features) && plan.features.length > 0 && (
+                          <div className={styles.planFeatures}>
+                            {plan.features.slice(0, 3).map((feat: string, idx: number) => (
+                              <div key={idx} className={styles.planFeatureItem}>
+                                <Check size={13} color="#16a34a" />
+                                <span>{feat}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <Link
+                          href={`/seller/payment?planId=${plan.id}&category=${modalCategory}`}
+                          onClick={() => setModalOpen(false)}
+                          className={styles.planSelectBtn}
+                        >
+                          <span>Subscribe Now</span>
+                          <ArrowRight size={14} />
+                        </Link>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className={styles.modalFooterBtns}>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className={styles.modalCancelBtn}
+                  >
+                    Close
+                  </button>
+                  <Link
+                    href={`/seller/payment?category=${modalCategory}`}
+                    onClick={() => setModalOpen(false)}
+                    className={styles.modalPrimaryBtn}
+                  >
+                    View All Plans
+                  </Link>
+                </div>
+              </>
+            ) : modalType === "UPGRADE" ? (() => {
+              const verification = modalCategory === "FOOD"
+                ? (statusData?.sellerProfile?.foodVerificationStatus || "NONE")
+                : (statusData?.sellerProfile?.propertyVerificationStatus || "NONE");
+
+              if (verification === "PENDING") {
+                return (
+                  <div className={styles.pendingCard}>
+                    <div className={styles.pendingIcon}>⏳</div>
+                    <h3 className={styles.modalTitle}>Verification Under Review</h3>
+                    <p className={styles.modalSubtitle} style={{ maxWidth: "380px" }}>
+                      Your request to add the {modalCategory === "FOOD" ? "Food" : "Property"} category is currently being reviewed by our administration team.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className={styles.modalPrimaryBtn}
+                      style={{ marginTop: "12px", width: "100%" }}
+                    >
+                      Got It
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <form onSubmit={handleCategoryFormSubmit}>
+                  <div className={styles.modalHeader}>
+                    <div className={styles.modalTitleWrapper}>
+                      <h3 className={styles.modalTitle}>
+                        {modalCategory === "FOOD" ? "Food Category Verification" : "Property Category Verification"}
+                      </h3>
+                      <p className={styles.modalSubtitle}>
+                        Please provide verification documents to enable {modalCategory === "FOOD" ? "food menu & kitchen orders" : "rooms & bookings"} on your dashboard.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className={styles.modalCloseBtn}
+                      aria-label="Close"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <div style={{ maxHeight: "380px", overflowY: "auto", paddingRight: "4px" }}>
+                    {modalCategory === "FOOD" && (
+                      <>
+                        {/* FSSAI */}
+                        <div className={styles.fieldGroup}>
+                          <label className={styles.fieldLabel}>
+                            <span>FSSAI License / Certificate</span>
+                            {!statusData?.sellerProfile?.fssaiUrl && <span className={styles.fieldLabelRequired}>*</span>}
+                          </label>
+                          {!fssaiFile ? (
+                            <div className={styles.fileInputRow}>
+                              <label className={styles.uploadFileBtn}>
+                                <UploadCloud size={16} />
+                                <span>Upload File</span>
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  onChange={(e) => setFssaiFile(e.target.files?.[0] || null)}
+                                  style={{ display: "none" }}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setCameraMode("fssai")}
+                                className={styles.cameraFileBtn}
+                              >
+                                <CameraIcon size={16} />
+                                <span>Take Photo</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className={styles.filePreviewRow}>
+                              <span className={styles.fileName}>{fssaiFile.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setFssaiFile(null)}
+                                className={styles.fileRemoveBtn}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Kitchen Images */}
+                        <div className={styles.fieldGroup}>
+                          <label className={styles.fieldLabel}>
+                            <span>Kitchen Images (1-3 photos)</span>
+                            <span className={styles.fieldLabelRequired}>*</span>
+                          </label>
+                          {[0, 1, 2].map((idx) => {
+                            const file = kitchenImages[idx];
+                            return (
+                              <div key={`k_${idx}`} style={{ marginBottom: "6px" }}>
+                                {!file ? (
+                                  <div className={styles.fileInputRow}>
+                                    <label className={styles.uploadFileBtn}>
+                                      <UploadCloud size={15} />
+                                      <span>Kitchen Photo {idx + 1} {idx === 0 && "*"}</span>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const copy = [...kitchenImages];
+                                          copy[idx] = e.target.files?.[0] || null;
+                                          setKitchenImages(copy);
+                                        }}
+                                        style={{ display: "none" }}
+                                      />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCameraMode(`kitchen${idx}` as any)}
+                                      className={styles.cameraFileBtn}
+                                    >
+                                      <CameraIcon size={15} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className={styles.filePreviewRow}>
+                                    <span className={styles.fileName}>{file.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const copy = [...kitchenImages];
+                                        copy[idx] = null;
+                                        setKitchenImages(copy);
+                                      }}
+                                      className={styles.fileRemoveBtn}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Cuisine Images */}
+                        <div className={styles.fieldGroup}>
+                          <label className={styles.fieldLabel}>
+                            <span>Cuisine / Dish Images (1-3 photos)</span>
+                            <span className={styles.fieldLabelRequired}>*</span>
+                          </label>
+                          {[0, 1, 2].map((idx) => {
+                            const file = cuisineImages[idx];
+                            return (
+                              <div key={`c_${idx}`} style={{ marginBottom: "6px" }}>
+                                {!file ? (
+                                  <div className={styles.fileInputRow}>
+                                    <label className={styles.uploadFileBtn}>
+                                      <UploadCloud size={15} />
+                                      <span>Dish Photo {idx + 1} {idx === 0 && "*"}</span>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const copy = [...cuisineImages];
+                                          copy[idx] = e.target.files?.[0] || null;
+                                          setCuisineImages(copy);
+                                        }}
+                                        style={{ display: "none" }}
+                                      />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCameraMode(`cuisine${idx}` as any)}
+                                      className={styles.cameraFileBtn}
+                                    >
+                                      <CameraIcon size={15} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className={styles.filePreviewRow}>
+                                    <span className={styles.fileName}>{file.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const copy = [...cuisineImages];
+                                        copy[idx] = null;
+                                        setCuisineImages(copy);
+                                      }}
+                                      className={styles.fileRemoveBtn}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+
+                    {modalCategory === "PROPERTY" && (
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.fieldLabel}>
+                          <span>Room Photos (1-3 photos)</span>
+                          <span className={styles.fieldLabelRequired}>*</span>
+                        </label>
+                        {[0, 1, 2].map((idx) => {
+                          const file = roomImages[idx];
+                          return (
+                            <div key={`r_${idx}`} style={{ marginBottom: "6px" }}>
+                              {!file ? (
+                                <div className={styles.fileInputRow}>
+                                  <label className={styles.uploadFileBtn}>
+                                    <UploadCloud size={15} />
+                                    <span>Room Photo {idx + 1} {idx === 0 && "*"}</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => {
+                                        const copy = [...roomImages];
+                                        copy[idx] = e.target.files?.[0] || null;
+                                        setRoomImages(copy);
+                                      }}
+                                      style={{ display: "none" }}
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => setCameraMode(`room${idx}` as any)}
+                                    className={styles.cameraFileBtn}
+                                  >
+                                    <CameraIcon size={15} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className={styles.filePreviewRow}>
+                                  <span className={styles.fileName}>{file.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const copy = [...roomImages];
+                                      copy[idx] = null;
+                                      setRoomImages(copy);
+                                    }}
+                                    className={styles.fileRemoveBtn}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.modalFooterBtns}>
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className={styles.modalCancelBtn}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className={styles.modalPrimaryBtn}
+                    >
+                      {submitting ? "Uploading..." : "Submit Documents"}
+                    </button>
+                  </div>
+                </form>
+              );
+            })() : null}
+          </div>
+        </div>
+      )}
+
+      {/* Submitting Progress Modal */}
+      {submitting && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard} style={{ maxWidth: "400px", textAlign: "center", padding: "32px 24px" }}>
+            <Loader2 className="animate-spin" size={38} color="#ea580c" style={{ margin: "0 auto 16px" }} />
+            <h3 className={styles.modalTitle} style={{ marginBottom: "8px" }}>
+              {uploadProgress === 100 ? "Processing Category Request..." : "Submitting Upgrade Documents"}
+            </h3>
+            <p className={styles.modalSubtitle} style={{ marginBottom: "16px" }}>
+              {uploadProgress === 100
+                ? "Files uploaded successfully! Saving to server..."
+                : "Please wait while your files are uploaded..."}
+            </p>
+            <div style={{ width: "100%", backgroundColor: "#e2e8f0", borderRadius: "999px", height: "8px", overflow: "hidden", marginBottom: "8px" }}>
+              <div
+                style={{
+                  height: "100%",
+                  width: `${uploadProgress}%`,
+                  backgroundColor: "#ea580c",
+                  transition: "width 0.2s ease-out",
+                }}
+              />
+            </div>
+            <span style={{ fontSize: "12px", fontWeight: "700", color: "#ea580c" }}>{uploadProgress}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Camera Capture Modal */}
+      {cameraMode && (
+        <CameraCaptureModal
+          onCapture={handleCameraCapture}
+          onClose={() => setCameraMode(null)}
+          skipWatermark={cameraMode === "fssai"}
+        />
+      )}
+
       <style jsx>{`
         .nav-item:hover:not(.active) {
           background-color: #F8FAFC !important;
@@ -572,4 +1183,5 @@ export default function SellerSidebar({
     </>
   );
 }
+
 

@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
                     } else if (role === "SUPPORT") {
                         redirectPath = "/dashboard/support";
                     } else if (role === "SELLER") {
-                        redirectPath = "/dashboard/seller";
+                        redirectPath = "/seller/dashboard";
                     } else if (role === "DELIVERY") {
                         redirectPath = "/dashboard/delivery";
                     } else if (role === "USER") {

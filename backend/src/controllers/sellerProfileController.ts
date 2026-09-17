@@ -40,6 +40,9 @@ export const updateSellerProfile = async (req: Request) => {
     let pincode: string | undefined;
     let infoAddress: string | undefined;
     let upiId: string | undefined;
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    let isLocationPinned: boolean | undefined;
     let bannerImageFile: File | null = null;
 
     if (contentType.includes("multipart/form-data")) {
@@ -51,6 +54,12 @@ export const updateSellerProfile = async (req: Request) => {
         pincode = formData.get("pincode") as string;
         infoAddress = (formData.get("infoAddress") as string) || (formData.get("registeredAddress") as string);
         upiId = formData.get("upiId") as string;
+        const rawLat = formData.get("latitude") || formData.get("lat");
+        const rawLng = formData.get("longitude") || formData.get("lng");
+        const rawPinned = formData.get("isLocationPinned");
+        if (rawLat && rawLat !== "") latitude = parseFloat(rawLat as string);
+        if (rawLng && rawLng !== "") longitude = parseFloat(rawLng as string);
+        if (rawPinned !== null && rawPinned !== undefined) isLocationPinned = rawPinned === "true" || rawPinned === "1";
         bannerImageFile = formData.get("bannerImageFile") as File | null;
     } else {
         const body = await req.json();
@@ -61,6 +70,19 @@ export const updateSellerProfile = async (req: Request) => {
         pincode = body.pincode;
         infoAddress = body.infoAddress || body.registeredAddress;
         upiId = body.upiId;
+        if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
+            latitude = parseFloat(body.latitude);
+        } else if (body.lat !== undefined && body.lat !== null && body.lat !== "") {
+            latitude = parseFloat(body.lat);
+        }
+        if (body.longitude !== undefined && body.longitude !== null && body.longitude !== "") {
+            longitude = parseFloat(body.longitude);
+        } else if (body.lng !== undefined && body.lng !== null && body.lng !== "") {
+            longitude = parseFloat(body.lng);
+        }
+        if (body.isLocationPinned !== undefined) {
+            isLocationPinned = Boolean(body.isLocationPinned);
+        }
     }
 
     const userDataToUpdate: any = {};
@@ -80,6 +102,9 @@ export const updateSellerProfile = async (req: Request) => {
     if (businessName) profileUpdateData.businessName = businessName;
     if (infoAddress) profileUpdateData.addressLocality = infoAddress;
     if (upiId) profileUpdateData.upiId = upiId;
+    if (latitude !== undefined) profileUpdateData.latitude = latitude;
+    if (longitude !== undefined) profileUpdateData.longitude = longitude;
+    if (isLocationPinned !== undefined) profileUpdateData.isLocationPinned = isLocationPinned;
 
     if (bannerImageFile && bannerImageFile.size > 0) {
         const bytes = await bannerImageFile.arrayBuffer();

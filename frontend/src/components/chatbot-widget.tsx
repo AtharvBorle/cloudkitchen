@@ -934,7 +934,7 @@ export default function ChatbotWidget() {
                     ];
                 }
                 else if (normalizedText.includes("order") || normalizedText.includes("sale") || normalizedText.includes("customer") || normalizedText.includes("earning") || normalizedText.includes("revenue")) {
-                    replyText = "You can view your received kitchen orders, manage delivery status, or cancel/process orders directly in the [Received Orders](/dashboard/seller/orders) section of your Seller Dashboard.\n\nNeed assistance with a specific order?";
+                    replyText = "You can view your received kitchen orders, manage delivery status, or cancel/process orders directly in the [Received Orders](/seller/orders) section of your Seller Dashboard.\n\nNeed assistance with a specific order?";
                     generatedOptions = [
                         { label: "📈 Select recent order", action: () => handleSelectOption("seller_orders") },
                         { label: "🎟️ Raise order support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: "Seller Order Support", desc: "I need help with a customer order on my kitchen." }) },
@@ -1508,7 +1508,7 @@ Details: Category request submitted via chatbot assistant.`;
                                         {msg.isTicketSuccess && msg.ticketId && (
                                             <div style={{ marginTop: "10px", borderTop: "1px solid #E2E8F0", paddingTop: "8px" }}>
                                                 <Link
-                                                    href={session?.user.role === "SELLER" ? "/dashboard/seller/support" : session?.user.role === "DELIVERY" ? "/dashboard/delivery" : "/dashboard/user/support"}
+                                                    href={session?.user.role === "SELLER" ? "/seller/support" : session?.user.role === "DELIVERY" ? "/dashboard/delivery" : "/dashboard/user/support"}
                                                     style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline", fontSize: "0.8rem", display: "inline-flex", alignItems: "center" }}
                                                     onClick={() => toggleOpen(false)}
                                                 >
