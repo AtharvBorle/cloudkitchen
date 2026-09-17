@@ -14,7 +14,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import styles from "./LegalDocuments.module.css";
-import { readFileAsDataUrl, saveSellerDraft } from "@/lib/seller-registration-store";
+import { readFileAsDataUrl, compressImageFile, saveSellerDraft } from "@/lib/seller-registration-store";
 
 export interface LegalDocumentsData {
   identityProofFile?: string;
@@ -140,7 +140,13 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     }));
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      let dataUrl: string;
+      if (file.type === "application/pdf") {
+        dataUrl = await readFileAsDataUrl(file);
+      } else {
+        const compressed = await compressImageFile(file, 1600, 1600, 0.85);
+        dataUrl = compressed.dataUrl;
+      }
       const dataUrlField = fileField.replace("File", "DataUrl");
 
       setFormData((prev) => {

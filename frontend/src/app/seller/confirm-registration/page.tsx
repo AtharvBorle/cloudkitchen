@@ -93,26 +93,23 @@ export default function ConfirmRegistrationPage() {
       formData.append("bankAccountNumber", activeDraft.bankAccountNumber || "");
       formData.append("ifscCode", activeDraft.ifscCode || "");
 
-      // Files
-      if (activeDraft.identityProofDataUrl) {
+      // Attach document files (single canonical key each to prevent duplicate payloads)
+      if (activeDraft.identityProofDataUrl && activeDraft.identityProofDataUrl.startsWith("data:")) {
         const file = dataUrlToFile(activeDraft.identityProofDataUrl, activeDraft.identityProofFileName || "identity_proof.jpg");
         if (file) {
           formData.append("adhaarFile", file);
-          formData.append("identityProofFile", file);
         }
       }
-      if (activeDraft.fssaiLicenseDataUrl) {
+      if (activeDraft.fssaiLicenseDataUrl && activeDraft.fssaiLicenseDataUrl.startsWith("data:")) {
         const file = dataUrlToFile(activeDraft.fssaiLicenseDataUrl, activeDraft.fssaiLicenseFileName || "fssai_license.jpg");
         if (file) {
           formData.append("fssaiFile", file);
-          formData.append("fssaiLicenseFile", file);
         }
       }
-      if (activeDraft.utilityBillDataUrl) {
+      if (activeDraft.utilityBillDataUrl && activeDraft.utilityBillDataUrl.startsWith("data:")) {
         const file = dataUrlToFile(activeDraft.utilityBillDataUrl, activeDraft.utilityBillFileName || "utility_bill.jpg");
         if (file) {
           formData.append("lightBillFile", file);
-          formData.append("utilityBillFile", file);
         }
       }
 
@@ -122,7 +119,6 @@ export default function ConfirmRegistrationPage() {
           const file = dataUrlToFile(dataUrl, `kitchen_photo_${idx + 1}.jpg`);
           if (file) {
             formData.append(`kitchenImage_${idx}`, file);
-            formData.append(`kitchenPhoto_${idx}`, file);
           }
         }
       });
@@ -132,7 +128,6 @@ export default function ConfirmRegistrationPage() {
           const file = dataUrlToFile(dataUrl, `cuisine_photo_${idx + 1}.jpg`);
           if (file) {
             formData.append(`cuisineImage_${idx}`, file);
-            formData.append(`cuisinePhoto_${idx}`, file);
           }
         }
       });
@@ -142,7 +137,6 @@ export default function ConfirmRegistrationPage() {
           const file = dataUrlToFile(dataUrl, `room_photo_${idx + 1}.jpg`);
           if (file) {
             formData.append(`roomImage_${idx}`, file);
-            formData.append(`roomPhoto_${idx}`, file);
           }
         }
       });
@@ -152,7 +146,12 @@ export default function ConfirmRegistrationPage() {
         body: formData,
       });
 
-      const data = await res.json().catch(() => ({}));
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
 
       if (res.ok) {
         const trackingId =
@@ -179,7 +178,11 @@ export default function ConfirmRegistrationPage() {
           : "/seller/registration-submitted";
         router.push(nextUrl);
       } else {
-        setErrorMessage(data?.message || data?.error || "Registration failed. Please verify your details and try again.");
+        if (res.status === 409) {
+          setErrorMessage("An account with this email address already exists. Please sign in to your existing account.");
+        } else {
+          setErrorMessage(data?.message || data?.error || "Registration could not be completed. Please check your details and try again.");
+        }
       }
     } catch (err: any) {
       console.error("Submission error:", err);
