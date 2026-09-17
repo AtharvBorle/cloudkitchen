@@ -14,8 +14,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import styles from "./LegalDocuments.module.css";
-
-import { readFileAsDataUrl } from "@/lib/seller-registration-store";
+import { readFileAsDataUrl, saveSellerDraft } from "@/lib/seller-registration-store";
 
 export interface LegalDocumentsData {
   identityProofFile?: string;
@@ -58,6 +57,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     bankAccountNumber: initialData?.bankAccountNumber || "",
     ifscCode: initialData?.ifscCode || "",
   });
+
+  const [bankTouched, setBankTouched] = useState(!!initialData?.bankAccountNumber);
+  const [ifscTouched, setIfscTouched] = useState(!!initialData?.ifscCode);
+
+  const isBankValid = formData.bankAccountNumber.length >= 9 && formData.bankAccountNumber.length <= 18;
+  const isIfscValid = formData.ifscCode.trim().length >= 4 && /^[A-Z0-9]+$/.test(formData.ifscCode.trim().toUpperCase());
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({
     identityProofFile: null,
@@ -137,17 +142,33 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     try {
       const dataUrl = await readFileAsDataUrl(file);
       const dataUrlField = fileField.replace("File", "DataUrl");
-      setFormData((prev) => ({
-        ...prev,
-        [fileField]: file.name,
-        [dataUrlField]: dataUrl,
-      }));
+
+      setFormData((prev) => {
+        const next = {
+          ...prev,
+          [fileField]: file.name,
+          [dataUrlField]: dataUrl,
+        };
+        const draftKeyName = `${fileField.replace("File", "")}FileName` as any;
+        const draftKeyData = `${fileField.replace("File", "")}DataUrl` as any;
+        saveSellerDraft({
+          [draftKeyName]: file.name,
+          [draftKeyData]: dataUrl,
+        });
+        return next;
+      });
     } catch (err) {
       console.error("Error reading file:", err);
-      setFormData((prev) => ({
-        ...prev,
-        [fileField]: file.name,
-      }));
+      setFormData((prev) => {
+        const next = {
+          ...prev,
+          [fileField]: file.name,
+        };
+        saveSellerDraft({
+          [`${fileField.replace("File", "")}FileName` as any]: file.name,
+        });
+        return next;
+      });
     }
   };
 
@@ -195,11 +216,18 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
       inputRef.current.value = "";
     }
     const dataUrlField = field.replace("File", "DataUrl");
-    setFormData((prev) => ({
-      ...prev,
-      [field]: "",
-      [dataUrlField]: "",
-    }));
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [field]: "",
+        [dataUrlField]: "",
+      };
+      saveSellerDraft({
+        [`${field.replace("File", "")}FileName` as any]: "",
+        [`${field.replace("File", "")}DataUrl` as any]: "",
+      });
+      return next;
+    });
     setFieldErrors((prev) => ({
       ...prev,
       [field]: null,
@@ -211,13 +239,46 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleBankAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, "").slice(0, 18);
+    setFormData((prev) => {
+      const next = { ...prev, bankAccountNumber: rawValue };
+      saveSellerDraft({ bankAccountNumber: rawValue });
+      return next;
+    });
+    setBankTouched(true);
+  };
+
+  const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    setFormData((prev) => {
+      const next = { ...prev, ifscCode: rawValue };
+      saveSellerDraft({ ifscCode: rawValue });
+      return next;
+    });
+    setIfscTouched(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setBankTouched(true);
+    setIfscTouched(true);
+
+    if (!isBankValid || !isIfscValid) {
+      return;
+    }
+
+    saveSellerDraft({
+      identityProofFileName: formData.identityProofFile,
+      identityProofDataUrl: formData.identityProofDataUrl,
+      fssaiLicenseFileName: formData.fssaiLicenseFile,
+      fssaiLicenseDataUrl: formData.fssaiLicenseDataUrl,
+      utilityBillFileName: formData.utilityBillFile,
+      utilityBillDataUrl: formData.utilityBillDataUrl,
+      bankAccountNumber: formData.bankAccountNumber,
+      ifscCode: formData.ifscCode,
+    });
+
     if (onContinue) {
       onContinue(formData);
     }
@@ -225,519 +286,435 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
 
   return (
     <div className={styles.cardContainer}>
-      {/* Desktop Header Group (Desktop only) */}
+      {/* Desktop Header Group */}
       <div className={styles.desktopHeaderGroup}>
-        <h2 className={styles.title}>Legal Documents & Verification</h2>
+        <h2 className={styles.title}>Legal Documents & Payout</h2>
         <p className={styles.subtitle}>
-          Upload valid certificates and configure payout banking parameters.
+          Upload regulatory certificates and enter your payout account details.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
+        {/* Hidden File Inputs */}
+        <input
+          ref={identityInputRef}
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg"
+          style={{ display: "none" }}
+          onChange={(e) => handleFileSelect("identityProof", e)}
+        />
+        <input
+          ref={fssaiInputRef}
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg"
+          style={{ display: "none" }}
+          onChange={(e) => handleFileSelect("fssaiLicense", e)}
+        />
+        <input
+          ref={utilityInputRef}
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg"
+          style={{ display: "none" }}
+          onChange={(e) => handleFileSelect("utilityBill", e)}
+        />
+
         {/* ========================================================= */}
-        {/* MOBILE VIEW: Compact Card List (All with Upload Button)  */}
+        {/* MOBILE VIEW: Document Cards Stack Matching Mockup         */}
         {/* ========================================================= */}
         <div className={styles.mobileDocSection}>
-          {/* 1. Identity proof (Aadhaar / PAN) */}
+          {/* Doc 1: Identity Proof */}
           <div
             className={`${styles.mobileDocCard} ${
-              formData.identityProofFile
-                ? styles.mobileDocCardSuccess
-                : fieldErrors.identityProofFile
-                ? styles.mobileDocCardError
-                : ""
-            }`}
+              formData.identityProofFile ? styles.docCardUploaded : ""
+            } ${fieldErrors.identityProofFile ? styles.docCardError : ""}`}
+            onClick={() => identityInputRef.current?.click()}
           >
-            <input
-              type="file"
-              ref={identityInputRef}
-              onChange={(e) => handleFileSelect("identityProof", e)}
-              accept=".pdf,.png,.jpg,.jpeg"
-              className={styles.hiddenFileInput}
-            />
-            <div className={styles.mobileDocLeft}>
-              <div
-                className={`${styles.iconSquircle} ${
-                  formData.identityProofFile
-                    ? styles.iconSquircleSuccess
-                    : fieldErrors.identityProofFile
-                    ? styles.iconSquircleError
-                    : ""
-                }`}
-              >
-                {formData.identityProofFile ? (
-                  <CheckCircle2 className={styles.docIconSuccess} />
-                ) : fieldErrors.identityProofFile ? (
-                  <AlertTriangle className={styles.docIconError} />
-                ) : (
-                  <FileText className={styles.docIcon} />
-                )}
-              </div>
-              <div className={styles.mobileDocInfo}>
-                <h3 className={styles.mobileDocTitle}>
-                  Identity proof (Aadhaar / PAN)
-                </h3>
-                <span
-                  className={
-                    formData.identityProofFile
-                      ? styles.statusSelected
-                      : fieldErrors.identityProofFile
-                      ? styles.statusError
-                      : styles.statusMuted
-                  }
-                >
-                  {formData.identityProofFile
-                    ? `${formData.identityProofFile} (${fieldSizes.identityProofFile || "<5MB"})`
-                    : fieldErrors.identityProofFile
-                    ? "Oversize file rejected (>5MB)"
-                    : "Max 5MB (PDF, PNG, JPG)"}
-                </span>
-              </div>
+            <div className={styles.docIconBox}>
+              <FileText className={styles.docIcon} size={22} />
             </div>
-            <div className={styles.mobileCardActions}>
+            <div className={styles.docContent}>
+              <div className={styles.docTitleRow}>
+                <span className={styles.docName}>Identity Proof</span>
+                <span className={styles.docRequired}>*</span>
+              </div>
+              <p className={styles.docSub}>
+                {fieldErrors.identityProofFile ? (
+                  <span className={styles.errorSubText}>
+                    {fieldErrors.identityProofFile}
+                  </span>
+                ) : formData.identityProofFile ? (
+                  <span className={styles.uploadedSubText}>
+                    {formData.identityProofFile} ({fieldSizes.identityProofFile || "Uploaded"})
+                  </span>
+                ) : (
+                  "Aadhaar, Passport or Driving License (Max 5MB)"
+                )}
+              </p>
+            </div>
+            <div className={styles.docActionSlot}>
               {formData.identityProofFile ? (
                 <button
                   type="button"
+                  className={styles.removeFileBtn}
                   onClick={(e) => handleRemoveFile("identityProofFile", e)}
-                  className={styles.mobileRemoveBtn}
-                  title="Remove"
+                  title="Remove file"
                 >
-                  <X size={14} />
+                  <X size={15} />
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => identityInputRef.current?.click()}
-                className={`${styles.mobileUploadBtn} ${
-                  formData.identityProofFile ? styles.mobileUploadBtnChange : ""
-                }`}
-              >
-                {formData.identityProofFile ? "Change" : "Upload"}
-              </button>
+              ) : (
+                <div className={styles.mobileUploadBtn}>
+                  <UploadCloud size={16} />
+                  <span>Upload</span>
+                </div>
+              )}
             </div>
           </div>
-          {fieldErrors.identityProofFile && (
-            <div className={styles.fieldErrorBanner}>
-              <AlertCircle size={13} />
-              <span>{fieldErrors.identityProofFile}</span>
-            </div>
-          )}
 
-          {/* 2. FSSAI License */}
+          {/* Doc 2: FSSAI License */}
           <div
             className={`${styles.mobileDocCard} ${
-              formData.fssaiLicenseFile
-                ? styles.mobileDocCardSuccess
-                : fieldErrors.fssaiLicenseFile
-                ? styles.mobileDocCardError
-                : ""
-            }`}
+              formData.fssaiLicenseFile ? styles.docCardUploaded : ""
+            } ${fieldErrors.fssaiLicenseFile ? styles.docCardError : ""}`}
+            onClick={() => fssaiInputRef.current?.click()}
           >
-            <input
-              type="file"
-              ref={fssaiInputRef}
-              onChange={(e) => handleFileSelect("fssaiLicense", e)}
-              accept=".pdf,.png,.jpg,.jpeg"
-              className={styles.hiddenFileInput}
-            />
-            <div className={styles.mobileDocLeft}>
-              <div
-                className={`${styles.iconSquircle} ${
-                  formData.fssaiLicenseFile
-                    ? styles.iconSquircleSuccess
-                    : fieldErrors.fssaiLicenseFile
-                    ? styles.iconSquircleError
-                    : ""
-                }`}
-              >
-                {formData.fssaiLicenseFile ? (
-                  <CheckCircle2 className={styles.docIconSuccess} />
-                ) : fieldErrors.fssaiLicenseFile ? (
-                  <AlertTriangle className={styles.docIconError} />
-                ) : (
-                  <Shield className={styles.docIcon} />
-                )}
-              </div>
-              <div className={styles.mobileDocInfo}>
-                <h3 className={styles.mobileDocTitle}>FSSAI License</h3>
-                <span
-                  className={
-                    formData.fssaiLicenseFile
-                      ? styles.statusSelected
-                      : fieldErrors.fssaiLicenseFile
-                      ? styles.statusError
-                      : styles.statusMuted
-                  }
-                >
-                  {formData.fssaiLicenseFile
-                    ? `${formData.fssaiLicenseFile} (${fieldSizes.fssaiLicenseFile || "<5MB"})`
-                    : fieldErrors.fssaiLicenseFile
-                    ? "Oversize file rejected (>5MB)"
-                    : "Max 5MB (PDF, PNG, JPG)"}
-                </span>
-              </div>
+            <div className={styles.docIconBox}>
+              <Shield className={styles.docIcon} size={22} />
             </div>
-            <div className={styles.mobileCardActions}>
+            <div className={styles.docContent}>
+              <div className={styles.docTitleRow}>
+                <span className={styles.docName}>FSSAI License</span>
+                <span className={styles.docRequired}>*</span>
+              </div>
+              <p className={styles.docSub}>
+                {fieldErrors.fssaiLicenseFile ? (
+                  <span className={styles.errorSubText}>
+                    {fieldErrors.fssaiLicenseFile}
+                  </span>
+                ) : formData.fssaiLicenseFile ? (
+                  <span className={styles.uploadedSubText}>
+                    {formData.fssaiLicenseFile} ({fieldSizes.fssaiLicenseFile || "Uploaded"})
+                  </span>
+                ) : (
+                  "Food safety registration certificate (Max 5MB)"
+                )}
+              </p>
+            </div>
+            <div className={styles.docActionSlot}>
               {formData.fssaiLicenseFile ? (
                 <button
                   type="button"
+                  className={styles.removeFileBtn}
                   onClick={(e) => handleRemoveFile("fssaiLicenseFile", e)}
-                  className={styles.mobileRemoveBtn}
-                  title="Remove"
+                  title="Remove file"
                 >
-                  <X size={14} />
+                  <X size={15} />
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => fssaiInputRef.current?.click()}
-                className={`${styles.mobileUploadBtn} ${
-                  formData.fssaiLicenseFile ? styles.mobileUploadBtnChange : ""
-                }`}
-              >
-                {formData.fssaiLicenseFile ? "Change" : "Upload"}
-              </button>
+              ) : (
+                <div className={styles.mobileUploadBtn}>
+                  <UploadCloud size={16} />
+                  <span>Upload</span>
+                </div>
+              )}
             </div>
           </div>
-          {fieldErrors.fssaiLicenseFile && (
-            <div className={styles.fieldErrorBanner}>
-              <AlertCircle size={13} />
-              <span>{fieldErrors.fssaiLicenseFile}</span>
-            </div>
-          )}
 
-          {/* 3. Electricity bill */}
+          {/* Doc 3: Electricity Bill */}
           <div
             className={`${styles.mobileDocCard} ${
-              formData.utilityBillFile
-                ? styles.mobileDocCardSuccess
-                : fieldErrors.utilityBillFile
-                ? styles.mobileDocCardError
-                : ""
-            }`}
+              formData.utilityBillFile ? styles.docCardUploaded : ""
+            } ${fieldErrors.utilityBillFile ? styles.docCardError : ""}`}
+            onClick={() => utilityInputRef.current?.click()}
           >
-            <input
-              type="file"
-              ref={utilityInputRef}
-              onChange={(e) => handleFileSelect("utilityBill", e)}
-              accept=".pdf,.png,.jpg,.jpeg"
-              className={styles.hiddenFileInput}
-            />
-            <div className={styles.mobileDocLeft}>
-              <div
-                className={`${styles.iconSquircle} ${
-                  formData.utilityBillFile
-                    ? styles.iconSquircleSuccess
-                    : fieldErrors.utilityBillFile
-                    ? styles.iconSquircleError
-                    : ""
-                }`}
-              >
-                {formData.utilityBillFile ? (
-                  <CheckCircle2 className={styles.docIconSuccess} />
-                ) : fieldErrors.utilityBillFile ? (
-                  <AlertTriangle className={styles.docIconError} />
-                ) : (
-                  <Zap className={styles.docIcon} />
-                )}
-              </div>
-              <div className={styles.mobileDocInfo}>
-                <h3 className={styles.mobileDocTitle}>Electricity bill</h3>
-                <span
-                  className={
-                    formData.utilityBillFile
-                      ? styles.statusSelected
-                      : fieldErrors.utilityBillFile
-                      ? styles.statusError
-                      : styles.statusMuted
-                  }
-                >
-                  {formData.utilityBillFile
-                    ? `${formData.utilityBillFile} (${fieldSizes.utilityBillFile || "<5MB"})`
-                    : fieldErrors.utilityBillFile
-                    ? "Oversize file rejected (>5MB)"
-                    : "Max 5MB (PDF, PNG, JPG)"}
-                </span>
-              </div>
+            <div className={styles.docIconBox}>
+              <Zap className={styles.docIcon} size={22} />
             </div>
-            <div className={styles.mobileCardActions}>
+            <div className={styles.docContent}>
+              <div className={styles.docTitleRow}>
+                <span className={styles.docName}>Electricity Bill</span>
+                <span className={styles.docRequired}>*</span>
+              </div>
+              <p className={styles.docSub}>
+                {fieldErrors.utilityBillFile ? (
+                  <span className={styles.errorSubText}>
+                    {fieldErrors.utilityBillFile}
+                  </span>
+                ) : formData.utilityBillFile ? (
+                  <span className={styles.uploadedSubText}>
+                    {formData.utilityBillFile} ({fieldSizes.utilityBillFile || "Uploaded"})
+                  </span>
+                ) : (
+                  "Recent utility bill showing address (Max 5MB)"
+                )}
+              </p>
+            </div>
+            <div className={styles.docActionSlot}>
               {formData.utilityBillFile ? (
                 <button
                   type="button"
+                  className={styles.removeFileBtn}
                   onClick={(e) => handleRemoveFile("utilityBillFile", e)}
-                  className={styles.mobileRemoveBtn}
-                  title="Remove"
+                  title="Remove file"
                 >
-                  <X size={14} />
+                  <X size={15} />
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => utilityInputRef.current?.click()}
-                className={`${styles.mobileUploadBtn} ${
-                  formData.utilityBillFile ? styles.mobileUploadBtnChange : ""
-                }`}
-              >
-                {formData.utilityBillFile ? "Change" : "Upload"}
-              </button>
+              ) : (
+                <div className={styles.mobileUploadBtn}>
+                  <UploadCloud size={16} />
+                  <span>Upload</span>
+                </div>
+              )}
             </div>
           </div>
-          {fieldErrors.utilityBillFile && (
-            <div className={styles.fieldErrorBanner}>
-              <AlertCircle size={13} />
-              <span>{fieldErrors.utilityBillFile}</span>
-            </div>
-          )}
         </div>
 
         {/* ========================================================= */}
-        {/* DESKTOP VIEW: Full Drag & Drop Large Upload Zones         */}
+        {/* DESKTOP VIEW: Clean Dropzones with Progress/States        */}
         {/* ========================================================= */}
         <div className={styles.desktopDocSection}>
-          {/* 1. Identity Proof */}
+          {/* Identity Proof Dropzone */}
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>
-              Identity Proof (Passport / Driver&apos;s License / Aadhaar){" "}
-              <span className={styles.required}>*</span>
-            </label>
+            <div className={styles.labelRow}>
+              <label className={styles.label}>
+                Identity proof (Aadhaar / Passport / DL){" "}
+                <span className={styles.required}>*</span>
+              </label>
+              {fieldSizes.identityProofFile && (
+                <span className={styles.fileSizeBadge}>
+                  {fieldSizes.identityProofFile}
+                </span>
+              )}
+            </div>
             <div
               className={`${styles.dropzone} ${
                 formData.identityProofFile
                   ? styles.dropzoneSuccess
                   : fieldErrors.identityProofFile
                   ? styles.dropzoneError
-                  : dragActiveField === "identityProof"
+                  : dragActiveField === "identityProofFile"
                   ? styles.dropzoneActive
                   : ""
               }`}
               onClick={() => identityInputRef.current?.click()}
-              onDragOver={(e) => handleDragOver(e, "identityProof")}
+              onDragOver={(e) => handleDragOver(e, "identityProofFile")}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, "identityProof")}
             >
               {formData.identityProofFile ? (
                 <>
-                  <div className={styles.successIconBadge}>
-                    <CheckCircle2 className={styles.checkIconAnimated} size={32} />
+                  <div className={styles.uploadedIconWrap}>
+                    <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
-                  <div className={styles.fileSuccessContent}>
-                    <p className={styles.dropzoneSelectedFile}>
-                      {formData.identityProofFile}
-                    </p>
-                    <span className={styles.fileSizeBadge}>
-                      {fieldSizes.identityProofFile || "Valid Document (<5MB)"}
-                    </span>
+                  <div className={styles.fileInfoGroup}>
+                    <p className={styles.fileName}>{formData.identityProofFile}</p>
+                    <p className={styles.fileStatus}>Document verified and ready</p>
                   </div>
-                  <div className={styles.dropzoneActionBtns}>
+                  <div className={styles.dropzoneActions}>
                     <button
                       type="button"
+                      className={styles.reuploadBtn}
                       onClick={(e) => {
                         e.stopPropagation();
                         identityInputRef.current?.click();
                       }}
-                      className={styles.changeFileBtn}
+                      title="Replace file"
                     >
-                      <RefreshCw size={12} /> Replace
+                      <RefreshCw size={14} />
+                      <span>Change</span>
                     </button>
                     <button
                       type="button"
+                      className={styles.desktopRemoveBtn}
                       onClick={(e) => handleRemoveFile("identityProofFile", e)}
-                      className={styles.removeFileBtn}
+                      title="Remove file"
                     >
-                      <X size={12} /> Remove
+                      <X size={15} />
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <UploadCloud
-                    className={`${styles.dropzoneIcon} ${
-                      fieldErrors.identityProofFile ? styles.dropzoneIconError : ""
-                    }`}
-                  />
-                  <p className={styles.dropzoneMainText}>
-                    {fieldErrors.identityProofFile ? (
-                      <span className={styles.textError}>
-                        File rejected - Exceeds 5MB
-                      </span>
-                    ) : (
-                      "Click to upload or drag & drop"
-                    )}
-                  </p>
-                  <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+                  <div className={styles.dropzoneIconBox}>
+                    <UploadCloud className={styles.uploadIcon} />
+                  </div>
+                  <div className={styles.dropzoneTextGroup}>
+                    <p className={styles.primaryText}>
+                      <span>Click to upload</span> or drag and drop
+                    </p>
+                    <p className={styles.secondaryText}>
+                      PDF, PNG, JPG up to 5MB
+                    </p>
+                  </div>
                 </>
               )}
             </div>
             {fieldErrors.identityProofFile && (
-              <div className={styles.fieldErrorBanner}>
+              <div className={styles.fieldErrorMsg}>
                 <AlertCircle size={14} />
                 <span>{fieldErrors.identityProofFile}</span>
               </div>
             )}
           </div>
 
-          {/* 2. FSSAI License */}
+          {/* FSSAI License Dropzone */}
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>FSSAI License</label>
+            <div className={styles.labelRow}>
+              <label className={styles.label}>
+                FSSAI food license certificate <span className={styles.required}>*</span>
+              </label>
+              {fieldSizes.fssaiLicenseFile && (
+                <span className={styles.fileSizeBadge}>
+                  {fieldSizes.fssaiLicenseFile}
+                </span>
+              )}
+            </div>
             <div
               className={`${styles.dropzone} ${
                 formData.fssaiLicenseFile
                   ? styles.dropzoneSuccess
                   : fieldErrors.fssaiLicenseFile
                   ? styles.dropzoneError
-                  : dragActiveField === "fssaiLicense"
+                  : dragActiveField === "fssaiLicenseFile"
                   ? styles.dropzoneActive
                   : ""
               }`}
               onClick={() => fssaiInputRef.current?.click()}
-              onDragOver={(e) => handleDragOver(e, "fssaiLicense")}
+              onDragOver={(e) => handleDragOver(e, "fssaiLicenseFile")}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, "fssaiLicense")}
             >
               {formData.fssaiLicenseFile ? (
                 <>
-                  <div className={styles.successIconBadge}>
-                    <CheckCircle2 className={styles.checkIconAnimated} size={32} />
+                  <div className={styles.uploadedIconWrap}>
+                    <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
-                  <div className={styles.fileSuccessContent}>
-                    <p className={styles.dropzoneSelectedFile}>
-                      {formData.fssaiLicenseFile}
-                    </p>
-                    <span className={styles.fileSizeBadge}>
-                      {fieldSizes.fssaiLicenseFile || "Valid Document (<5MB)"}
-                    </span>
+                  <div className={styles.fileInfoGroup}>
+                    <p className={styles.fileName}>{formData.fssaiLicenseFile}</p>
+                    <p className={styles.fileStatus}>Document verified and ready</p>
                   </div>
-                  <div className={styles.dropzoneActionBtns}>
+                  <div className={styles.dropzoneActions}>
                     <button
                       type="button"
+                      className={styles.reuploadBtn}
                       onClick={(e) => {
                         e.stopPropagation();
                         fssaiInputRef.current?.click();
                       }}
-                      className={styles.changeFileBtn}
+                      title="Replace file"
                     >
-                      <RefreshCw size={12} /> Replace
+                      <RefreshCw size={14} />
+                      <span>Change</span>
                     </button>
                     <button
                       type="button"
+                      className={styles.desktopRemoveBtn}
                       onClick={(e) => handleRemoveFile("fssaiLicenseFile", e)}
-                      className={styles.removeFileBtn}
+                      title="Remove file"
                     >
-                      <X size={12} /> Remove
+                      <X size={15} />
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <UploadCloud
-                    className={`${styles.dropzoneIcon} ${
-                      fieldErrors.fssaiLicenseFile ? styles.dropzoneIconError : ""
-                    }`}
-                  />
-                  <p className={styles.dropzoneMainText}>
-                    {fieldErrors.fssaiLicenseFile ? (
-                      <span className={styles.textError}>
-                        File rejected - Exceeds 5MB
-                      </span>
-                    ) : (
-                      "Click to upload or drag & drop"
-                    )}
-                  </p>
-                  <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+                  <div className={styles.dropzoneIconBox}>
+                    <UploadCloud className={styles.uploadIcon} />
+                  </div>
+                  <div className={styles.dropzoneTextGroup}>
+                    <p className={styles.primaryText}>
+                      <span>Click to upload</span> or drag and drop
+                    </p>
+                    <p className={styles.secondaryText}>
+                      PDF, PNG, JPG up to 5MB
+                    </p>
+                  </div>
                 </>
               )}
             </div>
-            {fieldErrors.fssaiLicenseFile ? (
-              <div className={styles.fieldErrorBanner}>
+            {fieldErrors.fssaiLicenseFile && (
+              <div className={styles.fieldErrorMsg}>
                 <AlertCircle size={14} />
                 <span>{fieldErrors.fssaiLicenseFile}</span>
-              </div>
-            ) : (
-              <div className={styles.noticeBox}>
-                <AlertCircle className={styles.noticeIcon} />
-                <span className={styles.noticeText}>
-                  Mandatory for partners offering Food and Cloud Kitchen services.
-                </span>
               </div>
             )}
           </div>
 
-          {/* 3. Electricity Bill / Utility Statement */}
+          {/* Electricity Bill Dropzone */}
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>
-              Electricity Bill / Utility Statement{" "}
-              <span className={styles.required}>*</span>
-            </label>
+            <div className={styles.labelRow}>
+              <label className={styles.label}>
+                Electricity bill / premises statement <span className={styles.required}>*</span>
+              </label>
+              {fieldSizes.utilityBillFile && (
+                <span className={styles.fileSizeBadge}>
+                  {fieldSizes.utilityBillFile}
+                </span>
+              )}
+            </div>
             <div
               className={`${styles.dropzone} ${
                 formData.utilityBillFile
                   ? styles.dropzoneSuccess
                   : fieldErrors.utilityBillFile
                   ? styles.dropzoneError
-                  : dragActiveField === "utilityBill"
+                  : dragActiveField === "utilityBillFile"
                   ? styles.dropzoneActive
                   : ""
               }`}
               onClick={() => utilityInputRef.current?.click()}
-              onDragOver={(e) => handleDragOver(e, "utilityBill")}
+              onDragOver={(e) => handleDragOver(e, "utilityBillFile")}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, "utilityBill")}
             >
               {formData.utilityBillFile ? (
                 <>
-                  <div className={styles.successIconBadge}>
-                    <CheckCircle2 className={styles.checkIconAnimated} size={32} />
+                  <div className={styles.uploadedIconWrap}>
+                    <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
-                  <div className={styles.fileSuccessContent}>
-                    <p className={styles.dropzoneSelectedFile}>
-                      {formData.utilityBillFile}
-                    </p>
-                    <span className={styles.fileSizeBadge}>
-                      {fieldSizes.utilityBillFile || "Valid Document (<5MB)"}
-                    </span>
+                  <div className={styles.fileInfoGroup}>
+                    <p className={styles.fileName}>{formData.utilityBillFile}</p>
+                    <p className={styles.fileStatus}>Document verified and ready</p>
                   </div>
-                  <div className={styles.dropzoneActionBtns}>
+                  <div className={styles.dropzoneActions}>
                     <button
                       type="button"
+                      className={styles.reuploadBtn}
                       onClick={(e) => {
                         e.stopPropagation();
                         utilityInputRef.current?.click();
                       }}
-                      className={styles.changeFileBtn}
+                      title="Replace file"
                     >
-                      <RefreshCw size={12} /> Replace
+                      <RefreshCw size={14} />
+                      <span>Change</span>
                     </button>
                     <button
                       type="button"
+                      className={styles.desktopRemoveBtn}
                       onClick={(e) => handleRemoveFile("utilityBillFile", e)}
-                      className={styles.removeFileBtn}
+                      title="Remove file"
                     >
-                      <X size={12} /> Remove
+                      <X size={15} />
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <UploadCloud
-                    className={`${styles.dropzoneIcon} ${
-                      fieldErrors.utilityBillFile ? styles.dropzoneIconError : ""
-                    }`}
-                  />
-                  <p className={styles.dropzoneMainText}>
-                    {fieldErrors.utilityBillFile ? (
-                      <span className={styles.textError}>
-                        File rejected - Exceeds 5MB
-                      </span>
-                    ) : (
-                      "Click to upload or drag & drop"
-                    )}
-                  </p>
-                  <p className={styles.dropzoneSubText}>PDF, PNG, JPG up to 5MB</p>
+                  <div className={styles.dropzoneIconBox}>
+                    <UploadCloud className={styles.uploadIcon} />
+                  </div>
+                  <div className={styles.dropzoneTextGroup}>
+                    <p className={styles.primaryText}>
+                      <span>Click to upload</span> or drag and drop
+                    </p>
+                    <p className={styles.secondaryText}>
+                      PDF, PNG, JPG up to 5MB
+                    </p>
+                  </div>
                 </>
               )}
             </div>
             {fieldErrors.utilityBillFile && (
-              <div className={styles.fieldErrorBanner}>
+              <div className={styles.fieldErrorMsg}>
                 <AlertCircle size={14} />
                 <span>{fieldErrors.utilityBillFile}</span>
               </div>
@@ -746,46 +723,159 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
         </div>
 
         {/* ========================================================= */}
-        {/* BANKING DETAILS (Adaptive Grid for Web / Stack for Mobile)*/}
+        {/* BANKING / PAYOUT ACCOUNT DETAILS                          */}
         {/* ========================================================= */}
         <div className={styles.bankingSection}>
           {/* Bank Account Number */}
           <div className={styles.fieldGroup}>
-            <label className={styles.label} htmlFor="bankAccountNumber">
-              Bank account number <span className={styles.required}>*</span>
-            </label>
-            <div className={styles.inputWrapper}>
+            <div className={styles.labelRow}>
+              <label className={styles.label} htmlFor="bankAccountNumber">
+                Bank account number <span className={styles.required}>*</span>
+              </label>
+              <span
+                className={`${styles.digitCounter} ${
+                  formData.bankAccountNumber.length === 0
+                    ? bankTouched
+                      ? styles.digitCounterIncomplete
+                      : styles.digitCounterNeutral
+                    : isBankValid
+                    ? styles.digitCounterComplete
+                    : styles.digitCounterIncomplete
+                }`}
+              >
+                {formData.bankAccountNumber.length > 0
+                  ? isBankValid
+                    ? `${formData.bankAccountNumber.length} digits`
+                    : `${formData.bankAccountNumber.length}/9-18 digits`
+                  : bankTouched
+                  ? "Required"
+                  : "9-18 digits (numbers only)"}
+              </span>
+            </div>
+            <div
+              className={`${styles.inputWrapper} ${
+                bankTouched
+                  ? isBankValid
+                    ? styles.inputSuccess
+                    : styles.inputError
+                  : ""
+              }`}
+            >
               <input
                 id="bankAccountNumber"
                 name="bankAccountNumber"
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={18}
                 required
-                placeholder="9876543210123"
+                placeholder="e.g. 987654321012 (numbers only)"
                 value={formData.bankAccountNumber}
-                onChange={handleInputChange}
+                onChange={handleBankAccountChange}
+                onBlur={() => setBankTouched(true)}
                 className={styles.input}
               />
+              <div className={styles.statusIconBox}>
+                {isBankValid ? (
+                  <CheckCircle2 size={18} className={styles.validCheckIcon} />
+                ) : bankTouched ? (
+                  <AlertCircle size={18} className={styles.invalidAlertIcon} />
+                ) : null}
+              </div>
             </div>
+            {bankTouched && (
+              isBankValid ? (
+                <div className={styles.helperTextSuccess}>
+                  <CheckCircle2 size={13} />
+                  <span>Valid bank account number (digits only)</span>
+                </div>
+              ) : formData.bankAccountNumber.length === 0 ? (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>Bank account number cannot be empty (numbers only, no symbols or letters)</span>
+                </div>
+              ) : (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>Bank account must be between 9 and 18 digits (numbers only)</span>
+                </div>
+              )
+            )}
           </div>
 
           {/* IFSC Code */}
           <div className={styles.fieldGroup}>
-            <label className={styles.label} htmlFor="ifscCode">
-              IFSC code <span className={styles.required}>*</span>
-            </label>
-            <div className={styles.inputWrapper}>
+            <div className={styles.labelRow}>
+              <label className={styles.label} htmlFor="ifscCode">
+                IFSC code <span className={styles.required}>*</span>
+              </label>
+              <span
+                className={`${styles.digitCounter} ${
+                  formData.ifscCode.length === 0
+                    ? ifscTouched
+                      ? styles.digitCounterIncomplete
+                      : styles.digitCounterNeutral
+                    : isIfscValid
+                    ? styles.digitCounterComplete
+                    : styles.digitCounterIncomplete
+                }`}
+              >
+                {formData.ifscCode.length > 0
+                  ? isIfscValid
+                    ? "Valid IFSC"
+                    : "No symbols"
+                  : ifscTouched
+                  ? "Required"
+                  : "Letters & numbers only"}
+              </span>
+            </div>
+            <div
+              className={`${styles.inputWrapper} ${
+                ifscTouched
+                  ? isIfscValid
+                    ? styles.inputSuccess
+                    : styles.inputError
+                  : ""
+              }`}
+            >
               <input
                 id="ifscCode"
                 name="ifscCode"
                 type="text"
                 required
-                placeholder="HDFC0001234"
+                placeholder="e.g. HDFC0001234"
                 value={formData.ifscCode}
-                onChange={handleInputChange}
+                onChange={handleIfscChange}
+                onBlur={() => setIfscTouched(true)}
                 className={styles.input}
                 style={{ textTransform: "uppercase" }}
               />
+              <div className={styles.statusIconBox}>
+                {isIfscValid ? (
+                  <CheckCircle2 size={18} className={styles.validCheckIcon} />
+                ) : ifscTouched ? (
+                  <AlertCircle size={18} className={styles.invalidAlertIcon} />
+                ) : null}
+              </div>
             </div>
+            {ifscTouched && (
+              isIfscValid ? (
+                <div className={styles.helperTextSuccess}>
+                  <CheckCircle2 size={13} />
+                  <span>Valid IFSC code (letters & numbers only)</span>
+                </div>
+              ) : formData.ifscCode.length === 0 ? (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>IFSC code cannot be empty (no symbols allowed)</span>
+                </div>
+              ) : (
+                <div className={styles.helperTextError}>
+                  <AlertCircle size={13} />
+                  <span>Special characters and symbols are not allowed</span>
+                </div>
+              )
+            )}
           </div>
         </div>
 

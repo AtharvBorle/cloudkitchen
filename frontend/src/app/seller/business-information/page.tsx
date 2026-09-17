@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   SellerLayout,
   BusinessInformation,
@@ -9,8 +9,11 @@ import {
 } from "@/components/seller";
 import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store";
 
-export default function BusinessInformationPage() {
+function BusinessInfoContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromReview = searchParams?.get("from") === "review";
+
   const [businessData, setBusinessData] = useState<BusinessInformationData>({
     businessName: "",
     sellerType: "FOOD",
@@ -26,11 +29,16 @@ export default function BusinessInformationPage() {
     setBusinessData({
       businessName: draft.businessName || "",
       sellerType: draft.sellerType || "FOOD",
-      categories: draft.categories && draft.categories.length > 0 ? draft.categories : ["North Indian", "Biryani"],
+      categories:
+        draft.categories && draft.categories.length > 0
+          ? draft.categories
+          : ["North Indian", "Biryani"],
       foodType: draft.foodType || "BOTH",
       address: draft.address || "",
+      city: draft.city || "Pune",
+      pincode: draft.pincode || "411038",
       locationCoordinates: draft.locationCoordinates || { lat: 18.5204, lng: 73.8567 },
-      isLocationPinned: draft.isLocationPinned ?? false,
+      isLocationPinned: draft.isLocationPinned ?? true,
     });
   }, []);
 
@@ -41,14 +49,24 @@ export default function BusinessInformationPage() {
       categories: data.categories,
       foodType: data.foodType as any,
       address: data.address,
+      city: data.city,
+      pincode: data.pincode,
       locationCoordinates: data.locationCoordinates,
       isLocationPinned: data.isLocationPinned,
     });
-    router.push("/seller/legal-documents");
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/legal-documents");
+    }
   };
 
   const handleBack = () => {
-    router.push("/seller/account-information");
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/account-information");
+    }
   };
 
   return (
@@ -64,5 +82,13 @@ export default function BusinessInformationPage() {
         onBack={handleBack}
       />
     </SellerLayout>
+  );
+}
+
+export default function BusinessInformationPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>}>
+      <BusinessInfoContent />
+    </Suspense>
   );
 }

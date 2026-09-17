@@ -107,6 +107,9 @@ Every API response returns a consistent JSON schema:
 | `addressFlat` | String | Shop/House/Flat Number |
 | `addressArea` | String | Street / Locality |
 | `addressLandmark` | String | Nearby landmark |
+| `latitude` | Float / String | Accurate GPS Latitude for delivery routing (e.g. `18.5204`) |
+| `longitude` | Float / String | Accurate GPS Longitude for delivery routing (e.g. `73.8567`) |
+| `isLocationPinned` | Boolean / String | `true` if pinned accurately on map |
 | `adhaarFrontFile` | File | Aadhaar Front photo |
 | `adhaarBackFile` | File | Aadhaar Back photo |
 | `fssaiFile` | File | FSSAI Food License certificate |
@@ -131,7 +134,10 @@ Every API response returns a consistent JSON schema:
       "id": "sel_39103",
       "trackingId": "SHOP-A87X2Y",
       "businessName": "Spice Symphony Cloud Kitchen",
-      "verificationStatus": "PENDING"
+      "verificationStatus": "PENDING",
+      "latitude": 18.520432,
+      "longitude": 73.856743,
+      "isLocationPinned": true
     }
   },
   "message": "Registration successful",

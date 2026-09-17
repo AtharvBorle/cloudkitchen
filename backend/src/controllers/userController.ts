@@ -47,7 +47,8 @@ export const updateUserProfile = async (req: Request) => {
     
     if (body.phone !== undefined) {
         const rawPhone = String(body.phone).trim();
-        const digitsOnly = rawPhone.replace(/\D/g, "");
+        const rawDigits = rawPhone.replace(/\D/g, "");
+        const digitsOnly = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
         if (rawPhone !== "" && digitsOnly.length !== 10) {
             throw new ApiError("Please provide a valid 10-digit phone number", 400);
         }

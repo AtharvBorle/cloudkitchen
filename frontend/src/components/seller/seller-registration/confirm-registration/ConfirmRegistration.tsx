@@ -1,10 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Check, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import styles from "./ConfirmRegistration.module.css";
-import { SellerRegistrationDraft } from "@/lib/seller-registration-store";
+import {
+  getSellerDraft,
+  hydrateSellerDraftAsync,
+  SellerRegistrationDraft,
+} from "@/lib/seller-registration-store";
 
 export interface ConfirmRegistrationProps {
   draft?: Partial<SellerRegistrationDraft>;
@@ -15,40 +19,82 @@ export interface ConfirmRegistrationProps {
 }
 
 export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
-  draft,
+  draft: propDraft,
   isSubmitting = false,
   errorMessage = null,
   onSubmit,
   onBack,
 }) => {
+  const [liveDraft, setLiveDraft] = useState<SellerRegistrationDraft>(() => getSellerDraft());
+
+  useEffect(() => {
+    const current = getSellerDraft();
+    setLiveDraft(current);
+
+    hydrateSellerDraftAsync().then((hydrated) => {
+      setLiveDraft((prev) => ({
+        ...prev,
+        ...hydrated,
+      }));
+    });
+  }, [propDraft]);
+
+  const activeDraft = { ...liveDraft, ...(propDraft || {}) };
+
+  const cleanPhone = (activeDraft.phone || "").replace(/\D/g, "").slice(-10);
   const account = {
-    ownerName: draft?.ownerName || "Not provided",
-    email: draft?.email || "Not provided",
-    phone: draft?.phone || "Not provided",
-    sellerRole: draft?.sellerRole || "Owner",
+    ownerName: activeDraft.ownerName || "—",
+    email: activeDraft.email || "—",
+    phone: cleanPhone ? `+91 ${cleanPhone}` : "—",
   };
 
   const business = {
-    name: draft?.businessName || "Not provided",
-    type: draft?.sellerType === "FOOD" ? "Food" : draft?.sellerType === "PROPERTY" ? "Property" : "Both (Food & Property)",
-    cuisines: draft?.categories && draft.categories.length > 0 ? draft.categories.join(", ") : "Not provided",
-    foodType: draft?.foodType === "BOTH" ? "Both (Veg & Non-veg)" : draft?.foodType === "PURE_VEG" ? "Pure Veg" : "Non-veg",
-    address: draft?.address || "Not provided",
+    name: activeDraft.businessName || "—",
+    type:
+      activeDraft.sellerType === "FOOD"
+        ? "Food"
+        : activeDraft.sellerType === "PROPERTY"
+        ? "Property"
+        : activeDraft.sellerType === "BOTH"
+        ? "Both (Food & Property)"
+        : "Food",
+    cuisines:
+      activeDraft.categories && activeDraft.categories.length > 0
+        ? activeDraft.categories.join(", ")
+        : "—",
+    foodType:
+      activeDraft.foodType === "BOTH"
+        ? "Both (Veg & Non-veg)"
+        : activeDraft.foodType === "PURE_VEG"
+        ? "Pure Veg"
+        : "Non-veg",
+    address: activeDraft.address || "—",
+    deliveryPin:
+      activeDraft.locationCoordinates?.lat && activeDraft.locationCoordinates?.lng
+        ? `📍 Pinned (${activeDraft.locationCoordinates.lat.toFixed(4)}, ${activeDraft.locationCoordinates.lng.toFixed(4)})`
+        : "Standard Location",
   };
 
   const documents = {
-    identityProof: draft?.identityProofFileName || (draft?.identityProofDataUrl ? "Uploaded Identity Proof" : "Pending Upload"),
-    fssaiLicense: draft?.fssaiLicenseFileName || (draft?.fssaiLicenseDataUrl ? "Uploaded FSSAI License" : "Not Provided (Optional for Rooms)"),
-    electricityBill: draft?.utilityBillFileName || (draft?.utilityBillDataUrl ? "Uploaded Electricity Bill" : "Pending Upload"),
-    bankAccount: draft?.bankAccountNumber ? `••••${draft.bankAccountNumber.slice(-4)} (${draft?.ifscCode || "IFSC"})` : "Not provided",
+    identityProof:
+      activeDraft.identityProofFileName ||
+      (activeDraft.identityProofDataUrl ? "Uploaded Identity Proof" : "Pending Upload"),
+    fssaiLicense:
+      activeDraft.fssaiLicenseFileName ||
+      (activeDraft.fssaiLicenseDataUrl ? "Uploaded FSSAI License" : "Optional / Pending"),
+    electricityBill:
+      activeDraft.utilityBillFileName ||
+      (activeDraft.utilityBillDataUrl ? "Uploaded Electricity Bill" : "Pending Upload"),
+    bankAccountFull: activeDraft.bankAccountNumber || "—",
+    ifscCode: activeDraft.ifscCode || "—",
   };
 
   // Collect all real uploaded preview images
   const allImages = [
-    ...(draft?.kitchenPhotos || []),
-    ...(draft?.cuisinePhotos || []),
-    ...(draft?.roomPhotos || []),
-  ].filter(Boolean) as string[];
+    ...(activeDraft.kitchenPhotos || []),
+    ...(activeDraft.cuisinePhotos || []),
+    ...(activeDraft.roomPhotos || []),
+  ].filter((src) => Boolean(src && src !== "data:image/present")) as string[];
 
   const previewImages = allImages.slice(0, 3);
   const remainingCount = Math.max(0, allImages.length - 3);
@@ -84,7 +130,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>Account</h3>
-            <Link href="/seller/account-information" className={styles.editLink}>
+            <Link href="/seller/account-information?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
@@ -108,7 +154,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>Business</h3>
-            <Link href="/seller/business-information" className={styles.editLink}>
+            <Link href="/seller/business-information?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
@@ -125,14 +171,18 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               <span className={styles.rowKey}>Cuisines</span>
               <span className={styles.rowValue}>{business.cuisines}</span>
             </div>
+            <div className={styles.mobileRow}>
+              <span className={styles.rowKey}>Delivery Pin</span>
+              <span className={styles.rowValue}>{business.deliveryPin}</span>
+            </div>
           </div>
         </div>
 
         {/* Card 3: Documents */}
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>Documents</h3>
-            <Link href="/seller/legal-documents" className={styles.editLink}>
+            <h3 className={styles.cardTitle}>Documents & Bank</h3>
+            <Link href="/seller/legal-documents?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
@@ -149,6 +199,18 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               <Check className={styles.checkIcon} size={15} strokeWidth={2.6} />
               <span className={styles.docCheckText}>{documents.electricityBill}</span>
             </div>
+            {documents.bankAccountFull !== "—" && (
+              <div className={styles.mobileRow} style={{ marginTop: "4px" }}>
+                <span className={styles.rowKey}>Bank A/C</span>
+                <span className={styles.rowValue}>{documents.bankAccountFull}</span>
+              </div>
+            )}
+            {documents.ifscCode !== "—" && (
+              <div className={styles.mobileRow}>
+                <span className={styles.rowKey}>IFSC Code</span>
+                <span className={styles.rowValue}>{documents.ifscCode}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -156,7 +218,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>Media ({allImages.length} Photos)</h3>
-            <Link href="/seller/media-gallery" className={styles.editLink}>
+            <Link href="/seller/media-gallery?from=review" className={styles.editLink}>
               Edit
             </Link>
           </div>
@@ -166,7 +228,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 key={idx}
                 src={src}
                 alt={`Media thumbnail ${idx + 1}`}
-                style={{ width: "48px", height: "48px", borderRadius: "8px", objectFit: "cover" }}
+                className={styles.thumbImage}
               />
             ))}
             {remainingCount > 0 && <div className={styles.thumbMoreSlot}>+{remainingCount}</div>}
@@ -191,7 +253,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Account Details</h3>
-              <Link href="/seller/account-information" className={styles.editBtn}>
+              <Link href="/seller/account-information?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
@@ -215,7 +277,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Business Details</h3>
-              <Link href="/seller/business-information" className={styles.editBtn}>
+              <Link href="/seller/business-information?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
@@ -240,14 +302,18 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.key}>Address</span>
                 <span className={styles.value}>{business.address}</span>
               </div>
+              <div className={styles.row}>
+                <span className={styles.key}>Delivery Pin</span>
+                <span className={styles.value}>{business.deliveryPin}</span>
+              </div>
             </div>
           </div>
 
-          {/* 3. Legal Documents */}
+          {/* 3. Legal Documents & Payout */}
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Legal Documents & Payout</h3>
-              <Link href="/seller/legal-documents" className={styles.editBtn}>
+              <Link href="/seller/legal-documents?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
@@ -266,7 +332,11 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               </div>
               <div className={styles.row}>
                 <span className={styles.key}>Bank Account</span>
-                <span className={styles.value}>{documents.bankAccount}</span>
+                <span className={styles.value}>{documents.bankAccountFull}</span>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.key}>IFSC Code</span>
+                <span className={styles.value}>{documents.ifscCode}</span>
               </div>
             </div>
           </div>
@@ -275,7 +345,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Media Assets ({allImages.length} Photos)</h3>
-              <Link href="/seller/media-gallery" className={styles.editBtn}>
+              <Link href="/seller/media-gallery?from=review" className={styles.editBtn}>
                 Edit
               </Link>
             </div>
@@ -285,13 +355,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                   key={idx}
                   src={src}
                   alt={`Media asset ${idx + 1}`}
-                  style={{
-                    width: "56px",
-                    height: "56px",
-                    borderRadius: "10px",
-                    objectFit: "cover",
-                    border: "1.5px solid #e2e8f0",
-                  }}
+                  className={styles.thumbImage}
                 />
               ))}
               {remainingCount > 0 && <div className={styles.thumbMoreSlot}>+{remainingCount}</div>}

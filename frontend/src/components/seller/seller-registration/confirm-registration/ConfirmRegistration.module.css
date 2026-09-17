@@ -119,6 +119,15 @@
   gap: 8px;
 }
 
+.thumbImage {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+}
+
 .thumbPlaceholder {
   width: 44px;
   height: 44px;

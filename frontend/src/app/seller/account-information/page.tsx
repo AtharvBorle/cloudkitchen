@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   SellerLayout,
   AccountInformation,
@@ -9,8 +9,11 @@ import {
 } from "@/components/seller";
 import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store";
 
-export default function AccountInformationPage() {
+function AccountInfoContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromReview = searchParams?.get("from") === "review";
+
   const [accountData, setAccountData] = useState<AccountInformationData>({
     ownerName: "",
     email: "",
@@ -32,7 +35,11 @@ export default function AccountInformationPage() {
 
   const handleContinue = (data: AccountInformationData) => {
     saveSellerDraft(data);
-    router.push("/seller/business-information");
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/business-information");
+    }
   };
 
   return (
@@ -49,5 +56,13 @@ export default function AccountInformationPage() {
         onContinue={handleContinue}
       />
     </SellerLayout>
+  );
+}
+
+export default function AccountInformationPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>}>
+      <AccountInfoContent />
+    </Suspense>
   );
 }

@@ -1,9 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, X, ArrowRight, ImageIcon, AlertTriangle } from "lucide-react";
 import styles from "./MediaGallery.module.css";
-import { readFileAsDataUrl } from "@/lib/seller-registration-store";
+import {
+  compressImageFile,
+  saveSellerDraft,
+  getSellerDraft,
+} from "@/lib/seller-registration-store";
 
 export interface MediaGalleryData {
   kitchenPhotos: (string | null)[];
@@ -31,24 +35,44 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   onContinue,
   onBack,
 }) => {
-  const [kitchenPhotos, setKitchenPhotos] = useState<(string | null)[]>(
-    initialData?.kitchenPhotos && initialData.kitchenPhotos.length === 4
-      ? initialData.kitchenPhotos
-      : [null, null, null, null]
-  );
-  const [cuisinePhotos, setCuisinePhotos] = useState<(string | null)[]>(
-    initialData?.cuisinePhotos && initialData.cuisinePhotos.length === 4
-      ? initialData.cuisinePhotos
-      : [null, null, null, null]
-  );
-  const [roomPhotos, setRoomPhotos] = useState<(string | null)[]>(
-    initialData?.roomPhotos && initialData.roomPhotos.length === 2
-      ? initialData.roomPhotos
-      : [null, null]
-  );
+  const [kitchenPhotos, setKitchenPhotos] = useState<(string | null)[]>(() => {
+    const fromInit = initialData?.kitchenPhotos;
+    if (fromInit && fromInit.length === 4) return fromInit;
+    const fromDraft = getSellerDraft()?.kitchenPhotos;
+    if (fromDraft && fromDraft.length === 4) return fromDraft;
+    return [null, null, null, null];
+  });
+
+  const [cuisinePhotos, setCuisinePhotos] = useState<(string | null)[]>(() => {
+    const fromInit = initialData?.cuisinePhotos;
+    if (fromInit && fromInit.length === 4) return fromInit;
+    const fromDraft = getSellerDraft()?.cuisinePhotos;
+    if (fromDraft && fromDraft.length === 4) return fromDraft;
+    return [null, null, null, null];
+  });
+
+  const [roomPhotos, setRoomPhotos] = useState<(string | null)[]>(() => {
+    const fromInit = initialData?.roomPhotos;
+    if (fromInit && fromInit.length === 2) return fromInit;
+    const fromDraft = getSellerDraft()?.roomPhotos;
+    if (fromDraft && fromDraft.length === 2) return fromDraft;
+    return [null, null];
+  });
 
   const [oversizeModal, setOversizeModal] = useState<OversizeModalState | null>(null);
   const [dragTarget, setDragTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialData?.kitchenPhotos && initialData.kitchenPhotos.some(Boolean)) {
+      setKitchenPhotos(initialData.kitchenPhotos);
+    }
+    if (initialData?.cuisinePhotos && initialData.cuisinePhotos.some(Boolean)) {
+      setCuisinePhotos(initialData.cuisinePhotos);
+    }
+    if (initialData?.roomPhotos && initialData.roomPhotos.some(Boolean)) {
+      setRoomPhotos(initialData.roomPhotos);
+    }
+  }, [initialData]);
 
   const getCategoryLabel = (category: "kitchen" | "cuisine" | "room") => {
     if (category === "kitchen") return "Kitchen Photos";
@@ -89,28 +113,31 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       }
 
       try {
-        const dataUrl = await readFileAsDataUrl(file);
+        const { dataUrl } = await compressImageFile(file, 1600, 1600, 0.85);
         if (category === "kitchen") {
           setKitchenPhotos((prev) => {
             const next = [...prev];
             next[targetIdx] = dataUrl;
+            saveSellerDraft({ kitchenPhotos: next });
             return next;
           });
         } else if (category === "cuisine") {
           setCuisinePhotos((prev) => {
             const next = [...prev];
             next[targetIdx] = dataUrl;
+            saveSellerDraft({ cuisinePhotos: next });
             return next;
           });
         } else {
           setRoomPhotos((prev) => {
             const next = [...prev];
             next[targetIdx] = dataUrl;
+            saveSellerDraft({ roomPhotos: next });
             return next;
           });
         }
       } catch (err) {
-        console.error("Error reading media image:", err);
+        console.error("Error compressing media photo:", err);
       }
     }
   };
@@ -161,18 +188,21 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
       setKitchenPhotos((prev) => {
         const next = [...prev];
         next[index] = null;
+        saveSellerDraft({ kitchenPhotos: next });
         return next;
       });
     } else if (category === "cuisine") {
       setCuisinePhotos((prev) => {
         const next = [...prev];
         next[index] = null;
+        saveSellerDraft({ cuisinePhotos: next });
         return next;
       });
     } else {
       setRoomPhotos((prev) => {
         const next = [...prev];
         next[index] = null;
+        saveSellerDraft({ roomPhotos: next });
         return next;
       });
     }
@@ -180,12 +210,14 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const mediaPayload: MediaGalleryData = {
+      kitchenPhotos,
+      cuisinePhotos,
+      roomPhotos,
+    };
+    saveSellerDraft(mediaPayload);
     if (onContinue) {
-      onContinue({
-        kitchenPhotos,
-        cuisinePhotos,
-        roomPhotos,
-      });
+      onContinue(mediaPayload);
     }
   };
 

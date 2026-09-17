@@ -2,14 +2,12 @@
 
 import React, { useState } from "react";
 import {
-  ChevronDown,
   ArrowRight,
-  Eye,
-  EyeOff,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { saveSellerDraft } from "@/lib/seller-registration-store";
 import styles from "./AccountInformation.module.css";
 
 export interface AccountStepData {
@@ -34,20 +32,18 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
   onContinue,
 }) => {
   const initialPhoneDigits = (initialData?.phone || "")
-    .replace(/\+91/g, "")
     .replace(/\D/g, "")
-    .slice(0, 10);
+    .slice(-10);
 
   const [formData, setFormData] = useState<AccountStepData>({
     ownerName: initialData?.ownerName || "",
     email: initialData?.email || "",
     phone: initialPhoneDigits,
     password: initialData?.password || "",
-    sellerRole: initialData?.sellerRole || "Owner",
+    sellerRole: "Owner",
   });
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [showPassword, setShowPassword] = useState(false);
 
   // Validation States
   const isNameValid = formData.ownerName.trim().length >= 2;
@@ -67,16 +63,32 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
   const isPasswordError = touched.password && !isPasswordValid;
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      saveSellerDraft({ [name]: value });
+      return next;
+    });
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
-    setFormData((prev) => ({ ...prev, phone: digitsOnly }));
+    setFormData((prev) => {
+      const next = { ...prev, phone: digitsOnly };
+      saveSellerDraft({ phone: digitsOnly });
+      return next;
+    });
     setTouched((prev) => ({ ...prev, phone: true }));
+  };
+
+  const handlePasswordChange = (val: string) => {
+    setFormData((prev) => {
+      const next = { ...prev, password: val };
+      saveSellerDraft({ password: val });
+      return next;
+    });
   };
 
   const handleBlur = (field: string) => {
@@ -90,18 +102,22 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
       email: true,
       phone: true,
       password: true,
-      sellerRole: true,
     });
 
     if (!isNameValid || !isEmailValid || !isPhoneComplete || !isPasswordValid) {
       return;
     }
 
+    const cleanData = {
+      ...formData,
+      sellerRole: "Owner",
+      phone: formData.phone.replace(/\D/g, "").slice(-10),
+    };
+
+    saveSellerDraft(cleanData);
+
     if (onContinue) {
-      onContinue({
-        ...formData,
-        phone: `+91 ${formData.phone}`,
-      });
+      onContinue(cleanData);
     }
   };
 
@@ -302,31 +318,9 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
             required
             placeholder="••••••••"
             value={formData.password}
-            onChange={(val) => setFormData((prev) => ({ ...prev, password: val }))}
+            onChange={handlePasswordChange}
             autoComplete="new-password"
           />
-        </div>
-
-        {/* Seller Role */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label} htmlFor="sellerRole">
-            Seller role <span className={styles.required}>*</span>
-          </label>
-          <div className={styles.selectWrapper}>
-            <select
-              id="sellerRole"
-              name="sellerRole"
-              required
-              value={formData.sellerRole}
-              onChange={handleChange}
-              className={styles.select}
-            >
-              <option value="Owner">Owner</option>
-              <option value="Manager">Manager</option>
-              <option value="Partner">Partner</option>
-            </select>
-            <ChevronDown className={styles.chevronIcon} />
-          </div>
         </div>
 
         {/* Continue Button */}
@@ -343,4 +337,3 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
 
 export const AccountStep = AccountInformation;
 export default AccountInformation;
-

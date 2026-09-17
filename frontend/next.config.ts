@@ -34,6 +34,41 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/business-information",
+        destination: "/seller/business-information",
+        permanent: true,
+      },
+      {
+        source: "/business-informaiton",
+        destination: "/seller/business-information",
+        permanent: true,
+      },
+      {
+        source: "/account-information",
+        destination: "/seller/account-information",
+        permanent: true,
+      },
+      {
+        source: "/legal-documents",
+        destination: "/seller/legal-documents",
+        permanent: true,
+      },
+      {
+        source: "/media-gallery",
+        destination: "/seller/media-gallery",
+        permanent: true,
+      },
+      {
+        source: "/confirm-registration",
+        destination: "/seller/confirm-registration",
+        permanent: true,
+      },
+      {
+        source: "/confirm-information",
+        destination: "/seller/confirm-registration",
+        permanent: true,
+      },
+      {
         source: "/faq",
         destination: "/support",
         permanent: true,

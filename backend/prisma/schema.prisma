@@ -40,6 +40,9 @@ model SellerProfile {
   addressFlat                String           @default("")
   addressLocality            String           @default("")
   addressLandmark            String?
+  latitude                   Float?
+  longitude                  Float?
+  isLocationPinned           Boolean          @default(false)
   kitchenImages              String           @default("[]")
   cuisineImages              String           @default("[]")
   bannerImageUrl             String?

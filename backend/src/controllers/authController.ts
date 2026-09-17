@@ -8,6 +8,7 @@ export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
 
     let finalName, finalEmail, finalPhone, finalPassword, finalRole, finalSellerType, finalCity, finalPincode, finalBusinessName, finalAddressFlat, finalAddressArea, finalAddressLandmark, finalBusinessCategory, finalFoodType;
+    let finalLatitude: number | null = null, finalLongitude: number | null = null, finalIsLocationPinned = false;
     let adhaarUrl = "pending_url", fssaiUrl = null, lightBillUrl = null, passbookUrl = null;
     let kitchenImages: string[] = [];
     let cuisineImages: string[] = [];
@@ -29,6 +30,28 @@ export const registerUser = async (req: Request) => {
         finalAddressLandmark = body.addressLandmark || null;
         finalBusinessCategory = body.businessCategory || body.sellerType || "FOOD";
         finalFoodType = body.foodType || "BOTH";
+
+        if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
+            finalLatitude = parseFloat(body.latitude);
+        } else if (body.lat !== undefined && body.lat !== null && body.lat !== "") {
+            finalLatitude = parseFloat(body.lat);
+        } else if (body.locationCoordinates?.lat) {
+            finalLatitude = parseFloat(body.locationCoordinates.lat);
+        }
+
+        if (body.longitude !== undefined && body.longitude !== null && body.longitude !== "") {
+            finalLongitude = parseFloat(body.longitude);
+        } else if (body.lng !== undefined && body.lng !== null && body.lng !== "") {
+            finalLongitude = parseFloat(body.lng);
+        } else if (body.locationCoordinates?.lng) {
+            finalLongitude = parseFloat(body.locationCoordinates.lng);
+        }
+
+        if (body.isLocationPinned !== undefined) {
+            finalIsLocationPinned = Boolean(body.isLocationPinned);
+        } else if (finalLatitude !== null && finalLongitude !== null) {
+            finalIsLocationPinned = true;
+        }
 
         if (body.adhaarUrl) adhaarUrl = body.adhaarUrl;
         if (body.identityProofUrl) adhaarUrl = body.identityProofUrl;
@@ -59,6 +82,18 @@ export const registerUser = async (req: Request) => {
         finalAddressLandmark = (formData.get("addressLandmark") || "") as string;
         finalBusinessCategory = (formData.get("businessCategory") || formData.get("sellerType") || "FOOD") as string;
         finalFoodType = (formData.get("foodType") || "BOTH") as string;
+
+        const rawLat = formData.get("latitude") || formData.get("lat");
+        const rawLng = formData.get("longitude") || formData.get("lng");
+        const rawPinned = formData.get("isLocationPinned");
+
+        if (rawLat && rawLat !== "") finalLatitude = parseFloat(rawLat as string);
+        if (rawLng && rawLng !== "") finalLongitude = parseFloat(rawLng as string);
+        if (rawPinned !== null && rawPinned !== undefined) {
+            finalIsLocationPinned = rawPinned === "true" || rawPinned === "1";
+        } else if (finalLatitude !== null && finalLongitude !== null) {
+            finalIsLocationPinned = true;
+        }
 
         const saveFile = async (file: File | null) => {
             if (!file || typeof file === "string" || file.size === 0) return null;
@@ -155,7 +190,9 @@ export const registerUser = async (req: Request) => {
     }
 
     if (finalPhone) {
-        const phoneDigits = String(finalPhone).replace(/\D/g, "");
+        const rawDigits = String(finalPhone).replace(/\D/g, "");
+        // Strip country code (e.g. 91) if present and extract the 10-digit mobile number
+        const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
         if (phoneDigits.length !== 10) {
             throw new ApiError("Please provide a valid 10-digit phone number", 400);
         }
@@ -217,6 +254,9 @@ export const registerUser = async (req: Request) => {
                     addressFlat: finalAddressFlat || "",
                     addressLocality: finalAddressArea || "",
                     addressLandmark: finalAddressLandmark || null,
+                    latitude: finalLatitude,
+                    longitude: finalLongitude,
+                    isLocationPinned: finalIsLocationPinned,
                     kitchenImages: JSON.stringify(kitchenImages),
                     cuisineImages: JSON.stringify(cuisineImages),
                     roomImages: JSON.stringify(roomImages),
@@ -241,6 +281,9 @@ export const registerUser = async (req: Request) => {
                 trackingId: createdSellerProfile.trackingId,
                 businessName: createdSellerProfile.businessName,
                 verificationStatus: createdSellerProfile.verificationStatus,
+                latitude: createdSellerProfile.latitude,
+                longitude: createdSellerProfile.longitude,
+                isLocationPinned: createdSellerProfile.isLocationPinned,
             } : undefined
         };
     } catch (dbError: any) {

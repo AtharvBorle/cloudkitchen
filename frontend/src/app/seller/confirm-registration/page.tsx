@@ -11,31 +11,43 @@ import {
   getSellerDraft,
   clearSellerDraft,
   dataUrlToFile,
+  hydrateSellerDraftAsync,
   SellerRegistrationDraft,
 } from "@/lib/seller-registration-store";
 import { fetchApi } from "@/lib/fetch-api";
 
 export default function ConfirmRegistrationPage() {
   const router = useRouter();
-  const [draft, setDraft] = useState<SellerRegistrationDraft | null>(null);
+  const [draft, setDraft] = useState<SellerRegistrationDraft>(() => getSellerDraft());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const currentDraft = getSellerDraft();
     setDraft(currentDraft);
+
+    hydrateSellerDraftAsync().then((hydrated) => {
+      setDraft((prev) => ({
+        ...prev,
+        ...hydrated,
+        kitchenPhotos: hydrated.kitchenPhotos?.some(Boolean) ? hydrated.kitchenPhotos : prev.kitchenPhotos,
+        cuisinePhotos: hydrated.cuisinePhotos?.some(Boolean) ? hydrated.cuisinePhotos : prev.cuisinePhotos,
+        roomPhotos: hydrated.roomPhotos?.some(Boolean) ? hydrated.roomPhotos : prev.roomPhotos,
+      }));
+    });
   }, []);
 
   const handleSubmit = async () => {
-    if (!draft) return;
+    const activeDraft = getSellerDraft() || draft;
+    if (!activeDraft) return;
     setErrorMessage(null);
 
     // Validation
-    if (!draft.ownerName || !draft.email || !draft.password) {
+    if (!activeDraft.ownerName || !activeDraft.email || !activeDraft.password) {
       setErrorMessage("Please complete your account information (name, email, password).");
       return;
     }
-    if (!draft.businessName || !draft.address) {
+    if (!activeDraft.businessName || !activeDraft.address) {
       setErrorMessage("Please complete your business details (business name and address).");
       return;
     }
@@ -46,60 +58,92 @@ export default function ConfirmRegistrationPage() {
       const formData = new FormData();
 
       // Account info
-      formData.append("name", draft.ownerName.trim());
-      formData.append("email", draft.email.trim().toLowerCase());
-      formData.append("phone", draft.phone ? draft.phone.trim() : "");
-      formData.append("password", draft.password);
+      formData.append("name", activeDraft.ownerName.trim());
+      formData.append("ownerName", activeDraft.ownerName.trim());
+      formData.append("email", activeDraft.email.trim().toLowerCase());
+      const cleanPhone = activeDraft.phone ? activeDraft.phone.replace(/\D/g, "").slice(-10) : "";
+      formData.append("phone", cleanPhone);
+      formData.append("password", activeDraft.password);
       formData.append("role", "SELLER");
-      formData.append("sellerRole", draft.sellerRole || "Owner");
+      formData.append("sellerRole", activeDraft.sellerRole || "Owner");
 
       // Business info
-      formData.append("businessName", draft.businessName.trim());
-      formData.append("sellerType", draft.sellerType || "FOOD");
-      formData.append("businessCategory", draft.sellerType || "FOOD");
-      formData.append("foodType", draft.foodType || "BOTH");
-      formData.append("addressArea", draft.address.trim());
+      formData.append("businessName", activeDraft.businessName.trim());
+      formData.append("sellerType", activeDraft.sellerType || "FOOD");
+      formData.append("businessCategory", activeDraft.sellerType || "FOOD");
+      formData.append("foodType", activeDraft.foodType || "BOTH");
+      formData.append("addressArea", activeDraft.address.trim());
+      formData.append("address", activeDraft.address.trim());
       formData.append("addressFlat", "");
-      formData.append("city", draft.city || "Pune");
-      formData.append("pincode", draft.pincode || "411038");
+      formData.append("city", activeDraft.city || "Pune");
+      formData.append("pincode", activeDraft.pincode || "411038");
+      if (activeDraft.locationCoordinates?.lat !== undefined && activeDraft.locationCoordinates?.lat !== null) {
+        formData.append("latitude", String(activeDraft.locationCoordinates.lat));
+        formData.append("lat", String(activeDraft.locationCoordinates.lat));
+      }
+      if (activeDraft.locationCoordinates?.lng !== undefined && activeDraft.locationCoordinates?.lng !== null) {
+        formData.append("longitude", String(activeDraft.locationCoordinates.lng));
+        formData.append("lng", String(activeDraft.locationCoordinates.lng));
+      }
+      if (activeDraft.isLocationPinned !== undefined) {
+        formData.append("isLocationPinned", String(activeDraft.isLocationPinned));
+      }
 
       // Legal & Banking
-      formData.append("bankAccountNumber", draft.bankAccountNumber || "");
-      formData.append("ifscCode", draft.ifscCode || "");
+      formData.append("bankAccountNumber", activeDraft.bankAccountNumber || "");
+      formData.append("ifscCode", activeDraft.ifscCode || "");
 
       // Files
-      if (draft.identityProofDataUrl) {
-        const file = dataUrlToFile(draft.identityProofDataUrl, draft.identityProofFileName || "identity_proof.jpg");
-        if (file) formData.append("adhaarFile", file);
+      if (activeDraft.identityProofDataUrl) {
+        const file = dataUrlToFile(activeDraft.identityProofDataUrl, activeDraft.identityProofFileName || "identity_proof.jpg");
+        if (file) {
+          formData.append("adhaarFile", file);
+          formData.append("identityProofFile", file);
+        }
       }
-      if (draft.fssaiLicenseDataUrl) {
-        const file = dataUrlToFile(draft.fssaiLicenseDataUrl, draft.fssaiLicenseFileName || "fssai_license.jpg");
-        if (file) formData.append("fssaiFile", file);
+      if (activeDraft.fssaiLicenseDataUrl) {
+        const file = dataUrlToFile(activeDraft.fssaiLicenseDataUrl, activeDraft.fssaiLicenseFileName || "fssai_license.jpg");
+        if (file) {
+          formData.append("fssaiFile", file);
+          formData.append("fssaiLicenseFile", file);
+        }
       }
-      if (draft.utilityBillDataUrl) {
-        const file = dataUrlToFile(draft.utilityBillDataUrl, draft.utilityBillFileName || "utility_bill.jpg");
-        if (file) formData.append("lightBillFile", file);
+      if (activeDraft.utilityBillDataUrl) {
+        const file = dataUrlToFile(activeDraft.utilityBillDataUrl, activeDraft.utilityBillFileName || "utility_bill.jpg");
+        if (file) {
+          formData.append("lightBillFile", file);
+          formData.append("utilityBillFile", file);
+        }
       }
 
       // Photos
-      draft.kitchenPhotos?.forEach((dataUrl, idx) => {
-        if (dataUrl) {
+      activeDraft.kitchenPhotos?.forEach((dataUrl, idx) => {
+        if (dataUrl && dataUrl.startsWith("data:")) {
           const file = dataUrlToFile(dataUrl, `kitchen_photo_${idx + 1}.jpg`);
-          if (file) formData.append(`kitchenImage_${idx}`, file);
+          if (file) {
+            formData.append(`kitchenImage_${idx}`, file);
+            formData.append(`kitchenPhoto_${idx}`, file);
+          }
         }
       });
 
-      draft.cuisinePhotos?.forEach((dataUrl, idx) => {
-        if (dataUrl) {
+      activeDraft.cuisinePhotos?.forEach((dataUrl, idx) => {
+        if (dataUrl && dataUrl.startsWith("data:")) {
           const file = dataUrlToFile(dataUrl, `cuisine_photo_${idx + 1}.jpg`);
-          if (file) formData.append(`cuisineImage_${idx}`, file);
+          if (file) {
+            formData.append(`cuisineImage_${idx}`, file);
+            formData.append(`cuisinePhoto_${idx}`, file);
+          }
         }
       });
 
-      draft.roomPhotos?.forEach((dataUrl, idx) => {
-        if (dataUrl) {
+      activeDraft.roomPhotos?.forEach((dataUrl, idx) => {
+        if (dataUrl && dataUrl.startsWith("data:")) {
           const file = dataUrlToFile(dataUrl, `room_photo_${idx + 1}.jpg`);
-          if (file) formData.append(`roomImage_${idx}`, file);
+          if (file) {
+            formData.append(`roomImage_${idx}`, file);
+            formData.append(`roomPhoto_${idx}`, file);
+          }
         }
       });
 
@@ -121,8 +165,8 @@ export default function ConfirmRegistrationPage() {
         try {
           await signIn("credentials", {
             redirect: false,
-            email: draft.email.trim().toLowerCase(),
-            password: draft.password,
+            email: activeDraft.email.trim().toLowerCase(),
+            password: activeDraft.password,
             loginType: "SELLER",
           });
         } catch (loginErr) {
@@ -146,7 +190,7 @@ export default function ConfirmRegistrationPage() {
   };
 
   const handleBack = () => {
-    router.push("/seller/media-gallery");
+    router.push("/seller/media-gallery?from=review");
   };
 
   return (
@@ -156,7 +200,7 @@ export default function ConfirmRegistrationPage() {
       pageTitle="Neo Cloud Room Onboarding"
     >
       <ConfirmRegistration
-        draft={draft || undefined}
+        draft={draft}
         isSubmitting={isSubmitting}
         errorMessage={errorMessage}
         onSubmit={handleSubmit}

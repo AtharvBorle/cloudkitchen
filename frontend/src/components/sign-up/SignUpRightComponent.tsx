@@ -235,7 +235,8 @@ export default function SignUpRightComponent({
       setError("Please enter your full name.");
       return;
     }
-    if (phone.replace(/\D/g, "").length !== 10) {
+    const phoneDigits = phone.replace(/\D/g, "").slice(-10);
+    if (phoneDigits.length !== 10) {
       setError("Please enter a valid 10-digit mobile number.");
       return;
     }
@@ -269,7 +270,7 @@ export default function SignUpRightComponent({
         body: JSON.stringify({
           name: fullName.trim(),
           email: cleanEmail,
-          phone: phone.trim(),
+          phone: phoneDigits,
           password,
           role: "USER",
         }),

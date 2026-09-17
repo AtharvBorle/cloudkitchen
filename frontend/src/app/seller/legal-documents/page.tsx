@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   SellerLayout,
   LegalDocuments,
@@ -9,8 +9,11 @@ import {
 } from "@/components/seller";
 import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store";
 
-export default function LegalDocumentsPage() {
+function LegalDocumentsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromReview = searchParams?.get("from") === "review";
+
   const [initialDocs, setInitialDocs] = useState<Partial<LegalDocumentsData>>({
     identityProofFile: "",
     identityProofDataUrl: "",
@@ -47,11 +50,19 @@ export default function LegalDocumentsPage() {
       bankAccountNumber: data.bankAccountNumber,
       ifscCode: data.ifscCode,
     });
-    router.push("/seller/media-gallery");
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/media-gallery");
+    }
   };
 
   const handleBack = () => {
-    router.push("/seller/business-information");
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/business-information");
+    }
   };
 
   return (
@@ -67,5 +78,13 @@ export default function LegalDocumentsPage() {
         onBack={handleBack}
       />
     </SellerLayout>
+  );
+}
+
+export default function LegalDocumentsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>}>
+      <LegalDocumentsContent />
+    </Suspense>
   );
 }

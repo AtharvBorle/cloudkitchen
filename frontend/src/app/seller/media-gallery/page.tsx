@@ -1,16 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   SellerLayout,
   MediaGallery,
   MediaGalleryData,
 } from "@/components/seller";
-import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store";
+import { getSellerDraft, saveSellerDraft, hydrateSellerDraftAsync } from "@/lib/seller-registration-store";
 
-export default function MediaGalleryPage() {
+function MediaGalleryContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromReview = searchParams?.get("from") === "review";
+
   const [initialMedia, setInitialMedia] = useState<Partial<MediaGalleryData>>({
     kitchenPhotos: [null, null, null, null],
     cuisinePhotos: [null, null, null, null],
@@ -24,6 +27,17 @@ export default function MediaGalleryPage() {
       cuisinePhotos: draft.cuisinePhotos || [null, null, null, null],
       roomPhotos: draft.roomPhotos || [null, null],
     });
+
+    // Also hydrate async in case IndexedDB has persistent media
+    hydrateSellerDraftAsync().then((hydrated) => {
+      if (hydrated.kitchenPhotos?.some(Boolean) || hydrated.cuisinePhotos?.some(Boolean)) {
+        setInitialMedia({
+          kitchenPhotos: hydrated.kitchenPhotos || [null, null, null, null],
+          cuisinePhotos: hydrated.cuisinePhotos || [null, null, null, null],
+          roomPhotos: hydrated.roomPhotos || [null, null],
+        });
+      }
+    });
   }, []);
 
   const handleContinue = (data: MediaGalleryData) => {
@@ -36,7 +50,11 @@ export default function MediaGalleryPage() {
   };
 
   const handleBack = () => {
-    router.push("/seller/legal-documents");
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/legal-documents");
+    }
   };
 
   return (
@@ -52,5 +70,13 @@ export default function MediaGalleryPage() {
         onBack={handleBack}
       />
     </SellerLayout>
+  );
+}
+
+export default function MediaGalleryPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>}>
+      <MediaGalleryContent />
+    </Suspense>
   );
 }
