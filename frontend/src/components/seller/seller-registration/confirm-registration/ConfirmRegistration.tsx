@@ -22,6 +22,8 @@ export interface ConfirmRegistrationData {
     identityProof?: string;
     fssaiLicense?: string;
     electricityBill?: string;
+    bankAccountNumber?: string;
+    ifscCode?: string;
   };
   media?: {
     photosCount?: number;
@@ -45,23 +47,37 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   const seller = useSellerProfile();
 
   const account = {
-    ownerName: data?.account?.ownerName || (seller.ownerName && seller.ownerName !== "Kitchen Owner" ? seller.ownerName : "Kitchen Owner"),
+    ownerName:
+      data?.account?.ownerName ||
+      (seller.ownerName && seller.ownerName !== "Kitchen Owner"
+        ? seller.ownerName
+        : "Kitchen Owner"),
     email: data?.account?.email || seller.email || "partner@neocloud.com",
     phone: data?.account?.phone || seller.phone || "+91 98765 43210",
     sellerRole: data?.account?.sellerRole || "Owner",
   };
 
   const business = {
-    name: data?.business?.name || (seller.businessName && seller.businessName !== "Cloud Kitchen" ? seller.businessName : "Neo Kitchens"),
+    name:
+      data?.business?.name ||
+      (seller.businessName && seller.businessName !== "Cloud Kitchen"
+        ? seller.businessName
+        : "Neo Kitchens"),
     type: data?.business?.type || "Food",
     cuisines: data?.business?.cuisines || "North Indian, Biryani",
-    address: data?.business?.address || seller.address || "Cloud Kitchen Hub, Sector 6, Bangalore",
+    address:
+      data?.business?.address ||
+      seller.address ||
+      "Cloud Kitchen Hub, Sector 6, Bangalore",
   };
 
   const documents = {
-    identityProof: data?.documents?.identityProof || "Identity Proof (Aadhaar/PAN)",
+    identityProof:
+      data?.documents?.identityProof || "Identity Proof (Aadhaar/PAN)",
     fssaiLicense: data?.documents?.fssaiLicense || "FSSAI License",
     electricityBill: data?.documents?.electricityBill || "Electricity Bill",
+    bankAccountNumber: data?.documents?.bankAccountNumber || "",
+    ifscCode: data?.documents?.ifscCode || "",
   };
 
   const media = {
@@ -144,6 +160,18 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               <Check className={styles.checkIcon} size={15} strokeWidth={2.6} />
               <span className={styles.docCheckText}>{documents.electricityBill}</span>
             </div>
+            {documents.bankAccountNumber && (
+              <div className={styles.mobileRow} style={{ marginTop: "4px" }}>
+                <span className={styles.rowKey}>A/C:</span>
+                <span className={styles.rowValue}>{documents.bankAccountNumber}</span>
+              </div>
+            )}
+            {documents.ifscCode && (
+              <div className={styles.mobileRow}>
+                <span className={styles.rowKey}>IFSC:</span>
+                <span className={styles.rowValue}>{documents.ifscCode}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -156,10 +184,21 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
             </Link>
           </div>
           <div className={styles.thumbnailsRow}>
-            <div className={styles.thumbPlaceholder} />
-            <div className={styles.thumbPlaceholder} />
-            <div className={styles.thumbPlaceholder} />
-            <div className={styles.thumbMoreSlot}>+3</div>
+            {media.previewThumbnails.map((thumb, idx) =>
+              thumb ? (
+                <img
+                  key={idx}
+                  src={thumb}
+                  alt="Upload thumbnail"
+                  className={styles.thumbImage}
+                />
+              ) : (
+                <div key={idx} className={styles.thumbPlaceholder} />
+              )
+            )}
+            <div className={styles.thumbMoreSlot}>
+              +{media.photosCount > 3 ? media.photosCount - 3 : 0}
+            </div>
           </div>
         </div>
       </div>
@@ -231,7 +270,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
           {/* 3. Legal Documents */}
           <div className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Legal Documents</h3>
+              <h3 className={styles.sectionTitle}>Legal Documents & Bank Details</h3>
               <Link href="/seller/legal-documents" className={styles.editBtn}>
                 Edit
               </Link>
@@ -249,6 +288,18 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.key}>Electricity Bill</span>
                 <span className={styles.value}>{documents.electricityBill}</span>
               </div>
+              {documents.bankAccountNumber && (
+                <div className={styles.row}>
+                  <span className={styles.key}>Bank Account</span>
+                  <span className={styles.value}>{documents.bankAccountNumber}</span>
+                </div>
+              )}
+              {documents.ifscCode && (
+                <div className={styles.row}>
+                  <span className={styles.key}>IFSC Code</span>
+                  <span className={styles.value}>{documents.ifscCode}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -261,10 +312,21 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               </Link>
             </div>
             <div className={styles.thumbnailsRow}>
-              <div className={styles.thumbPlaceholder} />
-              <div className={styles.thumbPlaceholder} />
-              <div className={styles.thumbPlaceholder} />
-              <div className={styles.thumbMoreSlot}>+3</div>
+              {media.previewThumbnails.map((thumb, idx) =>
+                thumb ? (
+                  <img
+                    key={idx}
+                    src={thumb}
+                    alt="Upload thumbnail"
+                    className={styles.thumbImage}
+                  />
+                ) : (
+                  <div key={idx} className={styles.thumbPlaceholder} />
+                )
+              )}
+              <div className={styles.thumbMoreSlot}>
+                +{media.photosCount > 3 ? media.photosCount - 3 : 0}
+              </div>
             </div>
           </div>
         </div>

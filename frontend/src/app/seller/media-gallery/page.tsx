@@ -1,16 +1,56 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   SellerLayout,
   MediaGallery,
+  MediaGalleryData,
 } from "@/components/seller";
+import {
+  getSellerRegistrationDraft,
+  saveSellerRegistrationDraft,
+} from "@/utils/sellerRegistrationDraft";
 
 export default function MediaGalleryPage() {
   const router = useRouter();
+  const [mediaData, setMediaData] = useState<MediaGalleryData>(() => {
+    const draft = getSellerRegistrationDraft().media;
+    return {
+      kitchenPhotos: draft.kitchenPhotos,
+      cuisinePhotos: draft.cuisinePhotos,
+      roomPhotos: draft.roomPhotos,
+    };
+  });
 
-  const handleContinue = () => {
+  useEffect(() => {
+    const draft = getSellerRegistrationDraft().media;
+    setMediaData({
+      kitchenPhotos: draft.kitchenPhotos,
+      cuisinePhotos: draft.cuisinePhotos,
+      roomPhotos: draft.roomPhotos,
+    });
+  }, []);
+
+  const handleContinue = (data: MediaGalleryData) => {
+    const allPhotos = [
+      ...data.kitchenPhotos.filter(Boolean),
+      ...data.cuisinePhotos.filter(Boolean),
+      ...data.roomPhotos.filter(Boolean),
+    ];
+    const previewThumbnails = [
+      data.kitchenPhotos[0] || data.cuisinePhotos[0] || data.roomPhotos[0] || null,
+      data.kitchenPhotos[1] || data.cuisinePhotos[1] || data.roomPhotos[1] || null,
+      data.kitchenPhotos[2] || data.cuisinePhotos[2] || data.roomPhotos[2] || null,
+    ];
+
+    saveSellerRegistrationDraft({
+      media: {
+        ...data,
+        photosCount: allPhotos.length,
+        previewThumbnails,
+      },
+    });
     router.push("/seller/confirm-registration");
   };
 
@@ -24,8 +64,8 @@ export default function MediaGalleryPage() {
       activeSidebarItem="registration"
       pageTitle="Neo Cloud Room Onboarding"
     >
-      {/* 5-Step Stepper Wizard (Step 4 Active, Steps 1, 2, 3 Completed with Orange Tick) */}
       <MediaGallery
+        initialData={mediaData}
         onContinue={handleContinue}
         onBack={handleBack}
       />
