@@ -26,7 +26,12 @@
 }
 
 .sidebarWrapper {
-  display: block;
+  width: 290px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 96px;
+  align-self: flex-start;
+  z-index: 10;
 }
 
 .contentWrapper {
