@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import styles from "./SellerHeader.module.css";
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -53,16 +53,8 @@ export const SellerHeader: React.FC<SellerHeaderProps> = ({
         <h1 className={styles.pageTitle}>{title}</h1>
       </div>
 
-      {/* Right: Notifications + Profile */}
+      {/* Right: Profile */}
       <div className={styles.rightSection}>
-        <button
-          type="button"
-          className={styles.notificationBtn}
-          aria-label="Notifications"
-        >
-          <Bell className={styles.bellIcon} />
-        </button>
-
         <div className={styles.profileSection}>
           <div className={styles.avatar}>{effectiveUserInitials}</div>
           <div className={styles.profileInfo}>

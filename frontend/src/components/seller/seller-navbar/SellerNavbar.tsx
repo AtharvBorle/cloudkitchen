@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Bell } from "lucide-react";
 import styles from "./SellerNavbar.module.css";
 
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -71,7 +70,7 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
         </h1>
       </div>
 
-      {/* 2. Right Side: Bell -> Avatar Circle -> Name & Designation */}
+      {/* 2. Right Side: Avatar Circle -> Name & Designation */}
       <div
         className={styles.rightSection}
         style={{
@@ -82,29 +81,6 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
           flexShrink: 0,
         }}
       >
-        {/* Bell Notification Icon */}
-        <button
-          type="button"
-          className={styles.notificationBtn}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            border: "1px solid #e2e8f0",
-            backgroundColor: "#f8fafc",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#64748b",
-            cursor: "pointer",
-            flexShrink: 0,
-            padding: 0,
-          }}
-          aria-label="Notifications"
-        >
-          <Bell className={styles.bellIcon} style={{ width: 18, height: 18 }} />
-        </button>
-
         {/* Profile Circle + Name & Designation */}
         <div
           className={styles.profileSection}
