@@ -115,9 +115,6 @@ export function isPublicSellerRoute(pathname?: string): boolean {
     pathname.startsWith("/seller/legal-information") ||
     pathname.startsWith("/seller/media-gallery") ||
     pathname.startsWith("/seller/media-information") ||
-    pathname.startsWith("/seller/verification") ||
-    pathname.startsWith("/seller/verification-status") ||
-    pathname.startsWith("/seller/revision") ||
     pathname.startsWith("/seller/faq") ||
     pathname.startsWith("/seller/res/faq") ||
     pathname.startsWith("/seller/tc") ||
@@ -194,7 +191,8 @@ export function useSellerProfile() {
     let isMounted = true;
 
     async function fetchProfile() {
-      if (status !== "authenticated" || (typeof window !== "undefined" && isPublicSellerRoute(window.location.pathname))) {
+      // Only make authenticated profile request when the user has an active session
+      if (status !== "authenticated") {
         if (isMounted) {
           setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
         }

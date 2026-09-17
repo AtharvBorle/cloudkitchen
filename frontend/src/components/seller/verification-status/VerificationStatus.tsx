@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ArrowRight, CheckCircle2, ShieldAlert, FileQuestion, Lock, Loader2 } from "lucide-react";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, updateCachedProfile } from "@/hooks/useSellerProfile";
+import { fetchApi } from "@/lib/fetch-api";
 import { performLogout } from "@/lib/logout";
 import styles from "./VerificationStatus.module.css";
 
@@ -61,6 +62,35 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
       setCurrentNote(seller.profile.verificationNote);
     }
   }, [seller.profile, propTrackingId, propStatus, propNote]);
+
+  // Fallback direct load if user is authenticated and profile state is still pending
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDirect() {
+      if (seller.authStatus === "authenticated") {
+        try {
+          const res = await fetchApi("/api/seller/profile");
+          if (res.ok) {
+            const data = await res.json();
+            const prof = data.data?.profile || data.profile;
+            const usr = data.data?.user || data.user;
+            if (prof && isMounted) {
+              if (prof.trackingId && !propTrackingId) setEffectiveTrackingId(prof.trackingId);
+              if (prof.verificationStatus && !propStatus) setCurrentStatus(prof.verificationStatus);
+              if (prof.verificationNote !== undefined && propNote === undefined) setCurrentNote(prof.verificationNote);
+              updateCachedProfile({
+                user: usr,
+                profile: prof,
+                isOnline: prof.isOnline ?? true,
+              });
+            }
+          }
+        } catch {}
+      }
+    }
+    loadDirect();
+    return () => { isMounted = false; };
+  }, [seller.authStatus, propTrackingId, propStatus, propNote]);
 
   const isApproved = currentStatus === "APPROVED";
   const isRevision = currentStatus === "REVISION";
