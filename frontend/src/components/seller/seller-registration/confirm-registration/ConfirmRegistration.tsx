@@ -166,7 +166,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
         {/* Card 3: Documents */}
         <div className={styles.mobileCard}>
           <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>Documents</h3>
+            <h3 className={styles.cardTitle}>Legal Documents & Payout</h3>
             <Link href="/seller/legal-documents" className={styles.editLink}>
               Edit
             </Link>
