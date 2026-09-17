@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
+import { LogOut } from "lucide-react";
 import styles from "./SellerNavbar.module.css";
-
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { performLogout } from "@/lib/logout";
 
 export interface SellerNavbarProps {
   title?: string;
@@ -70,7 +71,7 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
         </h1>
       </div>
 
-      {/* 2. Right Side: Avatar Circle -> Name & Designation */}
+      {/* 2. Right Side: Profile Info + Logout (when authenticated) */}
       <div
         className={styles.rightSection}
         style={{
@@ -144,6 +145,20 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Logout button: only visible when authenticated */}
+        {seller.authStatus === "authenticated" && (
+          <button
+            type="button"
+            onClick={() => performLogout({ role: "SELLER" })}
+            className={styles.logoutBtn}
+            title="Log out of partner account"
+            aria-label="Log out"
+          >
+            <LogOut size={16} />
+            <span>Logout</span>
+          </button>
+        )}
       </div>
     </nav>
   );

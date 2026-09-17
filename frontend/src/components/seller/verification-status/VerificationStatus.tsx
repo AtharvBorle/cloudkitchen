@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ArrowRight, CheckCircle2, ShieldAlert, FileQuestion, Lock, Loader2 } from "lucide-react";
+import { Check, ArrowRight, CheckCircle2, ShieldAlert, FileQuestion, Lock, Loader2, RotateCw } from "lucide-react";
 import { useSellerProfile, updateCachedProfile } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
 import { performLogout } from "@/lib/logout";
@@ -38,6 +38,35 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
   const [effectiveTrackingId, setEffectiveTrackingId] = useState(propTrackingId || "");
   const [currentStatus, setCurrentStatus] = useState<string>(propStatus || "PENDING");
   const [currentNote, setCurrentNote] = useState<string | null>(propNote || null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetchApi("/api/seller/profile");
+      if (res.ok) {
+        const data = await res.json();
+        const prof = data.data?.profile || data.profile;
+        const usr = data.data?.user || data.user;
+        if (prof) {
+          if (prof.trackingId) setEffectiveTrackingId(prof.trackingId);
+          if (prof.verificationStatus) setCurrentStatus(prof.verificationStatus);
+          if (prof.verificationNote !== undefined) setCurrentNote(prof.verificationNote);
+          updateCachedProfile({
+            user: usr,
+            profile: prof,
+            isOnline: prof.isOnline ?? true,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to refresh status:", e);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
+    }
+  };
 
   useEffect(() => {
     if (propTrackingId) {
@@ -178,7 +207,20 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
               {effectiveTrackingId || "Approved"}
             </h2>
           </div>
-          <div className={`${styles.statusBadge} ${styles.statusBadgeApproved}`}>Approved</div>
+          <div className={styles.trackingRight}>
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              className={styles.refreshBtn}
+              disabled={isRefreshing}
+              title="Refresh verification status"
+              aria-label="Refresh status"
+            >
+              <RotateCw size={14} className={isRefreshing ? styles.spinning : ""} />
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
+            <div className={`${styles.statusBadge} ${styles.statusBadgeApproved}`}>Approved</div>
+          </div>
         </div>
 
         <div className={styles.approvedBanner}>
@@ -209,7 +251,20 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
               {effectiveTrackingId || "Application"}
             </h2>
           </div>
-          <div className={`${styles.statusBadge} ${styles.statusBadgeRejected}`}>Rejected</div>
+          <div className={styles.trackingRight}>
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              className={styles.refreshBtn}
+              disabled={isRefreshing}
+              title="Refresh verification status"
+              aria-label="Refresh status"
+            >
+              <RotateCw size={14} className={isRefreshing ? styles.spinning : ""} />
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
+            <div className={`${styles.statusBadge} ${styles.statusBadgeRejected}`}>Rejected</div>
+          </div>
         </div>
 
         <div className={styles.rejectedCard}>
@@ -298,7 +353,20 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
             {effectiveTrackingId || (seller.isLoading ? "Loading..." : "Pending Verification")}
           </h2>
         </div>
-        <div className={`${styles.statusBadge} ${resolvedBadgeClass}`}>{resolvedBadgeText}</div>
+        <div className={styles.trackingRight}>
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            className={styles.refreshBtn}
+            disabled={isRefreshing}
+            title="Refresh verification status"
+            aria-label="Refresh status"
+          >
+            <RotateCw size={14} className={isRefreshing ? styles.spinning : ""} />
+            <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+          </button>
+          <div className={`${styles.statusBadge} ${resolvedBadgeClass}`}>{resolvedBadgeText}</div>
+        </div>
       </div>
 
       {/* Revision Banner if status is REVISION */}

@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import styles from "./SellerHeader.module.css";
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { performLogout } from "@/lib/logout";
 
 export interface SellerHeaderProps {
   title?: string;
@@ -53,7 +54,7 @@ export const SellerHeader: React.FC<SellerHeaderProps> = ({
         <h1 className={styles.pageTitle}>{title}</h1>
       </div>
 
-      {/* Right: Profile */}
+      {/* Right: Profile + Logout */}
       <div className={styles.rightSection}>
         <div className={styles.profileSection}>
           <div className={styles.avatar}>{effectiveUserInitials}</div>
@@ -62,6 +63,19 @@ export const SellerHeader: React.FC<SellerHeaderProps> = ({
             <span className={styles.userRole}>{effectiveUserRole}</span>
           </div>
         </div>
+
+        {seller.authStatus === "authenticated" && (
+          <button
+            type="button"
+            onClick={() => performLogout({ role: "SELLER" })}
+            className={styles.logoutBtn}
+            title="Log out of partner account"
+            aria-label="Log out"
+          >
+            <LogOut size={16} />
+            <span>Logout</span>
+          </button>
+        )}
       </div>
     </header>
   );
