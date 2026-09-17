@@ -55,7 +55,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
   const [ifscTouched, setIfscTouched] = useState(!!initialData?.ifscCode);
 
   const isBankValid = formData.bankAccountNumber.length >= 9 && formData.bankAccountNumber.length <= 18;
-  const isIfscValid = /^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode.trim().toUpperCase());
+  const isIfscValid = formData.ifscCode.trim().length > 0 && /^[A-Z0-9]+$/.test(formData.ifscCode.trim().toUpperCase());
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({
     identityProofFile: null,
@@ -197,7 +197,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
   };
 
   const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
+    const rawValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
     setFormData((prev) => ({ ...prev, ifscCode: rawValue }));
     setIfscTouched(true);
   };
@@ -842,10 +842,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                 }`}
               >
                 {formData.ifscCode.length > 0
-                  ? `${formData.ifscCode.length}/11 chars`
+                  ? isIfscValid
+                    ? "Valid IFSC"
+                    : "No symbols"
                   : ifscTouched
                   ? "Required"
-                  : "11 chars (no symbols)"}
+                  : "Letters & numbers only"}
               </span>
             </div>
             <div
@@ -861,7 +863,6 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                 id="ifscCode"
                 name="ifscCode"
                 type="text"
-                maxLength={11}
                 required
                 placeholder="e.g. HDFC0001234"
                 value={formData.ifscCode}
@@ -882,7 +883,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
               isIfscValid ? (
                 <div className={styles.helperTextSuccess}>
                   <CheckCircle2 size={13} />
-                  <span>Valid IFSC code format</span>
+                  <span>Valid IFSC code (letters & numbers only)</span>
                 </div>
               ) : formData.ifscCode.length === 0 ? (
                 <div className={styles.helperTextError}>
@@ -892,7 +893,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
               ) : (
                 <div className={styles.helperTextError}>
                   <AlertCircle size={13} />
-                  <span>11 chars: 4 letters + 0 + 6 alphanumeric (e.g. HDFC0001234, no symbols)</span>
+                  <span>Special characters and symbols are not allowed</span>
                 </div>
               )
             )}
