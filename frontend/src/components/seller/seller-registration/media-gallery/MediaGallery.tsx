@@ -61,6 +61,21 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
   const [oversizeModal, setOversizeModal] = useState<OversizeModalState | null>(null);
   const [dragTarget, setDragTarget] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  const sellerDraft = getSellerDraft();
+  const sellerType = sellerDraft?.sellerType || "FOOD";
+  const isFood = sellerType === "FOOD" || sellerType === "BOTH";
+  const isProperty = sellerType === "PROPERTY" || sellerType === "BOTH";
+
+  const kitchenCount = kitchenPhotos.filter(Boolean).length;
+  const cuisineCount = cuisinePhotos.filter(Boolean).length;
+  const roomCount = roomPhotos.filter(Boolean).length;
+
+  const isKitchenValid = !isFood || kitchenCount >= 3;
+  const isCuisineValid = !isFood || cuisineCount >= 3;
+  const isRoomValid = !isProperty || roomCount >= 2;
+  const isOverallValid = isKitchenValid && isCuisineValid && isRoomValid;
 
   useEffect(() => {
     if (initialData?.kitchenPhotos && initialData.kitchenPhotos.some(Boolean)) {
@@ -210,6 +225,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setHasSubmitted(true);
+
+    if (!isOverallValid) {
+      return;
+    }
+
     const mediaPayload: MediaGalleryData = {
       kitchenPhotos,
       cuisinePhotos,
@@ -261,122 +282,175 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
         </p>
       </div>
 
+      {hasSubmitted && !isOverallValid && (
+        <div className={styles.errorBanner} role="alert">
+          <AlertTriangle size={20} className={styles.errorBannerIcon} />
+          <span>
+            {isFood && (!isKitchenValid || !isCuisineValid)
+              ? "Please upload at least 3 Kitchen Photos and 3 Cuisine Photos before continuing."
+              : "Please upload the required minimum photos before continuing."}
+          </span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className={styles.form}>
         {/* ========================================================= */}
         {/* MOBILE VIEW: Sectioned 2x2 Grid Matching Mockup           */}
         {/* ========================================================= */}
         <div className={styles.mobileGalleryContainer}>
           {/* Section 1: Kitchen Photos */}
-          <div className={styles.mobileSection}>
-            <span className={styles.mobileSectionHeader}>KITCHEN PHOTOS</span>
-            <div className={styles.mobilePhotoGrid}>
-              {[0, 1, 2, 3].map((idx) => (
-                <div key={`mob-kitchen-${idx}`} className={styles.slotWrapper}>
-                  <div
-                    className={`${styles.mobileSlot} ${
-                      idx === 0 && !kitchenPhotos[idx] ? styles.slotUploadActive : ""
-                    }`}
-                    onClick={() => triggerUpload("kitchen", idx)}
-                  >
-                    {kitchenPhotos[idx] ? (
-                      <>
-                        <img
-                          src={kitchenPhotos[idx]!}
-                          alt={`Kitchen photo ${idx + 1}`}
-                          className={styles.previewImg}
-                        />
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={(e) => removePhoto("kitchen", idx, e)}
-                          title="Remove photo"
-                        >
-                          <X size={13} strokeWidth={2.5} />
-                        </button>
-                      </>
-                    ) : idx === 0 ? (
-                      <div className={styles.uploadPrompt}>
-                        <Plus size={16} className={styles.orangePlus} />
-                        <span className={styles.uploadText}>Upload</span>
-                      </div>
-                    ) : (
-                      <Plus size={16} className={styles.grayPlus} />
-                    )}
+          {isFood && (
+            <div className={styles.mobileSection}>
+              <div className={styles.fieldHeaderRow}>
+                <span className={styles.mobileSectionHeader}>KITCHEN PHOTOS *</span>
+                <span className={kitchenCount >= 3 ? styles.badgeComplete : styles.badgeRequired}>
+                  {kitchenCount >= 3 ? `✓ ${kitchenCount}/4` : `${kitchenCount}/3 Required`}
+                </span>
+              </div>
+              {hasSubmitted && !isKitchenValid && (
+                <p className={styles.fieldErrorText} style={{ marginBottom: "8px" }}>
+                  Please upload at least 3 Kitchen Photos ({kitchenCount}/3).
+                </p>
+              )}
+              <div className={styles.mobilePhotoGrid}>
+                {[0, 1, 2, 3].map((idx) => (
+                  <div key={`mob-kitchen-${idx}`} className={styles.slotWrapper}>
+                    <div
+                      className={`${styles.mobileSlot} ${
+                        idx === 0 && !kitchenPhotos[idx] ? styles.slotUploadActive : ""
+                      } ${
+                        hasSubmitted && !isKitchenValid && !kitchenPhotos[idx] ? styles.mobileSlotError : ""
+                      }`}
+                      onClick={() => triggerUpload("kitchen", idx)}
+                    >
+                      {kitchenPhotos[idx] ? (
+                        <>
+                          <img
+                            src={kitchenPhotos[idx]!}
+                            alt={`Kitchen photo ${idx + 1}`}
+                            className={styles.previewImg}
+                          />
+                          <button
+                            type="button"
+                            className={styles.removeBtn}
+                            onClick={(e) => removePhoto("kitchen", idx, e)}
+                            title="Remove photo"
+                          >
+                            <X size={13} strokeWidth={2.5} />
+                          </button>
+                        </>
+                      ) : idx === 0 ? (
+                        <div className={styles.uploadPrompt}>
+                          <Plus size={16} className={styles.orangePlus} />
+                          <span className={styles.uploadText}>Upload</span>
+                        </div>
+                      ) : (
+                        <Plus size={16} className={styles.grayPlus} />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Section 2: Cuisine Photos */}
-          <div className={styles.mobileSection}>
-            <span className={styles.mobileSectionHeader}>CUISINE PHOTOS</span>
-            <div className={styles.mobilePhotoGrid}>
-              {[0, 1, 2, 3].map((idx) => (
-                <div key={`mob-cuisine-${idx}`} className={styles.slotWrapper}>
-                  <div
-                    className={styles.mobileSlot}
-                    onClick={() => triggerUpload("cuisine", idx)}
-                  >
-                    {cuisinePhotos[idx] ? (
-                      <>
-                        <img
-                          src={cuisinePhotos[idx]!}
-                          alt={`Cuisine photo ${idx + 1}`}
-                          className={styles.previewImg}
-                        />
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={(e) => removePhoto("cuisine", idx, e)}
-                          title="Remove photo"
-                        >
-                          <X size={13} strokeWidth={2.5} />
-                        </button>
-                      </>
-                    ) : (
-                      <Plus size={16} className={styles.grayPlus} />
-                    )}
+          {isFood && (
+            <div className={styles.mobileSection}>
+              <div className={styles.fieldHeaderRow}>
+                <span className={styles.mobileSectionHeader}>CUISINE PHOTOS *</span>
+                <span className={cuisineCount >= 3 ? styles.badgeComplete : styles.badgeRequired}>
+                  {cuisineCount >= 3 ? `✓ ${cuisineCount}/4` : `${cuisineCount}/3 Required`}
+                </span>
+              </div>
+              {hasSubmitted && !isCuisineValid && (
+                <p className={styles.fieldErrorText} style={{ marginBottom: "8px" }}>
+                  Please upload at least 3 Cuisine Photos ({cuisineCount}/3).
+                </p>
+              )}
+              <div className={styles.mobilePhotoGrid}>
+                {[0, 1, 2, 3].map((idx) => (
+                  <div key={`mob-cuisine-${idx}`} className={styles.slotWrapper}>
+                    <div
+                      className={`${styles.mobileSlot} ${
+                        hasSubmitted && !isCuisineValid && !cuisinePhotos[idx] ? styles.mobileSlotError : ""
+                      }`}
+                      onClick={() => triggerUpload("cuisine", idx)}
+                    >
+                      {cuisinePhotos[idx] ? (
+                        <>
+                          <img
+                            src={cuisinePhotos[idx]!}
+                            alt={`Cuisine photo ${idx + 1}`}
+                            className={styles.previewImg}
+                          />
+                          <button
+                            type="button"
+                            className={styles.removeBtn}
+                            onClick={(e) => removePhoto("cuisine", idx, e)}
+                            title="Remove photo"
+                          >
+                            <X size={13} strokeWidth={2.5} />
+                          </button>
+                        </>
+                      ) : (
+                        <Plus size={16} className={styles.grayPlus} />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Section 3: Room Photos */}
-          <div className={styles.mobileSection}>
-            <span className={styles.mobileSectionHeader}>ROOM PHOTOS</span>
-            <div className={styles.mobilePhotoGrid}>
-              {[0, 1].map((idx) => (
-                <div key={`mob-room-${idx}`} className={styles.slotWrapper}>
-                  <div
-                    className={styles.mobileSlot}
-                    onClick={() => triggerUpload("room", idx)}
-                  >
-                    {roomPhotos[idx] ? (
-                      <>
-                        <img
-                          src={roomPhotos[idx]!}
-                          alt={`Room photo ${idx + 1}`}
-                          className={styles.previewImg}
-                        />
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={(e) => removePhoto("room", idx, e)}
-                          title="Remove photo"
-                        >
-                          <X size={13} strokeWidth={2.5} />
-                        </button>
-                      </>
-                    ) : (
-                      <Plus size={16} className={styles.grayPlus} />
-                    )}
+          {isProperty && (
+            <div className={styles.mobileSection}>
+              <div className={styles.fieldHeaderRow}>
+                <span className={styles.mobileSectionHeader}>ROOM PHOTOS *</span>
+                <span className={roomCount >= 2 ? styles.badgeComplete : styles.badgeRequired}>
+                  {roomCount >= 2 ? `✓ ${roomCount}/2` : `${roomCount}/2 Required`}
+                </span>
+              </div>
+              {hasSubmitted && !isRoomValid && (
+                <p className={styles.fieldErrorText} style={{ marginBottom: "8px" }}>
+                  Please upload at least 2 Room Photos ({roomCount}/2).
+                </p>
+              )}
+              <div className={styles.mobilePhotoGrid}>
+                {[0, 1].map((idx) => (
+                  <div key={`mob-room-${idx}`} className={styles.slotWrapper}>
+                    <div
+                      className={`${styles.mobileSlot} ${
+                        hasSubmitted && !isRoomValid && !roomPhotos[idx] ? styles.mobileSlotError : ""
+                      }`}
+                      onClick={() => triggerUpload("room", idx)}
+                    >
+                      {roomPhotos[idx] ? (
+                        <>
+                          <img
+                            src={roomPhotos[idx]!}
+                            alt={`Room photo ${idx + 1}`}
+                            className={styles.previewImg}
+                          />
+                          <button
+                            type="button"
+                            className={styles.removeBtn}
+                            onClick={(e) => removePhoto("room", idx, e)}
+                            title="Remove photo"
+                          >
+                            <X size={13} strokeWidth={2.5} />
+                          </button>
+                        </>
+                      ) : (
+                        <Plus size={16} className={styles.grayPlus} />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ========================================================= */}
@@ -384,139 +458,187 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
         {/* ========================================================= */}
         <div className={styles.desktopGalleryContainer}>
           {/* Kitchen Photos */}
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Kitchen Photos (Min. 3)</label>
-            <div className={styles.desktopGrid}>
-              {[0, 1, 2, 3].map((idx) => {
-                const key = `desktop-k-${idx}`;
-                return (
-                  <div
-                    key={key}
-                    className={`${styles.desktopPhotoBox} ${
-                      dragTarget === key ? styles.photoBoxDragging : ""
-                    }`}
-                    onClick={() => triggerUpload("kitchen", idx)}
-                    onDragOver={(e) => handleDragOver(e, key)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop("kitchen", idx, e)}
-                  >
-                    {kitchenPhotos[idx] ? (
-                      <>
-                        <img
-                          src={kitchenPhotos[idx]!}
-                          alt={`Kitchen photo ${idx + 1}`}
-                          className={styles.previewImg}
-                        />
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={(e) => removePhoto("kitchen", idx, e)}
-                          title="Remove photo"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className={styles.photoIcon} />
-                        <p className={styles.photoText}>Add photo</p>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+          {isFood && (
+            <div className={styles.fieldGroup}>
+              <div className={styles.fieldHeaderRow}>
+                <label className={styles.label}>
+                  Kitchen Photos <span style={{ color: "#e11d48" }}>*</span>
+                </label>
+                <span className={kitchenCount >= 3 ? styles.badgeComplete : styles.badgeRequired}>
+                  {kitchenCount >= 3 ? `✓ ${kitchenCount}/4 Uploaded` : `${kitchenCount}/3 Required`}
+                </span>
+              </div>
+              {hasSubmitted && !isKitchenValid && (
+                <p className={styles.fieldErrorText}>
+                  Please upload at least 3 Kitchen Photos (currently {kitchenCount}/3 uploaded).
+                </p>
+              )}
+              <div className={styles.desktopGrid}>
+                {[0, 1, 2, 3].map((idx) => {
+                  const key = `desktop-k-${idx}`;
+                  return (
+                    <div
+                      key={key}
+                      className={`${styles.desktopPhotoBox} ${
+                        dragTarget === key ? styles.photoBoxDragging : ""
+                      } ${
+                        hasSubmitted && !isKitchenValid && !kitchenPhotos[idx] ? styles.desktopPhotoBoxError : ""
+                      }`}
+                      onClick={() => triggerUpload("kitchen", idx)}
+                      onDragOver={(e) => handleDragOver(e, key)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop("kitchen", idx, e)}
+                    >
+                      {kitchenPhotos[idx] ? (
+                        <>
+                          <img
+                            src={kitchenPhotos[idx]!}
+                            alt={`Kitchen photo ${idx + 1}`}
+                            className={styles.previewImg}
+                          />
+                          <button
+                            type="button"
+                            className={styles.removeBtn}
+                            onClick={(e) => removePhoto("kitchen", idx, e)}
+                            title="Remove photo"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <ImageIcon className={styles.photoIcon} />
+                          <p className={styles.photoText}>Add photo</p>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Cuisine Photos */}
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Cuisine Photos (Min. 3)</label>
-            <div className={styles.desktopGrid}>
-              {[0, 1, 2, 3].map((idx) => {
-                const key = `desktop-c-${idx}`;
-                return (
-                  <div
-                    key={key}
-                    className={`${styles.desktopPhotoBox} ${
-                      dragTarget === key ? styles.photoBoxDragging : ""
-                    }`}
-                    onClick={() => triggerUpload("cuisine", idx)}
-                    onDragOver={(e) => handleDragOver(e, key)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop("cuisine", idx, e)}
-                  >
-                    {cuisinePhotos[idx] ? (
-                      <>
-                        <img
-                          src={cuisinePhotos[idx]!}
-                          alt={`Cuisine photo ${idx + 1}`}
-                          className={styles.previewImg}
-                        />
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={(e) => removePhoto("cuisine", idx, e)}
-                          title="Remove photo"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className={styles.photoIcon} />
-                        <p className={styles.photoText}>Add photo</p>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+          {isFood && (
+            <div className={styles.fieldGroup}>
+              <div className={styles.fieldHeaderRow}>
+                <label className={styles.label}>
+                  Cuisine Photos <span style={{ color: "#e11d48" }}>*</span>
+                </label>
+                <span className={cuisineCount >= 3 ? styles.badgeComplete : styles.badgeRequired}>
+                  {cuisineCount >= 3 ? `✓ ${cuisineCount}/4 Uploaded` : `${cuisineCount}/3 Required`}
+                </span>
+              </div>
+              {hasSubmitted && !isCuisineValid && (
+                <p className={styles.fieldErrorText}>
+                  Please upload at least 3 Cuisine Photos (currently {cuisineCount}/3 uploaded).
+                </p>
+              )}
+              <div className={styles.desktopGrid}>
+                {[0, 1, 2, 3].map((idx) => {
+                  const key = `desktop-c-${idx}`;
+                  return (
+                    <div
+                      key={key}
+                      className={`${styles.desktopPhotoBox} ${
+                        dragTarget === key ? styles.photoBoxDragging : ""
+                      } ${
+                        hasSubmitted && !isCuisineValid && !cuisinePhotos[idx] ? styles.desktopPhotoBoxError : ""
+                      }`}
+                      onClick={() => triggerUpload("cuisine", idx)}
+                      onDragOver={(e) => handleDragOver(e, key)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop("cuisine", idx, e)}
+                    >
+                      {cuisinePhotos[idx] ? (
+                        <>
+                          <img
+                            src={cuisinePhotos[idx]!}
+                            alt={`Cuisine photo ${idx + 1}`}
+                            className={styles.previewImg}
+                          />
+                          <button
+                            type="button"
+                            className={styles.removeBtn}
+                            onClick={(e) => removePhoto("cuisine", idx, e)}
+                            title="Remove photo"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <ImageIcon className={styles.photoIcon} />
+                          <p className={styles.photoText}>Add photo</p>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Room Photos */}
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Room Photos (Required for Properties)</label>
-            <div className={styles.desktopGrid}>
-              {[0, 1].map((idx) => {
-                const key = `desktop-r-${idx}`;
-                return (
-                  <div
-                    key={key}
-                    className={`${styles.desktopPhotoBox} ${
-                      dragTarget === key ? styles.photoBoxDragging : ""
-                    }`}
-                    onClick={() => triggerUpload("room", idx)}
-                    onDragOver={(e) => handleDragOver(e, key)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop("room", idx, e)}
-                  >
-                    {roomPhotos[idx] ? (
-                      <>
-                        <img
-                          src={roomPhotos[idx]!}
-                          alt={`Room photo ${idx + 1}`}
-                          className={styles.previewImg}
-                        />
-                        <button
-                          type="button"
-                          className={styles.removeBtn}
-                          onClick={(e) => removePhoto("room", idx, e)}
-                          title="Remove photo"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className={styles.photoIcon} />
-                        <p className={styles.photoText}>Add photo</p>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+          {isProperty && (
+            <div className={styles.fieldGroup}>
+              <div className={styles.fieldHeaderRow}>
+                <label className={styles.label}>
+                  Room Photos <span style={{ color: "#e11d48" }}>*</span>
+                </label>
+                <span className={roomCount >= 2 ? styles.badgeComplete : styles.badgeRequired}>
+                  {roomCount >= 2 ? `✓ ${roomCount}/2 Uploaded` : `${roomCount}/2 Required`}
+                </span>
+              </div>
+              {hasSubmitted && !isRoomValid && (
+                <p className={styles.fieldErrorText}>
+                  Please upload at least 2 Room Photos (currently {roomCount}/2 uploaded).
+                </p>
+              )}
+              <div className={styles.desktopGrid}>
+                {[0, 1].map((idx) => {
+                  const key = `desktop-r-${idx}`;
+                  return (
+                    <div
+                      key={key}
+                      className={`${styles.desktopPhotoBox} ${
+                        dragTarget === key ? styles.photoBoxDragging : ""
+                      } ${
+                        hasSubmitted && !isRoomValid && !roomPhotos[idx] ? styles.desktopPhotoBoxError : ""
+                      }`}
+                      onClick={() => triggerUpload("room", idx)}
+                      onDragOver={(e) => handleDragOver(e, key)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop("room", idx, e)}
+                    >
+                      {roomPhotos[idx] ? (
+                        <>
+                          <img
+                            src={roomPhotos[idx]!}
+                            alt={`Room photo ${idx + 1}`}
+                            className={styles.previewImg}
+                          />
+                          <button
+                            type="button"
+                            className={styles.removeBtn}
+                            onClick={(e) => removePhoto("room", idx, e)}
+                            title="Remove photo"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <ImageIcon className={styles.photoIcon} />
+                          <p className={styles.photoText}>Add photo</p>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Action Controls */}
