@@ -273,7 +273,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
   };
 
   const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const rawValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
     setFormData((prev) => {
       const next = { ...prev, ifscCode: rawValue };
       saveSellerDraft({ ifscCode: rawValue });
@@ -873,6 +873,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                 name="ifscCode"
                 type="text"
                 autoCapitalize="characters"
+                maxLength={11}
                 required
                 placeholder="e.g. HDFC0001234"
                 value={formData.ifscCode}

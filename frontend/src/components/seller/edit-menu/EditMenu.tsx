@@ -67,7 +67,7 @@ function EditMenuInner({
   // Form states (clean empty defaults for Add New Dish)
   const [itemName, setItemName] = useState('');
   const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('North Indian');
   const [description, setDescription] = useState('');
 
   // Food type dropdown & multi-select
@@ -213,6 +213,7 @@ function EditMenuInner({
   const handleAddAnother = () => {
     setItemName('');
     setPrice('');
+    setCategory(categoriesList[0]?.name || 'North Indian');
     setDescription('');
     setSelectedFoodTypes(['Veg']);
     setStockQty('10');

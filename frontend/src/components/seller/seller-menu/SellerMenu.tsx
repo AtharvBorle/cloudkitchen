@@ -9,14 +9,26 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./SellerMenu.module.css";
 
-export type MenuCategoryFilter =
-  | "All Items"
-  | "Veg"
-  | "Non-Veg"
-  | "Jain"
-  | "Vegan"
-  | "Desserts"
-  | "Beverages";
+export type MenuCategoryFilter = string;
+
+const DishThumbnail: React.FC<{ src?: string | null; alt: string }> = ({ src, alt }) => {
+  const [imgError, setImgError] = useState(false);
+  if (!src || imgError) {
+    return (
+      <div className={styles.dishPlaceholderIcon}>
+        <Utensils size={18} strokeWidth={2.2} />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={styles.dishThumbnail}
+      onError={() => setImgError(true)}
+    />
+  );
+};
 
 export function parseFoodTypes(itemTypeStr?: string): Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN"> {
   if (!itemTypeStr) return ["VEG"];
@@ -75,7 +87,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(initialIsOpen);
-  const [selectedCategory, setSelectedCategory] = useState<MenuCategoryFilter>("All Items");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
   const [dishList, setDishList] = useState<DishItem[]>(dishes || []);
   const [pincodesStr, setPincodesStr] = useState(operationalPincodes || seller.pincode || "Not configured");
@@ -92,7 +104,8 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
       try {
         const res = await fetchApi("/api/seller/menu");
         if (res.ok) {
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           if (data && data.items && Array.isArray(data.items) && isMounted) {
             const mapped: DishItem[] = data.items.map((item: any) => {
               let variantsCount = 0;
@@ -140,14 +153,17 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
     };
   }, []);
 
-  const categories: MenuCategoryFilter[] = [
-    "All Items",
-    "Veg",
-    "Non-Veg",
-    "Jain",
-    "Vegan",
-    "Desserts",
-    "Beverages",
+  const defaultPills: string[] = ["All Items", "Veg", "Non-Veg", "Jain", "Vegan"];
+  const dynamicCategories = Array.from(
+    new Set(
+      dishList
+        .map((d) => d.category)
+        .filter((c): c is string => Boolean(c && c.trim() && !defaultPills.includes(c)))
+    )
+  );
+  const categories: string[] = [
+    ...defaultPills,
+    ...(dynamicCategories.length > 0 ? dynamicCategories : ["Desserts", "Beverages"]),
   ];
 
   const handleToggleStore = async () => {
@@ -214,8 +230,15 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
     if (selectedCategory === "Non-Veg" && !dish.types?.includes("NON-VEG")) return false;
     if (selectedCategory === "Jain" && !dish.types?.includes("JAIN")) return false;
     if (selectedCategory === "Vegan" && !dish.types?.includes("VEGAN")) return false;
-    if (selectedCategory === "Desserts" && dish.category !== "Desserts") return false;
-    if (selectedCategory === "Beverages" && dish.category !== "Beverages") return false;
+    if (
+      selectedCategory !== "All Items" &&
+      selectedCategory !== "Veg" &&
+      selectedCategory !== "Non-Veg" &&
+      selectedCategory !== "Jain" &&
+      selectedCategory !== "Vegan"
+    ) {
+      if (dish.category.toLowerCase() !== selectedCategory.toLowerCase()) return false;
+    }
 
     // 2. Search Filter
     if (searchQuery.trim()) {
@@ -377,8 +400,22 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                 <tbody>
                   {filteredDishes.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b", fontSize: "14px" }}>
-                        {loading ? "Loading menu items..." : "No dishes found. Click '+ Add New Dish' to add dishes to your menu."}
+                      <td colSpan={7} style={{ textAlign: "center", padding: "48px 16px", color: "#64748b", fontSize: "14px" }}>
+                        {loading ? (
+                          <span>Loading menu items...</span>
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                            <div className={styles.dishPlaceholderIcon} style={{ width: 44, height: 44, borderRadius: "50%" }}>
+                              <Utensils size={20} strokeWidth={2.2} />
+                            </div>
+                            <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>No dishes found</span>
+                            <span style={{ color: "#64748B", fontSize: "13px" }}>
+                              {searchQuery || selectedCategory !== "All Items"
+                                ? "Try adjusting your search query or category filter"
+                                : "Click '+ Add New Dish' to publish dishes to your cloud kitchen menu."}
+                            </span>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -388,20 +425,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                       <td>
                         <div className={styles.dishNameCell}>
                           <div className={styles.dishThumbnailWrapper}>
-                            {dish.imageUrl ? (
-                              <img
-                                src={dish.imageUrl}
-                                alt={dish.name}
-                                className={styles.dishThumbnail}
-                                onError={(e) => {
-                                  (e.target as HTMLElement).style.display = "none";
-                                }}
-                              />
-                            ) : (
-                              <div className={styles.dishPlaceholderIcon}>
-                                <Utensils size={18} strokeWidth={2.2} />
-                              </div>
-                            )}
+                            <DishThumbnail src={dish.imageUrl} alt={dish.name} />
                           </div>
                           <div className={styles.dishNameInfo}>
                             <span className={styles.dishNameText}>{dish.name}</span>
