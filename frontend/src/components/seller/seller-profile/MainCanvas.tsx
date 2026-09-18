@@ -69,24 +69,49 @@ export default function MainCanvas({
   // Subscription Status Data
   const [statusData, setStatusData] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+
+  const loadStatus = React.useCallback(async (isManual = false) => {
+    try {
+      if (isManual) setIsRefreshingStatus(true);
+      else setLoadingStatus(true);
+
+      const res = await fetchApi(`/api/seller/dashboard/status?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStatusData(data.data || data);
+      }
+    } catch (err) {
+      console.error("Failed to load subscription status:", err);
+    } finally {
+      setLoadingStatus(false);
+      setIsRefreshingStatus(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadStatus() {
-      try {
-        setLoadingStatus(true);
-        const res = await fetchApi("/api/seller/dashboard/status");
-        if (res.ok) {
-          const data = await res.json();
-          setStatusData(data.data || data);
-        }
-      } catch (err) {
-        console.error("Failed to load subscription status:", err);
-      } finally {
-        setLoadingStatus(false);
-      }
-    }
     loadStatus();
-  }, []);
+
+    const handleSubUpdated = () => {
+      loadStatus();
+    };
+
+    const handleFocus = () => {
+      loadStatus();
+    };
+
+    window.addEventListener("subscription-updated", handleSubUpdated);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      window.removeEventListener("subscription-updated", handleSubUpdated);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [loadStatus]);
 
   useEffect(() => {
     if (seller.ownerName || seller.businessName) {
@@ -163,8 +188,10 @@ export default function MainCanvas({
         start = created;
       }
 
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + duration);
+      const end = sub.validUntil ? new Date(sub.validUntil) : new Date(start);
+      if (!sub.validUntil) {
+        end.setMonth(end.getMonth() + duration);
+      }
 
       result.push({
         ...sub,
@@ -179,22 +206,42 @@ export default function MainCanvas({
 
   const activeSubs = statusData?.activeSubs || [];
   const foodSubs = activeSubs.filter(
-    (s: any) => s.plan?.category === "FOOD" || s.plan?.category === "BOTH"
+    (s: any) =>
+      (s.plan?.category || "").toUpperCase() === "FOOD" ||
+      (s.plan?.category || "").toUpperCase() === "BOTH" ||
+      (!s.plan?.category &&
+        (statusData?.sellerProfile?.businessCategory === "FOOD" ||
+          statusData?.sellerProfile?.businessCategory === "BOTH"))
   );
   const propertySubs = activeSubs.filter(
-    (s: any) => s.plan?.category === "PROPERTY" || s.plan?.category === "BOTH"
+    (s: any) =>
+      (s.plan?.category || "").toUpperCase() === "PROPERTY" ||
+      (s.plan?.category || "").toUpperCase() === "BOTH" ||
+      (!s.plan?.category &&
+        (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+          statusData?.sellerProfile?.businessCategory === "BOTH"))
   );
 
   const stackedFood = getStackedSubs(foodSubs);
-  const foodExpiry = stackedFood.length > 0 ? stackedFood[stackedFood.length - 1].endDate : null;
+  const foodExpiry =
+    statusData?.foodExpiry ? new Date(statusData.foodExpiry) : stackedFood.length > 0 ? stackedFood[stackedFood.length - 1].endDate : null;
 
   const stackedProperty = getStackedSubs(propertySubs);
   const propertyExpiry =
-    stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
+    statusData?.propertyExpiry ? new Date(statusData.propertyExpiry) : stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
 
-  const hasAnyActiveSub = Boolean(statusData?.hasActiveSub);
-  const isFoodVerified = statusData?.sellerProfile?.foodVerificationStatus === "APPROVED";
-  const isPropertyVerified = statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED";
+  const hasAnyActiveSub = Boolean(statusData?.hasActiveSub || activeSubs.length > 0);
+  const isFoodVerified =
+    statusData?.sellerProfile?.foodVerificationStatus === "APPROVED" ||
+    (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
+      (statusData?.sellerProfile?.businessCategory === "FOOD" ||
+        statusData?.sellerProfile?.businessCategory === "BOTH"));
+
+  const isPropertyVerified =
+    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED" ||
+    (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
+      (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+        statusData?.sellerProfile?.businessCategory === "BOTH"));
 
   const handleShareQR = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -345,44 +392,75 @@ export default function MainCanvas({
               </div>
             </div>
 
-            {/* Status Badge */}
-            {hasAnyActiveSub ? (
-              <div
+            {/* Actions & Status Badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => loadStatus(true)}
+                disabled={isRefreshingStatus || loadingStatus}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  backgroundColor: "#ECFDF5",
-                  color: "#166534",
-                  padding: "6px 14px",
+                  backgroundColor: "#FFFFFF",
+                  color: "#475569",
+                  border: "1px solid #CBD5E1",
                   borderRadius: "20px",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  border: "1px solid #BBF7D0",
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
                 }}
+                title="Refresh subscription status"
               >
-                <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10B981", display: "inline-block" }} />
-                Active Subscriptions Live
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  backgroundColor: "#FEF2F2",
-                  color: "#991B1B",
-                  padding: "6px 14px",
-                  borderRadius: "20px",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  border: "1px solid #FECACA",
-                }}
-              >
-                <AlertTriangle size={15} color="#DC2626" />
-                No Active Subscription
-              </div>
-            )}
+                <RefreshCw
+                  size={13}
+                  style={{
+                    animation: isRefreshingStatus || loadingStatus ? "spin 1s linear infinite" : "none",
+                  }}
+                />
+                <span>{isRefreshingStatus ? "Checking..." : "Refresh"}</span>
+              </button>
+
+              {hasAnyActiveSub ? (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    backgroundColor: "#ECFDF5",
+                    color: "#166534",
+                    padding: "6px 14px",
+                    borderRadius: "20px",
+                    fontSize: "12.5px",
+                    fontWeight: 700,
+                    border: "1px solid #BBF7D0",
+                  }}
+                >
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10B981", display: "inline-block" }} />
+                  Active Subscriptions Live
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    backgroundColor: "#FEF2F2",
+                    color: "#991B1B",
+                    padding: "6px 14px",
+                    borderRadius: "20px",
+                    fontSize: "12.5px",
+                    fontWeight: 700,
+                    border: "1px solid #FECACA",
+                  }}
+                >
+                  <AlertTriangle size={15} color="#DC2626" />
+                  No Active Subscription
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 2-Column Grid: Food Services vs Property Bookings */}

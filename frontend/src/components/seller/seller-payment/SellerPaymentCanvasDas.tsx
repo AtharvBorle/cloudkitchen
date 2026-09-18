@@ -244,6 +244,9 @@ export default function SellerPaymentCanvasDas() {
             });
 
             if (verifyRes.ok) {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new Event("subscription-updated"));
+              }
               setShowSuccessModal(true);
               await loadData();
             } else {

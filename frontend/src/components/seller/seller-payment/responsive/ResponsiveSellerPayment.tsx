@@ -200,6 +200,9 @@ export default function ResponsiveSellerPayment() {
           });
 
           if (verifyRes.ok) {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("subscription-updated"));
+            }
             alert("Subscription activated successfully!");
             router.push("/seller/dashboard");
           } else {

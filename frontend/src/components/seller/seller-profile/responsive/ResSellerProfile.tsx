@@ -89,24 +89,49 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   // Subscription Status Data
   const [statusData, setStatusData] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+
+  const loadStatus = React.useCallback(async (isManual = false) => {
+    try {
+      if (isManual) setIsRefreshingStatus(true);
+      else setLoadingStatus(true);
+
+      const res = await fetchApi(`/api/seller/dashboard/status?t=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStatusData(data.data || data);
+      }
+    } catch (err) {
+      console.error("Failed to load subscription status:", err);
+    } finally {
+      setLoadingStatus(false);
+      setIsRefreshingStatus(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadStatus() {
-      try {
-        setLoadingStatus(true);
-        const res = await fetchApi("/api/seller/dashboard/status");
-        if (res.ok) {
-          const data = await res.json();
-          setStatusData(data.data || data);
-        }
-      } catch (err) {
-        console.error("Failed to load subscription status:", err);
-      } finally {
-        setLoadingStatus(false);
-      }
-    }
     loadStatus();
-  }, []);
+
+    const handleSubUpdated = () => {
+      loadStatus();
+    };
+
+    const handleFocus = () => {
+      loadStatus();
+    };
+
+    window.addEventListener("subscription-updated", handleSubUpdated);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      window.removeEventListener("subscription-updated", handleSubUpdated);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [loadStatus]);
 
   useEffect(() => {
     if (seller.ownerName || seller.businessName) {
@@ -146,8 +171,10 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
         start = created;
       }
 
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + duration);
+      const end = sub.validUntil ? new Date(sub.validUntil) : new Date(start);
+      if (!sub.validUntil) {
+        end.setMonth(end.getMonth() + duration);
+      }
 
       result.push({
         ...sub,
@@ -162,22 +189,42 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
 
   const activeSubs = statusData?.activeSubs || [];
   const foodSubs = activeSubs.filter(
-    (s: any) => s.plan?.category === "FOOD" || s.plan?.category === "BOTH"
+    (s: any) =>
+      (s.plan?.category || "").toUpperCase() === "FOOD" ||
+      (s.plan?.category || "").toUpperCase() === "BOTH" ||
+      (!s.plan?.category &&
+        (statusData?.sellerProfile?.businessCategory === "FOOD" ||
+          statusData?.sellerProfile?.businessCategory === "BOTH"))
   );
   const propertySubs = activeSubs.filter(
-    (s: any) => s.plan?.category === "PROPERTY" || s.plan?.category === "BOTH"
+    (s: any) =>
+      (s.plan?.category || "").toUpperCase() === "PROPERTY" ||
+      (s.plan?.category || "").toUpperCase() === "BOTH" ||
+      (!s.plan?.category &&
+        (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+          statusData?.sellerProfile?.businessCategory === "BOTH"))
   );
 
   const stackedFood = getStackedSubs(foodSubs);
-  const foodExpiry = stackedFood.length > 0 ? stackedFood[stackedFood.length - 1].endDate : null;
+  const foodExpiry =
+    statusData?.foodExpiry ? new Date(statusData.foodExpiry) : stackedFood.length > 0 ? stackedFood[stackedFood.length - 1].endDate : null;
 
   const stackedProperty = getStackedSubs(propertySubs);
   const propertyExpiry =
-    stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
+    statusData?.propertyExpiry ? new Date(statusData.propertyExpiry) : stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
 
-  const hasAnyActiveSub = Boolean(statusData?.hasActiveSub);
-  const isFoodVerified = statusData?.sellerProfile?.foodVerificationStatus === "APPROVED";
-  const isPropertyVerified = statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED";
+  const hasAnyActiveSub = Boolean(statusData?.hasActiveSub || activeSubs.length > 0);
+  const isFoodVerified =
+    statusData?.sellerProfile?.foodVerificationStatus === "APPROVED" ||
+    (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
+      (statusData?.sellerProfile?.businessCategory === "FOOD" ||
+        statusData?.sellerProfile?.businessCategory === "BOTH"));
+
+  const isPropertyVerified =
+    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED" ||
+    (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
+      (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+        statusData?.sellerProfile?.businessCategory === "BOTH"));
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -519,9 +566,37 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
 
           {/* Card 3: Subscription & Plan */}
           <section className={styles.card}>
-            <div className={styles.subHeaderRow}>
-              <CreditCard size={20} color="#0F172A" />
-              <h2 className={styles.subTitle}>Subscription &amp; Plan</h2>
+            <div className={styles.subHeaderRow} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <CreditCard size={20} color="#0F172A" />
+                <h2 className={styles.subTitle}>Subscription &amp; Plan</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => loadStatus(true)}
+                disabled={isRefreshingStatus || loadingStatus}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  backgroundColor: "#FFFFFF",
+                  color: "#475569",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "14px",
+                  padding: "4px 10px",
+                  fontSize: "11.5px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <RefreshCw
+                  size={12}
+                  style={{
+                    animation: isRefreshingStatus || loadingStatus ? "spin 1s linear infinite" : "none",
+                  }}
+                />
+                <span>{isRefreshingStatus ? "Checking..." : "Refresh"}</span>
+              </button>
             </div>
 
             {hasAnyActiveSub ? (

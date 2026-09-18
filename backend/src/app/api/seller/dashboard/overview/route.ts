@@ -4,6 +4,8 @@ import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 import { getCategoryExpiries } from "@/lib/subscription";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
     try {
         const session = await getAuthSession();
@@ -50,12 +52,27 @@ export async function GET() {
             },
             include: {
                 plan: true
+            },
+            orderBy: {
+                createdAt: "asc"
             }
         });
 
+        const isFoodCategoryApproved =
+            sellerProfile.verificationStatus === "APPROVED" &&
+            (sellerProfile.businessCategory === "FOOD" ||
+                sellerProfile.businessCategory === "BOTH" ||
+                sellerProfile.foodVerificationStatus === "APPROVED");
+
+        const isPropertyCategoryApproved =
+            sellerProfile.verificationStatus === "APPROVED" &&
+            (sellerProfile.businessCategory === "PROPERTY" ||
+                sellerProfile.businessCategory === "BOTH" ||
+                sellerProfile.propertyVerificationStatus === "APPROVED");
+
         const { foodExpiry, propertyExpiry } = getCategoryExpiries(activeSubs);
-        const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
-        const isPropertyActive = (propertyExpiry ? propertyExpiry > new Date() : false) && sellerProfile.propertyVerificationStatus === "APPROVED";
+        const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && isFoodCategoryApproved;
+        const isPropertyActive = (propertyExpiry ? propertyExpiry > new Date() : false) && isPropertyCategoryApproved;
 
         const newestActiveSub = activeSubs.sort((a, b) => b.validUntil.getTime() - a.validUntil.getTime())[0];
 
