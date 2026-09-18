@@ -1,7 +1,7 @@
 "use client";
 
 import { fetchApi } from "@/lib/fetch-api";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     CheckCircle,
     XCircle,
@@ -63,11 +63,76 @@ export type ApplicationType = {
     isActive?: boolean;
 };
 
+export const safeParseImages = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) {
+        return val
+            .flatMap((item) => {
+                if (typeof item === "string") {
+                    const trimmed = item.trim();
+                    if (!trimmed || trimmed === "[]" || trimmed === '""' || trimmed === "null") return [];
+                    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                        try {
+                            const parsed = JSON.parse(trimmed);
+                            return Array.isArray(parsed) ? parsed : [parsed];
+                        } catch {
+                            return [trimmed];
+                        }
+                    }
+                    return [trimmed];
+                }
+                return [];
+            })
+            .filter((img): img is string => typeof img === "string" && img.length > 0 && img !== "[]");
+    }
+    if (typeof val === "string") {
+        const trimmed = val.trim();
+        if (!trimmed || trimmed === "[]" || trimmed === '""' || trimmed === "null") return [];
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+                return parsed.filter((item) => typeof item === "string" && item.trim().length > 0 && item !== "[]");
+            }
+            if (typeof parsed === "string" && parsed.trim().length > 0 && parsed !== "[]") {
+                return [parsed];
+            }
+        } catch {
+            if (
+                trimmed.startsWith("http://") ||
+                trimmed.startsWith("https://") ||
+                trimmed.startsWith("/") ||
+                trimmed.startsWith("data:")
+            ) {
+                return [trimmed];
+            }
+        }
+    }
+    return [];
+};
+
+export const normalizeApplication = (app: any): ApplicationType => {
+    if (!app || typeof app !== "object") return app;
+    return {
+        ...app,
+        kitchenImages: safeParseImages(app.kitchenImages),
+        cuisineImages: safeParseImages(app.cuisineImages),
+        roomImages: safeParseImages(app.roomImages),
+    };
+};
+
 export default function RegistrationsClient({ initialApplications }: { initialApplications: ApplicationType[] }) {
-    const [applications, setApplications] = useState<ApplicationType[]>(initialApplications);
+    const [applications, setApplications] = useState<ApplicationType[]>(() =>
+        (Array.isArray(initialApplications) ? initialApplications : []).map(normalizeApplication)
+    );
     const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    useEffect(() => {
+        if (Array.isArray(initialApplications)) {
+            setApplications(initialApplications.map(normalizeApplication));
+        }
+    }, [initialApplications]);
 
     // History Filters & Search State
     const [searchQuery, setSearchQuery] = useState("");
@@ -102,7 +167,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
             const res = await fetchApi("/api/admin/registrations");
             if (res.ok) {
                 const data = await res.json();
-                setApplications(data);
+                const rawList = Array.isArray(data) ? data : data?.data && Array.isArray(data.data) ? data.data : [];
+                setApplications(rawList.map(normalizeApplication));
             }
         } catch (err) {
             console.error("Refresh error:", err);
@@ -159,9 +225,14 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                         if (app.id === sellerId) {
                             return {
                                 ...app,
-                                ...(updatedProfile || {}),
-                                verificationStatus: newStatus,
-                                verificationNote: bodyData.verificationNote || app.verificationNote,
+                                verificationStatus: updatedProfile?.verificationStatus || newStatus,
+                                verificationNote: bodyData.verificationNote || updatedProfile?.verificationNote || app.verificationNote,
+                                foodVerificationStatus: updatedProfile?.foodVerificationStatus !== undefined ? updatedProfile.foodVerificationStatus : app.foodVerificationStatus,
+                                propertyVerificationStatus: updatedProfile?.propertyVerificationStatus !== undefined ? updatedProfile.propertyVerificationStatus : app.propertyVerificationStatus,
+                                businessCategory: updatedProfile?.businessCategory || app.businessCategory,
+                                kitchenImages: updatedProfile?.kitchenImages !== undefined ? safeParseImages(updatedProfile.kitchenImages) : app.kitchenImages,
+                                cuisineImages: updatedProfile?.cuisineImages !== undefined ? safeParseImages(updatedProfile.cuisineImages) : app.cuisineImages,
+                                roomImages: updatedProfile?.roomImages !== undefined ? safeParseImages(updatedProfile.roomImages) : app.roomImages,
                                 updatedAt: new Date().toISOString(),
                             };
                         }
@@ -1452,6 +1523,10 @@ function ApplicationCard({
     renderStatusBadge,
     showActions = true,
 }: ApplicationCardProps) {
+    const kitchenImages = safeParseImages(app.kitchenImages);
+    const cuisineImages = safeParseImages(app.cuisineImages);
+    const roomImages = safeParseImages(app.roomImages);
+
     const isPending =
         app.verificationStatus === "PENDING" ||
         app.verificationStatus === "REVISION" ||
@@ -2000,13 +2075,13 @@ function ApplicationCard({
                         </div>
 
                         {/* Kitchen Photos Gallery */}
-                        {app.kitchenImages && app.kitchenImages.length > 0 && (
+                        {kitchenImages.length > 0 && (
                             <div style={{ marginTop: "0.5rem" }}>
                                 <h5 style={{ fontSize: "0.82rem", color: "#64748B", marginBottom: "0.4rem", fontWeight: "600" }}>
-                                    Kitchen Photos ({app.kitchenImages.length})
+                                    Kitchen Photos ({kitchenImages.length})
                                 </h5>
                                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                    {app.kitchenImages.map((img, i) => (
+                                    {kitchenImages.map((img, i) => (
                                         <div
                                             key={i}
                                             onClick={(e) => openImage(e, img)}
@@ -2031,13 +2106,13 @@ function ApplicationCard({
                         )}
 
                         {/* Cuisine Photos Gallery */}
-                        {app.cuisineImages && app.cuisineImages.length > 0 && (
+                        {cuisineImages.length > 0 && (
                             <div style={{ marginTop: "0.5rem" }}>
                                 <h5 style={{ fontSize: "0.82rem", color: "#64748B", marginBottom: "0.4rem", fontWeight: "600" }}>
-                                    Food & Cuisine Photos ({app.cuisineImages.length})
+                                    Food & Cuisine Photos ({cuisineImages.length})
                                 </h5>
                                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                    {app.cuisineImages.map((img, i) => (
+                                    {cuisineImages.map((img, i) => (
                                         <div
                                             key={i}
                                             onClick={(e) => openImage(e, img)}
@@ -2062,13 +2137,13 @@ function ApplicationCard({
                         )}
 
                         {/* Room Photos Gallery */}
-                        {app.roomImages && app.roomImages.length > 0 && (
+                        {roomImages.length > 0 && (
                             <div style={{ marginTop: "0.5rem" }}>
                                 <h5 style={{ fontSize: "0.82rem", color: "#64748B", marginBottom: "0.4rem", fontWeight: "600" }}>
-                                    Room Photos ({app.roomImages.length})
+                                    Room Photos ({roomImages.length})
                                 </h5>
                                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                    {app.roomImages.map((img, i) => (
+                                    {roomImages.map((img, i) => (
                                         <div
                                             key={i}
                                             onClick={(e) => openImage(e, img)}

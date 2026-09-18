@@ -46,15 +46,51 @@ export async function GET(req: Request) {
             }
         });
 
-        const safeParseArray = (val: any) => {
+        const safeParseArray = (val: any): string[] => {
             if (!val) return [];
-            if (Array.isArray(val)) return val;
-            try {
-                const parsed = JSON.parse(val);
-                return Array.isArray(parsed) ? parsed : [parsed];
-            } catch {
-                return typeof val === 'string' && val.length > 0 ? [val] : [];
+            if (Array.isArray(val)) {
+                return val
+                    .flatMap((item) => {
+                        if (typeof item === "string") {
+                            const trimmed = item.trim();
+                            if (!trimmed || trimmed === "[]" || trimmed === '""' || trimmed === "null") return [];
+                            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                                try {
+                                    const parsed = JSON.parse(trimmed);
+                                    return Array.isArray(parsed) ? parsed : [parsed];
+                                } catch {
+                                    return [trimmed];
+                                }
+                            }
+                            return [trimmed];
+                        }
+                        return [];
+                    })
+                    .filter((img): img is string => typeof img === "string" && img.length > 0 && img !== "[]");
             }
+            if (typeof val === "string") {
+                const trimmed = val.trim();
+                if (!trimmed || trimmed === "[]" || trimmed === '""' || trimmed === "null") return [];
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) {
+                        return parsed.filter((item) => typeof item === "string" && item.trim().length > 0 && item !== "[]");
+                    }
+                    if (typeof parsed === "string" && parsed.trim().length > 0 && parsed !== "[]") {
+                        return [parsed];
+                    }
+                } catch {
+                    if (
+                        trimmed.startsWith("http://") ||
+                        trimmed.startsWith("https://") ||
+                        trimmed.startsWith("/") ||
+                        trimmed.startsWith("data:")
+                    ) {
+                        return [trimmed];
+                    }
+                }
+            }
+            return [];
         };
 
         const applications = profiles.map(profile => ({
