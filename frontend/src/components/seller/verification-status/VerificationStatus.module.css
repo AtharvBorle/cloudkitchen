@@ -242,6 +242,50 @@
   transform: translateY(-1px);
 }
 
+/* Rejection Alert Banner */
+.rejectionBanner {
+  background-color: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.08);
+}
+
+.rejectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rejectionIconCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rejectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #991b1b;
+  margin: 0;
+}
+
+.rejectionText {
+  font-size: 13.5px;
+  color: #7f1d1d;
+  margin: 0;
+  line-height: 1.5;
+}
+
 /* Card 2: Status Timeline */
 .timelineCard {
   background-color: #ffffff;
@@ -331,6 +375,18 @@
   background-color: #94a3b8;
 }
 
+.nodeRejected {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+}
+
+.rejectedIcon {
+  width: 12px;
+  height: 12px;
+  color: #dc2626;
+}
+
 .connectingLine {
   width: 2px;
   flex: 1;
@@ -345,6 +401,10 @@
 
 .linePending {
   background-color: #e2e8f0;
+}
+
+.lineRejected {
+  background-color: #ef4444;
 }
 
 /* Right Content */
@@ -376,6 +436,11 @@
   color: #94a3b8;
 }
 
+.itemTitleRejected {
+  font-weight: 700;
+  color: #b91c1c;
+}
+
 .itemSubtitle {
   font-size: 12px;
   margin: 0;
@@ -388,6 +453,11 @@
 
 .itemSubtitleUpcoming {
   color: #cbd5e1;
+}
+
+.itemSubtitleRejected {
+  color: #dc2626;
+  font-weight: 500;
 }
 
 /* Card 3: Notice Info Card */

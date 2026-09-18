@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ArrowRight, CheckCircle2, ShieldAlert, FileQuestion, Lock, Loader2, RotateCw } from "lucide-react";
+import { Check, ArrowRight, CheckCircle2, ShieldAlert, FileQuestion, Lock, Loader2, RotateCw, X } from "lucide-react";
 import { useSellerProfile, updateCachedProfile } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
 import { performLogout } from "@/lib/logout";
@@ -13,7 +13,7 @@ export interface TimelineStep {
   id: string;
   title: string;
   subtitle: string;
-  status: "completed" | "in_progress" | "upcoming";
+  status: "completed" | "in_progress" | "upcoming" | "rejected";
 }
 
 export interface VerificationStatusProps {
@@ -240,106 +240,98 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
     );
   }
 
-  // Dedicated Rejected State (no normal 4-step timeline, blocks dashboard)
-  if (isRejected) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.trackingCard}>
-          <div className={styles.trackingLeft}>
-            <span className={styles.trackingLabel}>Tracking ID</span>
-            <h2 className={styles.trackingValue}>
-              {effectiveTrackingId || "Application"}
-            </h2>
-          </div>
-          <div className={styles.trackingRight}>
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              className={styles.refreshBtn}
-              disabled={isRefreshing}
-              title="Refresh verification status"
-              aria-label="Refresh status"
-            >
-              <RotateCw size={14} className={isRefreshing ? styles.spinning : ""} />
-              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-            </button>
-            <div className={`${styles.statusBadge} ${styles.statusBadgeRejected}`}>Rejected</div>
-          </div>
-        </div>
+  // Standard Pending / Revision / Rejected Step Timeline
+  const resolvedSteps: TimelineStep[] =
+    propSteps ||
+    (isRejected
+      ? [
+          {
+            id: "submitted",
+            title: "Application submitted",
+            subtitle: "Completed",
+            status: "completed",
+          },
+          {
+            id: "rejected",
+            title: "Application rejected",
+            subtitle: "Declined by admin",
+            status: "rejected",
+          },
+        ]
+      : isRevision
+      ? [
+          {
+            id: "submitted",
+            title: "Application submitted",
+            subtitle: "Completed",
+            status: "completed",
+          },
+          {
+            id: "review",
+            title: "Revision requested",
+            subtitle: "Action needed",
+            status: "in_progress",
+          },
+          {
+            id: "complete",
+            title: "Verification complete",
+            subtitle: "Upcoming",
+            status: "upcoming",
+          },
+          {
+            id: "activated",
+            title: "Account activated",
+            subtitle: "Upcoming",
+            status: "upcoming",
+          },
+        ]
+      : [
+          {
+            id: "submitted",
+            title: "Application submitted",
+            subtitle: "Completed",
+            status: "completed",
+          },
+          {
+            id: "review",
+            title: "Under review",
+            subtitle: "In progress",
+            status: "in_progress",
+          },
+          {
+            id: "complete",
+            title: "Verification complete",
+            subtitle: "Upcoming",
+            status: "upcoming",
+          },
+          {
+            id: "activated",
+            title: "Account activated",
+            subtitle: "Upcoming",
+            status: "upcoming",
+          },
+        ]);
 
-        <div className={styles.rejectedCard}>
-          <div className={styles.rejectedIconCircle}>
-            <ShieldAlert size={36} color="#dc2626" />
-          </div>
-          <h2 className={styles.rejectedTitle}>Application Declined</h2>
-          <p className={styles.rejectedSubtitle}>
-            We appreciate your interest in partner onboarding. Unfortunately, your registration could not be approved at this time.
-          </p>
-          {currentNote && (
-            <div className={styles.rejectionNoteBox}>
-              <strong>Reason from Review Team:</strong>
-              <p>{currentNote}</p>
-            </div>
-          )}
-          <div className={styles.rejectedActions}>
-            <Link href="/seller/registration" className={styles.reapplyBtn}>
-              <span>Reapply with New Information</span>
-              <ArrowRight size={15} style={{ marginLeft: "6px" }} />
-            </Link>
-            <Link href="/seller/support" className={styles.contactSupportBtn}>
-              Contact Support
-            </Link>
-            <button
-              type="button"
-              onClick={() => performLogout({ role: "SELLER" })}
-              className={styles.signOutBtn}
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Standard Pending / Revision Step Timeline
-  const resolvedSteps: TimelineStep[] = propSteps || [
-    {
-      id: "submitted",
-      title: "Application submitted",
-      subtitle: "Completed",
-      status: "completed",
-    },
-    {
-      id: "review",
-      title: isRevision ? "Revision requested" : "Under review",
-      subtitle: isRevision ? "Action needed" : "In progress",
-      status: "in_progress",
-    },
-    {
-      id: "complete",
-      title: "Verification complete",
-      subtitle: "Upcoming",
-      status: "upcoming",
-    },
-    {
-      id: "activated",
-      title: "Account activated",
-      subtitle: "Upcoming",
-      status: "upcoming",
-    },
-  ];
+  // When rejected, do not show any upcoming stages
+  const stepsToRender = isRejected
+    ? resolvedSteps.filter((s) => s.status !== "upcoming")
+    : resolvedSteps;
 
   const resolvedBadgeText =
-    propBadgeText || (isRevision ? "Action Required" : "Under Review");
+    propBadgeText ||
+    (isRejected ? "Rejected" : isRevision ? "Action Required" : "Under Review");
 
-  const resolvedBadgeClass = isRevision
+  const resolvedBadgeClass = isRejected
+    ? styles.statusBadgeRejected
+    : isRevision
     ? styles.statusBadgeRevision
     : styles.statusBadgePending;
 
   const resolvedNoticeText =
     propNoticeText ||
-    (isRevision
+    (isRejected
+      ? "Your partner application was declined by the review team. Registration is closed for this account. If you believe this is an error, please contact our support team."
+      : isRevision
       ? "The admin team has requested modifications to your application. Please correct the flagged documents."
       : "Your application is being reviewed. We'll notify you within 24–48 hours.");
 
@@ -386,16 +378,50 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
         </div>
       )}
 
+      {/* Rejection Alert Banner if status is REJECTED */}
+      {isRejected && (
+        <div className={styles.rejectionBanner}>
+          <div className={styles.rejectionHeader}>
+            <div className={styles.rejectionIconCircle}>
+              <ShieldAlert size={22} />
+            </div>
+            <h3 className={styles.rejectionTitle}>Application Declined</h3>
+          </div>
+          <p className={styles.rejectionText}>
+            We appreciate your interest in partner onboarding. Unfortunately, your registration could not be approved at this time.
+          </p>
+          {currentNote && (
+            <div className={styles.rejectionNoteBox}>
+              <strong>Reason from Review Team:</strong>
+              <p>{currentNote}</p>
+            </div>
+          )}
+          <div className={styles.rejectionActions}>
+            <Link href="/seller/support" className={styles.contactSupportBtn}>
+              Contact Support
+            </Link>
+            <button
+              type="button"
+              onClick={() => performLogout({ role: "SELLER" })}
+              className={styles.signOutBtn}
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Card 2: Status Timeline */}
       <div className={styles.timelineCard}>
         <h3 className={styles.timelineHeading}>Status Timeline</h3>
 
         <div className={styles.timelineList}>
-          {resolvedSteps.map((step, index) => {
-            const isLast = index === resolvedSteps.length - 1;
+          {stepsToRender.map((step, index) => {
+            const isLast = index === stepsToRender.length - 1;
             const isCompleted = step.status === "completed";
             const isInProgress = step.status === "in_progress";
             const isUpcoming = step.status === "upcoming";
+            const isStepRejected = step.status === "rejected";
 
             return (
               <div key={step.id} className={styles.timelineItem}>
@@ -416,12 +442,21 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
                       <div className={styles.nodeDotUpcoming} />
                     </div>
                   )}
+                  {isStepRejected && (
+                    <div className={`${styles.nodeCircle} ${styles.nodeRejected}`}>
+                      <X size={13} strokeWidth={3} className={styles.rejectedIcon} />
+                    </div>
+                  )}
 
                   {/* Connecting Line (if not last) */}
                   {!isLast && (
                     <div
                       className={`${styles.connectingLine} ${
-                        isCompleted ? styles.lineCompleted : styles.linePending
+                        isCompleted
+                          ? styles.lineCompleted
+                          : isStepRejected
+                          ? styles.lineRejected
+                          : styles.linePending
                       }`}
                     />
                   )}
@@ -431,14 +466,22 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
                 <div className={styles.itemContent}>
                   <h4
                     className={`${styles.itemTitle} ${
-                      isUpcoming ? styles.itemTitleUpcoming : styles.itemTitleActive
+                      isUpcoming
+                        ? styles.itemTitleUpcoming
+                        : isStepRejected
+                        ? styles.itemTitleRejected
+                        : styles.itemTitleActive
                     }`}
                   >
                     {step.title}
                   </h4>
                   <p
                     className={`${styles.itemSubtitle} ${
-                      isUpcoming ? styles.itemSubtitleUpcoming : styles.itemSubtitleActive
+                      isUpcoming
+                        ? styles.itemSubtitleUpcoming
+                        : isStepRejected
+                        ? styles.itemSubtitleRejected
+                        : styles.itemSubtitleActive
                     }`}
                   >
                     {step.subtitle}

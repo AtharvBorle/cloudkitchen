@@ -45,19 +45,26 @@ export const LocationModal: React.FC = () => {
   } = useLocation();
 
   const isStaffOrSeller = Boolean(
-    session?.user?.role &&
-      ["SELLER", "ADMIN", "SUPERADMIN", "AGENT", "DELIVERY", "DELIVERY_PARTNER"].includes(session.user.role)
+    session?.user?.role && session.user.role !== "USER"
   );
 
   const isNonCustomerRoute = Boolean(
-    pathname?.startsWith("/seller") ||
-      pathname?.startsWith("/dashboard/seller") ||
-      pathname?.startsWith("/admin") ||
-      pathname?.startsWith("/dashboard/admin") ||
-      pathname?.startsWith("/superadmin") ||
-      pathname?.startsWith("/dashboard/superadmin") ||
-      pathname?.startsWith("/delivery") ||
-      pathname?.startsWith("/dashboard/delivery")
+    !pathname ||
+      pathname.startsWith("/seller") ||
+      pathname.startsWith("/seller-onboarding") ||
+      pathname.startsWith("/dashboard/seller") ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/dashboard/admin") ||
+      pathname.startsWith("/superadmin") ||
+      pathname.startsWith("/dashboard/superadmin") ||
+      pathname.startsWith("/dashboard/support") ||
+      pathname.startsWith("/support") ||
+      pathname.startsWith("/dashboard/delivery") ||
+      pathname.startsWith("/delivery") ||
+      pathname.startsWith("/auth") ||
+      pathname.startsWith("/invoice") ||
+      pathname === "/login" ||
+      pathname === "/signup"
   );
 
   const [pincodeInput, setPincodeInput] = useState("");

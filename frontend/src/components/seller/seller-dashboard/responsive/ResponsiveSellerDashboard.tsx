@@ -76,11 +76,11 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   // Verification status routing protection:
-  // If seller is PENDING or REVISION, redirect them to the verification status page.
+  // If seller is PENDING, REVISION, or REJECTED, redirect them to the verification status page.
   useEffect(() => {
     if (seller.authStatus === "authenticated") {
       const vStatus = seller.profile?.verificationStatus;
-      if (vStatus === "PENDING" || vStatus === "REVISION") {
+      if (vStatus === "PENDING" || vStatus === "REVISION" || vStatus === "REJECTED") {
         router.replace("/seller/verification-status");
       }
     }
