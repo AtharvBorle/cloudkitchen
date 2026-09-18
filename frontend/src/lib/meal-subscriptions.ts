@@ -383,3 +383,128 @@ export function getStoredMealSubscribers(): MealSubscriber[] {
     return [];
   }
 }
+
+export interface UserActiveMealSubscription {
+  id: string;
+  userId: string;
+  sellerId: string;
+  planId: string;
+  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED" | string;
+  tier: string;
+  cycle: "WEEKLY" | "MONTHLY" | string;
+  pricePaid: number;
+  isPaused: boolean;
+  startDate: string;
+  endDate: string | null;
+  deliveryAddress: string;
+  contactPhone: string;
+  createdAt: string;
+  updatedAt: string;
+  plan: {
+    id: string;
+    name: string;
+    tier: string;
+    description: string;
+    weeklyPrice: number;
+    monthlyPrice: number;
+    quarterlyPrice: number;
+    yearlyPrice: number;
+    duration: string;
+    features: string[];
+    mealTimings: string[];
+    status: string;
+    allowCancel: boolean;
+    pauseBillingPeriod: string;
+  };
+  seller: {
+    id: string;
+    businessName: string;
+    trackingId: string;
+    addressLocality: string;
+    foodType: string;
+    bannerImageUrl?: string;
+  };
+}
+
+export async function fetchUserMealSubscriptions(): Promise<UserActiveMealSubscription[]> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions");
+    if (res.ok) {
+      const json = await res.json();
+      const subs = json.data || json;
+      return Array.isArray(subs) ? subs : [];
+    }
+  } catch (err) {
+    console.error("Failed to fetch user meal subscriptions:", err);
+  }
+  return [];
+}
+
+export async function fetchSellerMealPlans(sellerId: string): Promise<any[]> {
+  try {
+    const res = await fetchApi(`/api/public/meal-plans?sellerId=${encodeURIComponent(sellerId)}`);
+    if (res.ok) {
+      const json = await res.json();
+      const plans = json.data || json;
+      return Array.isArray(plans) ? plans : [];
+    }
+  } catch (err) {
+    console.error("Failed to fetch seller meal plans:", err);
+  }
+  return [];
+}
+
+export async function cancelUserSubscription(subscriptionId: string, reason?: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "CANCEL", id: subscriptionId, reason }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to cancel subscription");
+    }
+    return { success: true, message: json.message || "Subscription cancelled successfully" };
+  } catch (err: any) {
+    console.error("Error cancelling subscription:", err);
+    throw err;
+  }
+}
+
+export async function changeUserSubscriptionPlan(subscriptionId: string, newPlanId: string): Promise<{ success: boolean; message: string; subscription?: any }> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "CHANGE_PLAN", id: subscriptionId, newPlanId }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to change meal plan");
+    }
+    return { success: true, message: json.message || "Meal plan changed successfully", subscription: json.data?.subscription };
+  } catch (err: any) {
+    console.error("Error changing subscription plan:", err);
+    throw err;
+  }
+}
+
+export async function togglePauseUserSubscription(subscriptionId: string, isPaused: boolean): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "PAUSE", id: subscriptionId, isPaused }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to update pause state");
+    }
+    return { success: true, message: json.message || "Pause status updated" };
+  } catch (err: any) {
+    console.error("Error toggling pause state:", err);
+    throw err;
+  }
+}
+

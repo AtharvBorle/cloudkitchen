@@ -12,7 +12,20 @@ export const getSellerProfile = async () => {
 
     const user = await db.user.findUnique({
         where: { id: session.user.id },
-        include: { sellerProfile: true }
+        include: {
+            sellerProfile: {
+                include: {
+                    subscriptions: {
+                        include: {
+                            plan: true
+                        },
+                        orderBy: {
+                            createdAt: "desc"
+                        }
+                    }
+                }
+            }
+        }
     });
 
     if (!user || !user.sellerProfile) {

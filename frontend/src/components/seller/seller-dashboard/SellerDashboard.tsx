@@ -64,11 +64,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   // Verification status routing protection:
-  // If seller is PENDING or REVISION, redirect them to the verification status page.
+  // If seller is PENDING, REVISION, or REJECTED, redirect them to the verification status page.
   useEffect(() => {
     if (seller.authStatus === "authenticated") {
       const vStatus = seller.profile?.verificationStatus;
-      if (vStatus === "PENDING" || vStatus === "REVISION") {
+      if (vStatus === "PENDING" || vStatus === "REVISION" || vStatus === "REJECTED") {
         router.replace("/seller/verification-status");
       }
     }
@@ -260,7 +260,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               )}
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", marginTop: "10px" }}>
                 <Link
-                  href="/seller/registration"
+                  href="/seller/verification-status"
                   style={{
                     padding: "11px 20px",
                     background: "linear-gradient(135deg, #EA580C, #F97316)",
@@ -271,7 +271,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     textDecoration: "none",
                   }}
                 >
-                  Reapply for Registration
+                  View Verification Status
                 </Link>
                 <Link
                   href="/seller/support"

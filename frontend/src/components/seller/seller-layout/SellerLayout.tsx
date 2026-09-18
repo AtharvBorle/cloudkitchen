@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { SellerSidebar } from "../seller-sidebar";
@@ -48,6 +48,18 @@ export const SellerLayout: React.FC<SellerLayoutProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+
+  // Guard: if rejected seller attempts to access registration flow, redirect to verification status
+  useEffect(() => {
+    if (
+      seller.authStatus === "authenticated" &&
+      seller.profile?.verificationStatus === "REJECTED" &&
+      activeSidebarItem === "registration"
+    ) {
+      router.replace("/seller/verification-status");
+    }
+  }, [seller.authStatus, seller.profile?.verificationStatus, activeSidebarItem, router]);
+
   const effectiveUserName =
     userName && !isGenericFallbackName(userName)
       ? userName

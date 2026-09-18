@@ -19,6 +19,7 @@ import {
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
+import { discardExistingSession } from "@/lib/logout";
 
 export interface SignUpRightComponentProps {
   signInUrl?: string;
@@ -278,6 +279,7 @@ export default function SignUpRightComponent({
 
       if (res.ok) {
         // Automatically sign in the user
+        await discardExistingSession();
         const signInRes = await signIn("credentials", {
           redirect: false,
           email: cleanEmail,

@@ -23,26 +23,13 @@ export interface ResponsiveCashHandoverProps {
   onBack?: () => void;
 }
 
-const DEFAULT_ORDERS: CashOrderLine[] = [
-  {
-    id: "1",
-    orderNumber: "#1234",
-    customerName: "Priya Mehta",
-    amount: "₹850",
-  },
-  {
-    id: "2",
-    orderNumber: "#1235",
-    customerName: "Rahul Verma",
-    amount: "₹850",
-  },
-];
+const DEFAULT_ORDERS: CashOrderLine[] = [];
 
 export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
-  riderName = "Rahul Kumar",
-  riderInitials = "RK",
-  totalCash = "₹1,700",
-  ordersCount = 3,
+  riderName = "Rider",
+  riderInitials = "RD",
+  totalCash = "₹0",
+  ordersCount = 0,
   orders = DEFAULT_ORDERS,
   onConfirmReceipt,
   onReportDiscrepancy,
@@ -142,16 +129,22 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
           <section className={styles.breakdownSection}>
             <h4 className={styles.sectionLabel}>ORDERS BREAKDOWN</h4>
             <div className={styles.breakdownList}>
-              {orders.map((order) => (
-                <div key={order.id} className={styles.breakdownRow}>
-                  <span className={styles.orderText}>
-                    <strong className={styles.orderNum}>{order.orderNumber}</strong>
-                    <span className={styles.orderDot}>•</span>
-                    <span className={styles.orderCust}>{order.customerName}</span>
-                  </span>
-                  <span className={styles.orderAmount}>{order.amount}</span>
+              {orders.length === 0 ? (
+                <div style={{ padding: "16px 8px", textAlign: "center", color: "#64748B", fontSize: "0.85rem" }}>
+                  No pending cash orders for handover.
                 </div>
-              ))}
+              ) : (
+                orders.map((order) => (
+                  <div key={order.id} className={styles.breakdownRow}>
+                    <span className={styles.orderText}>
+                      <strong className={styles.orderNum}>{order.orderNumber}</strong>
+                      <span className={styles.orderDot}>•</span>
+                      <span className={styles.orderCust}>{order.customerName}</span>
+                    </span>
+                    <span className={styles.orderAmount}>{order.amount}</span>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 

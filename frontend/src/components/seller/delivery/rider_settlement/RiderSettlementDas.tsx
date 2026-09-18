@@ -119,12 +119,12 @@ function RiderSettlementContent({
 
   // Map Rider Profile Info
   const effectiveRiderProfile: RiderProfileInfo = propRiderProfile || {
-    id: selectedRider?.id || "r1",
-    name: selectedRider?.name || "Rider",
-    phone: selectedRider?.phone || "+91 98765 43210",
+    id: selectedRider?.id || "",
+    name: selectedRider?.name || (deliveryRiders.length === 0 ? "No Riders Registered" : "Rider"),
+    phone: selectedRider?.phone || "",
     email: selectedRider?.email || "",
-    vehicleNumber: selectedRider ? `DL 3S ${selectedRider.phone ? selectedRider.phone.slice(-4) : "8912"}` : "DL 3S CQ 8912",
-    status: selectedRider ? (selectedRider.isActive ? "On Duty" : "Off Duty") : "On Duty",
+    vehicleNumber: selectedRider ? `DL 3S ${selectedRider.phone ? selectedRider.phone.slice(-4) : "8912"}` : "N/A",
+    status: selectedRider ? (selectedRider.isActive ? "On Duty" : "Off Duty") : "Offline",
   };
 
   // Map Cash Balance Info

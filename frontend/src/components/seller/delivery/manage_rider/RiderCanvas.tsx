@@ -34,63 +34,27 @@ const DEFAULT_METRICS: RiderSummaryMetric[] = [
   {
     id: "total_cod",
     label: "Total COD Outstanding",
-    value: "₹8,200",
+    value: "₹0",
     description: "Cumulative cash held by active delivery riders",
     iconType: "card",
   },
   {
     id: "cash_collected",
     label: "Cash Collected Today",
-    value: "₹1,200",
+    value: "₹0",
     description: "Deposited safely to partner cash drawers",
     iconType: "check",
   },
   {
     id: "active_squad",
     label: "Active Delivery Squad",
-    value: "3 Riders Online",
+    value: "0 Riders Online",
     description: "Real-time geofenced tracking configured",
     iconType: "truck",
   },
 ];
 
-const DEFAULT_RIDERS: RiderWalletRecord[] = [
-  {
-    id: "r1",
-    name: "Rahul Kumar",
-    phone: "+91 98765 43210",
-    codBalance: "₹2,450",
-    dutyStatus: "ON DUTY",
-  },
-  {
-    id: "r2",
-    name: "Vikram Singh",
-    phone: "+91 87654 32109",
-    codBalance: "₹1,800",
-    dutyStatus: "ON DUTY",
-  },
-  {
-    id: "r3",
-    name: "Arjun Sharma",
-    phone: "+91 76543 21098",
-    codBalance: "₹3,150",
-    dutyStatus: "ON DUTY",
-  },
-  {
-    id: "r4",
-    name: "Amit Yadav",
-    phone: "+91 95432 10987",
-    codBalance: "₹800",
-    dutyStatus: "OFF DUTY",
-  },
-  {
-    id: "r5",
-    name: "Deepak Joshi",
-    phone: "+91 99988 77665",
-    codBalance: "₹0",
-    dutyStatus: "OFF DUTY",
-  },
-];
+const DEFAULT_RIDERS: RiderWalletRecord[] = [];
 
 export default function RiderCanvas({
   title = "COD Cash Collection & Delivery Logs",
@@ -105,7 +69,7 @@ export default function RiderCanvas({
   const [metricsList, setMetricsList] = React.useState<RiderSummaryMetric[]>(initialMetrics || DEFAULT_METRICS);
 
   React.useEffect(() => {
-    if (initialRiders && initialRiders.length > 0) {
+    if (initialRiders !== undefined) {
       setRiderList(initialRiders);
       return;
     }
@@ -116,7 +80,7 @@ export default function RiderCanvas({
         if (res.ok) {
           const data = await res.json();
           const list = data.data?.deliveryPersons || data.deliveryPersons || data.data || [];
-          if (Array.isArray(list) && list.length > 0) {
+          if (Array.isArray(list)) {
             const mapped: RiderWalletRecord[] = list.map((dp: any) => ({
               id: dp.id,
               name: dp.name,
@@ -510,163 +474,193 @@ export default function RiderCanvas({
 
               {/* Table Body */}
               <tbody>
-                {riders.map((rider, index) => {
-                  const isOnDuty =
-                    rider.dutyStatus.toUpperCase() === "ON DUTY";
-                  const isZeroBalance =
-                    rider.codBalance === "₹0" ||
-                    rider.codBalance === 0 ||
-                    rider.codBalance === "0";
-
-                  return (
-                    <tr
-                      key={rider.id || index}
+                {riders.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
                       style={{
-                        borderBottom:
-                          index !== riders.length - 1
-                            ? "1px solid #F1F5F9"
-                            : "none",
-                        transition: "background-color 0.15s ease",
+                        padding: "48px 16px",
+                        textAlign: "center",
+                        color: "#64748B",
+                        fontSize: "14px",
                       }}
-                      className="rider-table-row"
                     >
-                      {/* Rider Name with Avatar */}
-                      <td style={{ padding: "14px 0", verticalAlign: "middle" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                          }}
-                        >
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <Truck size={36} color="#CBD5E1" />
+                        <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>
+                          No Delivery Riders Found
+                        </span>
+                        <span>Click &quot;Add Delivery Agent&quot; above to register and assign delivery partners.</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  riders.map((rider, index) => {
+                    const isOnDuty =
+                      rider.dutyStatus.toUpperCase() === "ON DUTY";
+                    const isZeroBalance =
+                      rider.codBalance === "₹0" ||
+                      rider.codBalance === 0 ||
+                      rider.codBalance === "0";
+
+                    return (
+                      <tr
+                        key={rider.id || index}
+                        style={{
+                          borderBottom:
+                            index !== riders.length - 1
+                              ? "1px solid #F1F5F9"
+                              : "none",
+                          transition: "background-color 0.15s ease",
+                        }}
+                        className="rider-table-row"
+                      >
+                        {/* Rider Name with Avatar */}
+                        <td style={{ padding: "14px 0", verticalAlign: "middle" }}>
                           <div
                             style={{
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "50%",
-                              backgroundColor: "#F1F5F9",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
-                              color: "#64748B",
-                              flexShrink: 0,
+                              gap: "12px",
                             }}
                           >
-                            <User size={16} />
+                            <div
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                backgroundColor: "#F1F5F9",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "#64748B",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <User size={16} />
+                            </div>
+                            <span
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: 700,
+                                color: "#0F172A",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {rider.name}
+                            </span>
                           </div>
-                          <span
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: 700,
-                              color: "#0F172A",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {rider.name}
-                          </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Phone Number */}
-                      <td
-                        style={{
-                          padding: "14px 0",
-                          verticalAlign: "middle",
-                          fontSize: "13.5px",
-                          color: "#475569",
-                          fontWeight: 500,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {rider.phone}
-                      </td>
-
-                      {/* COD Balance */}
-                      <td
-                        style={{
-                          padding: "14px 0",
-                          verticalAlign: "middle",
-                          fontSize: "14px",
-                          fontWeight: 700,
-                          color: isZeroBalance ? "#475569" : "#DC2626",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {typeof rider.codBalance === "number"
-                          ? `₹${rider.codBalance.toLocaleString("en-IN")}`
-                          : rider.codBalance}
-                      </td>
-
-                      {/* Duty Status Badge */}
-                      <td style={{ padding: "14px 0", verticalAlign: "middle" }}>
-                        <span
+                        {/* Phone Number */}
+                        <td
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            fontSize: "10.5px",
-                            fontWeight: 700,
-                            letterSpacing: "0.4px",
-                            textTransform: "uppercase",
-                            backgroundColor: isOnDuty
-                              ? "#FFF1E8"
-                              : "#F1F5F9",
-                            color: isOnDuty ? "#F97316" : "#64748B",
+                            padding: "14px 0",
+                            verticalAlign: "middle",
+                            fontSize: "13.5px",
+                            color: "#475569",
+                            fontWeight: 500,
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {rider.dutyStatus}
-                        </span>
-                      </td>
+                          {rider.phone}
+                        </td>
 
-                      {/* Ledger Transaction Action */}
-                      <td
-                        style={{
-                          padding: "14px 0",
-                          verticalAlign: "middle",
-                          textAlign: "right",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onViewWallet) {
-                              onViewWallet(rider);
-                            } else {
-                              router.push(
-                                `/seller/delivery/settlements?riderId=${encodeURIComponent(
-                                  rider.id
-                                )}`
-                              );
-                            }
-                          }}
+                        {/* COD Balance */}
+                        <td
                           style={{
-                            background: "none",
-                            border: "none",
-                            padding: "4px 0",
-                            color: "#FF5500",
-                            fontSize: "13px",
+                            padding: "14px 0",
+                            verticalAlign: "middle",
+                            fontSize: "14px",
                             fontWeight: 700,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            fontFamily:
-                              "var(--font-poppins), 'Poppins', sans-serif",
-                            transition: "all 0.15s ease",
+                            color: isZeroBalance ? "#475569" : "#DC2626",
+                            whiteSpace: "nowrap",
                           }}
-                          className="view-wallet-btn"
                         >
-                          <span>View Wallet</span>
-                          <ArrowRight size={14} strokeWidth={2.5} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          {typeof rider.codBalance === "number"
+                            ? `₹${rider.codBalance.toLocaleString("en-IN")}`
+                            : rider.codBalance}
+                        </td>
+
+                        {/* Duty Status Badge */}
+                        <td style={{ padding: "14px 0", verticalAlign: "middle" }}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "4px 10px",
+                              borderRadius: "6px",
+                              fontSize: "10.5px",
+                              fontWeight: 700,
+                              letterSpacing: "0.4px",
+                              textTransform: "uppercase",
+                              backgroundColor: isOnDuty
+                                ? "#FFF1E8"
+                                : "#F1F5F9",
+                              color: isOnDuty ? "#F97316" : "#64748B",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {rider.dutyStatus}
+                          </span>
+                        </td>
+
+                        {/* Ledger Transaction Action */}
+                        <td
+                          style={{
+                            padding: "14px 0",
+                            verticalAlign: "middle",
+                            textAlign: "right",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onViewWallet) {
+                                onViewWallet(rider);
+                              } else {
+                                router.push(
+                                  `/seller/delivery/settlements?riderId=${encodeURIComponent(
+                                    rider.id
+                                  )}`
+                                );
+                              }
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: "4px 0",
+                              color: "#FF5500",
+                              fontSize: "13px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontFamily:
+                                "var(--font-poppins), 'Poppins', sans-serif",
+                              transition: "all 0.15s ease",
+                            }}
+                            className="view-wallet-btn"
+                          >
+                            <span>View Wallet</span>
+                            <ArrowRight size={14} strokeWidth={2.5} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

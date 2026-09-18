@@ -14,17 +14,9 @@ export default function SellerPortalRoot() {
             const role = session.user.role;
             if (role === "SELLER") {
                 router.push("/seller/dashboard");
-            } else if (role === "SUPERADMIN") {
-                router.push("/dashboard/superadmin");
-            } else if (role === "AGENT") {
-                router.push("/dashboard/admin");
-            } else if (role === "SUPPORT") {
-                router.push("/dashboard/support");
-            } else if (role === "DELIVERY") {
-                router.push("/dashboard/delivery");
-            } else {
-                router.push("/dashboard/user");
             }
+            // If the user is logged in with a non-seller role (e.g. USER, ADMIN, DELIVERY),
+            // do NOT auto-redirect away. Let them see Seller login so they can log in cleanly.
         }
     }, [session, status, router]);
 
@@ -32,7 +24,9 @@ export default function SellerPortalRoot() {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#FAFAFA' }}>Loading Seller Portal...</div>;
     }
 
-    if (status === "unauthenticated" || !session) {
+    const isSellerRole = session?.user?.role === "SELLER";
+
+    if (status === "unauthenticated" || !session || !isSellerRole) {
         return (
             <SellerResponsiveWrapper
                 desktop={<SellerLogin />}

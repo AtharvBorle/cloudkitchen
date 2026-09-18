@@ -340,12 +340,13 @@ export function ExploreHeader() {
         }
     }, [isAddressModalOpen]);
 
-    // Auto-open modal if no default location is configured
+    // Auto-open modal if no default location is configured (only for regular user or guest)
     useEffect(() => {
-        if (!isLocationLoading && !defaultAddress) {
+        const isNonCustomer = Boolean(session?.user?.role && session.user.role !== "USER");
+        if (!isLocationLoading && !defaultAddress && !isNonCustomer) {
             setIsAddressModalOpen(true);
         }
-    }, [isLocationLoading, defaultAddress]);
+    }, [isLocationLoading, defaultAddress, session]);
 
     const fetchUserAddresses = async () => {
         if (!session || !session.user) return [];

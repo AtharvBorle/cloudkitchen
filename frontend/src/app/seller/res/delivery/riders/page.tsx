@@ -54,9 +54,9 @@ export default function ResponsiveManageRidersPage() {
 
   return (
     <ResponsiveManageRiders
-      activeRidersCount={riders.length > 0 ? riders.filter((r) => r.status === "Online").length : 4}
-      totalCodAmount={`₹${(totalCod || 14800).toLocaleString("en-IN")}`}
-      riders={riders.length > 0 ? riders : undefined}
+      activeRidersCount={riders.filter((r) => r.status === "Online").length}
+      totalCodAmount={`₹${totalCod.toLocaleString("en-IN")}`}
+      riders={riders}
       onSelectRider={handleSelectRider}
       onBack={() => router.push("/seller/delivery")}
     />

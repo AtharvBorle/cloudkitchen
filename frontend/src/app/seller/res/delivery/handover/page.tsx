@@ -72,28 +72,13 @@ function CashHandoverContent() {
 
   const cashOrders = React.useMemo(() => {
     if (!transactions || transactions.length === 0) {
-      if (!rider || !rider.outstandingBalance) return [];
-      return [
-        {
-          id: "1",
-          orderNumber: "#COD-101",
-          customerName: "Order Delivery",
-          amount: `₹${(rider.outstandingBalance || 0).toLocaleString("en-IN")}`,
-        },
-      ];
+      return [];
     }
     const collectionTxs = transactions.filter(
       (tx: any) => tx.type !== "SETTLEMENT" && (tx.amount > 0 || tx.orderId)
     );
     if (collectionTxs.length === 0) {
-      return [
-        {
-          id: "1",
-          orderNumber: "#COD-101",
-          customerName: "Pending Deliveries",
-          amount: `₹${(rider?.outstandingBalance || 0).toLocaleString("en-IN")}`,
-        },
-      ];
+      return [];
     }
     return collectionTxs.map((tx: any, idx: number) => {
       const amt = Math.abs(tx.amount || 0);

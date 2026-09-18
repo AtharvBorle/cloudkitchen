@@ -29,58 +29,22 @@ export interface SellerReviewsCanvasDasProps {
   activeSidebarId?: string;
 }
 
-const DEFAULT_REVIEWS: ReviewItem[] = [
-  {
-    id: "rev-1",
-    customerName: "John Customer",
-    orderId: "7024453f",
-    date: "7 July 2026",
-    rating: 4,
-    comment: "No comment left for this order.",
-    itemsOrdered: ["Gourmet Truffle Burger", "Crispy Rosemary Fries"],
-  },
-  {
-    id: "rev-2",
-    customerName: "Anita Sharma",
-    orderId: "8932711d",
-    date: "6 July 2026",
-    rating: 5,
-    comment: "The Butter Chicken was absolutely phenomenal! Perfectly spiced, rich creamy texture, and hot on arrival. Will definitely order again this week!",
-    itemsOrdered: ["Classic Butter Chicken", "Garlic Butter Naan"],
-    managerResponse: {
-      date: "6 July 2026",
-      text: "Thank you so much for the glowing review, Anita! We take pride in our family recipes and are thrilled you enjoyed it.",
-    },
-  },
-  {
-    id: "rev-3",
-    customerName: "Rahul Malhotra",
-    orderId: "6438201b",
-    date: "4 July 2026",
-    rating: 3,
-    comment: "Food quality was good, but delivery was delayed by almost 25 minutes. Fries were slightly soggy because of the delay.",
-    itemsOrdered: ["BBQ Chicken Pizza", "Crispy Rosemary Fries"],
-    managerResponse: {
-      date: "5 July 2026",
-      text: "Apologies for the delivery hiccup, Rahul. We've spoken to our dispatch team to ensure thermal bags are optimized for future orders.",
-    },
-  },
-];
+const DEFAULT_REVIEWS: ReviewItem[] = [];
 
 const DEFAULT_RATINGS_DISTRIBUTION = [
-  { label: "5 Stars", count: 842, percentage: "67.5%" },
-  { label: "4 Stars", count: 284, percentage: "22.7%" },
-  { label: "3 Stars", count: 82, percentage: "6.6%" },
-  { label: "2 Stars", count: 24, percentage: "1.9%" },
-  { label: "1 Star", count: 16, percentage: "1.3%" },
+  { label: "5 Stars", count: 0, percentage: "0%" },
+  { label: "4 Stars", count: 0, percentage: "0%" },
+  { label: "3 Stars", count: 0, percentage: "0%" },
+  { label: "2 Stars", count: 0, percentage: "0%" },
+  { label: "1 Star", count: 0, percentage: "0%" },
 ];
 
 const DEFAULT_BREAKDOWN_BARS = [
-  { label: "5 Star", count: 842, percentage: 67.5, color: "#334155" },
-  { label: "4 Star", count: 284, percentage: 22.7, color: "#EF4444" },
-  { label: "3 Star", count: 82, percentage: 6.6, color: "#475569" },
-  { label: "2 Star", count: 24, percentage: 1.9, color: "#475569" },
-  { label: "1 Star", count: 16, percentage: 1.3, color: "#475569" },
+  { label: "5 Star", count: 0, percentage: 0, color: "#334155" },
+  { label: "4 Star", count: 0, percentage: 0, color: "#EF4444" },
+  { label: "3 Star", count: 0, percentage: 0, color: "#475569" },
+  { label: "2 Star", count: 0, percentage: 0, color: "#475569" },
+  { label: "1 Star", count: 0, percentage: 0, color: "#475569" },
 ];
 
 /* Helper Component: Smooth Numeric Counter with EaseOut */
@@ -172,9 +136,9 @@ export default function SellerReviewsCanvasDas({
   const [isMounted, setIsMounted] = useState(false);
 
   // Live Data / API States
-  const [reviewsList, setReviewsList] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
-  const [overallRating, setOverallRating] = useState(4.8);
-  const [totalReviewsCount, setTotalReviewsCount] = useState(1248);
+  const [reviewsList, setReviewsList] = useState<ReviewItem[]>([]);
+  const [overallRating, setOverallRating] = useState(0);
+  const [totalReviewsCount, setTotalReviewsCount] = useState(0);
   const [ratingsDistribution, setRatingsDistribution] = useState(DEFAULT_RATINGS_DISTRIBUTION);
   const [breakdownBars, setBreakdownBars] = useState(DEFAULT_BREAKDOWN_BARS);
 
@@ -272,8 +236,9 @@ export default function SellerReviewsCanvasDas({
           const json = await res.json();
           const apiData = json.data || json;
 
-          if (apiData?.reviews && apiData.reviews.length > 0) {
-            const mapped: ReviewItem[] = apiData.reviews.map((r: any) => ({
+          if (apiData) {
+            const rawList = apiData.reviews || [];
+            const mapped: ReviewItem[] = rawList.map((r: any) => ({
               id: r.id,
               customerName: r.user?.name || "Customer",
               orderId: r.orderId ? r.orderId.slice(-8) : r.id.slice(-8),
@@ -298,39 +263,35 @@ export default function SellerReviewsCanvasDas({
             }));
             setReviewsList(mapped);
 
-            if (apiData.stats) {
-              const stats = apiData.stats;
-              if (stats.averageRating) setOverallRating(stats.averageRating);
-              if (stats.totalReviews) setTotalReviewsCount(stats.totalReviews);
+            const stats = apiData.stats;
+            const total = stats?.totalReviews !== undefined ? stats.totalReviews : mapped.length;
+            setTotalReviewsCount(total);
+            setOverallRating(stats?.averageRating || 0);
 
-              if (stats.ratingDistribution) {
-                const total = stats.totalReviews || 1;
-                const dist = [5, 4, 3, 2, 1].map((star) => {
-                  const count = stats.ratingDistribution[star] || 0;
-                  const pct = ((count / total) * 100).toFixed(1);
-                  return {
-                    label: star === 1 ? "1 Star" : `${star} Stars`,
-                    count,
-                    percentage: `${pct}%`,
-                  };
-                });
-                setRatingsDistribution(dist);
+            const distMap = stats?.ratingDistribution || {};
+            const dist = [5, 4, 3, 2, 1].map((star) => {
+              const count = distMap[star] || 0;
+              const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0";
+              return {
+                label: star === 1 ? "1 Star" : `${star} Stars`,
+                count,
+                percentage: `${pct}%`,
+              };
+            });
+            setRatingsDistribution(dist);
 
-                const bars = [
-                  { label: "5 Star", count: stats.ratingDistribution[5] || 0, percentage: Number(((stats.ratingDistribution[5] || 0) / total * 100).toFixed(1)), color: "#334155" },
-                  { label: "4 Star", count: stats.ratingDistribution[4] || 0, percentage: Number(((stats.ratingDistribution[4] || 0) / total * 100).toFixed(1)), color: "#EF4444" },
-                  { label: "3 Star", count: stats.ratingDistribution[3] || 0, percentage: Number(((stats.ratingDistribution[3] || 0) / total * 100).toFixed(1)), color: "#475569" },
-                  { label: "2 Star", count: stats.ratingDistribution[2] || 0, percentage: Number(((stats.ratingDistribution[2] || 0) / total * 100).toFixed(1)), color: "#475569" },
-                  { label: "1 Star", count: stats.ratingDistribution[1] || 0, percentage: Number(((stats.ratingDistribution[1] || 0) / total * 100).toFixed(1)), color: "#475569" },
-                ];
-                setBreakdownBars(bars);
-              }
-            }
+            const bars = [
+              { label: "5 Star", count: distMap[5] || 0, percentage: total > 0 ? Number(((distMap[5] || 0) / total * 100).toFixed(1)) : 0, color: "#334155" },
+              { label: "4 Star", count: distMap[4] || 0, percentage: total > 0 ? Number(((distMap[4] || 0) / total * 100).toFixed(1)) : 0, color: "#EF4444" },
+              { label: "3 Star", count: distMap[3] || 0, percentage: total > 0 ? Number(((distMap[3] || 0) / total * 100).toFixed(1)) : 0, color: "#475569" },
+              { label: "2 Star", count: distMap[2] || 0, percentage: total > 0 ? Number(((distMap[2] || 0) / total * 100).toFixed(1)) : 0, color: "#475569" },
+              { label: "1 Star", count: distMap[1] || 0, percentage: total > 0 ? Number(((distMap[1] || 0) / total * 100).toFixed(1)) : 0, color: "#475569" },
+            ];
+            setBreakdownBars(bars);
           }
         }
       } catch (err) {
-        // Fallback gracefully to default showcase reviews
-        console.log("Using default demo reviews data:", err);
+        console.error("Failed to load seller reviews:", err);
       }
     }
 
@@ -472,7 +433,9 @@ export default function SellerReviewsCanvasDas({
                     </div>
                   </div>
                 </div>
-                <div className={styles.trendGreen}>+0.2 from last month</div>
+                <div className={totalReviewsCount > 0 ? styles.trendGreen : styles.trendNeutral || styles.basedText}>
+                  {totalReviewsCount > 0 ? "Active customer ratings" : "No reviews yet"}
+                </div>
               </div>
 
               {/* Card 2: Review Count */}
@@ -586,7 +549,9 @@ export default function SellerReviewsCanvasDas({
                 <div className={styles.reviewsList}>
                   {filteredAndSortedReviews.length === 0 ? (
                     <div className={styles.emptyReviewsState}>
-                      No reviews found matching the selected filter criteria.
+                      {reviewsList.length === 0
+                        ? "No customer reviews or ratings yet. Once customers place orders and leave feedback, their ratings and reviews will appear here."
+                        : "No reviews found matching the selected filter criteria."}
                     </div>
                   ) : (
                     filteredAndSortedReviews.map((review, index) => {
@@ -711,7 +676,9 @@ export default function SellerReviewsCanvasDas({
                   </div>
 
                   <p className={styles.breakdownInsight}>
-                    High proportion of 4 & 5 star ratings indicates strong core culinary performance.
+                    {totalReviewsCount > 0
+                      ? "Distribution across all customer reviews and order ratings."
+                      : "No customer rating distributions recorded yet."}
                   </p>
                 </div>
 

@@ -4,7 +4,8 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, ShieldCheck } from "lucide-react";
+import { ClipboardList, ShieldCheck, Lock } from "lucide-react";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import styles from "./SellerSidebar.module.css";
 
 export interface SellerSidebarProps {
@@ -15,6 +16,8 @@ export const SellerSidebar: React.FC<SellerSidebarProps> = ({
   activeItem,
 }) => {
   const pathname = usePathname();
+  const seller = useSellerProfile();
+  const isRejected = seller.profile?.verificationStatus === "REJECTED";
 
   // Determine active item based on prop or pathname
   const isVerification =
@@ -24,20 +27,21 @@ export const SellerSidebar: React.FC<SellerSidebarProps> = ({
         pathname?.includes("/seller/revision")));
 
   const isRegistration =
-    activeItem === "registration" ||
-    (!isVerification &&
-      (pathname?.includes("/seller/registration") ||
-        pathname?.includes("/seller/account-information") ||
-        pathname?.includes("/seller/business-information") ||
-        pathname?.includes("/seller/legal-documents") ||
-        pathname?.includes("/seller/legal-information") ||
-        pathname?.includes("/seller/media-gallery") ||
-        pathname?.includes("/seller/media-information") ||
-        pathname?.includes("/seller/confirm-registration") ||
-        pathname?.includes("/seller/confirm-information") ||
-        pathname?.includes("/seller-onboarding") ||
-        !pathname ||
-        pathname === "/seller"));
+    !isRejected &&
+    (activeItem === "registration" ||
+      (!isVerification &&
+        (pathname?.includes("/seller/registration") ||
+          pathname?.includes("/seller/account-information") ||
+          pathname?.includes("/seller/business-information") ||
+          pathname?.includes("/seller/legal-documents") ||
+          pathname?.includes("/seller/legal-information") ||
+          pathname?.includes("/seller/media-gallery") ||
+          pathname?.includes("/seller/media-information") ||
+          pathname?.includes("/seller/confirm-registration") ||
+          pathname?.includes("/seller/confirm-information") ||
+          pathname?.includes("/seller-onboarding") ||
+          !pathname ||
+          pathname === "/seller")));
 
   return (
     <aside className={styles.sidebar}>
@@ -63,14 +67,28 @@ export const SellerSidebar: React.FC<SellerSidebarProps> = ({
       {/* Navigation Menu */}
       <nav className={styles.navMenu}>
         {/* Registration Item */}
-        <Link
-          href="/seller/registration"
-          className={`${styles.navItem} ${isRegistration ? styles.active : ""}`}
-        >
-          {isRegistration && <span className={styles.activeIndicator} />}
-          <ClipboardList className={styles.navIcon} />
-          <span className={styles.navLabel}>Registration</span>
-        </Link>
+        {isRejected ? (
+          <div
+            className={`${styles.navItem} ${styles.navItemBlocked}`}
+            title="Registration is blocked for rejected accounts"
+            aria-disabled="true"
+          >
+            <ClipboardList className={styles.navIcon} />
+            <span className={styles.navLabel}>Registration</span>
+            <span className={styles.blockedBadge}>
+              <Lock size={10} /> Blocked
+            </span>
+          </div>
+        ) : (
+          <Link
+            href="/seller/registration"
+            className={`${styles.navItem} ${isRegistration ? styles.active : ""}`}
+          >
+            {isRegistration && <span className={styles.activeIndicator} />}
+            <ClipboardList className={styles.navIcon} />
+            <span className={styles.navLabel}>Registration</span>
+          </Link>
+        )}
 
         {/* Verification Item */}
         <Link

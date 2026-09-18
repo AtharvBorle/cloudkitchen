@@ -1,4 +1,4 @@
-﻿.navbar {
+.navbar {
   height: 72px;
   min-height: 72px;
   background-color: #ffffff;
@@ -155,4 +155,26 @@
   color: #94a3b8;
   line-height: 1.2;
   font-weight: 500;
+}
+
+.logoutBtn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background-color: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.logoutBtn:hover {
+  background-color: #ffe4e6;
+  color: #be123c;
+  border-color: #fda4af;
 }

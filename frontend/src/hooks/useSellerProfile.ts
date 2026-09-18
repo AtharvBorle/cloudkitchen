@@ -66,6 +66,11 @@ export function updateCachedProfile(partial: Partial<SellerProfileData>) {
   notifyListeners();
 }
 
+export function clearCachedProfile() {
+  cachedProfile = null;
+  notifyListeners();
+}
+
 export async function toggleSellerOnlineStatus(newStatus?: boolean): Promise<boolean> {
   const currentStatus = cachedProfile?.isOnline ?? true;
   const targetStatus = typeof newStatus === "boolean" ? newStatus : !currentStatus;
@@ -126,27 +131,29 @@ export function useSellerProfile() {
   const { data: session, status } = useSession();
   const sessionName = session?.user?.name || "";
   const sessionEmail = session?.user?.email || "";
+  const sessionRole = session?.user?.role;
 
   const [profileState, setProfileState] = useState<SellerProfileData>(() => {
-    const rawName = cachedProfile?.ownerName || (!isGenericFallbackName(sessionName) ? sessionName : "") || "";
-    const busName = cachedProfile?.businessName || rawName;
+    const isSeller = sessionRole === "SELLER";
+    const rawName = (isSeller && cachedProfile?.ownerName) || (!isGenericFallbackName(sessionName) ? sessionName : "") || "";
+    const busName = (isSeller && cachedProfile?.businessName) || rawName;
     const name = busName || rawName;
     return {
-      ownerName: name,
-      businessName: busName,
-      userFullName: cachedProfile?.userFullName || sessionName || name,
-      email: cachedProfile?.email || sessionEmail || "",
-      phone: cachedProfile?.phone || "",
-      city: cachedProfile?.city || "",
-      pincode: cachedProfile?.pincode || "",
-      address: cachedProfile?.address || "",
-      avatarInitials: cachedProfile?.avatarInitials || computeInitials(name),
-      partnerRole: cachedProfile?.partnerRole || "Neo Cloud Partner",
-      isOnline: cachedProfile?.isOnline ?? true,
-      isLoading: !cachedProfile,
+      ownerName: isSeller ? name : "",
+      businessName: isSeller ? busName : "",
+      userFullName: (isSeller && cachedProfile?.userFullName) || sessionName || name,
+      email: (isSeller && cachedProfile?.email) || sessionEmail || "",
+      phone: (isSeller && cachedProfile?.phone) || "",
+      city: (isSeller && cachedProfile?.city) || "",
+      pincode: (isSeller && cachedProfile?.pincode) || "",
+      address: (isSeller && cachedProfile?.address) || "",
+      avatarInitials: isSeller ? (cachedProfile?.avatarInitials || computeInitials(name)) : "SK",
+      partnerRole: isSeller ? (cachedProfile?.partnerRole || "Neo Cloud Partner") : "",
+      isOnline: isSeller ? (cachedProfile?.isOnline ?? true) : true,
+      isLoading: isSeller ? !cachedProfile : false,
       authStatus: status,
-      user: cachedProfile?.user || null,
-      profile: cachedProfile?.profile || null,
+      user: isSeller ? (cachedProfile?.user || null) : null,
+      profile: isSeller ? (cachedProfile?.profile || null) : null,
     };
   });
 
@@ -164,15 +171,15 @@ export function useSellerProfile() {
       pathname === "/dashboard/seller" ||
       pathname.startsWith("/dashboard/seller/");
 
-    if (isSellerRoute && !isPublicSellerPath && status === "unauthenticated") {
+    if (isSellerRoute && !isPublicSellerPath && (status === "unauthenticated" || (status === "authenticated" && sessionRole !== "SELLER"))) {
       const callbackUrl = encodeURIComponent(pathname + window.location.search);
       window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
     }
-  }, [status]);
+  }, [status, sessionRole]);
 
   useEffect(() => {
     const handleUpdate = () => {
-      if (cachedProfile) {
+      if (cachedProfile && sessionRole === "SELLER") {
         setProfileState((prev) => ({
           ...prev,
           ...cachedProfile,
@@ -185,16 +192,24 @@ export function useSellerProfile() {
     return () => {
       listeners.delete(handleUpdate);
     };
-  }, [status]);
+  }, [status, sessionRole]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function fetchProfile() {
-      // Only make authenticated profile request when the user has an active session
-      if (status !== "authenticated") {
+      // Only make authenticated profile request when the user has an active SELLER session
+      if (status !== "authenticated" || sessionRole !== "SELLER") {
         if (isMounted) {
-          setProfileState((prev) => ({ ...prev, authStatus: status, isLoading: false }));
+          setProfileState((prev) => ({
+            ...prev,
+            authStatus: status,
+            isLoading: false,
+            ownerName: sessionRole === "SELLER" ? prev.ownerName : "",
+            businessName: sessionRole === "SELLER" ? prev.businessName : "",
+            user: sessionRole === "SELLER" ? prev.user : null,
+            profile: sessionRole === "SELLER" ? prev.profile : null,
+          }));
         }
         return;
       }

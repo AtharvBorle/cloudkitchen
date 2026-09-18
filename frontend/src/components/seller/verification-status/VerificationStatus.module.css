@@ -42,6 +42,51 @@
   letter-spacing: -0.01em;
 }
 
+.trackingRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.refreshBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .statusBadge {
   font-size: 12px;
   font-weight: 600;
@@ -197,6 +242,50 @@
   transform: translateY(-1px);
 }
 
+/* Rejection Alert Banner */
+.rejectionBanner {
+  background-color: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.08);
+}
+
+.rejectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rejectionIconCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rejectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #991b1b;
+  margin: 0;
+}
+
+.rejectionText {
+  font-size: 13.5px;
+  color: #7f1d1d;
+  margin: 0;
+  line-height: 1.5;
+}
+
 /* Card 2: Status Timeline */
 .timelineCard {
   background-color: #ffffff;
@@ -286,6 +375,18 @@
   background-color: #94a3b8;
 }
 
+.nodeRejected {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+}
+
+.rejectedIcon {
+  width: 12px;
+  height: 12px;
+  color: #dc2626;
+}
+
 .connectingLine {
   width: 2px;
   flex: 1;
@@ -300,6 +401,10 @@
 
 .linePending {
   background-color: #e2e8f0;
+}
+
+.lineRejected {
+  background-color: #ef4444;
 }
 
 /* Right Content */
@@ -331,6 +436,11 @@
   color: #94a3b8;
 }
 
+.itemTitleRejected {
+  font-weight: 700;
+  color: #b91c1c;
+}
+
 .itemSubtitle {
   font-size: 12px;
   margin: 0;
@@ -343,6 +453,11 @@
 
 .itemSubtitleUpcoming {
   color: #cbd5e1;
+}
+
+.itemSubtitleRejected {
+  color: #dc2626;
+  font-weight: 500;
 }
 
 /* Card 3: Notice Info Card */

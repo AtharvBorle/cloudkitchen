@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -74,6 +74,17 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
       ? ownerName
       : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+
+  // Verification status routing protection:
+  // If seller is PENDING, REVISION, or REJECTED, redirect them to the verification status page.
+  useEffect(() => {
+    if (seller.authStatus === "authenticated") {
+      const vStatus = seller.profile?.verificationStatus;
+      if (vStatus === "PENDING" || vStatus === "REVISION" || vStatus === "REJECTED") {
+        router.replace("/seller/verification-status");
+      }
+    }
+  }, [seller.authStatus, seller.profile?.verificationStatus, router]);
 
 
   const getStatusBadgeStyle = (status: string) => {

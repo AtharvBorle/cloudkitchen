@@ -14,17 +14,9 @@ export default function DeliveryPortalRoot() {
             const role = session.user.role;
             if (role === "DELIVERY") {
                 router.push("/dashboard/delivery");
-            } else if (role === "SUPERADMIN") {
-                router.push("/dashboard/superadmin");
-            } else if (role === "AGENT") {
-                router.push("/dashboard/admin");
-            } else if (role === "SUPPORT") {
-                router.push("/dashboard/support");
-            } else if (role === "SELLER") {
-                router.push("/seller/dashboard");
-            } else {
-                router.push("/dashboard/user");
             }
+            // If the user is logged in with a non-delivery role (e.g. USER, ADMIN, SELLER),
+            // do NOT auto-redirect away. Let them see Delivery login so they can log in cleanly.
         }
     }, [session, status, router]);
 
@@ -32,7 +24,9 @@ export default function DeliveryPortalRoot() {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#FAFAFA' }}>Loading Delivery Portal...</div>;
     }
 
-    if (status === "unauthenticated" || !session) {
+    const isDeliveryRole = session?.user?.role === "DELIVERY";
+
+    if (status === "unauthenticated" || !session || !isDeliveryRole) {
         return <DeliveryLoginPage />;
     }
 

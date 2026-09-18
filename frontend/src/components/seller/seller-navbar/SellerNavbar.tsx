@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { Search, Bell } from "lucide-react";
+import { LogOut } from "lucide-react";
 import styles from "./SellerNavbar.module.css";
-
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { performLogout } from "@/lib/logout";
 
 export interface SellerNavbarProps {
   title?: string;
@@ -71,7 +71,7 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
         </h1>
       </div>
 
-      {/* 2. Right Side: Search -> Bell -> Avatar Circle -> Name & Designation */}
+      {/* 2. Right Side: Profile Info + Logout (when authenticated) */}
       <div
         className={styles.rightSection}
         style={{
@@ -82,64 +82,6 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
           flexShrink: 0,
         }}
       >
-        {/* Search Bar */}
-        <div
-          className={styles.searchWrapper}
-          style={{ position: "relative", display: "flex", alignItems: "center" }}
-        >
-          <Search
-            className={styles.searchIcon}
-            style={{
-              position: "absolute",
-              left: 12,
-              width: 16,
-              height: 16,
-              color: "#94a3b8",
-              pointerEvents: "none",
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search properties..."
-            className={styles.searchInput}
-            style={{
-              height: 40,
-              width: 240,
-              padding: "0 14px 0 38px",
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              backgroundColor: "#f8fafc",
-              fontSize: "0.88rem",
-              color: "#1e293b",
-              outline: "none",
-            }}
-            onChange={(e) => onSearch?.(e.target.value)}
-          />
-        </div>
-
-        {/* Bell Notification Icon */}
-        <button
-          type="button"
-          className={styles.notificationBtn}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            border: "1px solid #e2e8f0",
-            backgroundColor: "#f8fafc",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#64748b",
-            cursor: "pointer",
-            flexShrink: 0,
-            padding: 0,
-          }}
-          aria-label="Notifications"
-        >
-          <Bell className={styles.bellIcon} style={{ width: 18, height: 18 }} />
-        </button>
-
         {/* Profile Circle + Name & Designation */}
         <div
           className={styles.profileSection}
@@ -203,6 +145,20 @@ export const SellerNavbar: React.FC<SellerNavbarProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Logout button: only visible when authenticated */}
+        {seller.authStatus === "authenticated" && (
+          <button
+            type="button"
+            onClick={() => performLogout({ role: "SELLER" })}
+            className={styles.logoutBtn}
+            title="Log out of partner account"
+            aria-label="Log out"
+          >
+            <LogOut size={16} />
+            <span>Logout</span>
+          </button>
+        )}
       </div>
     </nav>
   );

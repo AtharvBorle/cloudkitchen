@@ -15,10 +15,9 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
     const toggleSidebar = () => setIsCollapsed(prev => !prev);
 
     useEffect(() => {
-        if (status === "unauthenticated") {
-            router.replace("/auth/login/admin");
-        } else if (status === "authenticated" && session?.user?.role !== "SUPPORT" && session?.user?.role !== "SUPERADMIN") {
-            router.replace("/explore-desktop");
+        if (status === "loading") return;
+        if (!session || (session?.user?.role !== "SUPPORT" && session?.user?.role !== "SUPERADMIN")) {
+            router.replace("/admin");
         }
     }, [status, session, router]);
 
