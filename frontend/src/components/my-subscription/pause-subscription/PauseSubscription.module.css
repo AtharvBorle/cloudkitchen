@@ -10,6 +10,11 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
   margin-bottom: 24px;
   gap: 20px;
+  transition: opacity 0.2s ease;
+}
+
+.disabledContainer {
+  opacity: 0.55;
 }
 
 .left {
@@ -69,6 +74,11 @@
 
 .toggleActive {
   background-color: #f97316;
+}
+
+.toggleDisabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .toggleThumb {
