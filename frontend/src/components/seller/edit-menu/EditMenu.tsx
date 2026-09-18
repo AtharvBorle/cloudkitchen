@@ -98,6 +98,7 @@ function EditMenuInner({
   ]);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string>('');
 
   useEffect(() => {
     async function loadItem() {
@@ -119,6 +120,7 @@ function EditMenuInner({
               setPrice(String(found.price || ''));
               if (found.foodCategory?.name) setCategory(found.foodCategory.name);
               setDescription(found.description || '');
+              if (found.imageUrl) setExistingImageUrl(found.imageUrl);
               setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 10));
               setIsInStock(found.isAvailable ?? true);
               if (found.itemType) {
@@ -331,9 +333,13 @@ function EditMenuInner({
               <ArrowLeft size={18} strokeWidth={2.4} />
             </Link>
             <div className={styles.headerInfo}>
-              <h1 className={styles.pageTitle}>Edit Menu Item</h1>
+              <h1 className={styles.pageTitle}>
+                {itemId ? 'Edit Menu Item' : 'Add New Dish'}
+              </h1>
               <p className={styles.pageSubtitle}>
-                Update details for &lsquo;{itemName}&rsquo;
+                {itemId
+                  ? `Update details for '${itemName || 'dish'}'`
+                  : 'Publish a new dish to your cloud kitchen menu'}
               </p>
             </div>
           </div>
@@ -342,9 +348,13 @@ function EditMenuInner({
           <form onSubmit={handleSave} className={styles.formCard}>
             {/* Section Header */}
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>Dish Meta & Configurations</h2>
+              <h2 className={styles.sectionTitle}>
+                {itemId ? 'Dish Meta & Configurations' : 'Dish Details & Configurations'}
+              </h2>
               <p className={styles.sectionSubtitle}>
-                Edit ingredient composition, prices, and room visibility tags.
+                {itemId
+                  ? 'Edit ingredient composition, prices, and room visibility tags.'
+                  : 'Configure dish name, category, pricing, food types, and stock availability.'}
               </p>
             </div>
 
@@ -641,7 +651,9 @@ function EditMenuInner({
                   <span className={styles.uploadTitle}>Click to upload raw picture</span>
                   <span className={styles.uploadHint}>
                     {imageFile
-                      ? imageFile.name
+                      ? `Selected: ${imageFile.name}`
+                      : existingImageUrl
+                      ? 'Current image attached (click to replace)'
                       : 'PNG, JPG, up to 5MB, recommended square scale ratio'}
                   </span>
                 </div>
@@ -654,7 +666,7 @@ function EditMenuInner({
                 Cancel
               </Link>
               <button type="submit" className={styles.saveItemBtn} disabled={loading}>
-                {loading ? 'Saving...' : 'Save Item'}
+                {loading ? 'Saving...' : itemId ? 'Update Dish' : 'Add Dish'}
               </button>
             </div>
           </form>
