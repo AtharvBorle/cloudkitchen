@@ -61,54 +61,6 @@ export interface MobileRoomCard {
   category: "all" | "single" | "shared" | "hostel" | "flat";
 }
 
-const SAMPLE_ROOMS: MobileRoomCard[] = [
-  {
-    id: "room-1",
-    title: "Sunrise Co-Living PG for Boys",
-    location: "Near MIT College Back Gate, Kothrud",
-    rating: 4.2,
-    reviewCount: 32,
-    overallScore: 4.8,
-    price: "₹5,500/month",
-    tags: ["Wi-Fi", "AC", "Meals Included", "Laundry"],
-    image: neoLivingImg,
-    category: "shared",
-  },
-  {
-    id: "room-2",
-    title: "Green View Premium Hostel",
-    location: "Ideal Colony, Kothrud",
-    rating: 4.5,
-    reviewCount: 112,
-    price: "₹6,200/month",
-    tags: ["Gym", "24/7 Security", "Meals Included"],
-    image: comfortStayImg,
-    category: "hostel",
-  },
-  {
-    id: "room-3",
-    title: "Cozy 1BHK Flat near Paud Road",
-    location: "MIT College Area, Paud Road, Kothrud",
-    rating: 4.0,
-    reviewCount: 22,
-    price: "₹12,000/month",
-    tags: ["Full Furnished", "No Brokerage", "Parking"],
-    image: executiveDoubleImg,
-    category: "flat",
-  },
-  {
-    id: "room-4",
-    title: "Executive Single Private Suite",
-    location: "Behind Cummins College, Karve Nagar",
-    rating: 4.7,
-    reviewCount: 45,
-    price: "₹8,500/month",
-    tags: ["Wi-Fi", "Attached Washroom", "Power Backup"],
-    image: premiumSingleImg,
-    category: "single",
-  },
-];
-
 const CATEGORIES = [
   { id: "all", label: "All" },
   { id: "single", label: "Single Room" },
@@ -134,7 +86,7 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (propRooms && propRooms.length > 0) {
+    if (propRooms !== undefined) {
       const mapped: MobileRoomCard[] = propRooms.map((r: any, idx: number) => {
         let imgUrl: string | StaticImageData =
           idx % 4 === 0
@@ -154,20 +106,30 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
           }
         }
 
-        const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+        const locality = r.sellerLocality || r.seller?.addressLocality || "";
         const city = r.sellerCity || r.seller?.user?.city || "Pune";
-        const cap = Number(r.capacity) || 2;
+        const locStr = locality ? `${locality}, ${city}` : city;
+        const cap = Number(r.capacity) || 1;
         const cat = cap === 1 ? "single" : cap === 2 ? "shared" : cap >= 4 ? "hostel" : "flat";
+
+        const tagsList: string[] = [];
+        if (Array.isArray(r.amenities) && r.amenities.length > 0) {
+          tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
+        }
+        tagsList.push(`${cap} Guest${cap > 1 ? "s" : ""}`);
+
+        const numRating = Number(r.rating) || 0;
+        const revCount = Number(r.reviewCount) || 0;
 
         return {
           id: r.id,
-          title: r.title || "Neo Luxury Living PG",
-          location: `${locality}, ${city}`,
-          rating: Number(r.rating || 4.8),
-          reviewCount: Number(r.reviewCount || 18),
-          overallScore: Number(r.rating || 4.8),
-          price: `₹${Number(r.price || 3500).toLocaleString("en-IN")}/night`,
-          tags: ["Wi-Fi", `${cap} Guests`, "Meals Available"],
+          title: r.title || "Room Listing",
+          location: locStr,
+          rating: numRating,
+          reviewCount: revCount,
+          overallScore: numRating > 0 ? numRating : undefined,
+          price: `₹${Number(r.price || 0).toLocaleString("en-IN")}/night`,
+          tags: tagsList.filter(Boolean),
           image: imgUrl,
           category: cat,
         };
@@ -202,25 +164,37 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
                 }
               }
 
-              const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+              const locality = r.sellerLocality || r.seller?.addressLocality || "";
               const city = r.sellerCity || r.seller?.user?.city || "Pune";
-              const cap = Number(r.capacity) || 2;
+              const locStr = locality ? `${locality}, ${city}` : city;
+              const cap = Number(r.capacity) || 1;
               const cat = cap === 1 ? "single" : cap === 2 ? "shared" : cap >= 4 ? "hostel" : "flat";
+
+              const tagsList: string[] = [];
+              if (Array.isArray(r.amenities) && r.amenities.length > 0) {
+                tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
+              }
+              tagsList.push(`${cap} Guest${cap > 1 ? "s" : ""}`);
+
+              const numRating = Number(r.rating) || 0;
+              const revCount = Number(r.reviewCount) || 0;
 
               return {
                 id: r.id,
-                title: r.title || "Neo Luxury Living PG",
-                location: `${locality}, ${city}`,
-                rating: Number(r.rating || 4.8),
-                reviewCount: Number(r.reviewCount || 18),
-                overallScore: Number(r.rating || 4.8),
-                price: `₹${Number(r.price || 3500).toLocaleString("en-IN")}/night`,
-                tags: ["Wi-Fi", `${cap} Guests`, "Meals Available"],
+                title: r.title || "Room Listing",
+                location: locStr,
+                rating: numRating,
+                reviewCount: revCount,
+                overallScore: numRating > 0 ? numRating : undefined,
+                price: `₹${Number(r.price || 0).toLocaleString("en-IN")}/night`,
+                tags: tagsList.filter(Boolean),
                 image: imgUrl,
                 category: cat,
               };
             });
             setDynamicRooms(mapped);
+          } else {
+            setDynamicRooms([]);
           }
         }
       } catch (err) {
@@ -230,7 +204,7 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
     loadRooms();
   }, [propRooms]);
 
-  const rawRooms = dynamicRooms.length > 0 ? dynamicRooms : SAMPLE_ROOMS;
+  const rawRooms = dynamicRooms;
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -396,84 +370,119 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
 
       {/* 6. Vertical Feed of Accommodation Cards */}
       <div className={styles.cardsList}>
-        {filteredRooms.map((room) => {
-          const isFav = !!favorites[room.id];
-          return (
-            <article key={room.id} className={styles.roomCard}>
-              {/* Photo Box */}
-              <div className={styles.imageBox}>
-                <Image
-                  src={room.image}
-                  alt={room.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 400px"
-                  className={styles.roomImage}
-                />
-
-                {/* Rating Badge on Top Left */}
-                <div className={styles.glassRatingBadge}>
-                  <Star size={12} className={styles.starIcon} />
-                  <span>
-                    {room.rating} ({room.reviewCount})
-                  </span>
-                </div>
-
-                {/* Heart / Favorite Toggle Button on Top Right */}
-                <button
-                  className={`${styles.heartBtn} ${isFav ? styles.heartBtnActive : ""}`}
-                  onClick={(e) => toggleFavorite(room.id, e)}
-                  aria-label="Save to favorites"
-                >
-                  <Heart
-                    size={16}
-                    strokeWidth={2}
-                    className={isFav ? styles.heartIconFilled : ""}
+        {filteredRooms.length === 0 ? (
+          <div
+            style={{
+              padding: "48px 24px",
+              textAlign: "center",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              border: "1px dashed #CBD5E1",
+              margin: "12px 16px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span style={{ fontSize: "2.2rem" }}>🏠</span>
+            <p style={{ fontWeight: 700, fontSize: "14.5px", color: "#1E293B", margin: 0 }}>
+              No rooms found
+            </p>
+            <p style={{ fontSize: "12px", color: "#64748B", margin: 0, maxWidth: "260px" }}>
+              Try selecting another category or adjusting your search terms.
+            </p>
+          </div>
+        ) : (
+          filteredRooms.map((room) => {
+            const isFav = !!favorites[room.id];
+            return (
+              <article key={room.id} className={styles.roomCard}>
+                {/* Photo Box */}
+                <div className={styles.imageBox}>
+                  <Image
+                    src={room.image}
+                    alt={room.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 400px"
+                    className={styles.roomImage}
                   />
-                </button>
-              </div>
 
-              {/* Card Body */}
-              <div className={styles.cardBody}>
-                <div className={styles.cardTopRow}>
-                  <h3 className={styles.cardTitle}>{room.title}</h3>
-                  {room.overallScore && (
-                    <div className={styles.greenRatingPill}>
-                      <Star size={11} className={styles.greenStarIcon} />
-                      <span>{room.overallScore}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.locationRow}>
-                  <MapPin size={13} className={styles.pinIcon} />
-                  <span>{room.location}</span>
-                </div>
-
-                <div className={styles.amenitiesRow}>
-                  {room.tags.map((tag, idx) => (
-                    <span key={idx} className={styles.amenityPill}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className={styles.cardBottomRow}>
-                  <div className={styles.priceCol}>
-                    <span className={styles.startingLabel}>STARTING FROM</span>
-                    <span className={styles.priceValue}>{room.price}</span>
+                  {/* Rating Badge on Top Left */}
+                  <div className={styles.glassRatingBadge}>
+                    {room.rating > 0 ? (
+                      <>
+                        <Star size={12} className={styles.starIcon} />
+                        <span>
+                          {room.rating.toFixed(1)} ({room.reviewCount})
+                        </span>
+                      </>
+                    ) : (
+                      <span>New</span>
+                    )}
                   </div>
 
+                  {/* Heart / Favorite Toggle Button on Top Right */}
                   <button
-                    className={styles.bookBtn}
-                    onClick={() => router.push(`/room-booking/${room.id}`)}
+                    className={`${styles.heartBtn} ${isFav ? styles.heartBtnActive : ""}`}
+                    onClick={(e) => toggleFavorite(room.id, e)}
+                    aria-label="Save to favorites"
                   >
-                    Book Room
+                    <Heart
+                      size={16}
+                      strokeWidth={2}
+                      className={isFav ? styles.heartIconFilled : ""}
+                    />
                   </button>
                 </div>
-              </div>
-            </article>
-          );
-        })}
+
+                {/* Card Body */}
+                <div className={styles.cardBody}>
+                  <div className={styles.cardTopRow}>
+                    <h3 className={styles.cardTitle}>{room.title}</h3>
+                    {room.overallScore && room.overallScore > 0 ? (
+                      <div className={styles.greenRatingPill}>
+                        <Star size={11} className={styles.greenStarIcon} />
+                        <span>{room.overallScore.toFixed(1)}</span>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {room.location && (
+                    <div className={styles.locationRow}>
+                      <MapPin size={13} className={styles.pinIcon} />
+                      <span>{room.location}</span>
+                    </div>
+                  )}
+
+                  {room.tags && room.tags.length > 0 && (
+                    <div className={styles.amenitiesRow}>
+                      {room.tags.map((tag, idx) => (
+                        <span key={idx} className={styles.amenityPill}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className={styles.cardBottomRow}>
+                    <div className={styles.priceCol}>
+                      <span className={styles.startingLabel}>STARTING FROM</span>
+                      <span className={styles.priceValue}>{room.price}</span>
+                    </div>
+
+                    <button
+                      className={styles.bookBtn}
+                      onClick={() => router.push(`/room-booking/${room.id}`)}
+                    >
+                      Book Room
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        )}
       </div>
     </div>
   );

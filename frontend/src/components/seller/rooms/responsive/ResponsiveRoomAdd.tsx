@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, Bell } from "lucide-react";
+import { ChevronLeft, Camera, Bell, X, Plus } from "lucide-react";
 import styles from "./ResponsiveRoomAdd.module.css";
 
 export interface ResponsiveAmenity {
@@ -15,7 +15,9 @@ export interface ResponsiveRoomAddProps {
   initialRoomName?: string;
   initialCapacity?: string | number;
   initialPricePerNight?: string;
+  initialAbout?: string;
   initialAmenities?: ResponsiveAmenity[];
+  initialHouseRules?: string[];
   initialIsAvailable?: boolean;
   initialImageUrl?: string;
   isEditMode?: boolean;
@@ -25,7 +27,9 @@ export interface ResponsiveRoomAddProps {
     roomName: string;
     capacity: string | number;
     pricePerNight: string;
+    about: string;
     amenities: ResponsiveAmenity[];
+    houseRules: string[];
     isAvailable: boolean;
     imageFile?: File | null;
   }) => void;
@@ -35,7 +39,7 @@ const DEFAULT_AMENITIES: ResponsiveAmenity[] = [
   { id: "wifi", name: "WiFi", selected: true },
   { id: "ac", name: "AC", selected: true },
   { id: "tv", name: "TV", selected: true },
-  { id: "minibar", name: "Minibar", selected: false },
+  { id: "desk", name: "Work Desk", selected: false },
   { id: "balcony", name: "Balcony", selected: false },
 ];
 
@@ -43,7 +47,9 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   initialRoomName = "",
   initialCapacity = "",
   initialPricePerNight = "",
+  initialAbout = "",
   initialAmenities = DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
+  initialHouseRules = [],
   initialIsAvailable = true,
   initialImageUrl,
   isEditMode = false,
@@ -57,8 +63,11 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   const [roomName, setRoomName] = useState(initialRoomName);
   const [capacity, setCapacity] = useState(initialCapacity);
   const [pricePerNight, setPricePerNight] = useState(initialPricePerNight);
-  const [amenities, setAmenities] =
-    useState<ResponsiveAmenity[]>(initialAmenities);
+  const [about, setAbout] = useState(initialAbout);
+  const [amenities, setAmenities] = useState<ResponsiveAmenity[]>(initialAmenities);
+  const [houseRules, setHouseRules] = useState<string[]>(initialHouseRules);
+  const [customAmenity, setCustomAmenity] = useState("");
+  const [customRule, setCustomRule] = useState("");
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialImageUrl || null
@@ -68,6 +77,10 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   React.useEffect(() => {
     if (initialRoomName !== undefined) setRoomName(initialRoomName);
   }, [initialRoomName]);
+
+  React.useEffect(() => {
+    if (initialAbout !== undefined) setAbout(initialAbout);
+  }, [initialAbout]);
 
   React.useEffect(() => {
     if (initialCapacity !== undefined) setCapacity(initialCapacity);
@@ -80,6 +93,10 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   React.useEffect(() => {
     if (initialAmenities && initialAmenities.length > 0) setAmenities(initialAmenities);
   }, [initialAmenities]);
+
+  React.useEffect(() => {
+    if (initialHouseRules && initialHouseRules.length > 0) setHouseRules(initialHouseRules);
+  }, [initialHouseRules]);
 
   React.useEffect(() => {
     if (initialIsAvailable !== undefined) setIsAvailable(initialIsAvailable);
@@ -98,7 +115,6 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
       router.push("/seller/rooms");
     }
   };
-
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -127,13 +143,55 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
     );
   };
 
+  const handleDeleteAmenity = (amenityId: string) => {
+    setAmenities((prev) => prev.filter((a) => a.id !== amenityId));
+  };
+
+  const handleAddCustomAmenity = () => {
+    const trimmed = customAmenity.trim();
+    if (!trimmed) return;
+    const exists = amenities.some(
+      (a) => a.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      setAmenities((prev) =>
+        prev.map((a) =>
+          a.name.toLowerCase() === trimmed.toLowerCase() ? { ...a, selected: true } : a
+        )
+      );
+    } else {
+      setAmenities((prev) => [
+        ...prev,
+        { id: `custom-${Date.now()}`, name: trimmed, selected: true },
+      ]);
+    }
+    setCustomAmenity("");
+  };
+
+  const handleAddHouseRule = () => {
+    const trimmed = customRule.trim();
+    if (!trimmed) return;
+    if (houseRules.includes(trimmed)) {
+      setCustomRule("");
+      return;
+    }
+    setHouseRules((prev) => [...prev, trimmed]);
+    setCustomRule("");
+  };
+
+  const handleDeleteHouseRule = (idx: number) => {
+    setHouseRules((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const data = {
       roomName,
       capacity,
       pricePerNight,
+      about,
       amenities,
+      houseRules,
       isAvailable,
       imageFile,
     };
@@ -268,23 +326,190 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
             </div>
           </div>
 
-          {/* 4. Amenities Pills */}
+          {/* About / Description */}
           <div className={styles.formGroup}>
-            <label className={styles.fieldLabel}>Amenities</label>
-            <div className={styles.amenitiesList}>
+            <label className={styles.fieldLabel} htmlFor="aboutInput">
+              About This Property
+            </label>
+            <textarea
+              id="aboutInput"
+              className={styles.textInput}
+              value={about}
+              onChange={(e) => setAbout(e.target.value)}
+              placeholder="Describe the room, amenities, and location highlights..."
+              rows={3}
+              style={{ resize: "vertical", fontFamily: "inherit" }}
+            />
+          </div>
+
+          {/* 4. Amenities Pills & Custom Add */}
+          <div className={styles.formGroup}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <label className={styles.fieldLabel} style={{ margin: 0 }}>Amenities</label>
+              <span style={{ fontSize: "11px", color: "#94A3B8" }}>Toggle or delete</span>
+            </div>
+            <div className={styles.amenitiesList} style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {amenities.map((amenity) => (
-                <button
+                <div
                   key={amenity.id}
-                  type="button"
-                  className={`${styles.amenityPill} ${
-                    amenity.selected ? styles.amenityPillSelected : ""
-                  }`}
-                  onClick={() => handleToggleAmenity(amenity.id)}
-                  aria-pressed={amenity.selected}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    borderRadius: "9999px",
+                    backgroundColor: amenity.selected ? "#FFF1E8" : "#F1F5F9",
+                    border: amenity.selected ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
+                    overflow: "hidden",
+                  }}
                 >
-                  {amenity.name}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleAmenity(amenity.id)}
+                    style={{
+                      padding: "6px 10px 6px 12px",
+                      background: "none",
+                      border: "none",
+                      color: amenity.selected ? "#FF5500" : "#475569",
+                      fontWeight: amenity.selected ? 600 : 500,
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {amenity.name}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAmenity(amenity.id)}
+                    style={{
+                      padding: "6px 8px 6px 0px",
+                      background: "none",
+                      border: "none",
+                      color: amenity.selected ? "#FF5500" : "#94A3B8",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                    title={`Delete ${amenity.name}`}
+                  >
+                    <X size={12} strokeWidth={2.5} />
+                  </button>
+                </div>
               ))}
+            </div>
+
+            {/* Custom Amenity Input */}
+            <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
+              <input
+                type="text"
+                value={customAmenity}
+                onChange={(e) => setCustomAmenity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomAmenity();
+                  }
+                }}
+                placeholder="Add custom amenity"
+                className={styles.textInput}
+                style={{ fontSize: "12px", padding: "8px 12px" }}
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomAmenity}
+                style={{
+                  backgroundColor: "#FF5500",
+                  color: "#FFF",
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "0 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                + Add
+              </button>
+            </div>
+          </div>
+
+          {/* House Rules */}
+          <div className={styles.formGroup}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <label className={styles.fieldLabel} style={{ margin: 0 }}>House Rules</label>
+              <span style={{ fontSize: "11px", color: "#94A3B8" }}>Rules for guests</span>
+            </div>
+
+            {houseRules.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "8px" }}>
+                {houseRules.map((rule, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      backgroundColor: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "#334155",
+                    }}
+                  >
+                    <span>• {rule}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteHouseRule(idx)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#EF4444",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                      title="Remove rule"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "6px" }}>
+              <input
+                type="text"
+                value={customRule}
+                onChange={(e) => setCustomRule(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddHouseRule();
+                  }
+                }}
+                placeholder="e.g. No smoking inside, Quiet hours 10 PM"
+                className={styles.textInput}
+                style={{ fontSize: "12px", padding: "8px 12px" }}
+              />
+              <button
+                type="button"
+                onClick={handleAddHouseRule}
+                style={{
+                  backgroundColor: "#0F172A",
+                  color: "#FFF",
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "0 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                + Add Rule
+              </button>
             </div>
           </div>
 

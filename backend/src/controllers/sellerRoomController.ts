@@ -36,6 +36,101 @@ const checkPropertyCategoryActive = async (userId: string) => {
     return sellerProfile;
 };
 
+export function parseRoomDescription(descRaw?: string | null): {
+    about: string;
+    amenities: string[];
+    houseRules: string[];
+} {
+    if (!descRaw || !descRaw.trim()) {
+        return { about: "", amenities: [], houseRules: [] };
+    }
+
+    try {
+        const parsed = JSON.parse(descRaw);
+        if (typeof parsed === "object" && parsed !== null) {
+            let amenities: string[] = [];
+            if (Array.isArray(parsed.amenities)) {
+                amenities = parsed.amenities.map(String).map(s => s.trim()).filter(Boolean);
+            } else if (typeof parsed.amenities === "string" && parsed.amenities.trim()) {
+                amenities = parsed.amenities.split(",").map((s: string) => s.trim()).filter(Boolean);
+            }
+
+            let houseRules: string[] = [];
+            if (Array.isArray(parsed.houseRules)) {
+                houseRules = parsed.houseRules.map(String).map(s => s.trim()).filter(Boolean);
+            } else if (typeof parsed.houseRules === "string" && parsed.houseRules.trim()) {
+                if (parsed.houseRules.includes("\n")) {
+                    houseRules = parsed.houseRules.split("\n").map((s: string) => s.trim()).filter(Boolean);
+                } else {
+                    houseRules = parsed.houseRules.split(",").map((s: string) => s.trim()).filter(Boolean);
+                }
+            }
+
+            return {
+                about: typeof parsed.about === "string" ? parsed.about : (typeof parsed.description === "string" ? parsed.description : ""),
+                amenities,
+                houseRules,
+            };
+        }
+    } catch {
+        // Not JSON
+    }
+
+    let about = descRaw;
+    let amenities: string[] = [];
+    let houseRules: string[] = [];
+
+    const amenitiesMatch = descRaw.match(/Amenities:\s*([^\n]+)/i);
+    if (amenitiesMatch) {
+        amenities = amenitiesMatch[1].split(",").map(s => s.trim()).filter(Boolean);
+        about = about.replace(amenitiesMatch[0], "").trim();
+    }
+
+    const houseRulesMatch = descRaw.match(/House Rules:\s*([^\n]+)/i);
+    if (houseRulesMatch) {
+        houseRules = houseRulesMatch[1].split(",").map(s => s.trim()).filter(Boolean);
+        about = about.replace(houseRulesMatch[0], "").trim();
+    }
+
+    return { about, amenities, houseRules };
+}
+
+export function formatRoomDescription(about?: string | null, amenities?: any, houseRules?: any): string {
+    let parsedAmenities: string[] = [];
+    if (Array.isArray(amenities)) {
+        parsedAmenities = amenities.map(String).map(s => s.trim()).filter(Boolean);
+    } else if (typeof amenities === "string" && amenities.trim()) {
+        try {
+            const arr = JSON.parse(amenities);
+            if (Array.isArray(arr)) parsedAmenities = arr.map(String).map(s => s.trim()).filter(Boolean);
+            else parsedAmenities = amenities.split(",").map(s => s.trim()).filter(Boolean);
+        } catch {
+            parsedAmenities = amenities.split(",").map(s => s.trim()).filter(Boolean);
+        }
+    }
+
+    let parsedHouseRules: string[] = [];
+    if (Array.isArray(houseRules)) {
+        parsedHouseRules = houseRules.map(String).map(s => s.trim()).filter(Boolean);
+    } else if (typeof houseRules === "string" && houseRules.trim()) {
+        try {
+            const arr = JSON.parse(houseRules);
+            if (Array.isArray(arr)) parsedHouseRules = arr.map(String).map(s => s.trim()).filter(Boolean);
+            else if (houseRules.includes("\n")) parsedHouseRules = houseRules.split("\n").map(s => s.trim()).filter(Boolean);
+            else parsedHouseRules = houseRules.split(",").map(s => s.trim()).filter(Boolean);
+        } catch {
+            if (houseRules.includes("\n")) parsedHouseRules = houseRules.split("\n").map(s => s.trim()).filter(Boolean);
+            else parsedHouseRules = houseRules.split(",").map(s => s.trim()).filter(Boolean);
+        }
+    }
+
+    return JSON.stringify({
+        about: (about || "").trim(),
+        amenities: parsedAmenities,
+        houseRules: parsedHouseRules,
+    });
+}
+
 export const createSellerRoom = async (req: Request) => {
     const session = await getAuthSession();
     if (!session?.user || session.user.role !== "SELLER") {
@@ -48,7 +143,12 @@ export const createSellerRoom = async (req: Request) => {
     const title = formData.get("title") as string;
     const price = parseFloat(formData.get("price") as string);
     const description = formData.get("description") as string;
+    const about = (formData.get("about") as string) || description;
+    const amenities = formData.get("amenities") as string;
+    const houseRules = formData.get("houseRules") as string;
     const capacity = parseInt(formData.get("capacity") as string) || 1;
+    const isAvailableField = formData.get("isAvailable");
+    const isAvailable = isAvailableField !== null ? isAvailableField === "true" : true;
     const imageFile = formData.get("image") as File | null;
     const imageUrlField = formData.get("imageUrl") as string | null;
 
@@ -64,19 +164,22 @@ export const createSellerRoom = async (req: Request) => {
     }
 
     const imagesArray = [imageUrl];
+    const encodedDescription = formatRoomDescription(about, amenities, houseRules);
 
     const room = await db.room.create({
         data: {
             sellerId: sellerProfile.id,
             title,
             price,
-            description: description || "",
+            description: encodedDescription,
             capacity,
             images: JSON.stringify(imagesArray),
+            isAvailable,
         }
     });
 
-    return { room };
+    const parsed = parseRoomDescription(room.description);
+    return { room: { ...room, ...parsed } };
 };
 
 export const deleteSellerRoom = async (req: Request) => {
@@ -132,7 +235,15 @@ export const getSellerRooms = async () => {
         orderBy: { createdAt: 'desc' }
     });
 
-    return { rooms, bookings };
+    const formattedRooms = rooms.map(r => {
+        const parsed = parseRoomDescription(r.description);
+        return {
+            ...r,
+            ...parsed,
+        };
+    });
+
+    return { rooms: formattedRooms, bookings };
 };
 
 export const getSellerBookings = async () => {
@@ -178,7 +289,8 @@ export const getSellerRoomById = async (roomId: string) => {
         throw new ApiError("Room not found or unauthorized", 404);
     }
 
-    return { room };
+    const parsed = parseRoomDescription(room.description);
+    return { room: { ...room, ...parsed } };
 };
 
 export const updateSellerRoom = async (req: Request, roomIdOverride?: string) => {
@@ -194,6 +306,9 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
     let title: string | undefined;
     let price: number | undefined;
     let description: string | undefined;
+    let about: string | undefined;
+    let amenities: any = undefined;
+    let houseRules: any = undefined;
     let capacity: number | undefined;
     let isAvailable: boolean | undefined;
     let imageFile: File | null = null;
@@ -206,6 +321,13 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         const priceStr = formData.get("price") as string;
         if (priceStr) price = parseFloat(priceStr);
         description = formData.get("description") as string;
+        about = (formData.get("about") as string) || description;
+        if (formData.has("amenities")) {
+            amenities = formData.get("amenities") as string;
+        }
+        if (formData.has("houseRules")) {
+            houseRules = formData.get("houseRules") as string;
+        }
         const capacityStr = formData.get("capacity") as string;
         if (capacityStr) capacity = parseInt(capacityStr);
         if (formData.has("isAvailable")) {
@@ -219,6 +341,9 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         title = body.title;
         if (body.price !== undefined) price = parseFloat(body.price);
         description = body.description;
+        about = body.about || description;
+        if (body.amenities !== undefined) amenities = body.amenities;
+        if (body.houseRules !== undefined) houseRules = body.houseRules;
         if (body.capacity !== undefined) capacity = parseInt(body.capacity);
         if (body.isAvailable !== undefined) isAvailable = body.isAvailable;
         if (body.imageUrl !== undefined) imageUrlField = body.imageUrl;
@@ -241,12 +366,21 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         throw new ApiError("Room not found or unauthorized", 404);
     }
 
+    const existingParsed = parseRoomDescription(existingRoom.description);
+
     const dataToUpdate: any = {};
     if (title !== undefined) dataToUpdate.title = title;
     if (price !== undefined && !isNaN(price)) dataToUpdate.price = price;
-    if (description !== undefined) dataToUpdate.description = description;
     if (capacity !== undefined && !isNaN(capacity)) dataToUpdate.capacity = capacity;
     if (isAvailable !== undefined) dataToUpdate.isAvailable = isAvailable;
+
+    // Build encoded description if any of about, amenities, houseRules, or description was provided
+    if (about !== undefined || amenities !== undefined || houseRules !== undefined || description !== undefined) {
+        const targetAbout = about !== undefined ? about : existingParsed.about;
+        const targetAmenities = amenities !== undefined ? amenities : existingParsed.amenities;
+        const targetHouseRules = houseRules !== undefined ? houseRules : existingParsed.houseRules;
+        dataToUpdate.description = formatRoomDescription(targetAbout, targetAmenities, targetHouseRules);
+    }
 
     if (imageFile && imageFile.size > 0) {
         const bytes = await imageFile.arrayBuffer();
@@ -262,7 +396,8 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         data: dataToUpdate
     });
 
-    return { room: updatedRoom };
+    const parsed = parseRoomDescription(updatedRoom.description);
+    return { room: { ...updatedRoom, ...parsed } };
 };
 
 export const updateSellerBookingStatus = async (req: Request) => {

@@ -22,6 +22,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Fan,
+  Laptop,
+  Sparkles,
 } from "lucide-react";
 import { Navbar, NavbarProps } from "@/components/navbar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
@@ -81,61 +84,29 @@ export interface RoomDetailDesktopProps {
 }
 
 const DEFAULT_ROOM_DATA: RoomDetailData = {
-  id: "sunrise-pg-kothamangalam",
-  name: "Sunrise Co-Living PG for Boys",
-  roomTag: "Single Room",
-  rating: 4.2,
-  reviewsCount: "(128 reviews)",
-  location: "Main SBT College Back Gate, Kothamangalam",
-  city: "Kothamangalam",
-  pricePerMonth: "₹5,500",
-  availableFrom: "Oct 15, 2026",
-  roomSize: "120 sq ft",
-  occupancy: "Single",
-  floor: "Ground Floor",
-  furnished: "Fully Furnished",
-  depositAmount: "₹10,000",
-  description:
-    "Sunrise Co-Living PG offers comfortable and affordable living spaces for students and working professionals. Located just steps from SBT College, this PG provides a safe, clean, and well-maintained environment with all essential amenities.",
-  amenities: [
-    { name: "WiFi", icon: "wifi" },
-    { name: "AC", icon: "ac" },
-    { name: "Parking", icon: "parking" },
-    { name: "Laundry", icon: "laundry" },
-    { name: "Kitchen", icon: "kitchen" },
-    { name: "Hot Water", icon: "hotwater" },
-    { name: "Power Backup", icon: "power" },
-    { name: "CCTV Security", icon: "security" },
-  ],
-  houseRules: [
-    "No smoking inside rooms",
-    "Visitors allowed till 9 PM",
-    "Quiet hours: 10 PM – 7 AM",
-    "Keep common areas clean",
-  ],
-  reviews: [
-    {
-      id: "1",
-      name: "Priya S.",
-      avatarLetter: "P",
-      date: "2 months ago",
-      rating: 4.5,
-      comment: "Great location and clean rooms. The staff is very helpful. WiFi could be better though.",
-    },
-    {
-      id: "2",
-      name: "Rahul K.",
-      avatarLetter: "R",
-      date: "1 month ago",
-      rating: 4.0,
-      comment: "Good value for money. Food quality is decent. Maintenance team responds quickly.",
-    },
-  ],
+  id: "",
+  name: "",
+  roomTag: "Room",
+  rating: 0,
+  reviewsCount: "(0 reviews)",
+  location: "",
+  city: "Pune",
+  pricePerMonth: "₹0",
+  availableFrom: "",
+  roomSize: "",
+  occupancy: "",
+  floor: "",
+  furnished: "",
+  depositAmount: "",
+  description: "",
+  amenities: [],
+  houseRules: [],
+  reviews: [],
   priceBreakdown: {
-    roomCharges: "₹2,750",
-    serviceFee: "₹250",
-    cleaningFee: "₹150",
-    total: "₹2,835",
+    roomCharges: "₹0",
+    serviceFee: "₹0",
+    cleaningFee: "₹0",
+    total: "₹0",
   },
 };
 
@@ -147,8 +118,8 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 }) => {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [checkInDate, setCheckInDate] = useState("Oct 15, 2026");
-  const [checkOutDate, setCheckOutDate] = useState("Oct 30, 2026");
+  const [checkInDate, setCheckInDate] = useState("Today");
+  const [checkOutDate, setCheckOutDate] = useState("Next Month");
   const [guestCount, setGuestCount] = useState("1 Guest");
   const [fetchedRoomData, setFetchedRoomData] = useState<RoomDetailData | null>(null);
   const [loading, setLoading] = useState(Boolean(roomId));
@@ -165,16 +136,35 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
           if (r) {
             const cap = Number(r.capacity) || 1;
             const price = Number(r.price) || 2800;
-            const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+            const locality = r.sellerLocality || r.seller?.addressLocality || "";
             const city = r.sellerCity || r.seller?.user?.city || "Pune";
+            const locationStr = locality ? `${locality}, ${city}` : city;
+
+            let parsedAmenities: { name: string; icon: string }[] = [];
+            if (Array.isArray(r.amenities)) {
+              parsedAmenities = r.amenities.map((item: any) => {
+                if (typeof item === "string") {
+                  return { name: item, icon: item.toLowerCase().replace(/\s+/g, "") };
+                }
+                return { name: item.name || String(item), icon: (item.icon || item.name || "").toLowerCase() };
+              });
+            }
+
+            let parsedHouseRules: string[] = [];
+            if (Array.isArray(r.houseRules)) {
+              parsedHouseRules = r.houseRules.map(String).filter(Boolean);
+            }
+
+            const revCount = Number(r.reviewCount) || (Array.isArray(r.reviews) ? r.reviews.length : 0);
+            const numRating = Number(r.rating) || 0;
 
             setFetchedRoomData({
               id: r.id,
-              name: r.title || "Deluxe AC Room",
+              name: r.title || "Room Listing",
               roomTag: cap === 1 ? "Single Room" : cap === 2 ? "Double Sharing" : `${cap} Guests Sharing`,
-              rating: Number(r.rating || 4.8),
-              reviewsCount: `(${r.reviewCount || r.reviews?.length || 12} reviews)`,
-              location: `${locality}, ${city}`,
+              rating: numRating,
+              reviewsCount: revCount > 0 ? `(${revCount} ${revCount === 1 ? "review" : "reviews"})` : "(0 reviews)",
+              location: locationStr,
               address: r.sellerLandmark ? `${locality} (Near ${r.sellerLandmark})` : locality,
               city: city,
               pricePerMonth: `₹${price.toLocaleString("en-IN")}`,
@@ -184,27 +174,14 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
               floor: "1st Floor",
               furnished: "Fully Furnished",
               depositAmount: `₹${(price * 2).toLocaleString("en-IN")}`,
-              description:
-                r.description ||
-                "Comfortable, modern and secure living space with quality fittings, high-speed WiFi, dedicated desk, and power backup.",
-              amenities: [
-                { name: "WiFi", icon: "wifi" },
-                { name: "AC", icon: "ac" },
-                { name: "Daily Cleaning", icon: "kitchen" },
-                { name: "Hot Water", icon: "hotwater" },
-                { name: "Power Backup", icon: "power" },
-                { name: "CCTV Security", icon: "security" },
-              ],
-              houseRules: [
-                "No smoking inside room premises",
-                "Visitors allowed during daytime hours",
-                "Maintain cleanliness in common spaces",
-              ],
+              description: r.about || r.description || "",
+              amenities: parsedAmenities,
+              houseRules: parsedHouseRules,
               sellerId: r.sellerId || r.seller?.id,
-              sellerName: r.seller?.restaurantName || r.sellerName || "Host",
+              sellerName: r.seller?.businessName || r.seller?.restaurantName || r.sellerName || "Host",
               capacity: cap,
               images: r.images,
-              reviews: r.reviews?.length > 0 ? r.reviews : DEFAULT_ROOM_DATA.reviews,
+              reviews: Array.isArray(r.reviews) ? r.reviews : [],
               priceBreakdown: {
                 roomCharges: `₹${price.toLocaleString("en-IN")}`,
                 serviceFee: "₹150",
@@ -257,25 +234,38 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
   }, [isGalleryOpen, allGalleryImages.length]);
 
   const renderAmenityIcon = (iconName: string) => {
-    switch (iconName) {
-      case "wifi":
-        return <Wifi size={20} className={styles.amenityIcon} />;
-      case "ac":
-        return <Tv size={20} className={styles.amenityIcon} />;
-      case "parking":
-        return <Car size={20} className={styles.amenityIcon} />;
-      case "laundry":
-        return <Clock size={20} className={styles.amenityIcon} />;
-      case "kitchen":
-        return <ChefHat size={20} className={styles.amenityIcon} />;
-      case "hotwater":
-        return <Droplets size={20} className={styles.amenityIcon} />;
-      case "power":
-        return <Zap size={20} className={styles.amenityIcon} />;
-      case "security":
-      default:
-        return <ShieldCheck size={20} className={styles.amenityIcon} />;
+    const clean = (iconName || "").toLowerCase();
+    if (clean.includes("wifi") || clean.includes("internet")) {
+      return <Wifi size={20} className={styles.amenityIcon} />;
     }
+    if (clean.includes("tv")) {
+      return <Tv size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("ac") || clean.includes("air") || clean.includes("fan")) {
+      return <Fan size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("parking") || clean.includes("car")) {
+      return <Car size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("laundry") || clean.includes("wash") || clean.includes("clean")) {
+      return <Clock size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("kitchen") || clean.includes("food") || clean.includes("meal")) {
+      return <ChefHat size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("water") || clean.includes("geyser") || clean.includes("hot")) {
+      return <Droplets size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("power") || clean.includes("backup") || clean.includes("electricity") || clean.includes("zap")) {
+      return <Zap size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("desk") || clean.includes("work") || clean.includes("laptop")) {
+      return <Laptop size={20} className={styles.amenityIcon} />;
+    }
+    if (clean.includes("security") || clean.includes("cctv")) {
+      return <ShieldCheck size={20} className={styles.amenityIcon} />;
+    }
+    return <Sparkles size={20} className={styles.amenityIcon} />;
   };
 
   const handleBooking = () => {
@@ -316,7 +306,7 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
             {roomData.city || "Pune"}
           </Link>
           <span className={styles.breadcrumbSeparator}>›</span>
-          <span className={styles.breadcrumbCurrent}>{roomData.name}</span>
+          <span className={styles.breadcrumbCurrent}>{roomData.name || "Room Details"}</span>
         </nav>
 
         {/* Photo Gallery Grid Showcase */}
@@ -362,129 +352,117 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
         {/* Two Column Layout (Details Left + Sticky Booking Card Right) */}
         <div className={styles.twoColumnLayout}>
-          {/* Left Column: Room Info, About, Room Details & Amenities */}
+          {/* Left Column: Room Info, About, Amenities & House Rules */}
           <div className={styles.leftColumn}>
             {/* Header Section */}
             <div className={styles.roomHeaderSection}>
               <div className={styles.headerTopRow}>
                 <span className={styles.roomTag}>{roomData.roomTag || "Single Room"}</span>
                 <div className={styles.ratingBadge}>
-                  <Star size={16} className={styles.ratingStar} />
-                  <span>{roomData.rating}</span>
-                  <span className={styles.reviewsCount}>{roomData.reviewsCount}</span>
+                  {roomData.rating > 0 ? (
+                    <>
+                      <Star size={16} className={styles.ratingStar} />
+                      <span>{roomData.rating.toFixed(1)}</span>
+                      <span className={styles.reviewsCount}>{roomData.reviewsCount}</span>
+                    </>
+                  ) : (
+                    <span className={styles.reviewsCount}>New Listing • No reviews yet</span>
+                  )}
                 </div>
               </div>
 
               <h1 className={styles.roomMainTitle}>{roomData.name}</h1>
 
-              <div className={styles.roomLocationRow}>
-                <MapPin size={16} color="#EA580C" />
-                <span>{roomData.location}</span>
-              </div>
+              {roomData.location && (
+                <div className={styles.roomLocationRow}>
+                  <MapPin size={16} color="#EA580C" />
+                  <span>{roomData.location}</span>
+                </div>
+              )}
             </div>
 
-            <div className={styles.sectionDivider} />
+            {roomData.description ? (
+              <>
+                <div className={styles.sectionDivider} />
+                {/* About This Property */}
+                <section className={styles.sectionBlock}>
+                  <h2 className={styles.sectionHeading}>About This Property</h2>
+                  <p className={styles.aboutDescription}>{roomData.description}</p>
+                </section>
+              </>
+            ) : null}
 
-            {/* About This Property */}
-            <section className={styles.sectionBlock}>
-              <h2 className={styles.sectionHeading}>About This Property</h2>
-              <p className={styles.aboutDescription}>{roomData.description}</p>
-            </section>
-
-            <div className={styles.sectionDivider} />
-
-            {/* Room Details Grid */}
-            <section className={styles.sectionBlock}>
-              <h2 className={styles.sectionHeading}>Room Details</h2>
-              <div className={styles.roomDetailsGrid}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailSubLabel}>AVAILABLE FROM</span>
-                  <span className={styles.detailValue}>{roomData.availableFrom}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailSubLabel}>ROOM SIZE</span>
-                  <span className={styles.detailValue}>{roomData.roomSize}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailSubLabel}>OCCUPANCY</span>
-                  <span className={styles.detailValue}>{roomData.occupancy}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailSubLabel}>FLOOR</span>
-                  <span className={styles.detailValue}>{roomData.floor}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailSubLabel}>FURNISHED</span>
-                  <span className={styles.detailValue}>{roomData.furnished}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailSubLabel}>DEPOSIT</span>
-                  <span className={styles.detailValue}>{roomData.depositAmount}</span>
-                </div>
-              </div>
-            </section>
-
-            <div className={styles.sectionDivider} />
-
-            {/* Amenities Grid */}
-            <section className={styles.sectionBlock}>
-              <h2 className={styles.sectionHeading}>Amenities</h2>
-              <div className={styles.amenitiesGrid}>
-                {roomData.amenities.map((item, idx) => (
-                  <div key={idx} className={styles.amenityCard}>
-                    {renderAmenityIcon(item.icon)}
-                    <span>{item.name}</span>
+            {/* Dynamic Amenities (Only if seller has configured amenities) */}
+            {roomData.amenities && roomData.amenities.length > 0 && (
+              <>
+                <div className={styles.sectionDivider} />
+                <section className={styles.sectionBlock}>
+                  <h2 className={styles.sectionHeading}>Amenities</h2>
+                  <div className={styles.amenitiesGrid}>
+                    {roomData.amenities.map((item, idx) => (
+                      <div key={idx} className={styles.amenityCard}>
+                        {renderAmenityIcon(item.icon)}
+                        <span>{item.name}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
+                </section>
+              </>
+            )}
 
-            <div className={styles.sectionDivider} />
-
-            {/* House Rules */}
-            <section className={styles.sectionBlock}>
-              <h2 className={styles.sectionHeading}>House Rules</h2>
-              <div className={styles.houseRulesGrid}>
-                {roomData.houseRules?.map((rule, idx) => (
-                  <div key={idx} className={styles.ruleItem}>
-                    <span className={styles.ruleBullet} />
-                    <span>{rule}</span>
+            {/* Dynamic House Rules (Only if seller has configured house rules) */}
+            {roomData.houseRules && roomData.houseRules.length > 0 && (
+              <>
+                <div className={styles.sectionDivider} />
+                <section className={styles.sectionBlock}>
+                  <h2 className={styles.sectionHeading}>House Rules</h2>
+                  <div className={styles.houseRulesGrid}>
+                    {roomData.houseRules.map((rule, idx) => (
+                      <div key={idx} className={styles.ruleItem}>
+                        <span className={styles.ruleBullet} />
+                        <span>{rule}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
-
-            <div className={styles.sectionDivider} />
+                </section>
+              </>
+            )}
 
             {/* Reviews Section */}
+            <div className={styles.sectionDivider} />
             <section className={styles.sectionBlock}>
               <div className={styles.reviewsHeaderRow}>
-                <h2 className={styles.sectionHeading}>Reviews (128)</h2>
-                <Link href="#all-reviews" className={styles.seeAllReviewsLink}>
-                  See All 128 Reviews
-                </Link>
+                <h2 className={styles.sectionHeading}>
+                  Reviews ({roomData.reviews?.length || 0})
+                </h2>
               </div>
 
-              <div className={styles.reviewsGrid}>
-                {roomData.reviews?.map((rev) => (
-                  <div key={rev.id} className={styles.reviewCard}>
-                    <div className={styles.reviewCardHeader}>
-                      <div className={styles.reviewerInfoGroup}>
-                        <div className={styles.reviewerAvatar}>{rev.avatarLetter}</div>
-                        <div className={styles.reviewerDetails}>
-                          <span className={styles.reviewerName}>{rev.name}</span>
-                          <span className={styles.reviewDate}>{rev.date}</span>
+              {roomData.reviews && roomData.reviews.length > 0 ? (
+                <div className={styles.reviewsGrid}>
+                  {roomData.reviews.map((rev) => (
+                    <div key={rev.id} className={styles.reviewCard}>
+                      <div className={styles.reviewCardHeader}>
+                        <div className={styles.reviewerInfoGroup}>
+                          <div className={styles.reviewerAvatar}>{rev.avatarLetter}</div>
+                          <div className={styles.reviewerDetails}>
+                            <span className={styles.reviewerName}>{rev.name}</span>
+                            <span className={styles.reviewDate}>{rev.date}</span>
+                          </div>
+                        </div>
+                        <div className={styles.reviewRatingBadge}>
+                          <Star size={14} className={styles.reviewStarIcon} />
+                          <span>{rev.rating.toFixed(1)}</span>
                         </div>
                       </div>
-                      <div className={styles.reviewRatingBadge}>
-                        <Star size={14} className={styles.reviewStarIcon} />
-                        <span>{rev.rating.toFixed(1)}</span>
-                      </div>
+                      <p className={styles.reviewComment}>&ldquo;{rev.comment}&rdquo;</p>
                     </div>
-                    <p className={styles.reviewComment}>&ldquo;{rev.comment}&rdquo;</p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: "#64748B", fontSize: "14px", margin: "16px 0 0 0" }}>
+                  No reviews yet for this room property.
+                </p>
+              )}
             </section>
           </div>
 
@@ -498,9 +476,15 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
                   <span className={styles.pricePeriod}>/month</span>
                 </div>
                 <div className={styles.ratingBadge}>
-                  <Star size={15} className={styles.ratingStar} />
-                  <span>{roomData.rating}</span>
-                  <span className={styles.reviewsCount}>{roomData.reviewsCount}</span>
+                  {roomData.rating > 0 ? (
+                    <>
+                      <Star size={15} className={styles.ratingStar} />
+                      <span>{roomData.rating.toFixed(1)}</span>
+                      <span className={styles.reviewsCount}>{roomData.reviewsCount}</span>
+                    </>
+                  ) : (
+                    <span className={styles.reviewsCount}>New Listing</span>
+                  )}
                 </div>
               </div>
 

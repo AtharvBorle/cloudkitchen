@@ -9,11 +9,13 @@ import {
   Wifi,
   Tv,
   Fan,
-  XCircle,
   Laptop,
   Bell,
-  Coffee,
   Trash2,
+  Sparkles,
+  X,
+  FileText,
+  ShieldAlert,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 
@@ -28,8 +30,10 @@ export interface RoomConfigData {
   roomName: string;
   capacity: string;
   pricePerNight: string;
+  about: string;
   mediaPhotos: string[];
   amenities: AmenityItem[];
+  houseRules: string[];
   isInstantlyBookable: boolean;
 }
 
@@ -43,10 +47,8 @@ const DEFAULT_AMENITIES: AmenityItem[] = [
   { id: "wifi", name: "High-Speed WiFi", icon: Wifi, selected: true },
   { id: "tv", name: "Smart TV", icon: Tv, selected: true },
   { id: "ac", name: "Air Conditioning", icon: Fan, selected: true },
-  { id: "minibar", name: "Mini Bar", icon: XCircle, selected: false },
   { id: "desk", name: "Work Desk", icon: Laptop, selected: true },
   { id: "roomservice", name: "Room Service", icon: Bell, selected: false },
-  { id: "coffeemaker", name: "Coffee Maker", icon: Coffee, selected: false },
 ];
 
 const DEFAULT_PHOTOS = [
@@ -58,8 +60,10 @@ const DEFAULT_ROOM_DATA: RoomConfigData = {
   roomName: "",
   capacity: "",
   pricePerNight: "",
+  about: "",
   mediaPhotos: [],
   amenities: DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
+  houseRules: [],
   isInstantlyBookable: true,
 };
 
@@ -82,6 +86,8 @@ export default function RoomConfigCanvas({
 
   const [isCapacityDropdownOpen, setIsCapacityDropdownOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [customAmenityName, setCustomAmenityName] = useState("");
+  const [customRuleText, setCustomRuleText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const capacityOptions = ["1 Guest", "2 Guests", "3 Guests", "4 Guests", "5+ Guests"];
@@ -104,15 +110,70 @@ export default function RoomConfigCanvas({
               if (room.images) photos = [room.images];
             }
 
+            // Extract amenities
+            let loadedAmenitiesList: string[] = [];
+            if (Array.isArray(room.amenities)) {
+              loadedAmenitiesList = room.amenities.map(String);
+            } else if (typeof room.amenities === "string" && room.amenities.trim()) {
+              try {
+                const parsed = JSON.parse(room.amenities);
+                if (Array.isArray(parsed)) loadedAmenitiesList = parsed.map(String);
+                else loadedAmenitiesList = room.amenities.split(",").map((s: string) => s.trim());
+              } catch {
+                loadedAmenitiesList = room.amenities.split(",").map((s: string) => s.trim());
+              }
+            } else if (room.description) {
+              const match = room.description.match(/Amenities:\s*([^\n]+)/i);
+              if (match) {
+                loadedAmenitiesList = match[1].split(",").map((s: string) => s.trim());
+              }
+            }
+
+            // Map into AmenityItem[]
+            const mappedAmenities: AmenityItem[] = DEFAULT_AMENITIES.map((a) => {
+              const isSelected = loadedAmenitiesList.some(
+                (la) => la.toLowerCase() === a.name.toLowerCase() || la.toLowerCase() === a.id.toLowerCase()
+              );
+              return { ...a, selected: isSelected };
+            });
+
+            // Add custom loaded amenities not present in DEFAULT_AMENITIES
+            loadedAmenitiesList.forEach((la, idx) => {
+              const exists = mappedAmenities.some(
+                (ma) => ma.name.toLowerCase() === la.toLowerCase() || ma.id.toLowerCase() === la.toLowerCase()
+              );
+              if (!exists && la.trim()) {
+                mappedAmenities.push({
+                  id: `custom-${idx}-${Date.now()}`,
+                  name: la.trim(),
+                  icon: Sparkles,
+                  selected: true,
+                });
+              }
+            });
+
+            // Extract house rules
+            let loadedHouseRules: string[] = [];
+            if (Array.isArray(room.houseRules)) {
+              loadedHouseRules = room.houseRules.map(String).filter(Boolean);
+            } else if (typeof room.houseRules === "string" && room.houseRules.trim()) {
+              try {
+                const parsed = JSON.parse(room.houseRules);
+                if (Array.isArray(parsed)) loadedHouseRules = parsed.map(String).filter(Boolean);
+                else loadedHouseRules = room.houseRules.split("\n").map((s: string) => s.trim()).filter(Boolean);
+              } catch {
+                loadedHouseRules = room.houseRules.split("\n").map((s: string) => s.trim()).filter(Boolean);
+              }
+            }
+
             setFormData({
               roomName: room.title || "",
               capacity: `${room.capacity || 2} Guest${(room.capacity || 2) > 1 ? "s" : ""}`,
               pricePerNight: String(room.price || ""),
+              about: room.about || (room.description && !room.description.startsWith("{") ? room.description.replace(/Amenities:[^\n]+/i, "").replace(/House Rules:[^\n]+/i, "").trim() : ""),
               mediaPhotos: photos,
-              amenities: DEFAULT_AMENITIES.map((a) => ({
-                ...a,
-                selected: room.description ? room.description.toLowerCase().includes(a.name.toLowerCase()) : false,
-              })),
+              amenities: mappedAmenities,
+              houseRules: loadedHouseRules,
               isInstantlyBookable: room.isAvailable ?? true,
             });
           }
@@ -134,6 +195,69 @@ export default function RoomConfigCanvas({
       amenities: prev.amenities.map((a) =>
         a.id === id ? { ...a, selected: !a.selected } : a
       ),
+    }));
+  };
+
+  const handleDeleteAmenity = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      amenities: prev.amenities.filter((a) => a.id !== id),
+    }));
+  };
+
+  const handleAddCustomAmenity = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = customAmenityName.trim();
+    if (!trimmed) return;
+
+    // Check if already exists
+    const exists = formData.amenities.some(
+      (a) => a.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      // Toggle select it
+      setFormData((prev) => ({
+        ...prev,
+        amenities: prev.amenities.map((a) =>
+          a.name.toLowerCase() === trimmed.toLowerCase() ? { ...a, selected: true } : a
+        ),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        amenities: [
+          ...prev.amenities,
+          {
+            id: `custom-${Date.now()}`,
+            name: trimmed,
+            icon: Sparkles,
+            selected: true,
+          },
+        ],
+      }));
+    }
+    setCustomAmenityName("");
+  };
+
+  const handleAddHouseRule = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = customRuleText.trim();
+    if (!trimmed) return;
+    if (formData.houseRules.includes(trimmed)) {
+      setCustomRuleText("");
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      houseRules: [...prev.houseRules, trimmed],
+    }));
+    setCustomRuleText("");
+  };
+
+  const handleDeleteHouseRule = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      houseRules: prev.houseRules.filter((_, idx) => idx !== index),
     }));
   };
 
@@ -206,6 +330,10 @@ export default function RoomConfigCanvas({
       const guestsMatch = formData.capacity.match(/\d+/);
       const capacityNum = guestsMatch ? guestsMatch[0] : "2";
 
+      const selectedAmenities = formData.amenities
+        .filter((a) => a.selected)
+        .map((a) => a.name);
+
       const bodyFormData = new FormData();
       if (roomId) {
         bodyFormData.append("roomId", roomId);
@@ -214,13 +342,10 @@ export default function RoomConfigCanvas({
       bodyFormData.append("price", parsedPrice);
       bodyFormData.append("capacity", capacityNum);
       bodyFormData.append("isAvailable", String(formData.isInstantlyBookable));
-      bodyFormData.append(
-        "description",
-        `Amenities: ${formData.amenities
-          .filter((a) => a.selected)
-          .map((a) => a.name)
-          .join(", ")}`
-      );
+      bodyFormData.append("about", formData.about || "");
+      bodyFormData.append("amenities", JSON.stringify(selectedAmenities));
+      bodyFormData.append("houseRules", JSON.stringify(formData.houseRules));
+      bodyFormData.append("description", formData.about || "");
 
       if (rawFiles.length > 0) {
         bodyFormData.append("image", rawFiles[0]);
@@ -671,8 +796,8 @@ export default function RoomConfigCanvas({
             </div>
           </div>
 
-          {/* Field 5: Amenities Selection */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {/* Field: About Property / Description */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label
               style={{
                 fontSize: "12.5px",
@@ -680,8 +805,45 @@ export default function RoomConfigCanvas({
                 color: "#0F172A",
               }}
             >
-              Amenities Selection
+              About This Property / Description
             </label>
+            <textarea
+              value={formData.about}
+              onChange={(e) => handleTextChange("about", e.target.value)}
+              placeholder="Describe the room, building features, neighborhood highlights, and overall vibe..."
+              rows={3}
+              style={{
+                width: "100%",
+                borderRadius: "8px",
+                border: "1px solid #E2E8F0",
+                padding: "10px 14px",
+                fontSize: "13.5px",
+                color: "#0F172A",
+                backgroundColor: "#FFFFFF",
+                outline: "none",
+                boxSizing: "border-box",
+                fontFamily: "inherit",
+                resize: "vertical",
+              }}
+            />
+          </div>
+
+          {/* Field 5: Amenities Selection */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "#0F172A",
+                }}
+              >
+                Amenities Selection
+              </label>
+              <span style={{ fontSize: "11.5px", color: "#64748B" }}>
+                Click to toggle, or remove / add custom amenities
+              </span>
+            </div>
 
             <div
               style={{
@@ -696,31 +858,201 @@ export default function RoomConfigCanvas({
                 const isSelected = amenity.selected;
 
                 return (
-                  <button
+                  <div
                     key={amenity.id}
-                    type="button"
-                    onClick={() => handleToggleAmenity(amenity.id)}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: "8px",
-                      padding: "7px 14px",
                       borderRadius: "6px",
                       border: isSelected ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
                       backgroundColor: isSelected ? "#FFF1E8" : "#F8FAFC",
-                      color: isSelected ? "#FF5500" : "#475569",
-                      fontSize: "12.5px",
-                      fontWeight: isSelected ? 600 : 500,
-                      cursor: "pointer",
+                      overflow: "hidden",
                       transition: "all 0.15s ease",
-                      fontFamily: "inherit",
                     }}
                   >
-                    <Icon size={15} color={isSelected ? "#FF5500" : "#64748B"} />
-                    <span>{amenity.name}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAmenity(amenity.id)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "7px 12px",
+                        border: "none",
+                        backgroundColor: "transparent",
+                        color: isSelected ? "#FF5500" : "#475569",
+                        fontSize: "12.5px",
+                        fontWeight: isSelected ? 600 : 500,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <Icon size={15} color={isSelected ? "#FF5500" : "#64748B"} />
+                      <span>{amenity.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteAmenity(amenity.id);
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "7px 8px 7px 2px",
+                        border: "none",
+                        backgroundColor: "transparent",
+                        color: isSelected ? "#FF5500" : "#94A3B8",
+                        cursor: "pointer",
+                      }}
+                      title={`Delete "${amenity.name}"`}
+                    >
+                      <X size={13} strokeWidth={2.4} />
+                    </button>
+                  </div>
                 );
               })}
+            </div>
+
+            {/* Add Custom Amenity Input */}
+            <div style={{ display: "flex", gap: "8px", marginTop: "4px", maxWidth: "420px" }}>
+              <input
+                type="text"
+                value={customAmenityName}
+                onChange={(e) => setCustomAmenityName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomAmenity();
+                  }
+                }}
+                placeholder="Enter custom amenity (e.g. Balcony, Geyser)"
+                style={{
+                  flex: 1,
+                  borderRadius: "6px",
+                  border: "1px solid #E2E8F0",
+                  padding: "7px 12px",
+                  fontSize: "12.5px",
+                  color: "#0F172A",
+                  outline: "none",
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomAmenity}
+                style={{
+                  backgroundColor: "#FF5500",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "7px 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                + Add Amenity
+              </button>
+            </div>
+          </div>
+
+          {/* Field: House Rules */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "#0F172A",
+                }}
+              >
+                House Rules
+              </label>
+              <span style={{ fontSize: "11.5px", color: "#64748B" }}>
+                Add custom rules for residents
+              </span>
+            </div>
+
+            {formData.houseRules.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {formData.houseRules.map((rule, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      backgroundColor: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "6px",
+                      fontSize: "13px",
+                      color: "#334155",
+                    }}
+                  >
+                    <span>• {rule}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteHouseRule(idx)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#EF4444",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "2px",
+                      }}
+                      title="Remove rule"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "8px", maxWidth: "560px" }}>
+              <input
+                type="text"
+                value={customRuleText}
+                onChange={(e) => setCustomRuleText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddHouseRule();
+                  }
+                }}
+                placeholder="e.g. No smoking inside room, Quiet hours after 10 PM"
+                style={{
+                  flex: 1,
+                  borderRadius: "6px",
+                  border: "1px solid #E2E8F0",
+                  padding: "7px 12px",
+                  fontSize: "12.5px",
+                  color: "#0F172A",
+                  outline: "none",
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddHouseRule}
+                style={{
+                  backgroundColor: "#0F172A",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "7px 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                + Add Rule
+              </button>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { parseRoomDescription } from "@/controllers/sellerRoomController";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -49,10 +50,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             return errorResponse("Room not found", 404);
         }
 
-        const reviewCount = room.seller?.reviews?.length || 0;
+        const reviewList = room.seller?.reviews || [];
+        const reviewCount = reviewList.length;
         const avgRating = reviewCount > 0
-            ? Number((room.seller.reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1))
-            : 4.8;
+            ? Number((reviewList.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1))
+            : 0;
 
         let parsedImages: string[] = [];
         try {
@@ -62,32 +64,37 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             parsedImages = typeof room.images === "string" && room.images.startsWith("http") ? [room.images] : [];
         }
 
+        const { about, amenities, houseRules } = parseRoomDescription(room.description);
+
         const formattedRoom = {
             id: room.id,
             title: room.title,
             price: room.price,
-            description: room.description,
+            description: about || room.description || "",
+            about: about || room.description || "",
+            amenities: amenities || [],
+            houseRules: houseRules || [],
             capacity: room.capacity,
             images: parsedImages,
             isAvailable: room.isAvailable,
             sellerId: room.sellerId,
-            sellerName: room.seller?.businessName || room.seller?.user?.name || "Verified Host",
-            sellerLocality: room.seller?.addressLocality || "Kothrud",
-            sellerCity: room.seller?.user?.city || "Pune",
-            sellerPincode: room.seller?.user?.pincode || "411038",
+            sellerName: room.seller?.businessName || room.seller?.user?.name || "Host",
+            sellerLocality: room.seller?.addressLocality || "",
+            sellerCity: room.seller?.user?.city || "",
+            sellerPincode: room.seller?.user?.pincode || "",
             sellerLandmark: room.seller?.addressLandmark || "",
             sellerTrackingId: room.seller?.trackingId,
             sellerIsOnline: room.seller?.isOnline !== false,
             rating: avgRating,
             reviewCount,
-            reviews: room.seller?.reviews?.map((r, idx) => ({
+            reviews: reviewList.map((r, idx) => ({
                 id: String(idx + 1),
-                name: r.user?.name || "Resident",
-                avatarLetter: (r.user?.name || "R")[0].toUpperCase(),
-                date: r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "Recent",
+                name: r.user?.name || "Verified Resident",
+                avatarLetter: (r.user?.name || "V")[0].toUpperCase(),
+                date: r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "",
                 rating: r.rating,
-                comment: r.comment || "Clean, comfortable and well maintained space.",
-            })) || []
+                comment: r.comment || "",
+            }))
         };
 
         return successResponse(formattedRoom, "Room details fetched successfully");

@@ -23,42 +23,6 @@ export interface AvailableRoomItem {
   image: StaticImageData | string;
 }
 
-const DEFAULT_ROOMS: AvailableRoomItem[] = [
-  {
-    id: "room-1",
-    title: "Premium Single Room",
-    rating: "4.8",
-    location: "MIT College Road, Kothrud",
-    tags: ["Free Wi-Fi", "Daily Cleaning"],
-    startingLabel: "STARTING FROM",
-    price: "₹6,200/month",
-    buttonText: "Book Now",
-    image: premiumSingleImg,
-  },
-  {
-    id: "room-2",
-    title: "Executive Double Sharing",
-    rating: "4.6",
-    location: "Paud Road, Pune",
-    tags: ["Free Wi-Fi", "Daily Cleaning"],
-    startingLabel: "STARTING FROM",
-    price: "₹6,200/month",
-    buttonText: "Book Now",
-    image: executiveDoubleImg,
-  },
-  {
-    id: "room-3",
-    title: "Standard Hostel Room",
-    rating: "4.5",
-    location: "Karve Nagar, Pune",
-    tags: ["Free Wi-Fi", "Daily Cleaning"],
-    startingLabel: "STARTING FROM",
-    price: "₹6,200/month",
-    buttonText: "Book Now",
-    image: standardHostelImg,
-  },
-];
-
 export interface AllAvailableRoomsProps {
   heading?: string;
   rooms?: any[];
@@ -106,17 +70,26 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
           }
         }
 
-        const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+        const locality = r.sellerLocality || r.seller?.addressLocality || "";
         const city = r.sellerCity || r.seller?.user?.city || "Pune";
+        const locStr = locality ? `${locality}, ${city}` : city;
+
+        const tagsList: string[] = [];
+        if (Array.isArray(r.amenities) && r.amenities.length > 0) {
+          tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
+        }
+        tagsList.push(`${r.capacity || 1} Guest${(r.capacity || 1) > 1 ? "s" : ""}`);
+
+        const numRating = Number(r.rating) || 0;
 
         return {
           id: r.id,
-          title: r.title || `Deluxe Room ${idx + 101}`,
-          rating: r.rating ? Number(r.rating).toFixed(1) : r.seller?.rating ? Number(r.seller.rating).toFixed(1) : "4.8",
-          location: `${locality}, ${city}`,
-          tags: ["Free Wi-Fi", `${r.capacity || 2} Guests`, "Daily Cleaning"],
+          title: r.title || `Room ${idx + 101}`,
+          rating: numRating > 0 ? numRating.toFixed(1) : "New",
+          location: locStr,
+          tags: tagsList.filter(Boolean),
           startingLabel: "STARTING FROM",
-          price: `₹${Number(r.price || 2500).toLocaleString("en-IN")}/night`,
+          price: `₹${Number(r.price || 0).toLocaleString("en-IN")}/night`,
           buttonText: "Book Now",
           image: imgUrl,
         };
@@ -151,22 +124,33 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
                 }
               }
 
-              const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+              const locality = r.sellerLocality || r.seller?.addressLocality || "";
               const city = r.sellerCity || r.seller?.user?.city || "Pune";
+              const locStr = locality ? `${locality}, ${city}` : city;
+
+              const tagsList: string[] = [];
+              if (Array.isArray(r.amenities) && r.amenities.length > 0) {
+                tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
+              }
+              tagsList.push(`${r.capacity || 1} Guest${(r.capacity || 1) > 1 ? "s" : ""}`);
+
+              const numRating = Number(r.rating) || 0;
 
               return {
                 id: r.id,
-                title: r.title || `Deluxe Room ${idx + 101}`,
-                rating: r.rating ? Number(r.rating).toFixed(1) : "4.8",
-                location: `${locality}, ${city}`,
-                tags: ["Free Wi-Fi", `${r.capacity || 2} Guests`, "Air Conditioned"],
+                title: r.title || `Room ${idx + 101}`,
+                rating: numRating > 0 ? numRating.toFixed(1) : "New",
+                location: locStr,
+                tags: tagsList.filter(Boolean),
                 startingLabel: "STARTING FROM",
-                price: `₹${Number(r.price || 2500).toLocaleString("en-IN")}/night`,
+                price: `₹${Number(r.price || 0).toLocaleString("en-IN")}/night`,
                 buttonText: "Book Now",
                 image: imgUrl,
               };
             });
             setDynamicRooms(mapped);
+          } else {
+            setDynamicRooms([]);
           }
         }
       } catch (err) {
@@ -176,8 +160,7 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
     loadPublicRooms();
   }, [propRooms]);
 
-  const rawDisplayRooms =
-    propRooms !== undefined ? dynamicRooms : (dynamicRooms.length > 0 ? dynamicRooms : DEFAULT_ROOMS);
+  const rawDisplayRooms = dynamicRooms;
 
   const displayRooms = useMemo(() => {
     if (!queryParam.trim()) return rawDisplayRooms;

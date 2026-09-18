@@ -19,49 +19,6 @@ export interface ColivingCardItem {
   image: StaticImageData | string;
 }
 
-const DEFAULT_COLIVINGS: ColivingCardItem[] = [
-  {
-    id: "coliving-1",
-    title: "Neo Living PG Space",
-    location: "Behind MIT, Kothrud",
-    startingLabel: "STARTING FROM",
-    price: "₹5,500/month",
-    tags: ["WiFi", "AC", "Meals Included", "Laundry"],
-    buttonText: "Book Room",
-    image: neoLivingImg,
-  },
-  {
-    id: "coliving-2",
-    title: "Comfort Stay co-living",
-    location: "Ideal Colony, Pune",
-    startingLabel: "STARTING FROM",
-    price: "₹5,500/month",
-    tags: ["WiFi", "AC", "Meals Included", "Laundry"],
-    buttonText: "Book Room",
-    image: comfortStayImg,
-  },
-  {
-    id: "coliving-3",
-    title: "Neo Living PG Space",
-    location: "Behind MIT, Kothrud",
-    startingLabel: "STARTING FROM",
-    price: "₹5,500/month",
-    tags: ["WiFi", "AC", "Meals Included", "Laundry"],
-    buttonText: "Book Room",
-    image: neoLivingImg,
-  },
-  {
-    id: "coliving-4",
-    title: "Comfort Stay co-living",
-    location: "Ideal Colony, Pune",
-    startingLabel: "STARTING FROM",
-    price: "₹5,500/month",
-    tags: ["WiFi", "AC", "Meals Included", "Laundry"],
-    buttonText: "Book Room",
-    image: comfortStayImg,
-  },
-];
-
 export interface FeaturedColivingsProps {
   heading?: string;
   cards?: ColivingCardItem[];
@@ -79,7 +36,11 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
   const [dynamicCards, setDynamicCards] = useState<ColivingCardItem[]>([]);
 
   useEffect(() => {
-    if (propRooms && propRooms.length > 0) {
+    if (propRooms !== undefined) {
+      if (!propRooms || propRooms.length === 0) {
+        setDynamicCards([]);
+        return;
+      }
       const mapped: ColivingCardItem[] = propRooms.slice(0, 4).map((r: any, idx: number) => {
         let imgUrl: string | StaticImageData = idx % 2 === 0 ? neoLivingImg : comfortStayImg;
         if (r.images) {
@@ -90,16 +51,23 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
             if (typeof r.images === "string" && r.images.startsWith("http")) imgUrl = r.images;
           }
         }
-        const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+        const locality = r.sellerLocality || r.seller?.addressLocality || "";
         const city = r.sellerCity || r.seller?.user?.city || "Pune";
+        const locStr = locality ? `${locality}, ${city}` : city;
+
+        const tagsList: string[] = [];
+        if (Array.isArray(r.amenities) && r.amenities.length > 0) {
+          tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
+        }
+        tagsList.push(`${r.capacity || 1} Guest${(r.capacity || 1) > 1 ? "s" : ""}`);
 
         return {
           id: r.id,
-          title: r.title || "Neo Luxury Living",
-          location: `${locality}, ${city}`,
+          title: r.title || "Room Listing",
+          location: locStr,
           startingLabel: "STARTING FROM",
-          price: `₹${Number(r.price || 5500).toLocaleString("en-IN")}/night`,
-          tags: ["WiFi", "AC", "Meals Included", `${r.capacity || 2} Guests`],
+          price: `₹${Number(r.price || 0).toLocaleString("en-IN")}/night`,
+          tags: tagsList.filter(Boolean),
           buttonText: "Book Room",
           image: imgUrl,
         };
@@ -125,21 +93,30 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
                   if (typeof r.images === "string" && r.images.startsWith("http")) imgUrl = r.images;
                 }
               }
-              const locality = r.sellerLocality || r.seller?.addressLocality || "Kothrud";
+              const locality = r.sellerLocality || r.seller?.addressLocality || "";
               const city = r.sellerCity || r.seller?.user?.city || "Pune";
+              const locStr = locality ? `${locality}, ${city}` : city;
+
+              const tagsList: string[] = [];
+              if (Array.isArray(r.amenities) && r.amenities.length > 0) {
+                tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
+              }
+              tagsList.push(`${r.capacity || 1} Guest${(r.capacity || 1) > 1 ? "s" : ""}`);
 
               return {
                 id: r.id,
-                title: r.title || "Neo Luxury Living",
-                location: `${locality}, ${city}`,
+                title: r.title || "Room Listing",
+                location: locStr,
                 startingLabel: "STARTING FROM",
-                price: `₹${Number(r.price || 5500).toLocaleString("en-IN")}/night`,
-                tags: ["WiFi", "AC", "Meals Included", `${r.capacity || 2} Guests`],
+                price: `₹${Number(r.price || 0).toLocaleString("en-IN")}/night`,
+                tags: tagsList.filter(Boolean),
                 buttonText: "Book Room",
                 image: imgUrl,
               };
             });
             setDynamicCards(mapped);
+          } else {
+            setDynamicCards([]);
           }
         }
       } catch (err) {
@@ -149,8 +126,11 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
     loadFeatured();
   }, [propRooms]);
 
-  const displayCards =
-    propCards || (dynamicCards.length > 0 ? dynamicCards : DEFAULT_COLIVINGS);
+  const displayCards = propCards || dynamicCards;
+
+  if (!displayCards || displayCards.length === 0) {
+    return null;
+  }
 
   const handleBookClick = (card: ColivingCardItem) => {
     if (onBookRoom) {
