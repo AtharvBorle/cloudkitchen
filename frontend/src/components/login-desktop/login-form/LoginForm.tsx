@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { discardExistingSession } from "@/lib/logout";
 import styles from "./LoginForm.module.css";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
@@ -171,6 +172,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
       setIsLoading(true);
       try {
+        await discardExistingSession();
         const res = await signIn("credentials", {
           redirect: false,
           email: email.trim().toLowerCase(),

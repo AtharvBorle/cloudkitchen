@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { discardExistingSession } from "@/lib/logout";
 
 export default function DeliveryLoginPage() {
     const router = useRouter();
@@ -32,6 +33,7 @@ export default function DeliveryLoginPage() {
         }
 
         try {
+            await discardExistingSession();
             const res = await signIn("credentials", {
                 redirect: false,
                 email,

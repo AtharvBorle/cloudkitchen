@@ -15,6 +15,7 @@ import {
   SellerRegistrationDraft,
 } from "@/lib/seller-registration-store";
 import { fetchApi } from "@/lib/fetch-api";
+import { discardExistingSession } from "@/lib/logout";
 
 export default function ConfirmRegistrationPage() {
   const router = useRouter();
@@ -162,6 +163,7 @@ export default function ConfirmRegistrationPage() {
 
         // Auto-login the seller
         try {
+          await discardExistingSession();
           await signIn("credentials", {
             redirect: false,
             email: activeDraft.email.trim().toLowerCase(),

@@ -9,6 +9,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import { updateCachedProfile } from "@/hooks/useSellerProfile";
+import { discardExistingSession } from "@/lib/logout";
 import styles from "./ResSellerLogin.module.css";
 
 export interface ResSellerLoginProps {
@@ -47,6 +48,7 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
     setErrorMessage("");
 
     try {
+      await discardExistingSession();
       const res = await signIn("credentials", {
         redirect: false,
         email: email.trim().toLowerCase(),

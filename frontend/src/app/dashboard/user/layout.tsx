@@ -1088,15 +1088,21 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const pathname = usePathname();
 
     const isCheckout = pathname === "/dashboard/user/checkout";
+    const isUserRole = session?.user?.role === "USER";
 
     useEffect(() => {
         if (status === "loading") return;
-        if (!session && !isCheckout) {
-            router.push("/user");
+        if (!isCheckout) {
+            if (!session) {
+                router.push("/user");
+            } else if (!isUserRole) {
+                // If logged in as another role (SELLER/ADMIN/DELIVERY), redirect them out of user dashboard
+                router.push("/user");
+            }
         }
-    }, [session, status, router, isCheckout]);
+    }, [session, status, router, isCheckout, isUserRole]);
 
-    if (status === "loading" || (!session && !isCheckout)) {
+    if (status === "loading" || (!session && !isCheckout) || (session && !isUserRole && !isCheckout)) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--background)' }}>
                 <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>Checking authorization...</span>

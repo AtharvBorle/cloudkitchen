@@ -8,6 +8,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import { updateCachedProfile } from "@/hooks/useSellerProfile";
+import { discardExistingSession } from "@/lib/logout";
 import styles from "./SellerLogin.module.css";
 
 export interface SellerLoginFormProps {
@@ -46,6 +47,7 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
     setErrorMessage("");
 
     try {
+      await discardExistingSession();
       const res = await signIn("credentials", {
         redirect: false,
         email: email.trim().toLowerCase(),

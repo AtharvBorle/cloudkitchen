@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { discardExistingSession } from "@/lib/logout";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./SellerLogin.module.css";
 
@@ -38,6 +39,7 @@ export const SellerLogin: React.FC<SellerLoginProps> = ({
     setErrorMessage("");
 
     try {
+      await discardExistingSession();
       const res = await signIn("credentials", {
         redirect: false,
         email: identifier.trim(),
