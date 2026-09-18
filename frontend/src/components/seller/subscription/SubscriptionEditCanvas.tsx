@@ -183,6 +183,10 @@ export default function SubscriptionEditCanvas({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleInputChange = (field: keyof SubscriptionPlanData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleToggle = (field: "allowCancelSubscription" | "allowPauseBilling") => {
     setFormData((prev) => ({ ...prev, [field]: !prev[field] }));
   };
@@ -234,12 +238,23 @@ export default function SubscriptionEditCanvas({
     }));
   };
 
+  const handleMealNameChange = (id: string, newMealName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      mealTimings: prev.mealTimings.map((t) =>
+        t.id === id ? { ...t, mealName: newMealName } : t
+      ),
+    }));
+  };
+
   const handleTimingDelete = (id: string) => {
     setFormData((prev) => ({
       ...prev,
       mealTimings: prev.mealTimings.filter((t) => t.id !== id),
     }));
   };
+
+  const handleDeleteTiming = handleTimingDelete;
 
   const handleAddMealTiming = () => {
     const newTiming: MealTimingItem = {
@@ -251,7 +266,10 @@ export default function SubscriptionEditCanvas({
       ...prev,
       mealTimings: [...prev.mealTimings, newTiming],
     }));
+    if (onAddTiming) onAddTiming();
   };
+
+  const handleAddTimingItem = handleAddMealTiming;
 
   const handleSave = async () => {
     if (targetPlanId) {
@@ -1079,75 +1097,80 @@ export default function SubscriptionEditCanvas({
                     style={{
                       border: "1px solid #E2E8F0",
                       borderRadius: "8px",
-                      padding: "12px 16px",
+                      padding: "8px 12px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       backgroundColor: "#FFFFFF",
                       boxSizing: "border-box",
+                      gap: "10px",
                     }}
                   >
-                    <span
+                    <input
+                      type="text"
+                      value={timing.mealName}
+                      onChange={(e) => handleMealNameChange(timing.id, e.target.value)}
+                      placeholder="Meal (e.g. Breakfast)"
                       style={{
                         fontSize: "13px",
                         fontWeight: 600,
                         color: "#0F172A",
-                        minWidth: "140px",
+                        minWidth: "120px",
+                        width: "140px",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "6px",
+                        padding: "6px 10px",
+                        outline: "none",
+                        fontFamily: "inherit",
                       }}
-                    >
-                      {timing.mealName}
-                    </span>
+                    />
 
-                    <span
+                    <input
+                      type="text"
+                      value={timing.timing}
+                      onChange={(e) => handleTimingChange(timing.id, e.target.value)}
+                      placeholder="e.g. 7:30 AM – 9:30 AM"
                       style={{
                         fontSize: "13px",
-                        color: "#64748B",
-                        fontWeight: 400,
+                        color: "#334155",
+                        fontWeight: 500,
+                        flex: 1,
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "6px",
+                        padding: "6px 10px",
+                        outline: "none",
+                        fontFamily: "inherit",
                       }}
-                    >
-                      {timing.timing}
-                    </span>
+                    />
 
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "12px",
+                        gap: "6px",
                       }}
                     >
                       <button
                         type="button"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#64748B",
-                          cursor: "pointer",
-                          padding: "2px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        title="Edit Timing"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-
-                      <button
-                        type="button"
                         onClick={() => handleDeleteTiming(timing.id)}
                         style={{
-                          background: "none",
-                          border: "none",
-                          color: "#EF4444",
-                          cursor: "pointer",
-                          padding: "2px",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "6px",
+                          border: "1px solid #FEE2E2",
+                          backgroundColor: "#FFF5F5",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          color: "#EF4444",
+                          cursor: "pointer",
+                          padding: 0,
+                          flexShrink: 0,
+                          transition: "background-color 0.15s ease",
                         }}
                         title="Delete Timing"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
