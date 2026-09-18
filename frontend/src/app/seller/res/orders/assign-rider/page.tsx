@@ -73,13 +73,13 @@ function AssignRiderContent() {
     }
   };
 
-  let itemCount = 3;
+  let itemCount = 0;
   if (order?.items) {
     try {
       const parsed = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
-      itemCount = parsed.length || 1;
+      itemCount = parsed.length || 0;
     } catch {
-      itemCount = 1;
+      itemCount = 0;
     }
   }
 
@@ -87,9 +87,9 @@ function AssignRiderContent() {
     <ResponsiveAssignRider
       orderId={order ? `#${order.id.slice(0, 6)}` : rawId}
       itemCount={itemCount}
-      orderTotal={order ? `₹${order.totalAmount}` : "₹850"}
-      deliveryArea={order?.deliveryAddress?.split(",")[0] || "Powai"}
-      riders={riders.length > 0 ? riders : undefined}
+      orderTotal={order ? `₹${order.totalAmount}` : "₹0"}
+      deliveryArea={order?.deliveryAddress?.split(",")[0] || "—"}
+      riders={riders}
       onAssign={handleAssign}
     />
   );

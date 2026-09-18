@@ -36,128 +36,7 @@ export interface Ticket {
   messages: TicketMessage[];
 }
 
-const INITIAL_TICKETS: Ticket[] = [
-  {
-    id: "1",
-    ticketNumber: "#0824",
-    category: "Technical",
-    title: "Login issue on mobile app",
-    preview: "I cannot log into my account on the mobile app. It keeps showing an error after entering my credentials.",
-    customerName: "Sarah Johnson",
-    customerInitials: "SJ",
-    time: "10:30 AM",
-    status: "Open",
-    priority: "High",
-    messages: [
-      {
-        id: "m1",
-        sender: "Sarah Johnson",
-        role: "customer",
-        initials: "SJ",
-        timestamp: "Jun 15, 2024 10:30 AM",
-        text: "I cannot log into my account on the mobile app. It keeps showing an error after entering my credentials.",
-      },
-      {
-        id: "m2",
-        sender: "You (Support)",
-        role: "support",
-        initials: "ME",
-        timestamp: "Jun 15, 2024 10:45 AM",
-        text: "Hi Sarah, I apologize for the inconvenience. Could you please tell me which device and OS version you are using?",
-      },
-      {
-        id: "m3",
-        sender: "Sarah Johnson",
-        role: "customer",
-        initials: "SJ",
-        timestamp: "Jun 15, 2024 11:00 AM",
-        text: "I am using an iPhone 14 Pro with iOS 17.2.",
-      },
-    ],
-  },
-  {
-    id: "2",
-    ticketNumber: "#0823",
-    category: "Billing",
-    title: "Payment not processed",
-    preview: "My payment for order #1209 failed but the money was debited from my bank account.",
-    customerName: "Mike Chen",
-    customerInitials: "MC",
-    time: "Yesterday",
-    status: "In Progress",
-    priority: "High",
-    messages: [
-      {
-        id: "m2-1",
-        sender: "Mike Chen",
-        role: "customer",
-        initials: "MC",
-        timestamp: "Jun 14, 2024 04:12 PM",
-        text: "My payment for order #1209 failed but the money was debited from my bank account.",
-      },
-      {
-        id: "m2-2",
-        sender: "You (Support)",
-        role: "support",
-        initials: "ME",
-        timestamp: "Jun 14, 2024 04:25 PM",
-        text: "Hi Mike, we are checking with the payment gateway. If debited, it will auto-refund in 2-3 business days or settle to your order.",
-      },
-    ],
-  },
-  {
-    id: "3",
-    ticketNumber: "#0820",
-    category: "Feature Request",
-    title: "Feature request: Dark mode",
-    preview: "The interface is very bright at night, having dark mode would be awesome!",
-    customerName: "Emma Wilson",
-    customerInitials: "EW",
-    time: "Mar 10",
-    status: "Closed",
-    priority: "Low",
-    messages: [
-      {
-        id: "m3-1",
-        sender: "Emma Wilson",
-        role: "customer",
-        initials: "EW",
-        timestamp: "Mar 10, 2024 09:15 AM",
-        text: "The interface is very bright at night, having dark mode would be awesome!",
-      },
-      {
-        id: "m3-2",
-        sender: "You (Support)",
-        role: "support",
-        initials: "ME",
-        timestamp: "Mar 10, 2024 10:00 AM",
-        text: "Thanks for the suggestion Emma! We have logged this with our product design team.",
-      },
-    ],
-  },
-  {
-    id: "4",
-    ticketNumber: "#0819",
-    category: "Technical",
-    title: "Cannot export reports",
-    preview: "When clicking the export CSV button nothing happens on the reports screen.",
-    customerName: "David Brown",
-    customerInitials: "DB",
-    time: "Apr 2",
-    status: "Open",
-    priority: "Medium",
-    messages: [
-      {
-        id: "m4-1",
-        sender: "David Brown",
-        role: "customer",
-        initials: "DB",
-        timestamp: "Apr 2, 2024 02:40 PM",
-        text: "When clicking the export CSV button nothing happens on the reports screen.",
-      },
-    ],
-  },
-];
+const INITIAL_TICKETS: Ticket[] = [];
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 
@@ -195,13 +74,13 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
-  const [selectedTicketId, setSelectedTicketId] = useState<string>("1");
+  const [selectedTicketId, setSelectedTicketId] = useState<string>("");
   const [activeMobileView, setActiveMobileView] = useState<"list" | "chat">("list");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("Open");
+  const [statusFilter, setStatusFilter] = useState<string>("All");
   const [inputMessage, setInputMessage] = useState("");
 
-  const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0];
+  const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0] || null;
 
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -313,10 +192,10 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                 </button>
                 <div className={styles.mobileChatTitleGroup}>
                   <h1 className={styles.mobileHeaderTitle}>
-                    {selectedTicket?.title}
+                    {selectedTicket?.title || "Ticket"}
                   </h1>
                   <span className={styles.mobileChatSubtitle}>
-                    {selectedTicket?.customerName}
+                    {selectedTicket?.customerName || ""}
                   </span>
                 </div>
                 <span
@@ -444,7 +323,11 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
                 {filteredTickets.length === 0 && (
                   <div className={styles.emptyListState}>
-                    <p>No tickets found under &quot;{statusFilter}&quot;</p>
+                    <p>
+                      {tickets.length === 0
+                        ? "No support tickets yet. Click '+' to raise a new ticket."
+                        : `No tickets found under "${statusFilter}"`}
+                    </p>
                   </div>
                 )}
               </div>
@@ -565,7 +448,11 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
               </section>
             ) : (
               <div className={styles.emptyPane}>
-                <p>Select a ticket to view conversation</p>
+                <p>
+                  {tickets.length === 0
+                    ? "No support tickets found. Raise a ticket whenever you need assistance."
+                    : "Select a ticket to view conversation"}
+                </p>
               </div>
             )}
           </div>

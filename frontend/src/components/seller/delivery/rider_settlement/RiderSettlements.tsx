@@ -69,94 +69,21 @@ export interface RiderSettlementsProps {
 }
 
 const DEFAULT_RIDER_PROFILE: RiderProfileInfo = {
-  name: "Ramesh Kumar",
-  phone: "+91 98765 43210",
-  vehicleNumber: "DL 3S CQ 8912",
-  status: "On Duty",
+  name: "",
+  phone: "",
+  vehicleNumber: "",
+  status: "",
 };
 
 const DEFAULT_CASH_BALANCE: CashCollectionBalanceInfo = {
-  balance: "₹3,200",
-  riderName: "Ramesh",
+  balance: "₹0",
+  rawBalance: 0,
+  riderName: "",
   limitAmount: "₹5,000",
-  warningMessage:
-    "Limit is ₹5,000. Collect cash soon to avoid automatic profile lock.",
+  warningMessage: "No outstanding cash currently held.",
 };
 
-const DEFAULT_LEDGER_HISTORY: LedgerEntry[] = [
-  {
-    id: "l1",
-    type: "Collection",
-    description: "Cash Collected from #NCR-8291 (Aditya Sharma)",
-    amount: "+₹480",
-    isPositive: true,
-    dateTime: "Jan 24, 02:15 PM",
-    date: "2026-01-24",
-  },
-  {
-    id: "l2",
-    type: "Settlement",
-    description: "Cash Handover to Owner Console",
-    amount: "-₹1,200",
-    isPositive: false,
-    dateTime: "Jan 24, 11:30 AM",
-    date: "2026-01-24",
-  },
-  {
-    id: "l3",
-    type: "Collection",
-    description: "Cash Collected from #NCR-8288 (Priya Nair)",
-    amount: "+₹520",
-    isPositive: true,
-    dateTime: "Jan 23, 08:44 PM",
-    date: "2026-01-23",
-  },
-  {
-    id: "l4",
-    type: "Adjustment",
-    description: "Correction adjustment for delivery delay bonus",
-    amount: "+₹100",
-    isPositive: true,
-    dateTime: "Jan 23, 05:00 PM",
-    date: "2026-01-23",
-  },
-  {
-    id: "l5",
-    type: "Collection",
-    description: "Cash Collected from #NCR-8272 (Sanjay Dutt)",
-    amount: "+₹610",
-    isPositive: true,
-    dateTime: "Jan 22, 09:12 PM",
-    date: "2026-01-22",
-  },
-  {
-    id: "l6",
-    type: "Settlement",
-    description: "Cash Handover to Owner Console",
-    amount: "-₹2,000",
-    isPositive: false,
-    dateTime: "Jan 22, 06:30 PM",
-    date: "2026-01-22",
-  },
-  {
-    id: "l7",
-    type: "Collection",
-    description: "Cash Collected from #NCR-8260 (Rajesh V)",
-    amount: "+₹350",
-    isPositive: true,
-    dateTime: "Jan 21, 01:10 PM",
-    date: "2026-01-21",
-  },
-  {
-    id: "l8",
-    type: "Collection",
-    description: "Cash Collected from #NCR-8255 (Karan J)",
-    amount: "+₹440",
-    isPositive: true,
-    dateTime: "Jan 20, 07:44 PM",
-    date: "2026-01-20",
-  },
-];
+const DEFAULT_LEDGER_HISTORY: LedgerEntry[] = [];
 
 export default function RiderSettlements({
   title = "Rider Management & Settlements",
@@ -179,7 +106,7 @@ export default function RiderSettlements({
     if (typeof cashBalance.rawBalance === "number") return cashBalance.rawBalance;
     if (typeof cashBalance.balance === "number") return cashBalance.balance;
     const num = parseFloat(String(cashBalance.balance).replace(/[^0-9.]/g, ""));
-    return isNaN(num) ? 3200 : num;
+    return isNaN(num) ? 0 : num;
   });
 
   const [currentLedger, setCurrentLedger] = useState<LedgerEntry[]>(ledgerHistory);
@@ -634,7 +561,7 @@ export default function RiderSettlements({
                       color: "#0F172A",
                     }}
                   >
-                    {riderProfile.name}
+                    {riderProfile.name || "No Rider Selected"}
                   </span>
                   <span
                     style={{
@@ -643,7 +570,7 @@ export default function RiderSettlements({
                       fontWeight: 400,
                     }}
                   >
-                    {riderProfile.phone}
+                    {riderProfile.phone || "—"}
                   </span>
                 </div>
               </div>
@@ -677,7 +604,7 @@ export default function RiderSettlements({
                       fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                     }}
                   >
-                    {riderProfile.vehicleNumber}
+                    {riderProfile.vehicleNumber || "—"}
                   </span>
                 </div>
 
@@ -693,8 +620,8 @@ export default function RiderSettlements({
                   </span>
                   <span
                     style={{
-                      backgroundColor: riderProfile.status.toLowerCase().includes("on") ? "#FFF1E8" : "#F1F5F9",
-                      color: riderProfile.status.toLowerCase().includes("on") ? "#F97316" : "#64748B",
+                      backgroundColor: (riderProfile.status || "").toLowerCase().includes("on") ? "#FFF1E8" : "#F1F5F9",
+                      color: (riderProfile.status || "").toLowerCase().includes("on") ? "#F97316" : "#64748B",
                       fontSize: "11px",
                       fontWeight: 700,
                       padding: "3px 8px",
@@ -702,7 +629,7 @@ export default function RiderSettlements({
                       letterSpacing: "0.4px",
                     }}
                   >
-                    {riderProfile.status}
+                    {riderProfile.status || "—"}
                   </span>
                 </div>
               </div>
@@ -753,7 +680,7 @@ export default function RiderSettlements({
                     fontWeight: 400,
                   }}
                 >
-                  COD Cash currently held by {cashBalance.riderName || riderProfile.name}
+                  COD Cash currently held by {cashBalance.riderName || riderProfile.name || "Rider"}
                 </span>
               </div>
 
@@ -788,7 +715,7 @@ export default function RiderSettlements({
                 >
                   {currentBalance > 0
                     ? `Limit is ₹5,000. Collect cash soon to settle outstanding balance.`
-                    : `All cash collected by ${riderProfile.name} is fully settled.`}
+                    : `All cash collected by ${riderProfile.name || "rider"} is fully settled.`}
                 </span>
               </div>
 

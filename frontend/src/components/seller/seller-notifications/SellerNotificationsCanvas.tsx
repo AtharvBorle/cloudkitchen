@@ -253,17 +253,23 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
           <div className={styles.emptyIconWrapper}>
             <Bell size={26} />
           </div>
-          <h3 className={styles.emptyTitle}>No Notifications in this Category</h3>
+          <h3 className={styles.emptyTitle}>
+            {notifications.length === 0 ? "No Notifications Yet" : "No Notifications in this Category"}
+          </h3>
           <p className={styles.emptyDesc}>
-            You&apos;re all caught up! New orders, inventory updates, and delivery alerts will appear here as they arrive.
+            {notifications.length === 0
+              ? "You're all caught up! New orders, inventory updates, and delivery alerts will appear here in real-time."
+              : "No notifications match this filter. Check other categories or view all alerts."}
           </p>
-          <button
-            type="button"
-            className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-            onClick={() => setActiveFilter("all")}
-          >
-            Show All Notifications
-          </button>
+          {notifications.length > 0 && activeFilter !== "all" && (
+            <button
+              type="button"
+              className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+              onClick={() => setActiveFilter("all")}
+            >
+              Show All Notifications
+            </button>
+          )}
         </div>
       ) : (
         <div className={styles.notificationList}>

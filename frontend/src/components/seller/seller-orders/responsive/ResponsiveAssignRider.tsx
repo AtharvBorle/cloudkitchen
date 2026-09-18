@@ -24,17 +24,13 @@ export interface ResponsiveAssignRiderProps {
   onBack?: () => void;
 }
 
-const DEFAULT_RIDERS: AvailableRiderItem[] = [
-  { id: "r1", name: "Rahul Kumar", initials: "RK", distance: "2.3 km away" },
-  { id: "r2", name: "Amit Sharma", initials: "AS", distance: "3.1 km away" },
-  { id: "r3", name: "Vikram Singh", initials: "VS", distance: "4.5 km away" },
-];
+const DEFAULT_RIDERS: AvailableRiderItem[] = [];
 
 export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
-  orderId = "#1234",
-  itemCount = 3,
-  orderTotal = "₹850",
-  deliveryArea = "Powai",
+  orderId = "#---",
+  itemCount = 0,
+  orderTotal = "₹0",
+  deliveryArea = "—",
   riders = DEFAULT_RIDERS,
   onAssign,
   onCopyShareLink,
@@ -132,30 +128,36 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
             <h3 className={styles.sectionLabel}>AVAILABLE RIDERS</h3>
 
             <div className={styles.ridersList}>
-              {riders.map((rider) => {
-                const isAssigned = assignedRiderId === rider.id;
-                return (
-                  <article key={rider.id} className={styles.riderCard}>
-                    <div className={styles.riderLeft}>
-                      <div className={styles.avatarCircle}>{rider.initials}</div>
-                      <div className={styles.riderInfo}>
-                        <h4 className={styles.riderName}>{rider.name}</h4>
-                        <p className={styles.riderDistance}>{rider.distance}</p>
+              {riders.length === 0 ? (
+                <div style={{ padding: "16px 8px", textAlign: "center", color: "#64748B", fontSize: "0.85rem" }}>
+                  No delivery riders available.
+                </div>
+              ) : (
+                riders.map((rider) => {
+                  const isAssigned = assignedRiderId === rider.id;
+                  return (
+                    <article key={rider.id} className={styles.riderCard}>
+                      <div className={styles.riderLeft}>
+                        <div className={styles.avatarCircle}>{rider.initials}</div>
+                        <div className={styles.riderInfo}>
+                          <h4 className={styles.riderName}>{rider.name}</h4>
+                          <p className={styles.riderDistance}>{rider.distance}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <button
-                      type="button"
-                      className={`${styles.assignButton} ${
-                        isAssigned ? styles.assignButtonAssigned : ""
-                      }`}
-                      onClick={() => handleAssignClick(rider)}
-                    >
-                      {isAssigned ? "Assigned ✓" : "Assign"}
-                    </button>
-                  </article>
-                );
-              })}
+                      <button
+                        type="button"
+                        className={`${styles.assignButton} ${
+                          isAssigned ? styles.assignButtonAssigned : ""
+                        }`}
+                        onClick={() => handleAssignClick(rider)}
+                      >
+                        {isAssigned ? "Assigned ✓" : "Assign"}
+                      </button>
+                    </article>
+                  );
+                })
+              )}
             </div>
           </section>
 

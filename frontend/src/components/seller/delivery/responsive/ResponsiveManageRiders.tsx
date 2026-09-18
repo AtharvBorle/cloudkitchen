@@ -22,40 +22,11 @@ export interface ResponsiveManageRidersProps {
   onBack?: () => void;
 }
 
-const DEFAULT_MANAGED_RIDERS: ManagedRiderItem[] = [
-  {
-    id: "r1",
-    name: "Rahul Kumar",
-    initials: "RK",
-    phone: "+91 98765 00101",
-    status: "Online",
-  },
-  {
-    id: "r2",
-    name: "Amit Sharma",
-    initials: "AS",
-    phone: "+91 98765 00102",
-    status: "Online",
-  },
-  {
-    id: "r3",
-    name: "Vikram Singh",
-    initials: "VS",
-    phone: "+91 98765 00103",
-    status: "Offline",
-  },
-  {
-    id: "r4",
-    name: "Suresh Raina",
-    initials: "SR",
-    phone: "+91 98765 00104",
-    status: "Offline",
-  },
-];
+const DEFAULT_MANAGED_RIDERS: ManagedRiderItem[] = [];
 
 export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
-  activeRidersCount = 4,
-  totalCodAmount = "₹14,800",
+  activeRidersCount = 0,
+  totalCodAmount = "₹0",
   riders = DEFAULT_MANAGED_RIDERS,
   onInviteRider,
   onSelectRider,
@@ -159,41 +130,48 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
             <h2 className={styles.sectionLabel}>YOUR RIDERS</h2>
 
             <div className={styles.ridersList}>
-              {riders.map((rider) => (
-                <article
-                  key={rider.id}
-                  className={styles.riderCard}
-                  onClick={() => handleRiderClick(rider)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      handleRiderClick(rider);
-                    }
-                  }}
-                >
-                  <div className={styles.riderLeft}>
-                    <div className={styles.avatarCircle}>{rider.initials}</div>
-                    <div className={styles.riderInfo}>
-                      <h3 className={styles.riderName}>{rider.name}</h3>
-                      <p className={styles.riderPhone}>{rider.phone}</p>
+              {riders.length === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748B", fontSize: "14px" }}>
+                  <p style={{ margin: 0, fontWeight: 600, color: "#1E293B" }}>No delivery riders registered</p>
+                  <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>Add an agent to start managing riders.</p>
+                </div>
+              ) : (
+                riders.map((rider) => (
+                  <article
+                    key={rider.id}
+                    className={styles.riderCard}
+                    onClick={() => handleRiderClick(rider)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        handleRiderClick(rider);
+                      }
+                    }}
+                  >
+                    <div className={styles.riderLeft}>
+                      <div className={styles.avatarCircle}>{rider.initials}</div>
+                      <div className={styles.riderInfo}>
+                        <h3 className={styles.riderName}>{rider.name}</h3>
+                        <p className={styles.riderPhone}>{rider.phone}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className={styles.riderRight}>
-                    <span
-                      className={`${styles.statusPill} ${
-                        rider.status === "Online"
-                          ? styles.statusOnline
-                          : styles.statusOffline
-                      }`}
-                    >
-                      {rider.status}
-                    </span>
-                    <ChevronRight size={18} className={styles.chevronIcon} />
-                  </div>
-                </article>
-              ))}
+                    <div className={styles.riderRight}>
+                      <span
+                        className={`${styles.statusPill} ${
+                          rider.status === "Online"
+                            ? styles.statusOnline
+                            : styles.statusOffline
+                        }`}
+                      >
+                        {rider.status}
+                      </span>
+                      <ChevronRight size={18} className={styles.chevronIcon} />
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
           </section>
 
