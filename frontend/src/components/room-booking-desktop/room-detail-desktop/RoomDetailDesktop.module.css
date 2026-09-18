@@ -100,6 +100,40 @@
   transform: translateY(0);
 }
 
+.bannerNavBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.bannerNavBtn:hover {
+  background-color: rgba(15, 23, 42, 0.9);
+  transform: translateY(-50%) scale(1.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.bannerNavBtnLeft {
+  left: 20px;
+}
+
+.bannerNavBtnRight {
+  right: 20px;
+}
+
 /* Two Column Layout (Details Left + Sticky Booking Card Right) */
 .twoColumnLayout {
   display: flex;

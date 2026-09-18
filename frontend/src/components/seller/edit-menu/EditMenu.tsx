@@ -73,6 +73,7 @@ function EditMenuInner({
   // Food type dropdown & multi-select
   const [isFoodTypeDropdownOpen, setIsFoodTypeDropdownOpen] = useState(false);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(['Veg']);
+  const [foodTypeError, setFoodTypeError] = useState<string | null>(null);
 
   // Stock
   const [stockQty, setStockQty] = useState('10');
@@ -164,22 +165,27 @@ function EditMenuInner({
     setSelectedFoodTypes((prev) => {
       const isAlreadySelected = prev.includes(type);
 
+      let next: string[];
       if (isAlreadySelected) {
         // Unselect the clicked type
-        return prev.filter((t) => t !== type);
+        next = prev.filter((t) => t !== type);
       } else {
         // Select the clicked type
         if (type === 'Non Veg' || type === 'Non-Veg' || type === 'NON_VEG') {
           // If Non Veg is selected: automatically unselect Veg, Vegan, and Jain
-          return ['Non Veg'];
+          next = ['Non Veg'];
         } else {
           // If Veg, Vegan, or Jain is selected: automatically unselect Non Veg
           const withoutNonVeg = prev.filter(
             (t) => t !== 'Non Veg' && t !== 'Non-Veg' && t !== 'NON_VEG'
           );
-          return [...withoutNonVeg, type];
+          next = [...withoutNonVeg, type];
         }
       }
+      if (next.length > 0) {
+        setFoodTypeError(null);
+      }
+      return next;
     });
   };
 
@@ -215,6 +221,7 @@ function EditMenuInner({
     setPrice('');
     setDescription('');
     setSelectedFoodTypes(['Veg']);
+    setFoodTypeError(null);
     setStockQty('10');
     setIsInStock(true);
     setVariants([]);
@@ -227,6 +234,13 @@ function EditMenuInner({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!selectedFoodTypes || selectedFoodTypes.length === 0) {
+      setFoodTypeError('Food Type is required. Please select at least one type.');
+      alert('Please select a food type (Veg, Non Veg, Vegan, or Jain).');
+      return;
+    }
+
     setLoading(true);
     try {
       const formData = new FormData();
@@ -246,7 +260,8 @@ function EditMenuInner({
       }
       formData.append('itemType', itemTypeVal);
 
-      formData.append('stockQuantity', stockQty || '24');
+      const cleanStock = Math.max(0, parseInt(stockQty, 10) || 0);
+      formData.append('stockQuantity', String(cleanStock));
       formData.append('isAvailable', String(isInStock));
 
       const validVariants = variants
@@ -414,20 +429,32 @@ function EditMenuInner({
             <div className={styles.twoColRow}>
               {/* Food Type with Custom Multi-select Dropdown */}
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Food Type</label>
+                <label className={styles.fieldLabel}>
+                  Food Type <span className={styles.requiredStar}>*</span>
+                </label>
                 <div className={styles.foodTypeDropdownContainer}>
                   <button
                     type="button"
-                    className={styles.dropdownTrigger}
+                    className={`${styles.dropdownTrigger} ${
+                      foodTypeError ? styles.dropdownTriggerError : ''
+                    }`}
                     onClick={() => setIsFoodTypeDropdownOpen((prev) => !prev)}
                   >
-                    <span className={styles.dropdownTriggerText}>
+                    <span
+                      className={styles.dropdownTriggerText}
+                      style={{
+                        color: selectedFoodTypes.length === 0 ? '#94A3B8' : '#0F172A',
+                      }}
+                    >
                       {selectedFoodTypes.length > 0
                         ? selectedFoodTypes.join(', ')
-                        : 'Select Type'}
+                        : 'Select Food Type *'}
                     </span>
                     <ChevronDown size={16} className={styles.selectArrow} />
                   </button>
+                  {foodTypeError && (
+                    <span className={styles.errorText}>{foodTypeError}</span>
+                  )}
 
                   {isFoodTypeDropdownOpen && (
                     <>
@@ -461,7 +488,7 @@ function EditMenuInner({
                             >
                               <div
                                 className={`${styles.checkboxBox} ${
-                                  isSelected ? styles.checkboxBoxActive : ''
+                                   isSelected ? styles.checkboxBoxActive : ''
                                 }`}
                               >
                                 {isSelected && <Check size={12} strokeWidth={3} />}
@@ -493,10 +520,26 @@ function EditMenuInner({
                   <span className={styles.itemInStockLabel}>Item in Stock</span>
                   <input
                     type="number"
+                    min="0"
+                    step="1"
                     className={styles.stockNumberInput}
                     value={stockQty}
-                    onChange={(e) => setStockQty(e.target.value)}
-                    placeholder="24"
+                    onChange={(e) => {
+                      const rawVal = e.target.value;
+                      if (rawVal === '') {
+                        setStockQty('');
+                        return;
+                      }
+                      const cleanVal = rawVal.replace(/[^\d]/g, '');
+                      const num = parseInt(cleanVal, 10);
+                      setStockQty(isNaN(num) ? '0' : String(Math.max(0, num)));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '.') {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="0"
                   />
                   <button
                     type="button"

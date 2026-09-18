@@ -254,6 +254,19 @@
   white-space: nowrap;
 }
 
+.dropdownTriggerError {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+}
+
+.errorText {
+  font-size: 0.75rem;
+  color: #EF4444;
+  margin-top: 4px;
+  font-weight: 500;
+  display: block;
+}
+
 .dropdownMenu {
   position: absolute;
   top: calc(100% + 4px);
