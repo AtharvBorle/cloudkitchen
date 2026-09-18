@@ -163,6 +163,26 @@ const nextConfig: NextConfig = {
         destination: "/seller/create-subscription-plan",
         permanent: true,
       },
+      {
+        source: "/dashboard/seller/subscription",
+        destination: "/seller/subscription",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/seller/subscription/:path*",
+        destination: "/seller/subscription/:path*",
+        permanent: true,
+      },
+      {
+        source: "/seller/subscription/edit-plan",
+        destination: "/seller/subscription/edit",
+        permanent: true,
+      },
+      {
+        source: "/seller/create-subscription",
+        destination: "/seller/subscription/add",
+        permanent: true,
+      },
     ];
   },
 };

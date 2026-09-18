@@ -26,6 +26,7 @@ import {
   HelpCircle,
   Shield,
   Sparkles,
+  Utensils,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
@@ -272,11 +273,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (onProfileClick) {
       onProfileClick();
     } else if (session?.user) {
-      const role = (session.user as any)?.role;
+      const role = (session.user as any)?.role?.toUpperCase();
       if (role === "SELLER") {
         router.push("/seller/dashboard");
       } else if (role === "ADMIN" || role === "SUPERADMIN") {
         router.push("/dashboard/admin");
+      } else if (role === "DELIVERY") {
+        router.push("/dashboard/delivery");
       } else {
         router.push("/settings-desktop");
       }
@@ -862,113 +865,230 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   ) : (
                     // ================= AUTHENTICATED USER STATE =================
-                    <div className={styles.profileAuthCard}>
-                      <div className={styles.profileUserHeader}>
-                        <div className={styles.profileUserAvatarCircle}>
-                          {session.user.name?.trim().charAt(0).toUpperCase() || "U"}
-                        </div>
-                        <div className={styles.profileUserDetails}>
-                          <span className={styles.profileUserName}>{session.user.name || "User"}</span>
-                          <span className={styles.profileUserEmail}>
-                            {session.user.email || "Active Account"}
-                          </span>
-                        </div>
-                      </div>
+                    (() => {
+                      const userRole = ((session.user as any)?.role || "USER").toUpperCase();
+                      const isSeller = userRole === "SELLER";
+                      const isAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+                      const isDelivery = userRole === "DELIVERY";
 
-                      <div className={styles.profileDivider} />
+                      return (
+                        <div className={styles.profileAuthCard}>
+                          <div className={styles.profileUserHeader}>
+                            <div className={styles.profileUserAvatarCircle}>
+                              {session.user.name?.trim().charAt(0).toUpperCase() || "U"}
+                            </div>
+                            <div className={styles.profileUserDetails}>
+                              <span className={styles.profileUserName}>{session.user.name || "User"}</span>
+                              <span className={styles.profileUserEmail}>
+                                {session.user.email || "Active Account"}
+                              </span>
+                              {isSeller && (
+                                <span className={`${styles.profileRoleBadge} ${styles.roleBadgeSeller}`}>
+                                  Seller Account
+                                </span>
+                              )}
+                              {isAdmin && (
+                                <span className={`${styles.profileRoleBadge} ${styles.roleBadgeAdmin}`}>
+                                  Admin
+                                </span>
+                              )}
+                              {isDelivery && (
+                                <span className={`${styles.profileRoleBadge} ${styles.roleBadgeDelivery}`}>
+                                  Delivery Partner
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                      {/* Auth Nav Links */}
-                      <div className={styles.profileNavList}>
-                        <Link
-                          href="/settings-desktop"
-                          className={styles.profileNavItem}
-                          onClick={closeProfileMenu}
-                          role="menuitem"
-                        >
-                          <Settings size={16} className={styles.profileNavIcon} />
-                          <span>My Profile & Settings</span>
-                        </Link>
+                          {/* Primary CTA for Merchant / Staff Roles */}
+                          {isSeller && (
+                            <Link
+                              href="/seller/dashboard"
+                              className={styles.profileRoleActionBtn}
+                              onClick={closeProfileMenu}
+                              role="menuitem"
+                            >
+                              <Store size={16} />
+                              <span>Go to Seller Dashboard</span>
+                            </Link>
+                          )}
 
-                        <Link
-                          href="/orders-desktop"
-                          className={styles.profileNavItem}
-                          onClick={closeProfileMenu}
-                          role="menuitem"
-                        >
-                          <Package size={16} className={styles.profileNavIcon} />
-                          <span>My Orders</span>
-                        </Link>
+                          {isAdmin && (
+                            <Link
+                              href="/dashboard/admin"
+                              className={`${styles.profileRoleActionBtn} ${styles.profileRoleActionBtnAdmin}`}
+                              onClick={closeProfileMenu}
+                              role="menuitem"
+                            >
+                              <Shield size={16} />
+                              <span>Admin Console</span>
+                            </Link>
+                          )}
 
-                        <Link
-                          href="/my-subscription"
-                          className={styles.profileNavItem}
-                          onClick={closeProfileMenu}
-                          role="menuitem"
-                        >
-                          <Calendar size={16} className={styles.profileNavIcon} />
-                          <span>My Subscriptions</span>
-                        </Link>
+                          {isDelivery && (
+                            <Link
+                              href="/dashboard/delivery"
+                              className={`${styles.profileRoleActionBtn} ${styles.profileRoleActionBtnDelivery}`}
+                              onClick={closeProfileMenu}
+                              role="menuitem"
+                            >
+                              <Bike size={16} />
+                              <span>Delivery Console</span>
+                            </Link>
+                          )}
 
-                        <Link
-                          href="/delivery-addresses-desktop"
-                          className={styles.profileNavItem}
-                          onClick={closeProfileMenu}
-                          role="menuitem"
-                        >
-                          <MapPin size={16} className={styles.profileNavIcon} />
-                          <span>Delivery Addresses</span>
-                        </Link>
+                          <div className={styles.profileDivider} />
 
-                        {(session.user as any)?.role === "SELLER" && (
-                          <Link
-                            href="/seller/dashboard"
-                            className={styles.profileNavItem}
-                            onClick={closeProfileMenu}
+                          {/* Auth Nav Links - Tailored by Role */}
+                          <div className={styles.profileNavList}>
+                            {isSeller ? (
+                              <>
+                                <Link
+                                  href="/seller/menu"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Utensils size={16} className={styles.profileNavIcon} />
+                                  <span>Menu & Inventory</span>
+                                </Link>
+
+                                <Link
+                                  href="/seller/orders"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Package size={16} className={styles.profileNavIcon} />
+                                  <span>Kitchen Orders</span>
+                                </Link>
+
+                                <Link
+                                  href="/seller/subscription"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Calendar size={16} className={styles.profileNavIcon} />
+                                  <span>Meal Subscriptions</span>
+                                </Link>
+
+                                <Link
+                                  href="/seller/settings"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Settings size={16} className={styles.profileNavIcon} />
+                                  <span>Store Settings</span>
+                                </Link>
+                              </>
+                            ) : isAdmin ? (
+                              <>
+                                <Link
+                                  href="/dashboard/admin"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Shield size={16} className={styles.profileNavIcon} />
+                                  <span>Dashboard Overview</span>
+                                </Link>
+
+                                <Link
+                                  href="/support"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <HelpCircle size={16} className={styles.profileNavIcon} />
+                                  <span>Support Tickets</span>
+                                </Link>
+                              </>
+                            ) : isDelivery ? (
+                              <>
+                                <Link
+                                  href="/dashboard/delivery"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Bike size={16} className={styles.profileNavIcon} />
+                                  <span>Active Deliveries</span>
+                                </Link>
+                              </>
+                            ) : (
+                              <>
+                                <Link
+                                  href="/settings-desktop"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Settings size={16} className={styles.profileNavIcon} />
+                                  <span>My Profile & Settings</span>
+                                </Link>
+
+                                <Link
+                                  href="/orders-desktop"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Package size={16} className={styles.profileNavIcon} />
+                                  <span>My Orders</span>
+                                </Link>
+
+                                <Link
+                                  href="/my-subscription"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Calendar size={16} className={styles.profileNavIcon} />
+                                  <span>My Subscriptions</span>
+                                </Link>
+
+                                <Link
+                                  href="/delivery-addresses-desktop"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <MapPin size={16} className={styles.profileNavIcon} />
+                                  <span>Delivery Addresses</span>
+                                </Link>
+                              </>
+                            )}
+
+                            <Link
+                              href="/support"
+                              className={styles.profileNavItem}
+                              onClick={closeProfileMenu}
+                              role="menuitem"
+                            >
+                              <HelpCircle size={16} className={styles.profileNavIcon} />
+                              <span>Help & Support</span>
+                            </Link>
+                          </div>
+
+                          <div className={styles.profileDivider} />
+
+                          <button
+                            type="button"
+                            className={styles.profileLogoutBtn}
+                            onClick={() => {
+                              closeProfileMenu();
+                              performLogout({ role: (session.user as any)?.role });
+                            }}
                             role="menuitem"
                           >
-                            <Store size={16} className={styles.profileNavIcon} />
-                            <span>Seller Dashboard</span>
-                          </Link>
-                        )}
-
-                        {((session.user as any)?.role === "ADMIN" || (session.user as any)?.role === "SUPERADMIN") && (
-                          <Link
-                            href="/dashboard/admin"
-                            className={styles.profileNavItem}
-                            onClick={closeProfileMenu}
-                            role="menuitem"
-                          >
-                            <Shield size={16} className={styles.profileNavIcon} />
-                            <span>Admin Console</span>
-                          </Link>
-                        )}
-
-                        <Link
-                          href="/support"
-                          className={styles.profileNavItem}
-                          onClick={closeProfileMenu}
-                          role="menuitem"
-                        >
-                          <HelpCircle size={16} className={styles.profileNavIcon} />
-                          <span>Help & Support</span>
-                        </Link>
-                      </div>
-
-                      <div className={styles.profileDivider} />
-
-                      <button
-                        type="button"
-                        className={styles.profileLogoutBtn}
-                        onClick={() => {
-                          closeProfileMenu();
-                          performLogout({ role: (session.user as any)?.role });
-                        }}
-                        role="menuitem"
-                      >
-                        <LogOut size={16} strokeWidth={2.2} />
-                        <span>Log Out</span>
-                      </button>
-                    </div>
+                            <LogOut size={16} strokeWidth={2.2} />
+                            <span>Log Out</span>
+                          </button>
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               )}

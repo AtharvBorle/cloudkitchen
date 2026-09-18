@@ -113,10 +113,15 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     };
   }, [isOpen, pathname, activeItem, isSettingsRoute]);
 
+  const userRole = ((session?.user as any)?.role || "USER").toUpperCase();
+  const isSeller = userRole === "SELLER";
+  const isAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+  const isDelivery = userRole === "DELIVERY";
+
   const handleAuthAction = () => {
     onClose();
     if (session?.user) {
-      performLogout({ role: "USER" });
+      performLogout({ role: (session.user as any)?.role });
     } else {
       router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);
     }
@@ -129,6 +134,37 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       icon: <Home className={styles.navIcon} size={18} />,
       hasBadge: false,
     },
+    ...(isSeller
+      ? [
+          {
+            label: "Seller Dashboard",
+            href: "/seller/dashboard",
+            icon: <Utensils className={styles.navIcon} size={18} />,
+            hasBadge: true,
+            badgeText: "PORTAL",
+          },
+        ]
+      : isAdmin
+      ? [
+          {
+            label: "Admin Console",
+            href: "/dashboard/admin",
+            icon: <Shield className={styles.navIcon} size={18} />,
+            hasBadge: true,
+            badgeText: "ADMIN",
+          },
+        ]
+      : isDelivery
+      ? [
+          {
+            label: "Delivery Dashboard",
+            href: "/dashboard/delivery",
+            icon: <Utensils className={styles.navIcon} size={18} />,
+            hasBadge: true,
+            badgeText: "DELIVERY",
+          },
+        ]
+      : []),
     {
       label: "Explore",
       href: "/explore-desktop",
@@ -157,10 +193,10 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     },
     {
       label: "Settings",
-      href: "/settings-desktop",
+      href: isSeller ? "/seller/settings" : "/settings-desktop",
       icon: <Settings className={styles.navIcon} size={18} />,
       hasBadge: false,
-      isDropdown: true,
+      isDropdown: !isSeller,
     },
     {
       label: "Help & Support",
@@ -346,7 +382,15 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           className={styles.profileSection}
           onClick={() => {
             onClose();
-            router.push("/settings-desktop");
+            if (isSeller) {
+              router.push("/seller/dashboard");
+            } else if (isAdmin) {
+              router.push("/dashboard/admin");
+            } else if (isDelivery) {
+              router.push("/dashboard/delivery");
+            } else {
+              router.push("/settings-desktop");
+            }
           }}
           style={{ cursor: "pointer" }}
           role="button"
@@ -363,12 +407,27 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           </div>
           <div className={styles.userInfo}>
             <h3 className={styles.userName}>{userName}</h3>
-            {isGoldMember && (
+            {isSeller ? (
+              <div className={styles.goldBadge} style={{ background: '#ff6b00', color: '#ffffff' }}>
+                <Utensils size={11} fill="#FFFFFF" color="#FFFFFF" />
+                <span>Seller Account</span>
+              </div>
+            ) : isAdmin ? (
+              <div className={styles.goldBadge} style={{ background: '#7c3aed', color: '#ffffff' }}>
+                <Shield size={11} fill="#FFFFFF" color="#FFFFFF" />
+                <span>Admin</span>
+              </div>
+            ) : isDelivery ? (
+              <div className={styles.goldBadge} style={{ background: '#059669', color: '#ffffff' }}>
+                <Utensils size={11} fill="#FFFFFF" color="#FFFFFF" />
+                <span>Delivery Partner</span>
+              </div>
+            ) : isGoldMember ? (
               <div className={styles.goldBadge}>
                 <Star size={11} fill="#FFFFFF" color="#FFFFFF" />
                 <span>Gold Member</span>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
