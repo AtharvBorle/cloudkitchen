@@ -72,7 +72,7 @@ function LegalDocumentsContent() {
       pageTitle="Neo Cloud Room Onboarding"
     >
       <LegalDocuments
-        key={initialDocs.bankAccountNumber || "docs-init"}
+        key={initialDocs.bankAccountNumber + (initialDocs.ifscCode || "") + (initialDocs.identityProofFile || "") || "docs-init"}
         initialData={initialDocs}
         onContinue={handleContinue}
         onBack={handleBack}

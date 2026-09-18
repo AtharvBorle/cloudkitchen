@@ -46,7 +46,11 @@ function MediaGalleryContent() {
       cuisinePhotos: data.cuisinePhotos,
       roomPhotos: data.roomPhotos,
     });
-    router.push("/seller/confirm-registration");
+    if (isFromReview) {
+      router.push("/seller/confirm-registration");
+    } else {
+      router.push("/seller/confirm-registration");
+    }
   };
 
   const handleBack = () => {

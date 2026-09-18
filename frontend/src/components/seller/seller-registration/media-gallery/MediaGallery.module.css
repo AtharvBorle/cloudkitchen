@@ -555,3 +555,75 @@
   }
 }
 
+/* Validation Alert Banner & Requirement Badges */
+.errorBanner {
+  background-color: #fef2f2;
+  border: 1px solid #f87171;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #991b1b;
+  font-size: 0.88rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.errorBannerIcon {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.fieldHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.badgeRequired {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.badgeComplete {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.badgeOptional {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.fieldErrorText {
+  font-size: 0.78rem;
+  color: #dc2626;
+  font-weight: 500;
+  margin: 4px 0 0 0;
+}
+
+.desktopPhotoBoxError {
+  border-color: #f87171 !important;
+  background-color: #fffafb !important;
+}
+
+.mobileSlotError {
+  border-color: #f87171 !important;
+  background-color: #fffafb !important;
+}
+

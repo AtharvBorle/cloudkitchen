@@ -62,7 +62,24 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
   const [ifscTouched, setIfscTouched] = useState(!!initialData?.ifscCode);
 
   const isBankValid = formData.bankAccountNumber.length >= 9 && formData.bankAccountNumber.length <= 18;
-  const isIfscValid = formData.ifscCode.trim().length >= 4 && /^[A-Z0-9]+$/.test(formData.ifscCode.trim().toUpperCase());
+  const isIfscValid =
+    formData.ifscCode.trim().length > 0 &&
+    /^[A-Z0-9]+$/i.test(formData.ifscCode.trim()) &&
+    /[A-Z]/i.test(formData.ifscCode.trim());
+
+  const getIfscErrorMessage = (code: string): string => {
+    const val = code.trim().toUpperCase();
+    if (val.length === 0) {
+      return "IFSC code cannot be empty";
+    }
+    if (/^\d+$/.test(val)) {
+      return "Numbers only are not supported. IFSC code must be alphanumeric (contain letters and numbers)";
+    }
+    if (!/^[A-Z0-9]+$/.test(val)) {
+      return "Special characters and symbols are not allowed";
+    }
+    return "Invalid alphanumeric IFSC code";
+  };
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({
     identityProofFile: null,
@@ -270,7 +287,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
     setBankTouched(true);
     setIfscTouched(true);
 
-    if (!isBankValid || !isIfscValid) {
+    if (!isBankValid) {
+      document.getElementById("bankAccountNumber")?.focus();
+      return;
+    }
+    if (!isIfscValid) {
+      document.getElementById("ifscCode")?.focus();
       return;
     }
 
@@ -829,10 +851,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                 {formData.ifscCode.length > 0
                   ? isIfscValid
                     ? "Valid IFSC"
-                    : "No symbols"
+                    : /^\d+$/.test(formData.ifscCode)
+                    ? "Letters required"
+                    : "Alphanumeric required"
                   : ifscTouched
                   ? "Required"
-                  : "Letters & numbers only"}
+                  : "Alphanumeric (letters & numbers)"}
               </span>
             </div>
             <div
@@ -848,6 +872,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                 id="ifscCode"
                 name="ifscCode"
                 type="text"
+                autoCapitalize="characters"
                 required
                 placeholder="e.g. HDFC0001234"
                 value={formData.ifscCode}
@@ -868,17 +893,12 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
               isIfscValid ? (
                 <div className={styles.helperTextSuccess}>
                   <CheckCircle2 size={13} />
-                  <span>Valid IFSC code (letters & numbers only)</span>
-                </div>
-              ) : formData.ifscCode.length === 0 ? (
-                <div className={styles.helperTextError}>
-                  <AlertCircle size={13} />
-                  <span>IFSC code cannot be empty (no symbols allowed)</span>
+                  <span>Valid alphanumeric IFSC code</span>
                 </div>
               ) : (
                 <div className={styles.helperTextError}>
                   <AlertCircle size={13} />
-                  <span>Special characters and symbols are not allowed</span>
+                  <span>{getIfscErrorMessage(formData.ifscCode)}</span>
                 </div>
               )
             )}

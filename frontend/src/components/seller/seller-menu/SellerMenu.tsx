@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, SquarePen, Sparkles, Trash2 } from "lucide-react";
+import { Plus, Search, SquarePen, Sparkles, Trash2, Utensils } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
@@ -38,6 +38,7 @@ export interface DishItem {
   price: string;
   type: "VEG" | "NON-VEG" | "JAIN" | "VEGAN";
   types: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN">;
+  imageUrl?: string | null;
   variantsCount?: number;
   stockQty: number;
   inStock: boolean;
@@ -109,6 +110,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                 name: item.name,
                 category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
                 price: `₹${item.price}`,
+                imageUrl: item.imageUrl || null,
                 type: foodTypes[0] || "VEG",
                 types: foodTypes,
                 variantsCount,
@@ -309,7 +311,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
               </div>
             </div>
 
-            <div className={styles.opDivider} />
+            <div className={styles.verticalDivider} />
 
             {/* Store Timings */}
             <div className={styles.opItem}>
@@ -317,7 +319,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
               <span className={styles.opValue}>{storeTimings}</span>
             </div>
 
-            <div className={styles.opDivider} />
+            <div className={styles.verticalDivider} />
 
             {/* Operational Pincodes */}
             <div className={styles.opItem}>
@@ -327,9 +329,9 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
           </div>
 
           {/* 3. Search Bar + Category Tabs Row */}
-          <div className={styles.filtersRow}>
+          <div className={styles.searchFilterRow}>
             {/* Search Input */}
-            <div className={styles.searchBox}>
+            <div className={styles.searchInputWrapper}>
               <Search size={16} className={styles.searchIcon} />
               <input
                 type="text"
@@ -341,14 +343,15 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
             </div>
 
             {/* Category Filter Tabs */}
-            <div className={styles.categoryTabs}>
+            <div className={styles.categoryPillsGroup}>
               {categories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`${styles.categoryTab} ${selectedCategory === cat ? styles.categoryTabActive : ""
-                    }`}
+                  className={`${styles.categoryPill} ${
+                    selectedCategory === cat ? styles.activeCategoryPill : ""
+                  }`}
                 >
                   {cat}
                 </button>
@@ -362,50 +365,48 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
               <table className={styles.dishTable}>
                 <thead>
                   <tr>
-                    <th>DISH NAME</th>
+                    <th>DISH</th>
                     <th>CATEGORY</th>
                     <th>PRICE</th>
                     <th>TYPE</th>
                     <th>STOCK QTY</th>
                     <th>IN-STOCK STATUS</th>
+                    <th style={{ textAlign: "right" }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredDishes.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b", fontSize: "14px" }}>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "#64748b", fontSize: "14px" }}>
                         {loading ? "Loading menu items..." : "No dishes found. Click '+ Add New Dish' to add dishes to your menu."}
                       </td>
                     </tr>
                   ) : (
                     filteredDishes.map((dish) => (
                     <tr key={dish.id}>
-                      {/* Dish Name with Edit & Delete Icon Buttons */}
+                      {/* Dish Thumbnail & Details */}
                       <td>
                         <div className={styles.dishNameCell}>
-                          <button
-                            type="button"
-                            className={styles.editDishBtn}
-                            aria-label={`Edit ${dish.name}`}
-                            title="Edit dish"
-                            onClick={() => router.push(`/seller/edit-menu?id=${dish.id}`)}
-                          >
-                            <SquarePen size={17} strokeWidth={2.2} />
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.editDishBtn}
-                            style={{ color: "#EF4444" }}
-                            aria-label={`Delete ${dish.name}`}
-                            title="Delete dish"
-                            onClick={() => handleDeleteDish(dish.id, dish.name)}
-                          >
-                            <Trash2 size={16} strokeWidth={2.2} />
-                          </button>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <div className={styles.dishThumbnailWrapper}>
+                            {dish.imageUrl ? (
+                              <img
+                                src={dish.imageUrl}
+                                alt={dish.name}
+                                className={styles.dishThumbnail}
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className={styles.dishPlaceholderIcon}>
+                                <Utensils size={18} strokeWidth={2.2} />
+                              </div>
+                            )}
+                          </div>
+                          <div className={styles.dishNameInfo}>
                             <span className={styles.dishNameText}>{dish.name}</span>
                             {dish.variantsCount && dish.variantsCount > 0 ? (
-                              <span style={{ fontSize: "0.72rem", color: "#EA580C", fontWeight: 600 }}>
+                              <span className={styles.variantBadgeText}>
                                 {dish.variantsCount} {dish.variantsCount === 1 ? "variant" : "variants"} available
                               </span>
                             ) : null}
@@ -493,6 +494,30 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                               className={`${styles.miniThumb} ${dish.inStock ? styles.miniThumbActive : ""
                                 }`}
                             />
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Actions: Edit & Delete Buttons at the End */}
+                      <td>
+                        <div className={styles.dishActionsCell}>
+                          <button
+                            type="button"
+                            className={styles.editDishBtn}
+                            aria-label={`Edit ${dish.name}`}
+                            title="Edit dish"
+                            onClick={() => router.push(`/seller/edit-menu?id=${dish.id}`)}
+                          >
+                            <SquarePen size={16} strokeWidth={2.2} />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deleteDishBtn}
+                            aria-label={`Delete ${dish.name}`}
+                            title="Delete dish"
+                            onClick={() => handleDeleteDish(dish.id, dish.name)}
+                          >
+                            <Trash2 size={16} strokeWidth={2.2} />
                           </button>
                         </div>
                       </td>

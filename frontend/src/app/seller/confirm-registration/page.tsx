@@ -53,6 +53,23 @@ export default function ConfirmRegistrationPage() {
       return;
     }
 
+    const sellerType = activeDraft.sellerType || "FOOD";
+    const isFood = sellerType === "FOOD" || sellerType === "BOTH";
+    const isProperty = sellerType === "PROPERTY" || sellerType === "BOTH";
+
+    const kitchenPhotosCount = activeDraft.kitchenPhotos?.filter(Boolean).length || 0;
+    const cuisinePhotosCount = activeDraft.cuisinePhotos?.filter(Boolean).length || 0;
+    const roomPhotosCount = activeDraft.roomPhotos?.filter(Boolean).length || 0;
+
+    if (isFood && (kitchenPhotosCount < 3 || cuisinePhotosCount < 3)) {
+      setErrorMessage("Please upload at least 3 Kitchen Photos and 3 Cuisine Photos in the Media section before submitting.");
+      return;
+    }
+    if (isProperty && roomPhotosCount < 2) {
+      setErrorMessage("Please upload at least 2 Room Photos in the Media section before submitting.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {

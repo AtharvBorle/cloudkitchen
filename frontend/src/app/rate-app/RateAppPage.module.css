@@ -8,6 +8,9 @@
 .desktopNavbar {
   display: block;
   width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .mainContainer {
@@ -26,7 +29,12 @@
 }
 
 .sidebarWrapper {
-  display: block;
+  width: 290px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 96px;
+  align-self: flex-start;
+  z-index: 10;
 }
 
 .contentWrapper {
