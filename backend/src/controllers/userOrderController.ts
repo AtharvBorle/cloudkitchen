@@ -183,7 +183,7 @@ export const createOrder = async (req: Request) => {
                 if (foodItem.stockQuantity < cartItem.quantity) {
                     throw new ApiError(`Not enough stock for ${cartItem.name}. Only ${foodItem.stockQuantity} left.`, 400);
                 }
-                const newStock = foodItem.stockQuantity - cartItem.quantity;
+                const newStock = Math.max(0, foodItem.stockQuantity - cartItem.quantity);
                 itemUpdates.push({
                     id: foodItem.id,
                     newStock,

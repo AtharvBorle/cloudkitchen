@@ -139,13 +139,16 @@ export const createMenuItem = async (req: Request) => {
     const description = formData.get("description") as string;
     const availableDays = formData.get("availableDays") as string;
     const stockQuantityStr = formData.get("stockQuantity") as string;
-    const stockQuantity = stockQuantityStr && !isNaN(parseInt(stockQuantityStr)) ? parseInt(stockQuantityStr) : -1;
+    const stockQuantity = stockQuantityStr && !isNaN(parseInt(stockQuantityStr)) ? Math.max(0, parseInt(stockQuantityStr)) : 10;
     const deliveryPincodes = formData.get("deliveryPincodes") as string | null;
     const openTime = formData.get("openTime") as string | null;
     const closeTime = formData.get("closeTime") as string | null;
     const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
     const rawItemType = formData.get("itemType") as string | null;
+    if (!rawItemType || !rawItemType.trim()) {
+        throw new ApiError("Food type is required", 400);
+    }
     const itemType = normalizeFoodItemType(rawItemType);
 
     const rawVariants = formData.get("variants") as string | null;
@@ -250,7 +253,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (description !== null) dataToUpdate.description = description;
         if (price !== null && !isNaN(parseFloat(price))) dataToUpdate.price = parseFloat(price);
         if (isAvailable !== null) dataToUpdate.isAvailable = isAvailable === "true";
-        if (stockQuantity !== null && !isNaN(parseInt(stockQuantity))) dataToUpdate.stockQuantity = parseInt(stockQuantity);
+        if (stockQuantity !== null && !isNaN(parseInt(stockQuantity))) dataToUpdate.stockQuantity = Math.max(0, parseInt(stockQuantity));
         if (deliveryPincodes !== null) {
             dataToUpdate.deliveryPincodes = deliveryPincodes.trim() || null;
         }
@@ -284,7 +287,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.description !== undefined) dataToUpdate.description = body.comment !== undefined ? body.comment : body.description;
         if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
         if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
-        if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = parseInt(body.stockQuantity);
+        if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = Math.max(0, parseInt(body.stockQuantity));
         if (body.deliveryPincodes !== undefined) {
             dataToUpdate.deliveryPincodes = body.deliveryPincodes ? body.deliveryPincodes.trim() || null : null;
         }

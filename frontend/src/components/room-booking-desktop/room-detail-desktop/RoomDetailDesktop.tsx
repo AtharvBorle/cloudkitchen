@@ -570,10 +570,28 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
 
   const allGalleryImages = React.useMemo(() => {
-    if (roomData.images && roomData.images.length > 0) {
-      return roomData.images.map((img: any) => (typeof img === "string" ? img : img?.src || ""));
+    let list: string[] = [];
+    if (roomData.images) {
+      if (typeof roomData.images === "string") {
+        try {
+          const parsed = JSON.parse(roomData.images);
+          if (Array.isArray(parsed)) list = parsed;
+          else if (typeof parsed === "string") list = [parsed];
+        } catch {
+          if (roomData.images.startsWith("http") || roomData.images.startsWith("/")) {
+            list = [roomData.images];
+          }
+        }
+      } else if (Array.isArray(roomData.images)) {
+        list = roomData.images.map((img: any) => (typeof img === "string" ? img : img?.src || ""));
+      }
+    }
+    const cleanList = list.filter((u) => typeof u === "string" && u.trim().length > 0 && !u.startsWith("["));
+    if (cleanList.length > 0) {
+      return cleanList;
     }
     return [
       typeof roomGalleryBanner === "string" ? roomGalleryBanner : roomGalleryBanner.src,
@@ -590,9 +608,9 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
       if (e.key === "Escape") {
         setIsGalleryOpen(false);
       } else if (e.key === "ArrowLeft") {
-        setActivePhotoIdx((prev) => (prev === 0 ? allGalleryImages.length - 1 : prev - 1));
+        setActivePhotoIdx((prev) => Math.max(0, prev - 1));
       } else if (e.key === "ArrowRight") {
-        setActivePhotoIdx((prev) => (prev + 1) % allGalleryImages.length);
+        setActivePhotoIdx((prev) => Math.min(allGalleryImages.length - 1, prev + 1));
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -752,35 +770,56 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
         <section
           aria-label="Room Photo Gallery"
           className={styles.galleryContainer}
-          style={{ cursor: "pointer" }}
+          style={{ cursor: "pointer", position: "relative" }}
           onClick={() => {
-            setActivePhotoIdx(0);
+            setActivePhotoIdx(activeBannerIdx);
             setIsGalleryOpen(true);
           }}
         >
-          {roomData.images && roomData.images.length > 0 && typeof roomData.images[0] === "string" ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={roomData.images[0]}
-              alt={roomData.name}
-              className={styles.galleryBannerImg}
-              style={{ width: "100%", maxHeight: "420px", objectFit: "cover", borderRadius: "16px" }}
-            />
-          ) : (
-            <Image
-              src={roomGalleryBanner}
-              alt={roomData.name}
-              priority
-              sizes="(max-width: 1400px) 100vw, 1400px"
-              className={styles.galleryBannerImg}
-            />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={allGalleryImages[activeBannerIdx] || allGalleryImages[0]}
+            alt={roomData.name}
+            className={styles.galleryBannerImg}
+            style={{ width: "100%", maxHeight: "420px", minHeight: "260px", objectFit: "cover", borderRadius: "16px" }}
+          />
+
+          {/* Banner Left Arrow: shown ONLY when activeBannerIdx > 0 */}
+          {activeBannerIdx > 0 && (
+            <button
+              type="button"
+              className={`${styles.bannerNavBtn} ${styles.bannerNavBtnLeft}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveBannerIdx((prev) => Math.max(0, prev - 1));
+              }}
+              aria-label="Previous photo"
+            >
+              <ChevronLeft size={22} strokeWidth={2.4} />
+            </button>
           )}
+
+          {/* Banner Right Arrow: shown when multiple images and activeBannerIdx < allGalleryImages.length - 1 */}
+          {allGalleryImages.length > 1 && activeBannerIdx < allGalleryImages.length - 1 && (
+            <button
+              type="button"
+              className={`${styles.bannerNavBtn} ${styles.bannerNavBtnRight}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveBannerIdx((prev) => Math.min(allGalleryImages.length - 1, prev + 1));
+              }}
+              aria-label="Next photo"
+            >
+              <ChevronRight size={22} strokeWidth={2.4} />
+            </button>
+          )}
+
           <button
             type="button"
             className={styles.viewAllPhotosBtn}
             onClick={(e) => {
               e.stopPropagation();
-              setActivePhotoIdx(0);
+              setActivePhotoIdx(activeBannerIdx);
               setIsGalleryOpen(true);
             }}
           >
@@ -1129,15 +1168,14 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
             className={styles.galleryMainView}
             onClick={(e) => e.stopPropagation()}
           >
-            {allGalleryImages.length > 1 && (
+            {/* Left Arrow: ONLY show when activePhotoIdx > 0 */}
+            {activePhotoIdx > 0 && (
               <button
                 type="button"
                 className={`${styles.galleryNavBtn} ${styles.galleryNavBtnLeft}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActivePhotoIdx((prev) =>
-                    prev === 0 ? allGalleryImages.length - 1 : prev - 1
-                  );
+                  setActivePhotoIdx((prev) => Math.max(0, prev - 1));
                 }}
                 aria-label="Previous photo"
               >
@@ -1152,13 +1190,14 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
               className={styles.galleryMainImg}
             />
 
-            {allGalleryImages.length > 1 && (
+            {/* Right Arrow: show when activePhotoIdx < allGalleryImages.length - 1 */}
+            {allGalleryImages.length > 1 && activePhotoIdx < allGalleryImages.length - 1 && (
               <button
                 type="button"
                 className={`${styles.galleryNavBtn} ${styles.galleryNavBtnRight}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActivePhotoIdx((prev) => (prev + 1) % allGalleryImages.length);
+                  setActivePhotoIdx((prev) => Math.min(allGalleryImages.length - 1, prev + 1));
                 }}
                 aria-label="Next photo"
               >

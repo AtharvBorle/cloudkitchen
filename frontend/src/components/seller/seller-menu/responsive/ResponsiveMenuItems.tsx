@@ -185,6 +185,14 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!selectedFoodTypes || selectedFoodTypes.length === 0) {
+      alert("Please select at least one food type (Veg, Non-Veg, Vegan, or Jain).");
+      return;
+    }
+
+    const cleanStock = Math.max(0, parseInt(String(stockQty), 10) || 0);
+
     const data = {
       itemName,
       price,
@@ -192,7 +200,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       type,
       selectedFoodTypes,
       description,
-      stockQty,
+      stockQty: cleanStock,
       isInStock,
       variants,
       schedules,
@@ -341,7 +349,8 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           {/* 5. Food Type Multi-Select */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel}>
-              Food Type <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "normal" }}>(Multi-Select)</span>
+              Food Type <span style={{ color: "#EF4444" }}>*</span>{" "}
+              <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "normal" }}>(Multi-Select)</span>
             </label>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
               {["Veg", "Non-Veg", "Vegan", "Jain"].map((ft) => {
@@ -531,10 +540,26 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             <div className={styles.stockControls}>
               <input
                 type="number"
+                min="0"
+                step="1"
                 className={styles.stockQtyInput}
                 value={stockQty}
-                onChange={(e) => setStockQty(e.target.value)}
-                placeholder="24"
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setStockQty("");
+                    return;
+                  }
+                  const clean = raw.replace(/[^\d]/g, "");
+                  const num = parseInt(clean, 10);
+                  setStockQty(isNaN(num) ? "0" : String(Math.max(0, num)));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+" || e.key === ".") {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="0"
                 aria-label="Stock quantity"
               />
               <button

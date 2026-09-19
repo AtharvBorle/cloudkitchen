@@ -175,24 +175,53 @@ export const createSellerRoom = async (req: Request) => {
     const amenities = formData.get("amenities") as string;
     const houseRules = formData.get("houseRules") as string;
     const capacity = parseInt(formData.get("capacity") as string) || 1;
-    const isAvailableField = formData.get("isAvailable");
-    const isAvailable = isAvailableField !== null ? isAvailableField === "true" : true;
-    const imageFile = formData.get("image") as File | null;
-    const imageUrlField = formData.get("imageUrl") as string | null;
+    const isAvailable = formData.has("isAvailable") ? formData.get("isAvailable") === "true" : true;
 
     if (!title || isNaN(price)) {
         throw new ApiError("Title and Price are required", 400);
     }
 
-    let imageUrl = imageUrlField || "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&auto=format&fit=crop&q=80";
-    if (imageFile && imageFile.size > 0) {
-        const bytes = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "rooms");
+    let existingImages: string[] = [];
+    const existingImagesRaw = formData.get("existingImages") as string | null;
+    if (existingImagesRaw) {
+        try {
+            const parsed = JSON.parse(existingImagesRaw);
+            if (Array.isArray(parsed)) {
+                existingImages = parsed.filter((u: any) => typeof u === "string" && u.trim().length > 0 && !u.startsWith("blob:"));
+            }
+        } catch {
+            if (typeof existingImagesRaw === "string" && !existingImagesRaw.startsWith("blob:")) {
+                existingImages = [existingImagesRaw];
+            }
+        }
+    }
+    const imageUrlField = formData.get("imageUrl") as string | null;
+    if (imageUrlField && !imageUrlField.startsWith("blob:") && !existingImages.includes(imageUrlField)) {
+        existingImages.push(imageUrlField);
     }
 
-    const imagesArray = [imageUrl];
     const encodedDescription = formatRoomDescription(about, amenities, houseRules, floor);
+    const uploadedUrls: string[] = [];
+    const fileEntries = [
+        ...formData.getAll("images"),
+        ...formData.getAll("image")
+    ];
+
+    for (const entry of fileEntries) {
+        if (entry instanceof File && entry.size > 0) {
+            const bytes = await entry.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            const uploadedUrl = await uploadImage(buffer, entry.type, entry.name, "rooms");
+            if (uploadedUrl) {
+                uploadedUrls.push(uploadedUrl);
+            }
+        }
+    }
+
+    let finalImages = [...existingImages, ...uploadedUrls];
+    if (finalImages.length === 0) {
+        finalImages = ["https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&auto=format&fit=crop&q=80"];
+    }
 
     const room = await db.room.create({
         data: {
@@ -201,8 +230,8 @@ export const createSellerRoom = async (req: Request) => {
             price,
             description: encodedDescription,
             capacity,
-            images: JSON.stringify(imagesArray),
             isAvailable,
+            images: JSON.stringify(finalImages),
         }
     });
 
@@ -340,16 +369,16 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
     let houseRules: any = undefined;
     let capacity: number | undefined;
     let isAvailable: boolean | undefined;
-    let imageFile: File | null = null;
-    let imageUrlField: string | null = null;
+    let existingImages: string[] | undefined = undefined;
+    const uploadedUrls: string[] = [];
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
         roomId = roomId || (formData.get("roomId") as string) || (formData.get("id") as string);
-        title = formData.get("title") as string;
+        title = (formData.get("title") as string) || undefined;
         const priceStr = formData.get("price") as string;
         if (priceStr) price = parseFloat(priceStr);
-        description = formData.get("description") as string;
+        description = (formData.get("description") as string) || undefined;
         about = (formData.get("about") as string) || (description && !description.startsWith("{") ? description : undefined);
         if (formData.has("floor") || formData.has("floorNo")) {
             floor = (formData.get("floor") as string) || (formData.get("floorNo") as string) || "";
@@ -365,8 +394,42 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         if (formData.has("isAvailable")) {
             isAvailable = formData.get("isAvailable") === "true";
         }
-        imageFile = formData.get("image") as File | null;
-        imageUrlField = formData.get("imageUrl") as string | null;
+
+        const existingImagesRaw = formData.get("existingImages") as string | null;
+        if (existingImagesRaw !== null) {
+            try {
+                const parsed = JSON.parse(existingImagesRaw);
+                if (Array.isArray(parsed)) {
+                    existingImages = parsed.filter((u: any) => typeof u === "string" && u.trim().length > 0 && !u.startsWith("blob:"));
+                }
+            } catch {
+                if (typeof existingImagesRaw === "string" && !existingImagesRaw.startsWith("blob:")) {
+                    existingImages = [existingImagesRaw];
+                }
+            }
+        }
+
+        const imageUrlField = formData.get("imageUrl") as string | null;
+        if (imageUrlField && !imageUrlField.startsWith("blob:")) {
+            if (!existingImages) existingImages = [];
+            if (!existingImages.includes(imageUrlField)) existingImages.push(imageUrlField);
+        }
+
+        const fileEntries = [
+            ...formData.getAll("images"),
+            ...formData.getAll("image")
+        ];
+
+        for (const entry of fileEntries) {
+            if (entry instanceof File && entry.size > 0) {
+                const bytes = await entry.arrayBuffer();
+                const buffer = Buffer.from(bytes);
+                const uploadedUrl = await uploadImage(buffer, entry.type, entry.name, "rooms");
+                if (uploadedUrl) {
+                    uploadedUrls.push(uploadedUrl);
+                }
+            }
+        }
     } else {
         const body = await req.json();
         roomId = roomId || body.roomId || body.id;
@@ -379,7 +442,19 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         if (body.houseRules !== undefined) houseRules = body.houseRules;
         if (body.capacity !== undefined) capacity = parseInt(body.capacity);
         if (body.isAvailable !== undefined) isAvailable = body.isAvailable;
-        if (body.imageUrl !== undefined) imageUrlField = body.imageUrl;
+        if (body.existingImages !== undefined) {
+            if (Array.isArray(body.existingImages)) existingImages = body.existingImages;
+            else if (typeof body.existingImages === "string") {
+                try { existingImages = JSON.parse(body.existingImages); } catch { existingImages = [body.existingImages]; }
+            }
+        } else if (body.images !== undefined) {
+            if (Array.isArray(body.images)) existingImages = body.images;
+            else if (typeof body.images === "string") {
+                try { existingImages = JSON.parse(body.images); } catch { existingImages = [body.images]; }
+            }
+        } else if (body.imageUrl !== undefined) {
+            existingImages = [body.imageUrl];
+        }
     }
 
     if (!roomId) {
@@ -416,13 +491,9 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         dataToUpdate.description = formatRoomDescription(targetAbout, targetAmenities, targetHouseRules, targetFloor);
     }
 
-    if (imageFile && imageFile.size > 0) {
-        const bytes = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "rooms");
-        dataToUpdate.images = JSON.stringify([imageUrl]);
-    } else if (imageUrlField) {
-        dataToUpdate.images = JSON.stringify([imageUrlField]);
+    if (existingImages !== undefined || uploadedUrls.length > 0) {
+        const combined = [...(existingImages || []), ...uploadedUrls];
+        dataToUpdate.images = JSON.stringify(combined.length > 0 ? combined : ["https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&auto=format&fit=crop&q=80"]);
     }
 
     const updatedRoom = await db.room.update({

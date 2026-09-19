@@ -84,7 +84,23 @@ export default function RoomConfigCanvas({
     ...DEFAULT_ROOM_DATA,
     ...initialData,
   });
-  const [rawFiles, setRawFiles] = useState<File[]>([]);
+  interface PhotoItem {
+    id: string;
+    url: string;
+    file?: File;
+    isExisting: boolean;
+  }
+
+  const [photoItems, setPhotoItems] = useState<PhotoItem[]>(() => {
+    if (initialData?.mediaPhotos && initialData.mediaPhotos.length > 0) {
+      return initialData.mediaPhotos.map((url, idx) => ({
+        id: `init-${idx}-${Date.now()}`,
+        url,
+        isExisting: true,
+      }));
+    }
+    return [];
+  });
   const [saving, setSaving] = useState(false);
 
   const [isCapacityDropdownOpen, setIsCapacityDropdownOpen] = useState(false);
@@ -112,6 +128,13 @@ export default function RoomConfigCanvas({
             } catch (e) {
               if (room.images) photos = [room.images];
             }
+
+            const items: PhotoItem[] = photos.map((url, idx) => ({
+              id: `existing-${idx}-${Date.now()}`,
+              url,
+              isExisting: true,
+            }));
+            setPhotoItems(items);
 
             // Extract amenities
             let loadedAmenitiesList: string[] = [];
@@ -300,8 +323,7 @@ export default function RoomConfigCanvas({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newPhotoUrls: string[] = [];
-    const addedFiles: File[] = [];
+    const newItems: PhotoItem[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > 5 * 1024 * 1024) {
@@ -310,31 +332,48 @@ export default function RoomConfigCanvas({
         e.target.value = "";
         return;
       }
-      newPhotoUrls.push(URL.createObjectURL(file));
-      addedFiles.push(file);
+      newItems.push({
+        id: `new-${Date.now()}-${i}-${Math.random()}`,
+        url: URL.createObjectURL(file),
+        file,
+        isExisting: false,
+      });
     }
 
-    setRawFiles((prev) => [...prev, ...addedFiles]);
+    setPhotoItems((prev) => [...prev, ...newItems]);
     setFormData((prev) => ({
       ...prev,
-      mediaPhotos: [...prev.mediaPhotos, ...newPhotoUrls],
+      mediaPhotos: [...prev.mediaPhotos, ...newItems.map((item) => item.url)],
     }));
 
+    e.target.value = "";
     setToastMessage("Photos uploaded successfully");
     setTimeout(() => setToastMessage(null), 2500);
   };
 
   const handleDeletePhoto = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      mediaPhotos: prev.mediaPhotos.filter((_, i) => i !== index),
-    }));
-    setRawFiles((prev) => prev.filter((_, i) => i !== index));
+    setPhotoItems((prev) => {
+      const target = prev[index];
+      if (target && target.url.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(target.url);
+        } catch (e) {}
+      }
+      const updated = prev.filter((_, i) => i !== index);
+      setFormData((fPrev) => ({
+        ...fPrev,
+        mediaPhotos: updated.map((item) => item.url),
+      }));
+      return updated;
+    });
   };
 
   const handleSave = async () => {
     if (onSave) {
-      onSave(formData);
+      onSave({
+        ...formData,
+        mediaPhotos: photoItems.map((p) => p.url),
+      });
       setToastMessage("Room configuration saved successfully!");
       setTimeout(() => {
         setToastMessage(null);
@@ -376,10 +415,19 @@ export default function RoomConfigCanvas({
       bodyFormData.append("houseRules", JSON.stringify(formData.houseRules));
       bodyFormData.append("description", formData.about || "");
 
-      if (rawFiles.length > 0) {
-        bodyFormData.append("image", rawFiles[0]);
-      } else if (formData.mediaPhotos.length > 0) {
-        bodyFormData.append("imageUrl", formData.mediaPhotos[0]);
+      const existingUrls = photoItems
+        .filter((p) => p.isExisting && !p.url.startsWith("blob:"))
+        .map((p) => p.url);
+      const newFiles = photoItems
+        .filter((p) => p.file)
+        .map((p) => p.file as File);
+
+      bodyFormData.append("existingImages", JSON.stringify(existingUrls));
+      for (const file of newFiles) {
+        bodyFormData.append("images", file);
+      }
+      if (existingUrls.length > 0) {
+        bodyFormData.append("imageUrl", existingUrls[0]);
       }
 
       const endpoint = roomId ? `/api/seller/rooms/${roomId}` : "/api/seller/rooms";
@@ -754,9 +802,9 @@ export default function RoomConfigCanvas({
               }}
             >
               {/* Photo Thumbnails */}
-              {formData.mediaPhotos.map((photoUrl, idx) => (
+              {photoItems.map((item, idx) => (
                 <div
-                  key={idx}
+                  key={item.id || idx}
                   style={{
                     position: "relative",
                     width: "68px",
@@ -770,7 +818,7 @@ export default function RoomConfigCanvas({
                   className="photo-thumb"
                 >
                   <Image
-                    src={photoUrl}
+                    src={item.url}
                     alt={`Room photo ${idx + 1}`}
                     fill
                     sizes="68px"
