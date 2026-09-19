@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Star } from "lucide-react";
 import styles from "./FoodHeroBanner.module.css";
 import heroPhoto from "./FoodHeroPhoto.jpg";
-import chefProfileImg from "./chef-anjali-profile.png";
 
 export interface FoodHeroBannerProps {
   restaurantName?: string;
@@ -16,8 +15,6 @@ export interface FoodHeroBannerProps {
   deliveryFeeText?: string;
   dietType?: string;
   offerText?: string;
-  chefName?: string;
-  chefDetails?: string;
   initialVegOnly?: boolean;
   onVegToggle?: (vegOnly: boolean) => void;
 }
@@ -31,8 +28,6 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
   deliveryFeeText = "Free Delivery",
   dietType = "Pure Veg",
   offerText = "30% OFF up to ₹150",
-  chefName = "Chef Anjali Sharma",
-  chefDetails = "5+ years serving home meals • Pune Cantonment",
   initialVegOnly = true,
   onVegToggle,
 }) => {
@@ -94,24 +89,8 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
           </span>
         </div>
 
-        {/* Row 3: Chef Card (Left) + Veg Toggle (Right) */}
+        {/* Row 3: Veg Toggle (Right-aligned) */}
         <div className={styles.bottomRow}>
-          <div className={styles.chefCard}>
-            <div className={styles.chefAvatar} aria-label="Chef Profile">
-              <Image
-                src={chefProfileImg}
-                alt={chefName}
-                width={44}
-                height={44}
-                className={styles.chefAvatarImg}
-              />
-            </div>
-            <div className={styles.chefInfo}>
-              <span className={styles.chefName}>{chefName}</span>
-              <span className={styles.chefExperience}>{chefDetails}</span>
-            </div>
-          </div>
-
           {/* Veg Toggle */}
           <div
             className={styles.vegToggleWrapper}

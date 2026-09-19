@@ -245,15 +245,21 @@ export default function UserBookingsPage() {
                                     </div>
                                     <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
                                         <div style={{ flex: 1, backgroundColor: "#F9FAFB", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
-                                            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check In</div>
+                                            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>Check In</div>
                                             <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
                                                 {booking.startDate ? new Date(booking.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
                                             </div>
+                                            <div style={{ fontSize: "0.72rem", color: "#EA580C", fontWeight: "600", marginTop: "3px" }}>
+                                                From 12:00 PM (Entry)
+                                            </div>
                                         </div>
                                         <div style={{ flex: 1, backgroundColor: "#F9FAFB", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
-                                            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "5px" }}>Check Out</div>
+                                            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "4px" }}>Check Out</div>
                                             <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
                                                 {booking.endDate ? new Date(booking.endDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
+                                            </div>
+                                            <div style={{ fontSize: "0.72rem", color: "#64748B", fontWeight: "600", marginTop: "3px" }}>
+                                                Until 11:00 AM
                                             </div>
                                         </div>
                                     </div>

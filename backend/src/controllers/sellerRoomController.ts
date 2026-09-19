@@ -40,9 +40,10 @@ export function parseRoomDescription(descRaw?: string | null): {
     about: string;
     amenities: string[];
     houseRules: string[];
+    floor: string;
 } {
     if (!descRaw || !descRaw.trim()) {
-        return { about: "", amenities: [], houseRules: [] };
+        return { about: "", amenities: [], houseRules: [], floor: "" };
     }
 
     try {
@@ -66,10 +67,21 @@ export function parseRoomDescription(descRaw?: string | null): {
                 }
             }
 
+            let rawAbout = typeof parsed.about === "string" ? parsed.about : (typeof parsed.description === "string" ? parsed.description : "");
+            if (rawAbout.startsWith("{") && rawAbout.includes("about")) {
+                try {
+                    const inner = JSON.parse(rawAbout);
+                    rawAbout = typeof inner.about === "string" ? inner.about : "";
+                } catch {}
+            }
+
+            const floor = typeof parsed.floor === "string" ? parsed.floor.trim() : (typeof parsed.floorNo === "string" ? parsed.floorNo.trim() : "");
+
             return {
-                about: typeof parsed.about === "string" ? parsed.about : (typeof parsed.description === "string" ? parsed.description : ""),
+                about: rawAbout.trim(),
                 amenities,
                 houseRules,
+                floor,
             };
         }
     } catch {
@@ -79,6 +91,13 @@ export function parseRoomDescription(descRaw?: string | null): {
     let about = descRaw;
     let amenities: string[] = [];
     let houseRules: string[] = [];
+    let floor = "";
+
+    const floorMatch = descRaw.match(/Floor(?:\s*No)?:\s*([^\n]+)/i);
+    if (floorMatch) {
+        floor = floorMatch[1].trim();
+        about = about.replace(floorMatch[0], "").trim();
+    }
 
     const amenitiesMatch = descRaw.match(/Amenities:\s*([^\n]+)/i);
     if (amenitiesMatch) {
@@ -92,10 +111,17 @@ export function parseRoomDescription(descRaw?: string | null): {
         about = about.replace(houseRulesMatch[0], "").trim();
     }
 
-    return { about, amenities, houseRules };
+    if (about.startsWith("{") && about.includes("about")) {
+        try {
+            const inner = JSON.parse(about);
+            about = typeof inner.about === "string" ? inner.about : "";
+        } catch {}
+    }
+
+    return { about: about.trim(), amenities, houseRules, floor };
 }
 
-export function formatRoomDescription(about?: string | null, amenities?: any, houseRules?: any): string {
+export function formatRoomDescription(about?: string | null, amenities?: any, houseRules?: any, floor?: string | null): string {
     let parsedAmenities: string[] = [];
     if (Array.isArray(amenities)) {
         parsedAmenities = amenities.map(String).map(s => s.trim()).filter(Boolean);
@@ -128,6 +154,7 @@ export function formatRoomDescription(about?: string | null, amenities?: any, ho
         about: (about || "").trim(),
         amenities: parsedAmenities,
         houseRules: parsedHouseRules,
+        floor: (floor || "").trim(),
     });
 }
 
@@ -143,7 +170,8 @@ export const createSellerRoom = async (req: Request) => {
     const title = formData.get("title") as string;
     const price = parseFloat(formData.get("price") as string);
     const description = formData.get("description") as string;
-    const about = (formData.get("about") as string) || description;
+    const about = (formData.get("about") as string) || (description && !description.startsWith("{") ? description : "");
+    const floor = (formData.get("floor") as string) || (formData.get("floorNo") as string) || "";
     const amenities = formData.get("amenities") as string;
     const houseRules = formData.get("houseRules") as string;
     const capacity = parseInt(formData.get("capacity") as string) || 1;
@@ -164,7 +192,7 @@ export const createSellerRoom = async (req: Request) => {
     }
 
     const imagesArray = [imageUrl];
-    const encodedDescription = formatRoomDescription(about, amenities, houseRules);
+    const encodedDescription = formatRoomDescription(about, amenities, houseRules, floor);
 
     const room = await db.room.create({
         data: {
@@ -307,6 +335,7 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
     let price: number | undefined;
     let description: string | undefined;
     let about: string | undefined;
+    let floor: string | undefined;
     let amenities: any = undefined;
     let houseRules: any = undefined;
     let capacity: number | undefined;
@@ -321,7 +350,10 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         const priceStr = formData.get("price") as string;
         if (priceStr) price = parseFloat(priceStr);
         description = formData.get("description") as string;
-        about = (formData.get("about") as string) || description;
+        about = (formData.get("about") as string) || (description && !description.startsWith("{") ? description : undefined);
+        if (formData.has("floor") || formData.has("floorNo")) {
+            floor = (formData.get("floor") as string) || (formData.get("floorNo") as string) || "";
+        }
         if (formData.has("amenities")) {
             amenities = formData.get("amenities") as string;
         }
@@ -341,7 +373,8 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         title = body.title;
         if (body.price !== undefined) price = parseFloat(body.price);
         description = body.description;
-        about = body.about || description;
+        about = body.about !== undefined ? body.about : (description && !description.startsWith("{") ? description : undefined);
+        floor = body.floor !== undefined ? body.floor : body.floorNo;
         if (body.amenities !== undefined) amenities = body.amenities;
         if (body.houseRules !== undefined) houseRules = body.houseRules;
         if (body.capacity !== undefined) capacity = parseInt(body.capacity);
@@ -374,12 +407,13 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
     if (capacity !== undefined && !isNaN(capacity)) dataToUpdate.capacity = capacity;
     if (isAvailable !== undefined) dataToUpdate.isAvailable = isAvailable;
 
-    // Build encoded description if any of about, amenities, houseRules, or description was provided
-    if (about !== undefined || amenities !== undefined || houseRules !== undefined || description !== undefined) {
+    // Build encoded description if any of about, amenities, houseRules, floor, or description was provided
+    if (about !== undefined || amenities !== undefined || houseRules !== undefined || floor !== undefined || description !== undefined) {
         const targetAbout = about !== undefined ? about : existingParsed.about;
         const targetAmenities = amenities !== undefined ? amenities : existingParsed.amenities;
         const targetHouseRules = houseRules !== undefined ? houseRules : existingParsed.houseRules;
-        dataToUpdate.description = formatRoomDescription(targetAbout, targetAmenities, targetHouseRules);
+        const targetFloor = floor !== undefined ? floor : existingParsed.floor;
+        dataToUpdate.description = formatRoomDescription(targetAbout, targetAmenities, targetHouseRules, targetFloor);
     }
 
     if (imageFile && imageFile.size > 0) {

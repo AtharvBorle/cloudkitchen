@@ -25,6 +25,7 @@ function RoomAddEditContent() {
     roomName: string;
     capacity: string | number;
     pricePerNight: string;
+    floorNo: string;
     about: string;
     amenities: ResponsiveAmenity[];
     houseRules: string[];
@@ -34,6 +35,7 @@ function RoomAddEditContent() {
     roomName: "",
     capacity: "",
     pricePerNight: "",
+    floorNo: "",
     about: "",
     amenities: DEFAULT_AMENITIES,
     houseRules: [],
@@ -115,11 +117,36 @@ function RoomAddEditContent() {
               }
             }
 
+            // Extract floor
+            let loadedFloor = "";
+            if (typeof room.floor === "string" && room.floor.trim()) {
+              loadedFloor = room.floor.trim();
+            } else if (typeof room.floorNo === "string" && room.floorNo.trim()) {
+              loadedFloor = room.floorNo.trim();
+            }
+
+            // Extract clean about
+            let loadedAbout = "";
+            if (typeof room.about === "string" && room.about.trim()) {
+              loadedAbout = room.about.trim();
+            } else if (typeof room.description === "string" && room.description.trim() && !room.description.startsWith("{")) {
+              loadedAbout = room.description.replace(/Amenities:[^\n]+/i, "").replace(/House Rules:[^\n]+/i, "").replace(/Floor(?:\s*No)?:[^\n]+/i, "").trim();
+            }
+            if (loadedAbout.startsWith("{")) {
+              try {
+                const parsed = JSON.parse(loadedAbout);
+                loadedAbout = typeof parsed.about === "string" ? parsed.about : "";
+              } catch {
+                loadedAbout = "";
+              }
+            }
+
             setInitialData({
               roomName: room.title || "",
               capacity: room.capacity ? String(room.capacity) : "2",
               pricePerNight: room.price ? String(room.price) : "2500",
-              about: room.about || (room.description && !room.description.startsWith("{") ? room.description.replace(/Amenities:[^\n]+/i, "").replace(/House Rules:[^\n]+/i, "").trim() : ""),
+              floorNo: loadedFloor,
+              about: loadedAbout,
               amenities: mappedAmenities,
               houseRules: loadedHouseRules,
               isAvailable: room.isAvailable ?? true,
@@ -152,6 +179,7 @@ function RoomAddEditContent() {
       formData.append("capacity", String(data.capacity || 2));
       formData.append("isAvailable", String(data.isAvailable));
       formData.append("about", data.about || "");
+      formData.append("floor", data.floorNo || "");
       formData.append(
         "amenities",
         JSON.stringify(data.amenities.filter((a: any) => a.selected).map((a: any) => a.name))
@@ -220,12 +248,14 @@ function RoomAddEditContent() {
       initialRoomName={initialData.roomName}
       initialCapacity={initialData.capacity}
       initialPricePerNight={initialData.pricePerNight}
+      initialFloorNo={initialData.floorNo}
       initialAbout={initialData.about}
       initialAmenities={initialData.amenities}
       initialHouseRules={initialData.houseRules}
       initialIsAvailable={initialData.isAvailable}
       initialImageUrl={initialData.imageUrl}
       isEditMode={isEditMode}
+      isSaving={saving}
       onSave={handleSave}
       onDelete={isEditMode ? handleDelete : undefined}
       onBack={() => router.push("/seller/rooms")}

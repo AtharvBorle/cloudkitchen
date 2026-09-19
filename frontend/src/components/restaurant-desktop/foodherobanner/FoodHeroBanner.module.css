@@ -151,62 +151,13 @@
   font-weight: 700;
 }
 
-/* 3. Bottom Row: Chef Card (Left) + Veg Toggle (Right) */
+/* 3. Bottom Row: Veg Toggle (Right-aligned) */
 .bottomRow {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 20px;
   margin-top: 4px;
-}
-
-.chefCard {
-  background-color: #FFF3E3;
-  border-radius: 18px;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  max-width: 520px;
-  flex: 1;
-}
-
-.chefAvatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  background-color: #fed7aa;
-}
-
-.chefAvatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.chefInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.chefName {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.chefExperience {
-  font-size: 0.8rem;
-  color: #64748b;
-  font-weight: 500;
 }
 
 /* Veg Toggle on the Right of Bottom Row */

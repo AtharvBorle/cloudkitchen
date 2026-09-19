@@ -58,11 +58,7 @@ function LegalDocumentsContent() {
   };
 
   const handleBack = () => {
-    if (isFromReview) {
-      router.push("/seller/confirm-registration");
-    } else {
-      router.push("/seller/business-information");
-    }
+    router.push("/seller/business-information");
   };
 
   return (

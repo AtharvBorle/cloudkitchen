@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { ChevronDown, ArrowRight, X } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { ChevronDown, ArrowRight, X, Check, Plus, Search, Loader2 } from "lucide-react";
 import styles from "./BusinessInformation.module.css";
 import { SellerMapPicker, AddressDetails } from "./SellerMapPicker";
 import { saveSellerDraft } from "@/lib/seller-registration-store";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface BusinessInformationData {
   businessName: string;
@@ -24,6 +25,34 @@ export interface BusinessInformationProps {
   onBack?: () => void;
 }
 
+export interface AdminCategoryItem {
+  id?: string;
+  name: string;
+  type: "FOOD" | "PROPERTY" | "BOTH";
+}
+
+const isCategoryCompatibleWithSellerType = (
+  catType: string,
+  sellerType: string
+): boolean => {
+  const sType = (sellerType || "FOOD").toUpperCase();
+  const cType = (catType || "FOOD").toUpperCase();
+
+  if (sType === "BOTH") {
+    return true;
+  }
+  if (cType === "BOTH") {
+    return true;
+  }
+  if (sType === "FOOD") {
+    return cType === "FOOD";
+  }
+  if (sType === "PROPERTY") {
+    return cType === "PROPERTY" || cType === "ROOM";
+  }
+  return true;
+};
+
 export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   initialData,
   onContinue,
@@ -32,10 +61,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   const [formData, setFormData] = useState<BusinessInformationData>({
     businessName: initialData?.businessName || "",
     sellerType: initialData?.sellerType || "FOOD",
-    categories:
-      initialData?.categories && initialData.categories.length > 0
-        ? initialData.categories
-        : ["North Indian", "Biryani"],
+    categories: Array.isArray(initialData?.categories) ? initialData.categories : [],
     foodType: initialData?.foodType || "BOTH",
     address: initialData?.address || "",
     city: initialData?.city || "Pune",
@@ -47,8 +73,135 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     isLocationPinned: initialData?.isLocationPinned ?? true,
   });
 
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [newCategoryInput, setNewCategoryInput] = useState("");
+  const [adminCategories, setAdminCategories] = useState<AdminCategoryItem[]>([]);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(true);
+  const [categorySearch, setCategorySearch] = useState<string>("");
+  const [categoryError, setCategoryError] = useState<string>("");
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAdminCategories() {
+      try {
+        setIsCategoriesLoading(true);
+        const res = await fetchApi("/api/public/categories");
+        if (res.ok) {
+          const json = await res.json();
+          const data = json.data || json;
+          const formattedList: AdminCategoryItem[] = [];
+          const seen = new Set<string>();
+
+          if (Array.isArray(data.categories)) {
+            data.categories.forEach((c: any) => {
+              const name = typeof c === "string" ? c : c.name;
+              if (name && typeof name === "string" && name.trim()) {
+                const trimmedName = name.trim();
+                const lower = trimmedName.toLowerCase();
+                if (!seen.has(lower)) {
+                  seen.add(lower);
+                  const cleanName = trimmedName.charAt(0).toUpperCase() + trimmedName.slice(1);
+                  let catType: "FOOD" | "PROPERTY" | "BOTH" = "FOOD";
+                  const rawType = (c.type || "").toUpperCase();
+                  if (rawType === "PROPERTY" || rawType === "ROOM") {
+                    catType = "PROPERTY";
+                  } else if (rawType === "BOTH") {
+                    catType = "BOTH";
+                  } else {
+                    catType = "FOOD";
+                  }
+                  formattedList.push({
+                    id: c.id,
+                    name: cleanName,
+                    type: catType,
+                  });
+                }
+              }
+            });
+          }
+
+          if (formattedList.length === 0) {
+            const defaults: AdminCategoryItem[] = [
+              { name: "Cloud Kitchen", type: "FOOD" },
+              { name: "Bakery & Confectionery", type: "FOOD" },
+              { name: "Homestyle / Tiffin Service", type: "FOOD" },
+              { name: "Cafe & Bistro", type: "FOOD" },
+              { name: "Catering Service", type: "FOOD" },
+              { name: "Quick Service Restaurant (QSR)", type: "FOOD" },
+              { name: "Sweet Shop / Mithai", type: "FOOD" },
+              { name: "Ice Cream & Desserts", type: "FOOD" },
+              { name: "Commercial Kitchen Rental", type: "PROPERTY" },
+              { name: "Cloud Kitchen Room", type: "PROPERTY" },
+              { name: "Studio & Shoot Space", type: "PROPERTY" },
+              { name: "Co-working Kitchen", type: "PROPERTY" },
+              { name: "Co-living & Rooms", type: "PROPERTY" },
+              { name: "Banquet / Event Hall", type: "PROPERTY" },
+              { name: "Farmhouse / Resort Kitchen", type: "PROPERTY" },
+              { name: "Kitchen + Dining Space", type: "BOTH" },
+              { name: "Boutique Stay & Dining", type: "BOTH" },
+              { name: "Food Hub / Multi-brand", type: "BOTH" },
+            ];
+            formattedList.push(...defaults);
+          }
+
+          formattedList.sort((a, b) => a.name.localeCompare(b.name));
+
+          if (isMounted) {
+            setAdminCategories(formattedList);
+
+            // Clean up & normalize any pre-existing draft categories against current admin categories
+            setFormData((prev) => {
+              const validAndNormalized: string[] = [];
+              for (const selected of prev.categories) {
+                const match = formattedList.find(
+                  (ac) => ac.name.toLowerCase() === selected.toLowerCase()
+                );
+                if (match && isCategoryCompatibleWithSellerType(match.type, prev.sellerType)) {
+                  if (!validAndNormalized.includes(match.name)) {
+                    validAndNormalized.push(match.name);
+                  }
+                }
+              }
+              if (
+                validAndNormalized.length !== prev.categories.length ||
+                validAndNormalized.some((v, idx) => v !== prev.categories[idx])
+              ) {
+                saveSellerDraft({ categories: validAndNormalized });
+                return { ...prev, categories: validAndNormalized };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load admin categories:", err);
+      } finally {
+        if (isMounted) {
+          setIsCategoriesLoading(false);
+        }
+      }
+    }
+
+    loadAdminCategories();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData((prev) => ({
+        ...prev,
+        businessName: initialData.businessName ?? prev.businessName,
+        sellerType: initialData.sellerType ?? prev.sellerType,
+        categories: Array.isArray(initialData.categories) ? initialData.categories : prev.categories,
+        foodType: initialData.foodType ?? prev.foodType,
+        address: initialData.address ?? prev.address,
+        city: initialData.city ?? prev.city,
+        pincode: initialData.pincode ?? prev.pincode,
+        locationCoordinates: initialData.locationCoordinates ?? prev.locationCoordinates,
+        isLocationPinned: initialData.isLocationPinned ?? prev.isLocationPinned,
+      }));
+    }
+  }, [initialData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -63,39 +216,36 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
 
   const handleSellerTypeSelect = (type: string) => {
     setFormData((prev) => {
-      const next = { ...prev, sellerType: type };
-      saveSellerDraft({ sellerType: type as any });
-      return next;
-    });
-  };
-
-  const removeCategory = (catToRemove: string) => {
-    setFormData((prev) => {
-      const nextCategories = prev.categories.filter((cat) => cat !== catToRemove);
-      const next = {
-        ...prev,
-        categories: nextCategories,
-      };
-      saveSellerDraft({ categories: nextCategories });
-      return next;
-    });
-  };
-
-  const handleAddCategory = () => {
-    const trimmed = newCategoryInput.trim();
-    if (trimmed && !formData.categories.includes(trimmed)) {
-      const nextCategories = [...formData.categories, trimmed];
-      setFormData((prev) => {
-        const next = {
-          ...prev,
-          categories: nextCategories,
-        };
-        saveSellerDraft({ categories: nextCategories });
-        return next;
+      // Filter existing selected categories to remove any that are incompatible with the new seller type
+      const validCategories = prev.categories.filter((catName) => {
+        const found = adminCategories.find(
+          (ac) => ac.name.toLowerCase() === catName.toLowerCase()
+        );
+        if (!found) return false;
+        return isCategoryCompatibleWithSellerType(found.type, type);
       });
-      setNewCategoryInput("");
-      setShowAddCategory(false);
-    }
+
+      const next = { ...prev, sellerType: type, categories: validCategories };
+      saveSellerDraft({ sellerType: type as any, categories: validCategories });
+      return next;
+    });
+  };
+
+  const toggleCategory = (catName: string) => {
+    setFormData((prev) => {
+      const exists = prev.categories.some(
+        (c) => c.toLowerCase() === catName.toLowerCase()
+      );
+      const nextCategories = exists
+        ? prev.categories.filter((c) => c.toLowerCase() !== catName.toLowerCase())
+        : [...prev.categories, catName];
+
+      saveSellerDraft({ categories: nextCategories });
+      if (nextCategories.length > 0) {
+        setCategoryError("");
+      }
+      return { ...prev, categories: nextCategories };
+    });
   };
 
   const handleLocationChange = (
@@ -124,12 +274,35 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     });
   };
 
+  const selectedCount = useMemo(() => {
+    return formData.categories.filter((catName) =>
+      adminCategories.some(
+        (ac) =>
+          ac.name.toLowerCase() === catName.toLowerCase() &&
+          isCategoryCompatibleWithSellerType(ac.type, formData.sellerType)
+      )
+    ).length;
+  }, [formData.categories, adminCategories, formData.sellerType]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.sellerType !== "PROPERTY" && selectedCount === 0) {
+      setCategoryError("Please select at least one business category.");
+      return;
+    }
+
+    const validCategories = formData.categories.filter((catName) =>
+      adminCategories.some(
+        (ac) =>
+          ac.name.toLowerCase() === catName.toLowerCase() &&
+          isCategoryCompatibleWithSellerType(ac.type, formData.sellerType)
+      )
+    );
+
     saveSellerDraft({
       businessName: formData.businessName,
       sellerType: formData.sellerType as any,
-      categories: formData.categories,
+      categories: validCategories,
       foodType: formData.foodType as any,
       address: formData.address,
       city: formData.city,
@@ -138,9 +311,20 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
       isLocationPinned: formData.isLocationPinned,
     });
     if (onContinue) {
-      onContinue(formData);
+      onContinue({ ...formData, categories: validCategories });
     }
   };
+
+  const filteredCategories = useMemo(() => {
+    const typeFiltered = adminCategories.filter((cat) =>
+      isCategoryCompatibleWithSellerType(cat.type, formData.sellerType)
+    );
+
+    if (!categorySearch.trim()) return typeFiltered;
+    return typeFiltered.filter((c) =>
+      c.name.toLowerCase().includes(categorySearch.trim().toLowerCase())
+    );
+  }, [adminCategories, formData.sellerType, categorySearch]);
 
   return (
     <div className={styles.cardContainer}>
@@ -208,67 +392,82 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
           </div>
         </div>
 
-        {/* 3. Category / Cuisine */}
+        {/* 3. Business Category */}
         <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            Category / cuisine <span className={styles.required}>*</span>
-          </label>
-          <div className={styles.categoryContainer}>
-            {formData.categories.map((category) => (
-              <span key={category} className={styles.categoryPill}>
-                {category}
-                <button
-                  type="button"
-                  onClick={() => removeCategory(category)}
-                  className={styles.removeTagBtn}
-                  aria-label={`Remove ${category}`}
-                >
-                  <X size={12} strokeWidth={2.5} />
-                </button>
-              </span>
-            ))}
+          <div className={styles.categorySectionHeader}>
+            <label className={styles.label} style={{ marginBottom: 0 }}>
+              Business category <span className={styles.required}>*</span>
+            </label>
+            <span className={styles.categoryCountBadge}>
+              {selectedCount} Selected
+            </span>
+          </div>
+          <p className={styles.categorySubtitle}>
+            Select the business category that applies to your business operations (configured by admin).
+          </p>
 
-            {showAddCategory ? (
-              <div className={styles.addCategoryInputWrapper}>
-                <input
-                  type="text"
-                  placeholder="Cuisine name"
-                  value={newCategoryInput}
-                  onChange={(e) => setNewCategoryInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddCategory();
-                    }
-                  }}
-                  autoFocus
-                  className={styles.addCategoryInput}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCategory}
-                  className={styles.addTagConfirmBtn}
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddCategory(false)}
-                  className={styles.addTagCancelBtn}
-                >
-                  ✕
-                </button>
+          {/* Quick Search */}
+          {filteredCategories.length > 4 && (
+            <div className={styles.categorySearchWrapper}>
+              <Search size={14} className={styles.categorySearchIcon} />
+              <input
+                type="text"
+                placeholder="Search business categories..."
+                value={categorySearch}
+                onChange={(e) => setCategorySearch(e.target.value)}
+                className={styles.categorySearchInput}
+              />
+            </div>
+          )}
+
+          {/* Selectable Categories Grid */}
+          <div className={styles.selectableCategoriesGrid}>
+            {isCategoriesLoading ? (
+              <div className={styles.loadingCategories}>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Loading business categories...</span>
               </div>
+            ) : filteredCategories.length > 0 ? (
+              filteredCategories.map((category) => {
+                const isSelected = formData.categories.some(
+                  (c) => c.toLowerCase() === category.name.toLowerCase()
+                );
+                return (
+                  <button
+                    key={category.id || category.name}
+                    type="button"
+                    onClick={() => toggleCategory(category.name)}
+                    className={`${styles.selectableCategoryChip} ${
+                      isSelected ? styles.selectableCategoryChipActive : ""
+                    }`}
+                  >
+                    {isSelected ? (
+                      <Check size={13} strokeWidth={2.8} className={styles.chipCheckIcon} />
+                    ) : (
+                      <Plus size={13} strokeWidth={2.4} className={styles.chipPlusIcon} />
+                    )}
+                    <span>{category.name}</span>
+                  </button>
+                );
+              })
             ) : (
-              <button
-                type="button"
-                onClick={() => setShowAddCategory(true)}
-                className={styles.addMoreBtn}
-              >
-                + Add more
-              </button>
+              <span className={styles.noCategoriesFound}>
+                {categorySearch
+                  ? `No business categories matching "${categorySearch}"`
+                  : `No business categories configured for ${
+                      formData.sellerType === "FOOD"
+                        ? "Food"
+                        : formData.sellerType === "PROPERTY"
+                        ? "Property"
+                        : "this type"
+                    }.`}
+              </span>
             )}
           </div>
+
+          {categoryError && (
+            <p className={styles.categoryError}>⚠️ {categoryError}</p>
+          )}
         </div>
 
         {/* 4. Food Type */}
@@ -286,7 +485,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
               className={styles.select}
             >
               <option value="BOTH">Both (Veg & Non-veg)</option>
-              <option value="PURE_VEG">Pure Veg</option>
+              <option value="PURE_VEG">Pure Veg (includes Jain, and vegan foods)</option>
               <option value="NON_VEG">Non-veg</option>
             </select>
             <ChevronDown className={styles.chevronIcon} />

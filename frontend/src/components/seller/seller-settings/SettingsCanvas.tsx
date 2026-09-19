@@ -467,7 +467,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Language &amp; Region</h2>
 
-                {/* Language */}
+                {/* Language (Commented out for now) */}
+                {/*
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Language</label>
                   <div className={styles.selectWrapper}>
@@ -484,6 +485,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     <ChevronDown size={18} className={styles.selectChevron} />
                   </div>
                 </div>
+                */}
 
                 {/* Timezone */}
                 <div className={styles.fieldGroup}>
@@ -865,6 +867,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Localization</h2>
 
+                {/* Default Interface Language (Commented out for now) */}
+                {/*
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Default Interface Language</label>
                   <div className={styles.selectWrapper}>
@@ -882,6 +886,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     <ChevronDown size={18} className={styles.selectChevron} />
                   </div>
                 </div>
+                */}
 
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Console Timezone</label>

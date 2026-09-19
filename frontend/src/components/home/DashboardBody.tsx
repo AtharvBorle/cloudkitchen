@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
+import { DietaryTag } from "@/components/common/DietaryTag";
 
 export interface TopRatedItem {
   id: string;
@@ -13,6 +14,7 @@ export interface TopRatedItem {
   time: string;
   imageUrl: string;
   link?: string;
+  itemType?: string;
 }
 
 const TOP_RATED_ITEMS: TopRatedItem[] = [
@@ -245,6 +247,17 @@ export default function DashboardBody({
                     >
                       {item.name}
                     </h3>
+                    <DietaryTag
+                      itemType={
+                        item.itemType ||
+                        (item.name.toLowerCase().includes("chicken") ||
+                        (item.name.toLowerCase().includes("burger") &&
+                          !item.name.toLowerCase().includes("veg"))
+                          ? "NON_VEG"
+                          : "VEG")
+                      }
+                      size="xs"
+                    />
                     <div
                       style={{
                         display: "flex",

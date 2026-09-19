@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Plus, User, Pencil, X, Check, Upload, Sparkles, Image as ImageIcon, Lock, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Plus, User, Pencil, X, Check, Upload, Sparkles, Image as ImageIcon, Lock, ArrowRight, ShieldAlert, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
@@ -17,6 +17,7 @@ export interface RoomItem {
   guestsCount: number;
   tier: string;
   pricePerNight: string;
+  floor?: string;
   isAvailable: boolean;
   image: string;
 }
@@ -60,8 +61,10 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   const [editGuests, setEditGuests] = useState(2);
   const [editTier, setEditTier] = useState('Standard Tier');
   const [editPrice, setEditPrice] = useState('');
+  const [editFloor, setEditFloor] = useState('');
   const [editImage, setEditImage] = useState('');
   const [editAvailable, setEditAvailable] = useState(true);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const [statusChecked, setStatusChecked] = useState(false);
   const [isPropertyActive, setIsPropertyActive] = useState<boolean | null>(null);
@@ -128,6 +131,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
                 guestsCount: r.capacity || 2,
                 tier: r.tier || 'Standard Tier',
                 pricePerNight: `₹${r.price}`,
+                floor: r.floor || r.floorNo || '',
                 isAvailable: r.isAvailable ?? true,
                 image: imgUrl,
               };
@@ -175,6 +179,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
     setEditGuests(room.guestsCount);
     setEditTier(room.tier);
     setEditPrice(room.pricePerNight.replace('₹', '').trim());
+    setEditFloor(room.floor || '');
     setEditImage(room.image);
     setEditAvailable(room.isAvailable);
   };
@@ -185,8 +190,9 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingRoom) return;
+    if (!editingRoom || savingEdit) return;
 
+    setSavingEdit(true);
     const formattedPrice = editPrice.startsWith('₹') ? editPrice : `₹${editPrice}`;
     const rawPrice = editPrice.replace(/[^\d.]/g, '') || '2800';
 
@@ -199,6 +205,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
               guestsCount: Number(editGuests) || 1,
               tier: editTier,
               pricePerNight: formattedPrice,
+              floor: editFloor,
               image: editImage || r.image,
               isAvailable: editAvailable,
             }
@@ -215,15 +222,17 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
           title: editTitle,
           price: parseFloat(rawPrice),
           capacity: Number(editGuests) || 1,
+          floor: editFloor,
           isAvailable: editAvailable,
           imageUrl: editImage,
         }),
       });
     } catch (err) {
       console.error('Failed to update room in backend:', err);
+    } finally {
+      setSavingEdit(false);
+      setEditingRoom(null);
     }
-
-    setEditingRoom(null);
   };
 
   const handleAddRoomClick = () => {
@@ -586,17 +595,30 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
                 </div>
               </div>
 
-              {/* Price Per Night */}
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>PRICE PER NIGHT (₹)</label>
-                <input
-                  type="text"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  placeholder="2,800"
-                  required
-                  className={styles.formInput}
-                />
+              {/* Price & Floor 2-Column Row */}
+              <div className={styles.formTwoCol}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>PRICE PER NIGHT (₹)</label>
+                  <input
+                    type="text"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    placeholder="2,800"
+                    required
+                    className={styles.formInput}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>FLOOR NO / LEVEL</label>
+                  <input
+                    type="text"
+                    value={editFloor}
+                    onChange={(e) => setEditFloor(e.target.value)}
+                    placeholder="e.g. 2nd Floor, Ground"
+                    className={styles.formInput}
+                  />
+                </div>
               </div>
 
               {/* Availability Switch in Modal */}
@@ -631,12 +653,29 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
                   type="button"
                   className={styles.cancelBtn}
                   onClick={handleCloseEditModal}
+                  disabled={savingEdit}
+                  style={{
+                    opacity: savingEdit ? 0.6 : 1,
+                    cursor: savingEdit ? "not-allowed" : "pointer",
+                  }}
                 >
                   Cancel
                 </button>
-                <button type="submit" className={styles.saveBtn}>
-                  <Check size={16} strokeWidth={2.8} />
-                  <span>Save Changes</span>
+                <button
+                  type="submit"
+                  className={styles.saveBtn}
+                  disabled={savingEdit}
+                  style={{
+                    opacity: savingEdit ? 0.75 : 1,
+                    cursor: savingEdit ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {savingEdit ? (
+                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                  ) : (
+                    <Check size={16} strokeWidth={2.8} />
+                  )}
+                  <span>{savingEdit ? "Saving..." : "Save Changes"}</span>
                 </button>
               </div>
             </form>

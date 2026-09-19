@@ -366,28 +366,55 @@ function CheckoutContent() {
         }
     }, [isRoomBooking, roomIdParam]);
 
-    // Set default check-in (tomorrow) and check-out (day after) for room bookings
+    // Set default check-in and check-out for room bookings
     useEffect(() => {
         if (isRoomBooking && !bookingDates.start) {
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const dayAfter = new Date(tomorrow);
-            dayAfter.setDate(dayAfter.getDate() + 1);
+            const checkInParam = searchParams?.get("checkIn");
+            const checkOutParam = searchParams?.get("checkOut");
 
-            const formatYMD = (d: Date) => {
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, "0");
-                const day = String(d.getDate()).padStart(2, "0");
-                return `${y}-${m}-${day}`;
-            };
+            let initialStart = "";
+            let initialEnd = "";
+
+            if (checkInParam && checkOutParam) {
+                initialStart = checkInParam;
+                initialEnd = checkOutParam;
+            } else {
+                const savedRoomStr = sessionStorage.getItem("active_room_booking");
+                if (savedRoomStr) {
+                    try {
+                        const parsed = JSON.parse(savedRoomStr);
+                        if (parsed.checkIn && parsed.checkOut) {
+                            initialStart = parsed.checkIn;
+                            initialEnd = parsed.checkOut;
+                        }
+                    } catch {}
+                }
+            }
+
+            if (!initialStart || !initialEnd) {
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const dayAfter = new Date(tomorrow);
+                dayAfter.setDate(dayAfter.getDate() + 1);
+
+                const formatYMD = (d: Date) => {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, "0");
+                    const day = String(d.getDate()).padStart(2, "0");
+                    return `${y}-${m}-${day}`;
+                };
+
+                initialStart = formatYMD(tomorrow);
+                initialEnd = formatYMD(dayAfter);
+            }
 
             setBookingDates({
-                start: formatYMD(tomorrow),
-                end: formatYMD(dayAfter),
+                start: initialStart,
+                end: initialEnd,
             });
         }
-    }, [isRoomBooking, bookingDates.start]);
+    }, [isRoomBooking, bookingDates.start, searchParams]);
 
     // Fetch User Profile for Phone & Addresses
     useEffect(() => {
@@ -1021,8 +1048,8 @@ function CheckoutContent() {
                                                 className="input-field"
                                                 placeholder="Select on calendar"
                                             />
-                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                                🕑 Check-in from 12:00 PM
+                                            <div style={{ fontSize: "0.78rem", color: "#EA580C", fontWeight: "600", marginTop: "4px" }}>
+                                                🕑 Check-in from 12:00 PM (Entry Time)
                                             </div>
                                         </div>
                                         <div style={{ flex: 1 }} onClick={() => setShowCalendar(true)}>
@@ -1036,8 +1063,8 @@ function CheckoutContent() {
                                                 className="input-field"
                                                 placeholder="Select on calendar"
                                             />
-                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                                🕛 Check-out by 11:00 AM
+                                            <div style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: "600", marginTop: "4px" }}>
+                                                🕛 Check-out by 11:00 AM (Exit Time)
                                             </div>
                                         </div>
                                     </div>

@@ -212,7 +212,7 @@ export default function ConfirmRegistrationPage() {
   };
 
   const handleBack = () => {
-    router.push("/seller/media-gallery?from=review");
+    router.push("/seller/media-gallery");
   };
 
   return (

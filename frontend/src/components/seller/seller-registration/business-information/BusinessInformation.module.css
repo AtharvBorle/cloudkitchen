@@ -115,49 +115,152 @@
 }
 
 /* Category & Cuisine Tags */
-.categoryContainer {
-  border: 1px solid #e2e8f0;
+.categorySectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.categoryCountBadge {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ea580c;
+  background-color: #fff7ed;
+  border: 1px solid #ffedd5;
+  padding: 2px 8px;
   border-radius: 12px;
-  min-height: 48px;
-  padding: 6px 10px;
+}
+
+.categorySubtitle {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0 0 10px 0;
+}
+
+.categorySearchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.categorySearchIcon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.categorySearchInput {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 36px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  font-size: 13px;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.categorySearchInput:focus {
+  border-color: #f97316;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
+}
+
+.selectableCategoriesGrid {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 8px;
+  padding: 12px;
   background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  min-height: 52px;
+  max-height: 220px;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
-.categoryPill {
-  background-color: #fff1e7;
-  color: #f97316;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 16px;
+.selectableCategoryChip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
 }
 
-.removeTagBtn {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #f97316;
+.selectableCategoryChip:hover {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.selectableCategoryChipActive {
+  background-color: #fff7ed !important;
+  border-color: #ea580c !important;
+  color: #c2410c !important;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.15);
+}
+
+.selectableCategoryChipActive:hover {
+  background-color: #ffedd5 !important;
+  border-color: #c2410c !important;
+}
+
+.chipCheckIcon {
+  color: #ea580c;
+}
+
+.chipPlusIcon {
+  color: #94a3b8;
+}
+
+.loadingCategories {
   display: flex;
   align-items: center;
-  cursor: pointer;
-  opacity: 0.8;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+  padding: 10px;
 }
 
-.removeTagBtn:hover {
-  opacity: 1;
+.noCategoriesFound {
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 8px;
+  font-style: italic;
+}
+
+.customCategorySection {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categoryError {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 500;
 }
 
 .addMoreBtn {
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px dashed #cbd5e1;
   color: #64748b;
   font-size: 12px;
   font-weight: 500;
@@ -169,8 +272,8 @@
 
 .addMoreBtn:hover {
   background-color: #f8fafc;
-  border-color: #cbd5e1;
-  color: #334155;
+  border-color: #f97316;
+  color: #ea580c;
 }
 
 .addCategoryInputWrapper {
@@ -180,23 +283,23 @@
 }
 
 .addCategoryInput {
-  height: 30px;
+  height: 32px;
   padding: 0 10px;
   border-radius: 14px;
   border: 1px solid #f97316;
   font-size: 12px;
   outline: none;
-  width: 110px;
+  width: 140px;
 }
 
 .addTagConfirmBtn {
-  height: 28px;
-  padding: 0 10px;
+  height: 30px;
+  padding: 0 12px;
   border-radius: 14px;
   background-color: #f97316;
   color: #ffffff;
   border: none;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -206,7 +309,7 @@
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   padding: 0 4px;
 }
 

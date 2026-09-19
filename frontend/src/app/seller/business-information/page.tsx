@@ -17,7 +17,7 @@ function BusinessInfoContent() {
   const [businessData, setBusinessData] = useState<BusinessInformationData>({
     businessName: "",
     sellerType: "FOOD",
-    categories: ["North Indian", "Biryani"],
+    categories: [],
     foodType: "BOTH",
     address: "",
     locationCoordinates: { lat: 18.5204, lng: 73.8567 },
@@ -29,10 +29,7 @@ function BusinessInfoContent() {
     setBusinessData({
       businessName: draft.businessName || "",
       sellerType: draft.sellerType || "FOOD",
-      categories:
-        draft.categories && draft.categories.length > 0
-          ? draft.categories
-          : ["North Indian", "Biryani"],
+      categories: Array.isArray(draft.categories) ? draft.categories : [],
       foodType: draft.foodType || "BOTH",
       address: draft.address || "",
       city: draft.city || "Pune",
@@ -62,11 +59,7 @@ function BusinessInfoContent() {
   };
 
   const handleBack = () => {
-    if (isFromReview) {
-      router.push("/seller/confirm-registration");
-    } else {
-      router.push("/seller/account-information");
-    }
+    router.push("/seller/account-information");
   };
 
   return (

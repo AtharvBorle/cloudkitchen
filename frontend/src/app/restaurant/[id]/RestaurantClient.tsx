@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
 import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
-import { SubscriptionPlans } from "@/components/restaurant-desktop/subscriptionplans";
 import { PopularFood } from "@/components/restaurant-desktop/popularfood";
 import { RestaurantMobileView } from "@/components/restaurant-desktop/restaurant-mobile";
 import { getKitchenById, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
@@ -133,13 +132,9 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             deliveryFeeText={kitchenData.deliveryFeeText}
             dietType={kitchenData.dietType}
             offerText={kitchenData.offerText}
-            chefName={kitchenData.chefName}
-            chefDetails={kitchenData.chefDetails}
             initialVegOnly={isVegOnly}
             onVegToggle={(veg) => setIsVegOnly(veg)}
           />
-
-          <SubscriptionPlans />
 
           <PopularFood
             heading={`Popular at ${kitchenData.restaurantName}`}

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, Bell, X, Plus } from "lucide-react";
+import { ChevronLeft, Camera, Bell, X, Plus, Loader2 } from "lucide-react";
 import styles from "./ResponsiveRoomAdd.module.css";
 
 export interface ResponsiveAmenity {
@@ -15,18 +15,21 @@ export interface ResponsiveRoomAddProps {
   initialRoomName?: string;
   initialCapacity?: string | number;
   initialPricePerNight?: string;
+  initialFloorNo?: string;
   initialAbout?: string;
   initialAmenities?: ResponsiveAmenity[];
   initialHouseRules?: string[];
   initialIsAvailable?: boolean;
   initialImageUrl?: string;
   isEditMode?: boolean;
+  isSaving?: boolean;
   onBack?: () => void;
   onDelete?: () => void;
   onSave?: (data: {
     roomName: string;
     capacity: string | number;
     pricePerNight: string;
+    floorNo?: string;
     about: string;
     amenities: ResponsiveAmenity[];
     houseRules: string[];
@@ -47,12 +50,14 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   initialRoomName = "",
   initialCapacity = "",
   initialPricePerNight = "",
+  initialFloorNo = "",
   initialAbout = "",
   initialAmenities = DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
   initialHouseRules = [],
   initialIsAvailable = true,
   initialImageUrl,
   isEditMode = false,
+  isSaving,
   onBack,
   onDelete,
   onSave,
@@ -63,6 +68,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   const [roomName, setRoomName] = useState(initialRoomName);
   const [capacity, setCapacity] = useState(initialCapacity);
   const [pricePerNight, setPricePerNight] = useState(initialPricePerNight);
+  const [floorNo, setFloorNo] = useState(initialFloorNo);
   const [about, setAbout] = useState(initialAbout);
   const [amenities, setAmenities] = useState<ResponsiveAmenity[]>(initialAmenities);
   const [houseRules, setHouseRules] = useState<string[]>(initialHouseRules);
@@ -73,10 +79,17 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
     initialImageUrl || null
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [internalSaving, setInternalSaving] = useState(false);
+
+  const savingActive = isSaving !== undefined ? isSaving : internalSaving;
 
   React.useEffect(() => {
     if (initialRoomName !== undefined) setRoomName(initialRoomName);
   }, [initialRoomName]);
+
+  React.useEffect(() => {
+    if (initialFloorNo !== undefined) setFloorNo(initialFloorNo);
+  }, [initialFloorNo]);
 
   React.useEffect(() => {
     if (initialAbout !== undefined) setAbout(initialAbout);
@@ -185,10 +198,15 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingActive) return;
+    if (isSaving === undefined) {
+      setInternalSaving(true);
+    }
     const data = {
       roomName,
       capacity,
       pricePerNight,
+      floorNo,
       about,
       amenities,
       houseRules,
@@ -324,6 +342,21 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Floor No / Level */}
+          <div className={styles.formGroup}>
+            <label className={styles.fieldLabel} htmlFor="floorNoInput">
+              Floor No / Level
+            </label>
+            <input
+              id="floorNoInput"
+              type="text"
+              className={styles.textInput}
+              value={floorNo}
+              onChange={(e) => setFloorNo(e.target.value)}
+              placeholder="e.g. 2nd Floor, Ground Floor"
+            />
           </div>
 
           {/* About / Description */}
@@ -537,8 +570,31 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
           </div>
 
           {/* 6. Save Room Button */}
-          <button type="submit" className={styles.saveButton}>
-            {isEditMode ? "Update room" : "Save room"}
+          <button
+            type="submit"
+            className={styles.saveButton}
+            disabled={savingActive}
+            style={{
+              opacity: savingActive ? 0.75 : 1,
+              cursor: savingActive ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            {savingActive && (
+              <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+            )}
+            <span>
+              {savingActive
+                ? isEditMode
+                  ? "Updating..."
+                  : "Saving..."
+                : isEditMode
+                ? "Update room"
+                : "Save room"}
+            </span>
           </button>
 
           {isEditMode && onDelete && (

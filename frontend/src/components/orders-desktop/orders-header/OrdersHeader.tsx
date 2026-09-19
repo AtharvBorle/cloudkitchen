@@ -114,7 +114,8 @@ export const OrdersHeader: React.FC<OrdersHeaderProps> = ({
             <Bell size={20} strokeWidth={2} />
           </button>
 
-          {/* Language Selector Pill with Dropdown */}
+          {/* Language Selector Pill with Dropdown (Commented out for now) */}
+          {/*
           <div className={styles.langWrapper}>
             <button
               type="button"
@@ -156,6 +157,7 @@ export const OrdersHeader: React.FC<OrdersHeaderProps> = ({
               </>
             )}
           </div>
+          */}
         </div>
       </nav>
 

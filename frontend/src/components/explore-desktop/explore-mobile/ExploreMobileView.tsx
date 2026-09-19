@@ -433,7 +433,8 @@ export const ExploreMobileView: React.FC = () => {
             <Bell size={20} strokeWidth={2} />
           </button>
 
-          {/* Language Selector Pill with Dropdown */}
+          {/* Language Selector Pill with Dropdown (Commented out for now) */}
+          {/*
           <div className={styles.langWrapper}>
             <button
               type="button"
@@ -475,6 +476,7 @@ export const ExploreMobileView: React.FC = () => {
               </>
             )}
           </div>
+          */}
         </div>
       </nav>
 

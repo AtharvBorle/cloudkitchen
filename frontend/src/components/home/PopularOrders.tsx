@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Ticket } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
+import { DietaryTag } from "@/components/common/DietaryTag";
 
 export interface OfferCardData {
   id: string;
@@ -18,6 +19,7 @@ export interface OfferCardData {
   sellerId?: string;
   sellerName?: string;
   foodItemId?: string;
+  itemType?: string;
 }
 
 const OFFERS: OfferCardData[] = [
@@ -251,6 +253,18 @@ export default function PopularOrders({
                   backgroundColor: "#FFFFFF",
                 }}
               >
+                <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 2 }}>
+                  <DietaryTag
+                    itemType={
+                      offer.itemType ||
+                      (offer.title.toLowerCase().includes("biryani") ||
+                      offer.title.toLowerCase().includes("chicken")
+                        ? "NON_VEG"
+                        : "VEG")
+                    }
+                    size="xs"
+                  />
+                </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={offer.imageUrl}

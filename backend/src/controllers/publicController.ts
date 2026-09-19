@@ -9,8 +9,17 @@ export const getPublicCategories = unstable_cache(
         const categories = await db.category.findMany({
             orderBy: { name: 'asc' }
         });
+        const foodCategories = await db.foodCategory.findMany({
+            include: {
+                categories: true,
+                subCategories: {
+                    orderBy: { name: 'asc' }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
 
-        return { categories };
+        return { categories, foodCategories };
     },
     ["public-categories"],
     { revalidate: 60, tags: ["categories"] }

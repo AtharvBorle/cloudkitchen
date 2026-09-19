@@ -48,7 +48,7 @@ export const DEFAULT_SELLER_DRAFT: SellerRegistrationDraft = {
 
   businessName: "",
   sellerType: "FOOD",
-  categories: ["North Indian", "Biryani"],
+  categories: [],
   foodType: "BOTH",
   address: "",
   city: "Pune",

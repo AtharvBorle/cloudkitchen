@@ -16,6 +16,7 @@ import {
   X,
   FileText,
   ShieldAlert,
+  Loader2,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 
@@ -30,6 +31,7 @@ export interface RoomConfigData {
   roomName: string;
   capacity: string;
   pricePerNight: string;
+  floorNo: string;
   about: string;
   mediaPhotos: string[];
   amenities: AmenityItem[];
@@ -60,6 +62,7 @@ const DEFAULT_ROOM_DATA: RoomConfigData = {
   roomName: "",
   capacity: "",
   pricePerNight: "",
+  floorNo: "",
   about: "",
   mediaPhotos: [],
   amenities: DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
@@ -166,11 +169,36 @@ export default function RoomConfigCanvas({
               }
             }
 
+            // Extract floor
+            let loadedFloor = "";
+            if (typeof room.floor === "string" && room.floor.trim()) {
+              loadedFloor = room.floor.trim();
+            } else if (typeof room.floorNo === "string" && room.floorNo.trim()) {
+              loadedFloor = room.floorNo.trim();
+            }
+
+            // Extract clean about
+            let loadedAbout = "";
+            if (typeof room.about === "string" && room.about.trim()) {
+              loadedAbout = room.about.trim();
+            } else if (typeof room.description === "string" && room.description.trim() && !room.description.startsWith("{")) {
+              loadedAbout = room.description.replace(/Amenities:[^\n]+/i, "").replace(/House Rules:[^\n]+/i, "").replace(/Floor(?:\s*No)?:[^\n]+/i, "").trim();
+            }
+            if (loadedAbout.startsWith("{")) {
+              try {
+                const parsed = JSON.parse(loadedAbout);
+                loadedAbout = typeof parsed.about === "string" ? parsed.about : "";
+              } catch {
+                loadedAbout = "";
+              }
+            }
+
             setFormData({
               roomName: room.title || "",
               capacity: `${room.capacity || 2} Guest${(room.capacity || 2) > 1 ? "s" : ""}`,
               pricePerNight: String(room.price || ""),
-              about: room.about || (room.description && !room.description.startsWith("{") ? room.description.replace(/Amenities:[^\n]+/i, "").replace(/House Rules:[^\n]+/i, "").trim() : ""),
+              floorNo: loadedFloor,
+              about: loadedAbout,
               mediaPhotos: photos,
               amenities: mappedAmenities,
               houseRules: loadedHouseRules,
@@ -343,6 +371,7 @@ export default function RoomConfigCanvas({
       bodyFormData.append("capacity", capacityNum);
       bodyFormData.append("isAvailable", String(formData.isInstantlyBookable));
       bodyFormData.append("about", formData.about || "");
+      bodyFormData.append("floor", formData.floorNo || "");
       bodyFormData.append("amenities", JSON.stringify(selectedAmenities));
       bodyFormData.append("houseRules", JSON.stringify(formData.houseRules));
       bodyFormData.append("description", formData.about || "");
@@ -544,11 +573,11 @@ export default function RoomConfigCanvas({
             />
           </div>
 
-          {/* Field 2 & 3: Capacity & Price / Night (₹) Row */}
+          {/* Field 2, 3 & 4: Capacity, Floor No & Price / Night (₹) Row */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: "1fr 1fr 1fr",
               gap: "20px",
               width: "100%",
             }}
@@ -639,6 +668,37 @@ export default function RoomConfigCanvas({
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Floor No / Level */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "#0F172A",
+                }}
+              >
+                Floor No / Level
+              </label>
+              <input
+                type="text"
+                value={formData.floorNo}
+                onChange={(e) => handleTextChange("floorNo", e.target.value)}
+                placeholder="e.g. 2nd Floor, Ground"
+                style={{
+                  width: "100%",
+                  borderRadius: "8px",
+                  border: "1px solid #E2E8F0",
+                  padding: "10px 14px",
+                  fontSize: "13.5px",
+                  color: "#0F172A",
+                  backgroundColor: "#FFFFFF",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: "inherit",
+                }}
+              />
             </div>
 
             {/* Price / Night (₹) */}
@@ -1135,6 +1195,7 @@ export default function RoomConfigCanvas({
             <button
               type="button"
               onClick={handleCancel}
+              disabled={saving}
               style={{
                 backgroundColor: "#FFFFFF",
                 color: "#475569",
@@ -1143,12 +1204,17 @@ export default function RoomConfigCanvas({
                 fontSize: "13px",
                 fontWeight: 600,
                 padding: "9px 22px",
-                cursor: "pointer",
+                cursor: saving ? "not-allowed" : "pointer",
+                opacity: saving ? 0.6 : 1,
                 fontFamily: "inherit",
                 transition: "background-color 0.15s ease",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F8FAFC")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FFFFFF")}
+              onMouseEnter={(e) => {
+                if (!saving) e.currentTarget.style.backgroundColor = "#F8FAFC";
+              }}
+              onMouseLeave={(e) => {
+                if (!saving) e.currentTarget.style.backgroundColor = "#FFFFFF";
+              }}
             >
               Cancel
             </button>
@@ -1157,6 +1223,7 @@ export default function RoomConfigCanvas({
             <button
               type="button"
               onClick={handleSave}
+              disabled={saving}
               style={{
                 backgroundColor: "#FF5500",
                 color: "#FFFFFF",
@@ -1165,15 +1232,24 @@ export default function RoomConfigCanvas({
                 fontSize: "13px",
                 fontWeight: 700,
                 padding: "9px 22px",
-                cursor: "pointer",
+                cursor: saving ? "not-allowed" : "pointer",
+                opacity: saving ? 0.8 : 1,
                 fontFamily: "inherit",
                 boxShadow: "0 2px 4px rgba(255, 85, 0, 0.15)",
                 transition: "opacity 0.15s ease",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              onMouseEnter={(e) => {
+                if (!saving) e.currentTarget.style.opacity = "0.9";
+              }}
+              onMouseLeave={(e) => {
+                if (!saving) e.currentTarget.style.opacity = "1";
+              }}
             >
-              Save Room Details
+              {saving && <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />}
+              <span>{saving ? (isEditMode ? "Updating..." : "Saving...") : (isEditMode ? "Update Room Details" : "Save Room Details")}</span>
             </button>
           </div>
         </div>

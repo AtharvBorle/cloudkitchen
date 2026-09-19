@@ -10,6 +10,7 @@ import { UserHeader } from "@/app/dashboard/user/layout";
 import { ExploreHeader } from "@/app/explore/layout";
 import { useLocation } from "@/components/location-provider";
 import { Star, MessageSquare, Utensils } from "lucide-react";
+import { DietaryTag } from "@/components/common/DietaryTag";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -359,13 +360,15 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                     <div style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
                                         <div style={{ height: '200px', backgroundColor: '#EEE', position: 'relative' }}>
                                             <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 2 }}>
+                                                <DietaryTag itemType={item.itemType} size="sm" />
+                                            </div>
                                         </div>
                                         <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
                                                 <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         {item.name}
-                                                        {renderDietaryBadge(item.itemType)}
                                                     </span>
                                                     
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>

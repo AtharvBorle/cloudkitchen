@@ -64,14 +64,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             parsedImages = typeof room.images === "string" && room.images.startsWith("http") ? [room.images] : [];
         }
 
-        const { about, amenities, houseRules } = parseRoomDescription(room.description);
+        const { about, amenities, houseRules, floor } = parseRoomDescription(room.description);
 
         const formattedRoom = {
             id: room.id,
             title: room.title,
             price: room.price,
-            description: about || room.description || "",
-            about: about || room.description || "",
+            description: about || "",
+            about: about || "",
+            floor: floor || "",
             amenities: amenities || [],
             houseRules: houseRules || [],
             capacity: room.capacity,

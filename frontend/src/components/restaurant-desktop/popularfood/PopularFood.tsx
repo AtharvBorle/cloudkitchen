@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image, { StaticImageData } from "next/image";
 import { Star, Plus, Minus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { DietaryTag } from "@/components/common/DietaryTag";
 import styles from "./PopularFood.module.css";
 
 import img1 from "./pizza-margherita-classic.jpg";
@@ -212,6 +213,9 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
           <article key={item.id} className={styles.foodCard}>
             {/* Square Food Image */}
             <div className={styles.imageWrapper}>
+              <div style={{ position: "absolute", top: "6px", left: "6px", zIndex: 2 }}>
+                <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+              </div>
               <Image
                 src={item.image}
                 alt={item.title}

@@ -54,11 +54,7 @@ function MediaGalleryContent() {
   };
 
   const handleBack = () => {
-    if (isFromReview) {
-      router.push("/seller/confirm-registration");
-    } else {
-      router.push("/seller/legal-documents");
-    }
+    router.push("/seller/legal-documents");
   };
 
   return (

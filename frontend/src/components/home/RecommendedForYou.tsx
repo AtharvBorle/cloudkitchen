@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { DietaryTag } from "@/components/common/DietaryTag";
 
 export interface RecommendedDish {
   id: string;
@@ -9,6 +10,7 @@ export interface RecommendedDish {
   time: string;
   imageUrl: string;
   link?: string;
+  itemType?: string;
 }
 
 const RECOMMENDED_DISHES: RecommendedDish[] = [
@@ -159,6 +161,19 @@ export default function RecommendedForYou({
                   }}
                   className="rec-img-box"
                 >
+                  <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 2 }}>
+                    <DietaryTag
+                      itemType={
+                        dish.itemType ||
+                        (dish.name.toLowerCase().includes("chicken") ||
+                        dish.name.toLowerCase().includes("wings") ||
+                        dish.name.toLowerCase().includes("meat")
+                          ? "NON_VEG"
+                          : "VEG")
+                      }
+                      size="xs"
+                    />
+                  </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={dish.imageUrl}

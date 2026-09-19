@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
+import { DietaryTag } from "@/components/common/DietaryTag";
 
 export interface DishItem {
   id: string;
@@ -11,6 +12,7 @@ export interface DishItem {
   time: string;
   imageUrl: string;
   link?: string;
+  itemType?: string;
 }
 
 const POPULAR_DISHES: DishItem[] = [
@@ -168,6 +170,20 @@ export default function BestPlaces({
                   }}
                   className="dish-img-box"
                 >
+                  <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 2 }}>
+                    <DietaryTag
+                      itemType={
+                        dish.itemType ||
+                        (dish.name.toLowerCase().includes("chicken") ||
+                        dish.name.toLowerCase().includes("mutton") ||
+                        dish.name.toLowerCase().includes("fish") ||
+                        dish.name.toLowerCase().includes("meat")
+                          ? "NON_VEG"
+                          : "VEG")
+                      }
+                      size="xs"
+                    />
+                  </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={dish.imageUrl}

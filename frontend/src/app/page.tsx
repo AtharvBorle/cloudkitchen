@@ -147,6 +147,7 @@ export default function Home() {
       price: f.price || 199,
       sellerId: f.sellerId || "k-1",
       sellerName: f.sellerName || "Verified Cloud Kitchen",
+      itemType: f.itemType || "VEG",
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -188,6 +189,7 @@ export default function Home() {
       time: f.deliveryTime || "20-30 min",
       imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
+      itemType: f.itemType || "VEG",
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -224,6 +226,7 @@ export default function Home() {
       time: f.deliveryTime || "20-30 min",
       imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
+      itemType: f.itemType || "VEG",
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -253,6 +256,7 @@ export default function Home() {
       time: `₹${f.price} • ${f.deliveryTime || "20-25 min"}`,
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
+      itemType: f.itemType || "VEG",
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 

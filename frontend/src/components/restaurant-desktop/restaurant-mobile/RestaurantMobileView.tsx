@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -12,21 +11,17 @@ import {
   Clock,
   Bike,
   Tag,
-  ChevronDown,
-  ChevronUp,
   Plus,
   Minus,
   Trash2,
   ShoppingCart,
-  Shield,
-  Check,
   ChevronRight,
   Menu,
 } from "lucide-react";
 import styles from "./RestaurantMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
+import { DietaryTag } from "@/components/common/DietaryTag";
 import heroPhoto from "../foodherobanner/FoodHeroPhoto.jpg";
-import chefProfileImg from "../foodherobanner/chef-anjali-profile.png";
 import img1 from "../popularfood/pizza-margherita-classic.jpg";
 import img2 from "../popularfood/pizza-bbq-paneer.jpg";
 import img3 from "../popularfood/pizza-gourmet-table.jpg";
@@ -59,11 +54,9 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   onRemoveItem,
 }) => {
   const router = useRouter();
-  const { cartItems, addToCart, decreaseQuantity, removeFromCart, cartTotal } = useCart();
+  const { cartItems, decreaseQuantity, removeFromCart, cartTotal } = useCart();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [selectedPlanId, setSelectedPlanId] = useState<string>("premium");
-  const [showAllPlans, setShowAllPlans] = useState<boolean>(true);
   const [activeCategory, setActiveCategory] = useState<string>("Pizza");
   const [couponCopied, setCouponCopied] = useState<boolean>(false);
 
@@ -80,7 +73,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           text: `Check out delicious food from ${kitchenData.restaurantName}!`,
           url: window.location.href,
         });
-      } catch (err) {
+      } catch {
         // Dismissed
       }
     } else if (typeof navigator !== "undefined") {
@@ -304,46 +297,6 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   };
 
 
-  const plans = [
-    {
-      id: "basic",
-      name: "Basic",
-      meals: "(3 meals/wk • Lunch)",
-      price: "₹299",
-      period: "/week",
-      features: [
-        { label: "3 meals/week", icon: "shield" },
-        { label: "Lunch only delivery", icon: "check" },
-        { label: "Standard dispatch timings", icon: "check" },
-      ],
-    },
-    {
-      id: "silver",
-      name: "Silver",
-      meals: "(5 meals/wk • Lunch/Dinner)",
-      price: "₹499",
-      period: "/week",
-      features: [
-        { label: "5 meals/week", icon: "shield" },
-        { label: "Lunch & Dinner delivery choices", icon: "check" },
-        { label: "Priority dispatch timings", icon: "check" },
-      ],
-    },
-    {
-      id: "premium",
-      name: "Premium Plan",
-      badge: "BEST",
-      meals: "(7 meals/wk • Customised)",
-      price: "₹759",
-      period: "/week",
-      features: [
-        { label: "7 meals/week", icon: "shield" },
-        { label: "All meals included (Lunch & Dinner)", icon: "check" },
-        { label: "Diet customization & weekly chef consults", icon: "check" },
-      ],
-    },
-  ];
-
   const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
   const totalCartPrice = cartTotal;
 
@@ -430,23 +383,6 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         {/* Location Subtitle */}
         <p className={styles.locationText}>{kitchenData.location}</p>
 
-        {/* Chef Profile Card */}
-        <div className={styles.chefCard}>
-          <Image
-            src={chefProfileImg}
-            alt={kitchenData.chefName || "Chef Anjali Sharma"}
-            width={40}
-            height={40}
-            className={styles.chefAvatar}
-          />
-          <div className={styles.chefDetails}>
-            <span className={styles.chefName}>{kitchenData.chefName || "Chef Anjali Sharma"}</span>
-            <span className={styles.chefSubtitle}>
-              {kitchenData.chefDetails || "5+ years serving home meals • Pune Cantonment"}
-            </span>
-          </div>
-        </div>
-
         {/* Delivery Time & Free Delivery Info */}
         <div className={styles.deliveryRow}>
           <div className={styles.deliveryItem}>
@@ -492,92 +428,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           </div>
         </div>
 
-        {/* 3. Weekly Subscription Plans Section */}
-        <div className={styles.plansSection}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Weekly Subscription Plans</h2>
-            <span className={styles.plansCountBadge}>3</span>
-          </div>
-
-          {/* Flexible Plans Notice Banner */}
-          <div className={styles.flexiblePlansBanner}>
-            <strong>Flexible Plans</strong> - Pause or cancel anytime. Choose to pause for 1 or 2 weeks. No cancellation fees.
-          </div>
-
-          <div className={styles.plansList}>
-            {plans.map((plan) => {
-              const isSelected = selectedPlanId === plan.id;
-              return (
-                <div
-                  key={plan.id}
-                  className={`${styles.planAccordionCard} ${
-                    isSelected ? styles.planAccordionActive : ""
-                  }`}
-                  onClick={() => setSelectedPlanId(isSelected ? "" : plan.id)}
-                >
-                  <div className={styles.planHeaderRow}>
-                    <div className={styles.planLeft}>
-                      <span className={styles.planName}>{plan.name}</span>
-                      {plan.badge && (
-                        <span className={styles.planBestBadge}>{plan.badge}</span>
-                      )}
-                      {!isSelected && (
-                        <span className={styles.planMeals}>{plan.meals}</span>
-                      )}
-                    </div>
-                    <div className={styles.planRight}>
-                      <span className={styles.planPrice}>{plan.price}</span>
-                      <span className={styles.planPeriod}>{plan.period}</span>
-                      {isSelected ? (
-                        <ChevronUp size={16} className={styles.planChevron} />
-                      ) : (
-                        <ChevronDown size={16} className={styles.planChevron} />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Expanded Plan Details when selected */}
-                  {isSelected && (
-                    <div className={styles.planDetailsBody}>
-                      {plan.features.map((feat, idx) => (
-                        <div key={idx} className={styles.planFeatureItem}>
-                          {feat.icon === "shield" ? (
-                            <Shield size={13} className={styles.planFeatureIcon} />
-                          ) : (
-                            <Check size={13} className={styles.planFeatureIcon} />
-                          )}
-                          <span>{feat.label}</span>
-                        </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        className={styles.planSubscribeBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push("/user/checkout");
-                        }}
-                      >
-                        Subscribe Now
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            className={styles.seeMorePlansBtn}
-            onClick={() => setShowAllPlans((prev) => !prev)}
-          >
-            <span>{showAllPlans ? "Hide Plan Details" : "See More Plan Details"}</span>
-            {showAllPlans ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
-        </div>
-
-        {/* 4. Category Filter Chips (Horizontal Scroll) */}
+        {/* 3. Category Filter Chips (Horizontal Scroll) */}
         <div className={styles.categoriesBar}>
           {categories.map((cat) => {
             const isActive = activeCategory === cat;
@@ -607,6 +458,9 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                 <div key={item.id} className={styles.foodCard}>
                   {/* Left Food Image */}
                   <div className={styles.foodImageWrapper}>
+                    <div style={{ position: "absolute", top: "4px", left: "4px", zIndex: 2 }}>
+                      <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+                    </div>
                     <Image
                       src={item.image}
                       alt={item.title}

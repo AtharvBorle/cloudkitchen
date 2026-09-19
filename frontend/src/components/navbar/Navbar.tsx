@@ -664,7 +664,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
 
-            {/* Language Selector Pill + Dropdown Popover */}
+            {/* Language Selector Pill + Dropdown Popover (Commented out for now) */}
+            {/*
             <div className={styles.langWrapper}>
               <button
                 type="button"
@@ -686,7 +687,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 />
               </button>
 
-              {/* Language Dropdown Popover */}
               {isLangDropdownOpen && (
                 <>
                   <div
@@ -721,6 +721,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </>
               )}
             </div>
+            */}
 
             {/* Desktop Food Delivery Bag */}
             <button

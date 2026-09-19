@@ -66,7 +66,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
       activeDraft.foodType === "BOTH"
         ? "Both (Veg & Non-veg)"
         : activeDraft.foodType === "PURE_VEG"
-        ? "Pure Veg"
+        ? "Pure Veg (includes Jain, and vegan foods)"
         : "Non-veg",
     address: activeDraft.address || "—",
     deliveryPin:
@@ -188,7 +188,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
               <span className={styles.rowValue}>{business.type}</span>
             </div>
             <div className={styles.mobileRow}>
-              <span className={styles.rowKey}>Cuisines</span>
+              <span className={styles.rowKey}>Business Category</span>
               <span className={styles.rowValue}>{business.cuisines}</span>
             </div>
             <div className={styles.mobileRow}>
@@ -315,7 +315,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.value}>{business.foodType}</span>
               </div>
               <div className={styles.row}>
-                <span className={styles.key}>Cuisines / Categories</span>
+                <span className={styles.key}>Business Category</span>
                 <span className={styles.value}>{business.cuisines}</span>
               </div>
               <div className={styles.row}>

@@ -871,7 +871,17 @@ export default function BookingCanvas({
                             color: "#0F172A",
                           }}
                         >
-                          {booking.checkIn}
+                          <div>{booking.checkIn}</div>
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "#EA580C",
+                              fontWeight: 600,
+                              marginTop: "2px",
+                            }}
+                          >
+                            12:00 PM (Entry)
+                          </div>
                         </td>
 
                         {/* Check-Out */}
@@ -885,18 +895,16 @@ export default function BookingCanvas({
                           }}
                         >
                           <div>{booking.checkOut}</div>
-                          {(booking.duration || computeDuration(booking.checkIn, booking.checkOut)) && (
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                color: "#64748B",
-                                fontWeight: 500,
-                                marginTop: "2px",
-                              }}
-                            >
-                              ({booking.duration || computeDuration(booking.checkIn, booking.checkOut)})
-                            </div>
-                          )}
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "#64748B",
+                              fontWeight: 500,
+                              marginTop: "2px",
+                            }}
+                          >
+                            11:00 AM {booking.duration || computeDuration(booking.checkIn, booking.checkOut) ? `• ${booking.duration || computeDuration(booking.checkIn, booking.checkOut)}` : ""}
+                          </div>
                         </td>
 
                         {/* Amount */}
@@ -1236,7 +1244,7 @@ export default function BookingCanvas({
                       margin: "6px 0 0 0",
                     }}
                   >
-                    {selectedBooking.checkIn} → {selectedBooking.checkOut}
+                    {selectedBooking.checkIn} (12:00 PM Entry) → {selectedBooking.checkOut} (11:00 AM Exit)
                   </p>
                 </div>
               </div>

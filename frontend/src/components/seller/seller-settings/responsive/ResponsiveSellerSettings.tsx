@@ -516,6 +516,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Language &amp; Region</h2>
 
+                {/* Language (Commented out for now) */}
+                {/*
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Language</label>
                   <input
@@ -526,6 +528,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     placeholder="e.g. English"
                   />
                 </div>
+                */}
 
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Timezone</label>
@@ -904,6 +907,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Localization</h2>
 
+                {/* Default Interface Language (Commented out for now) */}
+                {/*
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Default Interface Language</label>
                   <input
@@ -914,6 +919,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     placeholder="e.g. English (United States)"
                   />
                 </div>
+                */}
 
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>Console Timezone</label>
