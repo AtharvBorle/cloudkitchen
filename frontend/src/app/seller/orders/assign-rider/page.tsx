@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SellerResponsiveWrapper } from "@/components/seller";
+import { SellerResponsiveWrapper, AssignRiderDas } from "@/components/seller";
 import ResponsiveAssignRiderPage from "@/app/seller/res/orders/assign-rider/page";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function SellerAssignRiderPage() {
   return (
     <SellerResponsiveWrapper
-      desktop={<ResponsiveAssignRiderPage />}
+      desktop={<AssignRiderDas />}
       mobile={<ResponsiveAssignRiderPage />}
     />
   );

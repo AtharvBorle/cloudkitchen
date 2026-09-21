@@ -86,8 +86,12 @@ export default function ConfirmRegistrationPage() {
       formData.append("sellerRole", activeDraft.sellerRole || "Owner");
 
       // Business info
+      const categoriesList = Array.isArray(activeDraft.categories) ? activeDraft.categories.filter(Boolean) : [];
+      const categoriesStr = categoriesList.length > 0 ? categoriesList.join(", ") : (activeDraft.sellerType || "FOOD");
+
       formData.append("businessName", activeDraft.businessName.trim());
-      formData.append("sellerType", activeDraft.sellerType || "FOOD");
+      formData.append("sellerType", categoriesStr);
+      formData.append("categories", JSON.stringify(categoriesList));
       formData.append("businessCategory", activeDraft.sellerType || "FOOD");
       formData.append("foodType", activeDraft.foodType || "BOTH");
       formData.append("addressArea", activeDraft.address.trim());

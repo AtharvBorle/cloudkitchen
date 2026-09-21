@@ -136,6 +136,7 @@ model FoodItem {
   operationalHours  String?
   itemType          String           @default("VEG")
   variants          String?          @default("[]")
+  addons            String?          @default("[]")
   foodCategoryId    String?
   foodSubCategoryId String?
   category          Category?        @relation(fields: [categoryId], references: [id])
@@ -383,6 +384,8 @@ model DeliveryPerson {
   name               String
   phone              String
   sellerId           String
+  vehicleType        String?               @default("Motorcycle / Scooter")
+  vehicleNumber      String?
   isActive           Boolean               @default(true)
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt

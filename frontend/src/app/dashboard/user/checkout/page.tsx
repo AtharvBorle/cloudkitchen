@@ -1262,23 +1262,57 @@ function CheckoutContent() {
                 ) : (
                     <div>
                         <div style={{ marginBottom: "20px", maxHeight: "400px", overflowY: "auto", paddingRight: "10px" }}>
-                            {cartItems.map((item) => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #f9fafb' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '500' }}>{item.name}</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>₹{item.price} each</div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #EAEAEA', borderRadius: '6px', overflow: 'hidden' }}>
-                                            <button type="button" onClick={() => decreaseQuantity(item.id)} style={{ padding: '4px 10px', backgroundColor: '#F9FAFB', borderRight: '1px solid #EAEAEA', cursor: 'pointer', border: 'none' }}>-</button>
-                                            <span style={{ padding: '0 12px', fontSize: '0.9rem', fontWeight: '500' }}>{item.quantity}</span>
-                                            <button type="button" onClick={() => addToCart({ ...item, quantity: 1 })} style={{ padding: '4px 10px', backgroundColor: '#F9FAFB', borderLeft: '1px solid #EAEAEA', cursor: 'pointer', border: 'none' }}>+</button>
+                            {cartItems.map((item) => {
+                                const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+                                const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+                                const isAtMaxStock = stockLimit !== -1 && item.quantity >= stockLimit;
+                                const itemImg = item.imageUrl || item.image;
+
+                                return (
+                                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #f9fafb' }}>
+                                        {itemImg && (
+                                            <img
+                                                src={itemImg}
+                                                alt={item.name}
+                                                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', marginRight: '12px', flexShrink: 0 }}
+                                                onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                            />
+                                        )}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: '600', fontSize: '0.95rem', color: '#1E293B' }}>{item.name}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>₹{item.price} each</div>
+                                            {stockLimit !== -1 && (
+                                                <div style={{ fontSize: '0.72rem', color: isAtMaxStock ? '#EF4444' : '#10B981', fontWeight: 600, marginTop: '2px' }}>
+                                                    {isAtMaxStock ? `Max stock reached (${stockLimit})` : `${stockLimit} in stock`}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div style={{ fontWeight: 'bold', minWidth: '60px', textAlign: 'right' }}>₹{item.price * item.quantity}</div>
-                                        <button type="button" onClick={() => removeFromCart(item.id)} style={{ padding: '6px', color: '#EF4444', backgroundColor: '#FEF2F2', borderRadius: '6px', cursor: 'pointer', border: 'none', fontSize: '0.8rem' }}>Remove</button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #EAEAEA', borderRadius: '6px', overflow: 'hidden' }}>
+                                                <button type="button" onClick={() => decreaseQuantity(item.id)} style={{ padding: '4px 10px', backgroundColor: '#F9FAFB', borderRight: '1px solid #EAEAEA', cursor: 'pointer', border: 'none' }}>-</button>
+                                                <span style={{ padding: '0 12px', fontSize: '0.9rem', fontWeight: '600' }}>{item.quantity}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addToCart({ ...item, quantity: 1 })}
+                                                    disabled={isAtMaxStock}
+                                                    style={{
+                                                        padding: '4px 10px',
+                                                        backgroundColor: '#F9FAFB',
+                                                        borderLeft: '1px solid #EAEAEA',
+                                                        cursor: isAtMaxStock ? 'not-allowed' : 'pointer',
+                                                        opacity: isAtMaxStock ? 0.35 : 1,
+                                                        border: 'none'
+                                                    }}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                            <div style={{ fontWeight: 'bold', minWidth: '60px', textAlign: 'right', color: '#0F172A' }}>₹{item.price * item.quantity}</div>
+                                            <button type="button" onClick={() => removeFromCart(item.id)} style={{ padding: '6px 10px', color: '#EF4444', backgroundColor: '#FEF2F2', borderRadius: '6px', cursor: 'pointer', border: 'none', fontSize: '0.8rem', fontWeight: 600 }}>Remove</button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         <hr style={{ border: 'none', borderTop: '1px solid #EEE', marginBottom: '20px' }} />
 

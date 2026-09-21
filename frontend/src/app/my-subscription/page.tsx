@@ -18,58 +18,13 @@ import {
   togglePauseUserSubscription,
   UserActiveMealSubscription,
 } from "@/lib/meal-subscriptions";
-import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import Link from "next/link";
+import { Utensils, CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 import styles from "./MySubscriptionPage.module.css";
-
-const DEFAULT_DEMO_SUBSCRIPTION: UserActiveMealSubscription = {
-  id: "sub-demo-01",
-  userId: "user-demo",
-  sellerId: "seller-gourmet-01",
-  planId: "plan-bronze-01",
-  status: "ACTIVE",
-  tier: "Bronze",
-  cycle: "WEEKLY",
-  pricePaid: 499,
-  isPaused: false,
-  startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  deliveryAddress: "Tower A, Flat 402, Green Glen Layout",
-  contactPhone: "+91 98765 43210",
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  plan: {
-    id: "plan-bronze-01",
-    name: "Standard Meal Plan",
-    tier: "Bronze",
-    description: "Daily fresh home-cooked essential meals.",
-    weeklyPrice: 499,
-    monthlyPrice: 1899,
-    quarterlyPrice: 5299,
-    yearlyPrice: 19999,
-    duration: "1 Week",
-    features: [
-      "3-5 home-cooked meals per week",
-      "Curated Lunch delivery",
-      "Pause or switch plans anytime",
-      "Eco-friendly sanitized packaging",
-    ],
-    mealTimings: ["Lunch Delivery (1:00 PM – 2:30 PM)"],
-    status: "Live",
-    allowCancel: true, // Dynamic toggle controlled by seller
-    pauseBillingPeriod: "30 Days",
-  },
-  seller: {
-    id: "seller-gourmet-01",
-    businessName: "Gourmet Spice Cloud Kitchen",
-    trackingId: "CK-GOURMET-101",
-    addressLocality: "Indiranagar, Bangalore",
-    foodType: "BOTH",
-  },
-};
 
 export default function MySubscriptionPage() {
   const { data: session } = useSession();
-  const [subscription, setSubscription] = useState<UserActiveMealSubscription>(DEFAULT_DEMO_SUBSCRIPTION);
+  const [subscription, setSubscription] = useState<UserActiveMealSubscription | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isChangingPlan, setIsChangingPlan] = useState<boolean>(false);
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
@@ -86,6 +41,8 @@ export default function MySubscriptionPage() {
           // Prefer active or most recent subscription
           const active = subs.find((s) => s.status === "ACTIVE") || subs[0];
           setSubscription(active);
+        } else if (isMounted) {
+          setSubscription(null);
         }
       } catch (err) {
         console.error("Error loading user subscriptions:", err);
@@ -109,15 +66,20 @@ export default function MySubscriptionPage() {
   };
 
   const handleTogglePause = async (nextPaused: boolean) => {
+    if (!subscription) return;
     try {
       if (subscription.id && !subscription.id.startsWith("sub-demo")) {
         await togglePauseUserSubscription(subscription.id, nextPaused);
       }
-      setSubscription((prev) => ({
-        ...prev,
-        isPaused: nextPaused,
-        status: nextPaused ? "PAUSED" : "ACTIVE",
-      }));
+      setSubscription((prev) =>
+        prev
+          ? {
+              ...prev,
+              isPaused: nextPaused,
+              status: nextPaused ? "PAUSED" : "ACTIVE",
+            }
+          : null
+      );
       showToast(
         "success",
         nextPaused
@@ -130,36 +92,48 @@ export default function MySubscriptionPage() {
   };
 
   const handlePlanChanged = (updatedData: any) => {
+    if (!subscription) return;
     if (updatedData.plan) {
-      setSubscription((prev) => ({
-        ...prev,
-        planId: updatedData.planId || updatedData.plan.id,
-        tier: updatedData.tier || updatedData.plan.tier,
-        status: updatedData.status || "ACTIVE",
-        pricePaid: updatedData.pricePaid || updatedData.plan.weeklyPrice,
-        plan: {
-          ...prev.plan,
-          ...updatedData.plan,
-        },
-      }));
+      setSubscription((prev) =>
+        prev
+          ? {
+              ...prev,
+              planId: updatedData.planId || updatedData.plan.id,
+              tier: updatedData.tier || updatedData.plan.tier,
+              status: updatedData.status || "ACTIVE",
+              pricePaid: updatedData.pricePaid || updatedData.plan.weeklyPrice,
+              plan: {
+                ...prev.plan,
+                ...updatedData.plan,
+              },
+            }
+          : null
+      );
     } else {
       // Direct plan payload fallback
-      setSubscription((prev) => ({
-        ...prev,
-        planId: updatedData.id,
-        tier: updatedData.tier || "Bronze",
-        status: "ACTIVE",
-        plan: {
-          ...prev.plan,
-          id: updatedData.id,
-          name: updatedData.name,
-          tier: updatedData.tier,
-          weeklyPrice: typeof updatedData.weeklyPrice === "number" ? updatedData.weeklyPrice : parseFloat(String(updatedData.weeklyPrice).replace(/[^\d.]/g, "")) || 499,
-          features: updatedData.features || prev.plan.features,
-          mealTimings: updatedData.mealTimings || prev.plan.mealTimings,
-          allowCancel: updatedData.allowCancel ?? true,
-        },
-      }));
+      setSubscription((prev) =>
+        prev
+          ? {
+              ...prev,
+              planId: updatedData.id,
+              tier: updatedData.tier || "Bronze",
+              status: "ACTIVE",
+              plan: {
+                ...prev.plan,
+                id: updatedData.id,
+                name: updatedData.name,
+                tier: updatedData.tier,
+                weeklyPrice:
+                  typeof updatedData.weeklyPrice === "number"
+                    ? updatedData.weeklyPrice
+                    : parseFloat(String(updatedData.weeklyPrice).replace(/[^\d.]/g, "")) || 499,
+                features: updatedData.features || prev.plan?.features,
+                mealTimings: updatedData.mealTimings || prev.plan?.mealTimings,
+                allowCancel: updatedData.allowCancel ?? true,
+              },
+            }
+          : null
+      );
     }
 
     showToast(
@@ -169,17 +143,21 @@ export default function MySubscriptionPage() {
   };
 
   const handleSubscriptionCancelled = () => {
-    setSubscription((prev) => ({
-      ...prev,
-      status: "CANCELLED",
-      isPaused: false,
-    }));
+    setSubscription((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: "CANCELLED",
+            isPaused: false,
+          }
+        : null
+    );
     showToast("info", "Your meal subscription has been cancelled.");
   };
 
   // Build custom delivery slots if defined in meal plan
   const customSlots: DeliverySlot[] =
-    subscription.plan?.mealTimings && subscription.plan.mealTimings.length > 0
+    subscription?.plan?.mealTimings && subscription.plan.mealTimings.length > 0
       ? subscription.plan.mealTimings.map((t, idx) => {
           let name = "Meal Delivery";
           let timeRange = t;
@@ -214,29 +192,31 @@ export default function MySubscriptionPage() {
         ];
 
   const customBenefits =
-    subscription.plan?.features && subscription.plan.features.length > 0
+    subscription?.plan?.features && subscription.plan.features.length > 0
       ? subscription.plan.features
       : undefined;
 
-  const formattedStartedOn = subscription.startDate
+  const formattedStartedOn = subscription?.startDate
     ? new Date(subscription.startDate).toLocaleDateString("en-US", {
         day: "2-digit",
         month: "short",
         year: "numeric",
       })
-    : "05 Jan, 2026";
+    : "";
 
-  const formattedRenewalDate = subscription.endDate
+  const formattedRenewalDate = subscription?.endDate
     ? new Date(subscription.endDate).toLocaleDateString("en-US", {
         day: "2-digit",
         month: "short",
         year: "numeric",
       })
-    : "Auto-renew (Weekly)";
+    : "Auto-renew";
 
-  const formattedPrice = `₹${(subscription.pricePaid || subscription.plan.weeklyPrice || 499).toLocaleString("en-IN")}/${
-    subscription.cycle === "MONTHLY" ? "month" : "week"
-  }`;
+  const formattedPrice = subscription
+    ? `₹${(subscription.pricePaid || subscription.plan?.weeklyPrice || 0).toLocaleString("en-IN")}/${
+        subscription.cycle === "MONTHLY" ? "month" : "week"
+      }`
+    : "";
 
   return (
     <div className={styles.pageWrapper}>
@@ -282,67 +262,132 @@ export default function MySubscriptionPage() {
               </div>
             )}
 
-            {/* 2. Daily Meal Plan Card */}
-            <SubscriptionPlanCard
-              title={subscription.plan?.name || "Daily Meal Plan"}
-              subtitle={
-                subscription.seller?.businessName
-                  ? `Kitchen: ${subscription.seller.businessName}`
-                  : "Standard Gourmet Kitchen"
-              }
-              tier={subscription.tier || subscription.plan?.tier || "Bronze"}
-              statusText={subscription.status}
-              isPaused={subscription.isPaused}
-              startedOn={formattedStartedOn}
-              renewalDate={formattedRenewalDate}
-              planPrice={formattedPrice}
-            />
+            {isLoading ? (
+              <div style={{ textAlign: "center", padding: "64px 20px", color: "#64748B" }}>
+                Loading subscription details...
+              </div>
+            ) : !subscription ? (
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "20px",
+                  padding: "60px 24px",
+                  textAlign: "center",
+                  border: "1px dashed #CBD5E1",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "14px",
+                  marginTop: "20px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    borderRadius: "50%",
+                    backgroundColor: "#FFF4E6",
+                    color: "#FF6B00",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "28px",
+                  }}
+                >
+                  🍱
+                </div>
+                <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: "700", color: "#1E293B" }}>
+                  No Active Meal Subscriptions
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.92rem", color: "#64748B", maxWidth: "420px" }}>
+                  You do not currently have any ongoing daily or weekly meal subscription plans. Explore local cloud kitchens to subscribe to fresh meals!
+                </p>
+                <Link
+                  href="/explore-desktop"
+                  style={{
+                    marginTop: "8px",
+                    padding: "10px 24px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FF6B00",
+                    color: "#FFFFFF",
+                    fontWeight: "600",
+                    fontSize: "0.9rem",
+                    textDecoration: "none",
+                    boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
+                  }}
+                >
+                  Explore Meal Plans
+                </Link>
+              </div>
+            ) : (
+              <>
+                {/* 2. Daily Meal Plan Card */}
+                <SubscriptionPlanCard
+                  title={subscription.plan?.name || "Daily Meal Plan"}
+                  subtitle={
+                    subscription.seller?.businessName
+                      ? `Kitchen: ${subscription.seller.businessName}`
+                      : "Standard Gourmet Kitchen"
+                  }
+                  tier={subscription.tier || subscription.plan?.tier || "Bronze"}
+                  statusText={subscription.status}
+                  isPaused={subscription.isPaused}
+                  startedOn={formattedStartedOn}
+                  renewalDate={formattedRenewalDate}
+                  planPrice={formattedPrice}
+                />
 
-            {/* 3. Pause Subscription Section */}
-            <PauseSubscription
-              isPaused={subscription.isPaused}
-              disabled={subscription.status?.toUpperCase() === "CANCELLED"}
-              onTogglePause={handleTogglePause}
-            />
+                {/* 3. Pause Subscription Section */}
+                <PauseSubscription
+                  isPaused={subscription.isPaused}
+                  disabled={subscription.status?.toUpperCase() === "CANCELLED"}
+                  onTogglePause={handleTogglePause}
+                />
 
-            {/* 4. Two-column grid: Daily Delivery Times & Subscription Benefits */}
-            <div className={styles.detailsGrid}>
-              <DeliveryTimes slots={customSlots} />
-              <SubscriptionBenefits benefits={customBenefits} />
-            </div>
+                {/* 4. Two-column grid: Daily Delivery Times & Subscription Benefits */}
+                <div className={styles.detailsGrid}>
+                  <DeliveryTimes slots={customSlots} />
+                  <SubscriptionBenefits benefits={customBenefits} />
+                </div>
 
-            {/* 5. Action Buttons: Cancel Subscription & Change Plan */}
-            {/* Dynamic cancellation button: Only rendered when seller enabled allowCancel on this plan */}
-            <SubscriptionActions
-              allowCancel={subscription.plan?.allowCancel ?? true}
-              status={subscription.status}
-              onCancelSubscription={() => setIsCancelling(true)}
-              onChangePlan={() => setIsChangingPlan(true)}
-            />
+                {/* 5. Action Buttons: Cancel Subscription & Change Plan */}
+                <SubscriptionActions
+                  allowCancel={subscription.plan?.allowCancel ?? true}
+                  status={subscription.status}
+                  onCancelSubscription={() => setIsCancelling(true)}
+                  onChangePlan={() => setIsChangingPlan(true)}
+                />
+              </>
+            )}
           </div>
         </div>
       </main>
 
       {/* 6. Change Plan Modal (Shows all other plans of this specific seller) */}
-      <ChangePlanModal
-        isOpen={isChangingPlan}
-        onClose={() => setIsChangingPlan(false)}
-        subscriptionId={subscription.id}
-        sellerId={subscription.sellerId || subscription.seller?.id}
-        sellerName={subscription.seller?.businessName}
-        currentPlanId={subscription.planId || subscription.plan?.id}
-        onPlanChanged={handlePlanChanged}
-      />
+      {subscription && (
+        <ChangePlanModal
+          isOpen={isChangingPlan}
+          onClose={() => setIsChangingPlan(false)}
+          subscriptionId={subscription.id}
+          sellerId={subscription.sellerId || subscription.seller?.id}
+          sellerName={subscription.seller?.businessName}
+          currentPlanId={subscription.planId || subscription.plan?.id}
+          onPlanChanged={handlePlanChanged}
+        />
+      )}
 
       {/* 7. Cancel Subscription Confirmation Modal */}
-      <CancelSubscriptionModal
-        isOpen={isCancelling}
-        onClose={() => setIsCancelling(false)}
-        subscriptionId={subscription.id}
-        planName={subscription.plan?.name}
-        sellerName={subscription.seller?.businessName}
-        onCancelled={handleSubscriptionCancelled}
-      />
+      {subscription && (
+        <CancelSubscriptionModal
+          isOpen={isCancelling}
+          onClose={() => setIsCancelling(false)}
+          subscriptionId={subscription.id}
+          planName={subscription.plan?.name}
+          sellerName={subscription.seller?.businessName}
+          onCancelled={handleSubscriptionCancelled}
+        />
+      )}
 
       {/* Global Responsive Footer */}
       <Footer />

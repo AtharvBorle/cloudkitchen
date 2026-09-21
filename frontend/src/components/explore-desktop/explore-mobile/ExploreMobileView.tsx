@@ -159,177 +159,72 @@ const WokStationArtwork = () => (
   </svg>
 );
 
-interface StoryCreator {
-  id: string;
-  name: string;
-  avatar?: StaticImageData | string;
-  customSvg?: React.ReactNode;
-}
-
-const STORIES: StoryCreator[] = [
-  {
-    id: "s1",
-    name: "Chef Arjun",
-    avatar: chefArjunAvatar,
-  },
-  {
-    id: "s2",
-    name: "Biryani Hub",
-    customSvg: <BiryaniHubArtwork />,
-  },
-  {
-    id: "s3",
-    name: "Pizza Lab",
-    avatar: chefYukiAvatar,
-  },
-  {
-    id: "s4",
-    name: "Wok Station",
-    customSvg: <WokStationArtwork />,
-  },
-];
-
-const REELS: ReelModalData[] = [
-  {
-    id: "r1",
-    author: "Chef Arjun",
-    authorAvatar: chefArjunAvatar,
-    thumbnail: butterChickenImg,
-    caption: "Making butter chicken from scratch",
-    hashtags: "#homecooking #butterchicken",
-    partnerTitle: "Cloud Kitchen Partner",
-    likes: "2.4k",
-    views: "12.4k views",
-    audioTitle: "Chef Arjun • Original Audio",
-    verified: true,
-  },
-  {
-    id: "r2",
-    author: "Pizza Lab",
-    authorAvatar: chefYukiAvatar,
-    thumbnail: woodfirePizzaImg,
-    caption: "Fresh dough for our wood-fired pizzas 🍕",
-    hashtags: "#pizzalovers #woodfire",
-    partnerTitle: "Cloud Kitchen Partner",
-    likes: "1.8k",
-    views: "8.9k views",
-    audioTitle: "Pizza Lab • Original Audio",
-    verified: true,
-  },
-  {
-    id: "r3",
-    author: "Chef Arjun",
-    authorAvatar: chefArjunAvatar,
-    thumbnail: reel1Img,
-    caption: "Making butter chicken from scratch",
-    hashtags: "#homecooking #butterchicken",
-    partnerTitle: "Cloud Kitchen Partner",
-    likes: "2.4k",
-    views: "12.4k views",
-    audioTitle: "Chef Arjun • Original Audio",
-    verified: true,
-  },
-  {
-    id: "r4",
-    author: "Pizza Lab",
-    authorAvatar: chefYukiAvatar,
-    thumbnail: reel2Img,
-    caption: "Fresh dough for our wood-fired pizzas 🍕",
-    hashtags: "#pizzalovers #woodfire",
-    partnerTitle: "Cloud Kitchen Partner",
-    likes: "1.8k",
-    views: "8.9k views",
-    audioTitle: "Pizza Lab • Original Audio",
-    verified: true,
-  },
-];
-
-interface MealMoment {
-  id: string;
-  tag: string;
-  name: string;
-  icon: StaticImageData | string;
-  cardClass: string;
-  isDark?: boolean;
-}
-
-const MEAL_MOMENTS: MealMoment[] = [
-  {
-    id: "m1",
-    tag: "Morning",
-    name: "Breakfast",
-    icon: breakfastIcon,
-    cardClass: styles.cardBreakfast,
-  },
-  {
-    id: "m2",
-    tag: "Midday",
-    name: "Lunch",
-    icon: lunchIcon,
-    cardClass: styles.cardLunch,
-  },
-  {
-    id: "m3",
-    tag: "Evening",
-    name: "Dinner",
-    icon: dinnerIcon,
-    cardClass: styles.cardDinner,
-  },
-  {
-    id: "m4",
-    tag: "Anytime",
-    name: "Snacks",
-    icon: snacksIcon,
-    cardClass: styles.cardSnacks,
-  },
-  {
-    id: "m5",
-    tag: "Late night",
-    name: "Late Night",
-    icon: lateNightIcon,
-    cardClass: styles.cardLateNight,
-    isDark: true,
-  },
-  {
-    id: "m6",
-    tag: "Refresh",
-    name: "Drinks",
-    icon: drinksIcon,
-    cardClass: styles.cardDrinks,
-  },
-];
-
-// Orange 3-Slider Filter Icon matching design
-const SlidersIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M4 21V14M4 10V3M12 21V12M12 8V3M20 21V16M20 12V3M1 14H7M9 8H15M17 16H23"
-      stroke="#f97316"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+import { useHomeData } from "@/lib/useHomeData";
 
 export const ExploreMobileView: React.FC = () => {
   const router = useRouter();
   const { defaultAddress, openLocationModal } = useLocation();
+  const homeData = useHomeData();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLang, setSelectedLang] = useState("en");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
-  const [favorites, setFavorites] = useState<Record<string, boolean>>({
-    c1: false,
-    c2: false,
-  });
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+
+  const stories = React.useMemo(() => {
+    return (homeData.kitchens || []).map((k) => ({
+      id: k.id,
+      name: k.name,
+      avatar: k.imageUrl || "/images/places/place-biryani.png",
+    }));
+  }, [homeData.kitchens]);
+
+  const reels: ReelModalData[] = React.useMemo(() => {
+    return (homeData.kitchens || []).map((k, idx) => ({
+      id: k.id,
+      author: k.name,
+      authorAvatar: k.imageUrl || "/images/places/place-biryani.png",
+      thumbnail: k.imageUrl || "/images/places/place-biryani.png",
+      caption: `${k.name} • Special Fresh Gourmet Preparation`,
+      hashtags: "#cloudkitchen #foodie #delicious",
+      partnerTitle: "Verified Cloud Kitchen Partner",
+      likes: `${(3 + (idx % 4)).toFixed(1)}k`,
+      views: `${(12 + idx * 2).toFixed(1)}k views`,
+      audioTitle: `${k.name} • Original Audio`,
+      verified: true,
+      kitchenId: k.trackingId || k.id,
+    }));
+  }, [homeData.kitchens]);
+
+  const featuredCollections = React.useMemo(() => {
+    return (homeData.foodItems || []).slice(0, 4).map((f) => ({
+      id: f.id,
+      title: f.name,
+      badge: f.price ? `₹${f.price}` : "Special",
+      image: f.imageUrl || "/images/places/place-pizza.png",
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
+    }));
+  }, [homeData.foodItems]);
+
+  const mealMoments = React.useMemo(() => {
+    const cardClasses = [
+      styles.cardBreakfast,
+      styles.cardLunch,
+      styles.cardDinner,
+      styles.cardSnacks,
+      styles.cardLateNight,
+      styles.cardDrinks,
+    ];
+    return (homeData.categories || []).slice(0, 6).map((c, idx) => ({
+      id: c.id,
+      tag: "Category",
+      name: c.name,
+      icon: c.image || "/images/categories/cat-food.png",
+      cardClass: cardClasses[idx % cardClasses.length],
+      isDark: idx % 2 === 1,
+    }));
+  }, [homeData.categories]);
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -355,13 +250,13 @@ export const ExploreMobileView: React.FC = () => {
 
   const handleNextReel = () => {
     setActiveReelIndex((prev) =>
-      prev !== null && prev < REELS.length - 1 ? prev + 1 : 0
+      prev !== null && prev < reels.length - 1 ? prev + 1 : 0
     );
   };
 
   const handlePrevReel = () => {
     setActiveReelIndex((prev) =>
-      prev !== null && prev > 0 ? prev - 1 : REELS.length - 1
+      prev !== null && prev > 0 ? prev - 1 : reels.length - 1
     );
   };
 
@@ -487,213 +382,201 @@ export const ExploreMobileView: React.FC = () => {
       </div>
 
       {/* 3. Cloud Kitchen Reels */}
-      <section className={styles.reelsSection}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Cloud Kitchen Reels</h2>
-          <span className={styles.seeAllLink}>See all</span>
-        </div>
+      {reels.length > 0 && (
+        <section className={styles.reelsSection}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Cloud Kitchen Reels</h2>
+            <Link href="/explore-desktop" className={styles.seeAllLink}>See all</Link>
+          </div>
 
-        {/* Stories Creators Row */}
-        <div className={styles.storiesRow}>
-          {STORIES.map((story, index) => (
-            <div
-              key={story.id}
-              className={styles.storyItem}
-              onClick={() => setActiveReelIndex(index % REELS.length)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  setActiveReelIndex(index % REELS.length);
-                }
-              }}
-              aria-label={`Watch story by ${story.name}`}
-            >
-              <div className={styles.storyRing}>
-                <div className={styles.storyAvatarInner}>
-                  {story.avatar ? (
-                    <Image
-                      src={story.avatar}
-                      alt={story.name}
-                      fill
-                      className={styles.storyAvatarImg}
-                    />
-                  ) : (
-                    story.customSvg
-                  )}
-                </div>
-              </div>
-              <span className={styles.storyName}>{story.name}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* 2x2 Reels Grid */}
-        <div className={styles.reelsGrid}>
-          {REELS.map((reel, index) => (
-            <article
-              key={reel.id}
-              className={styles.reelCard}
-              onClick={() => setActiveReelIndex(index)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  setActiveReelIndex(index);
-                }
-              }}
-              aria-label={`Open reel: ${reel.caption}`}
-            >
-              <Image
-                src={reel.thumbnail}
-                alt={reel.caption}
-                fill
-                sizes="(max-width: 768px) 50vw, 200px"
-                className={styles.reelThumbnail}
-              />
-              <div className={styles.reelOverlay}>
-                <div className={styles.reelTopRow}>
-                  <div className={reel.author ? styles.reelAuthor : ""}>
-                    <div className={styles.reelAuthorAvatar}>
+          {/* Stories Creators Row */}
+          {stories.length > 0 && (
+            <div className={styles.storiesRow}>
+              {stories.map((story, index) => (
+                <div
+                  key={story.id}
+                  className={styles.storyItem}
+                  onClick={() => setActiveReelIndex(index % reels.length)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setActiveReelIndex(index % reels.length);
+                    }
+                  }}
+                  aria-label={`Watch story by ${story.name}`}
+                >
+                  <div className={styles.storyRing}>
+                    <div className={styles.storyAvatarInner}>
                       <Image
-                        src={reel.authorAvatar}
-                        alt={reel.author}
+                        src={story.avatar}
+                        alt={story.name}
                         fill
                         className={styles.storyAvatarImg}
                       />
                     </div>
-                    <span className={styles.reelAuthorName}>{reel.author}</span>
                   </div>
-                  <div className={styles.reelPlayBtn}>
-                    <Play size={10} className={styles.playIcon} />
-                  </div>
+                  <span className={styles.storyName}>{story.name}</span>
                 </div>
+              ))}
+            </div>
+          )}
 
-                <div className={styles.reelBottomCol}>
-                  <p className={styles.reelCaption}>{reel.caption}</p>
-                  <div className={styles.reelViews}>
-                    <Eye size={11} />
-                    <span>{reel.views}</span>
+          {/* 2x2 Reels Grid */}
+          <div className={styles.reelsGrid}>
+            {reels.slice(0, 4).map((reel, index) => (
+              <article
+                key={reel.id}
+                className={styles.reelCard}
+                onClick={() => setActiveReelIndex(index)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setActiveReelIndex(index);
+                  }
+                }}
+                aria-label={`Open reel: ${reel.caption}`}
+              >
+                <Image
+                  src={reel.thumbnail}
+                  alt={reel.caption}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 200px"
+                  className={styles.reelThumbnail}
+                />
+                <div className={styles.reelOverlay}>
+                  <div className={styles.reelTopRow}>
+                    <div className={reel.author ? styles.reelAuthor : ""}>
+                      <div className={styles.reelAuthorAvatar}>
+                        <Image
+                          src={reel.authorAvatar}
+                          alt={reel.author}
+                          fill
+                          className={styles.storyAvatarImg}
+                        />
+                      </div>
+                      <span className={styles.reelAuthorName}>{reel.author}</span>
+                    </div>
+                    <div className={styles.reelPlayBtn}>
+                      <Play size={10} className={styles.playIcon} />
+                    </div>
+                  </div>
+
+                  <div className={styles.reelBottomCol}>
+                    <p className={styles.reelCaption}>{reel.caption}</p>
+                    <div className={styles.reelViews}>
+                      <Eye size={11} />
+                      <span>{reel.views}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 4. Featured Collections */}
-      <section className={styles.featuredSection}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Featured Collections</h2>
-          <span className={styles.seeAllLink}>See all</span>
-        </div>
+      {featuredCollections.length > 0 && (
+        <section className={styles.featuredSection}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Featured Collections</h2>
+            <Link href="/explore-desktop" className={styles.seeAllLink}>See all</Link>
+          </div>
 
-        <div className={styles.collectionsGrid}>
-          {/* Card 1: Budget Friendly Meals */}
-          <article className={styles.collectionCard}>
-            <Image
-              src={streetFoodImg}
-              alt="Budget Friendly Meals"
-              fill
-              sizes="(max-width: 768px) 50vw, 200px"
-              className={styles.collectionImg}
-            />
-            <div className={styles.collectionOverlay}>
-              <div className={styles.collectionTopRow}>
-                <span className={styles.pillBadge}>Under ₹149</span>
-                <button
-                  className={styles.heartBtn}
-                  onClick={(e) => toggleFavorite("c1", e)}
-                  aria-label="Favorite"
-                >
-                  <Heart
-                    size={16}
-                    strokeWidth={2}
-                    className={favorites["c1"] ? styles.heartIconActive : ""}
-                  />
-                </button>
-              </div>
-              <h3 className={styles.collectionTitle}>Budget Friendly Meals</h3>
-            </div>
-          </article>
-
-          {/* Card 2: Premium Dining */}
-          <article className={styles.collectionCard}>
-            <Image
-              src={fineDiningImg}
-              alt="Premium Dining"
-              fill
-              sizes="(max-width: 768px) 50vw, 200px"
-              className={styles.collectionImg}
-            />
-            <div className={styles.collectionOverlay}>
-              <div className={styles.collectionTopRow}>
-                <span className={styles.pillBadge}>Fine dining</span>
-                <button
-                  className={styles.heartBtn}
-                  onClick={(e) => toggleFavorite("c2", e)}
-                  aria-label="Favorite"
-                >
-                  <Heart
-                    size={16}
-                    strokeWidth={2}
-                    className={favorites["c2"] ? styles.heartIconActive : ""}
-                  />
-                </button>
-              </div>
-              <h3 className={styles.collectionTitle}>Premium Dining</h3>
-            </div>
-          </article>
-        </div>
-      </section>
+          <div className={styles.collectionsGrid}>
+            {featuredCollections.map((col) => (
+              <article
+                key={col.id}
+                className={styles.collectionCard}
+                onClick={() => router.push(col.link)}
+                style={{ cursor: "pointer" }}
+              >
+                <Image
+                  src={col.image}
+                  alt={col.title}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 200px"
+                  className={styles.collectionImg}
+                />
+                <div className={styles.collectionOverlay}>
+                  <div className={styles.collectionTopRow}>
+                    <span className={styles.pillBadge}>{col.badge}</span>
+                    <button
+                      className={styles.heartBtn}
+                      onClick={(e) => toggleFavorite(col.id, e)}
+                      aria-label="Favorite"
+                    >
+                      <Heart
+                        size={16}
+                        strokeWidth={2}
+                        className={favorites[col.id] ? styles.heartIconActive : ""}
+                      />
+                    </button>
+                  </div>
+                  <h3 className={styles.collectionTitle}>{col.title}</h3>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 5. What's on Your Mind? */}
-      <section className={styles.mindSection}>
-        <div className={styles.mindHeaderCol}>
-          <h2 className={styles.mindTitle}>What’s on Your Mind?</h2>
-          <p className={styles.mindSubtitle}>
-            Pick a meal moment to explore curated options.
-          </p>
-        </div>
+      {mealMoments.length > 0 && (
+        <section className={styles.mindSection}>
+          <div className={styles.mindHeaderCol}>
+            <h2 className={styles.mindTitle}>What’s on Your Mind?</h2>
+            <p className={styles.mindSubtitle}>
+              Pick a category to explore delicious options.
+            </p>
+          </div>
 
-        <div className={styles.mindGrid}>
-          {MEAL_MOMENTS.map((moment) => (
-            <div
-              key={moment.id}
-              className={`${styles.momentCard} ${moment.cardClass}`}
-            >
-              <span
-                className={`${styles.momentTag} ${moment.isDark ? styles.momentTagDark : ""}`}
+          <div className={styles.mindGrid}>
+            {mealMoments.map((moment) => (
+              <div
+                key={moment.id}
+                className={`${styles.momentCard} ${moment.cardClass}`}
+                onClick={() => router.push(`/explore-desktop?category=${encodeURIComponent(moment.name.toLowerCase())}`)}
+                style={{ cursor: "pointer" }}
               >
-                {moment.tag}
-              </span>
-
-              <div className={styles.momentBottomRow}>
-                <Image
-                  src={moment.icon}
-                  alt={moment.name}
-                  className={styles.momentIconImg}
-                />
                 <span
-                  className={`${styles.momentName} ${moment.isDark ? styles.momentNameLight : ""}`}
+                  className={`${styles.momentTag} ${moment.isDark ? styles.momentTagDark : ""}`}
                 >
-                  {moment.name}
+                  {moment.tag}
                 </span>
+
+                <div className={styles.momentBottomRow}>
+                  <Image
+                    src={moment.icon}
+                    alt={moment.name}
+                    width={32}
+                    height={32}
+                    className={styles.momentIconImg}
+                  />
+                  <span
+                    className={`${styles.momentName} ${moment.isDark ? styles.momentNameLight : ""}`}
+                  >
+                    {moment.name}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 6. Full-Screen Reels Modal */}
-      <ReelModal
-        isOpen={activeReelIndex !== null}
-        onClose={() => setActiveReelIndex(null)}
-        reel={activeReelIndex !== null ? REELS[activeReelIndex] : null}
-        onNext={handleNextReel}
-        onPrev={handlePrevReel}
-      />
+      {reels.length > 0 && (
+        <ReelModal
+          isOpen={activeReelIndex !== null}
+          onClose={() => setActiveReelIndex(null)}
+          reel={activeReelIndex !== null ? reels[activeReelIndex] : null}
+          onNext={handleNextReel}
+          onPrev={handlePrevReel}
+        />
+      )}
     </div>
   );
 };

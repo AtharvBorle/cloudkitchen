@@ -9,6 +9,7 @@ import { getKitchenById, KitchenData, FoodCardItem } from "@/components/restaura
 import { useCart } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { Footer } from "@/components/explore-desktop/footer";
+import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import styles from "../restaurant.module.css";
 
 interface RestaurantClientProps {
@@ -19,6 +20,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const { addToCart, decreaseQuantity } = useCart();
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(false);
+  const [addonModalItem, setAddonModalItem] = useState<FoodCardItem | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -27,26 +29,54 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       try {
         const res = await fetchApi(`/api/public/shop/${kitchenId}`);
         if (res.ok) {
-          const liveData = await res.json();
+          const resData = await res.json();
+          const liveData = resData?.data || resData;
           if (liveData && isMounted) {
-            const liveItems: FoodCardItem[] = (liveData.foodItems || []).map((item: any) => ({
-              id: item.id,
-              title: item.name,
-              description: item.description || "Freshly cooked gourmet preparation.",
-              rating: item.averageRating
-                ? Number(item.averageRating).toFixed(1)
-                : item.rating
-                ? Number(item.rating).toFixed(1)
-                : "4.8",
-              price: `₹${item.price}`,
-              image: item.imageUrl || kitchenData.items[0]?.image,
-              isVeg: item.itemType ? !item.itemType.toUpperCase().includes("NON_VEG") : item.isVeg !== false,
-              category: item.foodCategory?.name || "Popular",
-            }));
+            const rawFoodItems = liveData.foodItems || [];
+            const liveItems: FoodCardItem[] = rawFoodItems.map((item: any) => {
+              let parsedAddons: Array<{ id: string; name: string; price: number }> = [];
+              const rawAddons = item.addons || item.variants;
+              if (rawAddons) {
+                try {
+                  const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    parsedAddons = parsed
+                      .filter((a: any) => a && (a.name || "").trim())
+                      .map((a: any, idx: number) => ({
+                        id: String(a.id || idx + 1),
+                        name: String(a.name || ""),
+                        price: Number(a.price) || 0,
+                      }));
+                  }
+                } catch {}
+              }
+
+              return {
+                id: item.id,
+                foodItemId: item.id,
+                title: item.name,
+                description: item.description || "Freshly cooked gourmet preparation.",
+                rating: item.averageRating
+                  ? Number(item.averageRating).toFixed(1)
+                  : item.rating
+                  ? Number(item.rating).toFixed(1)
+                  : "4.8",
+                price: `₹${item.price}`,
+                image: item.imageUrl || kitchenData.items[0]?.image || "/images/places/place-pizza.png",
+                isVeg: item.itemType ? !item.itemType.toUpperCase().includes("NON_VEG") : item.isVeg !== false,
+                category: item.foodCategory?.name || "Popular",
+                addons: parsedAddons,
+                stockQuantity: item.stockQuantity !== undefined ? item.stockQuantity : -1,
+                maxStock: item.stockQuantity !== undefined ? item.stockQuantity : -1,
+                itemType: item.itemType,
+                sellerId: liveData.id || liveData.trackingId,
+                sellerName: liveData.businessName || liveData.user?.name,
+              };
+            });
 
             const uniqueCats = Array.from(
               new Set(
-                (liveData.foodItems || [])
+                (rawFoodItems)
                   .map((it: any) => it.foodCategory?.name)
                   .filter(Boolean)
               )
@@ -73,9 +103,9 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   : liveData.foodType === "NON_VEG"
                   ? "Non-Veg 🍗"
                   : "Veg & Non-Veg 🍱",
-              offerText: liveData.offerText || prev.offerText,
+              offerText: liveData.offerText || "",
               categories:
-                uniqueCats.length > 0 ? ["All", ...uniqueCats] : prev.categories,
+                uniqueCats.length > 0 ? ["All", ...uniqueCats] : [],
               items: liveItems.length > 0 ? liveItems : prev.items,
             }));
           }
@@ -93,14 +123,29 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   }, [kitchenId]);
 
   const handleAddItem = (item: FoodCardItem) => {
+    if (item.addons && item.addons.length > 0) {
+      setAddonModalItem(item);
+      return;
+    }
+
     const rawPrice = parseInt(item.price.replace(/[^\d]/g, ""), 10) || 0;
+    const rawStock = (item as any).maxStock !== undefined ? (item as any).maxStock : (item as any).stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
     addToCart({
       id: item.id,
+      foodItemId: (item as any).foodItemId || item.id,
       name: item.title,
       price: rawPrice,
       quantity: 1,
       sellerId: (kitchenData as any).sellerId || kitchenData.trackingId || kitchenId,
       sellerName: kitchenData.restaurantName,
+      image: item.image,
+      imageUrl: typeof item.image === "string" ? item.image : (item.image as any)?.src || "",
+      stockQuantity: stockLimit,
+      maxStock: stockLimit,
+      itemType: (item as any).itemType,
+      addons: item.addons,
     });
   };
 
@@ -159,6 +204,51 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         />
         <Footer />
       </div>
+
+      {addonModalItem && (
+        <AddonCustomizationModal
+          isOpen={!!addonModalItem}
+          onClose={() => setAddonModalItem(null)}
+          item={{
+            id: addonModalItem.id,
+            name: addonModalItem.title,
+            price: parseInt(addonModalItem.price.replace(/[^\d]/g, ""), 10) || 0,
+            description: addonModalItem.description,
+            imageUrl: typeof addonModalItem.image === "string" ? addonModalItem.image : (addonModalItem.image as any)?.src || "",
+            itemType: (addonModalItem as any).itemType,
+            isVeg: addonModalItem.isVeg,
+            addons: addonModalItem.addons || [],
+          }}
+          onAddToCart={(selectedAddons, quantity) => {
+            const base = parseInt(addonModalItem.price.replace(/[^\d]/g, ""), 10) || 0;
+            const addonsTotal = selectedAddons.reduce((sum, a) => sum + (a.price || 0), 0);
+            const unitPrice = base + addonsTotal;
+            const rawStock = (addonModalItem as any).maxStock !== undefined ? (addonModalItem as any).maxStock : (addonModalItem as any).stockQuantity;
+            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+            const itemImg = typeof addonModalItem.image === "string" ? addonModalItem.image : (addonModalItem.image as any)?.src || "";
+
+            addToCart({
+              id: addonModalItem.id,
+              foodItemId: (addonModalItem as any).foodItemId || addonModalItem.id,
+              name: addonModalItem.title,
+              price: unitPrice,
+              basePrice: base,
+              addonsTotal: addonsTotal,
+              selectedAddons: selectedAddons,
+              quantity: quantity || 1,
+              sellerId: (kitchenData as any).sellerId || kitchenData.trackingId || kitchenId,
+              sellerName: kitchenData.restaurantName,
+              image: itemImg,
+              imageUrl: itemImg,
+              stockQuantity: stockLimit,
+              maxStock: stockLimit,
+              itemType: (addonModalItem as any).itemType,
+              addons: addonModalItem.addons,
+            });
+            setAddonModalItem(null);
+          }}
+        />
+      )}
     </div>
   );
 }

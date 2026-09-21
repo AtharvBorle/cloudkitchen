@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import styles from "./MyOrdersView.module.css";
 
 export interface OrderItemData {
@@ -52,11 +53,11 @@ export interface OrderItemData {
   imageUrl: string;
   partner?: {
     name: string;
-    avatar: string;
-    rating: string;
-    deliveries: number;
+    avatar?: string;
     phone?: string;
-  };
+    vehicleType?: string;
+    vehicleNumber?: string;
+  } | null;
   billBreakdown: {
     itemTotal: number;
     deliveryFee: number;
@@ -100,14 +101,13 @@ function getOrderStepIndex(rawStatus: string): number {
   switch (s) {
     case "PENDING":
     case "PLACED":
-      return 0; // Confirmed active
+      return 0; // Placed & Waiting for seller confirmation
     case "ACCEPTED":
     case "CONFIRMED":
-      return 1; // Preparing active
     case "PREPARING":
-      return 1; // Preparing active
+      return 1; // Confirmed & Cooking active
     case "PICKED_UP":
-      return 2; // Picked Up done, On the way active
+      return 2; // Picked Up done
     case "OUT_FOR_DELIVERY":
       return 3; // On the way active
     case "DELIVERED":
@@ -154,10 +154,10 @@ function parseOrderFromDb(o: any): OrderItemData {
   } else {
     status = "ONGOING";
     if (rawStatus === "PENDING" || rawStatus === "PLACED") {
-      statusDisplay = "Order Placed";
+      statusDisplay = "Waiting for confirmation by seller";
       arrivingIn = "25-35 min";
     } else if (rawStatus === "ACCEPTED" || rawStatus === "CONFIRMED") {
-      statusDisplay = "Confirmed";
+      statusDisplay = "Order Confirmed";
       arrivingIn = "20-30 min";
     } else if (rawStatus === "PREPARING") {
       statusDisplay = "Preparing Food";
@@ -203,28 +203,22 @@ function parseOrderFromDb(o: any): OrderItemData {
     o.seller?.user?.name ||
     "Chef Anjali's Gourmet Kitchen";
 
-  // Delivery partner details
+  // Delivery partner details - strictly real data, no fake fallbacks
   const dp = o.deliveryPerson;
   const partner = dp
     ? {
         name: dp.name || "Delivery Partner",
-        avatar: dp.avatar || "/images/delivery-partner-rohit.jpg",
-        rating: dp.rating ? String(dp.rating) : "4.9",
-        deliveries: dp.deliveriesCount || 180,
-        phone: dp.phone || "+91 98765 43210",
+        avatar: dp.avatar || "",
+        phone: dp.phone || "",
+        vehicleType: dp.vehicleType || "",
+        vehicleNumber: dp.vehicleNumber || "",
       }
-    : {
-        name: o.seller?.restaurantName ? `${o.seller.restaurantName} Express` : "Kitchen Valet",
-        avatar: "/images/delivery-partner-rohit.jpg",
-        rating: "4.8",
-        deliveries: 120,
-        phone: o.seller?.phone || "+91 98765 43210",
-      };
+    : null;
 
   const itemTotal = parsedItems.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || it.qty || 1), 0) || (o.totalAmount || 0);
-  const deliveryFee = status === "CANCELLED" ? 0 : 35;
-  const platformFee = status === "CANCELLED" ? 0 : 10;
-  const totalPaid = o.totalAmount || (itemTotal + deliveryFee + platformFee);
+  const deliveryFee = 0;
+  const platformFee = 0;
+  const totalPaid = o.totalAmount || itemTotal;
 
   return {
     id: o.id,
@@ -402,16 +396,21 @@ export default function MyOrdersView() {
   useEffect(() => {
     if (authStatus === "authenticated") {
       loadData(true);
-      const interval = setInterval(() => {
-        loadData(false);
-      }, 4000);
-      return () => clearInterval(interval);
     } else if (authStatus === "unauthenticated") {
       setLoading(false);
       setOrders([]);
       setBookings([]);
     }
   }, [authStatus, loadData]);
+
+  // Real-time SSE stream replaces 4s auto-polling
+  useRealtimeStream({
+    url: "/api/user/orders/stream",
+    enabled: authStatus === "authenticated",
+    onOrder: () => {
+      loadData(false);
+    },
+  });
 
   // Counts
   const ongoingOrdersCount = useMemo(() => {
@@ -465,6 +464,10 @@ export default function MyOrdersView() {
   const handleReorder = (order: OrderItemData) => {
     if (order.rawItems && order.rawItems.length > 0) {
       order.rawItems.forEach((item) => {
+        const itemImg = item.imageUrl || item.image || order.imageUrl;
+        const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+        const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
         addToCart({
           id: item.id || `reorder-${item.name}`,
           foodItemId: item.foodItemId || item.id,
@@ -473,7 +476,10 @@ export default function MyOrdersView() {
           quantity: item.quantity || item.qty || 1,
           sellerId: item.sellerId || "k-1",
           sellerName: order.vendorName,
-          image: item.image || order.imageUrl,
+          image: itemImg,
+          imageUrl: itemImg,
+          stockQuantity: stockLimit,
+          maxStock: stockLimit,
         });
       });
       router.push("/user/cart");
@@ -683,7 +689,16 @@ export default function MyOrdersView() {
                         </div>
 
                         <div className={styles.activeCardTopRight}>
-                          <span className={styles.statusPillGreen}>{order.statusDisplay}</span>
+                          <span
+                            className={styles.statusPillGreen}
+                            style={
+                              order.rawStatus === "PENDING" || order.rawStatus === "PLACED"
+                                ? { background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }
+                                : {}
+                            }
+                          >
+                            {order.statusDisplay}
+                          </span>
                           <div className={styles.arrivingBox}>
                             <span className={styles.arrivingLabel}>Arriving in</span>
                             <span className={styles.arrivingTime}>{order.arrivingIn}</span>
@@ -697,19 +712,19 @@ export default function MyOrdersView() {
                       {/* 5-Stage Dynamic Status Tracker */}
                       <div className={styles.stepperContainer}>
                         <div className={styles.stepperRow}>
-                          {/* 1. Confirmed */}
+                          {/* 1. Placed / Confirmed */}
                           <div className={styles.trackerStep}>
                             <div
                               className={
                                 currentStep >= 1
                                   ? styles.stepCircleFilledDone
-                                  : styles.stepCircleOutlineDone
+                                  : styles.stepCircleActiveNav
                               }
                             >
                               <CheckCircle2 size={16} strokeWidth={2.4} />
                             </div>
-                            <span className={currentStep >= 0 ? styles.stepTextDone : styles.stepTextPending}>
-                              Confirmed
+                            <span className={currentStep >= 1 ? styles.stepTextDone : styles.stepTextActiveNav}>
+                              {currentStep >= 1 ? "Confirmed" : "Placed"}
                             </span>
                           </div>
 
@@ -1046,8 +1061,21 @@ export default function MyOrdersView() {
 
                 {/* Header with status pill & close */}
                 <div className={styles.sidebarHeaderRow}>
-                  <span className={selectedOrder.status === "CANCELLED" ? styles.statusPillRed : styles.statusPillGreen}>
-                    {selectedOrder.status === "ONGOING" ? `• ${selectedOrder.statusDisplay}` : `• ${selectedOrder.statusDisplay}`}
+                  <span
+                    className={
+                      selectedOrder.status === "CANCELLED"
+                        ? styles.statusPillRed
+                        : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
+                        ? styles.statusPillYellow || styles.statusPillGray
+                        : styles.statusPillGreen
+                    }
+                    style={
+                      selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
+                        ? { background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }
+                        : {}
+                    }
+                  >
+                    • {selectedOrder.statusDisplay}
                   </span>
                   <button
                     type="button"
@@ -1095,47 +1123,55 @@ export default function MyOrdersView() {
                   </div>
                 </div>
 
-                {/* Delivery Partner Details */}
-                <div className={styles.deliveryPartnerBox}>
-                  <div className={styles.partnerLeft}>
-                    <div className={styles.partnerAvatar}>
-                      <Image
-                        src={selectedOrder.partner?.avatar || "/images/delivery-partner-rohit.jpg"}
-                        alt="Delivery partner"
-                        width={44}
-                        height={44}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
+                {/* Delivery Partner Details - Real DB Data or Informative Unassigned state */}
+                {selectedOrder.partner ? (
+                  <div className={styles.deliveryPartnerBox} style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+                    <div className={styles.partnerLeft}>
+                      <div className={styles.partnerAvatar} style={{ background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px" }}>
+                        <Truck size={22} color="#16A34A" />
+                      </div>
+                      <div className={styles.partnerInfo}>
+                        <h4 className={styles.partnerName} style={{ color: "#15803D" }}>{selectedOrder.partner.name}</h4>
+                        <p className={styles.partnerRole} style={{ color: "#166534" }}>Assigned Delivery Partner</p>
+                        {(selectedOrder.partner.vehicleType || selectedOrder.partner.vehicleNumber) && (
+                          <span style={{ fontSize: "0.8rem", color: "#475569", display: "block", marginTop: "2px", fontWeight: 500 }}>
+                            {selectedOrder.partner.vehicleType || "Delivery Vehicle"}
+                            {selectedOrder.partner.vehicleNumber ? ` (${selectedOrder.partner.vehicleNumber})` : ""}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className={styles.partnerInfo}>
-                      <h4 className={styles.partnerName}>{selectedOrder.partner?.name || "Delivery Partner"}</h4>
-                      <p className={styles.partnerRole}>Assigned delivery partner</p>
-                      <span className={styles.partnerRating}>
-                        <Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
-                        <strong style={{ color: "#0F172A" }}>{selectedOrder.partner?.rating || "4.8"}</strong>{" "}
-                        <span style={{ color: "#94A3B8" }}>({selectedOrder.partner?.deliveries || 150} deliveries)</span>
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className={styles.partnerActions}>
-                    <a
-                      href={`tel:${selectedOrder.partner?.phone || "+919876543210"}`}
-                      className={styles.partnerActionBtn}
-                      title="Call Delivery Partner"
-                    >
-                      <Phone size={15} />
-                    </a>
-                    <button
-                      type="button"
-                      className={styles.partnerActionBtn}
-                      title="Message Delivery Partner"
-                      onClick={() => alert(`Connecting with ${selectedOrder.partner?.name || "delivery partner"}...`)}
-                    >
-                      <MessageSquare size={15} />
-                    </button>
+                    {selectedOrder.partner.phone && (
+                      <div className={styles.partnerActions}>
+                        <a
+                          href={`tel:${selectedOrder.partner.phone}`}
+                          className={styles.partnerActionBtn}
+                          style={{ background: "#FFFFFF", border: "1px solid #BBF7D0", color: "#16A34A" }}
+                          title={`Call ${selectedOrder.partner.name}`}
+                        >
+                          <Phone size={15} />
+                        </a>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className={styles.deliveryPartnerBox} style={{ background: "#FFFBEB", border: "1px solid #FEF3C7" }}>
+                    <div className={styles.partnerLeft}>
+                      <div className={styles.partnerAvatar} style={{ background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px" }}>
+                        <Clock size={20} color="#D97706" />
+                      </div>
+                      <div className={styles.partnerInfo}>
+                        <h4 className={styles.partnerName} style={{ color: "#92400E", fontSize: "0.92rem" }}>
+                          Assigning Delivery Partner Shortly
+                        </h4>
+                        <p className={styles.partnerRole} style={{ color: "#B45309" }}>
+                          The kitchen will assign a rider once food is being prepared.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Live Delivery Map Graphic */}
                 <div className={styles.mapCard}>
@@ -1158,14 +1194,20 @@ export default function MyOrdersView() {
                         ? "Order has been delivered successfully"
                         : selectedOrder.status === "CANCELLED"
                         ? "This order was cancelled"
-                        : `${selectedOrder.partner?.name || "Partner"} is on the way to your address`}
+                        : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
+                        ? "Waiting for confirmation by seller"
+                        : selectedOrder.partner?.name
+                        ? `${selectedOrder.partner.name} is assigned to deliver your order`
+                        : `${selectedOrder.statusDisplay} • Kitchen is preparing fresh`}
                     </span>
                     <span className={styles.alertSubtitle}>
                       {selectedOrder.status === "DELIVERED"
                         ? `Delivered on ${selectedOrder.deliveredTime}`
                         : selectedOrder.status === "CANCELLED"
                         ? "Contact support if you need assistance"
-                        : `Expected arrival in ${selectedOrder.arrivingIn || "8-12 minutes"}`}
+                        : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
+                        ? "The seller will review and accept your order shortly"
+                        : `Expected arrival in ${selectedOrder.arrivingIn || "15-25 minutes"}`}
                     </span>
                   </div>
                 </div>
@@ -1190,7 +1232,29 @@ export default function MyOrdersView() {
                         </div>
                         <div className={styles.sidebarItemTextGroup}>
                           <span className={styles.sidebarItemName}>{item.name}</span>
-                          <span className={styles.sidebarItemSub}>{item.variant ? `Variant: ${item.variant}` : "Fresh gourmet preparation"}</span>
+                          {item.selectedAddons && item.selectedAddons.length > 0 ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "2px 0" }}>
+                              {item.selectedAddons.map((a: any, aIdx: number) => (
+                                <span
+                                  key={aIdx}
+                                  style={{
+                                    fontSize: "0.7rem",
+                                    color: "#C2410C",
+                                    backgroundColor: "#FFF7ED",
+                                    padding: "1px 5px",
+                                    borderRadius: "4px",
+                                    fontWeight: "600",
+                                  }}
+                                >
+                                  + {a.name} (₹{a.price})
+                                </span>
+                              ))}
+                            </div>
+                          ) : item.variant ? (
+                            <span className={styles.sidebarItemSub}>Variant: {item.variant}</span>
+                          ) : (
+                            <span className={styles.sidebarItemSub}>Fresh gourmet preparation</span>
+                          )}
                           <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: 500, marginTop: "3px" }}>
                             {item.quantity || item.qty || 1} x &nbsp;<strong style={{ color: "#0F172A", fontWeight: 700 }}>₹{item.price || 0}</strong>
                           </span>
@@ -1227,14 +1291,6 @@ export default function MyOrdersView() {
                   <div className={styles.billRow}>
                     <span>Item Total</span>
                     <span>₹{selectedOrder.billBreakdown.itemTotal}</span>
-                  </div>
-                  <div className={styles.billRow}>
-                    <span>Delivery Fee</span>
-                    <span>₹{selectedOrder.billBreakdown.deliveryFee}</span>
-                  </div>
-                  <div className={styles.billRow}>
-                    <span>Platform Fee</span>
-                    <span>₹{selectedOrder.billBreakdown.platformFee}</span>
                   </div>
                   <div className={styles.billTotalRow}>
                     <span>Total Paid</span>

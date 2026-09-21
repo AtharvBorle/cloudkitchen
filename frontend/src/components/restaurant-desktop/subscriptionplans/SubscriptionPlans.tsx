@@ -16,55 +16,6 @@ export interface PlanItem {
   isPremium?: boolean;
 }
 
-const DEFAULT_PLANS: PlanItem[] = [
-  {
-    id: "bronze",
-    name: "Bronze Plan",
-    subtitle: "Perfect for light & essential lunch",
-    price: "₹299",
-    period: "/week",
-    features: [
-      "3-5 home-cooked meals per week",
-      "Curated Lunch delivery",
-      "Pause or cancel anytime",
-      "Standard eco-friendly packaging",
-    ],
-    buttonText: "Choose Bronze",
-    isPremium: false,
-  },
-  {
-    id: "silver",
-    name: "Silver Plan",
-    subtitle: "Our most balanced meal plan",
-    price: "₹499",
-    period: "/week",
-    features: [
-      "5-7 gourmet meals per week",
-      "Flexible Lunch or Dinner options",
-      "Pause or cancel anytime",
-      "Premium insulated packaging",
-    ],
-    buttonText: "Choose Silver",
-    isPremium: false,
-  },
-  {
-    id: "gold",
-    name: "Gold Plan",
-    subtitle: "The complete gourmet dining experience",
-    price: "₹799",
-    period: "/week",
-    badge: "BEST VALUE",
-    features: [
-      "All meals included (Lunch & Dinner)",
-      "Diet customization & extra portions",
-      "Complimentary desserts & beverages",
-      "Priority express room delivery",
-    ],
-    buttonText: "Subscribe Gold",
-    isPremium: true,
-  },
-];
-
 export interface SubscriptionPlansProps {
   plans?: PlanItem[];
   defaultActivePlanId?: string;
@@ -72,11 +23,15 @@ export interface SubscriptionPlansProps {
 }
 
 export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
-  plans = DEFAULT_PLANS,
+  plans,
   defaultActivePlanId = "bronze",
   onSelectPlan,
 }) => {
   const [activePlanId, setActivePlanId] = useState<string>(defaultActivePlanId);
+
+  if (!plans || plans.length === 0) {
+    return null;
+  }
 
   const handlePlanClick = (plan: PlanItem) => {
     setActivePlanId(plan.id);

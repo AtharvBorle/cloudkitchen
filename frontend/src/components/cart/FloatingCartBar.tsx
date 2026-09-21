@@ -23,7 +23,7 @@ export default function FloatingCartBar() {
 
   // Filter out items with images for stacked display (up to 3)
   const itemsWithImages = cartItems
-    .filter((item) => Boolean(item.image))
+    .filter((item) => Boolean(item.imageUrl || item.image))
     .slice(0, 3);
 
   // Hidden on specific pages where user is already viewing cart, checking out, or on auth / portal pages
@@ -144,7 +144,7 @@ export default function FloatingCartBar() {
                   }}
                 >
                   <Image
-                    src={it.image || "/images/places/place-biryani.png"}
+                    src={it.imageUrl || it.image || "/images/places/place-biryani.png"}
                     alt={it.name || "Food item"}
                     fill
                     sizes="44px"

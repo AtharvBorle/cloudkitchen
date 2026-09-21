@@ -429,7 +429,7 @@ export default function RiderSettlements({
             type="button"
             onClick={
               onAddDeliveryAgent ||
-              (() => router.push("/seller/riderMng/settlements/add-agent"))
+              (() => router.push("/seller/delivery/add-agent"))
             }
             style={{
               backgroundColor: "#F97316",
@@ -561,17 +561,19 @@ export default function RiderSettlements({
                       color: "#0F172A",
                     }}
                   >
-                    {riderProfile.name || "No Rider Selected"}
+                    {riderProfile.name || ""}
                   </span>
-                  <span
-                    style={{
-                      fontSize: "12.5px",
-                      color: "#64748B",
-                      fontWeight: 400,
-                    }}
-                  >
-                    {riderProfile.phone || "—"}
-                  </span>
+                  {riderProfile.phone && (
+                    <span
+                      style={{
+                        fontSize: "12.5px",
+                        color: "#64748B",
+                        fontWeight: 400,
+                      }}
+                    >
+                      {riderProfile.phone}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -604,7 +606,7 @@ export default function RiderSettlements({
                       fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                     }}
                   >
-                    {riderProfile.vehicleNumber || "—"}
+                    {riderProfile.vehicleNumber || ""}
                   </span>
                 </div>
 
@@ -618,19 +620,23 @@ export default function RiderSettlements({
                   <span style={{ fontSize: "12.5px", color: "#64748B" }}>
                     Status
                   </span>
-                  <span
-                    style={{
-                      backgroundColor: (riderProfile.status || "").toLowerCase().includes("on") ? "#FFF1E8" : "#F1F5F9",
-                      color: (riderProfile.status || "").toLowerCase().includes("on") ? "#F97316" : "#64748B",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      padding: "3px 8px",
-                      borderRadius: "6px",
-                      letterSpacing: "0.4px",
-                    }}
-                  >
-                    {riderProfile.status || "—"}
-                  </span>
+                  {riderProfile.status ? (
+                    <span
+                      style={{
+                        backgroundColor: (riderProfile.status || "").toLowerCase().includes("on") ? "#FFF1E8" : "#F1F5F9",
+                        color: (riderProfile.status || "").toLowerCase().includes("on") ? "#F97316" : "#64748B",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        letterSpacing: "0.4px",
+                      }}
+                    >
+                      {riderProfile.status}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "#94A3B8" }}></span>
+                  )}
                 </div>
               </div>
             </div>
@@ -680,7 +686,9 @@ export default function RiderSettlements({
                     fontWeight: 400,
                   }}
                 >
-                  COD Cash currently held by {cashBalance.riderName || riderProfile.name || "Rider"}
+                  {cashBalance.riderName || riderProfile.name
+                    ? `COD Cash currently held by ${cashBalance.riderName || riderProfile.name}`
+                    : "Outstanding cash collection"}
                 </span>
               </div>
 
@@ -715,7 +723,7 @@ export default function RiderSettlements({
                 >
                   {currentBalance > 0
                     ? `Limit is ₹5,000. Collect cash soon to settle outstanding balance.`
-                    : `All cash collected by ${riderProfile.name || "rider"} is fully settled.`}
+                    : `All cash collected ${riderProfile.name ? `by ${riderProfile.name} ` : ""}is fully settled.`}
                 </span>
               </div>
 

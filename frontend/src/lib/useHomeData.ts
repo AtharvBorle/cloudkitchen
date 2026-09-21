@@ -115,302 +115,14 @@ export interface HomeDataState {
   isUsingFallback: boolean;
 }
 
-// ==========================================
-// Comprehensive Rich Fallback Data
-// ==========================================
-export const FALLBACK_CATEGORIES: DynamicCategory[] = [
-  { id: "food", name: "Food", image: "/images/categories/cat-food.png", emoji: "🍔", route: "/explore-desktop" },
-  { id: "mess", name: "Mess", image: "/images/categories/cat-mess.png", emoji: "🧺", route: "/explore-desktop?category=mess" },
-  { id: "bakery", name: "Bakery", image: "/images/categories/cat-backery.png", emoji: "🥐", route: "/explore-desktop?category=bakery" },
-  { id: "home-meals", name: "Home Meals", image: "/images/categories/cat-homemeals.png", emoji: "🍲", route: "/explore-desktop?category=homemeals" },
-  { id: "healthy", name: "Healthy", image: "/images/categories/cat-healthy.png", emoji: "🥗", route: "/explore-desktop?category=healthy" },
-  { id: "snacks", name: "Snacks", image: "/images/categories/cat-snacks.png", emoji: "🍿", route: "/explore-desktop?category=snacks" },
-  { id: "desserts", name: "Desserts", image: "/images/categories/cat-deserts.png", emoji: "🍰", route: "/explore-desktop?category=desserts" },
-  { id: "drink", name: "Drink", image: "/images/categories/cat-drink.png", emoji: "🍹", route: "/explore-desktop?category=drinks" },
-  { id: "rooms", name: "Rooms", image: "/images/categories/cat-rooms.png", emoji: "🛏️", route: "/room-booking" },
-];
-
-export const FALLBACK_KITCHENS: DynamicKitchen[] = [
-  {
-    id: "k-1",
-    name: "Chef Anjali's Gourmet Kitchen",
-    trackingId: "chef-anjali",
-    rating: 4.9,
-    reviewsCount: 240,
-    time: "20-30 min",
-    imageUrl: "/images/places/place-pizza.png",
-    category: "Woodfire Pizzas & Italian",
-    locality: "Kothrud",
-    city: "Pune",
-    pincode: "411038",
-    isOnline: true,
-    foodType: "BOTH",
-    servedPincodes: ["411038", "411052", "411004", "411057", "411014"],
-  },
-  {
-    id: "k-2",
-    name: "Purohit Homely Tiffin Service",
-    trackingId: "purohit-tiffins",
-    rating: 4.8,
-    reviewsCount: 180,
-    time: "15-25 min",
-    imageUrl: "/images/places/place-biryani.png",
-    category: "Pure Veg • North & Maharashtrian",
-    locality: "Mayur Colony",
-    city: "Pune",
-    pincode: "411038",
-    isOnline: true,
-    foodType: "VEG",
-    servedPincodes: ["411038", "411004", "411052"],
-  },
-  {
-    id: "k-3",
-    name: "Urban Spice Cloud Kitchen",
-    trackingId: "urban-spice",
-    rating: 4.7,
-    reviewsCount: 310,
-    time: "25-35 min",
-    imageUrl: "/images/places/place-burger.png",
-    category: "Biryani, Rolls & Fast Food",
-    locality: "Baner",
-    city: "Pune",
-    pincode: "411045",
-    isOnline: true,
-    foodType: "BOTH",
-    servedPincodes: ["411045", "411057", "411007"],
-  },
-  {
-    id: "k-4",
-    name: "Green Garden Organic Bowls",
-    trackingId: "green-garden",
-    rating: 4.9,
-    reviewsCount: 140,
-    time: "20-25 min",
-    imageUrl: "/images/auth/salad-bowl.jpg",
-    category: "Healthy & Diet Food",
-    locality: "Aundh",
-    city: "Pune",
-    pincode: "411007",
-    isOnline: true,
-    foodType: "VEG",
-    servedPincodes: ["411007", "411045", "411057"],
-  },
-];
-
-export const FALLBACK_FOOD_ITEMS: DynamicFoodItem[] = [
-  {
-    id: "fb-1",
-    name: "Margherita Brick-Oven Pizza",
-    description: "Fresh mozzarella, classic marinara sauce, fresh basil and extra virgin olive oil.",
-    price: 289,
-    imageUrl: "/images/places/place-pizza.png",
-    itemType: "VEG",
-    isAvailable: true,
-    sellerId: "k-1",
-    sellerName: "Chef Anjali's Gourmet Kitchen",
-    sellerCity: "Pune",
-    sellerPincode: "411038",
-    sellerLocality: "Kothrud",
-    sellerTrackingId: "chef-anjali",
-    sellerIsOnline: true,
-    sellerFoodType: "BOTH",
-    categoryName: "Pizza",
-    rating: 4.9,
-    deliveryTime: "20-30 min",
-    servedPincodes: ["411038", "411052", "411004", "411057"],
-  },
-  {
-    id: "fb-2",
-    name: "Smoky BBQ Paneer Woodfire Pizza",
-    description: "Charred marinated paneer cubes, crisp red onions, bell peppers and smokey chipotle drizzle.",
-    price: 329,
-    imageUrl: "/images/places/place-pizza.png",
-    itemType: "VEG",
-    isAvailable: true,
-    sellerId: "k-1",
-    sellerName: "Chef Anjali's Gourmet Kitchen",
-    sellerCity: "Pune",
-    sellerPincode: "411038",
-    sellerLocality: "Kothrud",
-    sellerTrackingId: "chef-anjali",
-    sellerIsOnline: true,
-    sellerFoodType: "BOTH",
-    categoryName: "Pizza",
-    rating: 4.8,
-    deliveryTime: "20-30 min",
-    servedPincodes: ["411038", "411052", "411004", "411057"],
-  },
-  {
-    id: "fb-3",
-    name: "Avocado & Quinoa Power Bowl",
-    description: "Organic hass avocado, tricolor quinoa, roasted chickpeas and tahini lime dressing.",
-    price: 249,
-    imageUrl: "/images/auth/salad-bowl.jpg",
-    itemType: "VEG",
-    isAvailable: true,
-    sellerId: "k-4",
-    sellerName: "Green Garden Organic Bowls",
-    sellerCity: "Pune",
-    sellerPincode: "411007",
-    sellerLocality: "Aundh",
-    sellerTrackingId: "green-garden",
-    sellerIsOnline: true,
-    sellerFoodType: "VEG",
-    categoryName: "Healthy",
-    rating: 4.9,
-    deliveryTime: "15-25 min",
-    servedPincodes: ["411007", "411045", "411057", "411038"],
-  },
-  {
-    id: "fb-4",
-    name: "Royal Hyderabadi Dum Biryani",
-    description: "Fragrant basmati rice layered with spiced marinated meat, saffron milk and caramelised onions.",
-    price: 349,
-    imageUrl: "/images/places/place-biryani.png",
-    itemType: "NON_VEG",
-    isAvailable: true,
-    sellerId: "k-3",
-    sellerName: "Urban Spice Cloud Kitchen",
-    sellerCity: "Pune",
-    sellerPincode: "411045",
-    sellerLocality: "Baner",
-    sellerTrackingId: "urban-spice",
-    sellerIsOnline: true,
-    sellerFoodType: "BOTH",
-    categoryName: "Home Meals",
-    rating: 4.8,
-    deliveryTime: "25-35 min",
-    servedPincodes: ["411045", "411057", "411007", "411038"],
-  },
-  {
-    id: "fb-5",
-    name: "Garlic Herb Cheesy Breadsticks",
-    description: "Fresh dough baked with parmesan crust and melted mozzarella center with garlic dip.",
-    price: 159,
-    imageUrl: "/images/places/place-pizza.png",
-    itemType: "VEG",
-    isAvailable: true,
-    sellerId: "k-1",
-    sellerName: "Chef Anjali's Gourmet Kitchen",
-    sellerCity: "Pune",
-    sellerPincode: "411038",
-    sellerLocality: "Kothrud",
-    sellerTrackingId: "chef-anjali",
-    sellerIsOnline: true,
-    sellerFoodType: "BOTH",
-    categoryName: "Snacks",
-    rating: 4.7,
-    deliveryTime: "20-30 min",
-    servedPincodes: ["411038", "411052", "411004"],
-  },
-  {
-    id: "fb-6",
-    name: "Belgian Dark Molten Lava Cake",
-    description: "Warm chocolate sponge with rich, oozing liquid dark chocolate ganache center.",
-    price: 179,
-    imageUrl: "/images/places/place-burger.png",
-    itemType: "VEG",
-    isAvailable: true,
-    sellerId: "k-1",
-    sellerName: "Chef Anjali's Gourmet Kitchen",
-    sellerCity: "Pune",
-    sellerPincode: "411038",
-    sellerLocality: "Kothrud",
-    sellerTrackingId: "chef-anjali",
-    sellerIsOnline: true,
-    sellerFoodType: "BOTH",
-    categoryName: "Desserts",
-    rating: 4.9,
-    deliveryTime: "20-30 min",
-    servedPincodes: ["411038", "411052", "411004"],
-  },
-  {
-    id: "fb-7",
-    name: "Deluxe Homely Maharashtrian Thali",
-    description: "2 Rotis, Dal Tadka, Paneer Bhaji, Steamed Rice, Sweet Gulab Jamun, Papad and Pickle.",
-    price: 189,
-    imageUrl: "/images/places/place-biryani.png",
-    itemType: "VEG",
-    isAvailable: true,
-    sellerId: "k-2",
-    sellerName: "Purohit Homely Tiffin Service",
-    sellerCity: "Pune",
-    sellerPincode: "411038",
-    sellerLocality: "Mayur Colony",
-    sellerTrackingId: "purohit-tiffins",
-    sellerIsOnline: true,
-    sellerFoodType: "VEG",
-    categoryName: "Mess",
-    rating: 4.9,
-    deliveryTime: "15-25 min",
-    servedPincodes: ["411038", "411004", "411052"],
-  },
-  {
-    id: "fb-8",
-    name: "Crispy Grilled Veg Supreme Burger",
-    description: "Herb potato patty, melted cheddar slice, crisp lettuce, tomatoes and thousand island dressing.",
-    price: 149,
-    imageUrl: "/images/places/place-burger.png",
-    itemType: "VEG",
-    isAvailable: true,
-    sellerId: "k-3",
-    sellerName: "Urban Spice Cloud Kitchen",
-    sellerCity: "Pune",
-    sellerPincode: "411045",
-    sellerLocality: "Baner",
-    sellerTrackingId: "urban-spice",
-    sellerIsOnline: true,
-    sellerFoodType: "BOTH",
-    categoryName: "Snacks",
-    rating: 4.7,
-    deliveryTime: "20-30 min",
-    servedPincodes: ["411045", "411057", "411007"],
-  },
-];
-
-export const FALLBACK_COUPONS: DynamicCoupon[] = [
-  {
-    id: "cp-1",
-    code: "CRUST30",
-    description: "30% OFF up to ₹150 on your first cloud kitchen order",
-    discountPercentage: 30,
-    minimumCartValue: 249,
-  },
-  {
-    id: "cp-2",
-    code: "WELCOME20",
-    description: "Flat 20% OFF on all gourmet meal plans & dishes",
-    discountPercentage: 20,
-    minimumCartValue: 199,
-  },
-  {
-    id: "cp-3",
-    code: "NEOFREESHIP",
-    description: "Free Delivery on orders above ₹299",
-    discountAmount: 49,
-    minimumCartValue: 299,
-  },
-];
-
-export const FALLBACK_BANNERS: DynamicPromoBanner[] = [
-  {
-    id: "b-1",
-    title: "Limited Welcome Offer - 30% OFF",
-    desktopImageUrl: "/images/promo-banner-full.png",
-    mobileImageUrl: "/images/promo-welcome-mobile-3d.png",
-    redirectUrl: "/explore",
-    displayOrder: 1,
-  },
-];
-
 export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   const { defaultAddress } = useLocation();
-  const [categories, setCategories] = useState<DynamicCategory[]>(FALLBACK_CATEGORIES);
-  const [foodItems, setFoodItems] = useState<DynamicFoodItem[]>(FALLBACK_FOOD_ITEMS);
+  const [categories, setCategories] = useState<DynamicCategory[]>([]);
+  const [foodItems, setFoodItems] = useState<DynamicFoodItem[]>([]);
   const [rooms, setRooms] = useState<DynamicRoom[]>([]);
-  const [kitchens, setKitchens] = useState<DynamicKitchen[]>(FALLBACK_KITCHENS);
-  const [coupons, setCoupons] = useState<DynamicCoupon[]>(FALLBACK_COUPONS);
-  const [promoBanners, setPromoBanners] = useState<DynamicPromoBanner[]>(FALLBACK_BANNERS);
+  const [kitchens, setKitchens] = useState<DynamicKitchen[]>([]);
+  const [coupons, setCoupons] = useState<DynamicCoupon[]>([]);
+  const [promoBanners, setPromoBanners] = useState<DynamicPromoBanner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
@@ -513,7 +225,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           });
         }
 
-        setCategories(dbCategories.length > 2 ? dbCategories : FALLBACK_CATEGORIES);
+        setCategories(dbCategories);
 
         // 2. Process Food Items & Kitchens
         const rawFoodItems: DynamicFoodItem[] = [];
@@ -524,13 +236,13 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             const foodItem: DynamicFoodItem = {
               id: item.id,
               name: item.name,
-              description: item.description || 'Fresh gourmet preparation crafted with quality ingredients.',
-              price: item.price || 199,
-              imageUrl: item.imageUrl || '/images/places/place-biryani.png',
+              description: item.description || '',
+              price: item.price || 0,
+              imageUrl: item.imageUrl || null,
               itemType: item.itemType || 'VEG',
               isAvailable: item.isAvailable !== false,
               sellerId: item.sellerId,
-              sellerName: item.sellerName || 'Verified Cloud Kitchen',
+              sellerName: item.sellerName || 'Cloud Kitchen',
               sellerCity: item.sellerCity,
               sellerPincode: item.sellerPincode,
               sellerLocality: item.sellerLocality,
@@ -538,9 +250,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerTrackingId: item.sellerTrackingId,
               sellerIsOnline: item.sellerIsOnline !== false,
               sellerFoodType: item.sellerFoodType || 'BOTH',
-              categoryName: item.foodCategory?.name || item.category?.name || 'Main Course',
-              rating: item.rating || 4.8,
-              deliveryTime: '20-30 min',
+              categoryName: item.foodCategory?.name || item.category?.name || 'Food',
+              rating: item.rating || 5.0,
+              deliveryTime: item.deliveryTime || '20-30 min',
               servedPincodes: item.servedPincodes || [],
             };
             rawFoodItems.push(foodItem);
@@ -553,10 +265,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               id: k.id,
               name: k.name,
               trackingId: k.trackingId || k.id,
-              rating: k.rating || 4.8,
-              reviewsCount: k.reviewsCount || 120,
-              time: '20-30 min',
-              imageUrl: k.imageUrl || '/images/places/place-pizza.png',
+              rating: k.rating || 5.0,
+              reviewsCount: k.reviewsCount || 0,
+              time: k.time || '20-30 min',
+              imageUrl: k.imageUrl || '',
               category: k.type || (k.foodType === 'VEG' ? 'Pure Veg' : 'Cloud Kitchen'),
               locality: k.locality,
               city: k.city,
@@ -568,13 +280,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           });
         }
 
-        // Apply fallback if database items are empty
-        const finalFoodItems = rawFoodItems.length > 0 ? rawFoodItems : FALLBACK_FOOD_ITEMS;
-        const finalKitchens = kitchenMap.size > 0 ? Array.from(kitchenMap.values()) : FALLBACK_KITCHENS;
-
-        setFoodItems(finalFoodItems);
-        setKitchens(finalKitchens);
-        setIsUsingFallback(rawFoodItems.length === 0);
+        setFoodItems(rawFoodItems);
+        setKitchens(Array.from(kitchenMap.values()));
+        setIsUsingFallback(false);
 
         // 3. Process Rooms
         const rawRooms: DynamicRoom[] = [];
@@ -593,14 +301,14 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
             rawRooms.push({
               id: r.id,
-              title: r.title || 'Comfort Room',
+              title: r.title || 'Room',
               price: r.price || 0,
               description: r.description || '',
               capacity: r.capacity || 1,
-              images: parsedImages.length > 0 ? parsedImages : ['/images/places/place-rooms.png'],
+              images: parsedImages,
               isAvailable: r.isAvailable !== false,
               sellerId: r.sellerId,
-              sellerName: r.sellerName || 'Verified Host',
+              sellerName: r.sellerName || '',
               sellerCity: r.sellerCity,
               sellerPincode: r.sellerPincode,
               sellerLocality: r.sellerLocality,
@@ -624,7 +332,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             });
           });
         }
-        setCoupons(rawCoupons.length > 0 ? rawCoupons : FALLBACK_COUPONS);
+        setCoupons(rawCoupons);
 
         // 5. Process Promo Banners
         const rawBanners: DynamicPromoBanner[] = [];
@@ -641,13 +349,13 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             });
           });
         }
-        setPromoBanners(rawBanners.length > 0 ? rawBanners : FALLBACK_BANNERS);
+        setPromoBanners(rawBanners);
         setError(null);
       } catch (err: any) {
         if (isMounted) {
-          console.error('Error loading home data (using fallback):', err);
-          setError(err?.message || 'Failed to load live data, using default catalog');
-          setIsUsingFallback(true);
+          console.error('Error loading home data:', err);
+          setError(err?.message || 'Failed to load live data');
+          setIsUsingFallback(false);
         }
       } finally {
         if (isMounted) {

@@ -171,12 +171,6 @@
   gap: 8px;
 }
 
-.shareSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .sectionLabel {
   font-size: 11.5px;
   font-weight: 700;
@@ -286,38 +280,6 @@
 .assignButtonAssigned {
   background: #16A34A;
   box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
-}
-
-/* Share Pickup Link Button */
-.copyLinkButton {
-  width: 100%;
-  height: 48px;
-  background-color: #FFFFFF;
-  border: 1.5px solid #E2E8F0;
-  border-radius: 14px;
-  color: #0F172A;
-  font-size: 14.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 2px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-}
-
-.copyLinkButton:hover {
-  background-color: #F8FAFC;
-  border-color: #CBD5E1;
-}
-
-.copyLinkButton:active {
-  transform: scale(0.98);
 }
 
 /* Toast Notification */

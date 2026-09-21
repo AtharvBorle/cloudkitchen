@@ -55,29 +55,21 @@ function EditMenuInner({
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string }>>([
-    { id: 'cat-1', name: 'North Indian' },
-    { id: 'cat-2', name: 'South Indian' },
-    { id: 'cat-3', name: 'Chinese' },
-    { id: 'cat-4', name: 'Italian' },
-    { id: 'cat-5', name: 'Desserts' },
-    { id: 'cat-6', name: 'Beverages' },
-  ]);
+  const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string }>>([]);
 
   // Form states (clean empty defaults for Add New Dish)
   const [itemName, setItemName] = useState('');
   const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('North Indian');
+  const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
 
   // Food type dropdown & multi-select
   const [isFoodTypeDropdownOpen, setIsFoodTypeDropdownOpen] = useState(false);
-  const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(['Veg']);
+  const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>([]);
   const [foodTypeError, setFoodTypeError] = useState<string | null>(null);
 
   // Stock
-  const [stockQty, setStockQty] = useState('10');
-  const [isInStock, setIsInStock] = useState(true);
+  const [stockQty, setStockQty] = useState('');
 
   // Variants & Add-ons
   const [variants, setVariants] = useState<VariantItem[]>([]);
@@ -89,13 +81,13 @@ function EditMenuInner({
 
   // Day-wise Operational Hours
   const [schedules, setSchedules] = useState<DaySchedule[]>([
-    { day: 'Monday', openTime: '09:00 AM', closeTime: '10:00 PM', isOpen: true },
-    { day: 'Tuesday', openTime: '09:00 AM', closeTime: '10:00 PM', isOpen: true },
-    { day: 'Wednesday', openTime: '09:00 AM', closeTime: '10:00 PM', isOpen: true },
-    { day: 'Thursday', openTime: '09:00 AM', closeTime: '10:00 PM', isOpen: true },
-    { day: 'Friday', openTime: '09:00 AM', closeTime: '10:00 PM', isOpen: true },
-    { day: 'Saturday', openTime: '09:00 AM', closeTime: '10:00 PM', isOpen: true },
-    { day: 'Sunday', openTime: '09:00 AM', closeTime: '10:00 PM', isOpen: true },
+    { day: 'Monday', openTime: '', closeTime: '', isOpen: true },
+    { day: 'Tuesday', openTime: '', closeTime: '', isOpen: true },
+    { day: 'Wednesday', openTime: '', closeTime: '', isOpen: true },
+    { day: 'Thursday', openTime: '', closeTime: '', isOpen: true },
+    { day: 'Friday', openTime: '', closeTime: '', isOpen: true },
+    { day: 'Saturday', openTime: '', closeTime: '', isOpen: true },
+    { day: 'Sunday', openTime: '', closeTime: '', isOpen: true },
   ]);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -110,20 +102,24 @@ function EditMenuInner({
           const dataPayload = json.data || json;
           if (dataPayload.foodCategories && dataPayload.foodCategories.length > 0) {
             setCategoriesList(dataPayload.foodCategories);
-            if (!category) {
+            if (!category && !itemId) {
               setCategory(dataPayload.foodCategories[0].name);
+            }
+          } else {
+            setCategoriesList([]);
+            if (!itemId) {
+              setCategory('');
             }
           }
           if (itemId && dataPayload.items) {
             const found = dataPayload.items.find((it: any) => it.id === itemId);
             if (found) {
               setItemName(found.name || '');
-              setPrice(String(found.price || ''));
+              setPrice(found.price !== null && found.price !== undefined ? String(found.price) : '');
               if (found.foodCategory?.name) setCategory(found.foodCategory.name);
               setDescription(found.description || '');
               if (found.imageUrl) setExistingImageUrl(found.imageUrl);
-              setStockQty(String(found.stockQuantity >= 0 ? found.stockQuantity : 10));
-              setIsInStock(found.isAvailable ?? true);
+              setStockQty(found.stockQuantity !== null && found.stockQuantity !== undefined && found.stockQuantity >= 0 ? String(found.stockQuantity) : '');
               if (found.itemType) {
                 const parts = String(found.itemType).split(',').map((s: string) => s.trim().toUpperCase());
                 if (parts.includes('NON_VEG') || parts.includes('NON-VEG') || parts.includes('NON VEG')) {
@@ -133,13 +129,25 @@ function EditMenuInner({
                   if (parts.includes('VEG')) loadedTypes.push('Veg');
                   if (parts.includes('VEGAN')) loadedTypes.push('Vegan');
                   if (parts.includes('JAIN')) loadedTypes.push('Jain');
-                  setSelectedFoodTypes(loadedTypes.length > 0 ? loadedTypes : ['Veg']);
+                  setSelectedFoodTypes(loadedTypes);
                 }
+              } else {
+                setSelectedFoodTypes([]);
               }
 
-              if (found.variants) {
+              if (found.operationalHours) {
                 try {
-                  const parsed = typeof found.variants === 'string' ? JSON.parse(found.variants) : found.variants;
+                  const parsed = typeof found.operationalHours === 'string' ? JSON.parse(found.operationalHours) : found.operationalHours;
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    setSchedules(parsed);
+                  }
+                } catch {}
+              }
+
+              const rawAddonsData = found.addons || found.variants;
+              if (rawAddonsData) {
+                try {
+                  const parsed = typeof rawAddonsData === 'string' ? JSON.parse(rawAddonsData) : rawAddonsData;
                   if (Array.isArray(parsed)) {
                     setVariants(parsed.map((v: any, i: number) => ({
                       id: v.id || String(i + 1),
@@ -148,7 +156,7 @@ function EditMenuInner({
                     })));
                   }
                 } catch (e) {
-                  console.error('Failed to parse item variants:', e);
+                  console.error('Failed to parse item addons:', e);
                 }
               }
             }
@@ -191,12 +199,16 @@ function EditMenuInner({
 
   const handleAddVariant = () => {
     const newId = (Date.now() + Math.floor(Math.random() * 1000)).toString();
-    setVariants([...variants, { id: newId, name: '', price: price || '0' }]);
+    setVariants([...variants, { id: newId, name: '', price: '' }]);
   };
 
   const handleUpdateVariant = (id: string, field: 'name' | 'price', value: string) => {
+    let cleanVal = value;
+    if (field === 'price') {
+      cleanVal = cleanVal.replace(/-/g, '');
+    }
     setVariants(
-      variants.map((v) => (v.id === id ? { ...v, [field]: value } : v))
+      variants.map((v) => (v.id === id ? { ...v, [field]: cleanVal } : v))
     );
   };
 
@@ -219,12 +231,11 @@ function EditMenuInner({
   const handleAddAnother = () => {
     setItemName('');
     setPrice('');
-    setCategory(categoriesList[0]?.name || 'North Indian');
+    setCategory(categoriesList[0]?.name || '');
     setDescription('');
-    setSelectedFoodTypes(['Veg']);
+    setSelectedFoodTypes([]);
     setFoodTypeError(null);
-    setStockQty('10');
-    setIsInStock(true);
+    setStockQty('');
     setVariants([]);
     setImageFile(null);
     setShowSuccessModal(false);
@@ -236,9 +247,53 @@ function EditMenuInner({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!itemName || !itemName.trim()) {
+      alert("Dish Name is required.");
+      return;
+    }
+
+    if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      alert("Please enter a valid base price greater than ₹0 (no negative numbers).");
+      return;
+    }
+
+    // Validate all Add-ons: name and price are mandatory, price must be non-negative
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      const trimmedName = (v.name || '').trim();
+      if (!trimmedName) {
+        alert(`Add-on #${i + 1} name is required. Please provide a name or delete the add-on.`);
+        return;
+      }
+      if (v.price === '' || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
+        alert(`Price for add-on "${trimmedName}" is mandatory and must be ₹0 or greater (negative numbers are not allowed).`);
+        return;
+      }
+    }
+
+    if (!category || !category.trim()) {
+      alert("Please select a category.");
+      return;
+    }
+
     if (!selectedFoodTypes || selectedFoodTypes.length === 0) {
       setFoodTypeError('Food Type is required. Please select at least one type.');
       alert('Please select a food type (Veg, Non Veg, Vegan, or Jain).');
+      return;
+    }
+
+    if (stockQty === '' || isNaN(parseInt(stockQty, 10)) || parseInt(stockQty, 10) < 0) {
+      alert("Stock Quantity is required (enter 0 or more).");
+      return;
+    }
+
+    if (!description || !description.trim()) {
+      alert("Description is required.");
+      return;
+    }
+
+    if (!imageFile && !existingImageUrl) {
+      alert("Dish image is mandatory. Please upload an image.");
       return;
     }
 
@@ -261,17 +316,19 @@ function EditMenuInner({
       }
       formData.append('itemType', itemTypeVal);
 
-      const cleanStock = Math.max(0, parseInt(stockQty, 10) || 0);
+      const cleanStock = stockQty.trim() !== '' && !isNaN(parseInt(stockQty, 10)) ? Math.max(0, parseInt(stockQty, 10)) : 0;
       formData.append('stockQuantity', String(cleanStock));
-      formData.append('isAvailable', String(isInStock));
+      formData.append('isAvailable', String(cleanStock > 0));
+      formData.append('operationalHours', JSON.stringify(schedules));
 
       const validVariants = variants
         .filter(v => v.name.trim().length > 0)
         .map(v => ({
           id: v.id,
           name: v.name.trim(),
-          price: Number(v.price) || Number(price) || 0
+          price: Number(v.price) || 0
         }));
+      formData.append('addons', JSON.stringify(validVariants));
       formData.append('variants', JSON.stringify(validVariants));
 
       let matchedCatId = categoriesList[0]?.id || '';
@@ -384,7 +441,7 @@ function EditMenuInner({
                 className={styles.textInput}
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
-                placeholder="Item Name"
+                placeholder="Enter item name"
                 required
               />
             </div>
@@ -397,10 +454,20 @@ function EditMenuInner({
                 </label>
                 <input
                   type="number"
+                  min="0"
+                  step="any"
                   className={styles.textInput}
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="380"
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/-/g, '');
+                    setPrice(clean);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Enter price (₹)"
                   required
                 />
               </div>
@@ -414,12 +481,20 @@ function EditMenuInner({
                     className={styles.selectInput}
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
+                    required
                   >
-                    {categoriesList.map((cat) => (
-                      <option key={cat.id} value={cat.name}>
-                        {cat.name}
-                      </option>
-                    ))}
+                    {categoriesList.length === 0 ? (
+                      <option value="">No categories available</option>
+                    ) : (
+                      <>
+                        {!category && <option value="">Select a category</option>}
+                        {categoriesList.map((cat) => (
+                          <option key={cat.id} value={cat.name}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
                   <ChevronDown size={16} className={styles.selectArrow} />
                 </div>
@@ -514,97 +589,98 @@ function EditMenuInner({
                 </div>
               </div>
 
-              {/* Automatic Stock Control */}
+              {/* Manual Stock Quantity Input */}
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Automatic Stock</label>
-                <div className={styles.stockControlCard}>
-                  <span className={styles.itemInStockLabel}>Item in Stock</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    className={styles.stockNumberInput}
-                    value={stockQty}
-                    onChange={(e) => {
-                      const rawVal = e.target.value;
-                      if (rawVal === '') {
-                        setStockQty('');
-                        return;
-                      }
-                      const cleanVal = rawVal.replace(/[^\d]/g, '');
-                      const num = parseInt(cleanVal, 10);
-                      setStockQty(isNaN(num) ? '0' : String(Math.max(0, num)));
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '.') {
-                        e.preventDefault();
-                      }
-                    }}
-                    placeholder="0"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIsInStock((prev) => !prev)}
-                    className={`${styles.toggleSwitch} ${
-                      isInStock ? styles.toggleSwitchActive : ''
-                    }`}
-                    aria-label="Toggle in stock status"
-                  >
-                    <span
-                      className={`${styles.toggleThumb} ${
-                        isInStock ? styles.toggleThumbActive : ''
-                      }`}
-                    />
-                  </button>
-                </div>
+                <label className={styles.fieldLabel}>
+                  Stock Quantity <span className={styles.requiredStar}>*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className={styles.textInput}
+                  value={stockQty}
+                  onChange={(e) => {
+                    const rawVal = e.target.value;
+                    if (rawVal === '') {
+                      setStockQty('');
+                      return;
+                    }
+                    const cleanVal = rawVal.replace(/[^\d]/g, '');
+                    const num = parseInt(cleanVal, 10);
+                    setStockQty(isNaN(num) ? '0' : String(Math.max(0, num)));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '.') {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Enter available stock (e.g. 25)"
+                  required
+                />
               </div>
             </div>
 
             {/* Field: Description */}
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>Description</label>
+              <label className={styles.fieldLabel}>
+                Description <span className={styles.requiredStar}>*</span>
+              </label>
               <textarea
                 className={styles.textAreaInput}
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Dish description..."
+                required
               />
             </div>
 
-            {/* Variants & Add-Ons Section */}
+            {/* Dish Add-Ons Section */}
             <div className={styles.subSection}>
-              <label className={styles.subSectionTitle}>Variants & Add-Ons</label>
+              <label className={styles.subSectionTitle}>
+                Dish Add-Ons <span style={{ fontSize: "0.85rem", fontWeight: "normal", color: "#64748B" }}>(Optional add-ons with extra price, e.g. Dahi, Extra Butter, Extra Roti)</span>
+              </label>
               <div className={styles.variantsList}>
                 {variants.map((variant) => (
                   <div key={variant.id} className={styles.variantRow}>
                     <input
                       type="text"
                       className={styles.variantNameInput}
-                      placeholder="Variant / Add-on name (e.g. Regular, Large)"
+                      placeholder="Add-on name (e.g. Dahi, Extra Butter, Extra Pav) *"
                       value={variant.name}
+                      required
                       onChange={(e) =>
                         handleUpdateVariant(variant.id, 'name', e.target.value)
                       }
                     />
                     <div className={styles.variantPriceWrapper}>
-                      <span className={styles.currencyPrefix}>₹</span>
+                      <span className={styles.currencyPrefix}>+₹</span>
                       <input
                         type="number"
+                        min="0"
+                        step="1"
                         className={styles.variantPriceInput}
-                        placeholder="Price"
+                        placeholder="Price *"
                         value={variant.price}
+                        required
                         onChange={(e) =>
                           handleUpdateVariant(variant.id, 'price', e.target.value)
                         }
-                        aria-label="Variant price"
+                        onKeyDown={(e) => {
+                          if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                            e.preventDefault();
+                          }
+                        }}
+                        aria-label="Add-on price"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveVariant(variant.id)}
                       className={styles.deleteVariantBtn}
-                      aria-label="Remove variant"
+                      aria-label="Remove add-on"
+                      title="Remove add-on"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -618,7 +694,7 @@ function EditMenuInner({
                 className={styles.addVariantBtn}
               >
                 <Plus size={15} strokeWidth={2.6} />
-                <span>Add Variant</span>
+                <span>Add Add-on</span>
               </button>
             </div>
 
@@ -634,6 +710,7 @@ function EditMenuInner({
                         type="text"
                         className={styles.timeInput}
                         value={schedule.openTime}
+                        placeholder="09:00 AM"
                         onChange={(e) =>
                           handleTimeChange(schedule.day, 'openTime', e.target.value)
                         }
@@ -643,6 +720,7 @@ function EditMenuInner({
                         type="text"
                         className={styles.timeInput}
                         value={schedule.closeTime}
+                        placeholder="10:00 PM"
                         onChange={(e) =>
                           handleTimeChange(schedule.day, 'closeTime', e.target.value)
                         }
@@ -669,7 +747,9 @@ function EditMenuInner({
 
             {/* Dish Image Representation */}
             <div className={styles.subSection}>
-              <label className={styles.subSectionTitle}>Dish Image representation</label>
+              <label className={styles.subSectionTitle}>
+                Dish Image representation <span className={styles.requiredStar}>*</span>
+              </label>
               <label className={styles.uploadDropzone}>
                 <input
                   type="file"
@@ -726,7 +806,7 @@ function EditMenuInner({
                   {modalActionType === 'add' ? 'Dish Added Successfully!' : 'Dish Updated Successfully!'}
                 </h3>
                 <p className={styles.modalMessage}>
-                  &lsquo;<strong>{savedDishName}</strong>&rsquo; has been saved with active variants and pricing, and is now live in your menu.
+                  &lsquo;<strong>{savedDishName}</strong>&rsquo; has been saved with active add-ons and pricing, and is now live in your menu.
                 </p>
                 <div className={styles.modalButtons}>
                   <button
@@ -736,13 +816,15 @@ function EditMenuInner({
                   >
                     View Menu Inventory
                   </button>
-                  <button
-                    type="button"
-                    className={styles.modalSecondaryBtn}
-                    onClick={handleAddAnother}
-                  >
-                    {modalActionType === 'add' ? 'Add Another Dish' : 'Continue Editing'}
-                  </button>
+                  {modalActionType === 'add' && (
+                    <button
+                      type="button"
+                      className={styles.modalSecondaryBtn}
+                      onClick={handleAddAnother}
+                    >
+                      Add Another Dish
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

@@ -698,9 +698,13 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
                       }
                     }
                   },
-                  deliveryAddressId: { type: "string", example: "addr_456" },
-                  paymentMethod: { type: "string", enum: ["COD", "ONLINE", "WALLET"], example: "COD" },
-                  couponCode: { type: "string", example: "FIRST50" }
+                  deliveryAddress: { type: "string", example: "Flat 302, Royal Palms, Pune - 411014" },
+                  customerPhone: { type: "string", example: "9876543210" },
+                  paymentMethod: { type: "string", enum: ["COD", "ONLINE"], example: "ONLINE" },
+                  appliedCouponId: { type: "string", example: "cpm_xyz123" },
+                  razorpay_order_id: { type: "string", example: "order_Kxyz123", description: "Required when paymentMethod is ONLINE" },
+                  razorpay_payment_id: { type: "string", example: "pay_Kabc456", description: "Required when paymentMethod is ONLINE" },
+                  razorpay_signature: { type: "string", example: "e9a0...32f", description: "Required when paymentMethod is ONLINE" }
                 }
               }
             }
@@ -719,6 +723,53 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           200: { description: "Order details", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+        }
+      }
+    },
+    "/api/user/orders/initiate-payment": {
+      post: {
+        tags: ["Customer-User"],
+        summary: "Initiate Razorpay Online Payment for Order",
+        description: "Initializes a Razorpay order before placing the final order in the database. Returns razorpayOrderId and amount.",
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["totalAmount"],
+                properties: {
+                  totalAmount: { type: "number", example: 300 },
+                  sellerId: { type: "string", example: "sel_123" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: "Razorpay order initialized",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    data: {
+                      type: "object",
+                      properties: {
+                        razorpayOrderId: { type: "string", example: "order_Kxyz123" },
+                        amount: { type: "number", example: 30000 },
+                        currency: { type: "string", example: "INR" },
+                        keyId: { type: "string", example: "rzp_test_TX4MPQgJuetMFP" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -746,6 +797,28 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
         },
         responses: {
           200: { description: "Payment verified and order confirmed", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+        }
+      }
+    },
+    "/api/user/orders/stream": {
+      get: {
+        tags: ["Customer-User"],
+        summary: "Live Real-Time Order Stream (Server-Sent Events / SSE)",
+        description: "Establishes a real-time event stream (`text/event-stream`) to receive instant push updates when user orders are accepted, preparing, out for delivery, delivered, or cancelled without polling.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Active SSE stream emitting 'order' and 'connected' events",
+            content: {
+              "text/event-stream": {
+                schema: {
+                  type: "string",
+                  example: "event: order\ndata: {\"event\":\"ORDER_UPDATED\",\"orderId\":\"ord_123\",\"status\":\"OUT_FOR_DELIVERY\"}\n\n"
+                }
+              }
+            }
+          },
+          401: { description: "Unauthorized" }
         }
       }
     },
@@ -1000,10 +1073,118 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
         }
       }
     },
+    "/api/seller/reapply": {
+      get: {
+        tags: ["Seller-Profile"],
+        summary: "Get Reapplication & Verification Details",
+        description: "Retrieve the current seller verification status, admin rejection notes/remarks, and existing uploaded documents to display in the mobile reapply screen.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Reapplication details retrieved successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Seller application reapply/revision details retrieved successfully." },
+                    data: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string", example: "cm123abc456" },
+                        businessName: { type: "string", example: "Spice Delight Cloud Kitchen" },
+                        businessCategory: { type: "string", enum: ["FOOD", "PROPERTY", "BOTH"], example: "FOOD" },
+                        verificationStatus: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED", "REVISION"], example: "REJECTED" },
+                        verificationNote: { type: "string", example: "FSSAI certificate is blurry and light bill is older than 3 months. Please re-upload clear copies." },
+                        foodVerificationStatus: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED"], example: "REJECTED" },
+                        propertyVerificationStatus: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED"], example: "PENDING" },
+                        addressLocality: { type: "string", example: "Shop 4, Kothrud, Pune - 411038" },
+                        adhaarUrl: { type: "string", example: "https://res.cloudinary.com/demo/image/upload/v1/adhaar.jpg" },
+                        fssaiUrl: { type: "string", example: "https://res.cloudinary.com/demo/image/upload/v1/fssai.pdf" },
+                        lightBillUrl: { type: "string", example: "https://res.cloudinary.com/demo/image/upload/v1/lightbill.jpg" },
+                        passbookUrl: { type: "string", example: "https://res.cloudinary.com/demo/image/upload/v1/passbook.jpg" },
+                        kitchenImages: { type: "array", items: { type: "string" }, example: ["https://res.cloudinary.com/demo/image/upload/v1/k1.jpg"] },
+                        cuisineImages: { type: "array", items: { type: "string" }, example: ["https://res.cloudinary.com/demo/image/upload/v1/c1.jpg"] },
+                        roomImages: { type: "array", items: { type: "string" }, example: [] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          401: { description: "Unauthorized - SELLER session required" },
+          404: { description: "Seller profile not found" }
+        }
+      },
+      post: {
+        tags: ["Seller-Profile"],
+        summary: "Reapply / Resubmit Seller Application (Multipart Form-Data)",
+        description: "Allows a seller whose application was REJECTED or requested for REVISION to re-upload required documents, update address/business name, and re-submit for admin verification.",
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  businessName: { type: "string", description: "Updated Business Name", example: "Spice Delight Cloud Kitchen" },
+                  businessAddress: { type: "string", description: "Updated Business Address", example: "Shop 4, Green Avenue, Kothrud, Pune" },
+                  adhaarFrontFile: { type: "string", format: "binary", description: "Aadhaar Card Front Photo" },
+                  adhaarBackFile: { type: "string", format: "binary", description: "Aadhaar Card Back Photo" },
+                  adhaarFile: { type: "string", format: "binary", description: "Identity / PAN Card document fallback" },
+                  fssaiFile: { type: "string", format: "binary", description: "FSSAI Certificate (Mandatory for Food)" },
+                  lightBillFile: { type: "string", format: "binary", description: "Electricity / Utility Bill" },
+                  passbookFile: { type: "string", format: "binary", description: "Bank Passbook / Cancelled Cheque" },
+                  kitchenImage_0: { type: "string", format: "binary", description: "Kitchen Photo 1" },
+                  kitchenImage_1: { type: "string", format: "binary", description: "Kitchen Photo 2" },
+                  cuisineImage_0: { type: "string", format: "binary", description: "Cuisine/Dish Photo 1" },
+                  cuisineImage_1: { type: "string", format: "binary", description: "Cuisine/Dish Photo 2" },
+                  roomImage_0: { type: "string", format: "binary", description: "Room/Property Photo 1 (for Property/Both)" },
+                  roomImage_1: { type: "string", format: "binary", description: "Room/Property Photo 2 (for Property/Both)" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: "Application resubmitted successfully. Verification status set to PENDING.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Seller application re-submitted successfully! Your application is now under review." },
+                    data: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string", example: "cm123abc456" },
+                        businessName: { type: "string", example: "Spice Delight Cloud Kitchen" },
+                        verificationStatus: { type: "string", example: "PENDING" },
+                        verificationNote: { type: "string", nullable: true, example: null },
+                        foodVerificationStatus: { type: "string", example: "PENDING" },
+                        propertyVerificationStatus: { type: "string", example: "PENDING" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { description: "Profile already approved or invalid parameters" },
+          401: { description: "Unauthorized" }
+        }
+      }
+    },
     "/api/seller/revision": {
       get: {
         tags: ["Seller-Profile"],
-        summary: "Get Verification Revision Details",
+        summary: "Get Verification Revision Details (Alias)",
+        description: "Alias endpoint to retrieve the current seller verification status, admin rejection notes, and existing uploaded documents.",
         security: [{ BearerAuth: [] }],
         responses: {
           200: { description: "Revision notes and required fields", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
@@ -1011,11 +1192,27 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
       },
       post: {
         tags: ["Seller-Profile"],
-        summary: "Resubmit KYC Documents for Revision",
+        summary: "Resubmit KYC Documents for Revision (Multipart Form-Data)",
+        description: "Submit updated documents after admin requests revisions or marks application as REJECTED/REVISION.",
         security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
-          content: { "multipart/form-data": { schema: { type: "object" } } }
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  businessName: { type: "string", example: "Spice Kitchen" },
+                  businessAddress: { type: "string", example: "Shop 12, FC Road, Pune" },
+                  adhaarFrontFile: { type: "string", format: "binary" },
+                  adhaarBackFile: { type: "string", format: "binary" },
+                  fssaiFile: { type: "string", format: "binary" },
+                  lightBillFile: { type: "string", format: "binary" },
+                  passbookFile: { type: "string", format: "binary" }
+                }
+              }
+            }
+          }
         },
         responses: {
           200: { description: "Documents resubmitted for admin review", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
@@ -1310,8 +1507,28 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
     },
 
     // ==========================================
-    // 8. SELLER - ORDERS & REVIEWS
-    // ==========================================
+    "/api/seller/orders/stream": {
+      get: {
+        tags: ["Seller-Orders"],
+        summary: "Live Real-Time Kitchen Order Stream (Server-Sent Events / SSE)",
+        description: "Establishes a persistent Server-Sent Events stream (`text/event-stream`) to instantly push new customer incoming orders, cancellations, and status transitions to the kitchen without client polling.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Active SSE stream emitting 'order', 'connected', and heartbeat events",
+            content: {
+              "text/event-stream": {
+                schema: {
+                  type: "string",
+                  example: "event: order\ndata: {\"event\":\"ORDER_CREATED\",\"order\":{...},\"orderId\":\"ord_abc\",\"status\":\"PENDING\"}\n\n"
+                }
+              }
+            }
+          },
+          401: { description: "Unauthorized - SELLER role required" }
+        }
+      }
+    },
     "/api/seller/orders": {
       get: {
         tags: ["Seller-Orders"],
@@ -1665,6 +1882,28 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
         },
         responses: {
           200: { description: "Rider status updated", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+        }
+      }
+    },
+    "/api/delivery/orders/stream": {
+      get: {
+        tags: ["Delivery-Rider"],
+        summary: "Live Real-Time Delivery Task Stream (Server-Sent Events / SSE)",
+        description: "Establishes a real-time event stream (`text/event-stream`) to receive instant push alerts for newly available delivery orders and assigned task status changes without polling.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Active SSE stream emitting 'order' and 'connected' events",
+            content: {
+              "text/event-stream": {
+                schema: {
+                  type: "string",
+                  example: "event: order\ndata: {\"event\":\"ORDER_CREATED\",\"orderId\":\"ord_123\",\"deliveryPersonId\":null}\n\n"
+                }
+              }
+            }
+          },
+          401: { description: "Unauthorized - DELIVERY role required" }
         }
       }
     },

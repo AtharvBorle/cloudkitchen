@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle } from "lucide
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./OrderDefault.module.css";
 
@@ -114,13 +115,19 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
             }
 
             const formattedItems: OrderItemRow[] = Array.isArray(parsedItems)
-              ? parsedItems.map((item: any, idx: number) => ({
-                  id: item.id || `item-${idx}`,
-                  name: item.name || "Food Item",
-                  qty: item.quantity || item.qty || 1,
-                  price: `₹${item.price || 0}`,
-                  total: `₹${(item.price || 0) * (item.quantity || item.qty || 1)}`,
-                }))
+              ? parsedItems.map((item: any, idx: number) => {
+                  const qty = Number(item.quantity || item.qty) || 1;
+                  const itemPrice = Number(item.price) || 0;
+                  const addonsList = Array.isArray(item.selectedAddons) ? item.selectedAddons : [];
+                  const addonStr = addonsList.length > 0 ? ` (+ ${addonsList.map((a: any) => `${a.name} ₹${a.price}`).join(', ')})` : '';
+                  return {
+                    id: item.id || `item-${idx}`,
+                    name: `${item.name || "Food Item"}${addonStr}`,
+                    qty: qty,
+                    price: `₹${itemPrice}`,
+                    total: `₹${itemPrice * qty}`,
+                  };
+                })
               : [];
 
             let statusVal: OrderDetailsData["status"] = "Pending";
@@ -135,8 +142,12 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               ? new Date(target.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
               : "Just now";
 
-            const totalNum = target.totalAmount || 0;
-            const subtotalNum = Math.max(totalNum - 34, 0);
+            const calculatedSubtotal = Array.isArray(parsedItems)
+              ? parsedItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty) || 1), 0)
+              : 0;
+
+            const totalNum = target.totalAmount !== undefined && target.totalAmount !== null ? Number(target.totalAmount) : calculatedSubtotal;
+            const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : totalNum;
 
             setOrder({
               id: target.id,
@@ -155,7 +166,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               subtotal: `₹${subtotalNum}`,
               deliveryFee: "₹0",
               serviceFee: "Free",
-              taxes: "₹34",
+              taxes: "₹0",
               total: `₹${totalNum}`,
               grandTotal: `₹${totalNum}`,
               paymentMethod: `${target.paymentMethod || "COD"} (${target.isPaid ? "Paid" : "Unpaid"})`,
@@ -176,14 +187,16 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
     loadOrder(false);
   }, [loadOrder]);
 
-  // Real-time polling every 4 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadOrder(true);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [loadOrder]);
+  // Real-time SSE stream replaces 4s polling
+  useRealtimeStream({
+    url: "/api/seller/orders/stream",
+    onOrder: (payload) => {
+      // Reload if event matches current order or any general order event
+      if (!payload.orderId || payload.orderId === currentOrderId || payload.orderId === rawOrderId) {
+        loadOrder(true);
+      }
+    },
+  });
 
   const currentOrderId = order?.id || (rawOrderId ? rawOrderId.replace("#", "") : "");
 

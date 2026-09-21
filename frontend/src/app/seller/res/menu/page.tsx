@@ -69,12 +69,30 @@ export default function ResponsiveMenuPage() {
         if (parsedTypes.length === 0) parsedTypes = ["VEG"];
       }
 
+      let addonsList: Array<{ id: string; name: string; price: number }> = [];
+      const rawAddons = item.addons || item.variants;
+      if (rawAddons) {
+        try {
+          const parsed = typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons;
+          if (Array.isArray(parsed)) {
+            addonsList = parsed
+              .filter((a: any) => a && (a.name || '').trim())
+              .map((a: any) => ({
+                id: String(a.id || ''),
+                name: String(a.name || '').trim(),
+                price: Number(a.price) || 0,
+              }));
+          }
+        } catch {}
+      }
+
       return {
         id: item.id,
         name: item.name,
         price: `₹${item.price}`,
         category: cat,
         types: parsedTypes,
+        addons: addonsList,
         stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 24,
         isAvailable: item.isAvailable ?? true,
         imageUrl: item.imageUrl || "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=150&auto=format&fit=crop&q=80",

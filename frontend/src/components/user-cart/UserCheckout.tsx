@@ -33,41 +33,6 @@ export interface UserCheckoutProps {
   onProceedToCheckout?: () => void;
 }
 
-const DEFAULT_CART_ITEMS: UserCartItem[] = [
-  {
-    id: "item-1",
-    name: "Gourmet Brick-Oven Margherita Pizza",
-    description: "Medium • Fresh Basil & Extra Mozzarella",
-    price: 449,
-    qty: 1,
-    image: "/images/places/place-pizza.png",
-  },
-  {
-    id: "item-2",
-    name: "Avocado & Quinoa Power Bowl",
-    description: "Organic • Tahini Lime Dressing",
-    price: 556,
-    qty: 1,
-    image: "/images/auth/salad-bowl.jpg",
-  },
-  {
-    id: "item-3",
-    name: "Classic Garlic Bread",
-    description: "Crispy • Herbs & Mozzarella",
-    price: 199,
-    qty: 1,
-    image: "/images/places/place-pizza.png",
-  },
-  {
-    id: "item-4",
-    name: "Classic Garlic Bread",
-    description: "Crispy • Herbs & Mozzarella",
-    price: 199,
-    qty: 1,
-    image: "/images/places/place-pizza.png",
-  },
-];
-
 const AVAILABLE_ADDRESSES = [
   {
     id: "addr-1",
@@ -87,7 +52,7 @@ const AVAILABLE_ADDRESSES = [
 ];
 
 export const UserCheckout: React.FC<UserCheckoutProps> = ({
-  initialItems = DEFAULT_CART_ITEMS,
+  initialItems = [],
   defaultLocation = "Kothrud, Pune",
   defaultAddress = "Flat 402, Golden Crest Apartments, Kothrud",
   onProceedToCheckout,
@@ -99,8 +64,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const [isVegOnly, setIsVegOnly] = useState<boolean>(true);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("EN");
   const [promoCode, setPromoCode] = useState<string>("");
-  const [appliedPromo, setAppliedPromo] = useState<string | null>("WELCOME20");
-  const [discountPercent, setDiscountPercent] = useState<number>(20);
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [currentAddress, setCurrentAddress] = useState<string>(defaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -158,9 +123,9 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   // Price Calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   const discountAmount = appliedPromo && subtotal > 0 ? Math.round((subtotal * discountPercent) / 100) : 0;
-  const deliveryFee = subtotal > 0 ? 49 : 0;
-  const taxesAndCharges = subtotal > 0 ? 38 : 0;
-  const grandTotal = Math.max(0, subtotal - discountAmount + deliveryFee + taxesAndCharges);
+  const deliveryFee = 0;
+  const taxesAndCharges = 0;
+  const grandTotal = Math.max(0, subtotal - discountAmount);
 
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
@@ -390,20 +355,6 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     </span>
                   </div>
                 )}
-
-                <div className={styles.pricingRow}>
-                  <span className={styles.pricingLabel}>Delivery Fee</span>
-                  <span className={styles.pricingValue}>
-                    ₹{deliveryFee.toLocaleString("en-IN")}
-                  </span>
-                </div>
-
-                <div className={styles.pricingRow}>
-                  <span className={styles.pricingLabel}>Taxes &amp; charges</span>
-                  <span className={styles.pricingValue}>
-                    ₹{taxesAndCharges.toLocaleString("en-IN")}
-                  </span>
-                </div>
 
                 <div className={styles.divider} />
 

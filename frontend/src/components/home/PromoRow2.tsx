@@ -32,66 +32,8 @@ export interface PromoRow2Props {
   imageSrc?: string;
 }
 
-const DEFAULT_PROMO_SLIDES: PromoSlide[] = [
-  {
-    id: "promo-1",
-    titlePrefix: "Save ",
-    highlight: "30% OFF",
-    titleSuffix: "First 2 Orders",
-    code: "FOOD30",
-    buttonText: "Order Now",
-    link: "/explore-desktop",
-    imageSrc: "/images/promo-scooter.png",
-    imageType: "scooter",
-  },
-  {
-    id: "promo-2",
-    titlePrefix: "Mess Special – Flat ",
-    highlight: "30% OFF",
-    titleSuffix: "on First Thali",
-    code: "THALI30",
-    buttonText: "Order Now",
-    link: "/explore-desktop?category=Mess/Tiffin",
-    imageSrc:
-      "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80",
-    imageType: "food",
-  },
-  {
-    id: "promo-3",
-    titlePrefix: "Fresh Bakes – Get ",
-    highlight: "25% OFF",
-    titleSuffix: "on Cakes",
-    code: "CAKE25",
-    buttonText: "Order Now",
-    link: "/explore-desktop?category=Bakery",
-    imageSrc:
-      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=80",
-    imageType: "food",
-  },
-  {
-    id: "promo-4",
-    titlePrefix: "Homemade – Flat ",
-    highlight: "20% OFF",
-    titleSuffix: "on Order",
-    code: "HOME20",
-    buttonText: "Explore Now",
-    link: "/explore-desktop?category=Homemade",
-    imageSrc:
-      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80",
-    imageType: "food",
-  },
-];
-
 export default function PromoRow2({
   banners,
-  badge = "LIMITED WELCOME OFFER",
-  titlePrefix = "Save",
-  titleHighlight = "30% OFF",
-  titleSuffix = "Your First 2",
-  description = "Kickstart your meal plan with premium ingredients & fast delivery.",
-  code = "FOOD30",
-  orderNowLink = "/explore-desktop",
-  imageSrc = "/images/promo-banner-food.png",
 }: PromoRow2Props) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -100,15 +42,7 @@ export default function PromoRow2({
 
   const hasDynamicBanners = banners && banners.length > 0;
   const bannerList = hasDynamicBanners ? banners : null;
-  const totalCount = bannerList ? bannerList.length : DEFAULT_PROMO_SLIDES.length;
-
-  const nextSlide = () => {
-    setActiveIdx((prev) => (prev + 1) % totalCount);
-  };
-
-  const prevSlide = () => {
-    setActiveIdx((prev) => (prev === 0 ? totalCount - 1 : prev - 1));
-  };
+  const totalCount = bannerList ? bannerList.length : 0;
 
   // Auto rotate if multiple dynamic banners
   useEffect(() => {
@@ -121,16 +55,17 @@ export default function PromoRow2({
     return () => clearInterval(timer);
   }, [bannerList, isHovered]);
 
-  // Auto-scroll default slides if no dynamic banners
-  useEffect(() => {
-    if (hasDynamicBanners || isHovered) return;
+  if (!hasDynamicBanners || !bannerList || bannerList.length === 0) {
+    return null;
+  }
 
-    const timer = setInterval(() => {
-      setActiveIdx((prev) => (prev + 1) % DEFAULT_PROMO_SLIDES.length);
-    }, 5000);
+  const nextSlide = () => {
+    setActiveIdx((prev) => (prev + 1) % totalCount);
+  };
 
-    return () => clearInterval(timer);
-  }, [hasDynamicBanners, isHovered]);
+  const prevSlide = () => {
+    setActiveIdx((prev) => (prev === 0 ? totalCount - 1 : prev - 1));
+  };
 
   // Touch Swipe Handlers for Mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -370,149 +305,6 @@ export default function PromoRow2({
     );
   }
 
-  // Fallback slider
-  const currentSlide = DEFAULT_PROMO_SLIDES[activeIdx] || DEFAULT_PROMO_SLIDES[0];
-
-  return (
-    <section
-      className={styles.promoWrapper}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{ position: "relative" }}
-    >
-      <div
-        className={styles.promoCard}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{ position: "relative" }}
-      >
-        <div key={currentSlide.id} className={styles.slideContent}>
-          <div className={styles.leftContent}>
-            <h2 className={styles.promoTitle}>
-              {currentSlide.titlePrefix}
-              <span className={styles.highlight}>{currentSlide.highlight}</span>
-              {currentSlide.titleSuffix && (
-                <>
-                  <br />
-                  {currentSlide.titleSuffix}
-                </>
-              )}
-            </h2>
-
-            <div className={styles.codeText}>
-              Use code:{" "}
-              <span className={styles.codeVal}>{currentSlide.code}</span>
-            </div>
-
-            <Link href={currentSlide.link} className={styles.orderBtn}>
-              {currentSlide.buttonText}
-            </Link>
-          </div>
-
-          <div className={styles.graphicBox}>
-            {currentSlide.imageType === "scooter" ? (
-              <div className={styles.scooterBox}>
-                <Image
-                  src={currentSlide.imageSrc}
-                  alt="Delivery Rider"
-                  width={220}
-                  height={220}
-                  priority
-                  className={styles.scooterImg}
-                />
-              </div>
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={currentSlide.imageSrc}
-                alt={currentSlide.titlePrefix}
-                className={styles.foodImg}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Navigation Arrows for Fallback Slides */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            prevSlide();
-          }}
-          aria-label="Previous slide"
-          style={{
-            position: "absolute",
-            left: "14px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "36px",
-            height: "36px",
-            borderRadius: "50%",
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            border: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "#0F172A",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            zIndex: 10,
-            transition: "all 0.2s ease",
-          }}
-        >
-          <ChevronLeft size={20} strokeWidth={2.5} />
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            nextSlide();
-          }}
-          aria-label="Next slide"
-          style={{
-            position: "absolute",
-            right: "14px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "36px",
-            height: "36px",
-            borderRadius: "50%",
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            border: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "#0F172A",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            zIndex: 10,
-            transition: "all 0.2s ease",
-          }}
-        >
-          <ChevronRight size={20} strokeWidth={2.5} />
-        </button>
-
-        <div className={styles.dotsContainer}>
-          {DEFAULT_PROMO_SLIDES.map((slide, index) => {
-            const isActive = activeIdx === index;
-            return (
-              <button
-                key={slide.id}
-                type="button"
-                className={`${styles.dotBtn} ${
-                  isActive ? styles.dotActive : styles.dotInactive
-                }`}
-                onClick={() => setActiveIdx(index)}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
+  return null;
 }
 

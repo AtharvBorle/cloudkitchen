@@ -29,75 +29,6 @@ export interface CollectionCardItem {
   kitchenId?: string;
 }
 
-const DEFAULT_COLLECTIONS: CollectionCardItem[] = [
-  {
-    id: "col-1",
-    author: "Chef Arjun",
-    avatarImg: chefArjunAvatar,
-    title: "Making butter chicken from scratch 🍗",
-    views: "12.4k views",
-    image: butterChickenImg,
-    kitchenId: "chef-arjun",
-  },
-  {
-    id: "col-2",
-    author: "Chef Yuki",
-    avatarImg: chefYukiAvatar,
-    title: "Perfect tonkotsu ramen at home 🍜",
-    views: "18.2k views",
-    image: tonkotsuRamenImg,
-    kitchenId: "wok-station",
-  },
-  {
-    id: "col-3",
-    author: "Pizza Lab",
-    title: "Wood-fired Margherita in 90 seconds 🍕",
-    views: "8.9k views",
-    image: woodfirePizzaImg,
-    kitchenId: "pizza-lab",
-  },
-  {
-    id: "col-4",
-    author: "Chef Niran",
-    title: "Authentic Thai green curry secrets 🌿",
-    views: "15.7k views",
-    image: thaiCurryImg,
-    kitchenId: "wok-station",
-  },
-  {
-    id: "col-5",
-    author: "Maple & Co",
-    title: "Fluffiest pancakes you'll ever make 🥞",
-    views: "22.1k views",
-    image: fluffyPancakesImg,
-    kitchenId: "baker-delight",
-  },
-  {
-    id: "col-6",
-    author: "Chef Rosa",
-    title: "Street-style carne asada tacos 🌮",
-    views: "9.6k views",
-    image: carneAsadaTacosImg,
-    kitchenId: "taco-cloud",
-  },
-  {
-    id: "col-7",
-    author: "Ocean Grill",
-    title: "Crispy skin salmon done right 🐟",
-    views: "14.3k views",
-    image: crispySalmonImg,
-    kitchenId: "fresh-salads",
-  },
-  {
-    id: "col-8",
-    author: "Cocoa Tales",
-    title: "Molten chocolate lava cake tutorial 🍫",
-    views: "31.5k views",
-    image: moltenLavaCakeImg,
-    kitchenId: "baker-delight",
-  },
-];
-
 export interface FeaturedCollectionsProps {
   heading?: string;
   subheading?: string;
@@ -111,7 +42,7 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
   heading = "Featured Collections",
   subheading = "Hand-curated food groupings tailored for your dining preferences",
   seeAllText = "See all",
-  collections = DEFAULT_COLLECTIONS,
+  collections,
   onCardClick,
   onSeeAllClick,
 }) => {
@@ -119,6 +50,7 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
 
   // Map collections into ReelModalData
   const modalReels: ReelModalData[] = React.useMemo(() => {
+    if (!collections || collections.length === 0) return [];
     return collections.map((item, idx) => ({
       id: item.id || `collection-${idx}`,
       author: item.author || "Featured Chef",
@@ -134,6 +66,10 @@ export const FeaturedCollections: React.FC<FeaturedCollectionsProps> = ({
       kitchenId: item.kitchenId,
     }));
   }, [collections]);
+
+  if (!collections || collections.length === 0) {
+    return null;
+  }
 
   const handleItemClick = (index: number, item: CollectionCardItem) => {
     if (onCardClick) {

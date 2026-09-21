@@ -28,8 +28,8 @@ export default function ResponsiveManageRidersPage() {
                     .join("")
                     .toUpperCase()
                     .slice(0, 2)
-                : "RK",
-              phone: dp.phone || "+91 98765 00000",
+                : "",
+              phone: dp.phone || "",
               status: dp.isActive ? ("Online" as const) : ("Offline" as const),
             }));
             setRiders(mapped);

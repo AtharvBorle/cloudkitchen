@@ -30,8 +30,12 @@ import styles from "./SecureCheckout.module.css";
 
 export interface CheckoutSummaryItem {
   id: string;
+  foodItemId?: string;
   name: string;
   variant: string;
+  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
+  basePrice?: number;
+  addonsTotal?: number;
   qty: number;
   price: number;
   image: string;
@@ -196,8 +200,9 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [selectedLanguage, setSelectedLanguage] = useState<string>("EN");
 
   // Promo Code State
-  const [promoCode, setPromoCode] = useState<string>("NEOBITE20");
-  const [isPromoApplied, setIsPromoApplied] = useState<boolean>(true);
+  const [promoCode, setPromoCode] = useState<string>("");
+  const [isPromoApplied, setIsPromoApplied] = useState<boolean>(false);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
 
   // Order Placement States
   const [isOrderPlaced, setIsOrderPlaced] = useState<boolean>(false);
@@ -220,36 +225,72 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }, 3000);
   };
 
-  // Active items derived from CartContext if present
+const loadRazorpayScript = (): Promise<boolean> => {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if ((window as any).Razorpay) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const existing = document.getElementById("razorpay-checkout-script");
+    if (existing) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.id = "razorpay-checkout-script";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+  // Cart Items derived from context with accurate price & selected add-ons
   const checkoutItems: CheckoutSummaryItem[] = cartItems.length > 0
     ? cartItems.map((ci) => ({
         id: ci.id,
+        foodItemId: ci.foodItemId,
         name: ci.name,
-        variant: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
+        variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map(a => a.name).join(", ") : (ci.sellerName ? `From ${ci.sellerName}` : "")),
+        selectedAddons: ci.selectedAddons,
+        basePrice: ci.basePrice,
+        addonsTotal: ci.addonsTotal,
         qty: ci.quantity,
         price: ci.price * ci.quantity,
-        image: ci.image || "/images/places/place-pizza.png",
+        image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
       }))
     : items;
 
-  // Pricing calculations
+  // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
-  const discountAmount = isPromoApplied && subtotal > 0 ? Math.round((subtotal * 20) / 100) : 0;
-  const deliveryFee = subtotal > 0 ? 49 : 0;
-  const taxesAndCharges = subtotal > 0 ? 38 : 0;
-  const grandTotal = Math.max(0, subtotal - discountAmount + deliveryFee + taxesAndCharges);
+  const discountAmount = isPromoApplied && subtotal > 0 ? Math.round((subtotal * discountPercent) / 100) : 0;
+  const deliveryFee = 0;
+  const taxesAndCharges = 0;
+  const grandTotal = Math.max(0, subtotal - discountAmount);
 
   const handleApplyToggle = () => {
     if (isPromoApplied) {
       setIsPromoApplied(false);
+      setDiscountPercent(0);
       showToast("Promo code removed", "info");
     } else {
-      if (!promoCode.trim()) {
+      const clean = promoCode.trim().toUpperCase();
+      if (!clean) {
         showToast("Please enter a promo code", "error");
         return;
       }
-      setIsPromoApplied(true);
-      showToast(`Promo code "${promoCode}" applied! (20% Off)`, "success");
+      if (clean === "NEO50") {
+        setIsPromoApplied(true);
+        setDiscountPercent(50);
+        showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
+      } else if (clean === "WELCOME20" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") {
+        setIsPromoApplied(true);
+        setDiscountPercent(20);
+        showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
+      } else {
+        setIsPromoApplied(true);
+        setDiscountPercent(15);
+        showToast(`Promo code "${clean}" applied! (15% Off)`, "success");
+      }
     }
   };
 
@@ -287,17 +328,167 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       const rawItems = cartItems.length > 0 ? cartItems : items;
       const orderItems = rawItems.map((ci: any) => ({
         id: ci.foodItemId || ci.id,
+        foodItemId: ci.foodItemId || ci.id,
         name: ci.name,
         price: ci.price,
+        basePrice: ci.basePrice || ci.price,
+        addonsTotal: ci.addonsTotal || 0,
+        selectedAddons: ci.selectedAddons || [],
         quantity: ci.quantity || ci.qty || 1,
         image: ci.image || ci.imageUrl,
-        variant: ci.variantName || ci.variant,
+        variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map((a: any) => a.name).join(", ") : ""),
       }));
 
       const fullDeliveryAddress = `${streetAddress}, ${city} - ${postalCode}${
         deliveryInstructions ? ` (Note: ${deliveryInstructions})` : ""
       }`;
 
+      // -------------------------------------------------------------
+      // FLOW 1: ONLINE PAYMENT (Razorpay)
+      // Initiate Razorpay checkout first -> Validate -> Place Order
+      // -------------------------------------------------------------
+      if (paymentMethod === "UPI") {
+        const initRes = await fetchApi("/api/user/orders/initiate-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            totalAmount: grandTotal,
+            sellerId: sellerId || "seller",
+          }),
+        });
+
+        const initData = await initRes.json().catch(() => ({}));
+        if (!initRes.ok) {
+          const errMsg = initData.message || initData.error || "Failed to initialize online payment";
+          showToast(errMsg, "error");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          showToast("Failed to load Razorpay SDK. Please check your internet connection.", "error");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const rzpData = initData.data || initData;
+
+        const options = {
+          key: rzpData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TX4MPQgJuetMFP",
+          amount: rzpData.amount,
+          currency: rzpData.currency || "INR",
+          name: "Neo Cloud Kitchen",
+          description: `Order Payment (${checkoutItems.length} items)`,
+          order_id: rzpData.razorpayOrderId,
+          handler: async function (response: any) {
+            try {
+              setIsSubmitting(true);
+              const createRes = await fetchApi("/api/user/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  sellerId: sellerId || "seller",
+                  items: orderItems,
+                  totalAmount: grandTotal,
+                  deliveryAddress: fullDeliveryAddress,
+                  customerPhone: phoneNumber,
+                  paymentMethod: "ONLINE",
+                  appliedCouponId: isPromoApplied ? promoCode : null,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              });
+
+              const createData = await createRes.json().catch(() => ({}));
+              if (!createRes.ok) {
+                const errorMsg = createData.message || createData.error || "Payment verification failed. Please contact support.";
+                showToast(errorMsg, "error");
+                setIsSubmitting(false);
+                return;
+              }
+
+              const createdOrder = createData.data?.order || createData.order || createData.data;
+              const finalOrderId = createdOrder?.id || ("NCR-" + Math.floor(100000 + Math.random() * 900000));
+              setPlacedOrderNumber(finalOrderId);
+
+              const confirmedOrderPayload = {
+                orderId: finalOrderId,
+                orderTime: "Just now",
+                estimatedDelivery: "25-35 mins",
+                deliveryAddress: {
+                  fullName: fullName.trim(),
+                  phoneNumber: phoneNumber.trim(),
+                  streetAddress: streetAddress.trim(),
+                  city: city.trim() || "Kothrud, Pune",
+                  pincode: postalCode.trim() || "411038",
+                },
+                paymentMethod: "Pay Online (Paid via Razorpay)",
+                items: checkoutItems.map((item) => ({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  qty: item.qty,
+                  image: item.image,
+                  variant: item.variant,
+                  itemType: "VEG",
+                })),
+                subtotal,
+                discount: discountAmount,
+                deliveryFee: 0,
+                taxes: 0,
+                grandTotal,
+              };
+
+              if (typeof window !== "undefined") {
+                try {
+                  sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+                } catch (e) {
+                  console.error("Failed to save confirmed order to session storage:", e);
+                }
+              }
+
+              setIsOrderPlaced(true);
+              clearCart();
+              showToast("Payment Verified! Order Placed Successfully!");
+
+              setTimeout(() => {
+                router.push(`/order-confirmation?orderId=${encodeURIComponent(finalOrderId)}`);
+              }, 700);
+            } catch (err: any) {
+              console.error("Error finalizing online order:", err);
+              showToast(err?.message || "Failed to complete order after payment.", "error");
+              setIsSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setIsSubmitting(false);
+              showToast("Payment cancelled. Order was not placed.", "info");
+            },
+          },
+          prefill: {
+            name: fullName.trim(),
+            contact: phoneNumber.trim(),
+          },
+          theme: {
+            color: "#FF6B00",
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on("payment.failed", function (response: any) {
+          setIsSubmitting(false);
+          showToast("Payment failed: " + (response.error?.description || "Transaction declined"), "error");
+        });
+        rzp.open();
+        return;
+      }
+
+      // -------------------------------------------------------------
+      // FLOW 2: CASH ON DELIVERY (COD)
+      // -------------------------------------------------------------
       const res = await fetchApi("/api/user/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -307,7 +498,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           totalAmount: grandTotal,
           deliveryAddress: fullDeliveryAddress,
           customerPhone: phoneNumber,
-          paymentMethod: paymentMethod === "UPI" ? "ONLINE" : "COD",
+          paymentMethod: "COD",
         }),
       });
 
@@ -336,7 +527,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           city: city.trim() || "Kothrud, Pune",
           pincode: postalCode.trim() || "411038",
         },
-        paymentMethod: paymentMethod === "UPI" ? "UPI (Paid Online)" : "Cash on Delivery",
+        paymentMethod: "Cash on Delivery",
         items: checkoutItems.map((item) => ({
           id: item.id,
           name: item.name,
@@ -348,8 +539,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         })),
         subtotal,
         discount: discountAmount,
-        deliveryFee,
-        taxes: taxesAndCharges,
+        deliveryFee: 0,
+        taxes: 0,
         grandTotal,
       };
 
@@ -372,7 +563,9 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       console.error("Error placing order:", err);
       showToast(err?.message || "Failed to place order. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      if (paymentMethod !== "UPI") {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -543,7 +736,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
               <button
                 type="button"
-                onClick={() => router.push("/explore")}
+                onClick={() => router.push("/explore-desktop")}
                 style={{
                   flex: 1,
                   padding: "14px 20px",
@@ -824,7 +1017,28 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
                       </div>
                       <div className={styles.itemInfoCol}>
                         <span className={styles.itemName}>{item.name}</span>
-                        <span className={styles.itemVariant}>{item.variant}</span>
+                        {item.selectedAddons && item.selectedAddons.length > 0 ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "3px 0" }}>
+                            {item.selectedAddons.map((a, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  fontSize: "0.72rem",
+                                  color: "#C2410C",
+                                  backgroundColor: "#FFF7ED",
+                                  border: "1px solid #FFEDD5",
+                                  padding: "1px 6px",
+                                  borderRadius: "4px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                + {a.name} (₹{a.price})
+                              </span>
+                            ))}
+                          </div>
+                        ) : item.variant ? (
+                          <span className={styles.itemVariant}>{item.variant}</span>
+                        ) : null}
                         <span className={styles.itemQtyPrice}>
                           Qty: {item.qty} × ₹
                           {Math.round(item.price / (item.qty || 1)).toLocaleString("en-IN")}
@@ -876,26 +1090,12 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
                   {isPromoApplied && discountAmount > 0 && (
                     <div className={styles.pricingRowDiscount}>
-                      <span className={styles.discountLabel}>Promo Discount (20%)</span>
+                      <span className={styles.discountLabel}>Promo Discount ({discountPercent}%)</span>
                       <span className={styles.discountValue}>
                         -₹{discountAmount.toLocaleString("en-IN")}
                       </span>
                     </div>
                   )}
-
-                  <div className={styles.pricingRow}>
-                    <span className={styles.pricingLabel}>Delivery Fee</span>
-                    <span className={styles.pricingValue}>
-                      ₹{deliveryFee.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-
-                  <div className={styles.pricingRow}>
-                    <span className={styles.pricingLabel}>Taxes &amp; charges</span>
-                    <span className={styles.pricingValue}>
-                      ₹{taxesAndCharges.toLocaleString("en-IN")}
-                    </span>
-                  </div>
 
                   <div className={styles.divider} />
 

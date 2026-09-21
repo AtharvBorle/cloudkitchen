@@ -352,7 +352,10 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                 } else if (categoryFilter === "UPGRADE") {
                     const isUpgrade =
                         app.verificationStatus === "APPROVED" &&
-                        (app.foodVerificationStatus !== "NONE" || app.propertyVerificationStatus !== "NONE");
+                        (app.foodVerificationStatus === "PENDING" ||
+                            app.foodVerificationStatus === "REVISION" ||
+                            app.propertyVerificationStatus === "PENDING" ||
+                            app.propertyVerificationStatus === "REVISION");
                     if (!isUpgrade) return false;
                 } else if (categoryFilter === "FOOD") {
                     const isFood =
@@ -542,7 +545,10 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                     >
                         New Seller Onboarding
                     </span>
-                ) : (
+                ) : (app.foodVerificationStatus === "PENDING" ||
+                    app.foodVerificationStatus === "REVISION" ||
+                    app.propertyVerificationStatus === "PENDING" ||
+                    app.propertyVerificationStatus === "REVISION") ? (
                     <span
                         style={{
                             fontSize: "0.75rem",
@@ -555,12 +561,25 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                     >
                         Category Upgrade (
                         {[
-                            app.foodVerificationStatus !== "NONE" && "FOOD",
-                            app.propertyVerificationStatus !== "NONE" && "PROPERTY",
+                            (app.foodVerificationStatus === "PENDING" || app.foodVerificationStatus === "REVISION") && "FOOD",
+                            (app.propertyVerificationStatus === "PENDING" || app.propertyVerificationStatus === "REVISION") && "PROPERTY",
                         ]
                             .filter(Boolean)
-                            .join(" & ") || "Verified Seller"}
+                            .join(" & ") || "Pending Upgrade"}
                         )
+                    </span>
+                ) : (
+                    <span
+                        style={{
+                            fontSize: "0.75rem",
+                            padding: "4px 10px",
+                            backgroundColor: "#DCFCE7",
+                            color: "#166534",
+                            borderRadius: "20px",
+                            fontWeight: "600",
+                        }}
+                    >
+                        Verified Seller
                     </span>
                 )}
 
@@ -1201,11 +1220,12 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
             {/* Revision Modal */}
             {revisionAppId && (() => {
                 const targetApp = applications.find((a) => a.id === revisionAppId);
-                const isCategoryUpgrade = targetApp?.verificationStatus === "APPROVED";
                 const isFoodPending =
                     targetApp?.foodVerificationStatus === "PENDING" || targetApp?.foodVerificationStatus === "REVISION";
                 const isPropertyPending =
                     targetApp?.propertyVerificationStatus === "PENDING" || targetApp?.propertyVerificationStatus === "REVISION";
+                const isCategoryUpgrade =
+                    targetApp?.verificationStatus === "APPROVED" && (isFoodPending || isPropertyPending);
 
                 return (
                     <div
@@ -1535,7 +1555,12 @@ function ApplicationCard({
         app.propertyVerificationStatus === "PENDING" ||
         app.propertyVerificationStatus === "REVISION";
 
-    const isCategoryUpgrade = app.verificationStatus === "APPROVED";
+    const isCategoryUpgrade =
+        app.verificationStatus === "APPROVED" &&
+        (app.foodVerificationStatus === "PENDING" ||
+            app.foodVerificationStatus === "REVISION" ||
+            app.propertyVerificationStatus === "PENDING" ||
+            app.propertyVerificationStatus === "REVISION");
 
     return (
         <div
@@ -1601,7 +1626,7 @@ function ApplicationCard({
                 </div>
 
                 {/* Header Action Buttons */}
-                {showActions && (
+                {showActions && isPending && (
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                         <button
                             type="button"

@@ -15,6 +15,8 @@ const cookiePrefix = useSecureCookies ? "__Secure-" : "";
 const cookieSameSite = useSecureCookies ? "none" as const : "lax" as const;
 
 export const authConfig: NextAuthConfig = {
+    trustHost: true,
+    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "super_secret_for_local_testing_dev_only",
     cookies: {
         sessionToken: {
             name: `${cookiePrefix}next-auth.session-token`,

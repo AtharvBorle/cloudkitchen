@@ -6,48 +6,56 @@ import ResponsiveSellerDashboard, {
   ResponsiveOrderSummary,
 } from "@/components/seller/seller-dashboard/responsive/ResponsiveSellerDashboard";
 import { fetchApi } from "@/lib/fetch-api";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { playNewOrderChime } from "@/lib/audio-chime";
 
 export default function ResponsiveSellerDashboardPage() {
   const [overviewData, setOverviewData] = useState<any | null>(null);
   const [ordersList, setOrdersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadDashboard = async () => {
+    try {
+      const [overviewRes, ordersRes] = await Promise.allSettled([
+        fetchApi("/api/seller/dashboard/overview"),
+        fetchApi("/api/seller/orders"),
+      ]);
 
-    async function loadDashboard() {
-      try {
-        const [overviewRes, ordersRes] = await Promise.allSettled([
-          fetchApi("/api/seller/dashboard/overview"),
-          fetchApi("/api/seller/orders"),
-        ]);
-
-        if (overviewRes.status === "fulfilled" && overviewRes.value.ok) {
-          const res = await overviewRes.value.json();
-          const d = res.data || res;
-          if (isMounted) setOverviewData(d);
-        }
-
-        if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
-          const res = await ordersRes.value.json();
-          const d = res.data?.orders || res.orders || res.data || [];
-          if (Array.isArray(d) && isMounted) setOrdersList(d);
-        }
-      } catch (err) {
-        console.error("Failed to load seller dashboard:", err);
-      } finally {
-        if (isMounted) setLoading(false);
+      if (overviewRes.status === "fulfilled" && overviewRes.value.ok) {
+        const res = await overviewRes.value.json();
+        const d = res.data || res;
+        setOverviewData(d);
       }
+
+      if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
+        const res = await ordersRes.value.json();
+        const d = res.data?.orders || res.orders || res.data || [];
+        if (Array.isArray(d)) setOrdersList(d);
+      }
+    } catch (err) {
+      console.error("Failed to load seller dashboard:", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadDashboard();
-    const interval = setInterval(loadDashboard, 4000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
   }, []);
+
+  // Real-time SSE stream replaces 4s polling
+  useRealtimeStream({
+    url: "/api/seller/orders/stream",
+    onConnected: () => {
+      loadDashboard();
+    },
+    onOrder: (payload) => {
+      if (payload.event === "ORDER_CREATED") {
+        playNewOrderChime();
+      }
+      loadDashboard();
+    },
+  });
 
   const dynamicMetrics: ResponsiveDashboardMetrics | undefined = useMemo(() => {
     if (!overviewData) return undefined;

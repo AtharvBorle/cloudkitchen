@@ -15,41 +15,6 @@ export interface DishItem {
   itemType?: string;
 }
 
-const POPULAR_DISHES: DishItem[] = [
-  {
-    id: "dish-1",
-    name: "Chicken Tikka Masala",
-    rating: 4.8,
-    time: "₹120 • 25 min",
-    imageUrl: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
-  },
-  {
-    id: "dish-2",
-    name: "Veg Momos",
-    rating: 4.7,
-    time: "₹125 • 15 min",
-    imageUrl: "https://images.unsplash.com/photo-1625220194771-7ebdea0b70b9?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
-  },
-  {
-    id: "dish-3",
-    name: "Garlic Butter Naan",
-    rating: 4.9,
-    time: "₹20 • 10 min",
-    imageUrl: "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
-  },
-  {
-    id: "dish-4",
-    name: "Chicken Biryani",
-    rating: 4.6,
-    time: "₹170 • 20 min",
-    imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/spice-biryani",
-  },
-];
-
 interface BestPlacesProps {
   title?: string;
   seeAllLink?: string;
@@ -58,10 +23,14 @@ interface BestPlacesProps {
 
 export default function BestPlaces({
   title = "Popular Dishes",
-  seeAllLink = "/explore",
+  seeAllLink = "/explore-desktop",
   dishes,
 }: BestPlacesProps) {
-  const displayDishes = dishes && dishes.length > 0 ? dishes : POPULAR_DISHES;
+  if (!dishes || dishes.length === 0) {
+    return null;
+  }
+
+  const displayDishes = dishes;
 
   return (
     <section
@@ -137,7 +106,7 @@ export default function BestPlaces({
           {displayDishes.slice(0, 4).map((dish) => (
             <Link
               key={dish.id}
-              href={dish.link || "/explore"}
+              href={dish.link || "/explore-desktop"}
               style={{
                 textDecoration: "none",
                 display: "flex",

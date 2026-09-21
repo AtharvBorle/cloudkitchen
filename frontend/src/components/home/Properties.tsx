@@ -18,142 +18,22 @@ export interface PlaceCardData {
   price?: number;
 }
 
-export const SAMPLE_PLACES: PlaceCardData[] = [
-  // Row 1
-  {
-    id: "1",
-    name: "Pizza Palace",
-    rating: 4.8,
-    time: "25-35 min",
-    imageUrl: "/images/places/place-pizza.png",
-    category: "Italian",
-    kitchenId: "pizza-palace",
-    price: 249,
-  },
-  {
-    id: "2",
-    name: "Spice Biryani",
-    rating: 4.7,
-    time: "20-30 min",
-    imageUrl: "/images/places/place-biryani.png",
-    category: "Indian / Mughlai",
-    kitchenId: "spice-biryani",
-    price: 289,
-  },
-  {
-    id: "3",
-    name: "Baker Delight",
-    rating: 4.6,
-    time: "15-25 min",
-    imageUrl: "/images/places/place-bakery.png",
-    category: "Bakery",
-    kitchenId: "baker-delight",
-    price: 139,
-  },
-  {
-    id: "4",
-    name: "Spice Biryani",
-    rating: 4.7,
-    time: "20-30 min",
-    imageUrl: "/images/places/place-biryani.png",
-    category: "Indian / Mughlai",
-    kitchenId: "spice-biryani",
-    price: 289,
-  },
-  // Row 2
-  {
-    id: "5",
-    name: "Pizza Palace",
-    rating: 4.8,
-    time: "25-35 min",
-    imageUrl: "/images/places/place-pizza.png",
-    category: "Italian",
-    kitchenId: "pizza-palace",
-    price: 249,
-  },
-  {
-    id: "6",
-    name: "Spice Biryani",
-    rating: 4.7,
-    time: "20-30 min",
-    imageUrl: "/images/places/place-biryani.png",
-    category: "Indian / Mughlai",
-    kitchenId: "spice-biryani",
-    price: 289,
-  },
-  {
-    id: "7",
-    name: "Baker Delight",
-    rating: 4.6,
-    time: "15-25 min",
-    imageUrl: "/images/places/place-bakery.png",
-    category: "Bakery",
-    price: 139,
-  },
-  {
-    id: "8",
-    name: "Spice Biryani",
-    rating: 4.7,
-    time: "20-30 min",
-    imageUrl: "/images/places/place-biryani.png",
-    category: "Indian / Mughlai",
-    price: 289,
-  },
-  // Row 3
-  {
-    id: "9",
-    name: "Pizza Palace",
-    rating: 4.8,
-    time: "25-35 min",
-    imageUrl: "/images/places/place-pizza.png",
-    category: "Italian",
-    price: 249,
-  },
-  {
-    id: "10",
-    name: "Spice Biryani",
-    rating: 4.7,
-    time: "20-30 min",
-    imageUrl: "/images/places/place-biryani.png",
-    category: "Indian / Mughlai",
-    price: 289,
-  },
-  {
-    id: "11",
-    name: "Baker Delight",
-    rating: 4.6,
-    time: "15-25 min",
-    imageUrl: "/images/places/place-bakery.png",
-    category: "Bakery",
-    price: 139,
-  },
-  {
-    id: "12",
-    name: "Spice Biryani",
-    rating: 4.7,
-    time: "20-30 min",
-    imageUrl: "/images/places/place-biryani.png",
-    category: "Indian / Mughlai",
-    price: 289,
-  },
-];
-
 const CUISINES = [
-  { id: "biryani", label: "Biryani & Mughlai", count: 24 },
-  { id: "homemeals", label: "Homely Meals / Thali", count: 18 },
-  { id: "italian", label: "Pizzas & Italian", count: 16 },
-  { id: "healthy", label: "Healthy Bowls & Salads", count: 12 },
-  { id: "bakery", label: "Bakery & Desserts", count: 14 },
-  { id: "fastfood", label: "Burgers & Fast Food", count: 20 },
-  { id: "chinese", label: "Chinese & Asian", count: 10 },
-  { id: "south-indian", label: "South Indian", count: 8 },
+  { id: "biryani", label: "Biryani & Mughlai" },
+  { id: "homemeals", label: "Homely Meals / Thali" },
+  { id: "italian", label: "Pizzas & Italian" },
+  { id: "healthy", label: "Healthy Bowls & Salads" },
+  { id: "bakery", label: "Bakery & Desserts" },
+  { id: "fastfood", label: "Burgers & Fast Food" },
+  { id: "chinese", label: "Chinese & Asian" },
+  { id: "south-indian", label: "South Indian" },
 ];
 
 const DIETARY = [
-  { id: "veg", label: "Pure Veg 🥦", count: 22 },
-  { id: "non-veg", label: "Non-Veg 🍗", count: 18 },
-  { id: "vegan", label: "Vegan (Plant-Based 🌱)", count: 6 },
-  { id: "jain", label: "Jain / Satvik 🌿", count: 8 },
+  { id: "veg", label: "Pure Veg 🥦" },
+  { id: "non-veg", label: "Non-Veg 🍗" },
+  { id: "vegan", label: "Vegan (Plant-Based 🌱)" },
+  { id: "jain", label: "Jain / Satvik 🌿" },
 ];
 
 interface PropertiesProps {
@@ -166,14 +46,14 @@ export default function Properties({ places }: PropertiesProps) {
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
-  const basePlaces = places !== undefined ? places : SAMPLE_PLACES;
+  const basePlaces = places || [];
 
   // Compute dynamic cuisine counts from available places
   const dynamicCuisines = React.useMemo(() => {
     return CUISINES.map((c) => {
       const matchCount = basePlaces.filter((p) => {
-        const cat = p.category.toLowerCase();
-        const name = p.name.toLowerCase();
+        const cat = (p.category || "").toLowerCase();
+        const name = (p.name || "").toLowerCase();
         if (c.id === "biryani") return cat.includes("biryani") || cat.includes("mughlai") || cat.includes("indian") || name.includes("biryani");
         if (c.id === "homemeals") return cat.includes("mess") || cat.includes("homemeal") || cat.includes("thali") || cat.includes("maharashtrian");
         if (c.id === "italian") return cat.includes("italian") || cat.includes("pizza") || name.includes("pizza");
@@ -186,7 +66,7 @@ export default function Properties({ places }: PropertiesProps) {
       }).length;
       return {
         ...c,
-        count: matchCount > 0 ? matchCount : c.count,
+        count: matchCount,
       };
     });
   }, [basePlaces]);
@@ -195,7 +75,7 @@ export default function Properties({ places }: PropertiesProps) {
   const dynamicDietary = React.useMemo(() => {
     return DIETARY.map((d) => {
       const matchCount = basePlaces.filter((p) => {
-        const cat = p.category.toLowerCase();
+        const cat = (p.category || "").toLowerCase();
         if (d.id === "veg") return cat.includes("veg") && !cat.includes("non-veg");
         if (d.id === "non-veg") return cat.includes("non-veg") || cat.includes("biryani") || cat.includes("mughlai");
         if (d.id === "vegan") return cat.includes("vegan") || cat.includes("organic");
@@ -204,7 +84,7 @@ export default function Properties({ places }: PropertiesProps) {
       }).length;
       return {
         ...d,
-        count: matchCount > 0 ? matchCount : d.count,
+        count: matchCount,
       };
     });
   }, [basePlaces]);
@@ -273,9 +153,7 @@ export default function Properties({ places }: PropertiesProps) {
     return list;
   }, [basePlaces, selectedCuisines, selectedDietary, maxPrice, activePricePreset]);
 
-  // Fallback if filter result is empty
-  const isFallbackApplied = filteredPlaces.length === 0 && (selectedCuisines.length > 0 || selectedDietary.length > 0);
-  const displayPlaces = filteredPlaces.length > 0 ? filteredPlaces : basePlaces;
+  const displayPlaces = filteredPlaces;
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -683,11 +561,6 @@ export default function Properties({ places }: PropertiesProps) {
             >
               Best Places Nearby
             </h2>
-            {isFallbackApplied && (
-              <span style={{ fontSize: "12.5px", color: "#EA580C", backgroundColor: "#FFF5ED", padding: "4px 10px", borderRadius: "8px", fontWeight: "600" }}>
-                No exact match for selected filters • Showing popular places
-              </span>
-            )}
           </div>
 
           {/* PlacesGrid: 4 columns grid with 24px gap, ~250px hug cards */}

@@ -23,6 +23,8 @@ export interface RiderCanvasDasProps {
   onSearch?: (query: string) => void;
   onNotificationClick?: () => void;
   onViewWallet?: (rider: RiderWalletRecord) => void;
+  onAddDeliveryAgent?: () => void;
+  onAddDeliveryBoy?: () => void;
 }
 
 export default function RiderCanvasDas({
@@ -37,6 +39,8 @@ export default function RiderCanvasDas({
   onSearch,
   onNotificationClick,
   onViewWallet,
+  onAddDeliveryAgent,
+  onAddDeliveryBoy,
 }: RiderCanvasDasProps) {
   const seller = useSellerProfile();
   const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
@@ -101,6 +105,8 @@ export default function RiderCanvasDas({
           riders={riders}
           searchQuery={searchQuery}
           onViewWallet={onViewWallet}
+          onAddDeliveryAgent={onAddDeliveryAgent}
+          onAddDeliveryBoy={onAddDeliveryBoy}
         />
       </div>
     </div>

@@ -48,12 +48,16 @@ function DetailsContent() {
   }
 
   const formattedItems = parsedItems.length > 0
-    ? parsedItems.map((it: any, idx: number) => ({
-        id: it.id || String(idx),
-        name: it.name || "Food Item",
-        qty: it.quantity || it.qty || 1,
-        price: `₹${it.price || 0}`,
-      }))
+    ? parsedItems.map((it: any, idx: number) => {
+        const addonsList = Array.isArray(it.selectedAddons) ? it.selectedAddons : [];
+        const addonStr = addonsList.length > 0 ? ` (+ ${addonsList.map((a: any) => `${a.name} ₹${a.price}`).join(', ')})` : '';
+        return {
+          id: it.id || String(idx),
+          name: `${it.name || "Food Item"}${addonStr}`,
+          qty: it.quantity || it.qty || 1,
+          price: `₹${it.price || 0}`,
+        };
+      })
     : undefined;
 
   const mapStatusToStep = (st: string) => {

@@ -11,9 +11,19 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
             }
         }
     }
+    const headers = new Headers(init?.headers);
+    if (!headers.has("Cache-Control")) {
+        headers.set("Cache-Control", "no-cache");
+    }
+    if (!headers.has("Pragma")) {
+        headers.set("Pragma", "no-cache");
+    }
+
     const res = await fetch(target, {
         credentials: "include",
-        ...init
+        cache: init?.cache || "no-store",
+        ...init,
+        headers,
     });
     const contentType = res.headers.get("content-type");
 

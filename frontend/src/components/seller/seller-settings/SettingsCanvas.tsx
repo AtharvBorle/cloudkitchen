@@ -344,8 +344,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
     setTimeout(() => {
       setSaving(false);
-      setToastMessage("Settings saved successfully!");
-      setTimeout(() => setToastMessage(null), 3500);
+      setToastData({ title: "Settings saved successfully!", status: "ON" });
     }, 500);
   };
 
@@ -354,8 +353,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       onCancel();
     } else {
       setFormData({ ...DEFAULT_DATA, ...initialData });
-      setToastMessage("Changes reverted");
-      setTimeout(() => setToastMessage(null), 2000);
+      setToastData({ title: "Changes reverted", status: null });
     }
   };
 
@@ -366,7 +364,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     setTimeout(() => {
       setIsDeletingAccount(false);
       setIsDeleteModalOpen(false);
-      setToastMessage("Account deleted successfully. Redirecting...");
+      setToastData({ title: "Account deleted successfully. Redirecting...", status: "OFF" });
       setTimeout(() => {
         window.location.href = "/seller/login";
       }, 1500);

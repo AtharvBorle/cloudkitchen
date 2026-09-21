@@ -18,15 +18,25 @@ import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
+import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import styles from "./UserCart.module.css";
 
 export interface UserCartItem {
   id: string;
+  foodItemId?: string;
   name: string;
   description: string;
   price: number;
+  basePrice?: number;
+  addonsTotal?: number;
+  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
+  addons?: Array<{ id?: string; name: string; price: number }>;
   qty: number;
   image: string;
+  maxStock?: number;
+  itemType?: string;
+  sellerId?: string;
+  sellerName?: string;
 }
 
 export interface UserCartProps {
@@ -35,41 +45,6 @@ export interface UserCartProps {
   defaultAddress?: string;
   onProceedToCheckout?: () => void;
 }
-
-const DEFAULT_CART_ITEMS: UserCartItem[] = [
-  {
-    id: "item-1",
-    name: "Gourmet Brick-Oven Margherita Pizza",
-    description: "Medium • Fresh Basil & Extra Mozzarella",
-    price: 449,
-    qty: 1,
-    image: "/images/places/place-pizza.png",
-  },
-  {
-    id: "item-2",
-    name: "Avocado & Quinoa Power Bowl",
-    description: "Organic • Tahini Lime Dressing",
-    price: 556,
-    qty: 1,
-    image: "/images/auth/salad-bowl.jpg",
-  },
-  {
-    id: "item-3",
-    name: "Classic Garlic Bread",
-    description: "Crispy • Herbs & Mozzarella",
-    price: 199,
-    qty: 1,
-    image: "/images/places/place-pizza.png",
-  },
-  {
-    id: "item-4",
-    name: "Classic Garlic Bread",
-    description: "Crispy • Herbs & Mozzarella",
-    price: 199,
-    qty: 1,
-    image: "/images/places/place-pizza.png",
-  },
-];
 
 const AVAILABLE_ADDRESSES = [
   {
@@ -96,28 +71,38 @@ export const UserCart: React.FC<UserCartProps> = ({
   onProceedToCheckout,
 }) => {
   const router = useRouter();
-  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, cartTotal } = useCart();
+  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal } = useCart();
 
   // State Management
   const [localCartItems, setLocalCartItems] = useState<UserCartItem[]>(initialItems);
   const [isVegOnly, setIsVegOnly] = useState<boolean>(true);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("EN");
   const [promoCode, setPromoCode] = useState<string>("");
-  const [appliedPromo, setAppliedPromo] = useState<string | null>("WELCOME20");
-  const [discountPercent, setDiscountPercent] = useState<number>(20);
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [currentAddress, setCurrentAddress] = useState<string>(defaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [customizingItem, setCustomizingItem] = useState<UserCartItem | null>(null);
 
   // Active items derived from context if present
   const cartItems: UserCartItem[] = contextCartItems.length > 0
     ? contextCartItems.map((ci) => ({
         id: ci.id,
+        foodItemId: ci.foodItemId,
         name: ci.name,
         description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
         price: ci.price,
+        basePrice: ci.basePrice,
+        addonsTotal: ci.addonsTotal,
+        selectedAddons: ci.selectedAddons,
+        addons: ci.addons,
         qty: ci.quantity,
-        image: ci.image || "/images/places/place-pizza.png",
+        image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
+        maxStock: ci.maxStock !== undefined ? ci.maxStock : (ci.stockQuantity !== undefined ? ci.stockQuantity : -1),
+        itemType: ci.itemType,
+        sellerId: ci.sellerId,
+        sellerName: ci.sellerName,
       }))
     : localCartItems;
 
@@ -128,18 +113,57 @@ export const UserCart: React.FC<UserCartProps> = ({
     }, 2800);
   };
 
+  // Recommendations for add-ons not yet chosen across cart items
+  const availableAddonRecommendations = React.useMemo(() => {
+    const list: Array<{ item: UserCartItem; addon: { id?: string; name: string; price: number } }> = [];
+    cartItems.forEach((item) => {
+      if (item.addons && Array.isArray(item.addons)) {
+        const selectedNames = new Set((item.selectedAddons || []).map((a) => (a.name || "").toLowerCase()));
+        item.addons.forEach((addon) => {
+          if (!selectedNames.has((addon.name || "").toLowerCase())) {
+            list.push({ item, addon });
+          }
+        });
+      }
+    });
+    return list;
+  }, [cartItems]);
+
+  const handleQuickAddAddon = (item: UserCartItem, addon: { id?: string; name: string; price: number }) => {
+    const newSelected = [...(item.selectedAddons || []), addon];
+    updateItemAddons(item.id, newSelected);
+    showToast(`Added ${addon.name} (+₹${addon.price}) to ${item.name}`);
+  };
+
   // Quantity Handlers
   const handleQtyChange = (id: string, delta: number) => {
     const existing = contextCartItems.find((ci) => ci.id === id);
     if (existing) {
       if (delta > 0) {
+        const rawStock = existing.maxStock !== undefined ? existing.maxStock : existing.stockQuantity;
+        const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+        if (stockLimit !== -1 && existing.quantity >= stockLimit) {
+          showToast(`Cannot add more. Only ${stockLimit} available in stock.`);
+          return;
+        }
         addToCart({
           id: existing.id,
+          foodItemId: existing.foodItemId || existing.id,
           name: existing.name,
+          variantName: existing.variantName,
           price: existing.price,
+          basePrice: existing.basePrice,
+          addonsTotal: existing.addonsTotal,
+          selectedAddons: existing.selectedAddons,
+          addons: existing.addons,
           quantity: 1,
           sellerId: existing.sellerId,
           sellerName: existing.sellerName,
+          image: existing.imageUrl || existing.image,
+          imageUrl: existing.imageUrl || existing.image,
+          maxStock: existing.maxStock,
+          stockQuantity: existing.stockQuantity,
+          itemType: existing.itemType,
         });
       } else {
         decreaseQuantity(id);
@@ -149,6 +173,10 @@ export const UserCart: React.FC<UserCartProps> = ({
         prev
           .map((item) => {
             if (item.id === id) {
+              if (delta > 0 && item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) {
+                showToast(`Cannot add more. Only ${item.maxStock} available in stock.`);
+                return item;
+              }
               const newQty = item.qty + delta;
               return newQty > 0 ? { ...item, qty: newQty } : item;
             }
@@ -195,9 +223,9 @@ export const UserCart: React.FC<UserCartProps> = ({
   // Price Calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   const discountAmount = appliedPromo && subtotal > 0 ? Math.round((subtotal * discountPercent) / 100) : 0;
-  const deliveryFee = subtotal > 0 ? 49 : 0;
-  const taxesAndCharges = subtotal > 0 ? 38 : 0;
-  const grandTotal = Math.max(0, subtotal - discountAmount + deliveryFee + taxesAndCharges);
+  const deliveryFee = 0;
+  const taxesAndCharges = 0;
+  const grandTotal = Math.max(0, subtotal - discountAmount);
 
   const { data: session, status } = useSession();
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
@@ -300,9 +328,80 @@ export const UserCart: React.FC<UserCartProps> = ({
                     <div className={styles.itemInfo}>
                       <h2 className={styles.itemTitle}>{item.name}</h2>
                       <p className={styles.itemSubtitle}>{item.description}</p>
-                      <span className={styles.itemPrice}>
-                        ₹{item.price.toLocaleString("en-IN")}
-                      </span>
+                      
+                      {/* Selected Add-ons Badge List */}
+                      {item.selectedAddons && item.selectedAddons.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "6px 0 4px 0" }}>
+                          {item.selectedAddons.map((addon, idx) => (
+                            <span
+                              key={addon.id || `${addon.name}-${idx}`}
+                              style={{
+                                fontSize: "0.76rem",
+                                fontWeight: "600",
+                                color: "#C2410C",
+                                backgroundColor: "#FFF7ED",
+                                border: "1px solid #FFEDD5",
+                                padding: "2px 8px",
+                                borderRadius: "6px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <span>+ {addon.name}</span>
+                              <strong style={{ color: "#EA580C" }}>(₹{addon.price})</strong>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
+                        <span className={styles.itemPrice}>
+                          ₹{item.price.toLocaleString("en-IN")}
+                        </span>
+                        {item.addonsTotal !== undefined && item.addonsTotal > 0 && item.basePrice !== undefined && (
+                          <span style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: "500" }}>
+                            (₹{item.basePrice} base + ₹{item.addonsTotal} add-ons)
+                          </span>
+                        )}
+                        {item.maxStock !== undefined && item.maxStock !== -1 && (
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: "600",
+                              color: item.qty >= item.maxStock ? "#EF4444" : "#10B981",
+                              backgroundColor: item.qty >= item.maxStock ? "#FEF2F2" : "#ECFDF5",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            {item.qty >= item.maxStock ? `Max Stock (${item.maxStock})` : `${item.maxStock} in stock`}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Customize Button if Item has Add-ons available */}
+                      {item.addons && item.addons.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomizingItem(item)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: "4px 0",
+                            marginTop: "4px",
+                            color: "#EA580C",
+                            fontSize: "0.78rem",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            textAlign: "left",
+                            width: "fit-content",
+                          }}
+                        >
+                          ⚙️ Customize Add-ons
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -323,6 +422,11 @@ export const UserCart: React.FC<UserCartProps> = ({
                         className={styles.qtyBtn}
                         onClick={() => handleQtyChange(item.id, 1)}
                         aria-label="Increase quantity"
+                        disabled={item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock}
+                        style={{
+                          opacity: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? 0.4 : 1,
+                          cursor: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? "not-allowed" : "pointer",
+                        }}
                       >
                         <Plus size={14} strokeWidth={3} />
                       </button>
@@ -348,6 +452,71 @@ export const UserCart: React.FC<UserCartProps> = ({
                 <Link href="/explore-desktop" className={styles.exploreMenuBtn}>
                   Explore Menu
                 </Link>
+              </div>
+            )}
+
+            {/* Zomato-style Add-on Recommendation Strip */}
+            {cartItems.length > 0 && availableAddonRecommendations.length > 0 && (
+              <div
+                style={{
+                  marginTop: "16px",
+                  padding: "16px 20px",
+                  backgroundColor: "#FFFBF7",
+                  border: "1px dashed #FDBA74",
+                  borderRadius: "14px",
+                }}
+              >
+                <div style={{ marginBottom: "12px" }}>
+                  <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: "700", color: "#9A3412" }}>
+                    🍛 Complete Your Meal with Add-ons
+                  </h4>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "0.8rem", color: "#C2410C" }}>
+                    Add extra accompaniments to your dishes in one tap
+                  </p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "10px" }}>
+                  {availableAddonRecommendations.map(({ item, addon }) => (
+                    <div
+                      key={`${item.id}-${addon.id || addon.name}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px 14px",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #FED7AA",
+                        borderRadius: "10px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                      }}
+                    >
+                      <div style={{ overflow: "hidden", marginRight: "8px" }}>
+                        <div style={{ fontSize: "0.86rem", fontWeight: "700", color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {addon.name}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                          for {item.name} • <strong style={{ color: "#EA580C" }}>+₹{addon.price}</strong>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAddAddon(item, addon)}
+                        style={{
+                          padding: "5px 12px",
+                          backgroundColor: "#FFF7ED",
+                          border: "1px solid #EA580C",
+                          borderRadius: "6px",
+                          color: "#EA580C",
+                          fontWeight: "700",
+                          fontSize: "0.78rem",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -425,20 +594,6 @@ export const UserCart: React.FC<UserCartProps> = ({
                     </span>
                   </div>
                 )}
-
-                <div className={styles.pricingRow}>
-                  <span className={styles.pricingLabel}>Delivery Fee</span>
-                  <span className={styles.pricingValue}>
-                    ₹{deliveryFee.toLocaleString("en-IN")}
-                  </span>
-                </div>
-
-                <div className={styles.pricingRow}>
-                  <span className={styles.pricingLabel}>Taxes &amp; charges</span>
-                  <span className={styles.pricingValue}>
-                    ₹{taxesAndCharges.toLocaleString("en-IN")}
-                  </span>
-                </div>
 
                 <div className={styles.divider} />
 
@@ -528,6 +683,37 @@ export const UserCart: React.FC<UserCartProps> = ({
           <CheckCircle2 size={18} color="#10B981" />
           <span>{toastMessage}</span>
         </div>
+      )}
+
+      {/* Addon Customization Modal for Cart Item */}
+      {customizingItem && (
+        <AddonCustomizationModal
+          isOpen={!!customizingItem}
+          onClose={() => setCustomizingItem(null)}
+          item={{
+            id: customizingItem.id,
+            name: customizingItem.name,
+            price: customizingItem.basePrice || customizingItem.price,
+            description: customizingItem.description,
+            imageUrl: customizingItem.image,
+            itemType: customizingItem.itemType,
+            addons: (customizingItem.addons || []).map((a, idx) => ({
+              id: a.id || `${idx + 1}`,
+              name: a.name,
+              price: a.price,
+            })),
+          }}
+          initialSelectedAddons={(customizingItem.selectedAddons || []).map((a, idx) => ({
+            id: a.id || `${idx + 1}`,
+            name: a.name,
+            price: a.price,
+          }))}
+          onAddToCart={(selectedAddons) => {
+            updateItemAddons(customizingItem.id, selectedAddons);
+            setCustomizingItem(null);
+            showToast(`Updated add-ons for "${customizingItem.name}"`);
+          }}
+        />
       )}
 
       {/* Global Responsive Footer */}

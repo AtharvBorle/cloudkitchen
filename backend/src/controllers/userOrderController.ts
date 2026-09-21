@@ -3,6 +3,50 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
+
+export const initiateOrderPayment = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "USER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const { totalAmount, sellerId } = await req.json();
+    if (!totalAmount || Number(totalAmount) <= 0) {
+        throw new ApiError("Invalid total amount", 400);
+    }
+
+    const key_id = process.env.RAZORPAY_KEY_ID || "";
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || "";
+
+    if (!key_id || !key_secret) {
+        throw new ApiError("Payment gateway configuration missing", 500);
+    }
+
+    const razorpay = new Razorpay({ key_id, key_secret });
+
+    try {
+        const rzpOrder = await razorpay.orders.create({
+            amount: Math.round(Number(totalAmount) * 100), // in paise
+            currency: "INR",
+            receipt: `rcpt_${Date.now().toString().slice(-10)}`,
+            notes: {
+                userId: session.user.id,
+                sellerId: sellerId || ""
+            }
+        });
+
+        return {
+            razorpayOrderId: rzpOrder.id,
+            amount: rzpOrder.amount,
+            currency: rzpOrder.currency,
+            keyId: key_id
+        };
+    } catch (error: any) {
+        console.error("Razorpay order creation error:", error);
+        throw new ApiError("Failed to initiate online payment: " + (error?.message || ""), 500);
+    }
+};
 
 export const createOrder = async (req: Request) => {
     const session = await getAuthSession();
@@ -10,10 +54,39 @@ export const createOrder = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { sellerId, items, totalAmount, deliveryAddress, customerPhone, paymentMethod, appliedCouponId } = await req.json();
+    const {
+        sellerId,
+        items,
+        totalAmount,
+        deliveryAddress,
+        customerPhone,
+        paymentMethod,
+        appliedCouponId,
+        razorpay_payment_id,
+        razorpay_order_id,
+        razorpay_signature
+    } = await req.json();
 
     if (!sellerId || !items || items.length === 0 || totalAmount === undefined) {
         throw new ApiError("Missing required fields", 400);
+    }
+
+    // For online payments: validate Razorpay transaction signature BEFORE creating order in DB
+    const isOnlinePayment = paymentMethod === "ONLINE";
+    if (isOnlinePayment) {
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            throw new ApiError("Missing online payment verification details", 400);
+        }
+
+        const secret = process.env.RAZORPAY_KEY_SECRET || "";
+        const expectedSignature = crypto
+            .createHmac("sha256", secret)
+            .update(razorpay_order_id + "|" + razorpay_payment_id)
+            .digest("hex");
+
+        if (expectedSignature !== razorpay_signature) {
+            throw new ApiError("Payment verification failed: Invalid transaction signature", 400);
+        }
     }
 
     const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
@@ -207,28 +280,6 @@ export const createOrder = async (req: Request) => {
         );
     }
 
-    let razorpayOrderData = null;
-
-    if (paymentMethod === "ONLINE") {
-        try {
-            const razorpay = new Razorpay({
-                key_id: process.env.RAZORPAY_KEY_ID || "",
-                key_secret: process.env.RAZORPAY_KEY_SECRET || "",
-            });
-
-            const rzpOrder = await razorpay.orders.create({
-                amount: Math.round(totalAmount * 100), // in paise
-                currency: "INR",
-                receipt: `order_rcpt_${Date.now()}`
-            });
-
-            razorpayOrderData = rzpOrder;
-        } catch (error) {
-            console.error("Razorpay error:", error);
-            throw new ApiError("Failed to initiate online payment", 500);
-        }
-    }
-
     const shortOrderId = crypto.randomBytes(4).toString("hex");
 
     transactionOperations.push(
@@ -241,11 +292,12 @@ export const createOrder = async (req: Request) => {
                 items: JSON.stringify(items),
                 deliveryAddress: deliveryAddress || dbUser.city || "Delivery Address",
                 customerPhone: customerPhone || dbUser.phone || "N/A",
-                paymentMethod: paymentMethod || "COD",
+                paymentMethod: isOnlinePayment ? "ONLINE" : "COD",
                 totalAmount: totalAmount,
-                isPaid: false,
+                isPaid: isOnlinePayment,
                 appliedCouponId: appliedCouponId || null,
-                razorpayOrderId: razorpayOrderData ? razorpayOrderData.id : null
+                razorpayOrderId: isOnlinePayment ? razorpay_order_id : null,
+                razorpayPaymentId: isOnlinePayment ? razorpay_payment_id : null,
             }
         })
     );
@@ -263,9 +315,22 @@ export const createOrder = async (req: Request) => {
     // Find the order from the transaction results. It's the one before the coupon update if applicable.
     const order = appliedCouponId ? results[results.length - 2] : results[results.length - 1];
 
+    try {
+        emitOrderCreated({
+            ...order,
+            user: {
+                id: dbUser.id,
+                name: dbUser.name,
+                phone: dbUser.phone,
+                email: dbUser.email
+            }
+        });
+    } catch (e) {
+        console.error("Realtime event emission error:", e);
+    }
+
     return {
-        order,
-        razorpayOrder: razorpayOrderData
+        order
     };
 };
 
@@ -327,10 +392,16 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         }
     }
 
-    await db.order.update({
+    const cancelledOrder = await db.order.update({
         where: { id: id },
         data: { status: "CANCELLED" }
     });
+
+    try {
+        emitOrderCancelled(cancelledOrder);
+    } catch (e) {
+        console.error("Realtime event emission error:", e);
+    }
 
     if (order.isPaid) {
         const existingRefund = await db.refund.findUnique({
@@ -404,6 +475,12 @@ export const verifyOrderPayment = async (req: Request) => {
         }
     });
 
+    try {
+        emitOrderUpdated(updatedOrder);
+    } catch (e) {
+        console.error("Realtime event emission error:", e);
+    }
+
     return { order: updatedOrder };
 };
 
@@ -439,7 +516,9 @@ export const getOrderDetails = async (id: string) => {
                     id: true,
                     userId: true,
                     name: true,
-                    phone: true
+                    phone: true,
+                    vehicleType: true,
+                    vehicleNumber: true
                 }
             }
         }

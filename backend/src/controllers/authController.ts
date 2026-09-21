@@ -22,6 +22,18 @@ export const registerUser = async (req: Request) => {
         finalPassword = body.password;
         finalRole = body.role || (body.businessName ? "SELLER" : "USER");
         finalSellerType = body.sellerType || "FOOD";
+        if (body.categories) {
+            try {
+                const parsed = typeof body.categories === "string" ? JSON.parse(body.categories) : body.categories;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    finalSellerType = parsed.join(", ");
+                }
+            } catch {
+                if (typeof body.categories === "string" && body.categories.trim()) {
+                    finalSellerType = body.categories.trim();
+                }
+            }
+        }
         finalCity = body.city;
         finalPincode = body.pincode;
         finalBusinessName = body.businessName;
@@ -74,6 +86,19 @@ export const registerUser = async (req: Request) => {
         finalPassword = formData.get("password") as string;
         finalRole = (formData.get("role") || (formData.get("businessName") ? "SELLER" : "USER")) as string;
         finalSellerType = (formData.get("sellerType") || "FOOD") as string;
+        const rawCategories = formData.get("categories");
+        if (rawCategories) {
+            try {
+                const parsed = typeof rawCategories === "string" ? JSON.parse(rawCategories) : rawCategories;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    finalSellerType = parsed.join(", ");
+                }
+            } catch {
+                if (typeof rawCategories === "string" && rawCategories.trim()) {
+                    finalSellerType = rawCategories.trim();
+                }
+            }
+        }
         finalCity = formData.get("city") as string;
         finalPincode = formData.get("pincode") as string;
         finalBusinessName = formData.get("businessName") as string;

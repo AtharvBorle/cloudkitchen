@@ -26,9 +26,9 @@ export default function Home() {
   const { openLocationModal, defaultAddress } = useLocation();
   const homeData = useHomeData();
 
-  // Dynamic Categories with fallback
+  // Dynamic Categories without fallback
   const categoryItems = useMemo(() => {
-    if (!homeData.categories || homeData.categories.length === 0) return undefined;
+    if (!homeData.categories || homeData.categories.length === 0) return [];
     return homeData.categories.map((c) => ({
       id: c.id,
       name: c.name,
@@ -52,13 +52,10 @@ export default function Home() {
     return Array.from(set);
   }, [homeData.categories, homeData.foodItems]);
 
-  // Dynamic Kitchens / Places with fallback (and multi-dimensional filtering)
+  // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
     if (!homeData.kitchens || homeData.kitchens.length === 0) {
-      if (homeData.activePincode && !homeData.isLoading) {
-        return [];
-      }
-      return undefined;
+      return [];
     }
     let list = homeData.kitchens;
 
@@ -117,9 +114,12 @@ export default function Home() {
     }));
   }, [homeData.kitchens, selectedCategory, activeFilters]);
 
-  // Dynamic Offers for PopularOrders with fallback
+  // Dynamic Offers for PopularOrders derived strictly from active coupons & real food items
   const dynamicOffers = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    if (!homeData.foodItems || homeData.foodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
+      return [];
+    }
+
     let list = homeData.foodItems;
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -136,24 +136,39 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
-    return list.slice(0, 4).map((f, idx) => ({
-      id: f.id,
-      foodItemId: f.id,
-      discount: idx % 2 === 0 ? "25% OFF" : "30% OFF",
-      title: f.name,
-      code: `Use code: FOOD${idx + 1}0`,
-      imageUrl: f.imageUrl || "/images/places/place-biryani.png",
-      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
-      price: f.price || 199,
-      sellerId: f.sellerId || "k-1",
-      sellerName: f.sellerName || "Verified Cloud Kitchen",
-      itemType: f.itemType || "VEG",
-    }));
-  }, [homeData.foodItems, selectedCategory, activeFilters]);
+    // Pair active coupons with food items
+    const offersList: any[] = [];
+    homeData.coupons.forEach((cp, idx) => {
+      const matchedItem = list[idx % list.length];
+      if (matchedItem) {
+        const discountText = cp.discountPercentage
+          ? `${cp.discountPercentage}% OFF`
+          : cp.discountAmount
+          ? `FLAT ₹${cp.discountAmount} OFF`
+          : "SPECIAL OFFER";
 
-  // Dynamic Dishes for BestPlaces with fallback
+        offersList.push({
+          id: `offer-${cp.id}-${matchedItem.id}`,
+          foodItemId: matchedItem.id,
+          discount: discountText,
+          title: matchedItem.name,
+          code: `Use code: ${cp.code}`,
+          imageUrl: matchedItem.imageUrl || "/images/places/place-biryani.png",
+          link: matchedItem.sellerTrackingId ? `/shop/${matchedItem.sellerTrackingId}` : `/explore-desktop?item=${matchedItem.id}`,
+          price: matchedItem.price || 0,
+          sellerId: matchedItem.sellerId || "",
+          sellerName: matchedItem.sellerName || "Cloud Kitchen",
+          itemType: matchedItem.itemType || "VEG",
+        });
+      }
+    });
+
+    return offersList.slice(0, 4);
+  }, [homeData.foodItems, homeData.coupons, selectedCategory, activeFilters]);
+
+  // Dynamic Dishes for BestPlaces
   const dynamicDishes = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return [];
     let list = homeData.foodItems;
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -185,17 +200,17 @@ export default function Home() {
     return list.slice(0, 4).map((f) => ({
       id: f.id,
       name: f.name,
-      rating: f.rating || 4.8,
+      rating: f.rating || 5.0,
       time: f.deliveryTime || "20-30 min",
-      imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
+      imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
-  // Dynamic Top Rated Items for DashboardBody with fallback
+  // Dynamic Top Rated Items for DashboardBody
   const dynamicTopRated = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return [];
     let list = homeData.foodItems;
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -220,19 +235,19 @@ export default function Home() {
     return list.slice(0, 6).map((f) => ({
       id: f.id,
       name: f.name,
-      rating: f.rating || 4.9,
+      rating: f.rating || 5.0,
       category: f.categoryName || (f.itemType === "VEG" ? "Pure Veg" : "Non-Veg Special"),
-      price: f.price || 199,
+      price: f.price || 0,
       time: f.deliveryTime || "20-30 min",
-      imageUrl: f.imageUrl || "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
+      imageUrl: f.imageUrl || "/images/places/place-pizza.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
-  // Dynamic Recommended Dishes for RecommendedForYou with fallback
+  // Dynamic Recommended Dishes for RecommendedForYou
   const dynamicRecommended = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
+    if (!homeData.foodItems || homeData.foodItems.length === 0) return [];
     let list = homeData.foodItems;
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -260,17 +275,17 @@ export default function Home() {
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
-  // Dynamic Promo Banner with fallback
+  // Dynamic Promo Banner from active coupons or DB promo banners
   const promoProps = useMemo(() => {
     if (homeData.coupons && homeData.coupons.length > 0) {
       const cp = homeData.coupons[0];
       return {
         code: cp.code,
         titleHighlight: cp.discountPercentage ? `${cp.discountPercentage}% OFF` : `FLAT ₹${cp.discountAmount} OFF`,
-        description: cp.description || "Kickstart your meal plan with premium ingredients & fast delivery.",
+        description: cp.description || "Limited time offer on all orders.",
       };
     }
-    return {};
+    return undefined;
   }, [homeData.coupons]);
 
   return (
@@ -327,11 +342,13 @@ export default function Home() {
         <HeroSection availableItems={homeData.foodItems} />
 
         {/* 2. Category Bar */}
-        <CategoryBar
-          activeCategoryId={selectedCategory}
-          onSelectCategory={(id) => setSelectedCategory(id)}
-          items={categoryItems}
-        />
+        {categoryItems.length > 0 && (
+          <CategoryBar
+            activeCategoryId={selectedCategory}
+            onSelectCategory={(id) => setSelectedCategory(id)}
+            items={categoryItems}
+          />
+        )}
 
         {/* 2.5 Multi-dimensional Filter Row */}
         <FilterRow
@@ -404,23 +421,25 @@ export default function Home() {
           </div>
         )}
 
-        {/* 3. Promo Banner Row (Dynamic Full-Graphic Banner with Fallback) */}
-        <PromoRow2 banners={homeData.promoBanners} {...promoProps} />
+        {/* 3. Promo Banner Row (Dynamic Full-Graphic Banner) */}
+        {homeData.promoBanners && homeData.promoBanners.length > 0 && (
+          <PromoRow2 banners={homeData.promoBanners} {...promoProps} />
+        )}
 
         {/* 4. Properties / Best Places Nearby */}
         <Properties places={dynamicPlaces} />
 
         {/* 6. Popular Orders / Today's Special Offers */}
-        <PopularOrders offers={dynamicOffers} />
+        {dynamicOffers.length > 0 && <PopularOrders offers={dynamicOffers} />}
 
         {/* 7. Best Places / Popular Dishes */}
-        <BestPlaces dishes={dynamicDishes} />
+        {dynamicDishes.length > 0 && <BestPlaces dishes={dynamicDishes} />}
 
         {/* 8. Dashboard Body / Top Rated */}
-        <DashboardBody items={dynamicTopRated} />
+        {dynamicTopRated.length > 0 && <DashboardBody items={dynamicTopRated} />}
 
         {/* 9. Recommended For You */}
-        <RecommendedForYou items={dynamicRecommended} />
+        {dynamicRecommended.length > 0 && <RecommendedForYou items={dynamicRecommended} />}
       </main>
 
       {/* Footer */}

@@ -22,6 +22,7 @@ import executiveDoubleImg from "../all-available-rooms/executive-double-room.jpg
 import premiumSingleImg from "../all-available-rooms/premium-single-room.jpg";
 import logoImg from "@/components/navbar/logo-nav.png";
 import { MobileSidebar } from "@/components/mobile-sidebar";
+import { fetchApi } from "@/lib/fetch-api";
 
 const LANG_OPTIONS = [
   { id: "hi", label: "Hindi", code: "HI" },

@@ -22,6 +22,7 @@ export interface ResponsiveMenuItemsProps {
   initialItemName?: string;
   initialPrice?: string;
   initialCategory?: string;
+  categories?: Array<{ id: string; name: string }>;
   initialType?: string;
   initialSelectedFoodTypes?: string[];
   initialDescription?: string;
@@ -62,11 +63,12 @@ const DEFAULT_VARIANTS: ResponsiveVariantItem[] = [];
 export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   initialItemName = "",
   initialPrice = "",
-  initialCategory = "Mains",
+  initialCategory = "",
+  categories = [],
   initialType = "Veg",
   initialSelectedFoodTypes,
   initialDescription = "",
-  initialStockQty = "24",
+  initialStockQty = "",
   initialIsInStock = true,
   initialVariants = DEFAULT_VARIANTS,
   initialSchedules = DEFAULT_SCHEDULES,
@@ -80,7 +82,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   // Form State
   const [itemName, setItemName] = useState(initialItemName);
   const [price, setPrice] = useState(initialPrice);
-  const [category, setCategory] = useState(initialCategory);
+  const [category, setCategory] = useState(() => initialCategory || (categories.length > 0 ? categories[0].name : ""));
   const [type, setType] = useState(initialType);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(() => {
     if (initialSelectedFoodTypes && initialSelectedFoodTypes.length > 0) {
@@ -113,6 +115,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       }
     });
   };
+  const [description, setDescription] = useState(initialDescription);
+  const [stockQty, setStockQty] = useState<number | string>(initialStockQty);
+  const [isInStock, setIsInStock] = useState(initialIsInStock);
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
@@ -166,7 +171,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
 
   const handleAddVariant = () => {
     const nextId = (Date.now() + Math.random()).toString();
-    setVariants((prev) => [...prev, { id: nextId, name: "", price: "0" }]);
+    setVariants((prev) => [...prev, { id: nextId, name: "", price: "" }]);
   };
 
   const handleUpdateVariant = (
@@ -174,8 +179,12 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     field: "name" | "price",
     value: string
   ) => {
+    let cleanVal = value;
+    if (field === "price") {
+      cleanVal = cleanVal.replace(/-/g, "");
+    }
     setVariants((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, [field]: value } : v))
+      prev.map((v) => (v.id === id ? { ...v, [field]: cleanVal } : v))
     );
   };
 
@@ -186,8 +195,52 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!itemName || !itemName.trim()) {
+      alert("Item name is required.");
+      return;
+    }
+
+    if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      alert("Please enter a valid price greater than ₹0 (no negative numbers).");
+      return;
+    }
+
+    // Validate all Add-ons: name and price are mandatory, price must be non-negative
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      const trimmedName = (v.name || "").trim();
+      if (!trimmedName) {
+        alert(`Add-on #${i + 1} name is required. Please provide a name or remove the add-on.`);
+        return;
+      }
+      if (v.price === "" || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
+        alert(`Price for add-on "${trimmedName}" is mandatory and must be ₹0 or greater (negative numbers are not allowed).`);
+        return;
+      }
+    }
+
+    if (!category || !category.trim()) {
+      alert("Please select a category.");
+      return;
+    }
+
     if (!selectedFoodTypes || selectedFoodTypes.length === 0) {
       alert("Please select at least one food type (Veg, Non-Veg, Vegan, or Jain).");
+      return;
+    }
+
+    if (stockQty === "" || isNaN(parseInt(String(stockQty), 10)) || parseInt(String(stockQty), 10) < 0) {
+      alert("Stock Quantity is required (enter 0 or more).");
+      return;
+    }
+
+    if (!description || !description.trim()) {
+      alert("Description is required.");
+      return;
+    }
+
+    if (!imageFile && !initialImageUrl && !imagePreview) {
+      alert("Dish photo is mandatory. Please upload a photo.");
       return;
     }
 
@@ -280,7 +333,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                 <div className={styles.cameraCircle}>
                   <Camera size={22} strokeWidth={2.2} />
                 </div>
-                <span className={styles.uploadTitle}>Upload photo</span>
+                <span className={styles.uploadTitle}>
+                  Upload photo <span style={{ color: "#EF4444" }}>*</span>
+                </span>
                 <span className={styles.uploadSubtitle}>
                   Supports JPG, PNG up to 5MB
                 </span>
@@ -291,7 +346,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           {/* 2. Item name */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel} htmlFor="itemNameInput">
-              Item name
+              Item name <span style={{ color: "#EF4444" }}>*</span>
             </label>
             <input
               id="itemNameInput"
@@ -307,16 +362,26 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           {/* 3. Price */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel} htmlFor="priceInput">
-              Price
+              Price <span style={{ color: "#EF4444" }}>*</span>
             </label>
             <div className={styles.priceInputWrapper}>
               <span className={styles.pricePrefix}>₹</span>
               <input
                 id="priceInput"
                 type="number"
+                min="0"
+                step="any"
                 className={`${styles.textInput} ${styles.priceInput}`}
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/-/g, "");
+                  setPrice(clean);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="450"
                 required
               />
@@ -326,7 +391,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           {/* 4. Category */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel} htmlFor="categorySelect">
-              Category
+              Category <span style={{ color: "#EF4444" }}>*</span>
             </label>
             <div className={styles.selectWrapper}>
               <select
@@ -335,12 +400,18 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               >
-                <option value="Mains">Mains</option>
-                <option value="Starters">Starters</option>
-                <option value="Desserts">Desserts</option>
-                <option value="Drinks">Drinks</option>
-                <option value="Breads">Breads</option>
-                <option value="Beverages">Beverages</option>
+                {categories.length === 0 ? (
+                  <option value="">No categories available</option>
+                ) : (
+                  <>
+                    {!category && <option value="">Select a category</option>}
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
               <ChevronDown size={18} className={styles.selectArrow} />
             </div>
@@ -419,10 +490,10 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
           </div>
 
-          {/* 6. Description (Optional) */}
+          {/* 6. Description */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel} htmlFor="descInput">
-              Description (Optional)
+              Description <span style={{ color: "#EF4444" }}>*</span>
             </label>
             <textarea
               id="descInput"
@@ -431,6 +502,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Rich and creamy tomato-based curry with succulent chicken tandoori pieces cooked in butter and aromatic spices."
+              required
             />
           </div>
 
@@ -479,9 +551,11 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
           </div>
 
-          {/* 8. Variants & Add-ons */}
+          {/* 8. Dish Add-Ons */}
           <div className={styles.formGroup}>
-            <h2 className={styles.sectionTitle}>Variants & Add-ons</h2>
+            <h2 className={styles.sectionTitle}>
+              Dish Add-Ons <span style={{ fontSize: "0.85rem", fontWeight: "normal", color: "#64748B" }}>(Optional add-ons with extra price)</span>
+            </h2>
             <div className={styles.variantsList}>
               {variants.map((variant) => (
                 <div key={variant.id} className={styles.variantRow}>
@@ -489,28 +563,39 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                     type="text"
                     className={styles.variantNameInput}
                     value={variant.name}
-                    placeholder="Variant name"
+                    placeholder="Add-on name (e.g. Dahi, Extra Butter) *"
+                    required
                     onChange={(e) =>
                       handleUpdateVariant(variant.id, "name", e.target.value)
                     }
                   />
-                  <div className={styles.variantPriceWrapper}>
-                    <span className={styles.variantCurrency}>₹</span>
-                    <input
-                      type="number"
-                      className={styles.variantPriceInput}
-                      value={variant.price}
-                      placeholder="0"
-                      onChange={(e) =>
-                        handleUpdateVariant(variant.id, "price", e.target.value)
-                      }
-                    />
-                  </div>
+                    <div className={styles.variantPriceWrapper}>
+                      <span className={styles.variantCurrency}>+₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        className={styles.variantPriceInput}
+                        value={variant.price}
+                        placeholder="Price *"
+                        required
+                        onChange={(e) =>
+                          handleUpdateVariant(variant.id, "price", e.target.value)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                            e.preventDefault();
+                          }
+                        }}
+                        aria-label="Add-on price"
+                      />
+                    </div>
                   <button
                     type="button"
                     className={styles.deleteVariantBtn}
                     onClick={() => handleRemoveVariant(variant.id)}
-                    aria-label={`Delete ${variant.name || "variant"}`}
+                    aria-label={`Delete ${variant.name || "add-on"}`}
+                    title="Remove add-on"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -523,7 +608,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                 onClick={handleAddVariant}
               >
                 <Plus size={16} strokeWidth={2.4} />
-                <span>Add Variant</span>
+                <span>Add Add-on</span>
               </button>
             </div>
           </div>
@@ -531,7 +616,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           {/* 9. In Stock Card */}
           <div className={styles.stockCard}>
             <div className={styles.stockInfo}>
-              <span className={styles.stockTitle}>In stock</span>
+              <span className={styles.stockTitle}>
+                In stock (Stock Quantity) <span style={{ color: "#EF4444" }}>*</span>
+              </span>
               <span className={styles.stockSubtitle}>
                 Make this item available immediately
               </span>

@@ -51,7 +51,7 @@ export interface DishItem {
   type: "VEG" | "NON-VEG" | "JAIN" | "VEGAN";
   types: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN">;
   imageUrl?: string | null;
-  variantsCount?: number;
+  addons?: Array<{ id: string; name: string; price: number }>;
   stockQty: number;
   inStock: boolean;
 }
@@ -68,13 +68,15 @@ export interface SellerMenuProps {
   onNotificationClick?: () => void;
   onAddNewDish?: () => void;
   onToggleStore?: (isOpen: boolean) => void;
+  onToggleStock?: (dishId: string, inStock: boolean) => void;
+  onStockQtyChange?: (dishId: string, delta: number) => void;
 }
 
-export const SellerMenu: React.FC<SellerMenuProps> = ({
+export default function SellerMenu({
   ownerName: initialOwnerName,
   partnerRole: initialPartnerRole,
   avatarInitials: initialAvatarInitials,
-  storeTimings = "07:00 AM - 11:30 PM",
+  storeTimings = "10:00 AM - 11:00 PM",
   operationalPincodes,
   initialIsOpen = true,
   dishes,
@@ -82,11 +84,13 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   onNotificationClick,
   onAddNewDish,
   onToggleStore,
-}) => {
+  onToggleStock,
+  onStockQtyChange,
+}: SellerMenuProps) {
   const router = useRouter();
   const seller = useSellerProfile();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(initialIsOpen);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
   const [dishList, setDishList] = useState<DishItem[]>(dishes || []);
@@ -108,11 +112,20 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
           const data = json.data || json;
           if (data && data.items && Array.isArray(data.items) && isMounted) {
             const mapped: DishItem[] = data.items.map((item: any) => {
-              let variantsCount = 0;
-              if (item.variants) {
+              let addonsList: Array<{ id: string; name: string; price: number }> = [];
+              const rawAddons = item.addons || item.variants;
+              if (rawAddons) {
                 try {
-                  const parsed = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants;
-                  if (Array.isArray(parsed)) variantsCount = parsed.length;
+                  const parsed = typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons;
+                  if (Array.isArray(parsed)) {
+                    addonsList = parsed
+                      .filter((a: any) => a && (a.name || '').trim())
+                      .map((a: any) => ({
+                        id: String(a.id || ''),
+                        name: String(a.name || '').trim(),
+                        price: Number(a.price) || 0,
+                      }));
+                  }
                 } catch {}
               }
 
@@ -121,13 +134,13 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
               return {
                 id: item.id,
                 name: item.name,
-                category: item.foodCategory?.name || item.foodSubCategory?.name || "Main Course",
+                category: item.foodCategory?.name || item.foodSubCategory?.name || "General",
                 price: `₹${item.price}`,
                 imageUrl: item.imageUrl || null,
                 type: foodTypes[0] || "VEG",
                 types: foodTypes,
-                variantsCount,
-                stockQty: item.stockQuantity >= 0 ? item.stockQuantity : 25,
+                addons: addonsList,
+                stockQty: item.stockQuantity !== null && item.stockQuantity !== undefined && item.stockQuantity >= 0 ? item.stockQuantity : 0,
                 inStock: item.isAvailable,
               };
             });
@@ -163,7 +176,7 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   );
   const categories: string[] = [
     ...defaultPills,
-    ...(dynamicCategories.length > 0 ? dynamicCategories : ["Desserts", "Beverages"]),
+    ...dynamicCategories,
   ];
 
   const handleToggleStore = async () => {
@@ -429,10 +442,25 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
                           </div>
                           <div className={styles.dishNameInfo}>
                             <span className={styles.dishNameText}>{dish.name}</span>
-                            {dish.variantsCount && dish.variantsCount > 0 ? (
-                              <span className={styles.variantBadgeText}>
-                                {dish.variantsCount} {dish.variantsCount === 1 ? "variant" : "variants"} available
-                              </span>
+                            {dish.addons && dish.addons.length > 0 ? (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
+                                {dish.addons.map((addon, idx) => (
+                                  <span
+                                    key={idx}
+                                    style={{
+                                      fontSize: "0.72rem",
+                                      fontWeight: 600,
+                                      color: "#EA580C",
+                                      backgroundColor: "#FFF7ED",
+                                      border: "1px solid #FFEDD5",
+                                      padding: "1px 6px",
+                                      borderRadius: "4px",
+                                    }}
+                                  >
+                                    + {addon.name} (₹{addon.price})
+                                  </span>
+                                ))}
+                              </div>
                             ) : null}
                           </div>
                         </div>
@@ -558,4 +586,4 @@ export const SellerMenu: React.FC<SellerMenuProps> = ({
   );
 };
 
-export default SellerMenu;
+export { SellerMenu };

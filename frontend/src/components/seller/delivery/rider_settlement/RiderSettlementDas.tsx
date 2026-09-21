@@ -120,11 +120,11 @@ function RiderSettlementContent({
   // Map Rider Profile Info
   const effectiveRiderProfile: RiderProfileInfo = propRiderProfile || {
     id: selectedRider?.id || "",
-    name: selectedRider?.name || (deliveryRiders.length === 0 ? "No Riders Registered" : "Rider"),
+    name: selectedRider?.name || "",
     phone: selectedRider?.phone || "",
     email: selectedRider?.email || "",
-    vehicleNumber: selectedRider ? `DL 3S ${selectedRider.phone ? selectedRider.phone.slice(-4) : "8912"}` : "N/A",
-    status: selectedRider ? (selectedRider.isActive ? "On Duty" : "Off Duty") : "Offline",
+    vehicleNumber: selectedRider?.vehicleNumber || selectedRider?.vehicleType || "",
+    status: selectedRider ? (selectedRider.isActive ? "On Duty" : "Off Duty") : "",
   };
 
   // Map Cash Balance Info
@@ -132,7 +132,7 @@ function RiderSettlementContent({
   const effectiveCashBalance: CashCollectionBalanceInfo = propCashBalance || {
     balance: `₹${rawBalance.toLocaleString("en-IN")}`,
     rawBalance: rawBalance,
-    riderName: selectedRider?.name?.split(" ")[0] || "Rider",
+    riderName: selectedRider?.name || "",
     limitAmount: "₹5,000",
     warningMessage: rawBalance > 0
       ? `Limit is ₹5,000. Collect cash soon to avoid automatic profile lock.`

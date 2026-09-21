@@ -51,14 +51,14 @@ export function parseRoomDescription(descRaw?: string | null): {
         if (typeof parsed === "object" && parsed !== null) {
             let amenities: string[] = [];
             if (Array.isArray(parsed.amenities)) {
-                amenities = parsed.amenities.map(String).map(s => s.trim()).filter(Boolean);
+                amenities = parsed.amenities.map(String).map((s: string) => s.trim()).filter(Boolean);
             } else if (typeof parsed.amenities === "string" && parsed.amenities.trim()) {
                 amenities = parsed.amenities.split(",").map((s: string) => s.trim()).filter(Boolean);
             }
 
             let houseRules: string[] = [];
             if (Array.isArray(parsed.houseRules)) {
-                houseRules = parsed.houseRules.map(String).map(s => s.trim()).filter(Boolean);
+                houseRules = parsed.houseRules.map(String).map((s: string) => s.trim()).filter(Boolean);
             } else if (typeof parsed.houseRules === "string" && parsed.houseRules.trim()) {
                 if (parsed.houseRules.includes("\n")) {
                     houseRules = parsed.houseRules.split("\n").map((s: string) => s.trim()).filter(Boolean);

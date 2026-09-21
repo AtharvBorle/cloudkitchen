@@ -1,5 +1,6 @@
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { useState, useEffect, useRef } from "react";
 import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet, Download, Search, Filter, ArrowUpDown } from "lucide-react";
 import Script from "next/script";
@@ -225,18 +226,20 @@ export default function DeliveryDashboard() {
         document.body.removeChild(link);
     };
 
-    // Initial load + Real-time auto-polling every 4 seconds
+    // Initial load
     useEffect(() => {
         fetchOrders(true);
         fetchProfile();
+    }, []);
 
-        const interval = setInterval(() => {
+    // Real-time SSE stream replaces 4s auto-polling
+    useRealtimeStream({
+        url: "/api/delivery/orders/stream",
+        onOrder: () => {
             fetchOrders(false);
             fetchProfile();
-        }, 4000);
-
-        return () => clearInterval(interval);
-    }, []);
+        },
+    });
 
     useEffect(() => {
         if (activeTab === 'WALLET') {

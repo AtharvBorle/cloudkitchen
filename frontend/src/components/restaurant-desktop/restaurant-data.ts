@@ -1,4 +1,4 @@
-﻿import img1 from "./popularfood/pizza-margherita-classic.jpg";
+import img1 from "./popularfood/pizza-margherita-classic.jpg";
 import img2 from "./popularfood/pizza-gourmet-table.jpg";
 import img3 from "./popularfood/pizza-slice-popart.jpg";
 import img4 from "./popularfood/pizza-bbq-paneer.jpg";
@@ -18,6 +18,7 @@ import sushiImg from "../explore-desktop/curated-dining-collections/dining-sushi
 
 export interface FoodCardItem {
   id: string;
+  foodItemId?: string;
   title: string;
   description: string;
   rating: string;
@@ -25,6 +26,12 @@ export interface FoodCardItem {
   image: any;
   isVeg?: boolean;
   category?: string;
+  addons?: Array<{ id: string; name: string; price: number }>;
+  stockQuantity?: number;
+  maxStock?: number;
+  itemType?: string;
+  sellerId?: string;
+  sellerName?: string;
 }
 
 export interface KitchenData {

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, CheckCircle2, Truck, User, ArrowRight } from "lucide-react";
+import { CreditCard, CheckCircle2, Truck, User, ArrowRight, UserPlus } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 
 export interface RiderSummaryMetric {
@@ -28,6 +28,8 @@ export interface RiderCanvasProps {
   riders?: RiderWalletRecord[];
   searchQuery?: string;
   onViewWallet?: (rider: RiderWalletRecord) => void;
+  onAddDeliveryAgent?: () => void;
+  onAddDeliveryBoy?: () => void;
 }
 
 const DEFAULT_METRICS: RiderSummaryMetric[] = [
@@ -63,6 +65,8 @@ export default function RiderCanvas({
   riders: initialRiders,
   searchQuery = "",
   onViewWallet,
+  onAddDeliveryAgent,
+  onAddDeliveryBoy,
 }: RiderCanvasProps) {
   const router = useRouter();
   const [riderList, setRiderList] = React.useState<RiderWalletRecord[]>(initialRiders || DEFAULT_RIDERS);
@@ -84,7 +88,7 @@ export default function RiderCanvas({
             const mapped: RiderWalletRecord[] = list.map((dp: any) => ({
               id: dp.id,
               name: dp.name,
-              phone: dp.phone || "+91 98765 00000",
+              phone: dp.phone || "",
               codBalance: `₹${(dp.outstandingBalance || 0).toLocaleString("en-IN")}`,
               dutyStatus: dp.isActive ? "ON DUTY" : "OFF DUTY",
             }));
@@ -237,35 +241,72 @@ export default function RiderCanvas({
           style={{
             width: "100%",
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
             justifyContent: "space-between",
-            gap: "4px",
+            flexWrap: "wrap",
+            gap: "12px",
             boxSizing: "border-box",
           }}
           className="header-frame-1"
         >
-          <h1
-            style={{
-              fontSize: "24px",
-              fontWeight: 800,
-              color: "#0F172A",
-              margin: 0,
-              letterSpacing: "-0.4px",
-              lineHeight: 1.25,
-            }}
-          >
-            {title}
-          </h1>
-          <p
-            style={{
-              fontSize: "13.5px",
-              color: "#64748B",
-              margin: 0,
-              fontWeight: 400,
-            }}
-          >
-            {subtitle}
-          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <h1
+              style={{
+                fontSize: "24px",
+                fontWeight: 800,
+                color: "#0F172A",
+                margin: 0,
+                letterSpacing: "-0.4px",
+                lineHeight: 1.25,
+              }}
+            >
+              {title}
+            </h1>
+            <p
+              style={{
+                fontSize: "13.5px",
+                color: "#64748B",
+                margin: 0,
+                fontWeight: 400,
+              }}
+            >
+              {subtitle}
+            </p>
+          </div>
+
+          {/* Add Delivery Boy Action Button */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              onClick={
+                onAddDeliveryAgent ||
+                onAddDeliveryBoy ||
+                (() => router.push("/seller/delivery/add-agent"))
+              }
+              style={{
+                backgroundColor: "#F97316",
+                backgroundImage: "linear-gradient(135deg, #FF5500 0%, #F97316 100%)",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "8px",
+                padding: "10px 20px",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(249, 115, 22, 0.28)",
+                transition: "all 0.18s ease",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+              className="add-delivery-boy-btn"
+            >
+              <UserPlus size={16} />
+              <span>Add Delivery Boy</span>
+            </button>
+          </div>
         </div>
 
         {/* Frame 2: 3 Cards Row (Width: 1120px, Height: 138px, Gap: 24px) */}
@@ -498,7 +539,35 @@ export default function RiderCanvas({
                         <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>
                           No Delivery Riders Found
                         </span>
-                        <span>Click &quot;Add Delivery Agent&quot; above to register and assign delivery partners.</span>
+                        <span style={{ fontSize: "13px", color: "#64748B", maxWidth: "360px" }}>
+                          Register your in-house delivery squad to assign orders and track live cash-on-delivery collections.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={
+                            onAddDeliveryAgent ||
+                            onAddDeliveryBoy ||
+                            (() => router.push("/seller/delivery/add-agent"))
+                          }
+                          style={{
+                            marginTop: "8px",
+                            backgroundColor: "#F97316",
+                            color: "#FFFFFF",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "9px 18px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            boxShadow: "0 2px 6px rgba(249, 115, 22, 0.25)",
+                          }}
+                        >
+                          <UserPlus size={15} />
+                          <span>Add Delivery Boy</span>
+                        </button>
                       </div>
                     </td>
                   </tr>

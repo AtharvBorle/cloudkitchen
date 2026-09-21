@@ -24,65 +24,6 @@ export interface DiningCollectionItem {
   kitchenId?: string;
 }
 
-const DEFAULT_DINING_ITEMS: DiningCollectionItem[] = [
-  {
-    id: "dining-1",
-    badge: "Under ₹149",
-    title: "Street Food Specials",
-    image: streetFoodImg,
-    kitchenId: "street-food-specials",
-  },
-  {
-    id: "dining-2",
-    badge: "Under ₹199",
-    title: "Comfort Food Classics",
-    image: comfortFoodImg,
-    kitchenId: "7-12-kitchen",
-  },
-  {
-    id: "dining-3",
-    badge: "Healthy Picks",
-    title: "Fresh Salads & Bowls",
-    image: freshSaladsImg,
-    kitchenId: "fresh-salads",
-  },
-  {
-    id: "dining-4",
-    badge: "Fine Dining",
-    title: "Premium Dining",
-    image: fineDiningImg,
-    kitchenId: "pizza-palace",
-  },
-  {
-    id: "dining-5",
-    badge: "Top Rated",
-    title: "Sushi & Sashimi",
-    image: sushiSashimiImg,
-    kitchenId: "sushi-bar",
-  },
-  {
-    id: "dining-6",
-    badge: "Under ₹249",
-    title: "Mediterranean Mezze",
-    image: mediterraneanMezzeImg,
-    kitchenId: "mediterranean-mezze",
-  },
-  {
-    id: "dining-7",
-    badge: "Breakfast",
-    title: "Morning Favourites",
-    image: morningFavouritesImg,
-    kitchenId: "baker-delight",
-  },
-  {
-    id: "dining-8",
-    badge: "Premium",
-    title: "Steakhouse Picks",
-    image: steakhousePicksImg,
-    kitchenId: "chef-arjun",
-  },
-];
-
 export interface CuratedDiningCollectionsProps {
   heading?: string;
   items?: DiningCollectionItem[];
@@ -92,12 +33,16 @@ export interface CuratedDiningCollectionsProps {
 
 export const CuratedDiningCollections: React.FC<CuratedDiningCollectionsProps> = ({
   heading = "Featured Collections",
-  items = DEFAULT_DINING_ITEMS,
+  items,
   onCardClick,
   onWishlistToggle,
 }) => {
   const router = useRouter();
   const [savedItems, setSavedItems] = useState<{ [id: string]: boolean }>({});
+
+  if (!items || items.length === 0) {
+    return null;
+  }
 
   const handleHeartClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();

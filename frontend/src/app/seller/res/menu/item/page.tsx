@@ -56,17 +56,31 @@ function MenuItemContent() {
       }
       formData.append("itemType", itemType);
 
-      formData.append("stockQuantity", String(data.stockQty || 24));
-      formData.append("isAvailable", String(data.isInStock));
+      const cleanStock = data.stockQty !== undefined && data.stockQty !== null && data.stockQty !== "" && !isNaN(parseInt(data.stockQty, 10))
+        ? Math.max(0, parseInt(data.stockQty, 10))
+        : 0;
+      formData.append("stockQuantity", String(cleanStock));
+      formData.append("isAvailable", String(cleanStock > 0));
 
-      if (data.variants && Array.isArray(data.variants)) {
-        const validVariants = data.variants
-          .filter((v: any) => v.name && v.name.trim().length > 0)
-          .map((v: any) => ({
-            id: v.id,
-            name: v.name.trim(),
-            price: Number(v.price) || Number(data.price) || 0
-          }));
+      if (data.variants && Array.isArray(data.variants) && data.variants.length > 0) {
+        for (let i = 0; i < data.variants.length; i++) {
+          const v = data.variants[i];
+          const trimmedName = (v.name || "").trim();
+          if (!trimmedName) {
+            alert(`Add-on #${i + 1} name is required.`);
+            return;
+          }
+          if (v.price === "" || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
+            alert(`Price for add-on "${trimmedName}" is mandatory and must be ₹0 or greater (negative numbers are not allowed).`);
+            return;
+          }
+        }
+        const validVariants = data.variants.map((v: any) => ({
+          id: v.id,
+          name: v.name.trim(),
+          price: Math.max(0, Number(v.price) || 0)
+        }));
+        formData.append("addons", JSON.stringify(validVariants));
         formData.append("variants", JSON.stringify(validVariants));
       }
 
@@ -83,6 +97,8 @@ function MenuItemContent() {
 
       if (data.imageFile) {
         formData.append("image", data.imageFile);
+      } else if (initialData?.imageUrl) {
+        formData.append("imageUrl", initialData.imageUrl);
       }
 
       if (itemId) {
@@ -114,9 +130,10 @@ function MenuItemContent() {
   };
 
   let parsedVariants: any[] = [];
-  if (initialData?.variants) {
+  const rawAddons = initialData?.addons || initialData?.variants;
+  if (rawAddons) {
     try {
-      const p = typeof initialData.variants === "string" ? JSON.parse(initialData.variants) : initialData.variants;
+      const p = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
       if (Array.isArray(p)) {
         parsedVariants = p.map((v: any, idx: number) => ({
           id: v.id || String(idx + 1),
@@ -148,6 +165,7 @@ function MenuItemContent() {
       initialItemName={initialData?.name}
       initialPrice={initialData ? String(initialData.price) : undefined}
       initialCategory={initialData?.foodCategory?.name}
+      categories={categories}
       initialType={mappedType}
       initialSelectedFoodTypes={parsedFoodTypes}
       initialDescription={initialData?.description}

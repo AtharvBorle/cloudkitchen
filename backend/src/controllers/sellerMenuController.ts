@@ -50,6 +50,41 @@ export const normalizeFoodItemType = (raw: string | null | undefined): string =>
     return unique.length > 0 ? unique.join(",") : "VEG";
 };
 
+export const extractCategoryNames = (typeStr?: string | null, businessCategoryStr?: string | null): string[] => {
+    const rawList: string[] = [];
+    
+    const processStr = (str?: string | null) => {
+        if (!str || !str.trim()) return;
+        let cleaned = str.trim();
+        if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
+            try {
+                const parsed = JSON.parse(cleaned);
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(p => {
+                        if (typeof p === "string" && p.trim()) rawList.push(p.trim());
+                    });
+                    return;
+                }
+            } catch {
+                cleaned = cleaned.slice(1, -1);
+            }
+        }
+        cleaned.split(",").forEach(part => {
+            const clean = part.replace(/^['"\s]+|['"\s]+$/g, "").trim();
+            if (clean && clean.toUpperCase() !== "FOOD" && clean.toUpperCase() !== "PROPERTY" && clean.toUpperCase() !== "BOTH") {
+                rawList.push(clean);
+            }
+        });
+    };
+
+    processStr(typeStr);
+    if (rawList.length === 0) {
+        processStr(businessCategoryStr);
+    }
+
+    return Array.from(new Set(rawList));
+};
+
 export const getMenuItems = async () => {
     const session = await getAuthSession();
     if (!session?.user || session.user.role !== "SELLER") {
@@ -72,20 +107,43 @@ export const getMenuItems = async () => {
         orderBy: { pincode: 'asc' }
     });
 
-    // Find the Category matching the seller's type (e.g. Bakery)
-    const matchingCategory = await db.category.findFirst({
-        where: {
-            name: { equals: sellerProfile.type, mode: "insensitive" },
-            type: "FOOD"
-        }
-    });
-
+    // Find FoodCategory records associated with seller's selected business categories
+    const categoryNames = extractCategoryNames(sellerProfile.type, sellerProfile.businessCategory);
     let foodCategories: any[] = [];
-    if (matchingCategory) {
+
+    if (categoryNames.length > 0) {
+        const matchingCategories = await db.category.findMany({
+            where: {
+                OR: categoryNames.map(name => ({
+                    name: { equals: name, mode: "insensitive" }
+                }))
+            }
+        });
+        const matchingCategoryIds = matchingCategories.map(c => c.id);
+        if (matchingCategoryIds.length > 0) {
+            foodCategories = await db.foodCategory.findMany({
+                where: {
+                    categories: {
+                        some: {
+                            id: { in: matchingCategoryIds }
+                        }
+                    }
+                },
+                include: {
+                    subCategories: {
+                        orderBy: { name: 'asc' }
+                    }
+                },
+                orderBy: { name: 'asc' }
+            });
+        }
+    } else {
         foodCategories = await db.foodCategory.findMany({
             where: {
                 categories: {
-                    some: { id: matchingCategory.id }
+                    some: {
+                        type: "FOOD"
+                    }
                 }
             },
             include: {
@@ -93,18 +151,6 @@ export const getMenuItems = async () => {
                     orderBy: { name: 'asc' }
                 }
             },
-            orderBy: { name: 'asc' }
-        });
-    }
-
-    if (foodCategories.length === 0) {
-        foodCategories = await db.foodCategory.findMany({
-            include: {
-                subCategories: {
-                    orderBy: { name: 'asc' }
-                }
-            },
-            take: 10,
             orderBy: { name: 'asc' }
         });
     }
@@ -139,7 +185,7 @@ export const createMenuItem = async (req: Request) => {
     const description = formData.get("description") as string;
     const availableDays = formData.get("availableDays") as string;
     const stockQuantityStr = formData.get("stockQuantity") as string;
-    const stockQuantity = stockQuantityStr && !isNaN(parseInt(stockQuantityStr)) ? Math.max(0, parseInt(stockQuantityStr)) : 10;
+    const stockQuantity = stockQuantityStr !== undefined && stockQuantityStr !== null && stockQuantityStr !== '' && !isNaN(parseInt(stockQuantityStr)) ? Math.max(0, parseInt(stockQuantityStr)) : 0;
     const deliveryPincodes = formData.get("deliveryPincodes") as string | null;
     const openTime = formData.get("openTime") as string | null;
     const closeTime = formData.get("closeTime") as string | null;
@@ -151,41 +197,98 @@ export const createMenuItem = async (req: Request) => {
     }
     const itemType = normalizeFoodItemType(rawItemType);
 
-    const rawVariants = formData.get("variants") as string | null;
-    let variantsStr = "[]";
-    if (rawVariants) {
+    const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
+    let addonsStr = "[]";
+    if (rawAddons) {
         try {
-            const parsed = typeof rawVariants === "string" ? JSON.parse(rawVariants) : rawVariants;
-            if (Array.isArray(parsed)) {
-                variantsStr = JSON.stringify(parsed);
+            const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                for (let i = 0; i < parsed.length; i++) {
+                    const a = parsed[i];
+                    if (!a || !a.name || !String(a.name).trim()) {
+                        throw new ApiError(`Add-on #${i + 1} name is required`, 400);
+                    }
+                    const addonPrice = parseFloat(a.price);
+                    if (isNaN(addonPrice) || addonPrice < 0) {
+                        throw new ApiError(`Add-on "${a.name}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                    }
+                }
+                const cleaned = parsed.map((a: any, idx: number) => ({
+                    id: String(a.id || `addon_${idx + 1}`),
+                    name: String(a.name || "").trim(),
+                    price: Math.max(0, parseFloat(a.price) || 0)
+                }));
+                addonsStr = JSON.stringify(cleaned);
             }
-        } catch (e) {
-            console.error("Failed to parse variants JSON in createMenuItem:", e);
+        } catch (e: any) {
+            if (e instanceof ApiError) throw e;
+            console.error("Failed to parse addons JSON in createMenuItem:", e);
         }
     }
 
     let foodCategoryId = formData.get("foodCategoryId") as string | null;
     const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
-    if (!name || isNaN(price)) {
-        throw new ApiError("Name and Price are required", 400);
+    if (!name || !name.trim()) {
+        throw new ApiError("Item Name is required", 400);
+    }
+    if (isNaN(price) || price <= 0) {
+        throw new ApiError("Valid Price (greater than 0) is required", 400);
+    }
+    if (!description || !description.trim()) {
+        throw new ApiError("Description is required", 400);
     }
 
     if (!foodCategoryId) {
-        const anyCat = await db.foodCategory.findFirst();
-        if (anyCat) {
-            foodCategoryId = anyCat.id;
+        const categoryNames = extractCategoryNames(sellerProfile.type, sellerProfile.businessCategory);
+        if (categoryNames.length > 0) {
+            const matchingCategories = await db.category.findMany({
+                where: {
+                    OR: categoryNames.map(catName => ({
+                        name: { equals: catName, mode: "insensitive" }
+                    }))
+                }
+            });
+            const matchingCategoryIds = matchingCategories.map(c => c.id);
+            if (matchingCategoryIds.length > 0) {
+                const anyCat = await db.foodCategory.findFirst({
+                    where: {
+                        categories: {
+                            some: { id: { in: matchingCategoryIds } }
+                        }
+                    }
+                });
+                if (anyCat) {
+                    foodCategoryId = anyCat.id;
+                }
+            }
+        }
+        if (!foodCategoryId) {
+            const anyCat = await db.foodCategory.findFirst();
+            if (anyCat) {
+                foodCategoryId = anyCat.id;
+            }
         }
     }
 
-    let imageUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80";
+    if (!foodCategoryId) {
+        throw new ApiError("Category is required", 400);
+    }
+
+    const providedImgUrl = formData.get("imageUrl") as string | null;
+    if ((!imageFile || imageFile.size === 0) && (!providedImgUrl || !providedImgUrl.trim())) {
+        throw new ApiError("Dish image is mandatory. Please upload an image.", 400);
+    }
+
+    let imageUrl = providedImgUrl && providedImgUrl.trim() ? providedImgUrl.trim() : "";
     if (imageFile && imageFile.size > 0) {
         const bytes = await imageFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
         imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
-    } else {
-        const providedImgUrl = formData.get("imageUrl") as string | null;
-        if (providedImgUrl) imageUrl = providedImgUrl;
+    }
+
+    if (!imageUrl) {
+        throw new ApiError("Dish image is mandatory. Please upload an image.", 400);
     }
 
     const foodItem = await db.foodItem.create({
@@ -202,7 +305,8 @@ export const createMenuItem = async (req: Request) => {
             operationalHours: operationalHours || null,
             imageUrl,
             itemType,
-            variants: variantsStr,
+            variants: addonsStr,
+            addons: addonsStr,
             foodCategoryId: foodCategoryId || null,
             foodSubCategoryId: foodSubCategoryId || null
         }
@@ -243,7 +347,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         const closeTime = formData.get("closeTime") as string | null;
         const operationalHours = formData.get("operationalHours") as string | null;
         const itemType = formData.get("itemType") as string | null;
-        const variants = formData.get("variants") as string | null;
+        const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
         const isAvailable = formData.get("isAvailable") as string | null;
         const imageFile = formData.get("image") as File | null;
         const foodCategoryId = formData.get("foodCategoryId") as string | null;
@@ -263,14 +367,34 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (itemType !== null) {
             dataToUpdate.itemType = normalizeFoodItemType(itemType);
         }
-        if (variants !== null) {
+        if (rawAddons !== null) {
             try {
-                const parsed = typeof variants === "string" ? JSON.parse(variants) : variants;
-                if (Array.isArray(parsed)) {
-                    dataToUpdate.variants = JSON.stringify(parsed);
+                const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    for (let i = 0; i < parsed.length; i++) {
+                        const a = parsed[i];
+                        if (!a || !a.name || !String(a.name).trim()) {
+                            throw new ApiError(`Add-on #${i + 1} name is required`, 400);
+                        }
+                        const addonPrice = parseFloat(a.price);
+                        if (isNaN(addonPrice) || addonPrice < 0) {
+                            throw new ApiError(`Add-on "${a.name}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                        }
+                    }
+                    const cleaned = parsed.map((a: any, idx: number) => ({
+                        id: String(a.id || `addon_${idx + 1}`),
+                        name: String(a.name || "").trim(),
+                        price: Math.max(0, parseFloat(a.price) || 0)
+                    }));
+                    dataToUpdate.addons = JSON.stringify(cleaned);
+                    dataToUpdate.variants = JSON.stringify(cleaned);
+                } else if (Array.isArray(parsed) && parsed.length === 0) {
+                    dataToUpdate.addons = "[]";
+                    dataToUpdate.variants = "[]";
                 }
-            } catch (e) {
-                console.error("Failed to parse variants in updateMenuItem:", e);
+            } catch (e: any) {
+                if (e instanceof ApiError) throw e;
+                console.error("Failed to parse addons in updateMenuItem:", e);
             }
         }
         if (foodCategoryId !== null) dataToUpdate.foodCategoryId = foodCategoryId || null;
@@ -297,14 +421,23 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.itemType !== undefined) {
             dataToUpdate.itemType = normalizeFoodItemType(body.itemType);
         }
-        if (body.variants !== undefined) {
+        const rawAddonsBody = body.addons !== undefined ? body.addons : body.variants;
+        if (rawAddonsBody !== undefined) {
             try {
-                const parsed = typeof body.variants === "string" ? JSON.parse(body.variants) : body.variants;
+                const parsed = typeof rawAddonsBody === "string" ? JSON.parse(rawAddonsBody) : rawAddonsBody;
                 if (Array.isArray(parsed)) {
-                    dataToUpdate.variants = JSON.stringify(parsed);
+                    const cleaned = parsed
+                        .filter((a: any) => a && (a.name || "").trim())
+                        .map((a: any, idx: number) => ({
+                            id: String(a.id || `addon_${idx + 1}`),
+                            name: String(a.name || "").trim(),
+                            price: Math.max(0, parseFloat(a.price) || 0)
+                        }));
+                    dataToUpdate.addons = JSON.stringify(cleaned);
+                    dataToUpdate.variants = JSON.stringify(cleaned);
                 }
             } catch (e) {
-                console.error("Failed to parse variants JSON in updateMenuItem:", e);
+                console.error("Failed to parse addons JSON in updateMenuItem:", e);
             }
         }
         if (body.foodCategoryId !== undefined) dataToUpdate.foodCategoryId = body.foodCategoryId || null;

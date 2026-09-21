@@ -465,7 +465,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className={styles.allDot} style={{ backgroundColor: "#16A34A" }} />
             <span className={styles.allDot} style={{ backgroundColor: "#DC2626" }} />
             <span className={styles.allDot} style={{ backgroundColor: "#16A34A" }} />
-            <span className={styles.allDot} style={{ backgroundColor: "#EA580C" }} />
+            <span className={styles.allDot} style={{ backgroundColor: "#16A34A" }} />
           </div>
         );
       case "veg":
@@ -488,8 +488,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         );
       case "jain":
         return (
-          <div className={styles.symbolSquare} style={{ border: "1.5px solid #EA580C" }}>
-            <span className={styles.symbolDot} style={{ backgroundColor: "#EA580C" }} />
+          <div className={styles.symbolSquare} style={{ border: "1.5px solid #16A34A" }}>
+            <span className={styles.symbolDot} style={{ backgroundColor: "#16A34A" }} />
           </div>
         );
       default:
@@ -509,7 +509,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       case "vegan":
         return "#15803D";
       case "jain":
-        return "#F97316";
+        return "#16A34A";
       default:
         return "#10B981";
     }

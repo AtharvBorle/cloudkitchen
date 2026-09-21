@@ -7,6 +7,8 @@ import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { playNewOrderChime } from "@/lib/audio-chime";
 import styles from "./SellerOrders.module.css";
 
 export type OrderStatusFilter =
@@ -96,7 +98,10 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             try {
               const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
               if (Array.isArray(parsed)) {
-                itemsSummary = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+                itemsSummary = parsed.map((i: any) => {
+                  const addonsText = i.selectedAddons && i.selectedAddons.length > 0 ? ` (+${i.selectedAddons.map((a: any) => a.name).join(", ")})` : "";
+                  return `${i.quantity || 1}x ${i.name}${addonsText}`;
+                }).join(", ");
               }
             } catch (e) {
               itemsSummary = "Kitchen Items";
@@ -144,14 +149,68 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     loadOrders(false);
   }, [loadOrders]);
 
-  // Real-time auto-polling every 4 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
+  // Real-time SSE stream replaces 4s auto-polling
+  useRealtimeStream({
+    url: "/api/seller/orders/stream",
+    onConnected: () => {
       loadOrders(true);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [loadOrders]);
+    },
+    onOrder: (payload) => {
+      if (payload.event === "ORDER_CREATED") {
+        playNewOrderChime();
+        if (payload.order && payload.order.id) {
+          const o = payload.order;
+          let itemsSummary = "";
+          try {
+            const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+            if (Array.isArray(parsed)) {
+              itemsSummary = parsed.map((i: any) => {
+                const addonsText = i.selectedAddons && i.selectedAddons.length > 0 ? ` (+${i.selectedAddons.map((a: any) => a.name).join(", ")})` : "";
+                return `${i.quantity || 1}x ${i.name}${addonsText}`;
+              }).join(", ");
+            }
+          } catch (e) {
+            itemsSummary = "Kitchen Items";
+          }
+          const newRow: OrderRow = {
+            id: o.id,
+            orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+            customer: o.user?.name || "Customer",
+            room: o.deliveryAddress || "Room 101",
+            items: itemsSummary || "1x Dish Item",
+            rawTotal: Number(o.totalAmount) || 0,
+            total: `₹${o.totalAmount || 0}`,
+            status: "Pending",
+            rawStatus: "PENDING",
+            createdAt: o.createdAt || new Date().toISOString(),
+            time: "Just now",
+            deliveryPersonName: o.deliveryPerson?.name,
+          };
+          setOrderList((prev) => {
+            if (prev.some((item) => item.id === o.id)) return prev;
+            return [newRow, ...prev];
+          });
+        }
+      } else if (payload.event === "ORDER_UPDATED" && payload.orderId) {
+        if (payload.status) {
+          const s = payload.status.toUpperCase();
+          let statusVal: OrderRow["status"] = "Pending";
+          if (s === "PREPARING") statusVal = "Preparing";
+          else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out for Delivery";
+          else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Completed";
+          else if (s === "CANCELLED") statusVal = "Cancelled";
+          setOrderList((prev) =>
+            prev.map((item) => (item.id === payload.orderId ? { ...item, status: statusVal, rawStatus: s } : item))
+          );
+        }
+      } else if (payload.event === "ORDER_CANCELLED" && payload.orderId) {
+        setOrderList((prev) =>
+          prev.map((item) => (item.id === payload.orderId ? { ...item, status: "Cancelled", rawStatus: "CANCELLED" } : item))
+        );
+      }
+      loadOrders(true);
+    },
+  });
 
   // Action: Accept order (PENDING -> PREPARING)
   const handleAccept = async (orderId: string, e: React.MouseEvent) => {

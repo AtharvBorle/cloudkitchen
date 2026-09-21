@@ -91,6 +91,10 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
     setSettings((prev) => ({ ...prev, [key]: val }));
   };
 
+  const handleValueChange = (key: keyof SellerSettingsData, val: any) => {
+    setSettings((prev) => ({ ...prev, [key]: val }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {

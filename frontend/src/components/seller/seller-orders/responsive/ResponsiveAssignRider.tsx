@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, CheckCircle2, Copy, Bell } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Bell } from "lucide-react";
 import styles from "./ResponsiveAssignRider.module.css";
 
 export interface AvailableRiderItem {
@@ -38,7 +38,6 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
 }) => {
   const router = useRouter();
   const [assignedRiderId, setAssignedRiderId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -67,21 +66,6 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
     setTimeout(() => {
       router.push(`/seller/orders/details?orderId=${encodeURIComponent(orderId)}`);
     }, 900);
-  };
-
-  const handleCopyLink = () => {
-    if (onCopyShareLink) {
-      onCopyShareLink();
-    } else {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        navigator.clipboard.writeText(
-          `https://neocloud.app/order/${orderId.replace("#", "")}/pickup`
-        );
-      }
-      setCopied(true);
-      showToast("Pickup link copied to clipboard!");
-      setTimeout(() => setCopied(false), 2000);
-    }
   };
 
   return (
@@ -159,20 +143,6 @@ export const ResponsiveAssignRider: React.FC<ResponsiveAssignRiderProps> = ({
                 })
               )}
             </div>
-          </section>
-
-          {/* Share Pickup Link Section */}
-          <section className={styles.shareSection}>
-            <h3 className={styles.sectionLabel}>OR SHARE PICKUP LINK</h3>
-
-            <button
-              type="button"
-              className={styles.copyLinkButton}
-              onClick={handleCopyLink}
-            >
-              <Copy size={16} />
-              <span>{copied ? "Link Copied! ✓" : "Copy Share Link"}</span>
-            </button>
           </section>
         </main>
 

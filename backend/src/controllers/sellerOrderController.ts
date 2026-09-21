@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
+import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
 
 export const getSellerOrders = async () => {
     const session = await getAuthSession();
@@ -35,6 +36,8 @@ export const getSellerOrders = async () => {
                     id: true,
                     name: true,
                     phone: true,
+                    vehicleType: true,
+                    vehicleNumber: true,
                     isActive: true,
                     outstandingBalance: true
                 }
@@ -88,6 +91,8 @@ export const getSellerOrderById = async (orderId: string) => {
                     id: true,
                     name: true,
                     phone: true,
+                    vehicleType: true,
+                    vehicleNumber: true,
                     isActive: true
                 }
             }
@@ -198,7 +203,9 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
                     select: {
                         id: true,
                         name: true,
-                        phone: true
+                        phone: true,
+                        vehicleType: true,
+                        vehicleNumber: true
                     }
                 }
             }
@@ -225,6 +232,13 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
 
         return uo;
     });
+
+    try {
+        emitOrderUpdated(updatedOrder);
+        emitSellerDashboardRefresh(sellerProfile.id);
+    } catch (e) {
+        console.error("Realtime event emission error in seller update:", e);
+    }
 
     return { order: updatedOrder };
 };

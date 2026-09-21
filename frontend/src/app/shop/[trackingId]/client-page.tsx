@@ -324,36 +324,37 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                             };
 
                             const FoodItemCard = ({ item }: { item: any }) => {
-                                let variants: Array<{ id: string; name: string; price: number }> = [];
-                                if (item.variants) {
+                                let addons: Array<{ id: string; name: string; price: number }> = [];
+                                const rawAddons = item.addons || item.variants;
+                                if (rawAddons) {
                                     try {
-                                        const parsed = typeof item.variants === "string" ? JSON.parse(item.variants) : item.variants;
+                                        const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
                                         if (Array.isArray(parsed) && parsed.length > 0) {
-                                            variants = parsed.map((v: any, idx: number) => ({
-                                                id: String(v.id || idx + 1),
-                                                name: String(v.name || ""),
-                                                price: Number(v.price) || Number(item.price) || 0
-                                            }));
+                                            addons = parsed
+                                                .filter((a: any) => a && (a.name || "").trim())
+                                                .map((a: any, idx: number) => ({
+                                                    id: String(a.id || idx + 1),
+                                                    name: String(a.name || ""),
+                                                    price: Number(a.price) || 0
+                                                }));
                                         }
                                     } catch {}
                                 }
 
-                                const [selectedVariantId, setSelectedVariantId] = useState<string>(variants[0]?.id || "");
-                                const activeVariant = variants.find(v => v.id === selectedVariantId) || null;
-                                const currentPrice = activeVariant ? activeVariant.price : item.price;
-                                const currentItemName = activeVariant ? `${item.name} (${activeVariant.name})` : item.name;
-                                const cartItemId = activeVariant ? `${item.id}-${activeVariant.id}` : item.id;
-
                                 const cartPayload = {
-                                    id: cartItemId,
+                                    id: item.id,
                                     foodItemId: item.id,
-                                    name: currentItemName,
-                                    variantName: activeVariant?.name,
-                                    price: currentPrice,
+                                    name: item.name,
+                                    price: Number(item.price) || 0,
+                                    addons,
                                     stockQuantity: item.stockQuantity,
+                                    maxStock: item.stockQuantity,
                                     sellerId: seller.id,
                                     sellerName: seller.businessName || seller.user.name,
-                                    imageUrl: item.imageUrl
+                                    image: item.imageUrl,
+                                    imageUrl: item.imageUrl,
+                                    itemType: item.itemType,
+                                    description: item.description,
                                 };
 
                                 return (
@@ -394,38 +395,33 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                         )}
                                                     </div>
                                                 </h3>
-                                                <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.15rem' }}>₹{currentPrice}</span>
+                                                <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.15rem' }}>₹{item.price}</span>
                                             </div>
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
 
-                                            {/* Variants Selector */}
-                                            {variants.length > 0 && (
+                                            {/* Add-ons available preview */}
+                                            {addons.length > 0 && (
                                                 <div style={{ marginBottom: '12px' }}>
-                                                    <div style={{ fontSize: '0.78rem', fontWeight: '600', color: '#64748B', marginBottom: '6px' }}>Select Variant:</div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                                        Available Add-ons:
+                                                    </div>
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                                        {variants.map((v) => {
-                                                            const isChosen = v.id === selectedVariantId;
-                                                            return (
-                                                                <button
-                                                                    key={v.id}
-                                                                    type="button"
-                                                                    onClick={() => setSelectedVariantId(v.id)}
-                                                                    style={{
-                                                                        padding: '4px 10px',
-                                                                        borderRadius: '6px',
-                                                                        fontSize: '0.8rem',
-                                                                        fontWeight: isChosen ? '700' : '500',
-                                                                        border: isChosen ? '1.5px solid #EA580C' : '1px solid #E2E8F0',
-                                                                        backgroundColor: isChosen ? '#FFF7ED' : '#F8FAFC',
-                                                                        color: isChosen ? '#EA580C' : '#334155',
-                                                                        cursor: 'pointer',
-                                                                        transition: 'all 0.15s ease'
-                                                                    }}
-                                                                >
-                                                                    {v.name} (₹{v.price})
-                                                                </button>
-                                                            );
-                                                        })}
+                                                        {addons.map((a) => (
+                                                            <span
+                                                                key={a.id}
+                                                                style={{
+                                                                    padding: '3px 8px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '0.78rem',
+                                                                    fontWeight: '600',
+                                                                    border: '1px solid #FFEDD5',
+                                                                    backgroundColor: '#FFF7ED',
+                                                                    color: '#EA580C',
+                                                                }}
+                                                            >
+                                                                + {a.name} (₹{a.price})
+                                                            </span>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             )}

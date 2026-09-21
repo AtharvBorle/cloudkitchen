@@ -25,73 +25,6 @@ export interface MealMomentItem {
   hasWhiteBadge?: boolean;
 }
 
-const DEFAULT_MOMENTS: MealMomentItem[] = [
-  {
-    id: "moment-1",
-    badge: "Morning Favorites",
-    title: "Breakfast",
-    icon: breakfastIcon,
-    bgClass: styles.bgBreakfast,
-    kitchenId: "baker-delight",
-  },
-  {
-    id: "moment-2",
-    badge: "Midday Boost",
-    title: "Lunch",
-    icon: lunchIcon,
-    bgClass: styles.bgLunch,
-    kitchenId: "7-12-kitchen",
-  },
-  {
-    id: "moment-3",
-    badge: "Evening Comfort",
-    title: "Dinner",
-    icon: dinnerIcon,
-    bgClass: styles.bgDinner,
-    kitchenId: "chef-arjun",
-  },
-  {
-    id: "moment-4",
-    badge: "Anytime Nibbles",
-    title: "Snacks",
-    icon: snacksIcon,
-    bgClass: styles.bgSnacks,
-    kitchenId: "street-food-specials",
-  },
-  {
-    id: "moment-5",
-    badge: "Midnight Cravings",
-    title: "Late Night",
-    icon: lateNightIcon,
-    bgClass: styles.bgLateNight,
-    kitchenId: "pizza-palace",
-  },
-  {
-    id: "moment-6",
-    badge: "Chilled Refreshments",
-    title: "Drinks",
-    icon: drinksIcon,
-    bgClass: styles.bgDrinks,
-    kitchenId: "dessert-bar",
-  },
-  {
-    id: "moment-7",
-    badge: "Sweet Indulgences",
-    title: "Desserts",
-    icon: dessertsIcon,
-    bgClass: styles.bgDesserts,
-    kitchenId: "baker-delight",
-  },
-  {
-    id: "moment-8",
-    badge: "Macro Friendly",
-    title: "Super Healthy",
-    icon: healthyIcon,
-    bgClass: styles.bgHealthy,
-    kitchenId: "fresh-salads",
-  },
-];
-
 export interface WhatsOnYourMindProps {
   heading?: string;
   subheading?: string;
@@ -102,10 +35,14 @@ export interface WhatsOnYourMindProps {
 export const WhatsOnYourMind: React.FC<WhatsOnYourMindProps> = ({
   heading = "What's on Your Mind?",
   subheading = "Pick a meal moment to explore curated options.",
-  moments = DEFAULT_MOMENTS,
+  moments,
   onMomentClick,
 }) => {
   const router = useRouter();
+
+  if (!moments || moments.length === 0) {
+    return null;
+  }
 
   const handleCardClick = (moment: MealMomentItem) => {
     if (onMomentClick) {

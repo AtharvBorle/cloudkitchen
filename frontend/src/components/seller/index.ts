@@ -131,6 +131,8 @@ export type {
   AvailableRiderItem,
 } from "./seller-orders/responsive/ResponsiveAssignRider";
 
+export { default as AssignRiderDas } from "./seller-orders/assign_rider/AssignRiderDas";
+
 
 
 export { default as OrderDefault } from "./order-default/OrderDefault";

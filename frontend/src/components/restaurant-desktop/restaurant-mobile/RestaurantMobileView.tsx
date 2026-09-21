@@ -22,17 +22,6 @@ import styles from "./RestaurantMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { DietaryTag } from "@/components/common/DietaryTag";
 import heroPhoto from "../foodherobanner/FoodHeroPhoto.jpg";
-import img1 from "../popularfood/pizza-margherita-classic.jpg";
-import img2 from "../popularfood/pizza-bbq-paneer.jpg";
-import img3 from "../popularfood/pizza-gourmet-table.jpg";
-import img4 from "../popularfood/pizza-rustic-slices.jpg";
-import img5 from "../popularfood/pizza-slice-popart.jpg";
-import img6 from "../popularfood/pizza-spinach-ricotta.jpg";
-import lavaCakeImg from "../../explore-desktop/featured-collections/collection-molten-lava-cake.jpg";
-import pancakeImg from "../../explore-desktop/featured-collections/collection-fluffy-pancakes.jpg";
-import streetFoodImg from "../../explore-desktop/curated-dining-collections/dining-street-food.jpg";
-import comfortFoodImg from "../../explore-desktop/curated-dining-collections/dining-comfort-food.jpg";
-import saladImg from "../../explore-desktop/curated-dining-collections/dining-fresh-salads.jpg";
 import { KitchenData, FoodCardItem } from "../restaurant-data";
 import { useCart } from "@/context/CartContext";
 
@@ -57,7 +46,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   const { cartItems, decreaseQuantity, removeFromCart, cartTotal } = useCart();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string>("Pizza");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
   const [couponCopied, setCouponCopied] = useState<boolean>(false);
 
   const getItemQuantity = (itemId: string) => {
@@ -106,196 +95,32 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
     }
   };
 
-  const categories = ["Popular", "Pizza", "Sides", "Drinks", "Desserts"];
+  // Base items strictly from kitchenData
+  const baseItems: FoodCardItem[] = kitchenData.items || [];
 
-  // Default menu items across Popular, Pizza, Sides, Drinks, and Desserts
-  const defaultMenuItems: FoodCardItem[] = [
-    // 1. Pizza
-    {
-      id: "pizza-1",
-      title: "Margherita Pizza",
-      description: "Fresh mozzarella, classic tomato sauce, fresh basil, and extra virgin olive oil.",
-      rating: "4.8",
-      price: "₹289",
-      image: img1,
-      isVeg: true,
-      category: "Pizza",
-    },
-    {
-      id: "pizza-2",
-      title: "Pepperoni & Cheese Pizza",
-      description: "Thick cut pepperoni slices, mozzarella cheese, and rich marinara sauce with oregano.",
-      rating: "4.8",
-      price: "₹349",
-      image: img2,
-      isVeg: false,
-      category: "Pizza",
-    },
-    {
-      id: "pizza-3",
-      title: "Smoky BBQ Paneer Woodfire",
-      description: "Charred marinated paneer cubes, crisp red onions, bell peppers and smokey chipotle drizzle.",
-      rating: "4.8",
-      price: "₹329",
-      image: img4,
-      isVeg: true,
-      category: "Pizza",
-    },
-    {
-      id: "pizza-4",
-      title: "Rustic Farmhouse Gourmet Pizza",
-      description: "Wild mushrooms, baby spinach, roasted garlic, black olives and sun-dried tomatoes.",
-      rating: "4.7",
-      price: "₹369",
-      image: img5,
-      isVeg: true,
-      category: "Pizza",
-    },
-    {
-      id: "pizza-5",
-      title: "Spinach & Ricotta Artisan Pizza",
-      description: "Creamy ricotta florets, wilted baby spinach, garlic confit on a sourdough base.",
-      rating: "4.9",
-      price: "₹359",
-      image: img6,
-      isVeg: true,
-      category: "Pizza",
-    },
+  const dynamicCategories = React.useMemo(() => {
+    const rawCategories = Array.from(
+      new Set(baseItems.map((item) => item.category).filter(Boolean))
+    ) as string[];
+    if (rawCategories.length === 0) return [];
+    return ["All", ...rawCategories];
+  }, [baseItems]);
 
-    // 2. Sides
-    {
-      id: "side-1",
-      title: "Garlic Herb Cheesy Breadsticks",
-      description: "Fresh dough baked with parmesan crust and melted mozzarella center with garlic dip.",
-      rating: "4.8",
-      price: "₹159",
-      image: img3,
-      isVeg: true,
-      category: "Sides",
-    },
-    {
-      id: "side-2",
-      title: "Crispy Mozzarella Bites",
-      description: "Golden fried Italian mozzarella balls served with warm marinara dipping sauce.",
-      rating: "4.7",
-      price: "₹179",
-      image: streetFoodImg,
-      isVeg: true,
-      category: "Sides",
-    },
-    {
-      id: "side-3",
-      title: "Loaded Herb Potato Wedges",
-      description: "Crispy seasoned golden potato wedges with smoked paprika and sour cream garlic dip.",
-      rating: "4.6",
-      price: "₹139",
-      image: comfortFoodImg,
-      isVeg: true,
-      category: "Sides",
-    },
-
-    // 3. Drinks
-    {
-      id: "drink-1",
-      title: "Classic Cold Coffee",
-      description: "Freshly brewed espresso whipped with creamy chilled milk and Belgian cocoa dust.",
-      rating: "4.9",
-      price: "₹119",
-      image: comfortFoodImg,
-      isVeg: true,
-      category: "Drinks",
-    },
-    {
-      id: "drink-2",
-      title: "Fresh Mint Mojito Fizz",
-      description: "Crushed fresh mint leaves, lime wedges, cane sugar syrup and chilled sparkling soda.",
-      rating: "4.8",
-      price: "₹99",
-      image: saladImg,
-      isVeg: true,
-      category: "Drinks",
-    },
-    {
-      id: "drink-3",
-      title: "Iced Lemon & Berry Tea",
-      description: "Chilled black tea with fresh lemon slices, sweet berry infusion and crushed ice.",
-      rating: "4.7",
-      price: "₹89",
-      image: streetFoodImg,
-      isVeg: true,
-      category: "Drinks",
-    },
-
-    // 4. Desserts
-    {
-      id: "dessert-1",
-      title: "Belgian Molten Lava Cake",
-      description: "Warm chocolate sponge with a rich, oozing liquid dark chocolate center.",
-      rating: "4.9",
-      price: "₹179",
-      image: lavaCakeImg,
-      isVeg: true,
-      category: "Desserts",
-    },
-    {
-      id: "dessert-2",
-      title: "Classic Italian Tiramisu Jar",
-      description: "Espresso-soaked ladyfinger cookies layered with velvety mascarpone cheese.",
-      rating: "4.8",
-      price: "₹199",
-      image: pancakeImg,
-      isVeg: true,
-      category: "Desserts",
-    },
-    {
-      id: "dessert-3",
-      title: "Warm Fudgy Walnut Brownie",
-      description: "Decadent dark chocolate fudge brownie topped with hot Belgian chocolate sauce.",
-      rating: "4.8",
-      price: "₹149",
-      image: lavaCakeImg,
-      isVeg: true,
-      category: "Desserts",
-    },
-  ];
-
-  // Base items from kitchenData or default menu
-  const baseItems: FoodCardItem[] =
-    kitchenData.items && kitchenData.items.length > 0 && kitchenData.items[0]?.category !== "Thali"
-      ? kitchenData.items
-      : defaultMenuItems;
-
-  // Filter items by category (if "Popular", show top items from each category or all items) and isVegOnly
+  // Filter items by category and isVegOnly
   const itemsToDisplay = baseItems.filter((item) => {
     const matchesVeg = !isVegOnly || item.isVeg !== false;
     const matchesCategory =
-      activeCategory === "Popular" ||
+      activeCategory === "All" ||
       (item.category && item.category.toLowerCase() === activeCategory.toLowerCase());
     return matchesVeg && matchesCategory;
   });
 
-  // Fallback if category has no items after filtering
-  const finalDisplayItems = itemsToDisplay.length > 0
-    ? itemsToDisplay
-    : baseItems.filter((item) => !isVegOnly || item.isVeg !== false);
+  const finalDisplayItems = itemsToDisplay;
 
   const getSectionTitle = () => {
-    switch (activeCategory) {
-      case "Popular":
-        return "Popular Pizzas & Sides";
-      case "Pizza":
-        return "Pizzas";
-      case "Sides":
-        return "Sides & Appetizers";
-      case "Drinks":
-        return "Beverages & Drinks";
-      case "Desserts":
-        return "Desserts & Sweets";
-      default:
-        return activeCategory;
-    }
+    if (activeCategory === "All") return "All Menu Items";
+    return activeCategory;
   };
-
 
   const totalCartCount = cartItems.reduce((acc, ci) => acc + ci.quantity, 0);
   const totalCartPrice = cartTotal;
@@ -376,44 +201,56 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           <div className={styles.ratingBadge}>
             <Star size={13} fill="#F59E0B" color="#F59E0B" />
             <span className={styles.ratingScore}>{kitchenData.rating}</span>
-            <span className={styles.ratingReviews}>[240+]</span>
+            {kitchenData.reviewsCount && (
+              <span className={styles.ratingReviews}>{kitchenData.reviewsCount}</span>
+            )}
           </div>
         </div>
 
         {/* Location Subtitle */}
-        <p className={styles.locationText}>{kitchenData.location}</p>
+        {kitchenData.location && <p className={styles.locationText}>{kitchenData.location}</p>}
 
         {/* Delivery Time & Free Delivery Info */}
-        <div className={styles.deliveryRow}>
-          <div className={styles.deliveryItem}>
-            <Clock size={15} className={styles.clockIcon} />
-            <span>{kitchenData.deliveryTime || "20 min"}</span>
+        {(kitchenData.deliveryTime || kitchenData.deliveryFeeText) && (
+          <div className={styles.deliveryRow}>
+            {kitchenData.deliveryTime && (
+              <div className={styles.deliveryItem}>
+                <Clock size={15} className={styles.clockIcon} />
+                <span>{kitchenData.deliveryTime}</span>
+              </div>
+            )}
+            {kitchenData.deliveryFeeText && (
+              <div className={`${styles.deliveryItem} ${styles.freeDeliveryItem}`}>
+                <Bike size={16} />
+                <span>{kitchenData.deliveryFeeText}</span>
+              </div>
+            )}
           </div>
-          <div className={`${styles.deliveryItem} ${styles.freeDeliveryItem}`}>
-            <Bike size={16} />
-            <span>{kitchenData.deliveryFeeText || "Free Delivery"}</span>
-          </div>
-        </div>
+        )}
 
         {/* Coupon Offer Banner & Veg Switch */}
         <div className={styles.offerAndVegRow}>
-          <div
-            className={styles.couponPill}
-            onClick={() => {
-              if (typeof navigator !== "undefined" && navigator.clipboard) {
-                navigator.clipboard.writeText("CRUST30");
-              }
-              setCouponCopied(true);
-              setTimeout(() => setCouponCopied(false), 2500);
-            }}
-            title="Click to copy coupon code"
-            style={{ cursor: "pointer" }}
-          >
-            <Tag size={13} className={styles.couponIcon} />
-            <span>
-              {couponCopied ? "✓ Code CRUST30 Applied! (30% OFF)" : "30% OFF up to ₹150 • Code: CRUST30"}
-            </span>
-          </div>
+          {kitchenData.offerText ? (
+            <div
+              className={styles.couponPill}
+              onClick={() => {
+                if (typeof navigator !== "undefined" && navigator.clipboard && kitchenData.offerText) {
+                  navigator.clipboard.writeText(kitchenData.offerText);
+                }
+                setCouponCopied(true);
+                setTimeout(() => setCouponCopied(false), 2500);
+              }}
+              title="Click to copy coupon code"
+              style={{ cursor: "pointer" }}
+            >
+              <Tag size={13} className={styles.couponIcon} />
+              <span>
+                {couponCopied ? "✓ Offer Copied!" : kitchenData.offerText}
+              </span>
+            </div>
+          ) : (
+            <div />
+          )}
 
           <div
             className={styles.vegToggle}
@@ -429,106 +266,122 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         </div>
 
         {/* 3. Category Filter Chips (Horizontal Scroll) */}
-        <div className={styles.categoriesBar}>
-          {categories.map((cat) => {
-            const isActive = activeCategory === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                className={`${styles.catChip} ${isActive ? styles.catChipActive : ""}`}
-                onClick={() => setActiveCategory(cat)}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
+        {dynamicCategories.length > 1 && (
+          <div className={styles.categoriesBar}>
+            {dynamicCategories.map((cat) => {
+              const isActive = activeCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`${styles.catChip} ${isActive ? styles.catChipActive : ""}`}
+                  onClick={() => setActiveCategory(cat)}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* 5. Food Items List */}
         <div className={styles.foodSection}>
           <h2 className={styles.foodSectionTitle}>{getSectionTitle()}</h2>
 
-          <div className={styles.foodList}>
-            {finalDisplayItems.map((item) => {
-              const quantity = getItemQuantity(item.id);
-              const hasQuantity = quantity > 0;
+          {finalDisplayItems.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 16px", color: "#64748B", fontSize: "0.95rem" }}>
+              No items available in this category.
+            </div>
+          ) : (
+            <div className={styles.foodList}>
+              {finalDisplayItems.map((item) => {
+                const quantity = getItemQuantity(item.id);
+                const hasQuantity = quantity > 0;
 
-              return (
-                <div key={item.id} className={styles.foodCard}>
-                  {/* Left Food Image */}
-                  <div className={styles.foodImageWrapper}>
-                    <div style={{ position: "absolute", top: "4px", left: "4px", zIndex: 2 }}>
-                      <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+                return (
+                  <div key={item.id} className={styles.foodCard}>
+                    {/* Left Food Image */}
+                    <div className={styles.foodImageWrapper}>
+                      <div style={{ position: "absolute", top: "4px", left: "4px", zIndex: 2 }}>
+                        <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+                      </div>
+                      <Image
+                        src={item.image || "/images/places/place-pizza.png"}
+                        alt={item.title}
+                        fill
+                        sizes="96px"
+                        className={styles.foodThumbnail}
+                      />
                     </div>
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      sizes="96px"
-                      className={styles.foodThumbnail}
-                    />
-                  </div>
 
-                  {/* Right Content */}
-                  <div className={styles.foodInfo}>
-                    <h3 className={styles.foodTitle}>{item.title}</h3>
-                    <p className={styles.foodDesc}>{item.description}</p>
+                    {/* Right Content */}
+                    <div className={styles.foodInfo}>
+                      <h3 className={styles.foodTitle}>{item.title}</h3>
+                      <p className={styles.foodDesc}>{item.description}</p>
 
-                    {/* Bottom Action Row */}
-                    <div className={styles.foodBottomRow}>
-                      <span className={styles.foodPrice}>{item.price}</span>
-
-                      {!hasQuantity ? (
-                        <button
-                          type="button"
-                          className={styles.addBtn}
-                          onClick={() => handleAdd(item)}
-                        >
-                          <Plus size={13} strokeWidth={2.5} />
-                          <span>Add</span>
-                        </button>
-                      ) : (
-                        <div className={styles.quantityControlsRow}>
-                          {/* Stepper */}
-                          <div className={styles.stepperPill}>
-                            <button
-                              type="button"
-                              className={styles.stepperBtn}
-                              onClick={() => handleDecrement(item.id)}
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus size={12} strokeWidth={2.5} />
-                            </button>
-                            <span className={styles.stepperVal}>{quantity}</span>
-                            <button
-                              type="button"
-                              className={styles.stepperBtn}
-                              onClick={() => handleIncrement(item)}
-                              aria-label="Increase quantity"
-                            >
-                              <Plus size={12} strokeWidth={2.5} />
-                            </button>
-                          </div>
-
-                          {/* Remove Pill */}
-                          <button
-                            type="button"
-                            className={styles.trashBtn}
-                            onClick={() => handleRemove(item.id)}
-                            aria-label="Remove item"
-                          >
-                            <Trash2 size={12} color="#EF4444" />
-                            <span>Remove</span>
-                          </button>
+                      {item.addons && item.addons.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "2px 0 6px 0" }}>
+                          <span style={{ fontSize: "0.68rem", fontWeight: "700", color: "#EA580C", backgroundColor: "#FFF7ED", border: "1px solid #FFEDD5", padding: "1px 5px", borderRadius: "4px" }}>
+                            ✨ {item.addons.length} Add-on{item.addons.length > 1 ? "s" : ""} Available
+                          </span>
                         </div>
                       )}
+
+                      {/* Bottom Action Row */}
+                      <div className={styles.foodBottomRow}>
+                        <span className={styles.foodPrice}>{item.price}</span>
+
+                        {!hasQuantity ? (
+                          <button
+                            type="button"
+                            className={styles.addBtn}
+                            onClick={() => handleAdd(item)}
+                          >
+                            <Plus size={13} strokeWidth={2.5} />
+                            <span>Add</span>
+                          </button>
+                        ) : (
+                          <div className={styles.quantityControlsRow}>
+                            {/* Stepper */}
+                            <div className={styles.stepperPill}>
+                              <button
+                                type="button"
+                                className={styles.stepperBtn}
+                                onClick={() => handleDecrement(item.id)}
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus size={12} strokeWidth={2.5} />
+                              </button>
+                              <span className={styles.stepperVal}>{quantity}</span>
+                              <button
+                                type="button"
+                                className={styles.stepperBtn}
+                                onClick={() => handleIncrement(item)}
+                                aria-label="Increase quantity"
+                              >
+                                <Plus size={12} strokeWidth={2.5} />
+                              </button>
+                            </div>
+
+                            {/* Remove Pill */}
+                            <button
+                              type="button"
+                              className={styles.trashBtn}
+                              onClick={() => handleRemove(item.id)}
+                              aria-label="Remove item"
+                            >
+                              <Trash2 size={12} color="#EF4444" />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -538,9 +391,16 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           <div className={styles.cartIndicatorHandle} />
           <div className={styles.cartLeftSection}>
             <div className={styles.cartThumbnailsGroup}>
-              <Image src={img1} alt="Food item" width={32} height={32} className={styles.cartMiniThumb} />
-              <Image src={img2} alt="Food item" width={32} height={32} className={styles.cartMiniThumb} />
-              <Image src={img3} alt="Food item" width={32} height={32} className={styles.cartMiniThumb} />
+              {cartItems.slice(0, 3).map((ci) => (
+                <Image
+                  key={ci.id}
+                  src={ci.image || "/images/places/place-pizza.png"}
+                  alt={ci.name}
+                  width={32}
+                  height={32}
+                  className={styles.cartMiniThumb}
+                />
+              ))}
             </div>
             <div className={styles.cartTrolleyWrapper}>
               <ShoppingCart size={20} />

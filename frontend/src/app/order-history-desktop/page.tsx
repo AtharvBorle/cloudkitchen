@@ -5,8 +5,9 @@ import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
 import { OrderHistoryHeader } from "@/components/order-history-desktop/order-history-header";
 import { OrderFilters, OrderFilterTab } from "@/components/order-history-desktop/order-filters";
-import { OrderList, OrderItemData, SAMPLE_ORDERS } from "@/components/order-history-desktop/order-list";
+import { OrderList, OrderItemData } from "@/components/order-history-desktop/order-list";
 import { fetchApi } from "@/lib/fetch-api";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { Footer } from "@/components/explore-desktop/footer";
 
 import styles from "./OrderHistoryPage.module.css";
@@ -20,38 +21,35 @@ export default function OrderHistoryDesktopPage() {
   const [liveOrders, setLiveOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadOrders(initial = false) {
-      if (initial) setLoading(true);
-      try {
-        const res = await fetchApi("/api/user/orders");
-        if (res.ok) {
-          const data = await res.json();
-          const list = data.data || data || [];
-          if (Array.isArray(list) && isMounted) {
-            setLiveOrders(list);
-          }
+  const loadOrders = async (initial = false) => {
+    if (initial) setLoading(true);
+    try {
+      const res = await fetchApi("/api/user/orders");
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.data || data || [];
+        if (Array.isArray(list)) {
+          setLiveOrders(list);
         }
-      } catch (err) {
-        console.error("Failed to load live orders for history:", err);
-      } finally {
-        if (initial && isMounted) setLoading(false);
       }
+    } catch (err) {
+      console.error("Failed to load live orders for history:", err);
+    } finally {
+      if (initial) setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadOrders(true);
-
-    const interval = setInterval(() => {
-      loadOrders(false);
-    }, 4000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
   }, []);
+
+  // Real-time SSE stream replaces 4s auto-polling
+  useRealtimeStream({
+    url: "/api/user/orders/stream",
+    onOrder: () => {
+      loadOrders(false);
+    },
+  });
 
   const formattedOrders: (OrderItemData & { rawDate?: Date })[] = useMemo(() => {
     return liveOrders.map((o: any) => {

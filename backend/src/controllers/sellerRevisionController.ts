@@ -135,3 +135,53 @@ export const requestSellerRevision = async (req: Request) => {
 
     return updatedProfile;
 };
+
+export const getSellerRevisionDetails = async () => {
+    const session = await getAuthSession();
+
+    if (!session || !session.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const profile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id },
+        include: { user: { select: { name: true, email: true, phone: true } } }
+    });
+
+    if (!profile) {
+        throw new ApiError("Seller profile not found.", 404);
+    }
+
+    let parsedKitchen: string[] = [];
+    let parsedCuisine: string[] = [];
+    let parsedRoom: string[] = [];
+
+    try {
+        if (profile.kitchenImages) parsedKitchen = JSON.parse(profile.kitchenImages);
+    } catch {}
+    try {
+        if (profile.cuisineImages) parsedCuisine = JSON.parse(profile.cuisineImages);
+    } catch {}
+    try {
+        if (profile.roomImages) parsedRoom = JSON.parse(profile.roomImages);
+    } catch {}
+
+    return {
+        id: profile.id,
+        businessName: profile.businessName,
+        businessCategory: profile.businessCategory,
+        verificationStatus: profile.verificationStatus,
+        verificationNote: profile.verificationNote,
+        foodVerificationStatus: profile.foodVerificationStatus,
+        propertyVerificationStatus: profile.propertyVerificationStatus,
+        addressLocality: profile.addressLocality,
+        adhaarUrl: profile.adhaarUrl,
+        fssaiUrl: profile.fssaiUrl,
+        lightBillUrl: profile.lightBillUrl,
+        passbookUrl: profile.passbookUrl,
+        kitchenImages: parsedKitchen,
+        cuisineImages: parsedCuisine,
+        roomImages: parsedRoom,
+        user: profile.user,
+    };
+};

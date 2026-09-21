@@ -6,15 +6,17 @@ import ResponsiveSellerOrders, {
   ResponsiveOrderItem,
 } from "@/components/seller/seller-orders/responsive/ResponsiveSellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { playNewOrderChime } from "@/lib/audio-chime";
 
 export default function ResponsiveSellerOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadOrders = useCallback(async (isPolling = false) => {
+  const loadOrders = useCallback(async (isSilent = false) => {
     try {
-      if (!isPolling) setLoading(true);
+      if (!isSilent) setLoading(true);
       const res = await fetchApi("/api/seller/orders");
       if (res.ok) {
         const data = await res.json();
@@ -26,17 +28,43 @@ export default function ResponsiveSellerOrdersPage() {
     } catch (err) {
       console.error("Failed to load seller orders:", err);
     } finally {
-      if (!isPolling) setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadOrders(false);
-    const interval = setInterval(() => {
-      loadOrders(true);
-    }, 4000);
-    return () => clearInterval(interval);
   }, [loadOrders]);
+
+  // Real-time SSE stream replaces 4s auto-polling
+  useRealtimeStream({
+    url: "/api/seller/orders/stream",
+    onConnected: () => {
+      loadOrders(true);
+    },
+    onOrder: (payload) => {
+      if (payload.event === "ORDER_CREATED") {
+        playNewOrderChime();
+        if (payload.order && payload.order.id) {
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === payload.order.id)) return prev;
+            return [payload.order, ...prev];
+          });
+        }
+      } else if (payload.event === "ORDER_UPDATED" && payload.orderId) {
+        if (payload.status) {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === payload.orderId ? { ...o, status: payload.status } : o))
+          );
+        }
+      } else if (payload.event === "ORDER_CANCELLED" && payload.orderId) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === payload.orderId ? { ...o, status: "CANCELLED" } : o))
+        );
+      }
+      loadOrders(true);
+    },
+  });
 
   const handleAcceptOrder = async (orderId: string) => {
     try {

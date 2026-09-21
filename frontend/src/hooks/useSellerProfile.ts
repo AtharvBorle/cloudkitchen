@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { fetchApi } from "@/lib/fetch-api";
 
 export interface SellerProfileData {
+  id?: string;
   ownerName: string;
   businessName: string;
   userFullName: string;
@@ -240,6 +241,7 @@ export function useSellerProfile() {
           const rawOnline = typeof profile?.isOnline === "boolean" ? profile.isOnline : true;
 
           cachedProfile = {
+            id: profile?.id || user?.sellerProfile?.id || user?.id || "",
             ownerName: rawOwnerName,
             businessName: rawBusinessName,
             userFullName: rawFullName,
@@ -259,6 +261,7 @@ export function useSellerProfile() {
 
           if (isMounted) {
             setProfileState({
+              id: profile?.id || user?.sellerProfile?.id || user?.id || "",
               ownerName: rawOwnerName,
               businessName: rawBusinessName,
               userFullName: rawFullName,

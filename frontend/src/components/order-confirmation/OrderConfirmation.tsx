@@ -26,6 +26,7 @@ import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./OrderConfirmation.module.css";
 
 import { fetchApi } from "@/lib/fetch-api";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 
 interface ConfirmedOrderItem {
   id: string;
@@ -34,6 +35,9 @@ interface ConfirmedOrderItem {
   qty: number;
   image: string;
   variant?: string;
+  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
+  basePrice?: number;
+  addonsTotal?: number;
   itemType?: "VEG" | "NON_VEG" | string;
 }
 
@@ -58,30 +62,45 @@ interface ConfirmedOrderData {
   grandTotal: number;
   sellerName?: string;
   deliveryPerson?: {
+    id?: string;
     name?: string;
     phone?: string;
+    vehicleType?: string;
+    vehicleNumber?: string;
   } | null;
 }
 
 const DEFAULT_DEMO_ORDER: ConfirmedOrderData = {
   orderId: "NCB-" + Math.floor(100000 + Math.random() * 900000),
   orderTime: "Just now",
-  status: "PREPARING",
+  status: "PENDING",
   estimatedDelivery: "25-35 mins",
   deliveryAddress: {
-    fullName: "Customer",
-    phoneNumber: "",
-    streetAddress: "Delivery Address",
-    city: "",
-    pincode: "",
+    fullName: "Aman Sharma",
+    phoneNumber: "+91 98765 43210",
+    streetAddress: "Flat 402, Sunshine Heights, Baner Road",
+    city: "Pune",
+    pincode: "411045",
   },
-  paymentMethod: "Online / COD",
-  items: [],
-  subtotal: 0,
+  paymentMethod: "Online Payment (Paid Online)",
+  items: [
+    {
+      id: "1",
+      name: "Hyderabadi Dum Biryani",
+      price: 260,
+      qty: 1,
+      image: "/images/places/place-biryani.png",
+      variant: "Family Pack (Serves 2)",
+      itemType: "NON_VEG",
+    },
+  ],
+  subtotal: 260,
   discount: 0,
   deliveryFee: 0,
   taxes: 0,
-  grandTotal: 0,
+  grandTotal: 260,
+  sellerName: "Chef Anjali's Gourmet Kitchen",
+  deliveryPerson: null,
 };
 
 // Colors for the celebratory confetti
@@ -121,6 +140,9 @@ export default function OrderConfirmation() {
             id: item.id || String(Math.random()),
             name: item.name || "Food Item",
             price: item.price || 0,
+            basePrice: item.basePrice,
+            addonsTotal: item.addonsTotal,
+            selectedAddons: item.selectedAddons,
             qty: item.quantity || item.qty || 1,
             image: item.image || "/images/places/place-pizza.png",
             variant: item.variant,
@@ -135,6 +157,9 @@ export default function OrderConfirmation() {
         id: item.id || String(Math.random()),
         name: item.name || "Food Item",
         price: item.price || 0,
+        basePrice: item.basePrice,
+        addonsTotal: item.addonsTotal,
+        selectedAddons: item.selectedAddons,
         qty: item.quantity || item.qty || 1,
         image: item.image || "/images/places/place-pizza.png",
         variant: item.variant,
@@ -146,8 +171,12 @@ export default function OrderConfirmation() {
       ? new Date(rawOrder.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
       : "Just now";
 
-    let rawAddress = rawOrder.deliveryAddress || "";
-    let street = rawAddress.split(" | Loc:")[0] || "Default Address";
+    let computedItemsSubtotal = 0;
+    if (parsedItems.length > 0) {
+      computedItemsSubtotal = parsedItems.reduce((acc, it) => acc + (it.price * it.qty), 0);
+    }
+    const finalTotal = Number(rawOrder.totalAmount) || computedItemsSubtotal;
+    const computedDiscount = Math.max(0, computedItemsSubtotal - finalTotal);
 
     setOrderData({
       orderId: rawOrder.id,
@@ -157,18 +186,18 @@ export default function OrderConfirmation() {
       deliveryAddress: {
         fullName: rawOrder.user?.name || "Customer",
         phoneNumber: rawOrder.customerPhone || rawOrder.user?.phone || "",
-        streetAddress: street,
+        streetAddress: rawOrder.deliveryAddress || rawOrder.address || "Your Delivery Address",
         city: "",
         pincode: "",
       },
-      paymentMethod: `${rawOrder.paymentMethod || "COD"} ${rawOrder.isPaid ? "(Paid Online)" : "(Pay on Delivery)"}`,
+      paymentMethod: `${rawOrder.paymentMethod === "ONLINE" ? "Online Payment" : (rawOrder.paymentMethod || "COD")} ${rawOrder.isPaid ? "(Paid Online)" : "(Pay on Delivery)"}`,
       items: parsedItems,
-      subtotal: rawOrder.totalAmount || 0,
-      discount: 0,
+      subtotal: computedItemsSubtotal || finalTotal,
+      discount: computedDiscount,
       deliveryFee: 0,
       taxes: 0,
-      grandTotal: rawOrder.totalAmount || 0,
-      sellerName: rawOrder.seller?.businessName,
+      grandTotal: finalTotal,
+      sellerName: rawOrder.seller?.restaurantName || rawOrder.seller?.businessName,
       deliveryPerson: rawOrder.deliveryPerson,
     });
   };
@@ -213,11 +242,6 @@ export default function OrderConfirmation() {
 
     fetchLiveOrder();
 
-    // 4s polling for real-time live tracking
-    const interval = setInterval(() => {
-      fetchLiveOrder();
-    }, 4000);
-
     // Auto fade confetti after 6 seconds
     const timer = setTimeout(() => {
       if (isMounted) setShowConfetti(false);
@@ -225,10 +249,30 @@ export default function OrderConfirmation() {
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
       clearTimeout(timer);
     };
   }, [queryOrderId]);
+
+  // Real-time SSE stream replaces 4s auto-polling
+  useRealtimeStream({
+    url: "/api/user/orders/stream",
+    onOrder: (payload) => {
+      const orderIdToFetch = queryOrderId || (typeof window !== "undefined" ? (() => {
+        try {
+          const s = sessionStorage.getItem("latestConfirmedOrder");
+          return s ? JSON.parse(s)?.orderId : null;
+        } catch { return null; }
+      })() : null);
+
+      if (!orderIdToFetch) return;
+      if (!payload.orderId || payload.orderId === orderIdToFetch || payload.orderId === orderData.orderId.replace("#NCR-", "")) {
+        fetchApi(`/api/user/orders/${orderIdToFetch}`)
+          .then((res) => res.ok && res.json())
+          .then((data) => data && parseAndSetOrder(data))
+          .catch(() => {});
+      }
+    },
+  });
 
   const handleCopyOrderId = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -248,38 +292,46 @@ export default function OrderConfirmation() {
   const timelineSteps = [
     {
       id: 1,
-      title: "Order Placed & Confirmed",
+      title: "Order Placed",
       time: orderData.orderTime || "Just now",
+      desc: "Order received and submitted to the seller.",
+      icon: CheckCircle2,
+      status: "done",
+    },
+    {
+      id: 2,
+      title: "Store Confirmation",
+      time: isPending ? "Waiting for Store ⏳" : (isCancelled ? "Cancelled" : "Confirmed ✅"),
       desc: isPending
-        ? `Order received and awaiting confirmation from ${orderData.sellerName || "the kitchen"}.`
-        : `Order verified and accepted by ${orderData.sellerName || "the kitchen"}.`,
+        ? `Awaiting confirmation from ${orderData.sellerName || "the kitchen"}.`
+        : isCancelled
+        ? "Order was not confirmed or cancelled."
+        : `Accepted & confirmed by ${orderData.sellerName || "the kitchen"}.`,
       icon: CheckCircle2,
       status: isCancelled ? "pending" : (isPending ? "active" : "done"),
     },
     {
-      id: 2,
+      id: 3,
       title: "Kitchen Preparation",
       time: isPreparing ? "In Progress 🍳" : (isOutForDelivery || isDelivered ? "Completed" : "Waiting"),
       desc: isPreparing
         ? "Fresh ingredients are currently being cooked with high hygiene standards."
-        : (isOutForDelivery || isDelivered ? "Food preparation was freshly completed." : "Kitchen will begin cooking shortly."),
+        : (isOutForDelivery || isDelivered ? "Food preparation was freshly completed." : "Kitchen will begin cooking once confirmed."),
       icon: ChefHat,
       status: isCancelled ? "pending" : (isPreparing ? "active" : isOutForDelivery || isDelivered ? "done" : "pending"),
     },
     {
-      id: 3,
+      id: 4,
       title: orderData.deliveryPerson?.name ? `Rider ${orderData.deliveryPerson.name}` : "Delivery Partner Assignment",
-      time: isOutForDelivery ? "On The Way 🛵" : (isDelivered ? "Delivered" : "Upcoming"),
-      desc: isOutForDelivery
-        ? (orderData.deliveryPerson?.name
-            ? `${orderData.deliveryPerson.name} (${orderData.deliveryPerson.phone || 'Partner'}) is heading to your delivery location.`
-            : "A delivery partner has picked up your package and is on the way.")
-        : (isDelivered ? "Order successfully arrived at destination." : "A nearby delivery partner will be dispatched once packed."),
+      time: isOutForDelivery ? "On The Way 🛵" : (isDelivered ? "Delivered" : (orderData.deliveryPerson ? "Assigned" : "Assigning shortly")),
+      desc: orderData.deliveryPerson
+        ? `${orderData.deliveryPerson.name}${orderData.deliveryPerson.vehicleType ? ` (${orderData.deliveryPerson.vehicleType}${orderData.deliveryPerson.vehicleNumber ? ` - ${orderData.deliveryPerson.vehicleNumber}` : ""})` : ""} is assigned for delivery.`
+        : "A delivery partner will be assigned shortly once food preparation starts.",
       icon: Bike,
-      status: isCancelled ? "pending" : (isOutForDelivery ? "active" : isDelivered ? "done" : "pending"),
+      status: isCancelled ? "pending" : (isOutForDelivery ? "active" : isDelivered ? "done" : (orderData.deliveryPerson ? "done" : "pending")),
     },
     {
-      id: 4,
+      id: 5,
       title: "Delivered to Doorstep",
       time: isDelivered ? "Delivered 🎉" : `Est. ${orderData.estimatedDelivery}`,
       desc: isDelivered
@@ -334,7 +386,13 @@ export default function OrderConfirmation() {
 
           <div className={styles.stepPillActive}>
             <Sparkles size={15} color="#EA580C" />
-            <span>3. Order Confirmed</span>
+            <span>
+              {isCancelled
+                ? "3. Order Cancelled"
+                : isPending
+                ? "3. Waiting for Confirmation"
+                : "3. Order Confirmed"}
+            </span>
           </div>
         </section>
 
@@ -345,7 +403,7 @@ export default function OrderConfirmation() {
           {/* Animated Success Checkmark Ring */}
           <div className={styles.successIconWrapper}>
             <div className={styles.pulsingRing} />
-            <CheckCircle2 size={54} strokeWidth={2.4} color={isCancelled ? "#EF4444" : "#22C55E"} />
+            <CheckCircle2 size={54} strokeWidth={2.4} color={isCancelled ? "#EF4444" : isPending ? "#F59E0B" : "#22C55E"} />
           </div>
 
           <h1 className={styles.heroTitle}>
@@ -356,7 +414,9 @@ export default function OrderConfirmation() {
               : isOutForDelivery
               ? "Your Food is on the Way!"
               : isPreparing
-              ? "Kitchen is Cooking Your Food"
+              ? "Order Confirmed & Kitchen Preparing"
+              : isPending
+              ? "Waiting for Confirmation by Seller"
               : "Woohoo! Order Confirmed"}
           </h1>
           <p className={styles.heroSubtitle}>
@@ -365,9 +425,13 @@ export default function OrderConfirmation() {
               : isDelivered
               ? "Your meal has been successfully delivered to your doorstep. Bon Appétit!"
               : isOutForDelivery
-              ? "Our delivery valet has picked up your order and is rushing towards your address!"
+              ? orderData.deliveryPerson?.name
+                ? `${orderData.deliveryPerson.name} has picked up your order and is rushing towards your address!`
+                : "Our delivery valet has picked up your order and is rushing towards your address!"
               : isPreparing
-              ? "The chefs are freshly preparing your delicious items. Tracking live!"
+              ? `The chefs at ${orderData.sellerName || "the kitchen"} have accepted your order and are cooking freshly!`
+              : isPending
+              ? `Your order has been placed. Waiting for ${orderData.sellerName || "the kitchen"} to confirm and start cooking.`
               : "Your order has been placed and transmitted to the kitchen. Sit back and relax!"}
           </p>
 
@@ -521,8 +585,30 @@ export default function OrderConfirmation() {
                           )}
                           <h4 className={styles.itemName}>{item.name}</h4>
                         </div>
+                        {item.selectedAddons && item.selectedAddons.length > 0 ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "2px 0" }}>
+                            {item.selectedAddons.map((a, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  fontSize: "0.72rem",
+                                  color: "#C2410C",
+                                  backgroundColor: "#FFF7ED",
+                                  border: "1px solid #FFEDD5",
+                                  padding: "1px 6px",
+                                  borderRadius: "4px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                + {a.name} (₹{a.price})
+                              </span>
+                            ))}
+                          </div>
+                        ) : item.variant ? (
+                          <span style={{ fontSize: "0.75rem", color: "#64748B" }}>• {item.variant}</span>
+                        ) : null}
                         <span className={styles.itemQtyText}>
-                          Qty: {item.qty} {item.variant ? `• ${item.variant}` : ""}
+                          Qty: {item.qty}
                         </span>
                       </div>
                     </div>
@@ -549,16 +635,6 @@ export default function OrderConfirmation() {
                   </div>
                 )}
 
-                <div className={styles.pricingRow}>
-                  <span>Delivery Fee</span>
-                  <span>₹{orderData.deliveryFee.toLocaleString("en-IN")}</span>
-                </div>
-
-                <div className={styles.pricingRow}>
-                  <span>Taxes &amp; Restaurant Charges</span>
-                  <span>₹{orderData.taxes.toLocaleString("en-IN")}</span>
-                </div>
-
                 <div className={styles.pricingTotalRow}>
                   <div>
                     <span>Total Paid</span>
@@ -582,10 +658,67 @@ export default function OrderConfirmation() {
                       {orderData.deliveryAddress.fullName} • {orderData.deliveryAddress.phoneNumber}
                     </p>
                     <p className={styles.infoText}>
-                      {orderData.deliveryAddress.streetAddress}, {orderData.deliveryAddress.city} - {orderData.deliveryAddress.pincode}
+                      {orderData.deliveryAddress.streetAddress}{orderData.deliveryAddress.city ? `, ${orderData.deliveryAddress.city}` : ""}{orderData.deliveryAddress.pincode ? ` - ${orderData.deliveryAddress.pincode}` : ""}
                     </p>
                   </div>
                 </div>
+
+                {/* Delivery Partner Status Box */}
+                {orderData.deliveryPerson ? (
+                  <div className={styles.infoBox} style={{ background: "#f0fdf4", borderColor: "#bbf7d0" }}>
+                    <div className={styles.infoIconBox} style={{ background: "#dcfce7", color: "#16a34a" }}>
+                      <Bike size={18} />
+                    </div>
+                    <div className={styles.infoContent} style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h4 className={styles.infoTitle} style={{ color: "#15803d" }}>Delivery Partner Assigned</h4>
+                        {orderData.deliveryPerson.phone && (
+                          <a
+                            href={`tel:${orderData.deliveryPerson.phone}`}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              background: "#ffffff",
+                              color: "#16a34a",
+                              padding: "4px 10px",
+                              borderRadius: "8px",
+                              fontSize: "0.8rem",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                              border: "1px solid #bbf7d0",
+                            }}
+                          >
+                            <Phone size={12} />
+                            <span>Call</span>
+                          </a>
+                        )}
+                      </div>
+                      <p className={styles.infoText} style={{ fontWeight: 700, color: "#0f172a" }}>
+                        {orderData.deliveryPerson.name}
+                      </p>
+                      <p className={styles.infoText}>
+                        {orderData.deliveryPerson.vehicleType || "Delivery Vehicle"}
+                        {orderData.deliveryPerson.vehicleNumber ? ` (${orderData.deliveryPerson.vehicleNumber})` : ""}
+                        {orderData.deliveryPerson.phone ? ` • ${orderData.deliveryPerson.phone}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.infoBox} style={{ background: "#fffbeb", borderColor: "#fef3c7" }}>
+                    <div className={styles.infoIconBox} style={{ background: "#fef3c7", color: "#d97706" }}>
+                      <Clock size={18} />
+                    </div>
+                    <div className={styles.infoContent}>
+                      <h4 className={styles.infoTitle} style={{ color: "#92400e" }}>
+                        Assigning Delivery Partner Shortly
+                      </h4>
+                      <p className={styles.infoText} style={{ color: "#b45309" }}>
+                        The kitchen is assigning a delivery partner for your order. Live contact and vehicle details will appear here once assigned.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           </div>

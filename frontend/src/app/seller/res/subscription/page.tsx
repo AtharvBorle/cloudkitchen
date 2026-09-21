@@ -9,10 +9,11 @@ export default function ResponsiveSellerSubscriptionPage() {
   const seller = useSellerProfile();
   const [plans, setPlans] = useState<ResponsiveSubscriptionPlan[]>([]);
 
-  const mapPlans = (stored: any[]) => {
+  const mapPlans = (stored: any[]): ResponsiveSubscriptionPlan[] => {
     return stored.map((p) => {
       const tierLower = (p.tier || "").toLowerCase();
-      const tierVariant = tierLower === "gold" ? "purple" : tierLower === "silver" ? "blue" : "orange";
+      const tierVariant: "blue" | "indigo" | "orange" | "purple" = tierLower === "gold" ? "purple" : tierLower === "silver" ? "blue" : "orange";
+      const status: "Draft" | "Paused" | "Active" = p.status === "Live" ? "Active" : p.status === "Paused" ? "Paused" : "Draft";
       return {
         id: p.id,
         title: p.name,
@@ -20,7 +21,7 @@ export default function ResponsiveSellerSubscriptionPage() {
         tierVariant,
         price: p.weeklyPrice || p.monthlyPrice,
         subscribersCount: p.subscribersCount || 0,
-        status: p.status === "Live" ? "Active" : p.status === "Paused" ? "Paused" : "Draft",
+        status,
         createdAt: p.deployedDate,
         billingCycle: p.duration?.toLowerCase().includes("month") ? "Monthly" : "Weekly",
         mealsPerDay: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.length : 1,

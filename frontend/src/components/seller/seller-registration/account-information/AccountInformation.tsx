@@ -57,7 +57,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
   const phoneLength = phoneDigits.length;
   const isPhoneComplete = phoneLength === 10;
   const isPhoneIncomplete = phoneLength > 0 && phoneLength < 10;
-  const isPhoneError = touched.phone && (!isPhoneComplete || phoneLength === 0);
+  const isPhoneError = Boolean(touched.phone && phoneLength !== 10);
 
   const isPasswordValid = formData.password.length >= 8;
   const isPasswordError = touched.password && !isPasswordValid;

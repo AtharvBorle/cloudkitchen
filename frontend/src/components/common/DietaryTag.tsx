@@ -143,9 +143,9 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            backgroundColor: "#FEFCE8",
-            color: "#CA8A04",
-            border: "1.2px solid #FDE047",
+            backgroundColor: "#F0FDF4",
+            color: "#16A34A",
+            border: "1.2px solid #86EFAC",
             borderRadius: "6px",
             padding: padding,
             fontSize: fontSize,

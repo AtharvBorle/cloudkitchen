@@ -305,10 +305,6 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                                 <span style={{ fontWeight: '600' }}>-₹{discountAmount.toFixed(2)}</span>
                             </div>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#475569' }}>
-                            <span>Delivery Fee & Taxes:</span>
-                            <span style={{ fontWeight: '600' }}>₹0.00</span>
-                        </div>
                         <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: '800', color: '#1E293B' }}>
                             <span>Total Paid:</span>
                             <span style={{ color: 'var(--coral, #F16F68)' }}>₹{order.totalAmount.toFixed(2)}</span>

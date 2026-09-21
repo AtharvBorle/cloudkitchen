@@ -140,13 +140,23 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
           <section className={styles.ridersSection}>
             <div className={styles.sectionHeaderRow}>
               <h2 className={styles.sectionLabel}>RIDERS</h2>
-              <button
-                type="button"
-                className={styles.sectionActionBtn}
-                onClick={() => router.push("/seller/delivery/riders")}
-              >
-                View All Riders
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                  type="button"
+                  className={styles.sectionActionBtn}
+                  onClick={() => router.push("/seller/delivery/add-agent")}
+                  style={{ color: "#F97316", fontWeight: 700 }}
+                >
+                  + Add Delivery Boy
+                </button>
+                <button
+                  type="button"
+                  className={styles.sectionActionBtn}
+                  onClick={() => router.push("/seller/delivery/riders")}
+                >
+                  View All
+                </button>
+              </div>
             </div>
 
             {riders.length > 0 ? (
@@ -188,6 +198,23 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
             ) : (
               <div className={styles.emptyState}>
                 <p className={styles.emptyText}>No active riders found.</p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/seller/delivery/add-agent")}
+                  style={{
+                    marginTop: "10px",
+                    backgroundColor: "#F97316",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "8px 16px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add Delivery Boy
+                </button>
               </div>
             )}
           </section>

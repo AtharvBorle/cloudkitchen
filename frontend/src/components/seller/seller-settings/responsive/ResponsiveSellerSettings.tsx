@@ -343,8 +343,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       if (onSave) {
         onSave(formData);
       }
-      setToastMessage("Settings updated successfully!");
-      setTimeout(() => setToastMessage(null), 3000);
+      setToastData({ title: "Settings updated successfully!", status: "ON" });
     } catch (err) {
       console.error("Error saving settings:", err);
     } finally {
@@ -359,7 +358,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     setTimeout(() => {
       setIsDeletingAccount(false);
       setIsDeleteModalOpen(false);
-      setToastMessage("Account deleted successfully. Redirecting...");
+      setToastData({ title: "Account deleted successfully. Redirecting...", status: "OFF" });
       setTimeout(() => {
         window.location.href = "/seller/login";
       }, 1500);

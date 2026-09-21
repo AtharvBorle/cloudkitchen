@@ -135,7 +135,7 @@ export const createUserMealSubscription = async (req: Request) => {
             startDate,
             endDate,
             deliveryAddress: deliveryAddress || "",
-            contactPhone: contactPhone || session.user.phone || "",
+            contactPhone: contactPhone || (session.user as any).phone || "",
         },
         include: {
             plan: true,

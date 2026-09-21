@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { playNewOrderChime } from "@/lib/audio-chime";
 import { performLogout } from "@/lib/logout";
 import styles from "./SellerDashboard.module.css";
 
@@ -150,9 +152,67 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     }
 
     loadDashboard();
-    const interval = setInterval(loadDashboard, 4000);
-    return () => clearInterval(interval);
   }, [initialOrders]);
+
+  // Real-time SSE stream subscription (replaces 4s polling)
+  useRealtimeStream({
+    url: "/api/seller/orders/stream",
+    onConnected: () => {
+      fetchApi("/api/seller/dashboard/overview")
+        .then((r) => r.ok && r.json())
+        .then((d) => d && setOverview(d.data || d))
+        .catch(() => {});
+    },
+    onOrder: (payload) => {
+      if (payload.event === "ORDER_CREATED") {
+        playNewOrderChime();
+      }
+      // Instant reload of metrics & recent orders upon new order or status change
+      fetchApi("/api/seller/dashboard/overview")
+        .then((r) => r.ok && r.json())
+        .then((d) => d && setOverview(d.data || d))
+        .catch(() => {});
+
+      fetchApi("/api/seller/orders")
+        .then((r) => r.ok && r.json())
+        .then((res) => {
+          const list = res.data?.orders || res.orders || res.data || [];
+          if (Array.isArray(list)) {
+            const mapped: OrderItem[] = list.slice(0, 5).map((o: any) => {
+              let itemsSummary = "";
+              try {
+                const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+                if (Array.isArray(parsed)) {
+                  itemsSummary = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+                }
+              } catch (e) {
+                itemsSummary = "Kitchen Items";
+              }
+
+              let statusVal: OrderItem["status"] = "Pending";
+              const s = (o.status || "").toUpperCase();
+              if (s === "PREPARING") statusVal = "Preparing";
+              else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out for Delivery";
+              else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Completed";
+              else if (s === "CANCELLED") statusVal = "Cancelled";
+              else statusVal = "Pending";
+
+              return {
+                id: o.id,
+                orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+                customer: o.user?.name || "Customer",
+                roomNo: o.room?.title || o.deliveryAddress || "Room 101",
+                items: itemsSummary || "1x Food Item",
+                total: `₹${o.totalAmount || 0}`,
+                status: statusVal,
+              };
+            });
+            setOrders(mapped);
+          }
+        })
+        .catch(() => {});
+    },
+  });
 
   const getStatusBadgeClass = (status: OrderItem["status"]) => {
     switch (status) {

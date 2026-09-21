@@ -16,42 +16,6 @@ export interface OrderItemData {
   hasViewDetails?: boolean;
 }
 
-export const SAMPLE_ORDERS: OrderItemData[] = [
-  {
-    id: "1",
-    restaurantName: "Spice Kitchen",
-    orderNumber: "Order MCS-20241",
-    orderDate: "Aug 28, 2024",
-    status: "DELIVERED",
-    itemsOrdered: "2x Butter Chicken, 1x Naan, 1x Dal Makhani",
-    totalAmount: 580,
-    deliveryAddress: "Delivered to Flat 402, Sector 56",
-    hasViewDetails: true,
-  },
-  {
-    id: "2",
-    restaurantName: "Biryani House",
-    orderNumber: "Order MCS-20238",
-    orderDate: "Aug 25, 2024",
-    status: "DELIVERED",
-    itemsOrdered: "1x Hyderabadi Biryani, 1x Raita",
-    totalAmount: 320,
-    deliveryAddress: "Delivered to Flat 402, Sector 56",
-    hasViewDetails: true,
-  },
-  {
-    id: "3",
-    restaurantName: "Fresh Bakes",
-    orderNumber: "Order MCS-20235",
-    orderDate: "Aug 22, 2024",
-    status: "CANCELLED",
-    itemsOrdered: "3x Croissant, 2x Coffee",
-    totalAmount: 450,
-    deliveryAddress: "Delivered to Flat 402, Sector 56",
-    hasViewDetails: false,
-  },
-];
-
 export interface OrderListProps {
   orders?: OrderItemData[];
   onViewDetails?: (orderId: string) => void;

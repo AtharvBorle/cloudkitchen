@@ -58,8 +58,8 @@ export default function ResponsiveDeliveryPage() {
       return {
         id: dp.id,
         name: dp.name,
-        initials: initials || "RD",
-        phone: dp.phone || "+91 98765 00000",
+        initials: initials || "",
+        phone: dp.phone || "",
         outstandingAmount: `₹${(dp.outstandingBalance || 0).toLocaleString("en-IN")}`,
       };
     });

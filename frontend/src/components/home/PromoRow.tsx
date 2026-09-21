@@ -16,61 +16,20 @@ export interface PromoCardData {
   imageSrc: string;
 }
 
-const DEFAULT_PROMOS: PromoCardData[] = [
-  {
-    id: "promo-1",
-    title: "Save 30% OFF First 2 Orders",
-    code: "FOOD30",
-    description: "Kickstart your meal plan with premium ingredients & fast delivery. Use code FOOD30 at checkout.",
-    buttonText: "Order Now",
-    buttonLink: "/explore-desktop",
-    badgeText: "Hurry - ends soon",
-    imageSrc: "/images/promo-scooter.png",
-  },
-  {
-    id: "promo-2",
-    title: "Flat 25% OFF on Daily Tiffin",
-    code: "TIFFIN25",
-    description: "Enjoy authentic home-style food cooked fresh every day. Use code TIFFIN25 to save.",
-    buttonText: "Order Now",
-    buttonLink: "/explore-desktop?category=Mess/Tiffin",
-    badgeText: "Popular Choice",
-    imageSrc: "/images/promo-scooter.png",
-  },
-  {
-    id: "promo-3",
-    title: "Get ₹100 Cashback on Biryani",
-    code: "BIRYANI100",
-    description: "Savor the rich aromas of Hyderabadi & Dum Biryani from top local cloud kitchens.",
-    buttonText: "Order Now",
-    buttonLink: "/explore-desktop?category=Biryani",
-    badgeText: "Chef's Special",
-    imageSrc: "/images/promo-scooter.png",
-  },
-  {
-    id: "promo-4",
-    title: "Save 20% on Healthy Salads & Bowls",
-    code: "HEALTH20",
-    description: "Nutritious and delicious meal bowls crafted with farm-fresh organic veggies.",
-    buttonText: "Explore",
-    buttonLink: "/explore-desktop",
-    badgeText: "Healthy Eats",
-    imageSrc: "/images/promo-scooter.png",
-  },
-];
-
 interface PromoRowProps {
   promos?: PromoCardData[];
 }
 
-export default function PromoRow({ promos = DEFAULT_PROMOS }: PromoRowProps) {
+export default function PromoRow({ promos = [] }: PromoRowProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
-  const displayPromos = promos && promos.length > 0 ? promos : DEFAULT_PROMOS;
+  const displayPromos = promos || [];
   const totalSlides = displayPromos.length;
+
+  if (totalSlides === 0) return null;
 
   const nextSlide = () => {
     setActiveIdx((prev) => (prev + 1) % totalSlides);

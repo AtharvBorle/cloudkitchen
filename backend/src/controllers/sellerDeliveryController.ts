@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { emitOrderUpdated } from "@/lib/realtime-events";
 import bcrypt from "bcryptjs";
 
 export const getSellerDeliveryPersons = async () => {
@@ -29,6 +30,8 @@ export const getSellerDeliveryPersons = async () => {
         name: dp.name,
         phone: dp.phone,
         email: dp.user?.email || "",
+        vehicleType: dp.vehicleType || "",
+        vehicleNumber: dp.vehicleNumber || "",
         isActive: dp.isActive,
         outstandingBalance: dp.outstandingBalance,
         createdAt: dp.createdAt,
@@ -54,7 +57,7 @@ export const createSellerDeliveryPerson = async (req: Request) => {
 
     const body = await req.json();
     console.log("Creating delivery person with payload:", body);
-    const { name, phone, email, password, city, pincode } = body;
+    const { name, phone, email, password, city, pincode, vehicleType, vehicleNumber } = body;
 
     if (!name || !phone || !email || !password) {
         console.error("Missing required fields for delivery person");
@@ -107,6 +110,8 @@ export const createSellerDeliveryPerson = async (req: Request) => {
                     name,
                     phone,
                     sellerId: sellerProfile.id,
+                    vehicleType: vehicleType || "Motorcycle / Scooter",
+                    vehicleNumber: vehicleNumber || null,
                     isActive: true
                 }
             });
@@ -174,6 +179,8 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
             name: updated.name,
             phone: updated.phone,
             email: updated.user?.email || "",
+            vehicleType: updated.vehicleType || "",
+            vehicleNumber: updated.vehicleNumber || "",
             isActive: updated.isActive,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt
@@ -252,6 +259,12 @@ export const assignDeliveryPersonToOrder = async (req: Request, orderId: string)
             status: deliveryPersonId ? "OUT_FOR_DELIVERY" : order.status
         }
     });
+
+    try {
+        emitOrderUpdated(updatedOrder);
+    } catch (e) {
+        console.error("Realtime event emission error:", e);
+    }
 
     return { order: updatedOrder };
 };

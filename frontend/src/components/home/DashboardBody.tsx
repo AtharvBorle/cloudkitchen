@@ -17,69 +17,6 @@ export interface TopRatedItem {
   itemType?: string;
 }
 
-const TOP_RATED_ITEMS: TopRatedItem[] = [
-  {
-    id: "tr-1",
-    name: "Green Leaf Salad",
-    rating: 4.9,
-    category: "Healthy",
-    price: 199,
-    time: "20-30 min",
-    imageUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/fresh-salads",
-  },
-  {
-    id: "tr-2",
-    name: "Classic Chicken Burger",
-    rating: 4.8,
-    category: "Burgers",
-    price: 249,
-    time: "25-35 min",
-    imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/burger-bistro",
-  },
-  {
-    id: "tr-3",
-    name: "Green Leaf Salad",
-    rating: 4.9,
-    category: "Healthy",
-    price: 199,
-    time: "20-30 min",
-    imageUrl: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/fresh-salads",
-  },
-  {
-    id: "tr-4",
-    name: "Classic Chicken Burger",
-    rating: 4.8,
-    category: "Burgers",
-    price: 249,
-    time: "25-35 min",
-    imageUrl: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/burger-bistro",
-  },
-  {
-    id: "tr-5",
-    name: "Green Leaf Salad",
-    rating: 4.9,
-    category: "Healthy",
-    price: 199,
-    time: "20-30 min",
-    imageUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/fresh-salads",
-  },
-  {
-    id: "tr-6",
-    name: "Classic Chicken Burger",
-    rating: 4.8,
-    category: "Burgers",
-    price: 249,
-    time: "25-35 min",
-    imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
-    link: "/restaurant/burger-bistro",
-  },
-];
-
 interface DashboardBodyProps {
   title?: string;
   seeAllLink?: string;
@@ -88,10 +25,14 @@ interface DashboardBodyProps {
 
 export default function DashboardBody({
   title = "Top Rated",
-  seeAllLink = "/explore?sort=top_rated",
+  seeAllLink = "/explore-desktop?sort=top_rated",
   items,
 }: DashboardBodyProps) {
-  const displayItems = items && items.length > 0 ? items : TOP_RATED_ITEMS;
+  if (!items || items.length === 0) {
+    return null;
+  }
+
+  const displayItems = items;
 
   return (
     <section
@@ -296,7 +237,7 @@ export default function DashboardBody({
 
               {/* Right Column: Order Button */}
               <Link
-                href={item.link || "/explore"}
+                href={item.link || "/explore-desktop"}
                 style={{
                   backgroundColor: "#FF6B00",
                   color: "#FFFFFF",

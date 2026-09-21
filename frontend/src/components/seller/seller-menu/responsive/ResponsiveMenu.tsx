@@ -8,14 +8,15 @@ import { Menu as MenuIcon, Plus, Search, Minus, UtensilsCrossed, Bell } from "lu
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveMenu.module.css";
 
-export type MenuCategory = "All" | "Starters" | "Mains" | "Desserts" | "Drinks";
+export type MenuCategory = string;
 
 export interface ResponsiveDishItem {
   id: string;
   name: string;
   price: string;
-  category: "Starters" | "Mains" | "Desserts" | "Drinks" | string;
+  category: string;
   types?: Array<"VEG" | "NON-VEG" | "JAIN" | "VEGAN">;
+  addons?: Array<{ id: string; name: string; price: number }>;
   stockQty: number;
   isAvailable: boolean;
   imageUrl: string;
@@ -30,66 +31,8 @@ export interface ResponsiveMenuProps {
   onSyncDevices?: () => void;
 }
 
-const DEFAULT_DISHES: ResponsiveDishItem[] = [
-  {
-    id: "1",
-    name: "Butter Chicken",
-    price: "₹450",
-    category: "Mains",
-    stockQty: 24,
-    isAvailable: true,
-    imageUrl: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "2",
-    name: "Dal Makhani",
-    price: "₹280",
-    category: "Mains",
-    stockQty: 24,
-    isAvailable: true,
-    imageUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "3",
-    name: "Garlic Naan",
-    price: "₹45",
-    category: "Mains",
-    stockQty: 24,
-    isAvailable: true,
-    imageUrl: "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "4",
-    name: "Tandoori Paneer Tikka",
-    price: "₹320",
-    category: "Starters",
-    stockQty: 24,
-    isAvailable: true,
-    imageUrl: "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "5",
-    name: "Veg Biryani",
-    price: "₹350",
-    category: "Mains",
-    stockQty: 0,
-    isAvailable: false,
-    imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "6",
-    name: "Mango Lassi",
-    price: "₹120",
-    category: "Drinks",
-    stockQty: 24,
-    isAvailable: true,
-    imageUrl: "https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=150&auto=format&fit=crop&q=80",
-  },
-];
-
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 
-const CATEGORIES: MenuCategory[] = ["All", "Starters", "Mains", "Desserts", "Drinks"];
 const EMPTY_DISHES: ResponsiveDishItem[] = [];
 
 export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
@@ -111,9 +54,18 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
       ? ownerName
       : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<MenuCategory>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [dishList, setDishList] = useState<ResponsiveDishItem[]>(dishes);
+
+  const dynamicCategories = Array.from(
+    new Set(
+      dishList
+        .map((d) => d.category)
+        .filter((c): c is string => Boolean(c && c.trim() && c !== "All"))
+    )
+  );
+  const categories = ["All", ...dynamicCategories];
 
   useEffect(() => {
     if (dishes && dishes !== EMPTY_DISHES) {
@@ -260,7 +212,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
 
           {/* Category Filter Pills */}
           <div className={styles.categoryPillsRow} role="tablist" aria-label="Menu Categories">
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const isActive = selectedCategory === cat;
               return (
                 <button
@@ -302,6 +254,26 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
                     <div className={styles.itemDetails}>
                       <h2 className={styles.dishName}>{dish.name}</h2>
                       <p className={styles.dishPrice}>{dish.price}</p>
+                      {dish.addons && dish.addons.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "2px" }}>
+                          {dish.addons.map((a, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                fontSize: "0.68rem",
+                                fontWeight: 600,
+                                color: "#EA580C",
+                                backgroundColor: "#FFF7ED",
+                                border: "1px solid #FFEDD5",
+                                padding: "1px 5px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              +{a.name} (₹{a.price})
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {dish.types && dish.types.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
                           {dish.types.includes("VEG") && (

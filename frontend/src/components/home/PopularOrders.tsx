@@ -22,57 +22,6 @@ export interface OfferCardData {
   itemType?: string;
 }
 
-const OFFERS: OfferCardData[] = [
-  {
-    id: "fb-4",
-    discount: "30% OFF",
-    title: "Biryani Bonanza",
-    code: "Use code: BIRYANI30",
-    imageUrl: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80",
-    link: "/shop/urban-spice",
-    price: 349,
-    sellerId: "k-3",
-    sellerName: "Urban Spice Cloud Kitchen",
-    foodItemId: "fb-4",
-  },
-  {
-    id: "fb-8",
-    discount: "25% OFF",
-    title: "Burger Bash",
-    code: "Use code: BURGER25",
-    imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
-    link: "/shop/urban-spice",
-    price: 149,
-    sellerId: "k-3",
-    sellerName: "Urban Spice Cloud Kitchen",
-    foodItemId: "fb-8",
-  },
-  {
-    id: "fb-1",
-    discount: "30% OFF",
-    title: "Pizza Party",
-    code: "Use code: PIZZA30",
-    imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=80",
-    link: "/shop/chef-anjali",
-    price: 289,
-    sellerId: "k-1",
-    sellerName: "Chef Anjali's Gourmet Kitchen",
-    foodItemId: "fb-1",
-  },
-  {
-    id: "fb-5",
-    discount: "20% OFF",
-    title: "Noodle Fest",
-    code: "Use code: NOODLE20",
-    imageUrl: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=500&auto=format&fit=crop&q=80",
-    link: "/shop/chef-anjali",
-    price: 159,
-    sellerId: "k-1",
-    sellerName: "Chef Anjali's Gourmet Kitchen",
-    foodItemId: "fb-5",
-  },
-];
-
 interface PopularOrdersProps {
   title?: string;
   seeAllLink?: string;
@@ -81,7 +30,7 @@ interface PopularOrdersProps {
 
 export default function PopularOrders({
   title = "Today's Special Offers",
-  seeAllLink = "/explore?offers=true",
+  seeAllLink = "/explore-desktop?offers=true",
   offers,
 }: PopularOrdersProps) {
   const router = useRouter();
@@ -109,7 +58,11 @@ export default function PopularOrders({
     loadActiveSeller();
   }, []);
 
-  const displayOffers = (offers && offers.length > 0 ? offers : OFFERS).map((off) => ({
+  if (!offers || offers.length === 0) {
+    return null;
+  }
+
+  const displayOffers = offers.map((off) => ({
     ...off,
     sellerId: off.sellerId && off.sellerId !== "k-1" && off.sellerId !== "k-3" ? off.sellerId : (activeSeller ? activeSeller.id : off.sellerId || "k-1"),
     sellerName: off.sellerName && off.sellerName !== "Chef Anjali's Gourmet Kitchen" && off.sellerName !== "Urban Spice Cloud Kitchen" ? off.sellerName : (activeSeller ? activeSeller.name : off.sellerName || "Verified Cloud Kitchen"),
@@ -118,6 +71,9 @@ export default function PopularOrders({
   const [addedId, setAddedId] = useState<string | null>(null);
 
   const handleOrderNow = (offer: OfferCardData) => {
+    const rawStock = (offer as any).maxStock !== undefined ? (offer as any).maxStock : (offer as any).stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
     addToCart({
       id: offer.id,
       foodItemId: offer.foodItemId || offer.id,
@@ -127,6 +83,9 @@ export default function PopularOrders({
       sellerId: offer.sellerId || (activeSeller ? activeSeller.id : "k-1"),
       sellerName: offer.sellerName || (activeSeller ? activeSeller.name : "Verified Cloud Kitchen"),
       image: offer.imageUrl,
+      imageUrl: offer.imageUrl,
+      stockQuantity: stockLimit,
+      maxStock: stockLimit,
     });
     setAddedId(offer.id);
     setTimeout(() => setAddedId(null), 1800);

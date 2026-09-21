@@ -68,7 +68,9 @@ export interface RoomDetailData {
   amenities: { name: string; icon: string }[];
   houseRules?: string[];
   reviews?: ReviewItem[];
-  images?: string[];
+  images?: string[] | string | any;
+  sellerId?: string;
+  sellerName?: string;
   priceBreakdown: {
     roomCharges: string;
     serviceFee?: string;

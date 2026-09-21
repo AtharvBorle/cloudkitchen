@@ -20,15 +20,15 @@ export interface FoodHeroBannerProps {
 }
 
 export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
-  restaurantName = "7/12 Kitchen",
-  location = "Near Kothrud, Maharishi Society, Pune",
-  rating = 4.2,
-  reviewsCount = "(240+ reviews)",
-  deliveryTime = "25 min",
-  deliveryFeeText = "Free Delivery",
+  restaurantName = "Cloud Kitchen",
+  location = "",
+  rating = 4.5,
+  reviewsCount,
+  deliveryTime = "20-30 min",
+  deliveryFeeText,
   dietType = "Pure Veg",
-  offerText = "30% OFF up to ₹150",
-  initialVegOnly = true,
+  offerText,
+  initialVegOnly = false,
   onVegToggle,
 }) => {
   const [isVegOnly, setIsVegOnly] = useState<boolean>(initialVegOnly);
@@ -62,7 +62,7 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
         <div className={styles.topRow}>
           <div className={styles.restaurantMain}>
             <h1 className={styles.restaurantName}>{restaurantName}</h1>
-            <span className={styles.locationText}>{location}</span>
+            {location && <span className={styles.locationText}>{location}</span>}
           </div>
 
           <div className={styles.ratingContainer}>
@@ -70,23 +70,29 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
               <Star size={13} fill="#16a34a" color="#16a34a" />
               <span>{rating}</span>
             </div>
-            <span className={styles.reviewsCount}>{reviewsCount}</span>
+            {reviewsCount && <span className={styles.reviewsCount}>{reviewsCount}</span>}
           </div>
         </div>
 
         {/* Row 2: Badges / Chips Row */}
         <div className={styles.badgesRow}>
-          <span className={styles.metaChip}>{deliveryTime}</span>
-          <span className={`${styles.metaChip} ${styles.freeDeliveryChip}`}>
-            {deliveryFeeText}
-          </span>
-          <span className={`${styles.metaChip} ${styles.pureVegChip}`}>
-            <span className={styles.pureVegDot}>●</span>
-            <span>{dietType}</span>
-          </span>
-          <span className={`${styles.metaChip} ${styles.offerChip}`}>
-            {offerText}
-          </span>
+          {deliveryTime && <span className={styles.metaChip}>{deliveryTime}</span>}
+          {deliveryFeeText && (
+            <span className={`${styles.metaChip} ${styles.freeDeliveryChip}`}>
+              {deliveryFeeText}
+            </span>
+          )}
+          {dietType && (
+            <span className={`${styles.metaChip} ${styles.pureVegChip}`}>
+              <span className={styles.pureVegDot}>●</span>
+              <span>{dietType}</span>
+            </span>
+          )}
+          {offerText && (
+            <span className={`${styles.metaChip} ${styles.offerChip}`}>
+              {offerText}
+            </span>
+          )}
         </div>
 
         {/* Row 3: Veg Toggle (Right-aligned) */}
