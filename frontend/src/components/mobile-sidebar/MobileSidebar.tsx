@@ -235,11 +235,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       href: "/my-subscriptions-desktop",
       icon: <Calendar className={styles.subnavIcon} size={15} />,
     },
-    {
-      label: "Notifications",
-      href: "/notifications-desktop",
-      icon: <Bell className={styles.subnavIcon} size={15} />,
-    },
     /*
     // PAYMENT METHODS (Disabled via comment - uncomment to re-enable in future)
     {
