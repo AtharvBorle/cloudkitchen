@@ -2,14 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Bell, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Calendar, Bell, ArrowRight, UtensilsCrossed } from "lucide-react";
 import styles from "./ActiveSubscriptionsNotifications.module.css";
 import { fetchUserMealSubscriptions, UserActiveMealSubscription } from "@/lib/meal-subscriptions";
 
 export const ActiveSubscriptionsNotifications: React.FC = () => {
   const router = useRouter();
   const [activeSub, setActiveSub] = useState<UserActiveMealSubscription | null>(null);
-  const [masterSubEnabled, setMasterSubEnabled] = useState<boolean>(true);
+  const [masterSubEnabled, setMasterSubEnabled] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [notifStates, setNotifStates] = useState<{ [key: string]: boolean }>({
     orderUpdates: true,
     promoOffers: false,
@@ -21,14 +23,28 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
     let isMounted = true;
     async function loadSubs() {
       try {
+        setIsLoading(true);
         const subs = await fetchUserMealSubscriptions();
-        if (isMounted && subs.length > 0) {
-          const active = subs.find((s) => s.status === "ACTIVE") || subs[0];
-          setActiveSub(active);
-          setMasterSubEnabled(active.status === "ACTIVE" && !active.isPaused);
+        if (isMounted) {
+          if (subs && subs.length > 0) {
+            const active = subs.find((s) => s.status === "ACTIVE") || subs[0];
+            setActiveSub(active);
+            setMasterSubEnabled(active.status === "ACTIVE" && !active.isPaused);
+          } else {
+            setActiveSub(null);
+            setMasterSubEnabled(false);
+          }
         }
       } catch (err) {
         console.error("Failed to load user subscriptions for settings overview:", err);
+        if (isMounted) {
+          setActiveSub(null);
+          setMasterSubEnabled(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
     loadSubs();
@@ -41,8 +57,8 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
     setNotifStates((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const planName = activeSub?.plan?.name || "Standard Meal Plan";
-  const sellerName = activeSub?.seller?.businessName || "Gourmet Spice Kitchen";
+  const planName = activeSub?.plan?.name || "Meal Plan";
+  const sellerName = activeSub?.seller?.businessName || "Kitchen Partner";
   const subStatus = activeSub?.isPaused ? "PAUSED" : activeSub?.status || "ACTIVE";
   const renewalDateText = activeSub?.endDate
     ? `Renewal Date: ${new Date(activeSub.endDate).toLocaleDateString("en-US", {
@@ -50,7 +66,7 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
         month: "long",
         year: "numeric",
       })}`
-    : "Renewal Date: Auto-renew weekly";
+    : "Renewal Date: Auto-renew";
 
   return (
     <div className={styles.sectionContainer}>
@@ -81,33 +97,95 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
           </div>
         </div>
 
-        <div
-          className={styles.subInnerCard}
-          onClick={() => router.push("/my-subscriptions-desktop")}
-          role="button"
-          tabIndex={0}
-          style={{ cursor: "pointer" }}
-        >
-          <div className={styles.subInnerHeader}>
-            <h3 className={styles.subPlanName}>{planName}</h3>
-            <span
-              className={styles.activeBadge}
+        {isLoading ? (
+          <div
+            style={{
+              padding: "28px 16px",
+              textAlign: "center",
+              color: "#94A3B8",
+              fontSize: "0.85rem",
+              backgroundColor: "#F8FAFC",
+              borderRadius: "14px",
+            }}
+          >
+            Loading subscriptions...
+          </div>
+        ) : activeSub ? (
+          <div
+            className={styles.subInnerCard}
+            onClick={() => router.push("/my-subscriptions-desktop")}
+            role="button"
+            tabIndex={0}
+            style={{ cursor: "pointer" }}
+          >
+            <div className={styles.subInnerHeader}>
+              <h3 className={styles.subPlanName}>{planName}</h3>
+              <span
+                className={styles.activeBadge}
+                style={{
+                  backgroundColor:
+                    subStatus === "PAUSED"
+                      ? "#fef9c3"
+                      : subStatus === "CANCELLED"
+                      ? "#fee2e2"
+                      : "#dcfce7",
+                  color:
+                    subStatus === "PAUSED"
+                      ? "#a16207"
+                      : subStatus === "CANCELLED"
+                      ? "#ef4444"
+                      : "#22c55e",
+                }}
+              >
+                {subStatus}
+              </span>
+            </div>
+            <p className={styles.subPlanDetails}>
+              Kitchen: {sellerName} • {activeSub.tier || activeSub.plan?.tier || "Standard"} Tier
+            </p>
+            <p className={styles.subPlanRenewal}>{renewalDateText}</p>
+
+            <div
               style={{
-                backgroundColor: subStatus === "PAUSED" ? "#fef9c3" : subStatus === "CANCELLED" ? "#fee2e2" : "#dcfce7",
-                color: subStatus === "PAUSED" ? "#a16207" : subStatus === "CANCELLED" ? "#ef4444" : "#22c55e",
+                marginTop: "12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "0.82rem",
+                color: "#f97316",
+                fontWeight: 700,
               }}
             >
-              {subStatus}
-            </span>
+              <span>Manage or Change Plan</span>
+              <ArrowRight size={14} />
+            </div>
           </div>
-          <p className={styles.subPlanDetails}>Kitchen: {sellerName} • {activeSub?.tier || "Bronze"} Tier</p>
-          <p className={styles.subPlanRenewal}>{renewalDateText}</p>
-
-          <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", color: "#f97316", fontWeight: 700 }}>
-            <span>Manage or Change Plan</span>
-            <ArrowRight size={14} />
+        ) : (
+          <div className={styles.emptySubCard}>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "50%",
+                backgroundColor: "#FFF7ED",
+                color: "#F97316",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <UtensilsCrossed size={18} />
+            </div>
+            <h3 className={styles.emptySubTitle}>No Active Subscription</h3>
+            <p className={styles.emptySubText}>
+              You do not have an active meal subscription plan.
+            </p>
+            <Link href="/explore-desktop" className={styles.exploreLink}>
+              <span>Explore Meal Plans</span>
+              <ArrowRight size={14} />
+            </Link>
           </div>
-        </div>
+        )}
       </div>
 
       {/* 2. Right Card: Notifications Summary */}

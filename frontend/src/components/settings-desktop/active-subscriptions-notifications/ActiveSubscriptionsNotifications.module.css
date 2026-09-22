@@ -129,6 +129,53 @@
   margin: 0;
 }
 
+/* Empty State Card */
+.emptySubCard {
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.emptySubTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.emptySubText {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.4;
+}
+
+.exploreLink {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f97316;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.exploreLink:hover {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
 /* Notifications List */
 .notifList {
   display: flex;

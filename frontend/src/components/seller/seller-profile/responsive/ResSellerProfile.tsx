@@ -22,10 +22,12 @@ import {
   RefreshCw,
   Copy,
   ExternalLink,
+  MapPin,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResSellerProfile.module.css";
 
 import { useSellerProfile, isGenericFallbackName, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
@@ -43,6 +45,9 @@ export interface ResSellerProfileProps {
   initialPrimaryEmail?: string;
   initialOutletName?: string;
   initialRegisteredAddress?: string;
+  initialLatitude?: number | null;
+  initialLongitude?: number | null;
+  initialIsLocationPinned?: boolean;
   initialUpiId?: string;
   initialTrackingId?: string;
   onBack?: () => void;
@@ -57,6 +62,9 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   initialPrimaryEmail,
   initialOutletName,
   initialRegisteredAddress,
+  initialLatitude,
+  initialLongitude,
+  initialIsLocationPinned,
   initialUpiId,
   initialTrackingId,
   onBack,
@@ -91,6 +99,15 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     initialRegisteredAddress && !initialRegisteredAddress.includes("Koramangala")
       ? initialRegisteredAddress
       : (seller.address || "")
+  );
+  const [latitude, setLatitude] = useState<number | null>(
+    initialLatitude !== undefined ? initialLatitude : (seller.latitude ?? null)
+  );
+  const [longitude, setLongitude] = useState<number | null>(
+    initialLongitude !== undefined ? initialLongitude : (seller.longitude ?? null)
+  );
+  const [isLocationPinned, setIsLocationPinned] = useState<boolean>(
+    initialIsLocationPinned !== undefined ? initialIsLocationPinned : (seller.isLocationPinned ?? false)
   );
   const [upiId, setUpiId] = useState<string>(
     initialUpiId || seller.upiId || (seller.profile as any)?.upiId || ""
@@ -179,13 +196,22 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     if (seller.address) {
       setRegisteredAddress((prev) => (!prev || prev.includes("Koramangala") ? seller.address : prev));
     }
+    if (seller.latitude !== undefined && seller.latitude !== null) {
+      setLatitude((prev) => (prev === null ? seller.latitude ?? null : prev));
+    }
+    if (seller.longitude !== undefined && seller.longitude !== null) {
+      setLongitude((prev) => (prev === null ? seller.longitude ?? null : prev));
+    }
+    if (seller.isLocationPinned !== undefined) {
+      setIsLocationPinned((prev) => prev || Boolean(seller.isLocationPinned));
+    }
     if (seller.upiId) {
       setUpiId((prev) => (!prev ? seller.upiId || "" : prev));
     }
     if (seller.trackingId) {
       setTrackingId((prev) => (!prev ? seller.trackingId || "" : prev));
     }
-  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address, seller.upiId, seller.trackingId]);
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned, seller.upiId, seller.trackingId]);
 
   // Stacked active subscriptions calculation
   const getStackedSubs = (subsList: any[]) => {
@@ -289,6 +315,9 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       primaryEmail,
       outletName,
       registeredAddress,
+      latitude,
+      longitude,
+      isLocationPinned: Boolean(latitude && longitude),
       upiId,
     };
 
@@ -299,6 +328,9 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       email: primaryEmail,
       phone: mobileNumber,
       address: registeredAddress,
+      latitude,
+      longitude,
+      isLocationPinned: Boolean(latitude && longitude),
       upiId,
       avatarInitials: computeInitials(outletName || ownerName),
     });
@@ -317,6 +349,9 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             email: primaryEmail,
             outletName,
             registeredAddress,
+            latitude,
+            longitude,
+            isLocationPinned: Boolean(latitude && longitude),
             upiId,
           }),
         });
@@ -538,17 +573,132 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
               />
             </div>
 
+            {/* Delivery Coverage & Nearby Customers Notice Banner */}
+            <div
+              style={{
+                backgroundColor: "#FFF7ED",
+                border: "1.5px solid #FED7AA",
+                borderRadius: "12px",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+                marginBottom: "4px",
+              }}
+            >
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "6px",
+                  backgroundColor: "#FFEDD5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  marginTop: "1px",
+                }}
+              >
+                <MapPin size={16} color="#EA580C" />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#9A3412" }}>
+                    Delivery Distance &amp; Nearby Reach
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "9.5px",
+                      fontWeight: 700,
+                      padding: "1px 6px",
+                      borderRadius: "8px",
+                      backgroundColor: "#EA580C",
+                      color: "#FFFFFF",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Important
+                  </span>
+                </div>
+                <p style={{ fontSize: "11.5px", color: "#C2410C", margin: 0, lineHeight: 1.4 }}>
+                  📍 <strong>Note:</strong> This exact GPS map pin is used to calculate delivery distance and show your kitchen to nearby customers.
+                </p>
+              </div>
+            </div>
+
+            {/* Interactive Kitchen Map Pin Picker */}
+            <div className={styles.formGroup}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                <label className={styles.label} style={{ margin: 0 }}>
+                  Kitchen Location on Map <span style={{ color: "#EA580C" }}>*</span>
+                </label>
+                {latitude && longitude ? (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      color: "#16A34A",
+                      backgroundColor: "#F0FDF4",
+                      padding: "2px 6px",
+                      borderRadius: "10px",
+                      border: "1px solid #BBF7D0",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <CheckCircle2 size={11} /> Pinned: {Number(latitude).toFixed(4)}, {Number(longitude).toFixed(4)}
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      color: "#EA580C",
+                      backgroundColor: "#FFF7ED",
+                      padding: "2px 6px",
+                      borderRadius: "10px",
+                      border: "1px solid #FED7AA",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <AlertTriangle size={11} /> Pin Required
+                  </span>
+                )}
+              </div>
+
+              <SellerMapPicker
+                latitude={latitude}
+                longitude={longitude}
+                isPinned={isLocationPinned}
+                onChange={(lat, lng, formattedAddress) => {
+                  setLatitude(lat);
+                  setLongitude(lng);
+                  setIsLocationPinned(true);
+                  if (formattedAddress) {
+                    setRegisteredAddress(formattedAddress);
+                  }
+                }}
+              />
+            </div>
+
             <div className={styles.formGroup}>
               <label htmlFor="registeredAddressInput" className={styles.label}>
-                Registered Address
+                Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
               </label>
               <textarea
                 id="registeredAddressInput"
                 className={styles.textarea}
                 value={registeredAddress}
                 onChange={(e) => setRegisteredAddress(e.target.value)}
+                placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                 rows={3}
               />
+              <p className={styles.helperText} style={{ marginTop: "3px" }}>
+                Shown on customer receipts and used by delivery riders for store pickup navigation.
+              </p>
             </div>
 
             {/* Banking & UPI Payment Settings */}

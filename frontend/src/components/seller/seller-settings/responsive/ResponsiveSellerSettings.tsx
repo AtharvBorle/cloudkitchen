@@ -17,6 +17,7 @@ import {
   Truck,
   Star,
   Shield,
+  MapPin,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
@@ -25,6 +26,7 @@ import {
   ActiveLoginSessionsCard,
 } from "../security-settings/SellerSecuritySettings";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResponsiveSellerSettings.module.css";
 
 export type SettingsTabType = "General" | "Notifications" | "Security" | "Preferences";
@@ -42,6 +44,9 @@ export interface ResponsiveSellerSettingsData {
   businessEmail: string;
   phoneNumber: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isLocationPinned?: boolean;
 
   // General - Operating Hours
   operatingHours: OperatingHoursDay[];
@@ -122,6 +127,9 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   businessEmail: "hello@neocloudbite.com",
   phoneNumber: "+91 98765 43210",
   address: "451 Innovation Way, Suite 300, Mumbai, MH 400001",
+  latitude: null,
+  longitude: null,
+  isLocationPinned: false,
   operatingHours: DEFAULT_OPERATING_HOURS,
   language: "English",
   timezone: "Asia/Kolkata (UTC+5:30)",
@@ -223,6 +231,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
     businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
     address: seller.address || INITIAL_SETTINGS.address,
+    latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
+    longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
+    isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
     storeOnline: typeof seller.isOnline === "boolean" ? seller.isOnline : INITIAL_SETTINGS.storeOnline,
     ...initialData,
   });
@@ -254,16 +265,19 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   }, [seller.isOnline]);
 
   useEffect(() => {
-    if (seller.businessName || seller.phone || seller.email || seller.address) {
+    if (seller.businessName || seller.phone || seller.email || seller.address || seller.latitude || seller.longitude) {
       setFormData((prev) => ({
         ...prev,
         businessName: (!prev.businessName || prev.businessName === "Neo Cloud Kitchen & Rooms") && seller.businessName ? seller.businessName : prev.businessName,
         phoneNumber: (!prev.phoneNumber || prev.phoneNumber === "+91 98765 43210") && seller.phone ? seller.phone : prev.phoneNumber,
         businessEmail: (!prev.businessEmail || prev.businessEmail === "hello@neocloudbite.com") && seller.email ? seller.email : prev.businessEmail,
         address: (!prev.address || prev.address.includes("Innovation Way")) && seller.address ? seller.address : prev.address,
+        latitude: seller.latitude !== undefined && seller.latitude !== null ? seller.latitude : prev.latitude,
+        longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
+        isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
       }));
     }
-  }, [seller.businessName, seller.phone, seller.email, seller.address]);
+  }, [seller.businessName, seller.phone, seller.email, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
@@ -386,6 +400,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
           email: formData.businessEmail,
           phone: formData.phoneNumber,
           address: formData.address,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          isLocationPinned: Boolean(formData.latitude && formData.longitude),
         }),
       });
 
@@ -401,6 +418,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         email: formData.businessEmail,
         phone: formData.phoneNumber,
         address: formData.address,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        isLocationPinned: Boolean(formData.latitude && formData.longitude),
         avatarInitials: computeInitials(formData.businessName),
       });
 
@@ -542,15 +562,131 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                   />
                 </div>
 
+                {/* Delivery Coverage & Nearby Customers Notice Banner */}
+                <div
+                  style={{
+                    backgroundColor: "#FFF7ED",
+                    border: "1.5px solid #FED7AA",
+                    borderRadius: "12px",
+                    padding: "12px 14px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    marginTop: "4px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "6px",
+                      backgroundColor: "#FFEDD5",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      marginTop: "1px",
+                    }}
+                  >
+                    <MapPin size={16} color="#EA580C" />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#9A3412" }}>
+                        Delivery Distance &amp; Nearby Reach
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "9.5px",
+                          fontWeight: 700,
+                          padding: "1px 6px",
+                          borderRadius: "8px",
+                          backgroundColor: "#EA580C",
+                          color: "#FFFFFF",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Important
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "11.5px", color: "#C2410C", margin: 0, lineHeight: 1.4 }}>
+                      📍 <strong>Note:</strong> This exact GPS map pin is used to calculate delivery distance and display your kitchen to nearby customers.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Interactive Kitchen Map Pin Picker */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Address</label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                    <label className={styles.label} style={{ margin: 0 }}>
+                      Kitchen Location on Map <span style={{ color: "#EA580C" }}>*</span>
+                    </label>
+                    {formData.latitude && formData.longitude ? (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          color: "#16A34A",
+                          backgroundColor: "#F0FDF4",
+                          padding: "2px 6px",
+                          borderRadius: "10px",
+                          border: "1px solid #BBF7D0",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "3px",
+                        }}
+                      >
+                        <CheckCircle2 size={11} /> Pinned: {Number(formData.latitude).toFixed(4)}, {Number(formData.longitude).toFixed(4)}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          color: "#EA580C",
+                          backgroundColor: "#FFF7ED",
+                          padding: "2px 6px",
+                          borderRadius: "10px",
+                          border: "1px solid #FED7AA",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "3px",
+                        }}
+                      >
+                        <AlertTriangle size={11} /> Pin Required
+                      </span>
+                    )}
+                  </div>
+
+                  <SellerMapPicker
+                    latitude={formData.latitude ?? null}
+                    longitude={formData.longitude ?? null}
+                    isPinned={formData.isLocationPinned}
+                    onChange={(lat, lng, formattedAddress) => {
+                      handleInputChange("latitude", lat);
+                      handleInputChange("longitude", lng);
+                      handleInputChange("isLocationPinned", true);
+                      if (formattedAddress) {
+                        handleInputChange("address", formattedAddress);
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.label}>
+                    Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
+                  </label>
                   <textarea
                     className={styles.textarea}
                     value={formData.address}
                     onChange={(e) => handleInputChange("address", e.target.value)}
-                    placeholder="Enter full physical address"
+                    placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                     rows={3}
                   />
+                  <p className={styles.helperText} style={{ marginTop: "3px" }}>
+                    Shown on customer receipts and used by delivery riders for store pickup navigation.
+                  </p>
                 </div>
               </div>
 

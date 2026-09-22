@@ -16,6 +16,9 @@ export interface SellerProfileData {
   city: string;
   pincode: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isLocationPinned?: boolean;
   avatarInitials: string;
   partnerRole: string;
   isOnline: boolean;
@@ -150,6 +153,9 @@ export function useSellerProfile() {
       city: (isSeller && cachedProfile?.city) || "",
       pincode: (isSeller && cachedProfile?.pincode) || "",
       address: (isSeller && cachedProfile?.address) || "",
+      latitude: isSeller ? (cachedProfile?.latitude ?? null) : null,
+      longitude: isSeller ? (cachedProfile?.longitude ?? null) : null,
+      isLocationPinned: isSeller ? (cachedProfile?.isLocationPinned ?? false) : false,
       avatarInitials: isSeller ? (cachedProfile?.avatarInitials || computeInitials(name)) : "SK",
       partnerRole: isSeller ? (cachedProfile?.partnerRole || "Neo Cloud Partner") : "",
       isOnline: isSeller ? (cachedProfile?.isOnline ?? true) : true,
@@ -239,6 +245,9 @@ export function useSellerProfile() {
             `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
             user?.city ||
             "";
+          const rawLat = profile?.latitude !== undefined && profile?.latitude !== null ? Number(profile.latitude) : null;
+          const rawLng = profile?.longitude !== undefined && profile?.longitude !== null ? Number(profile.longitude) : null;
+          const rawPinned = profile?.isLocationPinned ?? Boolean(rawLat && rawLng);
           const rawInitials = computeInitials(rawBusinessName);
           const rawOnline = typeof profile?.isOnline === "boolean" ? profile.isOnline : true;
           const rawTrackingId = profile?.trackingId || "";
@@ -256,6 +265,9 @@ export function useSellerProfile() {
             city: rawCity,
             pincode: rawPincode,
             address: rawAddress,
+            latitude: rawLat,
+            longitude: rawLng,
+            isLocationPinned: rawPinned,
             avatarInitials: rawInitials,
             partnerRole: "Neo Cloud Partner",
             isOnline: rawOnline,
@@ -278,6 +290,9 @@ export function useSellerProfile() {
               city: rawCity,
               pincode: rawPincode,
               address: rawAddress,
+              latitude: rawLat,
+              longitude: rawLng,
+              isLocationPinned: rawPinned,
               avatarInitials: rawInitials,
               partnerRole: "Neo Cloud Partner",
               isOnline: rawOnline,

@@ -145,8 +145,14 @@ export const updateSellerProfile = async (req: Request) => {
     if (upiId !== undefined) {
         profileUpdateData.upiId = upiId ? (typeof upiId === "string" ? upiId.trim() : null) : null;
     }
-    if (latitude !== undefined && !isNaN(latitude)) profileUpdateData.latitude = latitude;
-    if (longitude !== undefined && !isNaN(longitude)) profileUpdateData.longitude = longitude;
+    if (latitude !== undefined && !isNaN(latitude)) {
+        profileUpdateData.latitude = latitude;
+        if (isLocationPinned === undefined) profileUpdateData.isLocationPinned = true;
+    }
+    if (longitude !== undefined && !isNaN(longitude)) {
+        profileUpdateData.longitude = longitude;
+        if (isLocationPinned === undefined) profileUpdateData.isLocationPinned = true;
+    }
     if (isLocationPinned !== undefined) profileUpdateData.isLocationPinned = isLocationPinned;
 
     if (bannerImageFile && bannerImageFile.size > 0) {

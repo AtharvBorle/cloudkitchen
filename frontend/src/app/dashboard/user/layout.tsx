@@ -99,32 +99,48 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
             const L = (window as any).L;
             if (!L || !mapContainerRef.current) return;
 
-            // Zoom level 16 for close house-level detail
-            const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
-            mapRef.current = map;
+            if (mapRef.current) {
+                try {
+                    mapRef.current.off();
+                    mapRef.current.remove();
+                } catch (e) {}
+                mapRef.current = null;
+            }
 
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            if ((mapContainerRef.current as any)._leaflet_id) {
+                delete (mapContainerRef.current as any)._leaflet_id;
+            }
 
-            const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-            markerRef.current = marker;
+            try {
+                // Zoom level 16 for close house-level detail
+                const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
+                mapRef.current = map;
 
-            setCoords({ lat, lng });
-            handleGeocode(lat, lng);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
 
-            marker.on("dragend", () => {
-                const position = marker.getLatLng();
-                setCoords({ lat: position.lat, lng: position.lng });
-                handleGeocode(position.lat, position.lng);
-            });
+                const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                markerRef.current = marker;
 
-            map.on("click", (e: any) => {
-                const { lat, lng } = e.latlng;
-                marker.setLatLng([lat, lng]);
                 setCoords({ lat, lng });
                 handleGeocode(lat, lng);
-            });
+
+                marker.on("dragend", () => {
+                    const position = marker.getLatLng();
+                    setCoords({ lat: position.lat, lng: position.lng });
+                    handleGeocode(position.lat, position.lng);
+                });
+
+                map.on("click", (e: any) => {
+                    const { lat: clickLat, lng: clickLng } = e.latlng;
+                    marker.setLatLng([clickLat, clickLng]);
+                    setCoords({ lat: clickLat, lng: clickLng });
+                    handleGeocode(clickLat, clickLng);
+                });
+            } catch (err) {
+                console.warn("Leaflet map initialization warning:", err);
+            }
         };
 
         script.onload = () => {
@@ -149,7 +165,14 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
                 if (document.body.contains(script)) document.body.removeChild(script);
             } catch (e) {}
             if (mapRef.current) {
-                mapRef.current.remove();
+                try {
+                    mapRef.current.off();
+                    mapRef.current.remove();
+                } catch (e) {}
+                mapRef.current = null;
+            }
+            if (mapContainerRef.current && (mapContainerRef.current as any)._leaflet_id) {
+                delete (mapContainerRef.current as any)._leaflet_id;
             }
         };
     }, []);

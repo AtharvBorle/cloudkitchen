@@ -38,6 +38,9 @@ export default function Profile({
       email: initialData?.email || seller.email || "",
       outletName: outlet,
       registeredAddress: initialData?.registeredAddress || seller.address || "",
+      latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
+      longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
+      isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
       upiId: initialData?.upiId || seller.upiId || (seller.profile as any)?.upiId || "",
       trackingId: initialData?.trackingId || seller.trackingId || (seller.profile as any)?.trackingId || "",
       partnerRole: initialData?.partnerRole || seller.partnerRole,
@@ -61,13 +64,16 @@ export default function Profile({
           mobileNumber: seller.phone || prev.mobileNumber,
           outletName: outlet,
           registeredAddress: seller.address || prev.registeredAddress,
+          latitude: seller.latitude !== undefined && seller.latitude !== null ? seller.latitude : prev.latitude,
+          longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
+          isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
           upiId: seller.upiId || (seller.profile as any)?.upiId || prev.upiId || "",
           trackingId: seller.trackingId || (seller.profile as any)?.trackingId || prev.trackingId || "",
           avatarInitials: computeInitials(outlet || owner),
         };
       });
     }
-  }, [seller.ownerName, seller.userFullName, seller.email, seller.phone, seller.businessName, seller.address, seller.upiId, seller.trackingId]);
+  }, [seller.ownerName, seller.userFullName, seller.email, seller.phone, seller.businessName, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned, seller.upiId, seller.trackingId]);
 
   useEffect(() => {
     async function loadSellerProfile() {
@@ -82,6 +88,8 @@ export default function Profile({
             const outlet = profile?.businessName || rawUserName || user?.name || "Kitchen Owner";
             const owner = rawUserName || user.name || outlet;
             const initials = computeInitials(outlet);
+            const lat = profile?.latitude !== undefined && profile?.latitude !== null ? Number(profile.latitude) : null;
+            const lng = profile?.longitude !== undefined && profile?.longitude !== null ? Number(profile.longitude) : null;
 
             setProfileData((prev) => ({
               ...prev,
@@ -94,6 +102,9 @@ export default function Profile({
                 `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
                 user?.city ||
                 prev.registeredAddress,
+              latitude: lat !== null ? lat : prev.latitude,
+              longitude: lng !== null ? lng : prev.longitude,
+              isLocationPinned: profile?.isLocationPinned ?? Boolean(lat && lng),
               upiId: profile?.upiId || prev.upiId || "",
               trackingId: profile?.trackingId || prev.trackingId || "",
               avatarInitials: initials,
@@ -119,6 +130,9 @@ export default function Profile({
       email: data.email,
       phone: data.mobileNumber,
       address: data.registeredAddress,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      isLocationPinned: Boolean(data.latitude && data.longitude),
       upiId: data.upiId,
       trackingId: data.trackingId,
       avatarInitials: computeInitials(data.outletName || data.ownerName),
@@ -138,6 +152,9 @@ export default function Profile({
           email: data.email,
           outletName: data.outletName,
           registeredAddress: data.registeredAddress,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          isLocationPinned: Boolean(data.latitude && data.longitude),
           upiId: data.upiId,
         }),
       });

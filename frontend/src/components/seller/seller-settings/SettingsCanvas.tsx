@@ -16,6 +16,7 @@ import {
   CalendarCheck,
   Star,
   Lock,
+  MapPin,
 } from "lucide-react";
 import SellerNotificationChannels, {
   NotificationChannelsData,
@@ -28,6 +29,7 @@ import {
 import { useSellerProfile, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./SettingsCanvas.module.css";
 
 export type SettingsTab = "General" | "Notifications" | "Security" | "Preferences";
@@ -44,6 +46,9 @@ export interface SettingsFormData {
   businessEmail: string;
   phoneNumber: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isLocationPinned?: boolean;
   language: string;
   timezone: string;
   currency: string;
@@ -125,6 +130,9 @@ const DEFAULT_DATA: SettingsFormData = {
   businessEmail: "",
   phoneNumber: "",
   address: "",
+  latitude: null,
+  longitude: null,
+  isLocationPinned: false,
   language: "English",
   timezone: "Asia/Kolkata (UTC+5:30)",
   currency: "INR (₹)",
@@ -207,6 +215,9 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     businessEmail: initialData?.businessEmail || seller.email,
     phoneNumber: initialData?.phoneNumber || seller.phone,
     address: initialData?.address || seller.address,
+    latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
+    longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
+    isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
     ...initialData,
   }));
 
@@ -231,16 +242,19 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   }, []);
 
   useEffect(() => {
-    if (seller.businessName || seller.email || seller.phone || seller.address) {
+    if (seller.businessName || seller.email || seller.phone || seller.address || seller.latitude || seller.longitude) {
       setFormData((prev) => ({
         ...prev,
         businessName: (!prev.businessName || prev.businessName === "Neo Cloud Kitchen & Rooms") && seller.businessName ? seller.businessName : prev.businessName,
         businessEmail: (!prev.businessEmail || prev.businessEmail === "hello@neocloudbite.com") && seller.email ? seller.email : prev.businessEmail,
         phoneNumber: (!prev.phoneNumber || prev.phoneNumber === "+91 98765 43210") && seller.phone ? seller.phone : prev.phoneNumber,
         address: (!prev.address || prev.address.includes("Innovation Way")) && seller.address ? seller.address : prev.address,
+        latitude: seller.latitude !== undefined && seller.latitude !== null ? seller.latitude : prev.latitude,
+        longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
+        isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
       }));
     }
-  }, [seller.businessName, seller.email, seller.phone, seller.address]);
+  }, [seller.businessName, seller.email, seller.phone, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
@@ -383,6 +397,9 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
           email: formData.businessEmail,
           phone: formData.phoneNumber,
           address: formData.address,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          isLocationPinned: Boolean(formData.latitude && formData.longitude),
         }),
       });
 
@@ -398,6 +415,9 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         email: formData.businessEmail,
         phone: formData.phoneNumber,
         address: formData.address,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        isLocationPinned: Boolean(formData.latitude && formData.longitude),
         avatarInitials: computeInitials(formData.businessName),
       });
 
@@ -513,17 +533,134 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   />
                 </div>
 
+                {/* Delivery Coverage & Nearby Customers Notice Banner */}
+                <div
+                  style={{
+                    backgroundColor: "#FFF7ED",
+                    border: "1.5px solid #FED7AA",
+                    borderRadius: "12px",
+                    padding: "14px 16px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "12px",
+                    marginTop: "4px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      backgroundColor: "#FFEDD5",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      marginTop: "1px",
+                    }}
+                  >
+                    <MapPin size={18} color="#EA580C" />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#9A3412" }}>
+                        Delivery Distance &amp; Nearby Reach
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          padding: "2px 6px",
+                          borderRadius: "8px",
+                          backgroundColor: "#EA580C",
+                          color: "#FFFFFF",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Important Notice
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "12px", color: "#C2410C", margin: 0, lineHeight: 1.45 }}>
+                      📍 <strong>Note:</strong> This exact GPS map pin is used to calculate delivery distance and display your kitchen to nearby customers. Drag or search to set your exact kitchen entrance.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Interactive Map Pin Picker */}
+                <div className={styles.fieldGroup}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                    <label className={styles.label} style={{ margin: 0 }}>
+                      Kitchen Location on Map <span style={{ color: "#EA580C" }}>*</span>
+                    </label>
+                    {formData.latitude && formData.longitude ? (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          color: "#16A34A",
+                          backgroundColor: "#F0FDF4",
+                          padding: "2px 8px",
+                          borderRadius: "10px",
+                          border: "1px solid #BBF7D0",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <CheckCircle2 size={12} /> Pinned: {Number(formData.latitude).toFixed(4)}, {Number(formData.longitude).toFixed(4)}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          color: "#EA580C",
+                          backgroundColor: "#FFF7ED",
+                          padding: "2px 8px",
+                          borderRadius: "10px",
+                          border: "1px solid #FED7AA",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <AlertTriangle size={12} /> Map Pin Required
+                      </span>
+                    )}
+                  </div>
+
+                  <SellerMapPicker
+                    latitude={formData.latitude ?? null}
+                    longitude={formData.longitude ?? null}
+                    isPinned={formData.isLocationPinned}
+                    onChange={(lat, lng, formattedAddress) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        latitude: lat,
+                        longitude: lng,
+                        isLocationPinned: true,
+                        address: formattedAddress || prev.address,
+                      }));
+                    }}
+                  />
+                </div>
+
                 {/* Address */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Address</label>
+                  <label className={styles.label}>
+                    Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
+                  </label>
                   <textarea
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
                     className={styles.textarea}
-                    placeholder="Enter full registered address"
+                    placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                     rows={3}
                   />
+                  <p style={{ fontSize: "12px", color: "#64748B", margin: "3px 0 0 0" }}>
+                    Shown on customer receipts and used by delivery riders for store pickup navigation.
+                  </p>
                 </div>
               </div>
 
