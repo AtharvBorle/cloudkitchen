@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   Loader2,
   Save,
+  ImagePlus,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import styles from "./SellerSettings.module.css";
 
@@ -69,11 +72,78 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Banner state
+  const [bannerPreview, setBannerPreview] = useState<string>(
+    seller.bannerImageUrl || (seller.profile as any)?.bannerImageUrl || ""
+  );
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
+
   React.useEffect(() => {
     if (typeof seller.isOnline === "boolean") {
       setSettings((prev) => ({ ...prev, storeOnline: seller.isOnline }));
     }
   }, [seller.isOnline]);
+
+  React.useEffect(() => {
+    if (seller.bannerImageUrl && !bannerFile) {
+      setBannerPreview(seller.bannerImageUrl);
+    }
+  }, [seller.bannerImageUrl, bannerFile]);
+
+  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setSuccessMessage("Banner image must be less than 5MB");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      return;
+    }
+    setBannerFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setBannerPreview(localUrl);
+  };
+
+  const handleQuickUploadBanner = async () => {
+    if (!bannerFile) return;
+    setIsUploadingBanner(true);
+    try {
+      const data = new FormData();
+      data.append("bannerImageFile", bannerFile);
+      data.append("businessName", seller.businessName);
+
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload banner");
+      }
+
+      const json = await res.json();
+      const updatedBannerUrl = json.data?.profile?.bannerImageUrl || json.profile?.bannerImageUrl || bannerPreview;
+      setBannerPreview(updatedBannerUrl);
+      setBannerFile(null);
+      updateCachedProfile({ bannerImageUrl: updatedBannerUrl });
+      setSuccessMessage("Banner uploaded and published live!");
+      setTimeout(() => setSuccessMessage(null), 3500);
+    } catch (err: any) {
+      console.error("Banner upload error:", err);
+      setSuccessMessage(err.message || "Banner upload failed");
+      setTimeout(() => setSuccessMessage(null), 3500);
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleResetBanner = () => {
+    setBannerFile(null);
+    setBannerPreview("");
+    updateCachedProfile({ bannerImageUrl: "" });
+    setSuccessMessage("Banner reset to default theme");
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
 
   const handleToggle = (key: keyof SellerSettingsData) => {
     const newVal = !settings[key];
@@ -95,9 +165,13 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
     setSettings((prev) => ({ ...prev, [key]: val }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSaving(true);
     try {
+      if (bannerFile) {
+        await handleQuickUploadBanner();
+      }
       await toggleSellerOnlineStatus(settings.storeOnline);
       if (onSave) onSave(settings);
       setSuccessMessage("Settings updated successfully!");
@@ -133,7 +207,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
           <div className={styles.headerSection}>
             <h1 className={styles.pageTitle}>Operations &amp; Store Settings</h1>
             <p className={styles.pageDescription}>
-              Manage your kitchen dispatch rules, order handling preferences, delivery radii, and security controls.
+              Manage your kitchen dispatch rules, storefront hero banner, delivery radii, and security controls.
             </p>
           </div>
 
@@ -146,6 +220,181 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
           )}
 
           <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* 0. Storefront Hero Banner & Visual Branding Card */}
+            <div className={styles.settingsCard}>
+              <div className={styles.cardHeader}>
+                <div className={styles.cardIconWrapper}>
+                  <ImagePlus size={20} />
+                </div>
+                <div>
+                  <h2 className={styles.cardTitle}>Storefront Cover Banner &amp; Branding</h2>
+                  <p className={styles.cardDescription}>
+                    Hero cover image displayed at the top of your restaurant menu page for customers
+                  </p>
+                </div>
+              </div>
+
+              {/* Banner Preview Box */}
+              <div
+                style={{
+                  width: "100%",
+                  height: "170px",
+                  borderRadius: "14px",
+                  overflow: "hidden",
+                  position: "relative",
+                  backgroundColor: "#0F172A",
+                  marginTop: "8px",
+                  border: "1.5px solid #E2E8F0",
+                  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.06)",
+                }}
+              >
+                <img
+                  src={bannerPreview || "/images/places/place-pizza.png"}
+                  alt="Storefront Banner Preview"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/images/places/place-pizza.png";
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: "linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.1) 60%)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "flex-end",
+                    padding: "16px 20px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.8px", color: "#FDBA74", fontWeight: 700 }}>
+                        Live Storefront Cover
+                      </span>
+                      <h3 style={{ margin: "2px 0 0 0", color: "#FFFFFF", fontSize: "16px", fontWeight: 700 }}>
+                        {seller.businessName || "Your Kitchen"}
+                      </h3>
+                    </div>
+                    <span
+                      style={{
+                        backgroundColor: "rgba(255, 255, 255, 0.2)",
+                        backdropFilter: "blur(6px)",
+                        color: "#FFFFFF",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "4px 10px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                      }}
+                    >
+                      {bannerPreview ? "Custom Banner Live" : "Default Theme"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Toolbar */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  marginTop: "16px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <input
+                    type="file"
+                    id="operations-banner-file-input"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    style={{ display: "none" }}
+                    onChange={handleBannerFileSelect}
+                  />
+                  <label
+                    htmlFor="operations-banner-file-input"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 18px",
+                      backgroundColor: "#EA580C",
+                      color: "#FFFFFF",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px rgba(234, 88, 12, 0.25)",
+                    }}
+                  >
+                    <Upload size={15} />
+                    <span>{bannerPreview ? "Replace Banner" : "Upload Banner"}</span>
+                  </label>
+
+                  {bannerFile && (
+                    <button
+                      type="button"
+                      onClick={handleQuickUploadBanner}
+                      disabled={isUploadingBanner}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 16px",
+                        backgroundColor: "#16A34A",
+                        color: "#FFFFFF",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        border: "none",
+                        cursor: isUploadingBanner ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {isUploadingBanner ? <Loader2 size={14} className={styles.spinner} /> : <Save size={14} />}
+                      <span>{isUploadingBanner ? "Uploading..." : "Publish Banner"}</span>
+                    </button>
+                  )}
+
+                  {bannerPreview && (
+                    <button
+                      type="button"
+                      onClick={handleResetBanner}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "8px 14px",
+                        backgroundColor: "#FFF1F2",
+                        color: "#E11D48",
+                        border: "1px solid #FECDD3",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      <span>Reset to Default</span>
+                    </button>
+                  )}
+                </div>
+
+                <span style={{ fontSize: "12px", color: "#64748B" }}>
+                  Recommended: 1200 x 400px (3:1 ratio) • JPG/PNG/WebP up to 5MB
+                </span>
+              </div>
+            </div>
+
             {/* 1. Kitchen & Store Operations */}
             <div className={styles.settingsCard}>
               <div className={styles.cardHeader}>

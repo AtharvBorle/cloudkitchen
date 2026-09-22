@@ -17,6 +17,9 @@ import {
   Star,
   Lock,
   MapPin,
+  ImagePlus,
+  Upload,
+  Save,
 } from "lucide-react";
 import SellerNotificationChannels, {
   NotificationChannelsData,
@@ -271,6 +274,76 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const [saving, setSaving] = useState(false);
   const [toastData, setToastData] = useState<{ title: string; status: "ON" | "OFF" | null } | null>(null);
 
+  // Storefront Banner State
+  const [bannerPreview, setBannerPreview] = useState<string>(
+    seller.bannerImageUrl || (seller.profile as any)?.bannerImageUrl || ""
+  );
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (seller.bannerImageUrl && !bannerFile) {
+      setBannerPreview(seller.bannerImageUrl);
+    }
+  }, [seller.bannerImageUrl, bannerFile]);
+
+  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+      return;
+    }
+    setBannerFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setBannerPreview(localUrl);
+    setToastData({ title: "Banner selected. Click Save Changes to publish.", status: "ON" });
+  };
+
+  const handleQuickUploadBanner = async () => {
+    if (!bannerFile) return;
+    setIsUploadingBanner(true);
+    try {
+      const data = new FormData();
+      data.append("bannerImageFile", bannerFile);
+      data.append("businessName", formData.businessName || seller.businessName);
+      data.append("phone", formData.phoneNumber || seller.phone);
+      data.append("email", formData.businessEmail || seller.email);
+      data.append("address", formData.address || seller.address);
+      if (formData.latitude) data.append("latitude", String(formData.latitude));
+      if (formData.longitude) data.append("longitude", String(formData.longitude));
+      data.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload banner");
+      }
+
+      const json = await res.json();
+      const updatedBannerUrl = json.data?.profile?.bannerImageUrl || json.profile?.bannerImageUrl || bannerPreview;
+      setBannerPreview(updatedBannerUrl);
+      setBannerFile(null);
+      updateCachedProfile({ bannerImageUrl: updatedBannerUrl });
+      setToastData({ title: "Banner uploaded and published live!", status: "ON" });
+    } catch (err: any) {
+      console.error("Banner upload error:", err);
+      setToastData({ title: err.message || "Banner upload failed", status: "OFF" });
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleResetBanner = () => {
+    setBannerFile(null);
+    setBannerPreview("");
+    updateCachedProfile({ bannerImageUrl: "" });
+    setToastData({ title: "Banner reset to default theme image", status: "ON" });
+  };
+
   const NOTIFICATION_TITLES: Partial<Record<keyof SettingsFormData, string>> = {
     emailNotifications: "Email Notifications",
     smsAlerts: "SMS Alerts",
@@ -388,24 +461,49 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         console.error("Failed to save regional settings to localStorage:", err);
       }
 
-      // 2. Persist Restaurant Information to backend database
-      const res = await fetchApi("/api/seller/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName: formData.businessName,
-          email: formData.businessEmail,
-          phone: formData.phoneNumber,
-          address: formData.address,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          isLocationPinned: Boolean(formData.latitude && formData.longitude),
-        }),
-      });
+      // 2. Persist Restaurant Information & Banner to backend database
+      let res: Response;
+      if (bannerFile) {
+        const fd = new FormData();
+        fd.append("businessName", formData.businessName);
+        fd.append("email", formData.businessEmail);
+        fd.append("phone", formData.phoneNumber);
+        fd.append("address", formData.address);
+        if (formData.latitude) fd.append("latitude", String(formData.latitude));
+        if (formData.longitude) fd.append("longitude", String(formData.longitude));
+        fd.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+        fd.append("bannerImageFile", bannerFile);
+
+        res = await fetchApi("/api/seller/profile", {
+          method: "POST",
+          body: fd,
+        });
+      } else {
+        res = await fetchApi("/api/seller/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            businessName: formData.businessName,
+            email: formData.businessEmail,
+            phone: formData.phoneNumber,
+            address: formData.address,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            isLocationPinned: Boolean(formData.latitude && formData.longitude),
+          }),
+        });
+      }
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to update profile settings");
+      }
+
+      const resJson = await res.json().catch(() => ({}));
+      const updatedBannerUrl = resJson.data?.profile?.bannerImageUrl || resJson.profile?.bannerImageUrl || bannerPreview;
+      if (bannerFile) {
+        setBannerFile(null);
+        setBannerPreview(updatedBannerUrl);
       }
 
       // 3. Update cached profile state across all components
@@ -418,6 +516,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         latitude: formData.latitude,
         longitude: formData.longitude,
         isLocationPinned: Boolean(formData.latitude && formData.longitude),
+        bannerImageUrl: updatedBannerUrl,
         avatarInitials: computeInitials(formData.businessName),
       });
 
@@ -488,8 +587,232 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {/* Tab 1: General (Matches the Exact Provided Image) */}
         {activeTab === "General" && (
           <div className={styles.mainGrid}>
-            {/* Left Column: Restaurant Info & Language */}
+            {/* Left Column: Storefront Banner & Restaurant Info & Language */}
             <div className={styles.leftColumn}>
+              {/* Card 0: Storefront Cover Banner */}
+              <div className={styles.card}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        backgroundColor: "#FFF7ED",
+                        border: "1px solid #FED7AA",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#EA580C",
+                      }}
+                    >
+                      <ImagePlus size={19} />
+                    </div>
+                    <div>
+                      <h2 className={styles.cardTitle} style={{ margin: 0, fontSize: "16px" }}>
+                        Storefront Cover Banner
+                      </h2>
+                      <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0 0" }}>
+                        Hero banner displayed on user &amp; restaurant explore pages
+                      </p>
+                    </div>
+                  </div>
+                  {bannerPreview ? (
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: "#16A34A",
+                        backgroundColor: "#F0FDF4",
+                        padding: "3px 10px",
+                        borderRadius: "20px",
+                        border: "1px solid #BBF7D0",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <CheckCircle2 size={12} /> Custom Banner Live
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "#64748B",
+                        backgroundColor: "#F1F5F9",
+                        padding: "3px 10px",
+                        borderRadius: "20px",
+                        border: "1px solid #E2E8F0",
+                      }}
+                    >
+                      Default Theme
+                    </span>
+                  )}
+                </div>
+
+                {/* Live Banner Preview Box */}
+                <div
+                  style={{
+                    width: "100%",
+                    height: "160px",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    position: "relative",
+                    backgroundColor: "#0F172A",
+                    marginTop: "12px",
+                    border: "1.5px solid #E2E8F0",
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.06)",
+                  }}
+                >
+                  <img
+                    src={bannerPreview || "/images/places/place-pizza.png"}
+                    alt="Storefront Banner Preview"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/images/places/place-pizza.png";
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: "linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.1) 60%)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                      padding: "14px 16px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
+                        <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.8px", color: "#FDBA74", fontWeight: 700 }}>
+                          Live Customer View
+                        </span>
+                        <h3 style={{ margin: "2px 0 0 0", color: "#FFFFFF", fontSize: "15px", fontWeight: 700 }}>
+                          {formData.businessName || seller.businessName || "Your Kitchen"}
+                        </h3>
+                      </div>
+                      <span
+                        style={{
+                          backgroundColor: "rgba(255, 255, 255, 0.2)",
+                          backdropFilter: "blur(6px)",
+                          color: "#FFFFFF",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          padding: "4px 8px",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(255, 255, 255, 0.3)",
+                        }}
+                      >
+                        Store Header
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Banner Action Buttons */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                    marginTop: "14px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <input
+                      type="file"
+                      id="banner-file-input"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      style={{ display: "none" }}
+                      onChange={handleBannerFileSelect}
+                    />
+                    <label
+                      htmlFor="banner-file-input"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 16px",
+                        backgroundColor: "#EA580C",
+                        color: "#FFFFFF",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "background-color 0.15s ease",
+                        boxShadow: "0 2px 8px rgba(234, 88, 12, 0.25)",
+                      }}
+                    >
+                      <Upload size={14} />
+                      <span>{bannerPreview ? "Replace Banner" : "Upload Banner"}</span>
+                    </label>
+
+                    {bannerFile && (
+                      <button
+                        type="button"
+                        onClick={handleQuickUploadBanner}
+                        disabled={isUploadingBanner}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "8px 14px",
+                          backgroundColor: "#16A34A",
+                          color: "#FFFFFF",
+                          borderRadius: "8px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          border: "none",
+                          cursor: isUploadingBanner ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {isUploadingBanner ? <Loader2 size={14} className={styles.spinner} /> : <Save size={14} />}
+                        <span>{isUploadingBanner ? "Uploading..." : "Save Banner"}</span>
+                      </button>
+                    )}
+
+                    {bannerPreview && (
+                      <button
+                        type="button"
+                        onClick={handleResetBanner}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "8px 12px",
+                          backgroundColor: "#FFF1F2",
+                          color: "#E11D48",
+                          border: "1px solid #FECDD3",
+                          borderRadius: "8px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        <span>Reset Default</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <span style={{ fontSize: "11px", color: "#94A3B8" }}>
+                    3:1 Ratio • JPG/PNG/WebP up to 5MB
+                  </span>
+                </div>
+              </div>
+
               {/* Card 1: Restaurant Information */}
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Restaurant Information</h2>

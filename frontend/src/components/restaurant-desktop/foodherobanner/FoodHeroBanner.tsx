@@ -18,6 +18,7 @@ export interface FoodHeroBannerProps {
   initialVegOnly?: boolean;
   onVegToggle?: (vegOnly: boolean) => void;
   isOnline?: boolean;
+  bannerImageUrl?: string;
 }
 
 export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
@@ -32,6 +33,7 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
   initialVegOnly = false,
   onVegToggle,
   isOnline = true,
+  bannerImageUrl,
 }) => {
   const [isVegOnly, setIsVegOnly] = useState<boolean>(initialVegOnly);
 
@@ -95,10 +97,11 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
       {/* Top Food Image Banner */}
       <div className={styles.imageWrapper}>
         <Image
-          src={heroPhoto}
+          src={bannerImageUrl || heroPhoto}
           alt={`${restaurantName} Food Spread`}
           fill
           priority
+          unoptimized={Boolean(bannerImageUrl)}
           sizes="(max-width: 1400px) 100vw, 1400px"
           className={styles.foodImage}
           style={{

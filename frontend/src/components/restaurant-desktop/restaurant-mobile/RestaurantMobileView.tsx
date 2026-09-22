@@ -137,10 +137,11 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
       {/* 1. Hero Food Spread Cover Image */}
       <div className={styles.heroWrapper}>
         <Image
-          src={heroPhoto}
+          src={kitchenData.bannerImageUrl || heroPhoto}
           alt={kitchenData.restaurantName}
           fill
           priority
+          unoptimized={Boolean(kitchenData.bannerImageUrl)}
           sizes="100vw"
           className={styles.heroImg}
           style={{
