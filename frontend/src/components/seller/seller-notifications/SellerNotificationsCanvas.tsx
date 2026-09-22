@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   PlusCircle,
   RotateCcw,
+  X,
 } from "lucide-react";
 import {
   SellerNotificationItem,
@@ -51,6 +52,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showBanner, setShowBanner] = useState(true);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -335,17 +337,39 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
       </div>
 
       {/* 2. Settings Notification Preferences Banner */}
-      <div className={styles.settingsBanner}>
-        <div className={styles.settingsBannerLeft}>
-          <SlidersHorizontal size={18} className={styles.settingsBannerIcon} />
-          <p className={styles.settingsBannerText}>
-            Notifications are delivered based on your active preferences in <strong>Settings &gt; Notifications</strong>. You can customize audio chimes, low-stock thresholds, and closing alerts at any time.
-          </p>
+      {showBanner && (
+        <div className={styles.settingsBanner}>
+          <div className={styles.settingsBannerLeft}>
+            <SlidersHorizontal size={18} className={styles.settingsBannerIcon} />
+            <p className={styles.settingsBannerText}>
+              Notifications are delivered based on your active preferences in <strong>Settings &gt; Notifications</strong>. You can customize audio chimes, low-stock thresholds, and closing alerts at any time.
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+            <Link href="/seller/settings" className={styles.settingsLink}>
+              Manage Alerts
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowBanner(false)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "4px",
+                color: "#C2410C",
+                display: "inline-flex",
+                alignItems: "center",
+                opacity: 0.8,
+              }}
+              title="Dismiss banner"
+              aria-label="Dismiss banner"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
-        <Link href="/seller/settings" className={styles.settingsLink}>
-          Manage Alerts
-        </Link>
-      </div>
+      )}
 
       {/* 3. Filter Tabs */}
       <div className={styles.tabsContainer} role="tablist">

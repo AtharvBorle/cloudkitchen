@@ -82,6 +82,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showBanner, setShowBanner] = useState(true);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -243,14 +244,36 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         </header>
 
         {/* Settings Notice Banner */}
-        <div className={styles.settingsBanner}>
-          <p className={styles.settingsBannerText}>
-            Notifications reflect your active preferences in <strong>Settings &gt; Notifications</strong>.
-          </p>
-          <Link href="/seller/settings" className={styles.settingsBannerLink}>
-            Edit
-          </Link>
-        </div>
+        {showBanner && (
+          <div className={styles.settingsBanner}>
+            <p className={styles.settingsBannerText}>
+              Notifications reflect your active preferences in <strong>Settings &gt; Notifications</strong>.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Link href="/seller/settings" className={styles.settingsBannerLink}>
+                Edit
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowBanner(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "2px",
+                  color: "#C2410C",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  opacity: 0.8,
+                }}
+                title="Dismiss"
+                aria-label="Dismiss banner"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Horizontal Scrollable Tabs */}
         <div className={styles.pillsContainer}>
