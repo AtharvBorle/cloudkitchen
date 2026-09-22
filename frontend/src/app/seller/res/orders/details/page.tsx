@@ -73,6 +73,14 @@ function DetailsContent() {
     }
   };
 
+  const calculatedSubtotal = Array.isArray(parsedItems)
+    ? parsedItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty) || 1), 0)
+    : 0;
+
+  const totalNum = order?.totalAmount !== undefined && order?.totalAmount !== null ? Number(order.totalAmount) : calculatedSubtotal;
+  const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : totalNum;
+  const discountNum = Math.max(0, subtotalNum - totalNum);
+
   return (
     <ResponsiveSellerOrdersDetails
       orderId={order ? `#${order.id.slice(0, 6)}` : rawId}
@@ -94,8 +102,11 @@ function DetailsContent() {
       riderPhone={order?.deliveryPerson?.phone || "+919876500101"}
       riderEta="Live ETA: ~12 min"
       items={formattedItems}
-      total={order ? `₹${order.totalAmount}` : "₹850"}
-      paymentMethod={order?.paymentMethod || "COD"}
+      subtotal={`₹${subtotalNum}`}
+      deliveryFee="Free"
+      discount={discountNum > 0 ? `₹${discountNum}` : undefined}
+      total={`₹${totalNum}`}
+      paymentMethod={`${order?.paymentMethod || "COD"} (${order?.isPaid ? "Paid" : "Unpaid"})`}
       initialStatus={order ? mapStatusToStep(order.status) : "Preparing"}
     />
   );

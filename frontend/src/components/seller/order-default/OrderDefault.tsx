@@ -34,6 +34,7 @@ export interface OrderDetailsData {
   subtotal: string;
   deliveryFee?: string;
   serviceFee?: string;
+  discount?: string;
   taxes?: string;
   total?: string;
   grandTotal?: string;
@@ -148,6 +149,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
             const totalNum = target.totalAmount !== undefined && target.totalAmount !== null ? Number(target.totalAmount) : calculatedSubtotal;
             const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : totalNum;
+            const discountNum = Math.max(0, subtotalNum - totalNum);
 
             setOrder({
               id: target.id,
@@ -164,6 +166,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               roomAssigned: target.deliveryAddress ? target.deliveryAddress.split(",")[0] : "Room 101",
               items: formattedItems,
               subtotal: `₹${subtotalNum}`,
+              discount: discountNum > 0 ? `₹${discountNum}` : undefined,
               deliveryFee: "₹0",
               serviceFee: "Free",
               taxes: "₹0",
@@ -435,8 +438,14 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                   </div>
                   <div className={styles.priceRow}>
                     <span className={styles.priceRowLabel}>Service Fee & Delivery:</span>
-                    <span className={styles.freeBadge}>{activeOrderData.serviceFee}</span>
+                    <span className={styles.freeBadge}>{activeOrderData.serviceFee || "Free"}</span>
                   </div>
+                  {activeOrderData.discount && activeOrderData.discount !== "₹0" && (
+                    <div className={styles.priceRow}>
+                      <span className={styles.priceRowLabel}>Discount / Coupon:</span>
+                      <span style={{ color: "#16A34A", fontWeight: "600" }}>-{activeOrderData.discount}</span>
+                    </div>
+                  )}
                   <div className={styles.priceRow}>
                     <span className={styles.priceRowLabel}>Payment Mode:</span>
                     <span className={styles.priceRowValue}>{activeOrderData.paymentMethod}</span>
