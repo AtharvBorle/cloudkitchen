@@ -20,7 +20,10 @@ import {
   Calendar,
   Clock,
   RefreshCw,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./ResSellerProfile.module.css";
@@ -40,6 +43,8 @@ export interface ResSellerProfileProps {
   initialPrimaryEmail?: string;
   initialOutletName?: string;
   initialRegisteredAddress?: string;
+  initialUpiId?: string;
+  initialTrackingId?: string;
   onBack?: () => void;
   onSaveProfile?: (profileData: any) => void;
   onLogout?: () => void;
@@ -52,6 +57,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   initialPrimaryEmail,
   initialOutletName,
   initialRegisteredAddress,
+  initialUpiId,
+  initialTrackingId,
   onBack,
   onSaveProfile,
   onLogout,
@@ -62,29 +69,52 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   // Form State
-  const [ownerName, setOwnerName] = useState(
+  const [ownerName, setOwnerName] = useState<string>(
     initialOwnerName && !isGenericFallbackName(initialOwnerName)
       ? initialOwnerName
-      : (seller.userFullName || seller.ownerName)
+      : (seller.userFullName || seller.ownerName || "")
   );
-  const [mobileNumber, setMobileNumber] = useState(
-    initialMobileNumber && initialMobileNumber !== "+91 98887 76655" ? initialMobileNumber : seller.phone
+  const [mobileNumber, setMobileNumber] = useState<string>(
+    initialMobileNumber && initialMobileNumber !== "+91 98887 76655" ? initialMobileNumber : (seller.phone || "")
   );
-  const [primaryEmail, setPrimaryEmail] = useState(
+  const [primaryEmail, setPrimaryEmail] = useState<string>(
     initialPrimaryEmail && initialPrimaryEmail !== "john.doe@neocloudroom.com"
       ? initialPrimaryEmail
-      : seller.email
+      : (seller.email || "")
   );
-  const [outletName, setOutletName] = useState(
+  const [outletName, setOutletName] = useState<string>(
     initialOutletName && !isGenericFallbackName(initialOutletName)
       ? initialOutletName
-      : (seller.businessName || seller.ownerName)
+      : (seller.businessName || seller.ownerName || "")
   );
-  const [registeredAddress, setRegisteredAddress] = useState(
+  const [registeredAddress, setRegisteredAddress] = useState<string>(
     initialRegisteredAddress && !initialRegisteredAddress.includes("Koramangala")
       ? initialRegisteredAddress
-      : seller.address
+      : (seller.address || "")
   );
+  const [upiId, setUpiId] = useState<string>(
+    initialUpiId || seller.upiId || (seller.profile as any)?.upiId || ""
+  );
+  const [trackingId, setTrackingId] = useState<string>(
+    initialTrackingId || seller.trackingId || (seller.profile as any)?.trackingId || ""
+  );
+
+  // Origin & Dynamic URIs
+  const [currentOrigin, setCurrentOrigin] = useState("");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentOrigin(window.location.origin);
+    }
+  }, []);
+
+  const sellerTrackingId = trackingId || seller.trackingId || (seller.profile as any)?.trackingId || seller.id || "store";
+  const shopUrl = `${currentOrigin || "https://neocloud.app"}/shop/${sellerTrackingId}`;
+
+  const activeUpiId = (upiId || seller.upiId || (seller.profile as any)?.upiId || "").trim();
+  const businessTitle = outletName || seller.businessName || "Neo Cloud Kitchen";
+  const upiPaymentUri = activeUpiId
+    ? `upi://pay?pa=${encodeURIComponent(activeUpiId)}&pn=${encodeURIComponent(businessTitle)}&cu=INR&tn=${encodeURIComponent("Counter Payment - " + businessTitle)}`
+    : "";
 
   // Subscription Status Data
   const [statusData, setStatusData] = useState<any>(null);
@@ -149,7 +179,13 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     if (seller.address) {
       setRegisteredAddress((prev) => (!prev || prev.includes("Koramangala") ? seller.address : prev));
     }
-  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address]);
+    if (seller.upiId) {
+      setUpiId((prev) => (!prev ? seller.upiId || "" : prev));
+    }
+    if (seller.trackingId) {
+      setTrackingId((prev) => (!prev ? seller.trackingId || "" : prev));
+    }
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address, seller.upiId, seller.trackingId]);
 
   // Stacked active subscriptions calculation
   const getStackedSubs = (subsList: any[]) => {
@@ -246,13 +282,14 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     }
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     const payload = {
       ownerName,
       mobileNumber,
       primaryEmail,
       outletName,
       registeredAddress,
+      upiId,
     };
 
     updateCachedProfile({
@@ -262,13 +299,32 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       email: primaryEmail,
       phone: mobileNumber,
       address: registeredAddress,
+      upiId,
       avatarInitials: computeInitials(outletName || ownerName),
     });
 
     if (onSaveProfile) {
       onSaveProfile(payload);
-    } else {
       showToast("Profile Changes Saved Successfully!");
+    } else {
+      try {
+        await fetchApi("/api/seller/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ownerName,
+            mobileNumber,
+            email: primaryEmail,
+            outletName,
+            registeredAddress,
+            upiId,
+          }),
+        });
+        showToast("Profile Changes Saved Successfully!");
+      } catch (err) {
+        console.error("Failed to save profile:", err);
+        showToast("Failed to save profile changes");
+      }
     }
   };
 
@@ -282,17 +338,77 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     }
   };
 
-  const handleShareQR = () => {
+  const handleShareProfileQR = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText("https://neocloud.app/kitchen/bangalore-central");
-      showToast("Kitchen QR Link copied to clipboard!");
+      navigator.clipboard.writeText(shopUrl);
+      showToast("Store link copied to clipboard!");
     } else {
-      showToast("QR Link Ready to Share!");
+      showToast("Store Link: " + shopUrl);
     }
   };
 
-  const handleDownloadQR = () => {
-    showToast("Kitchen QR Code downloaded!");
+  const handleDownloadProfileQR = () => {
+    const canvas = document.getElementById("canvas-mobile-profile-qr") as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${(outletName || "kitchen").toLowerCase().replace(/[^a-z0-9]/g, "-")}-store-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      showToast("Store QR Code downloaded!");
+    } else {
+      showToast("Store QR Code ready!");
+    }
+  };
+
+  const handleCopyUPI = () => {
+    if (!activeUpiId) {
+      showToast("Please enter and save a UPI ID first");
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(activeUpiId);
+      showToast(`UPI ID "${activeUpiId}" copied!`);
+    }
+  };
+
+  const handleTestUPIQR = () => {
+    if (!activeUpiId) {
+      showToast("Please enter and save a UPI ID first");
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(upiPaymentUri);
+    }
+    if (typeof window !== "undefined") {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.location.href = upiPaymentUri;
+      }
+    }
+    showToast("UPI URI copied! Scan with GPay/PhonePe to test.");
+  };
+
+  const handleDownloadPaymentQR = () => {
+    if (!activeUpiId) {
+      showToast("Please enter a UPI ID first to generate Payment QR");
+      return;
+    }
+    const canvas = document.getElementById("canvas-mobile-payment-qr") as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${(outletName || "kitchen").toLowerCase().replace(/[^a-z0-9]/g, "-")}-upi-payment-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      showToast("Payment UPI QR downloaded!");
+    } else {
+      showToast("Payment QR ready!");
+    }
   };
 
   const currentDisplayOutlet = outletName || seller.businessName || seller.ownerName;
@@ -435,6 +551,40 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
               />
             </div>
 
+            {/* Banking & UPI Payment Settings */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px" }}>
+              <span className={styles.sectionTag} style={{ margin: 0 }}>PAYMENT &amp; SETTLEMENT (UPI)</span>
+              {upiId && upiId.trim().includes("@") ? (
+                <span className={styles.statusActive}>
+                  <CheckCircle2 size={11} /> Active
+                </span>
+              ) : (
+                <span className={styles.statusRequired}>
+                  <AlertTriangle size={11} /> Required
+                </span>
+              )}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="upiIdInput" className={styles.label}>
+                Payment UPI ID (VPA) <span style={{ color: "#EA580C" }}>*</span>
+              </label>
+              <input
+                id="upiIdInput"
+                type="text"
+                className={styles.input}
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="e.g. merchant@okhdfcbank, 9876543210@paytm"
+                style={{
+                  borderColor: upiId && !upiId.includes("@") ? "#FCA5A5" : undefined,
+                }}
+              />
+              <p className={styles.helperText}>
+                Customer QR payments and automated daily payout settlements will be credited directly to this UPI address.
+              </p>
+            </div>
+
             {/* Save & Logout Buttons */}
             <div className={styles.accountActionGroup}>
               <button
@@ -457,101 +607,142 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
 
           {/* Card 2: Profile & Check-in QR */}
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Profile &amp; Check-in QR</h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h2 className={styles.cardTitle}>Store Profile &amp; Payment QR</h2>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 600, padding: "3px 8px", borderRadius: "12px", backgroundColor: "#FFF1E8", color: "#EA580C" }}>
+                  Store Front
+                </span>
+                <span style={{ fontSize: "11px", fontWeight: 600, padding: "3px 8px", borderRadius: "12px", backgroundColor: "#F0FDF4", color: "#16A34A" }}>
+                  UPI
+                </span>
+              </div>
+            </div>
 
-            {/* Kitchen QR Code */}
+            {/* Important Banking & Active UPI Notice Alert */}
+            <div className={styles.noticeAlert}>
+              <AlertTriangle size={20} color="#D97706" style={{ flexShrink: 0, marginTop: "2px" }} />
+              <div className={styles.noticeContent}>
+                <h4 className={styles.noticeTitle}>
+                  Important Merchant UPI Notice
+                </h4>
+                <p className={styles.noticeText}>
+                  Please ensure your UPI ID is active and linked to your bank account. All customer payments and payouts are routed directly to this UPI ID.
+                </p>
+                <div className={styles.noticeTip}>
+                  💡 <strong>Test QR:</strong> Scan your QR with Google Pay, PhonePe, or Paytm before displaying at your counter.
+                </div>
+              </div>
+            </div>
+
+            {/* 1. Kitchen & Store Profile QR */}
             <div className={styles.qrSubSection}>
-              <h3 className={styles.qrSectionTitle}>Your Kitchen QR Code</h3>
+              <h3 className={styles.qrSectionTitle}>Store &amp; Kitchen Profile QR</h3>
               <p className={styles.qrSubtext}>
-                Scan this QR code to view your kitchen profile
+                Scan to open public storefront menu &amp; order food online
               </p>
 
               <div className={styles.qrBox}>
-                <svg
-                  width="140"
-                  height="140"
-                  viewBox="0 0 140 140"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <rect width="140" height="140" rx="8" fill="white" />
-                  {/* Outer corner squares */}
-                  <rect x="14" y="14" width="36" height="36" rx="6" fill="#0F172A" />
-                  <rect x="22" y="22" width="20" height="20" rx="3" fill="white" />
-                  <rect x="27" y="27" width="10" height="10" rx="2" fill="#0F172A" />
-
-                  <rect x="90" y="14" width="36" height="36" rx="6" fill="#0F172A" />
-                  <rect x="98" y="22" width="20" height="20" rx="3" fill="white" />
-                  <rect x="103" y="27" width="10" height="10" rx="2" fill="#0F172A" />
-
-                  <rect x="14" y="90" width="36" height="36" rx="6" fill="#0F172A" />
-                  <rect x="22" y="98" width="20" height="20" rx="3" fill="white" />
-                  <rect x="27" y="103" width="10" height="10" rx="2" fill="#0F172A" />
-
-                  {/* QR Pattern Data Dots */}
-                  <rect x="58" y="18" width="6" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="68" y="18" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="58" y="28" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="76" y="28" width="6" height="6" rx="1.5" fill="#0F172A" />
-
-                  <rect x="18" y="58" width="6" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="28" y="58" width="6" height="14" rx="1.5" fill="#0F172A" />
-                  <rect x="38" y="66" width="14" height="6" rx="1.5" fill="#0F172A" />
-
-                  <rect x="58" y="52" width="24" height="24" rx="4" fill="#F97316" />
-                  <circle cx="70" cy="64" r="5" fill="white" />
-
-                  <rect x="90" y="58" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="110" y="58" width="12" height="14" rx="1.5" fill="#0F172A" />
-
-                  <rect x="58" y="84" width="8" height="14" rx="1.5" fill="#0F172A" />
-                  <rect x="72" y="92" width="10" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="58" y="104" width="24" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="68" y="116" width="14" height="6" rx="1.5" fill="#0F172A" />
-
-                  <rect x="90" y="86" width="14" height="14" rx="3" fill="#0F172A" />
-                  <rect x="110" y="86" width="12" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="98" y="106" width="24" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="90" y="118" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="110" y="118" width="12" height="6" rx="1.5" fill="#0F172A" />
-                </svg>
+                <QRCodeCanvas
+                  id="canvas-mobile-profile-qr"
+                  value={shopUrl}
+                  size={220}
+                  style={{ width: "140px", height: "140px" }}
+                  level="H"
+                  includeMargin={false}
+                />
               </div>
 
-              <p className={styles.qrInstruction}>
-                Scan from the NeoCloud app to check in
-              </p>
+              {/* URL preview pill */}
+              <div
+                className={styles.urlPill}
+                onClick={handleShareProfileQR}
+                title="Click to copy store URL"
+              >
+                <Copy size={12} color="#EA580C" />
+                <span>{shopUrl}</span>
+              </div>
 
               <div className={styles.qrBtnRow}>
                 <button
                   type="button"
                   className={styles.shareBtn}
-                  onClick={handleShareQR}
+                  onClick={handleShareProfileQR}
                 >
-                  <Share2 size={16} />
-                  <span>Share</span>
+                  <Share2 size={15} />
+                  <span>Share Link</span>
                 </button>
 
                 <button
                   type="button"
                   className={styles.downloadBtn}
-                  onClick={handleDownloadQR}
+                  onClick={handleDownloadProfileQR}
                 >
-                  <Download size={16} />
-                  <span>Download</span>
+                  <Download size={15} />
+                  <span>Download QR</span>
                 </button>
               </div>
             </div>
 
-            {/* Payment QR Section */}
-            <div className={styles.qrSubSection} style={{ marginTop: "6px" }}>
-              <h3 className={styles.qrSectionTitle}>Payment QR</h3>
+            {/* 2. In-Store UPI & Payment QR */}
+            <div className={styles.qrSubSection} style={{ marginTop: "12px", borderTop: "1px solid #F1F5F9", paddingTop: "14px" }}>
+              <h3 className={styles.qrSectionTitle}>In-Store UPI &amp; Payment QR</h3>
               <p className={styles.qrSubtext}>
-                Sample Payment QR for in-store payments.
+                Scan with GPay, PhonePe, Paytm for direct counter payment
               </p>
 
-              <div className={styles.paymentQrBox}>
-                <QrCode size={64} color="#94A3B8" strokeWidth={1.5} />
-              </div>
+              {activeUpiId ? (
+                <>
+                  <div className={styles.qrBox}>
+                    <QRCodeCanvas
+                      id="canvas-mobile-payment-qr"
+                      value={upiPaymentUri}
+                      size={220}
+                      style={{ width: "140px", height: "140px" }}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </div>
+
+                  {/* Active UPI ID pill */}
+                  <div
+                    className={styles.upiPill}
+                    onClick={handleCopyUPI}
+                    title="Click to copy UPI ID"
+                  >
+                    <CheckCircle2 size={13} color="#16A34A" />
+                    <span>UPI ID: {activeUpiId}</span>
+                    <Copy size={11} color="#16A34A" style={{ marginLeft: "2px" }} />
+                  </div>
+
+                  <div className={styles.qrBtnRow}>
+                    <button
+                      type="button"
+                      className={styles.testBtn}
+                      onClick={handleTestUPIQR}
+                    >
+                      <ExternalLink size={15} />
+                      <span>Test QR Link</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.downloadBtn}
+                      onClick={handleDownloadPaymentQR}
+                    >
+                      <Download size={15} />
+                      <span>Download QR</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.emptyQrState}>
+                  <QrCode size={40} color="#94A3B8" strokeWidth={1.5} />
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748B", fontWeight: 500 }}>
+                    Enter and save your <strong>Payment UPI ID</strong> above to generate your counter payment QR code.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Experiences Section */}

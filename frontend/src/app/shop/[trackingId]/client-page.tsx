@@ -152,7 +152,16 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
             <div style={{ backgroundColor: '#555A5D', color: 'white', padding: '60px 20px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
                 {seller.bannerImageUrl && (
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, opacity: 0.4 }}>
-                        <img src={seller.bannerImageUrl} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img
+                            src={seller.bannerImageUrl}
+                            alt="Banner"
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                filter: !seller.isOnline ? 'grayscale(100%)' : 'none',
+                            }}
+                        />
                     </div>
                 )}
 
@@ -162,23 +171,60 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                     <p style={{ fontSize: '1.1rem', marginBottom: '5px' }}>{seller.user.city}</p>
                     <p style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Phone: {seller.user.phone}</p>
 
-                    {/* Overall Rating Badge in Header */}
-                    {seller.averageRating > 0 && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '6px 14px', borderRadius: '20px', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <Star size={16} fill="var(--coral, #F16F68)" color="var(--coral, #F16F68)" />
-                            <span style={{ fontWeight: '800', fontSize: '0.95rem' }}>{seller.averageRating}</span>
-                            <span style={{ opacity: 0.8, fontSize: '0.85rem' }}>({seller.totalReviews} reviews)</span>
-                        </div>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {!seller.isOnline && (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#EF4444', padding: '6px 14px', borderRadius: '20px', color: 'white', fontWeight: '800', fontSize: '0.85rem', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                                <span>🔴 CLOSED</span>
+                            </div>
+                        )}
+                        {/* Overall Rating Badge in Header */}
+                        {seller.averageRating > 0 && (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '6px 14px', borderRadius: '20px', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <Star size={16} fill="var(--coral, #F16F68)" color="var(--coral, #F16F68)" />
+                                <span style={{ fontWeight: '800', fontSize: '0.95rem' }}>{seller.averageRating}</span>
+                                <span style={{ opacity: 0.8, fontSize: '0.85rem' }}>({seller.totalReviews} reviews)</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
             <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
 
                 {!seller.isOnline && (
-                    <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '20px', borderRadius: '8px', marginBottom: '30px', textAlign: 'center', border: '1px solid #F87171' }}>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Store is Currently Offline</h3>
-                        <p>This kitchen is not accepting orders at this time. Please check back later.</p>
+                    <div style={{
+                        backgroundColor: '#FEF2F2',
+                        color: '#991B1B',
+                        padding: '18px 24px',
+                        borderRadius: '16px',
+                        marginBottom: '30px',
+                        border: '1.5px solid #FECACA',
+                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '12px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <span style={{ fontSize: '26px' }}>🔴</span>
+                            <div>
+                                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', margin: '0 0 4px 0', color: '#991B1B' }}>Store is Currently Closed</h3>
+                                <p style={{ margin: 0, color: '#DC2626', fontSize: '0.9rem' }}>This cloud kitchen is not accepting orders at this time. You can explore the menu items below.</p>
+                            </div>
+                        </div>
+                        <span style={{
+                            backgroundColor: '#DC2626',
+                            color: '#FFFFFF',
+                            fontWeight: '800',
+                            fontSize: '0.78rem',
+                            padding: '6px 14px',
+                            borderRadius: '12px',
+                            letterSpacing: '0.6px',
+                            textTransform: 'uppercase'
+                        }}>
+                            Not Accepting Orders
+                        </span>
                     </div>
                 )}
 
@@ -358,12 +404,63 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 };
 
                                 return (
-                                    <div style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{
+                                        backgroundColor: !seller.isOnline ? '#F8FAFC' : 'white',
+                                        borderRadius: '10px',
+                                        overflow: 'hidden',
+                                        boxShadow: 'var(--shadow-card)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        opacity: !seller.isOnline ? 0.85 : 1,
+                                        border: !seller.isOnline ? '1px solid #E2E8F0' : undefined,
+                                    }}>
                                         <div style={{ height: '200px', backgroundColor: '#EEE', position: 'relative' }}>
-                                            <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <img
+                                                src={item.imageUrl || placeholderImage}
+                                                alt={item.name}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                    filter: !seller.isOnline ? 'grayscale(100%)' : 'none',
+                                                }}
+                                            />
                                             <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 2 }}>
                                                 <DietaryTag itemType={item.itemType} size="sm" />
                                             </div>
+                                            {!seller.isOnline && (
+                                                <div
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        bottom: 0,
+                                                        backgroundColor: "rgba(15, 23, 42, 0.4)",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        zIndex: 3,
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            backgroundColor: "#0F172A",
+                                                            color: "#FFFFFF",
+                                                            fontSize: "11px",
+                                                            fontWeight: "800",
+                                                            letterSpacing: "0.8px",
+                                                            padding: "5px 12px",
+                                                            borderRadius: "14px",
+                                                            textTransform: "uppercase",
+                                                            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                                                            border: "1px solid rgba(255,255,255,0.2)",
+                                                        }}
+                                                    >
+                                                        🔴 CLOSED
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                         <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>

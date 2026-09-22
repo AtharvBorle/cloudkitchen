@@ -80,17 +80,16 @@ export default function ResponsiveSellerOrdersPage() {
   };
 
   const handleRejectOrder = async (orderId: string) => {
-    if (!confirm("Are you sure you want to reject / cancel this order?")) return;
-    try {
-      await fetchApi(`/api/seller/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "CANCELLED" }),
-      });
-      loadOrders(true);
-    } catch (err) {
-      console.error("Failed to reject order:", err);
+    const res = await fetchApi(`/api/seller/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "CANCELLED" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || data?.message || "Failed to reject order");
     }
+    loadOrders(true);
   };
 
   const mappedOrders: ResponsiveOrderItem[] | undefined = useMemo(() => {

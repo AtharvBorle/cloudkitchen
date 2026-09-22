@@ -14,8 +14,10 @@ function ProfileContent() {
       const formData = new FormData();
       if (formDataPayload.ownerName) formData.append("name", formDataPayload.ownerName);
       if (formDataPayload.mobileNumber) formData.append("phone", formDataPayload.mobileNumber);
+      if (formDataPayload.primaryEmail || formDataPayload.email) formData.append("email", formDataPayload.primaryEmail || formDataPayload.email);
       if (formDataPayload.outletName) formData.append("businessName", formDataPayload.outletName);
       if (formDataPayload.registeredAddress) formData.append("infoAddress", formDataPayload.registeredAddress);
+      if (formDataPayload.upiId !== undefined) formData.append("upiId", formDataPayload.upiId);
 
       await fetchApi("/api/seller/profile", {
         method: "PATCH",
@@ -33,6 +35,8 @@ function ProfileContent() {
       initialPrimaryEmail={seller.email}
       initialOutletName={seller.businessName}
       initialRegisteredAddress={seller.address}
+      initialUpiId={seller.upiId || (seller.profile as any)?.upiId || ""}
+      initialTrackingId={seller.trackingId || (seller.profile as any)?.trackingId || ""}
       onSaveProfile={handleSaveProfile}
     />
   );

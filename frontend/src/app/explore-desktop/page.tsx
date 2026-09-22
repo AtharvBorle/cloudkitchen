@@ -234,60 +234,102 @@ function ExploreDesktopContent() {
                   gap: "20px",
                 }}
               >
-                {filteredFoodItems.map((item) => (
+                {filteredFoodItems.map((item) => {
+                  const isClosed = item.sellerIsOnline === false;
+                  return (
                   <Link
                     key={item.id}
                     href={item.sellerTrackingId ? `/shop/${item.sellerTrackingId}` : `/explore-desktop?item=${item.id}`}
                     style={{
-                      backgroundColor: "#FFFFFF",
+                      backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                       borderRadius: "18px",
                       overflow: "hidden",
-                      border: "1px solid #F1F5F9",
+                      border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
                       boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
                       textDecoration: "none",
                       color: "inherit",
                       display: "flex",
                       flexDirection: "column",
                       transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                      opacity: isClosed ? 0.85 : 1,
                     }}
                     className="hover-lift"
                   >
-                    <div style={{ position: "relative", width: "100%", height: "160px" }}>
+                    <div style={{ position: "relative", width: "100%", height: "160px", backgroundColor: "#F8FAFC" }}>
                       <Image
                         src={item.imageUrl || "/images/places/place-biryani.png"}
                         alt={item.name}
                         fill
-                        style={{ objectFit: "cover" }}
+                        style={{
+                          objectFit: "cover",
+                          filter: isClosed ? "grayscale(100%)" : "none",
+                        }}
                       />
+                      {isClosed && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: "rgba(15, 23, 42, 0.4)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 2,
+                          }}
+                        >
+                          <span
+                            style={{
+                              backgroundColor: "#0F172A",
+                              color: "#FFFFFF",
+                              fontSize: "11px",
+                              fontWeight: "800",
+                              letterSpacing: "0.8px",
+                              padding: "5px 12px",
+                              borderRadius: "14px",
+                              textTransform: "uppercase",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                            }}
+                          >
+                            🔴 CLOSED
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: "6px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>{item.name}</span>
-                        <span style={{ fontSize: "0.95rem", fontWeight: "800", color: "#FF6B00" }}>₹{item.price}</span>
+                        <span style={{ fontSize: "1rem", fontWeight: "700", color: isClosed ? "#64748B" : "#0F172A" }}>{item.name}</span>
+                        <span style={{ fontSize: "0.95rem", fontWeight: "800", color: isClosed ? "#94A3B8" : "#FF6B00" }}>₹{item.price}</span>
                       </div>
-                      <span style={{ fontSize: "0.82rem", color: "#64748B" }}>{item.sellerName}</span>
+                      <span style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                        {item.sellerName} {isClosed ? "• (Not accepting orders)" : ""}
+                      </span>
                       <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
                         <div
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "4px",
-                            backgroundColor: "#E8FBF2",
-                            color: "#10B981",
+                            backgroundColor: isClosed ? "#F1F5F9" : "#E8FBF2",
+                            color: isClosed ? "#64748B" : "#10B981",
                             padding: "2px 6px",
                             borderRadius: "6px",
                             fontSize: "0.78rem",
                             fontWeight: "700",
                           }}
                         >
-                          <Star size={11} fill="#10B981" />
+                          <Star size={11} fill={isClosed ? "#64748B" : "#10B981"} />
                           <span>{item.rating || 4.8}</span>
                         </div>
                         <span style={{ fontSize: "0.78rem", color: "#94A3B8" }}>• {item.categoryName}</span>
                       </div>
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}

@@ -19,6 +19,7 @@ import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./UserCart.module.css";
 
 export interface UserCartItem {
@@ -84,6 +85,7 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [customizingItem, setCustomizingItem] = useState<UserCartItem | null>(null);
+  const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
 
   // Active items derived from context if present
   const cartItems: UserCartItem[] = contextCartItems.length > 0
@@ -105,6 +107,32 @@ export const UserCart: React.FC<UserCartProps> = ({
         sellerName: ci.sellerName,
       }))
     : localCartItems;
+
+  React.useEffect(() => {
+    const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
+    if (!sellerId) return;
+
+    let isMounted = true;
+    async function checkSellerStatus() {
+      try {
+        const res = await fetchApi(`/api/public/shop/${sellerId}`);
+        if (res.ok && isMounted) {
+          const json = await res.json();
+          const sellerObj = json.data || json;
+          if (sellerObj && sellerObj.isOnline === false) {
+            setIsSellerClosed(true);
+          }
+        }
+      } catch (e) {
+        // Silently continue
+      }
+    }
+    checkSellerStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cartItems]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -231,6 +259,10 @@ export const UserCart: React.FC<UserCartProps> = ({
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   const handleCheckoutClick = () => {
+    if (isSellerClosed) {
+      showToast("This kitchen is currently closed and not accepting orders.");
+      return;
+    }
     if (onProceedToCheckout) {
       onProceedToCheckout();
     } else if (status === "unauthenticated") {
@@ -306,6 +338,53 @@ export const UserCart: React.FC<UserCartProps> = ({
         <div className={styles.mainContent}>
           {/* Left Column: Cart Items List */}
           <div className={styles.cartItemsList}>
+            {/* Closed Restaurant Alert Notice */}
+            {isSellerClosed && (
+              <div
+                style={{
+                  backgroundColor: "#FEF2F2",
+                  border: "1.5px solid #FECACA",
+                  borderRadius: "16px",
+                  padding: "16px 20px",
+                  marginBottom: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  boxShadow: "0 4px 14px rgba(239, 68, 68, 0.08)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "24px" }}>🔴</span>
+                  <div>
+                    <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "800", color: "#991B1B" }}>
+                      Cloud Kitchen is Currently Closed
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#DC2626" }}>
+                      The kitchen for these items has turned off operations and is not accepting orders.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push("/explore-desktop")}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "10px",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    fontWeight: "700",
+                    fontSize: "0.82rem",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Explore Other Kitchens
+                </button>
+              </div>
+            )}
+
             {cartItems.length > 0 ? (
               cartItems.map((item) => (
                 <article key={item.id} className={styles.cartItemCard}>
@@ -611,13 +690,14 @@ export const UserCart: React.FC<UserCartProps> = ({
                 type="button"
                 className={styles.checkoutButton}
                 onClick={handleCheckoutClick}
-                disabled={cartItems.length === 0}
+                disabled={cartItems.length === 0 || isSellerClosed}
                 style={{
-                  opacity: cartItems.length === 0 ? 0.6 : 1,
-                  cursor: cartItems.length === 0 ? "not-allowed" : "pointer",
+                  backgroundColor: isSellerClosed ? "#94A3B8" : undefined,
+                  opacity: cartItems.length === 0 || isSellerClosed ? 0.6 : 1,
+                  cursor: cartItems.length === 0 || isSellerClosed ? "not-allowed" : "pointer",
                 }}
               >
-                <span>Proceed to Checkout</span>
+                <span>{isSellerClosed ? "Kitchen Closed • Cannot Order" : "Proceed to Checkout"}</span>
                 <ArrowRight size={18} />
               </button>
 

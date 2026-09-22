@@ -38,6 +38,8 @@ export default function Profile({
       email: initialData?.email || seller.email || "",
       outletName: outlet,
       registeredAddress: initialData?.registeredAddress || seller.address || "",
+      upiId: initialData?.upiId || seller.upiId || (seller.profile as any)?.upiId || "",
+      trackingId: initialData?.trackingId || seller.trackingId || (seller.profile as any)?.trackingId || "",
       partnerRole: initialData?.partnerRole || seller.partnerRole,
       avatarInitials: initialData?.avatarInitials || computeInitials(outlet || owner),
     };
@@ -59,11 +61,13 @@ export default function Profile({
           mobileNumber: seller.phone || prev.mobileNumber,
           outletName: outlet,
           registeredAddress: seller.address || prev.registeredAddress,
+          upiId: seller.upiId || (seller.profile as any)?.upiId || prev.upiId || "",
+          trackingId: seller.trackingId || (seller.profile as any)?.trackingId || prev.trackingId || "",
           avatarInitials: computeInitials(outlet || owner),
         };
       });
     }
-  }, [seller.ownerName, seller.userFullName, seller.email, seller.phone, seller.businessName, seller.address]);
+  }, [seller.ownerName, seller.userFullName, seller.email, seller.phone, seller.businessName, seller.address, seller.upiId, seller.trackingId]);
 
   useEffect(() => {
     async function loadSellerProfile() {
@@ -90,6 +94,8 @@ export default function Profile({
                 `${profile?.addressFlat ? profile.addressFlat + ", " : ""}${profile?.addressLocality || ""}` ||
                 user?.city ||
                 prev.registeredAddress,
+              upiId: profile?.upiId || prev.upiId || "",
+              trackingId: profile?.trackingId || prev.trackingId || "",
               avatarInitials: initials,
             }));
           }
@@ -113,6 +119,8 @@ export default function Profile({
       email: data.email,
       phone: data.mobileNumber,
       address: data.registeredAddress,
+      upiId: data.upiId,
+      trackingId: data.trackingId,
       avatarInitials: computeInitials(data.outletName || data.ownerName),
     });
 
@@ -127,8 +135,10 @@ export default function Profile({
         body: JSON.stringify({
           ownerName: data.ownerName,
           mobileNumber: data.mobileNumber,
+          email: data.email,
           outletName: data.outletName,
           registeredAddress: data.registeredAddress,
+          upiId: data.upiId,
         }),
       });
     } catch (err) {

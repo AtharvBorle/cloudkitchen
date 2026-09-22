@@ -183,7 +183,8 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   autoDeleteSessionHistory: false,
 };
 
-import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
+import { useSellerProfile, toggleSellerOnlineStatus, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { fetchApi } from "@/lib/fetch-api";
 
 export interface ResponsiveSellerSettingsProps {
   ownerName?: string;
@@ -227,6 +228,26 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   });
 
   useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const savedRegional = localStorage.getItem("seller_regional_settings");
+        if (savedRegional) {
+          const parsed = JSON.parse(savedRegional);
+          setFormData((prev) => ({
+            ...prev,
+            language: parsed.language || prev.language,
+            timezone: parsed.timezone || prev.timezone,
+            currency: parsed.currency || prev.currency,
+            operatingHours: parsed.operatingHours || prev.operatingHours,
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error reading saved regional settings in responsive:", e);
+    }
+  }, []);
+
+  useEffect(() => {
     if (typeof seller.isOnline === "boolean") {
       setFormData((prev) => ({ ...prev, storeOnline: seller.isOnline }));
     }
@@ -236,10 +257,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     if (seller.businessName || seller.phone || seller.email || seller.address) {
       setFormData((prev) => ({
         ...prev,
-        businessName: prev.businessName === "Neo Cloud Kitchen & Rooms" && seller.businessName ? seller.businessName : prev.businessName,
-        phoneNumber: prev.phoneNumber === "+91 98765 43210" && seller.phone ? seller.phone : prev.phoneNumber,
-        businessEmail: prev.businessEmail === "hello@neocloudbite.com" && seller.email ? seller.email : prev.businessEmail,
-        address: prev.address.includes("Innovation Way") && seller.address ? seller.address : prev.address,
+        businessName: (!prev.businessName || prev.businessName === "Neo Cloud Kitchen & Rooms") && seller.businessName ? seller.businessName : prev.businessName,
+        phoneNumber: (!prev.phoneNumber || prev.phoneNumber === "+91 98765 43210") && seller.phone ? seller.phone : prev.phoneNumber,
+        businessEmail: (!prev.businessEmail || prev.businessEmail === "hello@neocloudbite.com") && seller.email ? seller.email : prev.businessEmail,
+        address: (!prev.address || prev.address.includes("Innovation Way")) && seller.address ? seller.address : prev.address,
       }));
     }
   }, [seller.businessName, seller.phone, seller.email, seller.address]);
@@ -339,13 +360,60 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     setSaving(true);
 
     try {
+      // 1. Save regional settings to localStorage
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(
+            "seller_regional_settings",
+            JSON.stringify({
+              language: formData.language,
+              timezone: formData.timezone,
+              currency: formData.currency,
+              operatingHours: formData.operatingHours,
+            })
+          );
+        }
+      } catch (err) {
+        console.error("Failed to save regional settings in responsive:", err);
+      }
+
+      // 2. Persist Restaurant Information to backend database
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: formData.businessName,
+          email: formData.businessEmail,
+          phone: formData.phoneNumber,
+          address: formData.address,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update settings");
+      }
+
+      // 3. Update cached profile state
+      updateCachedProfile({
+        ownerName: formData.businessName,
+        businessName: formData.businessName,
+        email: formData.businessEmail,
+        phone: formData.phoneNumber,
+        address: formData.address,
+        avatarInitials: computeInitials(formData.businessName),
+      });
+
+      // 4. Toggle store online status if needed
       await toggleSellerOnlineStatus(formData.storeOnline);
+
       if (onSave) {
         onSave(formData);
       }
       setToastData({ title: "Settings updated successfully!", status: "ON" });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving settings:", err);
+      setToastData({ title: err.message || "Failed to save settings", status: "OFF" });
     } finally {
       setSaving(false);
     }

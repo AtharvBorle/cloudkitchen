@@ -9,6 +9,8 @@ import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { fetchApi } from "@/lib/fetch-api";
+import RejectOrderModal from "../seller-orders/RejectOrderModal";
+import ToastNotification from "../seller-orders/ToastNotification";
 import styles from "./OrderDefault.module.css";
 
 export interface OrderItemRow {
@@ -74,6 +76,19 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
   const [order, setOrder] = useState<OrderDetailsData | null>(propOrderData || null);
   const [loading, setLoading] = useState(!propOrderData);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // In-app rejection modal & toast state
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
@@ -224,15 +239,19 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
     }
   };
 
-  const handleReject = async () => {
+  const handleReject = () => {
     if (onRejectOrder) {
       onRejectOrder();
       return;
     }
     if (!currentOrderId) return;
-    if (!confirm("Are you sure you want to reject / cancel this order?")) return;
+    setIsRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!currentOrderId) return;
     try {
-      setActionLoading(true);
+      setIsRejecting(true);
       const res = await fetchApi(`/api/seller/orders/${currentOrderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -240,12 +259,27 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
       });
       if (res.ok) {
         setOrder((prev) => (prev ? { ...prev, status: "Cancelled", rawStatus: "CANCELLED" } : null));
+        setToast({
+          type: "success",
+          text: `Order ${activeOrderData.orderId} rejected successfully.`,
+        });
+        setIsRejectModalOpen(false);
         loadOrder(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setToast({
+          type: "error",
+          text: data?.error || data?.message || "Failed to reject order. Please try again.",
+        });
       }
     } catch (err) {
       console.error("Failed to reject order:", err);
+      setToast({
+        type: "error",
+        text: "Failed to reject order due to a network error.",
+      });
     } finally {
-      setActionLoading(false);
+      setIsRejecting(false);
     }
   };
 
@@ -659,6 +693,29 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
           </div>
         </main>
       </div>
+
+      {/* In-App Rejection Confirmation Modal */}
+      <RejectOrderModal
+        isOpen={isRejectModalOpen}
+        orderId={activeOrderData.orderId}
+        customerName={activeOrderData.customerName}
+        itemsSummary={activeOrderData.items?.map((i) => `${i.qty}x ${i.name}`).join(", ")}
+        totalAmount={activeOrderData.total}
+        isLoading={isRejecting}
+        onClose={() => {
+          if (!isRejecting) setIsRejectModalOpen(false);
+        }}
+        onConfirm={handleConfirmReject}
+      />
+
+      {/* In-App Toast Notification */}
+      {toast && (
+        <ToastNotification
+          type={toast.type}
+          message={toast.text}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

@@ -48,6 +48,7 @@ export interface PopularFoodProps {
   categories?: readonly string[];
   defaultActiveCategory?: string;
   items?: FoodCardItem[];
+  isOnline?: boolean;
   onCategoryChange?: (category: string) => void;
   onAddItem?: (item: FoodCardItem) => void;
   onDecreaseItem?: (itemId: string) => void;
@@ -58,6 +59,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
   categories = CATEGORIES,
   defaultActiveCategory = "Popular",
   items = [],
+  isOnline = true,
   onCategoryChange,
   onAddItem,
   onDecreaseItem,
@@ -176,7 +178,15 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
       ) : (
         <div className={styles.foodGrid} role="region" aria-label="Food Items Grid">
           {displayedList.map((item) => (
-            <article key={item.id} className={styles.foodCard}>
+            <article
+              key={item.id}
+              className={styles.foodCard}
+              style={{
+                backgroundColor: !isOnline ? "#F8FAFC" : undefined,
+                opacity: !isOnline ? 0.85 : 1,
+                borderColor: !isOnline ? "#E2E8F0" : undefined,
+              }}
+            >
               {/* Square Food Image */}
               <div className={styles.imageWrapper}>
                 <div style={{ position: "absolute", top: "6px", left: "6px", zIndex: 2 }}>
@@ -189,18 +199,52 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                   sizes="110px"
                   unoptimized={typeof item.image === "string"}
                   className={styles.foodImg}
+                  style={{
+                    filter: !isOnline ? "grayscale(100%)" : "none",
+                  }}
                 />
+                {!isOnline && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: "rgba(15, 23, 42, 0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 3,
+                    }}
+                  >
+                    <span
+                      style={{
+                        backgroundColor: "#0F172A",
+                        color: "#FFFFFF",
+                        fontSize: "9px",
+                        fontWeight: "800",
+                        letterSpacing: "0.6px",
+                        padding: "3px 8px",
+                        borderRadius: "10px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      CLOSED
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Food Information */}
               <div className={styles.cardContent}>
                 <div>
                   <div className={styles.cardTopRow}>
-                    <h3 className={styles.foodTitle} title={item.title}>
+                    <h3 className={styles.foodTitle} title={item.title} style={{ color: !isOnline ? "#64748B" : undefined }}>
                       {item.title}
                     </h3>
                     <span className={styles.ratingBadge}>
-                      <Star size={11} fill="#16a34a" color="#16a34a" />
+                      <Star size={11} fill={!isOnline ? "#94A3B8" : "#16a34a"} color={!isOnline ? "#94A3B8" : "#16a34a"} />
                       <span>{item.rating}</span>
                     </span>
                   </div>
@@ -211,7 +255,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
 
                   {item.addons && item.addons.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "4px 0 6px 0" }}>
-                      <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#EA580C", backgroundColor: "#FFF7ED", border: "1px solid #FFEDD5", padding: "2px 6px", borderRadius: "5px" }}>
+                      <span style={{ fontSize: "0.7rem", fontWeight: "700", color: !isOnline ? "#94A3B8" : "#EA580C", backgroundColor: !isOnline ? "#F1F5F9" : "#FFF7ED", border: `1px solid ${!isOnline ? "#E2E8F0" : "#FFEDD5"}`, padding: "2px 6px", borderRadius: "5px" }}>
                         ✨ {item.addons.length} Add-on{item.addons.length > 1 ? "s" : ""} Available
                       </span>
                     </div>
@@ -220,8 +264,24 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
 
                 {/* Price & Add / Quantity Stepper Button */}
                 <div className={styles.cardBottomRow}>
-                  <span className={styles.priceText}>{item.price}</span>
-                  {(() => {
+                  <span className={styles.priceText} style={{ color: !isOnline ? "#94A3B8" : undefined }}>{item.price}</span>
+                  {!isOnline ? (
+                    <button
+                      type="button"
+                      className={styles.addBtn}
+                      disabled
+                      style={{
+                        backgroundColor: "#F1F5F9",
+                        color: "#94A3B8",
+                        border: "1px solid #E2E8F0",
+                        cursor: "not-allowed",
+                        fontWeight: "700",
+                        opacity: 0.8,
+                      }}
+                    >
+                      Closed
+                    </button>
+                  ) : (() => {
                     const currentQty = getItemQuantity(item.id);
                     const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
                     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;

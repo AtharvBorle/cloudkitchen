@@ -88,6 +88,33 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     city?: string;
     postalCode?: string;
   }>({});
+  const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
+
+  useEffect(() => {
+    const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
+    if (!sellerId) return;
+
+    let isMounted = true;
+    async function checkSellerStatus() {
+      try {
+        const res = await fetchApi(`/api/public/shop/${sellerId}`);
+        if (res.ok && isMounted) {
+          const json = await res.json();
+          const sellerObj = json.data || json;
+          if (sellerObj && sellerObj.isOnline === false) {
+            setIsSellerClosed(true);
+          }
+        }
+      } catch (e) {
+        // Silently continue
+      }
+    }
+    checkSellerStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cartItems]);
 
   useEffect(() => {
     if (session?.user) {
@@ -295,6 +322,11 @@ const loadRazorpayScript = (): Promise<boolean> => {
   };
 
   const handlePlaceOrderClick = async () => {
+    if (isSellerClosed) {
+      showToast("This cloud kitchen is currently closed and not accepting orders.", "error");
+      return;
+    }
+
     if (!validateFields()) {
       showToast("Please fill in all mandatory delivery address fields.", "error");
       return;
@@ -758,6 +790,53 @@ const loadRazorpayScript = (): Promise<boolean> => {
           <div className={styles.mainContent}>
             {/* Left Column: Form Cards */}
             <div className={styles.leftFormsColumn}>
+              {/* Closed Restaurant Alert Banner */}
+              {isSellerClosed && (
+                <div
+                  style={{
+                    backgroundColor: "#FEF2F2",
+                    border: "1.5px solid #FECACA",
+                    borderRadius: "16px",
+                    padding: "16px 20px",
+                    marginBottom: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.08)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "24px" }}>🔴</span>
+                    <div>
+                      <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "800", color: "#991B1B" }}>
+                        Kitchen is Currently Closed
+                      </h3>
+                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#DC2626" }}>
+                        The restaurant for these items has turned off operations and cannot accept orders.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/explore-desktop")}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "10px",
+                      backgroundColor: "#DC2626",
+                      color: "#FFFFFF",
+                      fontWeight: "700",
+                      fontSize: "0.82rem",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Explore Other Kitchens
+                  </button>
+                </div>
+              )}
+
               {/* Card 1: Delivery Address */}
               <section className={styles.formCard}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "18px" }}>
@@ -1111,12 +1190,19 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 {/* Place Order Button */}
                 <button
                   type="button"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isSellerClosed}
                   className={styles.placeOrderButton}
                   onClick={handlePlaceOrderClick}
+                  style={{
+                    backgroundColor: isSellerClosed ? "#94A3B8" : undefined,
+                    cursor: isSellerClosed ? "not-allowed" : "pointer",
+                    opacity: isSellerClosed ? 0.7 : 1,
+                  }}
                 >
                   <span>
-                    {isSubmitting
+                    {isSellerClosed
+                      ? "Kitchen Closed • Cannot Place Order"
+                      : isSubmitting
                       ? "Placing Order..."
                       : `Place Order • ₹${grandTotal.toLocaleString("en-IN")}`}
                   </span>

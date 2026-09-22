@@ -16,7 +16,12 @@ import {
   QrCode,
   Share2,
   Download,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+  Check,
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 
 export interface SellerProfileData {
   ownerName: string;
@@ -24,6 +29,8 @@ export interface SellerProfileData {
   email: string;
   outletName: string;
   registeredAddress: string;
+  upiId?: string;
+  trackingId?: string;
   partnerRole?: string;
   avatarInitials?: string;
 }
@@ -61,6 +68,8 @@ export default function MainCanvas({
       email: initialData?.email || seller.email || "",
       outletName: outlet,
       registeredAddress: initialData?.registeredAddress || seller.address || "",
+      upiId: initialData?.upiId || seller.upiId || (seller.profile as any)?.upiId || "",
+      trackingId: initialData?.trackingId || seller.trackingId || (seller.profile as any)?.trackingId || "",
       partnerRole: initialData?.partnerRole || seller.partnerRole,
       avatarInitials: initialData?.avatarInitials || computeInitials(outlet || owner),
     };
@@ -129,11 +138,13 @@ export default function MainCanvas({
           email: seller.email || prev.email,
           outletName: outlet,
           registeredAddress: seller.address || prev.registeredAddress,
+          upiId: seller.upiId || (seller.profile as any)?.upiId || prev.upiId || "",
+          trackingId: seller.trackingId || (seller.profile as any)?.trackingId || prev.trackingId || "",
           avatarInitials: computeInitials(outlet || owner),
         };
       });
     }
-  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address]);
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address, seller.upiId, seller.trackingId]);
 
   const formData = externalFormData || internalFormData;
 
@@ -143,7 +154,7 @@ export default function MainCanvas({
 
   const showQrToast = (msg: string) => {
     setQrToastMessage(msg);
-    setTimeout(() => setQrToastMessage(""), 2500);
+    setTimeout(() => setQrToastMessage(""), 2800);
   };
 
   const handleChange = (field: keyof SellerProfileData, value: string) => {
@@ -166,6 +177,97 @@ export default function MainCanvas({
       setSuccessMessage("Changes saved successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     }, 600);
+  };
+
+  // Dynamic public shop URL
+  const [currentOrigin, setCurrentOrigin] = useState("");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentOrigin(window.location.origin);
+    }
+  }, []);
+
+  const sellerTrackingId = formData.trackingId || seller.trackingId || (seller.profile as any)?.trackingId || seller.id || "store";
+  const shopUrl = `${currentOrigin || "https://neocloud.app"}/shop/${sellerTrackingId}`;
+
+  // Dynamic UPI Payment URI
+  const activeUpiId = (formData.upiId || seller.upiId || (seller.profile as any)?.upiId || "").trim();
+  const businessTitle = formData.outletName || seller.businessName || "Neo Cloud Kitchen";
+  const upiPaymentUri = activeUpiId
+    ? `upi://pay?pa=${encodeURIComponent(activeUpiId)}&pn=${encodeURIComponent(businessTitle)}&cu=INR&tn=${encodeURIComponent("Counter Payment - " + businessTitle)}`
+    : "";
+
+  const handleShareProfileQR = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(shopUrl);
+      showQrToast("Store link copied to clipboard!");
+    } else {
+      showQrToast("Store Link: " + shopUrl);
+    }
+  };
+
+  const handleDownloadProfileQR = () => {
+    const canvas = document.getElementById("canvas-profile-qr") as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${(formData.outletName || "kitchen").toLowerCase().replace(/[^a-z0-9]/g, "-")}-store-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      showQrToast("Store QR Code downloaded!");
+    } else {
+      showQrToast("Store QR Code ready!");
+    }
+  };
+
+  const handleCopyUPI = () => {
+    if (!activeUpiId) {
+      showQrToast("Please enter and save a UPI ID first");
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(activeUpiId);
+      showQrToast(`UPI ID "${activeUpiId}" copied!`);
+    }
+  };
+
+  const handleTestUPIQR = () => {
+    if (!activeUpiId) {
+      showQrToast("Please enter and save a UPI ID first");
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(upiPaymentUri);
+    }
+    if (typeof window !== "undefined") {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.location.href = upiPaymentUri;
+      }
+    }
+    showQrToast("UPI Intent URI copied! Scan with GPay/PhonePe to test.");
+  };
+
+  const handleDownloadPaymentQR = () => {
+    if (!activeUpiId) {
+      showQrToast("Please enter a UPI ID first to generate your Payment QR");
+      return;
+    }
+    const canvas = document.getElementById("canvas-payment-qr") as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${(formData.outletName || "kitchen").toLowerCase().replace(/[^a-z0-9]/g, "-")}-upi-payment-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      showQrToast("Payment UPI QR downloaded!");
+    } else {
+      showQrToast("Payment QR ready!");
+    }
   };
 
   // Stacked active subscriptions calculation
@@ -1088,6 +1190,79 @@ export default function MainCanvas({
               </div>
             </div>
 
+            {/* Subtle Horizontal Divider */}
+            <div
+              style={{
+                width: "100%",
+                height: "1px",
+                backgroundColor: "#F1F5F9",
+                margin: "8px 0",
+              }}
+            />
+
+            {/* SECTION 3: BANKING & UPI PAYMENT SETTINGS */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#FF5500",
+                    letterSpacing: "0.6px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  PAYMENT &amp; SETTLEMENT (UPI)
+                </span>
+                {formData.upiId && formData.upiId.trim().includes("@") ? (
+                  <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#16A34A", backgroundColor: "#F0FDF4", padding: "2px 8px", borderRadius: "12px", border: "1px solid #BBF7D0", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <CheckCircle2 size={12} /> Active for Payments &amp; Payouts
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#D97706", backgroundColor: "#FFFBEB", padding: "2px 8px", borderRadius: "12px", border: "1px solid #FDE68A", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <AlertTriangle size={12} /> UPI ID Required
+                  </span>
+                )}
+              </div>
+
+              {/* UPI ID Input */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#475569",
+                  }}
+                >
+                  Payment UPI ID (VPA) <span style={{ color: "#EA580C" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.upiId || ""}
+                  onChange={(e) => handleChange("upiId", e.target.value)}
+                  placeholder="e.g. merchant@okhdfcbank, 9876543210@paytm, store@ybl"
+                  style={{
+                    width: "100%",
+                    height: "44px",
+                    padding: "0 14px",
+                    borderRadius: "8px",
+                    border: formData.upiId && !formData.upiId.includes("@") ? "1.5px solid #FCA5A5" : "1px solid #E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                    fontSize: "14px",
+                    color: "#0F172A",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                    transition: "all 0.15s ease",
+                  }}
+                  className="canvas-input"
+                />
+                <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0 0" }}>
+                  Customer QR transfers and seller settlement payouts will be credited directly to this bank-linked UPI handle.
+                </p>
+              </div>
+            </div>
+
             {/* Bottom Actions Row: Logout Account (Left) + Save Changes (Right) */}
             <div
               style={{
@@ -1163,7 +1338,7 @@ export default function MainCanvas({
             boxShadow: "0 2px 12px rgba(0, 0, 0, 0.02)",
             display: "flex",
             flexDirection: "column",
-            gap: "20px",
+            gap: "24px",
             boxSizing: "border-box",
           }}
           className="qr-card"
@@ -1171,19 +1346,45 @@ export default function MainCanvas({
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <h2 style={{ fontSize: "19px", fontWeight: 700, color: "#0F172A", margin: 0, letterSpacing: "-0.2px" }}>
-                Profile &amp; Store Check-in QR Codes
+                Store Profile &amp; Payment QR Codes
               </h2>
               <p style={{ fontSize: "13px", color: "#64748B", margin: "2px 0 0 0" }}>
-                Provide customer check-ins and direct table or counter order routing.
+                Live customer scan QR codes for direct menu browsing and instant counter UPI settlement.
               </p>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <span style={{ fontSize: "12px", fontWeight: 600, padding: "4px 12px", borderRadius: "16px", backgroundColor: "#FFF1E8", color: "#EA580C" }}>
-                Food Services
+                Store Front
               </span>
-              <span style={{ fontSize: "12px", fontWeight: 600, padding: "4px 12px", borderRadius: "16px", backgroundColor: "#EEF2FF", color: "#4F46E5" }}>
-                Room Bookings
+              <span style={{ fontSize: "12px", fontWeight: 600, padding: "4px 12px", borderRadius: "16px", backgroundColor: "#F0FDF4", color: "#16A34A" }}>
+                UPI Payments
               </span>
+            </div>
+          </div>
+
+          {/* Important Banking & Active UPI Notice Alert */}
+          <div
+            style={{
+              backgroundColor: "#FFFBEB",
+              border: "1.5px solid #FCD34D",
+              borderRadius: "12px",
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "14px",
+            }}
+          >
+            <AlertTriangle size={22} color="#D97706" style={{ flexShrink: 0, marginTop: "2px" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <h4 style={{ margin: 0, fontSize: "13.5px", fontWeight: 700, color: "#92400E" }}>
+                Important Merchant UPI &amp; Banking Notice
+              </h4>
+              <p style={{ margin: 0, fontSize: "12.5px", color: "#B45309", lineHeight: 1.5 }}>
+                Please ensure that your configured UPI ID is active, valid, and registered with your merchant bank. All customer direct payments, counter table scans, and daily automated settlement payouts are routed directly to this UPI account.
+              </p>
+              <div style={{ marginTop: "4px", fontSize: "12px", fontWeight: 600, color: "#78350F" }}>
+                💡 <strong>Verification Step:</strong> Test your QR code by scanning it with any UPI app (Google Pay, PhonePe, Paytm) before displaying it at your store.
+              </div>
             </div>
           </div>
 
@@ -1191,107 +1392,119 @@ export default function MainCanvas({
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "20px",
+              gap: "24px",
             }}
             className="two-col-grid"
           >
-            {/* Kitchen Check-in QR */}
+            {/* 1. Kitchen & Store Profile QR */}
             <div
               style={{
                 backgroundColor: "#F8FAFC",
                 border: "1px solid #E2E8F0",
-                borderRadius: "12px",
-                padding: "20px",
+                borderRadius: "14px",
+                padding: "24px 20px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: "12px",
+                gap: "14px",
                 textAlign: "center",
               }}
             >
-              <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
-                Store &amp; Kitchen QR Code
-              </h3>
-              <p style={{ fontSize: "12px", color: "#64748B", margin: 0 }}>
-                Scan to view public merchant profile &amp; live menu catalogue
-              </p>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
+                  Store &amp; Kitchen Profile QR
+                </h3>
+                <p style={{ fontSize: "12px", color: "#64748B", margin: 0 }}>
+                  Scan to open public merchant menu &amp; order food online
+                </p>
+              </div>
 
+              {/* Dynamic QR Code Canvas */}
               <div
                 style={{
                   backgroundColor: "#FFFFFF",
-                  border: "1px solid #CBD5E1",
-                  borderRadius: "12px",
+                  border: "1.5px solid #CBD5E1",
+                  borderRadius: "14px",
                   padding: "12px",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.04)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <svg width="130" height="130" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="140" height="140" rx="8" fill="white" />
-                  <rect x="14" y="14" width="36" height="36" rx="6" fill="#0F172A" />
-                  <rect x="22" y="22" width="20" height="20" rx="3" fill="white" />
-                  <rect x="27" y="27" width="10" height="10" rx="2" fill="#0F172A" />
-                  <rect x="90" y="14" width="36" height="36" rx="6" fill="#0F172A" />
-                  <rect x="98" y="22" width="20" height="20" rx="3" fill="white" />
-                  <rect x="103" y="27" width="10" height="10" rx="2" fill="#0F172A" />
-                  <rect x="14" y="90" width="36" height="36" rx="6" fill="#0F172A" />
-                  <rect x="22" y="98" width="20" height="20" rx="3" fill="white" />
-                  <rect x="27" y="103" width="10" height="10" rx="2" fill="#0F172A" />
-                  <rect x="58" y="18" width="6" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="68" y="18" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="58" y="28" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="76" y="28" width="6" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="18" y="58" width="6" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="28" y="58" width="6" height="14" rx="1.5" fill="#0F172A" />
-                  <rect x="38" y="66" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="58" y="52" width="24" height="24" rx="4" fill="#F97316" />
-                  <circle cx="70" cy="64" r="5" fill="white" />
-                  <rect x="90" y="58" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="110" y="58" width="12" height="14" rx="1.5" fill="#0F172A" />
-                  <rect x="58" y="84" width="8" height="14" rx="1.5" fill="#0F172A" />
-                  <rect x="72" y="92" width="10" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="58" y="104" width="24" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="68" y="116" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="90" y="86" width="14" height="14" rx="3" fill="#0F172A" />
-                  <rect x="110" y="86" width="12" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="98" y="106" width="24" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="90" y="118" width="14" height="6" rx="1.5" fill="#0F172A" />
-                  <rect x="110" y="118" width="12" height="6" rx="1.5" fill="#0F172A" />
-                </svg>
+                <QRCodeCanvas
+                  id="canvas-profile-qr"
+                  value={shopUrl}
+                  size={240}
+                  style={{ width: "140px", height: "140px" }}
+                  level="H"
+                  includeMargin={false}
+                />
               </div>
 
-              <div style={{ display: "flex", gap: "10px", width: "100%", marginTop: "4px" }}>
+              {/* URL preview & copy pill */}
+              <div
+                onClick={handleShareProfileQR}
+                title="Click to copy store URL"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  fontSize: "11.5px",
+                  fontWeight: 600,
+                  color: "#475569",
+                  maxWidth: "100%",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <Copy size={12} color="#EA580C" />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{shopUrl}</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "10px", width: "100%", marginTop: "2px" }}>
                 <button
                   type="button"
-                  onClick={handleShareQR}
+                  onClick={handleShareProfileQR}
                   style={{
                     flex: 1,
-                    height: "38px",
+                    height: "40px",
                     borderRadius: "8px",
                     border: "none",
                     backgroundColor: "#FF5500",
+                    backgroundImage: "linear-gradient(135deg, #FF5500 0%, #F97316 100%)",
                     color: "#FFFFFF",
-                    fontSize: "12.5px",
+                    fontSize: "13px",
                     fontWeight: 700,
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
+                    boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
                   }}
                 >
                   <Share2 size={15} />
-                  <span>Share QR</span>
+                  <span>Share Link</span>
                 </button>
                 <button
                   type="button"
-                  onClick={handleDownloadQR}
+                  onClick={handleDownloadProfileQR}
                   style={{
                     flex: 1,
-                    height: "38px",
+                    height: "40px",
                     borderRadius: "8px",
                     border: "1px solid #CBD5E1",
                     backgroundColor: "#FFFFFF",
                     color: "#0F172A",
-                    fontSize: "12.5px",
+                    fontSize: "13px",
                     fontWeight: 700,
                     cursor: "pointer",
                     display: "flex",
@@ -1301,71 +1514,180 @@ export default function MainCanvas({
                   }}
                 >
                   <Download size={15} />
-                  <span>Download</span>
+                  <span>Download QR</span>
                 </button>
               </div>
             </div>
 
-            {/* Payment Sample QR */}
+            {/* 2. In-Store UPI & Payment QR */}
             <div
               style={{
                 backgroundColor: "#F8FAFC",
                 border: "1px solid #E2E8F0",
-                borderRadius: "12px",
-                padding: "20px",
+                borderRadius: "14px",
+                padding: "24px 20px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: "12px",
+                gap: "14px",
                 textAlign: "center",
               }}
             >
-              <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
-                In-Store UPI &amp; Payment QR
-              </h3>
-              <p style={{ fontSize: "12px", color: "#64748B", margin: 0 }}>
-                Point-of-sale checkout and contactless in-store settlement
-              </p>
-
-              <div
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #CBD5E1",
-                  borderRadius: "12px",
-                  width: "130px",
-                  height: "130px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <QrCode size={70} color="#64748B" strokeWidth={1.5} />
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
+                  In-Store UPI &amp; Payment QR
+                </h3>
+                <p style={{ fontSize: "12px", color: "#64748B", margin: 0 }}>
+                  Scan with GPay, PhonePe, Paytm for direct counter settlement
+                </p>
               </div>
 
-              <div style={{ display: "flex", gap: "10px", width: "100%", marginTop: "4px" }}>
-                <button
-                  type="button"
-                  onClick={() => showQrToast("UPI QR Ready")}
+              {activeUpiId ? (
+                <>
+                  {/* Dynamic UPI QR Code Canvas */}
+                  <div
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      border: "1.5px solid #CBD5E1",
+                      borderRadius: "14px",
+                      padding: "12px",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.04)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <QRCodeCanvas
+                      id="canvas-payment-qr"
+                      value={upiPaymentUri}
+                      size={240}
+                      style={{ width: "140px", height: "140px" }}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </div>
+
+                  {/* Active UPI ID pill */}
+                  <div
+                    onClick={handleCopyUPI}
+                    title="Click to copy UPI ID"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      backgroundColor: "#F0FDF4",
+                      border: "1px solid #BBF7D0",
+                      borderRadius: "8px",
+                      padding: "6px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "#166534",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <CheckCircle2 size={13} color="#16A34A" />
+                    <span>UPI ID: {activeUpiId}</span>
+                    <Copy size={11} color="#16A34A" style={{ marginLeft: "2px" }} />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: "flex", gap: "10px", width: "100%", marginTop: "2px" }}>
+                    <button
+                      type="button"
+                      onClick={handleTestUPIQR}
+                      style={{
+                        flex: 1,
+                        height: "40px",
+                        borderRadius: "8px",
+                        border: "1px solid #16A34A",
+                        backgroundColor: "#F0FDF4",
+                        color: "#15803D",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <ExternalLink size={15} />
+                      <span>Test QR Link</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadPaymentQR}
+                      style={{
+                        flex: 1,
+                        height: "40px",
+                        borderRadius: "8px",
+                        border: "1px solid #CBD5E1",
+                        backgroundColor: "#FFFFFF",
+                        color: "#0F172A",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Download size={15} />
+                      <span>Download QR</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Empty state when UPI ID is missing */
+                <div
                   style={{
-                    width: "100%",
-                    height: "38px",
-                    borderRadius: "8px",
-                    border: "1px solid #E2E8F0",
                     backgroundColor: "#FFFFFF",
-                    color: "#475569",
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
+                    border: "1.5px dashed #CBD5E1",
+                    borderRadius: "14px",
+                    padding: "24px 16px",
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
+                    gap: "10px",
+                    width: "100%",
+                    boxSizing: "border-box",
                   }}
                 >
-                  <QrCode size={15} />
-                  <span>Configured in Order POS</span>
-                </button>
-              </div>
+                  <QrCode size={48} color="#94A3B8" strokeWidth={1.5} />
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#334155" }}>
+                    UPI Payment QR Not Configured
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#64748B", margin: 0, maxWidth: "260px" }}>
+                    Enter your active UPI ID in the form above and save changes to generate your direct payment QR code.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.querySelector('input[placeholder*="merchant@okhdfcbank"]') as HTMLInputElement;
+                      if (input) {
+                        input.focus();
+                        input.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }
+                    }}
+                    style={{
+                      marginTop: "4px",
+                      height: "36px",
+                      padding: "0 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      backgroundColor: "#FF5500",
+                      color: "#FFFFFF",
+                      fontSize: "12.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Configure UPI ID ↑
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -25,7 +25,8 @@ import {
   PasswordManagementCard,
   ActiveLoginSessionsCard,
 } from "./security-settings/SellerSecuritySettings";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { fetchApi } from "@/lib/fetch-api";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./SettingsCanvas.module.css";
 
@@ -210,17 +211,34 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   }));
 
   useEffect(() => {
-    if (seller.businessName) {
-      setFormData((prev) => {
-        if (prev.businessName && prev.businessName !== "Neo Cloud Kitchen & Rooms") return prev;
-        return {
-          ...prev,
-          businessName: seller.businessName || prev.businessName,
-          businessEmail: seller.email || prev.businessEmail,
-          phoneNumber: seller.phone || prev.phoneNumber,
-          address: seller.address || prev.address,
-        };
-      });
+    try {
+      if (typeof window !== "undefined") {
+        const savedRegional = localStorage.getItem("seller_regional_settings");
+        if (savedRegional) {
+          const parsed = JSON.parse(savedRegional);
+          setFormData((prev) => ({
+            ...prev,
+            language: parsed.language || prev.language,
+            timezone: parsed.timezone || prev.timezone,
+            currency: parsed.currency || prev.currency,
+            operatingHours: parsed.operatingHours || prev.operatingHours,
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error reading saved regional settings:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (seller.businessName || seller.email || seller.phone || seller.address) {
+      setFormData((prev) => ({
+        ...prev,
+        businessName: (!prev.businessName || prev.businessName === "Neo Cloud Kitchen & Rooms") && seller.businessName ? seller.businessName : prev.businessName,
+        businessEmail: (!prev.businessEmail || prev.businessEmail === "hello@neocloudbite.com") && seller.email ? seller.email : prev.businessEmail,
+        phoneNumber: (!prev.phoneNumber || prev.phoneNumber === "+91 98765 43210") && seller.phone ? seller.phone : prev.phoneNumber,
+        address: (!prev.address || prev.address.includes("Innovation Way")) && seller.address ? seller.address : prev.address,
+      }));
     }
   }, [seller.businessName, seller.email, seller.phone, seller.address]);
 
@@ -334,18 +352,66 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
-    if (onSave) {
-      onSave(formData);
-    }
+    try {
+      // 1. Save regional and preferences to localStorage
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(
+            "seller_regional_settings",
+            JSON.stringify({
+              language: formData.language,
+              timezone: formData.timezone,
+              currency: formData.currency,
+              operatingHours: formData.operatingHours,
+            })
+          );
+        }
+      } catch (err) {
+        console.error("Failed to save regional settings to localStorage:", err);
+      }
 
-    setTimeout(() => {
-      setSaving(false);
+      // 2. Persist Restaurant Information to backend database
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: formData.businessName,
+          email: formData.businessEmail,
+          phone: formData.phoneNumber,
+          address: formData.address,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update profile settings");
+      }
+
+      // 3. Update cached profile state across all components
+      updateCachedProfile({
+        ownerName: formData.businessName,
+        businessName: formData.businessName,
+        email: formData.businessEmail,
+        phone: formData.phoneNumber,
+        address: formData.address,
+        avatarInitials: computeInitials(formData.businessName),
+      });
+
+      if (onSave) {
+        onSave(formData);
+      }
+
       setToastData({ title: "Settings saved successfully!", status: "ON" });
-    }, 500);
+    } catch (err: any) {
+      console.error("Error saving settings:", err);
+      setToastData({ title: err.message || "Failed to save settings", status: "OFF" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancelClick = () => {
