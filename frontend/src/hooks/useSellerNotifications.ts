@@ -8,7 +8,7 @@ import {
   createSampleAlert,
 } from "@/components/seller/seller-notifications/notificationData";
 
-const STORAGE_KEY = "seller_notifications_store_v2";
+const STORAGE_KEY = "seller_notifications_store_v4";
 
 let memoryNotifications: SellerNotificationItem[] | null = null;
 const listeners = new Set<() => void>();
@@ -25,28 +25,27 @@ function notifyAll() {
 
 function loadInitialFromStorage(): SellerNotificationItem[] {
   if (typeof window === "undefined") {
-    return INITIAL_SELLER_NOTIFICATIONS;
+    return [];
   }
   try {
-    const isExplicitlyCleared = localStorage.getItem("seller_notifications_cleared") === "true";
+    // Purge legacy mock storage keys to eliminate outdated hardcoded 4 count
+    try {
+      localStorage.removeItem("seller_notifications_store");
+      localStorage.removeItem("seller_notifications_store_v2");
+      localStorage.removeItem("seller_notifications_store_v3");
+    } catch {}
+
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        if (parsed.length > 0 || isExplicitlyCleared) {
-          return parsed;
-        }
+        return parsed;
       }
     }
   } catch (err) {
     console.error("Failed to load notifications from localStorage:", err);
   }
-  // Default to initial rich notifications
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_SELLER_NOTIFICATIONS));
-    localStorage.removeItem("seller_notifications_cleared");
-  } catch {}
-  return INITIAL_SELLER_NOTIFICATIONS;
+  return [];
 }
 
 function persistNotifications(items: SellerNotificationItem[]) {

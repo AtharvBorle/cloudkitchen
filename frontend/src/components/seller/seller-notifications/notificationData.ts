@@ -25,7 +25,9 @@ export interface SellerNotificationItem {
   actionHref?: string;
 }
 
-export const INITIAL_SELLER_NOTIFICATIONS: SellerNotificationItem[] = [
+export const INITIAL_SELLER_NOTIFICATIONS: SellerNotificationItem[] = [];
+
+export const SAMPLE_PRESET_NOTIFICATIONS: SellerNotificationItem[] = [
   {
     id: "notif-init-1",
     category: "orders",

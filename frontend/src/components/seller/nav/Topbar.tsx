@@ -165,7 +165,7 @@ export default function Topbar({
     if (onNotificationClick) {
       onNotificationClick();
     } else {
-      router.push("/seller/notifications");
+      setIsDropdownOpen((prev) => !prev);
     }
   };
 
