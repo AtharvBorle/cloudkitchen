@@ -95,3 +95,94 @@ export const submitOrderReview = async (orderId: string, req: Request) => {
 
     return { review };
 };
+
+export const submitAppFeedback = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const body = await req.json();
+    const { rating, comment, aspects, tags, sentiment, sellerId: explicitSellerId } = body;
+
+    const parsedRating = parseInt(rating, 10);
+    if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+        throw new ApiError("Valid rating between 1 and 5 is required", 400);
+    }
+
+    // Determine seller to link to if not provided
+    let sellerId = explicitSellerId || null;
+    let orderId: string | null = null;
+
+    if (!sellerId) {
+        // Find latest order for user to associate seller
+        const latestOrder = await db.order.findFirst({
+            where: { userId: session.user.id },
+            orderBy: { createdAt: "desc" }
+        });
+
+        if (latestOrder) {
+            sellerId = latestOrder.sellerId;
+            orderId = latestOrder.id;
+        } else {
+            // Find first available approved seller in the system so feedback is linked
+            const defaultSeller = await db.sellerProfile.findFirst({
+                where: { status: "APPROVED" }
+            }) || await db.sellerProfile.findFirst();
+
+            if (defaultSeller) {
+                sellerId = defaultSeller.id;
+            }
+        }
+    }
+
+    const aspectsJson = Array.isArray(aspects) ? JSON.stringify(aspects) : typeof aspects === "string" ? aspects : "[]";
+    const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : typeof tags === "string" ? tags : "[]";
+
+    const newReview = await db.review.create({
+        data: {
+            userId: session.user.id,
+            sellerId: sellerId,
+            orderId: orderId,
+            rating: parsedRating,
+            comment: comment ? String(comment).trim() : null,
+            aspects: aspectsJson,
+            tags: tagsJson,
+            sentiment: sentiment ? String(sentiment).trim() : null
+        },
+        include: {
+            user: {
+                select: { name: true, email: true }
+            },
+            seller: {
+                select: { id: true, name: true }
+            }
+        }
+    });
+
+    return {
+        success: true,
+        review: newReview
+    };
+};
+
+export const getAppFeedback = async () => {
+    const session = await getAuthSession();
+    if (!session?.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const reviews = await db.review.findMany({
+        where: { userId: session.user.id },
+        include: {
+            seller: {
+                select: { name: true }
+            }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10
+    });
+
+    return { reviews };
+};
+

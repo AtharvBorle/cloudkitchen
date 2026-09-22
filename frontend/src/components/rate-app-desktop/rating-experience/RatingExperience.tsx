@@ -42,6 +42,9 @@ export const RatingExperience: React.FC = () => {
   const [feedbackText, setFeedbackText] = useState<string>("");
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const activeRating = hoverRating !== null ? hoverRating : rating;
 
   const toggleAspect = (aspect: string) => {
@@ -61,15 +64,49 @@ export const RatingExperience: React.FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      // Collect quick tags that are in feedbackText or selected
+      const detectedTags = QUICK_TAGS.filter((t) => feedbackText.includes(t));
+
+      const response = await fetch("/api/user/rate-app", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rating,
+          aspects: selectedAspects,
+          tags: detectedTags,
+          comment: feedbackText,
+          sentiment: SENTIMENT_LABELS[rating] || "Good & Satisfying",
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to submit review. Please try again.");
+      }
+
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error("Error submitting rating:", err);
+      setErrorMessage(err.message || "Something went wrong while submitting your feedback.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
     setIsSubmitted(false);
     setRating(5);
     setFeedbackText("");
+    setSelectedAspects(["Food Taste & Quality", "Delivery Speed"]);
+    setErrorMessage(null);
   };
 
   return (
@@ -181,10 +218,16 @@ export const RatingExperience: React.FC = () => {
               />
             </div>
 
+            {errorMessage && (
+              <div style={{ color: "#EF4444", fontSize: "0.875rem", marginBottom: "1rem", fontWeight: 500 }}>
+                {errorMessage}
+              </div>
+            )}
+
             {/* 5. Submit Action Button */}
-            <button type="submit" className={styles.submitBtn}>
+            <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
               <Send size={18} />
-              <span>Submit Rating &amp; Review</span>
+              <span>{isSubmitting ? "Submitting Review..." : "Submit Rating & Review"}</span>
             </button>
           </form>
         )}

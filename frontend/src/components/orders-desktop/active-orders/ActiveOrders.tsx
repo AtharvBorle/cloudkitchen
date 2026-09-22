@@ -158,7 +158,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
 
                   {/* Footer */}
                   <div className={styles.cardFooter}>
-                    <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                    <Link href="/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
                       Need Help?
                     </Link>
                     {order.invoiceUrl ? (
@@ -217,7 +217,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
 
                 {/* Footer */}
                 <div className={styles.cardFooter}>
-                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                  <Link href="/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
                     Need Help?
                   </Link>
                   <Link href={`/dashboard/user/bookings`} className={styles.actionBtn} style={{ textDecoration: "none" }}>

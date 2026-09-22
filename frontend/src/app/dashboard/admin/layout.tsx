@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag, Bike } from "lucide-react";
+import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag, Bike, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function adminLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +44,7 @@ export default function adminLayout({ children }: { children: React.ReactNode })
         { href: "/dashboard/admin/banners", label: "Popup Banners", icon: <ImageIcon size={20} /> },
         { href: "/dashboard/admin/coupons", label: "Offers & Coupons", icon: <Tag size={20} /> },
         { href: "/dashboard/admin/delivery", label: "Delivery Staff", icon: <Bike size={20} /> },
+        { href: "/dashboard/admin/reviews", label: "Reviews & Feedback", icon: <MessageSquare size={20} /> },
     ];
 
     return (
