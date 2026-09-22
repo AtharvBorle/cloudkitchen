@@ -141,16 +141,6 @@ export default function SuperadminLayout({
                         }}>
                         Support & Tickets
                     </Link>
-                    <Link href="/dashboard/superadmin/reviews"
-                        style={{
-                            padding: "var(--spacing-2) var(--spacing-3)",
-                            borderRadius: "var(--radius-md)",
-                            backgroundColor: pathname.includes("/reviews") ? "var(--primary)" : "transparent",
-                            color: pathname.includes("/reviews") ? "var(--text-inverse)" : "var(--text-main)",
-                            fontWeight: pathname.includes("/reviews") ? "500" : "normal"
-                        }}>
-                        Reviews &amp; Feedback
-                    </Link>
                     <Link href="/dashboard/superadmin/refunds"
                         style={{
                             padding: "var(--spacing-2) var(--spacing-3)",
