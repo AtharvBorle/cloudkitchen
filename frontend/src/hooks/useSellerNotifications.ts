@@ -503,11 +503,11 @@ function setupGlobalNotificationListeners() {
 }
 
 export function useSellerNotifications() {
-  const [notifications, setNotifications] = useState<SellerNotificationItem[]>(() => {
-    return getGlobalSellerNotifications();
-  });
+  const [isMounted, setIsMounted] = useState(false);
+  const [notifications, setNotifications] = useState<SellerNotificationItem[]>([]);
 
   useEffect(() => {
+    setIsMounted(true);
     setupGlobalNotificationListeners();
 
     // Sync initial mount in client
@@ -523,11 +523,13 @@ export function useSellerNotifications() {
     };
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const effectiveNotifications = isMounted ? notifications : [];
+  const unreadCount = isMounted ? effectiveNotifications.filter((n) => !n.isRead).length : 0;
 
   return {
-    notifications,
+    notifications: effectiveNotifications,
     unreadCount,
+    isMounted,
     markAsRead: markNotificationAsRead,
     toggleRead: toggleNotificationRead,
     deleteNotification: deleteSellerNotification,
