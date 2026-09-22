@@ -15,6 +15,7 @@ export interface DishItem {
   itemType?: string;
   sellerIsOnline?: boolean;
   isOnline?: boolean;
+  distanceText?: string;
 }
 
 interface BestPlacesProps {
@@ -238,16 +239,32 @@ export default function BestPlaces({
                     )}
                   </div>
 
-                  {/* Price & Delivery Time */}
-                  <span
-                    style={{
-                      fontSize: "0.82rem",
-                      color: isClosed ? "#94A3B8" : "#64748B",
-                      fontWeight: "500",
-                    }}
-                  >
-                    {isClosed ? "Currently not accepting orders" : dish.time}
-                  </span>
+                  {/* Price, Distance & Delivery Time */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
+                    <span
+                      style={{
+                        fontSize: "0.82rem",
+                        color: isClosed ? "#94A3B8" : "#64748B",
+                        fontWeight: "500",
+                      }}
+                    >
+                      {isClosed ? "Currently not accepting orders" : dish.time}
+                    </span>
+                    {dish.distanceText && !isClosed && (
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "700",
+                          color: "#FF6B00",
+                          backgroundColor: "#FFF3EB",
+                          padding: "2px 6px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        📍 {dish.distanceText}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </Link>

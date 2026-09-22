@@ -15,6 +15,7 @@ export interface TopRatedItem {
   imageUrl: string;
   link?: string;
   itemType?: string;
+  distanceText?: string;
 }
 
 interface DashboardBodyProps {
@@ -230,7 +231,7 @@ export default function DashboardBody({
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {item.category} • ₹{item.price} • {item.time}
+                    {item.category} • ₹{item.price} {item.distanceText ? `• 📍 ${item.distanceText}` : ""} • {item.time}
                   </span>
                 </div>
               </div>

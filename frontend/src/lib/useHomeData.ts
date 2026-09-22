@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchApi } from './fetch-api';
 import { useLocation } from '@/components/location-provider';
+import {
+  calculateDistanceKm,
+  formatDistance,
+  MAX_DELIVERY_RADIUS_KM,
+  getPincodeCoordinates,
+} from './geo-distance';
 
 export interface DynamicCategory {
   id: string;
@@ -27,6 +33,11 @@ export interface DynamicFoodItem {
   sellerTrackingId?: string;
   sellerIsOnline?: boolean;
   sellerFoodType?: string;
+  sellerLatitude?: number | null;
+  sellerLongitude?: number | null;
+  sellerIsLocationPinned?: boolean;
+  distanceKm?: number;
+  distanceText?: string;
   categoryName?: string;
   rating?: number;
   deliveryTime?: string;
@@ -47,6 +58,11 @@ export interface DynamicRoom {
   sellerPincode?: string;
   sellerLocality?: string;
   sellerTrackingId?: string;
+  sellerLatitude?: number | null;
+  sellerLongitude?: number | null;
+  sellerIsLocationPinned?: boolean;
+  distanceKm?: number;
+  distanceText?: string;
 }
 
 export interface DynamicCoupon {
@@ -79,6 +95,11 @@ export interface DynamicKitchen {
   locality?: string;
   city?: string;
   pincode?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isLocationPinned?: boolean;
+  distanceKm?: number;
+  distanceText?: string;
   isOnline: boolean;
   foodType?: string;
   servedPincodes?: string[];
@@ -233,6 +254,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
         if (exploreRes?.foodItems && Array.isArray(exploreRes.foodItems) && exploreRes.foodItems.length > 0) {
           exploreRes.foodItems.forEach((item: any) => {
+            const defaultCoords = getPincodeCoordinates(item.sellerPincode);
+            const resolvedLat = item.sellerLatitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = item.sellerLongitude ?? defaultCoords?.lng ?? null;
+
             const foodItem: DynamicFoodItem = {
               id: item.id,
               name: item.name,
@@ -250,6 +275,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerTrackingId: item.sellerTrackingId,
               sellerIsOnline: item.sellerIsOnline !== false,
               sellerFoodType: item.sellerFoodType || 'BOTH',
+              sellerLatitude: resolvedLat,
+              sellerLongitude: resolvedLng,
+              sellerIsLocationPinned: item.sellerIsLocationPinned ?? false,
               categoryName: item.foodCategory?.name || item.category?.name || 'Food',
               rating: item.rating || 5.0,
               deliveryTime: item.deliveryTime || '20-30 min',
@@ -261,6 +289,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
         if (exploreRes?.kitchens && Array.isArray(exploreRes.kitchens) && exploreRes.kitchens.length > 0) {
           exploreRes.kitchens.forEach((k: any) => {
+            const defaultCoords = getPincodeCoordinates(k.pincode);
+            const resolvedLat = k.latitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = k.longitude ?? defaultCoords?.lng ?? null;
+
             kitchenMap.set(k.id, {
               id: k.id,
               name: k.name,
@@ -273,6 +305,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               locality: k.locality,
               city: k.city,
               pincode: k.pincode,
+              latitude: resolvedLat,
+              longitude: resolvedLng,
+              isLocationPinned: k.isLocationPinned ?? false,
               isOnline: k.isOnline !== false,
               foodType: k.foodType,
               servedPincodes: k.servedPincodes || [],
@@ -299,6 +334,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               parsedImages = r.images;
             }
 
+            const defaultCoords = getPincodeCoordinates(r.sellerPincode);
+            const resolvedLat = r.sellerLatitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = r.sellerLongitude ?? defaultCoords?.lng ?? null;
+
             rawRooms.push({
               id: r.id,
               title: r.title || 'Room',
@@ -313,6 +352,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerPincode: r.sellerPincode,
               sellerLocality: r.sellerLocality,
               sellerTrackingId: r.sellerTrackingId,
+              sellerLatitude: resolvedLat,
+              sellerLongitude: resolvedLng,
+              sellerIsLocationPinned: r.sellerIsLocationPinned ?? false,
             });
           });
         }
@@ -371,18 +413,83 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     };
   }, []);
 
-  // Compute active pincode from filter options or active location
+  // Compute active pincode and coordinates from default address or filter options
   const activePincode = (options?.pincode || defaultAddress?.pincode || '').trim() || null;
 
-  // Compute filtered food items based on activePincode + passed filter options
+  const userLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) ? Number(defaultAddress.latitude) : null;
+  const userLng = defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)) ? Number(defaultAddress.longitude) : null;
+  const pinFallbackCoords = activePincode ? getPincodeCoordinates(activePincode) : null;
+  const activeUserLat = userLat ?? pinFallbackCoords?.lat ?? null;
+  const activeUserLng = userLng ?? pinFallbackCoords?.lng ?? null;
+  const hasUserCoords = activeUserLat !== null && activeUserLng !== null;
+
+  // Compute enriched food items with accurate distances
+  const enrichedFoodItems = useMemo(() => {
+    return foodItems.map((item) => {
+      if (hasUserCoords && item.sellerLatitude != null && item.sellerLongitude != null) {
+        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(item.sellerLatitude), Number(item.sellerLongitude));
+        const estTime = dist <= 1.5 ? "15-20 min" : dist <= 3.0 ? "20-30 min" : "30-40 min";
+        return {
+          ...item,
+          distanceKm: dist,
+          distanceText: formatDistance(dist),
+          deliveryTime: estTime,
+        };
+      }
+      return item;
+    });
+  }, [foodItems, hasUserCoords, activeUserLat, activeUserLng]);
+
+  // Compute enriched kitchens with accurate distances
+  const enrichedKitchens = useMemo(() => {
+    return kitchens.map((k) => {
+      if (hasUserCoords && k.latitude != null && k.longitude != null) {
+        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(k.latitude), Number(k.longitude));
+        const estTime = dist <= 1.5 ? "15-20 min" : dist <= 3.0 ? "20-30 min" : "30-40 min";
+        return {
+          ...k,
+          distanceKm: dist,
+          distanceText: formatDistance(dist),
+          time: estTime,
+        };
+      }
+      return k;
+    });
+  }, [kitchens, hasUserCoords, activeUserLat, activeUserLng]);
+
+  // Helper to check 5 km distance deliverability
+  const isSellerDeliverable = (
+    sellerLat?: number | null,
+    sellerLng?: number | null,
+    sellerPin?: string,
+    servedPins?: string[]
+  ) => {
+    // 1. If coordinates exist on both sides, strictly enforce 5.0 km radius
+    if (hasUserCoords && sellerLat != null && sellerLng != null && !isNaN(Number(sellerLat)) && !isNaN(Number(sellerLng))) {
+      const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(sellerLat), Number(sellerLng));
+      return dist <= MAX_DELIVERY_RADIUS_KM;
+    }
+    // 2. Fallback: Pincode serviceability match
+    if (activePincode) {
+      const pin = (sellerPin || '').trim();
+      const pins = Array.isArray(servedPins) ? servedPins.map((p) => p.trim()) : [];
+      return pin === activePincode || pins.includes(activePincode);
+    }
+    return true;
+  };
+
+  // Compute filtered food items based on 5 km distance + filter options
   const filteredFoodItems = useMemo(() => {
-    return foodItems.filter((item) => {
-      // 1. Pincode match check
-      if (activePincode) {
-        const itemPin = (item.sellerPincode || '').trim();
-        const servedPins = Array.isArray(item.servedPincodes) ? item.servedPincodes.map((p) => p.trim()) : [];
-        const matchPin = itemPin === activePincode || servedPins.includes(activePincode);
-        if (!matchPin) return false;
+    let list = enrichedFoodItems.filter((item) => {
+      // 1. Distance / Pincode boundary check (5 km limit)
+      if (activePincode || hasUserCoords) {
+        const deliverable = isSellerDeliverable(
+          item.sellerLatitude,
+          item.sellerLongitude,
+          item.sellerPincode,
+          item.servedPincodes
+        );
+        if (!deliverable) return false;
       }
 
       if (!options) return true;
@@ -415,17 +522,36 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
       return true;
     });
-  }, [foodItems, activePincode, options]);
 
-  // Compute filtered kitchens based on activePincode + passed filter options
+    // Sort: if options.sortBy === "fastest", or by distance closest first when user coords available
+    if (options?.sortBy === "fastest") {
+      list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+    } else if (options?.sortBy === "rating") {
+      list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (options?.sortBy === "price_asc") {
+      list = [...list].sort((a, b) => a.price - b.price);
+    } else if (options?.sortBy === "price_desc") {
+      list = [...list].sort((a, b) => b.price - a.price);
+    } else if (hasUserCoords) {
+      // Default: sort by distance closest first
+      list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+    }
+
+    return list;
+  }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng, options]);
+
+  // Compute filtered kitchens based on 5 km distance + filter options
   const filteredKitchens = useMemo(() => {
-    return kitchens.filter((k) => {
-      // 1. Pincode match check
-      if (activePincode) {
-        const kPin = (k.pincode || '').trim();
-        const servedPins = Array.isArray(k.servedPincodes) ? k.servedPincodes.map((p) => p.trim()) : [];
-        const matchPin = kPin === activePincode || servedPins.includes(activePincode);
-        if (!matchPin) return false;
+    let list = enrichedKitchens.filter((k) => {
+      // 1. Distance / Pincode boundary check (5 km limit)
+      if (activePincode || hasUserCoords) {
+        const deliverable = isSellerDeliverable(
+          k.latitude,
+          k.longitude,
+          k.pincode,
+          k.servedPincodes
+        );
+        if (!deliverable) return false;
       }
 
       if (!options) return true;
@@ -455,22 +581,29 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
       return true;
     });
-  }, [kitchens, activePincode, options]);
+
+    // Sort by distance closest first
+    if (options?.sortBy === "fastest" || hasUserCoords) {
+      list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+    }
+
+    return list;
+  }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng, options]);
 
   return {
     categories,
-    foodItems: activePincode || options ? filteredFoodItems : foodItems,
+    foodItems: activePincode || hasUserCoords || options ? filteredFoodItems : enrichedFoodItems,
     rooms,
-    kitchens: activePincode || options ? filteredKitchens : kitchens,
+    kitchens: activePincode || hasUserCoords || options ? filteredKitchens : enrichedKitchens,
     coupons,
     promoBanners,
     filteredFoodItems,
     filteredKitchens,
-    allFoodItems: foodItems,
-    allKitchens: kitchens,
+    allFoodItems: enrichedFoodItems,
+    allKitchens: enrichedKitchens,
     activePincode,
-    hasMatchingKitchens: activePincode ? filteredKitchens.length > 0 : kitchens.length > 0,
-    totalKitchensCount: kitchens.length,
+    hasMatchingKitchens: (activePincode || hasUserCoords) ? filteredKitchens.length > 0 : enrichedKitchens.length > 0,
+    totalKitchensCount: enrichedKitchens.length,
     isLoading,
     error,
     isUsingFallback,

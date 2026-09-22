@@ -20,15 +20,16 @@ import { useLocation } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
 import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 import styles from "./LocationModal.module.css";
 
 const POPULAR_AREAS = [
-  { pincode: "411038", name: "Kothrud, Pune" },
-  { pincode: "411045", name: "Baner, Pune" },
-  { pincode: "411007", name: "Aundh, Pune" },
-  { pincode: "411057", name: "Hinjawadi, Pune" },
-  { pincode: "411004", name: "Deccan, Pune" },
-  { pincode: "411014", name: "Viman Nagar, Pune" },
+  { pincode: "411038", name: "Kothrud, Pune", lat: 18.5074, lng: 73.8077 },
+  { pincode: "411045", name: "Baner, Pune", lat: 18.5590, lng: 73.7868 },
+  { pincode: "411007", name: "Aundh, Pune", lat: 18.5580, lng: 73.8075 },
+  { pincode: "411057", name: "Hinjawadi, Pune", lat: 18.5913, lng: 73.7389 },
+  { pincode: "411004", name: "Deccan, Pune", lat: 18.5173, lng: 73.8415 },
+  { pincode: "411014", name: "Viman Nagar, Pune", lat: 18.5679, lng: 73.9143 },
 ];
 
 export const LocationModal: React.FC = () => {
@@ -100,19 +101,23 @@ export const LocationModal: React.FC = () => {
   };
 
   // 1. Handle Manual Pincode Submission
-  const handleApplyPincode = async (targetPin: string, localityName?: string) => {
+  const handleApplyPincode = async (targetPin: string, localityName?: string, lat?: number | null, lng?: number | null) => {
     const cleanPin = targetPin.replace(/\D/g, "").slice(0, 6);
     if (cleanPin.length !== 6) {
       showNotification("error", "Please enter a valid 6-digit Indian Pincode");
       return;
     }
 
+    const pinInfo = getPincodeCoordinates(cleanPin);
+    const finalLat = (lat != null && !isNaN(lat)) ? lat : (pinInfo?.lat ?? null);
+    const finalLng = (lng != null && !isNaN(lng)) ? lng : (pinInfo?.lng ?? null);
+
     try {
       if (session?.user) {
         const res = await fetchApi("/api/user/location", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pincode: cleanPin }),
+          body: JSON.stringify({ pincode: cleanPin, lat: finalLat, lng: finalLng }),
         });
         if (res.ok) {
           await refreshAddress();
@@ -123,7 +128,7 @@ export const LocationModal: React.FC = () => {
       }
 
       // Guest / Fallback
-      setGuestLocation(cleanPin, localityName || `PIN ${cleanPin}`, "Pune");
+      setGuestLocation(cleanPin, localityName || pinInfo?.locality || `PIN ${cleanPin}`, pinInfo?.city || "Pune", finalLat, finalLng);
       showNotification("success", `Delivery location set to PIN ${cleanPin}`);
       setTimeout(() => closeLocationModal(), 700);
     } catch (err: any) {
@@ -366,7 +371,7 @@ export const LocationModal: React.FC = () => {
                     className={`${styles.chipBtn} ${isActive ? styles.chipBtnActive : ""}`}
                     onClick={() => {
                       setPincodeInput(area.pincode);
-                      handleApplyPincode(area.pincode, area.name);
+                      handleApplyPincode(area.pincode, area.name, area.lat, area.lng);
                     }}
                   >
                     <MapPin size={12} />

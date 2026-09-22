@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { fetchApi } from "@/lib/fetch-api";
 import Link from "next/link";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
@@ -9,8 +9,14 @@ import { useSession } from "next-auth/react";
 import { UserHeader } from "@/app/dashboard/user/layout";
 import { ExploreHeader } from "@/app/explore/layout";
 import { useLocation } from "@/components/location-provider";
-import { Star, MessageSquare, Utensils } from "lucide-react";
+import { Star, MessageSquare, Utensils, MapPin } from "lucide-react";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import {
+  calculateDistanceKm,
+  MAX_DELIVERY_RADIUS_KM,
+  getPincodeCoordinates,
+  formatDistance,
+} from "@/lib/geo-distance";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -65,10 +71,30 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
     const [foodFilter, setFoodFilter] = useState<"ALL" | "VEG" | "NON_VEG" | "JAIN" | "VEGAN">("ALL");
     const [activeTab, setActiveTab] = useState<"menu" | "reviews">("menu");
 
-    const isDeliverable = (item: any) => {
+    const userLat = userAddress?.latitude != null && !isNaN(Number(userAddress.latitude)) ? Number(userAddress.latitude) : null;
+    const userLng = userAddress?.longitude != null && !isNaN(Number(userAddress.longitude)) ? Number(userAddress.longitude) : null;
+    const userFallback = userAddress?.pincode ? getPincodeCoordinates(userAddress.pincode) : null;
+    const finalUserLat = userLat ?? userFallback?.lat ?? null;
+    const finalUserLng = userLng ?? userFallback?.lng ?? null;
+
+    const sellerCoords = (seller?.latitude && seller?.longitude) ? { lat: seller.latitude, lng: seller.longitude } : getPincodeCoordinates(seller?.user?.pincode);
+    const sellerLat = seller?.latitude ?? sellerCoords?.lat ?? null;
+    const sellerLng = seller?.longitude ?? sellerCoords?.lng ?? null;
+
+    const shopDistanceKm = useMemo(() => {
+        if (finalUserLat !== null && finalUserLng !== null && sellerLat !== null && sellerLng !== null) {
+            return calculateDistanceKm(finalUserLat, finalUserLng, sellerLat, sellerLng);
+        }
+        return null;
+    }, [finalUserLat, finalUserLng, sellerLat, sellerLng]);
+
+    const isDeliverable = (item?: any) => {
+        if (shopDistanceKm !== null) {
+            return shopDistanceKm <= MAX_DELIVERY_RADIUS_KM;
+        }
         if (!userAddress || !userAddress.pincode) return true;
         const userPincode = userAddress.pincode.trim();
-        if (item.deliveryPincodes) {
+        if (item?.deliveryPincodes) {
             const pins = item.deliveryPincodes.split(",").map((p: string) => p.trim());
             return pins.includes(userPincode);
         }
@@ -183,6 +209,30 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 <Star size={16} fill="var(--coral, #F16F68)" color="var(--coral, #F16F68)" />
                                 <span style={{ fontWeight: '800', fontSize: '0.95rem' }}>{seller.averageRating}</span>
                                 <span style={{ opacity: 0.8, fontSize: '0.85rem' }}>({seller.totalReviews} reviews)</span>
+                            </div>
+                        )}
+                        {/* Distance Badge in Header */}
+                        {shopDistanceKm !== null && (
+                            <div
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    backgroundColor: shopDistanceKm <= MAX_DELIVERY_RADIUS_KM ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)',
+                                    padding: '6px 14px',
+                                    borderRadius: '20px',
+                                    backdropFilter: 'blur(5px)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '700',
+                                    color: '#FFFFFF'
+                                }}
+                            >
+                                <MapPin size={15} />
+                                <span>{formatDistance(shopDistanceKm)} away</span>
+                                <span style={{ opacity: 0.9, fontSize: '0.78rem' }}>
+                                    {shopDistanceKm <= MAX_DELIVERY_RADIUS_KM ? "• Delivering" : "• Beyond 5 km radius"}
+                                </span>
                             </div>
                         )}
                     </div>

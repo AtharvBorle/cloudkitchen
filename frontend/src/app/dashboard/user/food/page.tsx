@@ -3,12 +3,18 @@ import { fetchApi } from "@/lib/fetch-api";
 
 
 import { useState, useEffect } from "react";
-import { ShoppingCart, Search } from "lucide-react";
+import { ShoppingCart, Search, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
 import { AddToCartButton } from "@/components/cart-buttons";
 import { useSession } from "next-auth/react";
+import {
+  calculateDistanceKm,
+  MAX_DELIVERY_RADIUS_KM,
+  getPincodeCoordinates,
+  formatDistance,
+} from "@/lib/geo-distance";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -65,6 +71,13 @@ export default function UserFoodPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const userLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) ? Number(defaultAddress.latitude) : null;
+    const userLng = defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)) ? Number(defaultAddress.longitude) : null;
+    const userFallback = defaultAddress?.pincode ? getPincodeCoordinates(defaultAddress.pincode) : null;
+    const finalUserLat = userLat ?? userFallback?.lat ?? null;
+    const finalUserLng = userLng ?? userFallback?.lng ?? null;
+    const hasUserCoords = finalUserLat !== null && finalUserLng !== null;
+
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (status === "loading") return;
@@ -75,16 +88,6 @@ export default function UserFoodPage() {
                 const data = await res.json();
                 if (res.ok) {
                     let items = data.foodItems || [];
-                    if (status !== "authenticated" && defaultAddress?.pincode) {
-                        const guestPin = defaultAddress.pincode.trim();
-                        items = items.filter((item: any) => {
-                            if (item.deliveryPincodes) {
-                                const pins = item.deliveryPincodes.split(",").map((p: any) => p.trim());
-                                return pins.includes(guestPin);
-                            }
-                            return item.sellerPincode === guestPin;
-                        });
-                    }
                     setFoodItems(items);
                     setFoodCategories(data.foodCategories || []);
                 }
@@ -109,25 +112,50 @@ export default function UserFoodPage() {
 
     const placeholderImage = "https://placehold.co/400x250?text=Delicious+Food";
 
-    const filteredFood = foodItems.filter(item => {
-        if (!isCurrentlyOpen(item)) return false;
-        if (vegOnly) {
-            if (item.itemType !== 'VEG') return false;
-            if (item.sellerFoodType !== 'VEG') return false;
-        }
-        if (selectedCategoryId && item.foodCategoryId !== selectedCategoryId) {
-            return false;
-        }
-        return (
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    });
+    const filteredFood = foodItems
+        .map(item => {
+            let distanceKm: number | undefined;
+            let distanceText: string | undefined;
+            if (hasUserCoords && item.sellerLatitude != null && item.sellerLongitude != null) {
+                distanceKm = calculateDistanceKm(finalUserLat!, finalUserLng!, Number(item.sellerLatitude), Number(item.sellerLongitude));
+                distanceText = formatDistance(distanceKm);
+            }
+            return {
+                ...item,
+                distanceKm,
+                distanceText,
+            };
+        })
+        .filter(item => {
+            if (!isCurrentlyOpen(item)) return false;
+
+            // 5 km delivery radius filter
+            if (hasUserCoords && item.distanceKm !== undefined) {
+                if (item.distanceKm > MAX_DELIVERY_RADIUS_KM) return false;
+            } else if (defaultAddress?.pincode) {
+                const guestPin = defaultAddress.pincode.trim();
+                const pins = item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: any) => p.trim()) : [];
+                const match = item.sellerPincode === guestPin || pins.includes(guestPin);
+                if (!match) return false;
+            }
+
+            if (vegOnly) {
+                if (item.itemType !== 'VEG') return false;
+                if (item.sellerFoodType !== 'VEG') return false;
+            }
+            if (selectedCategoryId && item.foodCategoryId !== selectedCategoryId) {
+                return false;
+            }
+            return (
+                item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        });
 
     const getGroupedFood = (items: any[]) => {
         const groups: { [key: string]: any[] } = {};
@@ -345,7 +373,14 @@ export default function UserFoodPage() {
                                                 {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                             </span>
                                         </h3>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>By {item.sellerName} • {item.sellerCity}</p>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>
+                                            By {item.sellerName} • {item.sellerCity}
+                                            {item.distanceText ? (
+                                                <span style={{ marginLeft: '8px', color: '#FF6B00', fontWeight: '700', backgroundColor: '#FFF3EB', padding: '2px 6px', borderRadius: '6px', fontSize: '0.78rem' }}>
+                                                    📍 {item.distanceText}
+                                                </span>
+                                            ) : null}
+                                        </p>
                                         <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                                         <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
                                             {item.stockQuantity === 0 ? (
@@ -400,7 +435,14 @@ export default function UserFoodPage() {
                                                         {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                                     </span>
                                                 </h3>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>By {item.sellerName} • {item.sellerCity}</p>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>
+                                                    By {item.sellerName} • {item.sellerCity}
+                                                    {item.distanceText ? (
+                                                        <span style={{ marginLeft: '8px', color: '#FF6B00', fontWeight: '700', backgroundColor: '#FFF3EB', padding: '2px 6px', borderRadius: '6px', fontSize: '0.78rem' }}>
+                                                            📍 {item.distanceText}
+                                                        </span>
+                                                    ) : null}
+                                                </p>
                                                 <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                                                 <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
                                                     {item.stockQuantity === 0 ? (

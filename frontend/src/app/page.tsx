@@ -208,6 +208,7 @@ export default function Home() {
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
+      distanceText: f.distanceText,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -246,6 +247,7 @@ export default function Home() {
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
+      distanceText: f.distanceText,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 

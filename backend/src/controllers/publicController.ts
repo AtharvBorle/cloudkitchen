@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 const prisma = new PrismaClient();
 
@@ -86,6 +87,10 @@ export const getPublicExploreData = unstable_cache(
                 parsedKitchenImages = [];
             }
 
+            const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+            const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
             activeSellersList.push({
                 id: seller.id,
                 name: seller.businessName || seller.user.name,
@@ -95,6 +100,9 @@ export const getPublicExploreData = unstable_cache(
                 pincode: seller.user.pincode,
                 locality: seller.addressLocality,
                 landmark: seller.addressLandmark,
+                latitude: resolvedLat,
+                longitude: resolvedLng,
+                isLocationPinned: seller.isLocationPinned,
                 rating: avgRating,
                 reviewsCount,
                 imageUrl: parsedKitchenImages[0] || seller.bannerImageUrl || "/images/places/place-pizza.png",
@@ -120,6 +128,9 @@ export const getPublicExploreData = unstable_cache(
                     sellerTrackingId: seller.trackingId,
                     sellerIsOnline: seller.isOnline,
                     sellerFoodType: seller.foodType,
+                    sellerLatitude: resolvedLat,
+                    sellerLongitude: resolvedLng,
+                    sellerIsLocationPinned: seller.isLocationPinned,
                     servedPincodes: seller.servedPincodes.map(p => p.pincode),
                 };
             });
@@ -132,6 +143,10 @@ export const getPublicExploreData = unstable_cache(
                 (sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH")
             );
             if (!hasActivePropertySub) return [];
+            const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+            const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
             return seller.rooms.map(room => ({
                 ...room,
                 sellerName: seller.businessName || seller.user.name,
@@ -140,7 +155,10 @@ export const getPublicExploreData = unstable_cache(
                 sellerLocality: seller.addressLocality,
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline
+                sellerIsOnline: seller.isOnline,
+                sellerLatitude: resolvedLat,
+                sellerLongitude: resolvedLng,
+                sellerIsLocationPinned: seller.isLocationPinned,
             }));
         });
 

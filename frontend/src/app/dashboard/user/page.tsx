@@ -5,11 +5,17 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, LogIn } from "lucide-react";
+import { ShoppingCart, LogIn, MapPin } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import {
+    calculateDistanceKm,
+    MAX_DELIVERY_RADIUS_KM,
+    getPincodeCoordinates,
+    formatDistance,
+} from "@/lib/geo-distance";
 
 const isCurrentlyOpen = (item: any) => {
     const now = new Date();
@@ -69,6 +75,13 @@ export default function UserDashboard() {
     const [foodCategories, setFoodCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const userLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) ? Number(defaultAddress.latitude) : null;
+    const userLng = defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)) ? Number(defaultAddress.longitude) : null;
+    const userFallback = defaultAddress?.pincode ? getPincodeCoordinates(defaultAddress.pincode) : null;
+    const finalUserLat = userLat ?? userFallback?.lat ?? null;
+    const finalUserLng = userLng ?? userFallback?.lng ?? null;
+    const hasUserCoords = finalUserLat !== null && finalUserLng !== null;
+
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (status === "loading") return;
@@ -78,23 +91,8 @@ export default function UserDashboard() {
                 const res = await fetchApi(url);
                 const data = await res.json();
                 if (res.ok) {
-                    let items = data.foodItems || [];
-                    let availableRooms = data.availableRooms || [];
-                    
-                    if (status !== "authenticated" && defaultAddress?.pincode) {
-                        const guestPin = defaultAddress.pincode.trim();
-                        items = items.filter((item: any) => {
-                            if (item.deliveryPincodes) {
-                                const pins = item.deliveryPincodes.split(",").map((p: any) => p.trim());
-                                return pins.includes(guestPin);
-                            }
-                            return item.sellerPincode === guestPin;
-                        });
-                        availableRooms = availableRooms.filter((room: any) => room.sellerPincode === guestPin);
-                    }
-                    
-                    setFoodItems(items);
-                    setRooms(availableRooms);
+                    setFoodItems(data.foodItems || []);
+                    setRooms(data.availableRooms || []);
                     setFoodCategories(data.foodCategories || []);
                     setActivePincode(data.userPincode || defaultAddress?.pincode || null);
                 }
@@ -128,22 +126,53 @@ export default function UserDashboard() {
         );
     }
 
-    const filteredFoodItems = foodItems.filter(item => {
-        if (!isCurrentlyOpen(item)) return false;
-        if (vegOnly) {
-            if (item.itemType !== 'VEG') return false;
-            if (item.sellerFoodType !== 'VEG') return false;
-        }
-        return (
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    });
+    const filteredFoodItems = foodItems
+        .map(item => {
+            let distanceKm: number | undefined;
+            let distanceText: string | undefined;
+            if (hasUserCoords && item.sellerLatitude != null && item.sellerLongitude != null) {
+                distanceKm = calculateDistanceKm(finalUserLat!, finalUserLng!, Number(item.sellerLatitude), Number(item.sellerLongitude));
+                distanceText = formatDistance(distanceKm);
+            }
+            return {
+                ...item,
+                distanceKm,
+                distanceText,
+            };
+        })
+        .filter(item => {
+            if (!isCurrentlyOpen(item)) return false;
+
+            // 5 km delivery radius filter
+            if (hasUserCoords && item.distanceKm !== undefined) {
+                if (item.distanceKm > MAX_DELIVERY_RADIUS_KM) return false;
+            } else if (defaultAddress?.pincode) {
+                const guestPin = defaultAddress.pincode.trim();
+                const pins = item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: any) => p.trim()) : [];
+                const match = item.sellerPincode === guestPin || pins.includes(guestPin);
+                if (!match) return false;
+            }
+
+            if (vegOnly) {
+                if (item.itemType !== 'VEG') return false;
+                if (item.sellerFoodType !== 'VEG') return false;
+            }
+            return (
+                item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        })
+        .sort((a, b) => {
+            if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
+                return a.distanceKm - b.distanceKm;
+            }
+            return 0;
+        });
 
     const categoriesMap: { [key: string]: any[] } = {};
     filteredFoodItems.forEach(item => {
@@ -154,15 +183,44 @@ export default function UserDashboard() {
         categoriesMap[catName].push(item);
     });
 
-    const filteredRooms = rooms.filter(room =>
-        room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRooms = rooms
+        .map(room => {
+            let distanceKm: number | undefined;
+            let distanceText: string | undefined;
+            if (hasUserCoords && room.sellerLatitude != null && room.sellerLongitude != null) {
+                distanceKm = calculateDistanceKm(finalUserLat!, finalUserLng!, Number(room.sellerLatitude), Number(room.sellerLongitude));
+                distanceText = formatDistance(distanceKm);
+            }
+            return {
+                ...room,
+                distanceKm,
+                distanceText,
+            };
+        })
+        .filter(room => {
+            if (hasUserCoords && room.distanceKm !== undefined) {
+                if (room.distanceKm > MAX_DELIVERY_RADIUS_KM) return false;
+            } else if (defaultAddress?.pincode) {
+                const guestPin = defaultAddress.pincode.trim();
+                if (room.sellerPincode !== guestPin) return false;
+            }
+
+            return (
+                room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                room.description?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        })
+        .sort((a, b) => {
+            if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
+                return a.distanceKm - b.distanceKm;
+            }
+            return 0;
+        });
 
     return (
         <div>
@@ -314,6 +372,11 @@ export default function UserDashboard() {
                                             <Link href={`/shop/${item.sellerTrackingId}`} style={{ display: 'block', height: '160px', position: 'relative' }}>
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                                 <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                {item.distanceText && (
+                                                    <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'rgba(0,0,0,0.75)', color: 'white', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
+                                                        📍 {item.distanceText}
+                                                    </div>
+                                                )}
                                                 <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '4px 8px', borderRadius: '20px', fontWeight: 'bold', color: 'var(--coral)', fontSize: '0.85rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
                                                     ₹{item.price}
                                                 </div>
@@ -334,7 +397,14 @@ export default function UserDashboard() {
                                                             {item.itemType === 'NON_VEG' ? 'N' : 'V'}
                                                         </span>
                                                     </h4>
-                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '8px' }}>By {item.sellerName}</p>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                        <span>By {item.sellerName}</span>
+                                                        {item.distanceText && (
+                                                            <span style={{ color: 'var(--teal)', fontWeight: '600' }}>
+                                                                📍 {item.distanceText}
+                                                            </span>
+                                                        )}
+                                                    </p>
                                                     <p style={{ color: '#555', fontSize: '0.8rem', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4rem' }}>{item.description}</p>
                                                     <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '10px' }}>
                                                         {item.stockQuantity === 0 ? (
@@ -376,6 +446,11 @@ export default function UserDashboard() {
                                 <div style={{ position: 'absolute', bottom: '10px', left: '10px', backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '5px 12px', borderRadius: '20px', fontSize: '0.85rem' }}>
                                     Up to {room.capacity} Guests
                                 </div>
+                                {room.distanceText && (
+                                    <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'rgba(0,0,0,0.75)', color: 'white', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
+                                        📍 {room.distanceText}
+                                    </div>
+                                )}
                             </Link>
                             <div style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <Link href={`/shop/${room.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none' }}>
@@ -383,7 +458,9 @@ export default function UserDashboard() {
                                         <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)', paddingRight: '10px' }}>{room.title}</h3>
                                         <span style={{ color: 'var(--teal)', fontWeight: 'bold', fontSize: '1.1rem', whiteSpace: 'nowrap' }}>₹{room.price}/night</span>
                                     </div>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>Location: {room.sellerCity} • Hosted by {room.sellerName}</p>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>
+                                        Location: {room.sellerCity} • Hosted by {room.sellerName} {room.distanceText ? `• 📍 ${room.distanceText}` : ''}
+                                    </p>
                                     <p style={{ color: '#555', fontSize: '0.95rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{room.description}</p>
                                 </Link>
 

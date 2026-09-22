@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 export interface Address {
   id: string;
@@ -30,7 +31,7 @@ export interface LocationContextType {
   closeLocationModal: () => void;
   refreshAddress: () => Promise<void>;
   selectAddress: (addressId: string) => Promise<void>;
-  setGuestLocation: (pincode: string, locality?: string, city?: string) => void;
+  setGuestLocation: (pincode: string, locality?: string, city?: string, latitude?: number | null, longitude?: number | null) => void;
   detectGpsLocation: () => Promise<boolean>;
 }
 
@@ -137,6 +138,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
                 localStorage.setItem("guest-pincode", pin);
                 localStorage.setItem("guest-locality", locality);
                 localStorage.setItem("guest-city", city);
+                localStorage.setItem("guest-lat", String(latitude));
+                localStorage.setItem("guest-lng", String(longitude));
 
                 if (status === "authenticated" && !isStaffOrSeller) {
                   fetchApi("/api/user/location", {
@@ -164,18 +167,34 @@ export function LocationProvider({ children }: LocationProviderProps) {
     });
   }, [status, shouldDisableLocation, isStaffOrSeller]);
 
-  const setGuestLocation = (pincode: string, locality?: string, city?: string) => {
+  const setGuestLocation = (
+    pincode: string,
+    locality?: string,
+    city?: string,
+    latitude?: number | null,
+    longitude?: number | null
+  ) => {
+    const pinInfo = getPincodeCoordinates(pincode);
+    const finalLat = (latitude != null && !isNaN(latitude)) ? latitude : (pinInfo?.lat ?? null);
+    const finalLng = (longitude != null && !isNaN(longitude)) ? longitude : (pinInfo?.lng ?? null);
+
     if (typeof window !== "undefined") {
       localStorage.setItem("guest-pincode", pincode);
       if (locality) localStorage.setItem("guest-locality", locality);
       if (city) localStorage.setItem("guest-city", city);
+      if (finalLat !== null && !isNaN(finalLat)) localStorage.setItem("guest-lat", String(finalLat));
+      else localStorage.removeItem("guest-lat");
+      if (finalLng !== null && !isNaN(finalLng)) localStorage.setItem("guest-lng", String(finalLng));
+      else localStorage.removeItem("guest-lng");
     }
     setDefaultAddress({
       id: "guest-location",
       type: "Current Location",
       pincode: pincode,
-      locality: locality || `PIN ${pincode}`,
-      city: city || "Pune",
+      locality: locality || pinInfo?.locality || `PIN ${pincode}`,
+      city: city || pinInfo?.city || "Pune",
+      latitude: finalLat,
+      longitude: finalLng,
       isDefault: true,
     });
   };
@@ -211,14 +230,24 @@ export function LocationProvider({ children }: LocationProviderProps) {
       const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
       const guestLocality = typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
       const guestCity = typeof window !== "undefined" ? localStorage.getItem("guest-city") : null;
+      const rawLat = typeof window !== "undefined" ? localStorage.getItem("guest-lat") : null;
+      const rawLng = typeof window !== "undefined" ? localStorage.getItem("guest-lng") : null;
+      const parsedLat = rawLat ? parseFloat(rawLat) : null;
+      const parsedLng = rawLng ? parseFloat(rawLng) : null;
 
       if (guestPin) {
+        const fallbackCoords = getPincodeCoordinates(guestPin);
+        const resolvedLat = parsedLat && !isNaN(parsedLat) ? parsedLat : (fallbackCoords?.lat ?? null);
+        const resolvedLng = parsedLng && !isNaN(parsedLng) ? parsedLng : (fallbackCoords?.lng ?? null);
+
         setDefaultAddress({
           id: "guest-location",
           type: "Current Location",
           pincode: guestPin,
-          locality: guestLocality || "Current Location",
-          city: guestCity || "Pune",
+          locality: guestLocality || fallbackCoords?.locality || "Current Location",
+          city: guestCity || fallbackCoords?.city || "Pune",
+          latitude: resolvedLat,
+          longitude: resolvedLng,
           isDefault: true,
         });
         setIsLoading(false);
@@ -274,17 +303,39 @@ export function LocationProvider({ children }: LocationProviderProps) {
       }
 
       if (activeAddr) {
+        // If latitude or longitude is missing, try matching with saved address or pincode coordinate map
+        if (activeAddr.latitude === null || activeAddr.latitude === undefined || activeAddr.longitude === null || activeAddr.longitude === undefined) {
+          const matchedSaved = addressList.find((a) => (a.id === activeAddr?.id || a.pincode === activeAddr?.pincode) && a.latitude && a.longitude);
+          if (matchedSaved) {
+            activeAddr.latitude = matchedSaved.latitude;
+            activeAddr.longitude = matchedSaved.longitude;
+          } else {
+            const pinCoords = getPincodeCoordinates(activeAddr.pincode);
+            if (pinCoords) {
+              activeAddr.latitude = pinCoords.lat;
+              activeAddr.longitude = pinCoords.lng;
+            }
+          }
+        }
         setDefaultAddress(activeAddr);
       } else {
         // Logged-in customer has no addresses yet
         const guestPin = typeof window !== "undefined" ? localStorage.getItem("guest-pincode") : null;
         if (guestPin) {
+          const pinCoords = getPincodeCoordinates(guestPin);
+          const rawLat = typeof window !== "undefined" ? localStorage.getItem("guest-lat") : null;
+          const rawLng = typeof window !== "undefined" ? localStorage.getItem("guest-lng") : null;
+          const parsedLat = rawLat ? parseFloat(rawLat) : null;
+          const parsedLng = rawLng ? parseFloat(rawLng) : null;
+
           setDefaultAddress({
             id: "guest-location",
             type: "Current Location",
             pincode: guestPin,
-            locality: typeof window !== "undefined" ? localStorage.getItem("guest-locality") || "Current Location" : "Current Location",
-            city: typeof window !== "undefined" ? localStorage.getItem("guest-city") || "Pune" : "Pune",
+            locality: typeof window !== "undefined" ? localStorage.getItem("guest-locality") || pinCoords?.locality || "Current Location" : (pinCoords?.locality || "Current Location"),
+            city: typeof window !== "undefined" ? localStorage.getItem("guest-city") || pinCoords?.city || "Pune" : (pinCoords?.city || "Pune"),
+            latitude: parsedLat && !isNaN(parsedLat) ? parsedLat : (pinCoords?.lat ?? null),
+            longitude: parsedLng && !isNaN(parsedLng) ? parsedLng : (pinCoords?.lng ?? null),
             isDefault: true,
           });
         } else if (!hasAttemptedGpsRef.current) {

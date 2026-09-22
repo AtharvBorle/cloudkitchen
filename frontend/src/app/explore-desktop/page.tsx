@@ -22,7 +22,7 @@ function ExploreDesktopContent() {
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get("category");
   const searchQuery = searchParams.get("query");
-  const { openLocationModal } = useLocation();
+  const { defaultAddress, openLocationModal } = useLocation();
   const homeData = useHomeData();
 
   // Dynamic Reels from approved kitchens
@@ -117,7 +117,7 @@ function ExploreDesktopContent() {
         <Navbar initialActiveItem="Explore" />
         <main className={styles.desktopMain}>
           {/* Out of Service Area Alert Banner */}
-          {homeData.activePincode && !homeData.isLoading && homeData.kitchens.length === 0 && (
+          {(homeData.activePincode || defaultAddress?.latitude) && !homeData.isLoading && homeData.kitchens.length === 0 && (
             <div
               style={{
                 width: "100%",
@@ -153,10 +153,10 @@ function ExploreDesktopContent() {
                 </div>
                 <div>
                   <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>
-                    No Cloud Kitchens Delivering to PIN {homeData.activePincode}
+                    No Cloud Kitchens Delivering Within 5 km
                   </h3>
                   <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B" }}>
-                    We haven&apos;t expanded to this specific pincode yet. Choose a nearby area like Kothrud (411038), Baner (411045), or Aundh (411007).
+                    We only show outlets within a 5 km radius of your location to ensure fast &amp; fresh delivery. Choose a nearby area like Kothrud (411038), Baner (411045), or Deccan (411004).
                   </p>
                 </div>
               </div>
@@ -307,7 +307,7 @@ function ExploreDesktopContent() {
                       <span style={{ fontSize: "0.82rem", color: "#64748B" }}>
                         {item.sellerName} {isClosed ? "• (Not accepting orders)" : ""}
                       </span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
                         <div
                           style={{
                             display: "inline-flex",
@@ -324,6 +324,24 @@ function ExploreDesktopContent() {
                           <Star size={11} fill={isClosed ? "#64748B" : "#10B981"} />
                           <span>{item.rating || 4.8}</span>
                         </div>
+                        {item.distanceText && (
+                          <div
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              backgroundColor: "#FFF3EB",
+                              color: "#FF6B00",
+                              padding: "2px 6px",
+                              borderRadius: "6px",
+                              fontSize: "0.78rem",
+                              fontWeight: "700",
+                            }}
+                          >
+                            <MapPin size={10} />
+                            <span>{item.distanceText}</span>
+                          </div>
+                        )}
                         <span style={{ fontSize: "0.78rem", color: "#94A3B8" }}>• {item.categoryName}</span>
                       </div>
                     </div>
