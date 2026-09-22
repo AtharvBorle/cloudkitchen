@@ -23,3 +23,11 @@ export async function POST(req: Request) {
         return errorResponse("An error occurred while updating the profile", 500);
     }
 }
+
+export async function PUT(req: Request) {
+    return POST(req);
+}
+
+export async function PATCH(req: Request) {
+    return POST(req);
+}

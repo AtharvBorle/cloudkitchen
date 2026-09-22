@@ -104,6 +104,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   ? "Non-Veg 🍗"
                   : "Veg & Non-Veg 🍱",
               offerText: liveData.offerText || "",
+              isOnline: liveData.isOnline !== false,
               categories:
                 uniqueCats.length > 0 ? ["All", ...uniqueCats] : [],
               items: liveItems.length > 0 ? liveItems : prev.items,
@@ -123,6 +124,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   }, [kitchenId]);
 
   const handleAddItem = (item: FoodCardItem) => {
+    if (kitchenData.isOnline === false) {
+      alert("This kitchen is currently closed and not accepting orders.");
+      return;
+    }
+
     if (item.addons && item.addons.length > 0) {
       setAddonModalItem(item);
       return;
@@ -179,6 +185,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             offerText={kitchenData.offerText}
             initialVegOnly={isVegOnly}
             onVegToggle={(veg) => setIsVegOnly(veg)}
+            isOnline={kitchenData.isOnline !== false}
           />
 
           <PopularFood
@@ -186,6 +193,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             categories={kitchenData.categories}
             defaultActiveCategory={kitchenData.defaultActiveCategory}
             items={displayedItems}
+            isOnline={kitchenData.isOnline !== false}
             onAddItem={handleAddItem}
             onDecreaseItem={handleDecreaseItem}
           />

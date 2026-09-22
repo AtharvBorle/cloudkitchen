@@ -50,6 +50,7 @@ export interface KitchenData {
   categories: readonly string[];
   defaultActiveCategory: string;
   items: FoodCardItem[];
+  isOnline?: boolean;
 }
 
 export const KITCHENS_REGISTRY: Record<string, KitchenData> = {

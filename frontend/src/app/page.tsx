@@ -111,6 +111,7 @@ export default function Home() {
       kitchenId: k.trackingId || k.id,
       trackingId: k.trackingId,
       locality: k.locality,
+      isOnline: k.isOnline !== false,
     }));
   }, [homeData.kitchens, selectedCategory, activeFilters]);
 
@@ -158,6 +159,7 @@ export default function Home() {
           price: matchedItem.price || 0,
           sellerId: matchedItem.sellerId || "",
           sellerName: matchedItem.sellerName || "Cloud Kitchen",
+          sellerIsOnline: matchedItem.sellerIsOnline !== false,
           itemType: matchedItem.itemType || "VEG",
         });
       }
@@ -205,6 +207,7 @@ export default function Home() {
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
+      sellerIsOnline: f.sellerIsOnline !== false,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -242,6 +245,7 @@ export default function Home() {
       imageUrl: f.imageUrl || "/images/places/place-pizza.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
+      sellerIsOnline: f.sellerIsOnline !== false,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -268,10 +272,12 @@ export default function Home() {
     return items.slice(0, 4).map((f) => ({
       id: f.id,
       name: f.name,
+      rating: f.rating || 5.0,
       time: `₹${f.price} • ${f.deliveryTime || "20-25 min"}`,
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
       itemType: f.itemType || "VEG",
+      sellerIsOnline: f.sellerIsOnline !== false,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 

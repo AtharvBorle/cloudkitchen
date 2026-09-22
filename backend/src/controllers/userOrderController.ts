@@ -16,6 +16,21 @@ export const initiateOrderPayment = async (req: Request) => {
         throw new ApiError("Invalid total amount", 400);
     }
 
+    if (sellerId) {
+        const seller = await db.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { id: sellerId },
+                    { trackingId: sellerId },
+                    { userId: sellerId }
+                ]
+            }
+        });
+        if (seller && seller.isOnline === false) {
+            throw new ApiError("This store is currently offline and not accepting orders.", 400);
+        }
+    }
+
     const key_id = process.env.RAZORPAY_KEY_ID || "";
     const key_secret = process.env.RAZORPAY_KEY_SECRET || "";
 

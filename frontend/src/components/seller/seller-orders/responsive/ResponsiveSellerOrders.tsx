@@ -15,6 +15,8 @@ import {
   XCircle,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import RejectOrderModal from "../RejectOrderModal";
+import ToastNotification from "../ToastNotification";
 import styles from "./ResponsiveSellerOrders.module.css";
 
 export type OrderFilterTab = "New" | "Preparing" | "Out" | "Done" | "All";
@@ -72,6 +74,19 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const [selectedTab, setSelectedTab] = useState<OrderFilterTab>("New");
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);
 
+  // In-app rejection modal & toast state
+  const [orderToReject, setOrderToReject] = useState<ResponsiveOrderItem | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   useEffect(() => {
     if (orders) {
       setOrdersList(orders);
@@ -108,14 +123,35 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     }
   };
 
-  const handleRejectOrder = (orderId: string, e: React.MouseEvent) => {
+  const handleOpenReject = (order: ResponsiveOrderItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onReject) {
-      onReject(orderId);
-    } else {
-      setOrdersList((prev) =>
-        prev.map((ord) => (ord.id === orderId ? { ...ord, status: "Cancelled" as const } : ord))
-      );
+    setOrderToReject(order);
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!orderToReject) return;
+    try {
+      setIsRejecting(true);
+      if (onReject) {
+        await onReject(orderToReject.id);
+      } else {
+        setOrdersList((prev) =>
+          prev.map((ord) => (ord.id === orderToReject.id ? { ...ord, status: "Cancelled" as const } : ord))
+        );
+      }
+      setToast({
+        type: "success",
+        text: `Order ${orderToReject.orderNumber} rejected successfully.`,
+      });
+      setOrderToReject(null);
+    } catch (err) {
+      console.error("Failed to reject order:", err);
+      setToast({
+        type: "error",
+        text: "Failed to reject order. Please try again.",
+      });
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -300,7 +336,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                       <button
                         type="button"
                         className={styles.rejectButton}
-                        onClick={(e) => handleRejectOrder(order.id, e)}
+                        onClick={(e) => handleOpenReject(order, e)}
                       >
                         Reject
                       </button>
@@ -356,6 +392,29 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           )}
         </main>
       </div>
+
+      {/* In-App Rejection Confirmation Modal */}
+      <RejectOrderModal
+        isOpen={Boolean(orderToReject)}
+        orderId={orderToReject?.orderNumber}
+        customerName={orderToReject?.customerName}
+        itemsSummary={orderToReject?.itemsText}
+        totalAmount={orderToReject?.totalAmount}
+        isLoading={isRejecting}
+        onClose={() => {
+          if (!isRejecting) setOrderToReject(null);
+        }}
+        onConfirm={handleConfirmRejection}
+      />
+
+      {/* In-App Toast Notification */}
+      {toast && (
+        <ToastNotification
+          type={toast.type}
+          message={toast.text}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

@@ -13,6 +13,8 @@ export interface DishItem {
   imageUrl: string;
   link?: string;
   itemType?: string;
+  sellerIsOnline?: boolean;
+  isOnline?: boolean;
 }
 
 interface BestPlacesProps {
@@ -103,7 +105,9 @@ export default function BestPlaces({
           }}
           className="popular-dishes-grid"
         >
-          {displayDishes.slice(0, 4).map((dish) => (
+          {displayDishes.slice(0, 4).map((dish) => {
+            const isClosed = dish.sellerIsOnline === false || dish.isOnline === false;
+            return (
             <Link
               key={dish.id}
               href={dish.link || "/explore-desktop"}
@@ -111,15 +115,16 @@ export default function BestPlaces({
                 textDecoration: "none",
                 display: "flex",
                 flexDirection: "column",
+                opacity: isClosed ? 0.85 : 1,
               }}
             >
               <div
                 style={{
                   width: "100%",
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                   borderRadius: "16px",
                   overflow: "hidden",
-                  border: "1px solid #F1F5F9",
+                  border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
                   boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
                   display: "flex",
                   flexDirection: "column",
@@ -162,9 +167,43 @@ export default function BestPlaces({
                       height: "100%",
                       objectFit: "cover",
                       transition: "transform 0.3s ease",
+                      filter: isClosed ? "grayscale(100%)" : "none",
                     }}
                     className="dish-card-img"
                   />
+                  {isClosed && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.4)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2,
+                      }}
+                    >
+                      <span
+                        style={{
+                          backgroundColor: "#0F172A",
+                          color: "#FFFFFF",
+                          fontSize: "10.5px",
+                          fontWeight: "800",
+                          letterSpacing: "0.8px",
+                          padding: "4px 10px",
+                          borderRadius: "12px",
+                          textTransform: "uppercase",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                        }}
+                      >
+                        🔴 CLOSED
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Info */}
@@ -174,37 +213,46 @@ export default function BestPlaces({
                     display: "flex",
                     flexDirection: "column",
                     gap: "6px",
+                    backgroundColor: isClosed ? "#F1F5F9" : "#FFFFFF",
                   }}
                 >
-                  <h3
-                    style={{
-                      fontSize: "0.98rem",
-                      fontWeight: "700",
-                      color: "#18181B",
-                      margin: 0,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    className="dish-name"
-                  >
-                    {dish.name}
-                  </h3>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                    <h3
+                      style={{
+                        fontSize: "0.98rem",
+                        fontWeight: "700",
+                        color: isClosed ? "#475569" : "#18181B",
+                        margin: 0,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                      className="dish-name"
+                    >
+                      {dish.name}
+                    </h3>
+                    {isClosed && (
+                      <span style={{ fontSize: "9.5px", fontWeight: "700", color: "#64748B", backgroundColor: "#E2E8F0", padding: "1px 5px", borderRadius: "4px" }}>
+                        CLOSED
+                      </span>
+                    )}
+                  </div>
 
                   {/* Price & Delivery Time */}
                   <span
                     style={{
                       fontSize: "0.82rem",
-                      color: "#64748B",
+                      color: isClosed ? "#94A3B8" : "#64748B",
                       fontWeight: "500",
                     }}
                   >
-                    {dish.time}
+                    {isClosed ? "Currently not accepting orders" : dish.time}
                   </span>
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
 

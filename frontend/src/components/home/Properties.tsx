@@ -16,6 +16,7 @@ export interface PlaceCardData {
   trackingId?: string;
   locality?: string;
   price?: number;
+  isOnline?: boolean;
 }
 
 const CUISINES = [
@@ -630,17 +631,19 @@ export default function Properties({ places }: PropertiesProps) {
                 </button>
               </div>
             ) : (
-              displayPlaces.map((place) => (
+              displayPlaces.map((place) => {
+                const isClosed = place.isOnline === false;
+                return (
                 <Link
                   href={place.trackingId ? `/shop/${place.trackingId}` : `/restaurant/${place.kitchenId || "7-12-kitchen"}`}
                   key={place.id}
                   style={{
                     width: "100%",
                     height: "250px",
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                     borderRadius: "20px",
                     overflow: "hidden",
-                    border: "1px solid #F1F5F9",
+                    border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
                     display: "flex",
                     flexDirection: "column",
@@ -649,6 +652,7 @@ export default function Properties({ places }: PropertiesProps) {
                     textDecoration: "none",
                     color: "inherit",
                     boxSizing: "border-box",
+                    opacity: isClosed ? 0.85 : 1,
                   }}
                   className="place-card"
                 >
@@ -670,9 +674,43 @@ export default function Properties({ places }: PropertiesProps) {
                     style={{
                       objectFit: "cover",
                       transition: "transform 0.3s ease",
+                      filter: isClosed ? "grayscale(100%)" : "none",
                     }}
                     className="place-card-img"
                   />
+                  {isClosed && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.4)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2,
+                      }}
+                    >
+                      <span
+                        style={{
+                          backgroundColor: "#0F172A",
+                          color: "#FFFFFF",
+                          fontSize: "11px",
+                          fontWeight: "800",
+                          letterSpacing: "0.8px",
+                          padding: "5px 12px",
+                          borderRadius: "14px",
+                          textTransform: "uppercase",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                        }}
+                      >
+                        🔴 CLOSED
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Content Footer */}
@@ -684,23 +722,41 @@ export default function Properties({ places }: PropertiesProps) {
                     justifyContent: "space-between",
                     flex: 1,
                     boxSizing: "border-box",
+                    backgroundColor: isClosed ? "#F1F5F9" : "#FFFFFF",
                   }}
                 >
                   {/* Restaurant Name */}
-                  <h3
-                    style={{
-                      fontSize: "15px",
-                      fontWeight: "700",
-                      color: "#0F172A",
-                      margin: 0,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                    }}
-                  >
-                    {place.name}
-                  </h3>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                    <h3
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "700",
+                        color: isClosed ? "#475569" : "#0F172A",
+                        margin: 0,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                      }}
+                    >
+                      {place.name}
+                    </h3>
+                    {isClosed && (
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: "700",
+                          color: "#64748B",
+                          backgroundColor: "#E2E8F0",
+                          padding: "1px 6px",
+                          borderRadius: "4px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        OFFLINE
+                      </span>
+                    )}
+                  </div>
 
                   {/* Rating & Delivery Time Meta Row */}
                   <div
@@ -710,15 +766,15 @@ export default function Properties({ places }: PropertiesProps) {
                       justifyContent: "space-between",
                     }}
                   >
-                    {/* Green Star Rating Badge */}
+                    {/* Star Rating Badge */}
                     <div
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "4px",
-                        backgroundColor: "#E8FBF2",
-                        color: "#10B981",
-                        border: "1px solid rgba(16, 185, 129, 0.2)",
+                        backgroundColor: isClosed ? "#E2E8F0" : "#E8FBF2",
+                        color: isClosed ? "#64748B" : "#10B981",
+                        border: isClosed ? "1px solid #CBD5E1" : "1px solid rgba(16, 185, 129, 0.2)",
                         padding: "2px 7px",
                         borderRadius: "6px",
                         fontSize: "12.5px",
@@ -726,25 +782,26 @@ export default function Properties({ places }: PropertiesProps) {
                         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                       }}
                     >
-                      <Star size={12} fill="#10B981" color="#10B981" />
+                      <Star size={12} fill={isClosed ? "#64748B" : "#10B981"} color={isClosed ? "#64748B" : "#10B981"} />
                       <span>{place.rating.toFixed(1)}</span>
                     </div>
 
-                    {/* Delivery Time */}
+                    {/* Delivery Time / Closed Text */}
                     <span
                       style={{
-                        fontSize: "13px",
-                        color: "#64748B",
+                        fontSize: "12px",
+                        color: isClosed ? "#94A3B8" : "#64748B",
                         fontWeight: "500",
                         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                       }}
                     >
-                      {place.time}
+                      {isClosed ? "Not accepting orders" : place.time}
                     </span>
                   </div>
                 </div>
               </Link>
-            ))
+              );
+            })
           )}
           </div>
         </div>

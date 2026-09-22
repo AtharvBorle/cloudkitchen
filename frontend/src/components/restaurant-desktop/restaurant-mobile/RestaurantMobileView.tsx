@@ -143,8 +143,44 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           priority
           sizes="100vw"
           className={styles.heroImg}
+          style={{
+            filter: kitchenData.isOnline === false ? "grayscale(100%)" : "none",
+          }}
         />
         <div className={styles.heroOverlay} />
+        {kitchenData.isOnline === false && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(15, 23, 42, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 3,
+            }}
+          >
+            <span
+              style={{
+                backgroundColor: "#0F172A",
+                color: "#FFFFFF",
+                fontSize: "13px",
+                fontWeight: "800",
+                letterSpacing: "1px",
+                padding: "6px 16px",
+                borderRadius: "16px",
+                textTransform: "uppercase",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                border: "1px solid rgba(255,255,255,0.2)",
+              }}
+            >
+              🔴 STORE CLOSED
+            </span>
+          </div>
+        )}
 
         {/* Floating Top Header Buttons matching the website header */}
         <header className={styles.floatingHeader}>
@@ -195,9 +231,31 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
       {/* 2. Restaurant Information Body */}
       <div className={styles.contentBody}>
+        {/* Closed Store Alert Notice */}
+        {kitchenData.isOnline === false && (
+          <div
+            style={{
+              backgroundColor: "#FEF2F2",
+              border: "1.5px solid #FECACA",
+              borderRadius: "14px",
+              padding: "12px 14px",
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <span style={{ fontSize: "20px" }}>🔴</span>
+            <div>
+              <div style={{ color: "#991B1B", fontWeight: "800", fontSize: "0.9rem" }}>Store is Currently Closed</div>
+              <div style={{ color: "#DC2626", fontSize: "0.78rem" }}>Not accepting online orders at this time.</div>
+            </div>
+          </div>
+        )}
+
         {/* Title & Rating */}
         <div className={styles.titleRow}>
-          <h1 className={styles.restaurantName}>{kitchenData.restaurantName}</h1>
+          <h1 className={styles.restaurantName} style={{ color: kitchenData.isOnline === false ? "#475569" : undefined }}>{kitchenData.restaurantName}</h1>
           <div className={styles.ratingBadge}>
             <Star size={13} fill="#F59E0B" color="#F59E0B" />
             <span className={styles.ratingScore}>{kitchenData.rating}</span>
@@ -297,9 +355,18 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
               {finalDisplayItems.map((item) => {
                 const quantity = getItemQuantity(item.id);
                 const hasQuantity = quantity > 0;
+                const isClosed = kitchenData.isOnline === false;
 
                 return (
-                  <div key={item.id} className={styles.foodCard}>
+                  <div
+                    key={item.id}
+                    className={styles.foodCard}
+                    style={{
+                      backgroundColor: isClosed ? "#F8FAFC" : undefined,
+                      opacity: isClosed ? 0.85 : 1,
+                      borderColor: isClosed ? "#E2E8F0" : undefined,
+                    }}
+                  >
                     {/* Left Food Image */}
                     <div className={styles.foodImageWrapper}>
                       <div style={{ position: "absolute", top: "4px", left: "4px", zIndex: 2 }}>
@@ -311,17 +378,51 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                         fill
                         sizes="96px"
                         className={styles.foodThumbnail}
+                        style={{
+                          filter: isClosed ? "grayscale(100%)" : "none",
+                        }}
                       />
+                      {isClosed && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: "rgba(15, 23, 42, 0.4)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 3,
+                          }}
+                        >
+                          <span
+                            style={{
+                              backgroundColor: "#0F172A",
+                              color: "#FFFFFF",
+                              fontSize: "8px",
+                              fontWeight: "800",
+                              letterSpacing: "0.5px",
+                              padding: "2px 6px",
+                              borderRadius: "8px",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            CLOSED
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Right Content */}
                     <div className={styles.foodInfo}>
-                      <h3 className={styles.foodTitle}>{item.title}</h3>
+                      <h3 className={styles.foodTitle} style={{ color: isClosed ? "#64748B" : undefined }}>{item.title}</h3>
                       <p className={styles.foodDesc}>{item.description}</p>
 
                       {item.addons && item.addons.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "2px 0 6px 0" }}>
-                          <span style={{ fontSize: "0.68rem", fontWeight: "700", color: "#EA580C", backgroundColor: "#FFF7ED", border: "1px solid #FFEDD5", padding: "1px 5px", borderRadius: "4px" }}>
+                          <span style={{ fontSize: "0.68rem", fontWeight: "700", color: isClosed ? "#94A3B8" : "#EA580C", backgroundColor: isClosed ? "#F1F5F9" : "#FFF7ED", border: `1px solid ${isClosed ? "#E2E8F0" : "#FFEDD5"}`, padding: "1px 5px", borderRadius: "4px" }}>
                             ✨ {item.addons.length} Add-on{item.addons.length > 1 ? "s" : ""} Available
                           </span>
                         </div>
@@ -329,9 +430,24 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
                       {/* Bottom Action Row */}
                       <div className={styles.foodBottomRow}>
-                        <span className={styles.foodPrice}>{item.price}</span>
+                        <span className={styles.foodPrice} style={{ color: isClosed ? "#94A3B8" : undefined }}>{item.price}</span>
 
-                        {!hasQuantity ? (
+                        {isClosed ? (
+                          <button
+                            type="button"
+                            className={styles.addBtn}
+                            disabled
+                            style={{
+                              backgroundColor: "#F1F5F9",
+                              color: "#94A3B8",
+                              border: "1px solid #E2E8F0",
+                              cursor: "not-allowed",
+                              fontWeight: "700",
+                            }}
+                          >
+                            <span>Closed</span>
+                          </button>
+                        ) : !hasQuantity ? (
                           <button
                             type="button"
                             className={styles.addBtn}

@@ -48,6 +48,7 @@ export const updateSellerProfile = async (req: Request) => {
     const contentType = req.headers.get("content-type") || "";
     let name: string | undefined;
     let phone: string | undefined;
+    let email: string | undefined;
     let businessName: string | undefined;
     let city: string | undefined;
     let pincode: string | undefined;
@@ -60,12 +61,13 @@ export const updateSellerProfile = async (req: Request) => {
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
-        name = (formData.get("name") as string) || (formData.get("ownerName") as string);
-        phone = (formData.get("phone") as string) || (formData.get("mobileNumber") as string);
+        name = (formData.get("name") as string) || (formData.get("ownerName") as string) || (formData.get("userFullName") as string);
+        phone = (formData.get("phone") as string) || (formData.get("mobileNumber") as string) || (formData.get("phoneNumber") as string);
+        email = (formData.get("email") as string) || (formData.get("businessEmail") as string) || (formData.get("primaryEmail") as string);
         businessName = (formData.get("businessName") as string) || (formData.get("outletName") as string);
         city = formData.get("city") as string;
         pincode = formData.get("pincode") as string;
-        infoAddress = (formData.get("infoAddress") as string) || (formData.get("registeredAddress") as string);
+        infoAddress = (formData.get("infoAddress") as string) || (formData.get("registeredAddress") as string) || (formData.get("address") as string) || (formData.get("addressLocality") as string);
         upiId = formData.get("upiId") as string;
         const rawLat = formData.get("latitude") || formData.get("lat");
         const rawLng = formData.get("longitude") || formData.get("lng");
@@ -76,12 +78,13 @@ export const updateSellerProfile = async (req: Request) => {
         bannerImageFile = formData.get("bannerImageFile") as File | null;
     } else {
         const body = await req.json();
-        name = body.name || body.ownerName;
-        phone = body.phone || body.mobileNumber;
+        name = body.name || body.ownerName || body.userFullName;
+        phone = body.phone || body.mobileNumber || body.phoneNumber;
+        email = body.email || body.businessEmail || body.primaryEmail;
         businessName = body.businessName || body.outletName;
         city = body.city;
         pincode = body.pincode;
-        infoAddress = body.infoAddress || body.registeredAddress;
+        infoAddress = body.infoAddress || body.registeredAddress || body.address || body.addressLocality;
         upiId = body.upiId;
         if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
             latitude = parseFloat(body.latitude);
@@ -99,10 +102,31 @@ export const updateSellerProfile = async (req: Request) => {
     }
 
     const userDataToUpdate: any = {};
-    if (name) userDataToUpdate.name = name;
-    if (phone) userDataToUpdate.phone = phone;
-    if (city) userDataToUpdate.city = city;
-    if (pincode) userDataToUpdate.pincode = pincode;
+    if (name && typeof name === "string" && name.trim()) {
+        userDataToUpdate.name = name.trim();
+    }
+    if (phone && typeof phone === "string" && phone.trim()) {
+        userDataToUpdate.phone = phone.trim();
+    }
+    if (email && typeof email === "string" && email.trim()) {
+        const cleanEmail = email.trim().toLowerCase();
+        const existingUser = await db.user.findFirst({
+            where: {
+                email: cleanEmail,
+                NOT: { id: session.user.id }
+            }
+        });
+        if (existingUser) {
+            throw new ApiError("Email is already in use by another account", 400);
+        }
+        userDataToUpdate.email = cleanEmail;
+    }
+    if (city !== undefined && typeof city === "string") {
+        userDataToUpdate.city = city.trim();
+    }
+    if (pincode !== undefined && typeof pincode === "string") {
+        userDataToUpdate.pincode = pincode.trim();
+    }
 
     if (Object.keys(userDataToUpdate).length > 0) {
         await db.user.update({
@@ -112,11 +136,17 @@ export const updateSellerProfile = async (req: Request) => {
     }
 
     const profileUpdateData: any = {};
-    if (businessName) profileUpdateData.businessName = businessName;
-    if (infoAddress) profileUpdateData.addressLocality = infoAddress;
-    if (upiId) profileUpdateData.upiId = upiId;
-    if (latitude !== undefined) profileUpdateData.latitude = latitude;
-    if (longitude !== undefined) profileUpdateData.longitude = longitude;
+    if (businessName !== undefined && typeof businessName === "string" && businessName.trim()) {
+        profileUpdateData.businessName = businessName.trim();
+    }
+    if (infoAddress !== undefined && typeof infoAddress === "string") {
+        profileUpdateData.addressLocality = infoAddress.trim();
+    }
+    if (upiId !== undefined) {
+        profileUpdateData.upiId = upiId ? (typeof upiId === "string" ? upiId.trim() : null) : null;
+    }
+    if (latitude !== undefined && !isNaN(latitude)) profileUpdateData.latitude = latitude;
+    if (longitude !== undefined && !isNaN(longitude)) profileUpdateData.longitude = longitude;
     if (isLocationPinned !== undefined) profileUpdateData.isLocationPinned = isLocationPinned;
 
     if (bannerImageFile && bannerImageFile.size > 0) {
@@ -134,7 +164,20 @@ export const updateSellerProfile = async (req: Request) => {
 
     const user = await db.user.findUnique({
         where: { id: session.user.id },
-        include: { sellerProfile: true }
+        include: {
+            sellerProfile: {
+                include: {
+                    subscriptions: {
+                        include: {
+                            plan: true
+                        },
+                        orderBy: {
+                            createdAt: "desc"
+                        }
+                    }
+                }
+            }
+        }
     });
 
     return { user, profile: user?.sellerProfile };

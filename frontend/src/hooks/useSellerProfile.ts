@@ -6,6 +6,8 @@ import { fetchApi } from "@/lib/fetch-api";
 
 export interface SellerProfileData {
   id?: string;
+  trackingId?: string;
+  upiId?: string;
   ownerName: string;
   businessName: string;
   userFullName: string;
@@ -239,9 +241,13 @@ export function useSellerProfile() {
             "";
           const rawInitials = computeInitials(rawBusinessName);
           const rawOnline = typeof profile?.isOnline === "boolean" ? profile.isOnline : true;
+          const rawTrackingId = profile?.trackingId || "";
+          const rawUpiId = profile?.upiId || "";
 
           cachedProfile = {
             id: profile?.id || user?.sellerProfile?.id || user?.id || "",
+            trackingId: rawTrackingId,
+            upiId: rawUpiId,
             ownerName: rawOwnerName,
             businessName: rawBusinessName,
             userFullName: rawFullName,
@@ -262,6 +268,8 @@ export function useSellerProfile() {
           if (isMounted) {
             setProfileState({
               id: profile?.id || user?.sellerProfile?.id || user?.id || "",
+              trackingId: rawTrackingId,
+              upiId: rawUpiId,
               ownerName: rawOwnerName,
               businessName: rawBusinessName,
               userFullName: rawFullName,
