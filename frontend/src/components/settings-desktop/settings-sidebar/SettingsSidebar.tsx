@@ -8,7 +8,6 @@ import { performLogout } from "@/lib/logout";
 import {
   Settings,
   Calendar,
-  Bell,
   CreditCard,
   MapPin,
   History,
@@ -175,19 +174,6 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               <ChevronRight size={16} className={styles.chevronIcon} />
             </button>
 
-            <button
-              type="button"
-              className={`${styles.navItem} ${
-                currentTab === "notifications" ? styles.navItemActive : ""
-              }`}
-              onClick={() => handleTabClick("notifications")}
-            >
-              <div className={styles.navItemLeft}>
-                <Bell size={18} className={styles.navIcon} />
-                <span>Notifications</span>
-              </div>
-              <ChevronRight size={16} className={styles.chevronIcon} />
-            </button>
 
             {/* 
               PAYMENT METHODS (Disabled via comment - uncomment to re-enable in future)

@@ -35,6 +35,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   items?: ResponsiveOrderItemLine[];
   subtotal?: string;
   deliveryFee?: string;
+  discount?: string;
   total?: string;
   paymentMethod?: string;
   initialStatus?: OrderTimelineStep;
@@ -60,6 +61,9 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   riderPhone = "+919876500101",
   riderEta = "Live ETA: ~12 min",
   items = DEFAULT_ITEMS,
+  subtotal,
+  deliveryFee,
+  discount,
   total = "₹850",
   paymentMethod = "COD",
   initialStatus = "Preparing",
@@ -347,10 +351,30 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
             <div className={styles.cardDivider} />
 
+            {/* Price breakdown */}
+            {subtotal && (
+              <div className={styles.itemRow} style={{ color: "#64748B", fontSize: "0.88rem" }}>
+                <span>Subtotal</span>
+                <span style={{ fontWeight: 600, color: "#0F172A" }}>{subtotal}</span>
+              </div>
+            )}
+            <div className={styles.itemRow} style={{ color: "#64748B", fontSize: "0.88rem" }}>
+              <span>Service Fee &amp; Delivery</span>
+              <span style={{ color: "#F97316", fontWeight: 600 }}>{deliveryFee || "Free"}</span>
+            </div>
+            {discount && (
+              <div className={styles.itemRow} style={{ color: "#16A34A", fontSize: "0.88rem", fontWeight: 600 }}>
+                <span>Discount / Coupon</span>
+                <span>-{discount}</span>
+              </div>
+            )}
+
+            <div className={styles.cardDivider} />
+
             {/* Total Row */}
             <div className={styles.totalRow}>
               <div className={styles.totalLeft}>
-                <span className={styles.totalLabel}>Total</span>
+                <span className={styles.totalLabel}>Grand Total</span>
                 <span className={styles.paymentBadge}>{paymentMethod}</span>
               </div>
               <span className={styles.totalPrice}>{total}</span>
