@@ -19,6 +19,7 @@ import {
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { useSellerNotifications, addSellerNotification } from "@/hooks/useSellerNotifications";
 import { playNewOrderChime } from "@/lib/audio-chime";
 import { performLogout } from "@/lib/logout";
 import styles from "./SellerDashboard.module.css";
@@ -133,6 +134,24 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               else if (s === "CANCELLED") statusVal = "Cancelled";
               else statusVal = "Pending";
 
+              if (statusVal === "Pending" || statusVal === "Preparing") {
+                try {
+                  const customerPhone = o.customerPhone || o.user?.phone || "";
+                  const address = o.room?.title || o.deliveryAddress || "";
+                  addSellerNotification({
+                    id: `notif-order-${o.id}`,
+                    category: "orders",
+                    settingKey: "orderAlerts",
+                    title: `New Incoming Order #${o.id.slice(0, 8)}`,
+                    message: `${itemsSummary || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
+                    details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
+                    severity: "success",
+                    actionLabel: "View Order",
+                    actionHref: "/seller/orders",
+                  });
+                } catch {}
+              }
+
               return {
                 id: o.id,
                 orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
@@ -166,6 +185,32 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     onOrder: (payload) => {
       if (payload.event === "ORDER_CREATED") {
         playNewOrderChime();
+        if (payload.order) {
+          const o = payload.order;
+          let itemsText = "";
+          try {
+            const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+            if (Array.isArray(parsed)) {
+              itemsText = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+            }
+          } catch {
+            itemsText = "Kitchen Items";
+          }
+          const orderId = o.id || payload.orderId || `ORD-${Date.now().toString().slice(-4)}`;
+          const customerPhone = o.customerPhone || o.user?.phone || "";
+          const address = o.room?.title || o.deliveryAddress || "";
+          addSellerNotification({
+            id: `notif-order-${orderId}`,
+            category: "orders",
+            settingKey: "orderAlerts",
+            title: `New Incoming Order #${orderId.slice(0, 8)}`,
+            message: `${itemsText || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
+            details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
+            severity: "success",
+            actionLabel: "View Order",
+            actionHref: "/seller/orders",
+          });
+        }
       }
       // Instant reload of metrics & recent orders upon new order or status change
       fetchApi("/api/seller/dashboard/overview")

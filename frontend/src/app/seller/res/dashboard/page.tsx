@@ -7,6 +7,7 @@ import ResponsiveSellerDashboard, {
 } from "@/components/seller/seller-dashboard/responsive/ResponsiveSellerDashboard";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { addSellerNotification } from "@/hooks/useSellerNotifications";
 import { playNewOrderChime } from "@/lib/audio-chime";
 
 export default function ResponsiveSellerDashboardPage() {
@@ -30,7 +31,36 @@ export default function ResponsiveSellerDashboardPage() {
       if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
         const res = await ordersRes.value.json();
         const d = res.data?.orders || res.orders || res.data || [];
-        if (Array.isArray(d)) setOrdersList(d);
+        if (Array.isArray(d)) {
+          setOrdersList(d);
+          d.forEach((o: any) => {
+            const s = (o.status || "").toUpperCase();
+            if (s === "PENDING" || s === "PREPARING") {
+              let itemsText = "";
+              try {
+                const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+                if (Array.isArray(parsed)) {
+                  itemsText = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+                }
+              } catch {
+                itemsText = "Kitchen Items";
+              }
+              const customerPhone = o.customerPhone || o.user?.phone || "";
+              const address = o.room?.title || o.deliveryAddress || "";
+              addSellerNotification({
+                id: `notif-order-${o.id}`,
+                category: "orders",
+                settingKey: "orderAlerts",
+                title: `New Incoming Order #${o.id.slice(0, 8)}`,
+                message: `${itemsText || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
+                details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
+                severity: "success",
+                actionLabel: "View Order",
+                actionHref: "/seller/orders",
+              });
+            }
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to load seller dashboard:", err);
@@ -52,6 +82,32 @@ export default function ResponsiveSellerDashboardPage() {
     onOrder: (payload) => {
       if (payload.event === "ORDER_CREATED") {
         playNewOrderChime();
+        if (payload.order) {
+          const o = payload.order;
+          let itemsText = "";
+          try {
+            const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+            if (Array.isArray(parsed)) {
+              itemsText = parsed.map((i: any) => `${i.quantity || 1}x ${i.name}`).join(", ");
+            }
+          } catch {
+            itemsText = "Kitchen Items";
+          }
+          const orderId = o.id || payload.orderId || `ORD-${Date.now().toString().slice(-4)}`;
+          const customerPhone = o.customerPhone || o.user?.phone || "";
+          const address = o.room?.title || o.deliveryAddress || "";
+          addSellerNotification({
+            id: `notif-order-${orderId}`,
+            category: "orders",
+            settingKey: "orderAlerts",
+            title: `New Incoming Order #${orderId.slice(0, 8)}`,
+            message: `${itemsText || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
+            details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
+            severity: "success",
+            actionLabel: "View Order",
+            actionHref: "/seller/orders",
+          });
+        }
       }
       loadDashboard();
     },
