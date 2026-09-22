@@ -1,6 +1,6 @@
 // ==============================================================================
 // 🚀 Neo Cloud Bites - PM2 Ecosystem Configuration
-// Manages: Frontend (Next.js :3000) + Backend API (Next.js :5000)
+// Manages: Frontend (Next.js :3000) + Backend API (Next.js :3001)
 // ==============================================================================
 
 module.exports = {
@@ -13,7 +13,7 @@ module.exports = {
       args: "start -H 0.0.0.0",
       env: {
         NODE_ENV: "production",
-        PORT: 5000,
+        PORT: 3001,
       },
       watch: false,
       max_memory_restart: "512M",
