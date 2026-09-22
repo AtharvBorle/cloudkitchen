@@ -28,11 +28,14 @@ function loadInitialFromStorage(): SellerNotificationItem[] {
     return INITIAL_SELLER_NOTIFICATIONS;
   }
   try {
+    const isExplicitlyCleared = localStorage.getItem("seller_notifications_cleared") === "true";
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed;
+        if (parsed.length > 0 || isExplicitlyCleared) {
+          return parsed;
+        }
       }
     }
   } catch (err) {
@@ -41,6 +44,7 @@ function loadInitialFromStorage(): SellerNotificationItem[] {
   // Default to initial rich notifications
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_SELLER_NOTIFICATIONS));
+    localStorage.removeItem("seller_notifications_cleared");
   } catch {}
   return INITIAL_SELLER_NOTIFICATIONS;
 }
@@ -94,6 +98,11 @@ export function markAllSellerNotificationsAsRead() {
 }
 
 export function clearAllSellerNotifications() {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("seller_notifications_cleared", "true");
+    } catch {}
+  }
   persistNotifications([]);
 }
 
@@ -104,6 +113,11 @@ export function addSellerNotification(
     timeAgo?: string;
   }
 ) {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem("seller_notifications_cleared");
+    } catch {}
+  }
   const current = getGlobalSellerNotifications();
   const newItem: SellerNotificationItem = {
     id: item.id || `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -124,6 +138,11 @@ export function addSellerNotification(
 }
 
 export function generateSampleSellerAlert(category: NotificationCategory = "orders") {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem("seller_notifications_cleared");
+    } catch {}
+  }
   const alert = createSampleAlert(category);
   const current = getGlobalSellerNotifications();
   persistNotifications([alert, ...current]);
@@ -131,6 +150,11 @@ export function generateSampleSellerAlert(category: NotificationCategory = "orde
 }
 
 export function resetSellerNotificationsToDefaults() {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem("seller_notifications_cleared");
+    } catch {}
+  }
   persistNotifications(INITIAL_SELLER_NOTIFICATIONS);
 }
 
