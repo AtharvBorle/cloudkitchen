@@ -195,6 +195,7 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
 };
 
 import { useSellerProfile, toggleSellerOnlineStatus, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { fetchApi } from "@/lib/fetch-api";
 
 export interface ResponsiveSellerSettingsProps {
@@ -217,6 +218,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const router = useRouter();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -603,7 +605,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             title="Notifications"
           >
             <Bell size={22} />
-            <span className={styles.notificationDot} />
+            {unreadCount > 0 && <span className={styles.notificationDot} />}
           </button>
         </header>
 

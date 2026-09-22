@@ -47,6 +47,7 @@ const TABS: TabItem[] = [
 ];
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveSellerNotificationsProps {
   ownerName?: string;
@@ -66,9 +67,17 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
     ownerName !== "Kitchen Owner"
       ? ownerName
       : seller.ownerName;
-  const [notifications, setNotifications] = useState<SellerNotificationItem[]>(
-    INITIAL_SELLER_NOTIFICATIONS
-  );
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    toggleRead,
+    deleteNotification,
+    markAllAsRead,
+    clearAllNotifications,
+    generateSampleAlert,
+    resetToDefaults,
+  } = useSellerNotifications();
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -81,32 +90,26 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
     }, 2500);
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
   const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllAsRead();
     showToast("All notifications marked as read");
   };
 
   const handleToggleRead = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-    );
+    toggleRead(id);
   };
 
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    deleteNotification(id);
     showToast("Notification dismissed");
   };
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
     // Auto mark read on expansion
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+    markAsRead(id);
   };
 
   // Filtered list

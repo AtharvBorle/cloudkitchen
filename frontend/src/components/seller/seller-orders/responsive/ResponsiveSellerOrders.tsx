@@ -36,13 +36,14 @@ export interface ResponsiveOrderItem {
 }
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveSellerOrdersProps {
   orders?: ResponsiveOrderItem[];
   ownerName?: string;
   hasUnreadNotifications?: boolean;
   onAccept?: (orderId: string) => void;
-  onReject?: (orderId: string) => void;
+  onReject?: (orderId: string) => Promise<void> | void;
   onOrderClick?: (order: ResponsiveOrderItem) => void;
   onNotificationClick?: () => void;
   onSyncDevices?: () => void;
@@ -53,7 +54,7 @@ const EMPTY_ORDERS: ResponsiveOrderItem[] = [];
 export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   orders = EMPTY_ORDERS,
   ownerName,
-  hasUnreadNotifications = true,
+  hasUnreadNotifications,
   onAccept,
   onReject,
   onOrderClick,
@@ -62,6 +63,9 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
+  const isNotificationActive =
+    hasUnreadNotifications !== undefined ? hasUnreadNotifications : unreadCount > 0;
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -213,7 +217,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
             title="Notifications"
           >
             <Bell size={22} />
-            {hasUnreadNotifications && <span className={styles.notificationDot} />}
+            {isNotificationActive && <span className={styles.notificationDot} />}
           </button>
         </header>
 

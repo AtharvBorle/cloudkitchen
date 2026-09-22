@@ -8,6 +8,7 @@ import { Menu as MenuIcon, Plus, User, ChevronRight, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveRoom.module.css";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveRoomItem {
   id: string;
@@ -39,6 +40,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -139,7 +141,7 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
               title="Notifications"
             >
               <Bell size={22} />
-              <span className={styles.notificationDot} />
+              {unreadCount > 0 && <span className={styles.notificationDot} />}
             </button>
             <button
               type="button"

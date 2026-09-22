@@ -17,6 +17,7 @@ import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveSellerDashboard.module.css";
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveOrderSummary {
   id: string;
@@ -58,13 +59,16 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
   greetingSubtitle = "Here is your business summary today",
   metrics = DEFAULT_METRICS,
   recentOrders = [],
-  hasUnreadNotifications = true,
+  hasUnreadNotifications,
   onNotificationClick,
   onOrderClick,
   onSyncDevices,
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
+  const isNotificationActive =
+    hasUnreadNotifications !== undefined ? hasUnreadNotifications : unreadCount > 0;
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -172,7 +176,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
             title="Notifications"
           >
             <Bell size={22} />
-            {hasUnreadNotifications && <span className={styles.notificationDot} />}
+            {isNotificationActive && <span className={styles.notificationDot} />}
           </button>
         </header>
 

@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Search, Bell, Menu, X } from "lucide-react";
 import styles from "./Topbar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface TopbarProps {
   title?: string;
@@ -25,7 +26,7 @@ export default function Topbar({
   partnerRole,
   avatarInitials,
   searchPlaceholder,
-  unreadCount = 4,
+  unreadCount: unreadCountProp,
   onSearch,
   onNotificationClick,
   onMenuToggle,
@@ -34,6 +35,8 @@ export default function Topbar({
   const router = useRouter();
   const pathname = usePathname();
   const seller = useSellerProfile();
+  const { unreadCount: liveUnreadCount } = useSellerNotifications();
+  const effectiveUnreadCount = typeof unreadCountProp === "number" ? unreadCountProp : liveUnreadCount;
   const [searchQuery, setSearchQuery] = useState("");
   const handleMenu = onMenuToggle || onMenuClick;
 
@@ -219,9 +222,9 @@ export default function Topbar({
           aria-label="Notifications"
         >
           <Bell size={22} strokeWidth={2.2} />
-          {unreadCount > 0 && (
+          {effectiveUnreadCount > 0 && (
             <span className={styles.notificationBadge}>
-              {unreadCount > 99 ? "99+" : unreadCount}
+              {effectiveUnreadCount > 99 ? "99+" : effectiveUnreadCount}
             </span>
           )}
         </button>
