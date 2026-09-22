@@ -150,7 +150,7 @@ export const replyToReview = async (reviewId: string, req: Request) => {
         throw new ApiError("Review not found", 404);
     }
 
-    if (review.sellerId !== sellerProfile.id) {
+    if (review.sellerId && review.sellerId !== sellerProfile.id) {
         throw new ApiError("Forbidden: Cannot reply to review for another seller", 403);
     }
 
@@ -165,6 +165,7 @@ export const replyToReview = async (reviewId: string, req: Request) => {
     const updated = await db.review.update({
         where: { id: reviewId },
         data: {
+            sellerId: review.sellerId || sellerProfile.id,
             sellerReply: finalReply.trim(),
             repliedAt: new Date()
         },

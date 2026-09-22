@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Star, CheckCircle2, Send, ThumbsUp, Heart } from "lucide-react";
+import { Star, CheckCircle2, Send, ThumbsUp, Heart, MessageSquare, Utensils, Clock } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./RatingExperience.module.css";
 
@@ -33,6 +33,24 @@ const QUICK_TAGS = [
   "Clean PG Rooms",
 ];
 
+interface UserReview {
+  id: string;
+  rating: number;
+  comment?: string;
+  aspects: string[];
+  tags: string[];
+  sentiment?: string;
+  createdAt: string;
+  seller?: {
+    id: string;
+    businessName: string;
+  };
+  managerResponse?: {
+    text: string;
+    date: string;
+  };
+}
+
 export const RatingExperience: React.FC = () => {
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
@@ -45,8 +63,30 @@ export const RatingExperience: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [feedbackHistory, setFeedbackHistory] = useState<UserReview[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
 
   const activeRating = hoverRating !== null ? hoverRating : rating;
+
+  const loadHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetchApi("/api/user/rate-app");
+      if (res.ok) {
+        const json = await res.json();
+        const list = json.data?.reviews || json.reviews || [];
+        setFeedbackHistory(list);
+      }
+    } catch (err) {
+      console.error("Failed to load feedback history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadHistory();
+  }, []);
 
   const toggleAspect = (aspect: string) => {
     setSelectedAspects((prev) =>
@@ -94,6 +134,7 @@ export const RatingExperience: React.FC = () => {
       }
 
       setIsSubmitted(true);
+      loadHistory();
     } catch (err: any) {
       console.error("Error submitting rating:", err);
       setErrorMessage(err.message || "Something went wrong while submitting your feedback.");
@@ -108,6 +149,7 @@ export const RatingExperience: React.FC = () => {
     setFeedbackText("");
     setSelectedAspects(["Food Taste & Quality", "Delivery Speed"]);
     setErrorMessage(null);
+    loadHistory();
   };
 
   return (
@@ -233,6 +275,100 @@ export const RatingExperience: React.FC = () => {
           </form>
         )}
       </div>
+
+      {/* 6. Past Feedback & Kitchen Responses History */}
+      {feedbackHistory.length > 0 && (
+        <div className={styles.historyCard}>
+          <div className={styles.historyHeader}>
+            <h3 className={styles.historyTitle}>
+              <MessageSquare size={20} color="#FF5500" />
+              <span>Your Feedback &amp; Kitchen Responses</span>
+            </h3>
+            <span className={styles.historyCountBadge}>
+              {feedbackHistory.length} {feedbackHistory.length === 1 ? "Review" : "Reviews"}
+            </span>
+          </div>
+
+          <div className={styles.historyList}>
+            {feedbackHistory.map((rev) => (
+              <div key={rev.id} className={styles.historyItem}>
+                <div className={styles.historyTop}>
+                  <div className={styles.starsAndSentiment}>
+                    <div className={styles.historyStarsRow}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          size={15}
+                          fill={s <= rev.rating ? "#FF5500" : "none"}
+                          color={s <= rev.rating ? "#FF5500" : "#CBD5E1"}
+                        />
+                      ))}
+                    </div>
+                    {rev.sentiment && (
+                      <span className={styles.historySentimentPill}>{rev.sentiment}</span>
+                    )}
+                    {rev.seller?.businessName && (
+                      <span className={styles.kitchenPill}>
+                        <Utensils size={12} />
+                        <span>{rev.seller.businessName}</span>
+                      </span>
+                    )}
+                  </div>
+                  <span className={styles.historyDate}>
+                    {new Date(rev.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                {rev.comment && <div className={styles.historyComment}>"{rev.comment}"</div>}
+
+                {((rev.aspects && rev.aspects.length > 0) || (rev.tags && rev.tags.length > 0)) && (
+                  <div className={styles.historyPillsRow}>
+                    {rev.aspects?.map((asp, i) => (
+                      <span key={`h-asp-${i}`} className={styles.historyAspectPill}>
+                        ✓ {asp}
+                      </span>
+                    ))}
+                    {rev.tags?.map((tg, i) => (
+                      <span key={`h-tag-${i}`} className={styles.historyTagPill}>
+                        ★ {tg}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Verified Kitchen Response or Status */}
+                {rev.managerResponse ? (
+                  <div className={styles.managerResponseBox}>
+                    <div className={styles.managerResponseHeader}>
+                      <span className={styles.managerResponseTitle}>
+                        <CheckCircle2 size={15} color="#EA580C" />
+                        <span>Verified Kitchen / Chef Response</span>
+                      </span>
+                      <span className={styles.managerResponseDate}>
+                        {new Date(rev.managerResponse.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <p className={styles.managerResponseText}>{rev.managerResponse.text}</p>
+                  </div>
+                ) : (
+                  <div className={styles.awaitingResponseBadge}>
+                    <Clock size={13} />
+                    <span>Delivered to Kitchen • Awaiting chef response</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Community Stats Highlights */}
       <div className={styles.statsCard}>
