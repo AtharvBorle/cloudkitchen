@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import styles from "./Topbar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
-import { useSellerNotifications } from "@/hooks/useSellerNotifications";
+import { useSellerNotifications, broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
 import { NotificationCategory } from "../seller-notifications/notificationData";
 
 export interface TopbarProps {
@@ -258,7 +258,11 @@ export default function Topbar({
         <button
           type="button"
           onClick={async () => {
-            await toggleSellerOnlineStatus(!seller.isOnline);
+            const nextStatus = !seller.isOnline;
+            await toggleSellerOnlineStatus(nextStatus);
+            try {
+              broadcastShopTimingAlert({ isOpen: nextStatus });
+            } catch {}
           }}
           className={`${styles.statusToggleBtn || ""} topbar-status-toggle`}
           title={seller.isOnline ? "Store is ONLINE (Click to switch to Offline)" : "Store is OFFLINE (Click to switch to Online)"}

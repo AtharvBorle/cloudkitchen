@@ -208,6 +208,196 @@ export function broadcastOrderToSellerNotifications(payload: PlacedOrderNotifica
   }
 }
 
+export function broadcastStockAlert(payload: {
+  itemId?: string;
+  itemName: string;
+  currentStock: number;
+  threshold?: number;
+}) {
+  const notifItem: SellerNotificationItem = {
+    id: `notif-stock-${payload.itemId || Date.now()}`,
+    category: "stock",
+    settingKey: "lowStockAlert",
+    title: payload.currentStock === 0 ? `Out of Stock: ${payload.itemName}` : `Low Inventory Alert: ${payload.itemName}`,
+    message: payload.currentStock === 0
+      ? `Inventory for "${payload.itemName}" is completely depleted (0 units). Item paused.`
+      : `Only ${payload.currentStock} units remaining for "${payload.itemName}". Restock item soon.`,
+    details: `Inventory limit triggered at ${payload.currentStock} units remaining.`,
+    timestamp: new Date().toISOString(),
+    timeAgo: "Just now",
+    isRead: false,
+    severity: payload.currentStock === 0 ? "critical" : "warning",
+    actionLabel: "Manage Stock",
+    actionHref: "/seller/menu",
+  };
+
+  addSellerNotification(notifItem);
+
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("cloudkitchen-new-notification", { detail: notifItem }));
+      if ("BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bc.postMessage({ type: "NEW_NOTIFICATION", payload: notifItem });
+        bc.close();
+      }
+    } catch {}
+  }
+}
+
+export function broadcastDeliveryAlert(payload: {
+  orderId: string;
+  riderName: string;
+  riderPhone?: string;
+  status?: string;
+  eta?: string;
+}) {
+  const isOut = payload.status === "OUT_FOR_DELIVERY" || payload.status === "ON_THE_WAY";
+  const notifItem: SellerNotificationItem = {
+    id: `notif-deliv-${payload.orderId || Date.now()}`,
+    category: "delivery",
+    settingKey: isOut ? "outForDeliveryAlert" : "riderAssignedAlert",
+    title: isOut ? `Out for Delivery: Order #${payload.orderId}` : `Rider Assigned: ${payload.riderName}`,
+    message: isOut
+      ? `Delivery partner ${payload.riderName} has dispatched parcel for Order #${payload.orderId}. ETA: ${payload.eta || "15 mins"}.`
+      : `${payload.riderName} accepted dispatch for Order #${payload.orderId}. Arriving at kitchen soon.`,
+    details: `Rider Contact: ${payload.riderPhone || "+91 98765 12345"}`,
+    timestamp: new Date().toISOString(),
+    timeAgo: "Just now",
+    isRead: false,
+    severity: "info",
+    actionLabel: "Track Dispatch",
+    actionHref: "/seller/delivery",
+  };
+
+  addSellerNotification(notifItem);
+
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("cloudkitchen-new-notification", { detail: notifItem }));
+      if ("BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bc.postMessage({ type: "NEW_NOTIFICATION", payload: notifItem });
+        bc.close();
+      }
+    } catch {}
+  }
+}
+
+export function broadcastShopTimingAlert(payload: {
+  isOpen: boolean;
+  closingInMinutes?: number;
+  customMessage?: string;
+}) {
+  const notifItem: SellerNotificationItem = {
+    id: `notif-timing-${Date.now()}`,
+    category: "timings",
+    settingKey: payload.closingInMinutes ? "closingReminder30Min" : "openingScheduleAlert",
+    title: payload.closingInMinutes
+      ? `Kitchen Closing in ${payload.closingInMinutes} Minutes`
+      : (payload.isOpen ? "Store is Now Online" : "Store Switched to Offline"),
+    message: payload.customMessage || (
+      payload.isOpen
+        ? "Your kitchen storefront is active and receiving live customer orders."
+        : "Your kitchen is currently closed. New incoming orders are paused."
+    ),
+    details: "Operating schedule updated in Seller Topbar & Preferences.",
+    timestamp: new Date().toISOString(),
+    timeAgo: "Just now",
+    isRead: false,
+    severity: payload.isOpen ? "success" : "warning",
+    actionLabel: "Shop Schedule",
+    actionHref: "/seller/settings",
+  };
+
+  addSellerNotification(notifItem);
+
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("cloudkitchen-new-notification", { detail: notifItem }));
+      if ("BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bc.postMessage({ type: "NEW_NOTIFICATION", payload: notifItem });
+        bc.close();
+      }
+    } catch {}
+  }
+}
+
+export function broadcastBookingAlert(payload: {
+  bookingId?: string;
+  guestName: string;
+  guestPhone?: string;
+  roomName: string;
+  nightsCount?: number;
+  totalAmount: number | string;
+  checkInDate?: string;
+}) {
+  const bId = payload.bookingId || `BK-${Math.floor(1000 + Math.random() * 9000)}`;
+  const notifItem: SellerNotificationItem = {
+    id: `notif-book-${bId}`,
+    category: "bookings",
+    settingKey: "bookingRequestAlert",
+    title: `New Room Reservation #${bId}`,
+    message: `${payload.roomName} confirmed for ${payload.guestName} (${payload.nightsCount || 1} nights). Total: ₹${payload.totalAmount}.`,
+    details: `Guest: ${payload.guestName}${payload.guestPhone ? ` • Phone: ${payload.guestPhone}` : ""}${payload.checkInDate ? ` • Check-in: ${payload.checkInDate}` : ""}`,
+    timestamp: new Date().toISOString(),
+    timeAgo: "Just now",
+    isRead: false,
+    severity: "info",
+    actionLabel: "View Bookings",
+    actionHref: "/seller/booking",
+  };
+
+  addSellerNotification(notifItem);
+
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("cloudkitchen-new-notification", { detail: notifItem }));
+      if ("BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bc.postMessage({ type: "NEW_NOTIFICATION", payload: notifItem });
+        bc.close();
+      }
+    } catch {}
+  }
+}
+
+export function broadcastReviewAlert(payload: {
+  customerName: string;
+  rating: number;
+  dishName?: string;
+  comment?: string;
+}) {
+  const notifItem: SellerNotificationItem = {
+    id: `notif-rev-${Date.now()}`,
+    category: "reviews",
+    settingKey: payload.rating <= 2 ? "negativeReviewAlert" : "newRatingAlert",
+    title: `New Customer Feedback: ${payload.rating} ★ Rating`,
+    message: `${payload.customerName} submitted a ${payload.rating}-star review: "${payload.comment || "Great taste and packaging!"}"`,
+    details: payload.dishName ? `Reviewed item: ${payload.dishName}` : "Customer feedback on restaurant storefront.",
+    timestamp: new Date().toISOString(),
+    timeAgo: "Just now",
+    isRead: false,
+    severity: payload.rating >= 4 ? "success" : payload.rating === 3 ? "info" : "warning",
+    actionLabel: "View Reviews",
+    actionHref: "/seller/reviews",
+  };
+
+  addSellerNotification(notifItem);
+
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("cloudkitchen-new-notification", { detail: notifItem }));
+      if ("BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bc.postMessage({ type: "NEW_NOTIFICATION", payload: notifItem });
+        bc.close();
+      }
+    } catch {}
+  }
+}
+
 export function generateSampleSellerAlert(category: NotificationCategory = "orders") {
   if (typeof window !== "undefined") {
     try {
@@ -241,7 +431,7 @@ function setupGlobalNotificationListeners() {
     if ("BroadcastChannel" in window) {
       const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
       bc.onmessage = (event) => {
-        if (event.data?.type === "NEW_ORDER_NOTIFICATION" && event.data.payload) {
+        if ((event.data?.type === "NEW_ORDER_NOTIFICATION" || event.data?.type === "NEW_NOTIFICATION") && event.data.payload) {
           addSellerNotification(event.data.payload);
         } else if (event.data?.type === "SYNC_NOTIFICATIONS" && Array.isArray(event.data.payload)) {
           memoryNotifications = event.data.payload;
@@ -264,8 +454,14 @@ function setupGlobalNotificationListeners() {
     }
   });
 
-  // 3. Custom window order placement event listener
+  // 3. Custom window order & notification placement event listeners
   window.addEventListener("cloudkitchen-new-order", (e: any) => {
+    if (e.detail) {
+      addSellerNotification(e.detail);
+    }
+  });
+
+  window.addEventListener("cloudkitchen-new-notification", (e: any) => {
     if (e.detail) {
       addSellerNotification(e.detail);
     }
@@ -339,6 +535,11 @@ export function useSellerNotifications() {
     clearAllNotifications: clearAllSellerNotifications,
     addNotification: addSellerNotification,
     broadcastOrder: broadcastOrderToSellerNotifications,
+    broadcastStock: broadcastStockAlert,
+    broadcastDelivery: broadcastDeliveryAlert,
+    broadcastTiming: broadcastShopTimingAlert,
+    broadcastBooking: broadcastBookingAlert,
+    broadcastReview: broadcastReviewAlert,
     generateSampleAlert: generateSampleSellerAlert,
     resetToDefaults: resetSellerNotificationsToDefaults,
   };

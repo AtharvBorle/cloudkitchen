@@ -21,6 +21,7 @@ import {
 import ConsoleSidebar from "../../sidebar/Sidebar";
 import Topbar from "../../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { broadcastDeliveryAlert } from "@/hooks/useSellerNotifications";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./AssignRiderDas.module.css";
 
@@ -109,6 +110,14 @@ function AssignRiderContent() {
 
       if (res.ok) {
         setAssignedRiderId(rider.id);
+        try {
+          broadcastDeliveryAlert({
+            orderId: order.id.slice(0, 6).toUpperCase(),
+            riderName: rider.name || "Delivery Partner",
+            riderPhone: rider.phone,
+            status: "RIDER_ASSIGNED",
+          });
+        } catch {}
         showToast(`Rider ${rider.name} assigned to Order #${order.id.slice(0, 6).toUpperCase()}!`);
         setTimeout(() => {
           router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}`);

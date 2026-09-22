@@ -316,6 +316,38 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
           </button>
           <button
             type="button"
+            onClick={() => handleGenerateAlert("timings")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#F0FDF4",
+              color: "#15803D",
+              border: "1px solid #BBF7D0",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Shop Timing
+          </button>
+          <button
+            type="button"
+            onClick={() => handleGenerateAlert("reviews")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#FFFBEB",
+              color: "#B45309",
+              border: "1px solid #FDE68A",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Review
+          </button>
+          <button
+            type="button"
             onClick={handleResetDefaults}
             style={{
               padding: "5px 10px",
