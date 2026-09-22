@@ -227,7 +227,17 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     ownerName !== "Kitchen Owner"
       ? ownerName
       : seller.ownerName;
-  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
+
+  const [activeTab, setActiveTab] = useState<SettingsTabType>(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam) {
+      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTabType[]).find(
+        (t) => t.toLowerCase() === tabParam.toLowerCase()
+      );
+      if (matched) return matched;
+    }
+    return initialTab;
+  });
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({

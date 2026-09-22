@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import {
@@ -63,6 +64,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   initialSettings,
   onSave,
 }) => {
+  const searchParams = useSearchParams();
   const seller = useSellerProfile();
   const [settings, setSettings] = useState<SellerSettingsData>({
     ...DEFAULT_SETTINGS,
@@ -71,6 +73,16 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
 
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam === "notifications") {
+      const el = document.getElementById("notifications-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [searchParams]);
 
   // Banner state
   const [bannerPreview, setBannerPreview] = useState<string>(
@@ -592,7 +604,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
             </div>
 
             {/* 3. Notifications & Security */}
-            <div className={styles.settingsCard}>
+            <div id="notifications-section" className={styles.settingsCard}>
               <div className={styles.cardHeader}>
                 <div className={styles.cardIconWrapper}>
                   <Shield size={20} />

@@ -250,7 +250,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
               Notifications reflect your active preferences in <strong>Settings &gt; Notifications</strong>.
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Link href="/seller/settings" className={styles.settingsBannerLink}>
+              <Link href="/seller/settings?tab=notifications" className={styles.settingsBannerLink}>
                 Edit
               </Link>
               <button

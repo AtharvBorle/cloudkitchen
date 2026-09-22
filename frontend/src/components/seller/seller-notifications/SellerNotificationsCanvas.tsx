@@ -217,7 +217,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
             </button>
           )}
 
-          <Link href="/seller/settings" className={styles.actionBtn}>
+          <Link href="/seller/settings?tab=notifications" className={styles.actionBtn}>
             <Settings size={16} />
             <span>Preferences</span>
           </Link>
@@ -378,7 +378,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-            <Link href="/seller/settings" className={styles.settingsLink}>
+            <Link href="/seller/settings?tab=notifications" className={styles.settingsLink}>
               Manage Alerts
             </Link>
             <button

@@ -211,7 +211,16 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 }) => {
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam) {
+      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTab[]).find(
+        (t) => t.toLowerCase() === tabParam.toLowerCase()
+      );
+      if (matched) return matched;
+    }
+    return initialTab;
+  });
   const [formData, setFormData] = useState<SettingsFormData>(() => ({
     ...DEFAULT_DATA,
     businessName: initialData?.businessName || seller.businessName,
