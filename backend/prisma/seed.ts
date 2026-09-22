@@ -12,7 +12,11 @@ async function main() {
     // 1. Superadmin
     const admin = await prisma.user.upsert({
         where: { email: "superadmin@admin.com" },
-        update: {},
+        update: {
+            passwordHash: hashPassword,
+            role: "SUPERADMIN",
+            isActive: true,
+        },
         create: {
             email: "superadmin@admin.com",
             passwordHash: hashPassword,
@@ -29,7 +33,11 @@ async function main() {
     // 2. Agent
     const agentUser = await prisma.user.upsert({
         where: { email: "agent@domain.com" },
-        update: {},
+        update: {
+            passwordHash: hashPassword,
+            role: "AGENT",
+            isActive: true,
+        },
         create: {
             email: "agent@domain.com",
             passwordHash: hashPassword,
@@ -49,7 +57,11 @@ async function main() {
     // 3. Seller (Approved)
     const sellerUser = await prisma.user.upsert({
         where: { email: "seller@domain.com" },
-        update: {},
+        update: {
+            passwordHash: hashPassword,
+            role: "SELLER",
+            isActive: true,
+        },
         create: {
             email: "seller@domain.com",
             passwordHash: hashPassword,
@@ -75,7 +87,11 @@ async function main() {
     // 3.5 Seller (Pending)
     const pendingSellerUser = await prisma.user.upsert({
         where: { email: "pending_seller@domain.com" },
-        update: {},
+        update: {
+            passwordHash: hashPassword,
+            role: "SELLER",
+            isActive: true,
+        },
         create: {
             email: "pending_seller@domain.com",
             passwordHash: hashPassword,
@@ -101,7 +117,11 @@ async function main() {
     // 4. Customer
     const customerUser = await prisma.user.upsert({
         where: { email: "customer@domain.com" },
-        update: {},
+        update: {
+            passwordHash: hashPassword,
+            role: "USER",
+            isActive: true,
+        },
         create: {
             email: "customer@domain.com",
             passwordHash: hashPassword,
