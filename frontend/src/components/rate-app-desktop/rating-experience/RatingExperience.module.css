@@ -544,3 +544,23 @@
   width: fit-content;
 }
 
+@media (max-width: 768px) {
+  .historyCard {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .historyTop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .managerResponseHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+
