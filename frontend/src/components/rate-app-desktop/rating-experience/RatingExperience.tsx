@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Star, CheckCircle2, Send, ThumbsUp, Heart } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./RatingExperience.module.css";
 
 const SENTIMENT_LABELS: Record<number, string> = {
@@ -73,7 +74,7 @@ export const RatingExperience: React.FC = () => {
       // Collect quick tags that are in feedbackText or selected
       const detectedTags = QUICK_TAGS.filter((t) => feedbackText.includes(t));
 
-      const response = await fetch("/api/user/rate-app", {
+      const response = await fetchApi("/api/user/rate-app", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -89,7 +90,7 @@ export const RatingExperience: React.FC = () => {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || "Failed to submit review. Please try again.");
+        throw new Error(errData.message || errData.error || "Failed to submit review. Please try again.");
       }
 
       setIsSubmitted(true);
