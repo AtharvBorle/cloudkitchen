@@ -1,0 +1,188 @@
+/* TC.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F5F6F8;
+  }
+}
+
+/* 390px Mobile View Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 390px;
+  min-height: 874px;
+  background-color: #F5F6F8;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
+
+/* Top Navigation Bar */
+.topBar {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #EEF0F4;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.iconButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: #F1F5F9;
+}
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
+.pageTitle {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+/* Tabs Header Strip */
+.tabsStrip {
+  width: 100%;
+  height: 48px;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #EEF0F4;
+  box-sizing: border-box;
+  position: sticky;
+  top: 56px;
+  z-index: 40;
+}
+
+.tabButton {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  padding: 0 8px;
+}
+
+.tabButton:hover {
+  color: #0F172A;
+}
+
+.tabButtonActive {
+  color: #F97316;
+  font-weight: 700;
+}
+
+.activeIndicator {
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 2.5px;
+  background-color: #F97316;
+  border-radius: 3px 3px 0 0;
+}
+
+/* Content Area */
+.contentArea {
+  flex: 1;
+  padding: 22px 18px 40px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  box-sizing: border-box;
+}
+
+/* Article Section */
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionHeading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.sectionParagraph {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+}
+

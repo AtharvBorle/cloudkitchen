@@ -1,0 +1,361 @@
+/* ResponsiveDelivery.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F5F6F8;
+  }
+}
+
+/* 420px Mobile View Container */
+.mobileContainer {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  background-color: #F4F6FA;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow-x: hidden;
+  padding-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
+
+/* Top Navigation Bar */
+.topBar {
+  width: 100%;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #F1F5F9;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.headerLeftGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerLogoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.headerLogoWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #FFF1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.15);
+  border: 1.5px solid #FED7AA;
+  transition: transform 0.15s ease;
+}
+
+.headerLogoWrapper:active {
+  transform: scale(0.94);
+}
+
+.headerLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.iconButton {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.notificationDot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #F97316;
+  border: 1.5px solid #FFFFFF;
+}
+
+.iconButton:hover {
+  background-color: #F1F5F9;
+  color: #F97316;
+  border-color: #CBD5E1;
+}
+
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
+.pageTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.headerPlaceholder {
+  width: 40px;
+  height: 40px;
+}
+
+/* Content Area */
+.contentArea {
+  flex: 1;
+  padding: 16px 18px 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* Total Outstanding Card */
+.totalCard {
+  background-color: #FFFFFF;
+  border-radius: 18px;
+  padding: 18px 20px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.totalCard:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.totalCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.totalLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0;
+}
+
+.viewRidersLink {
+  font-size: 12px;
+  font-weight: 700;
+  color: #F97316;
+}
+
+.totalAmount {
+  font-size: 30px;
+  font-weight: 800;
+  color: #EA580C;
+  margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+/* Riders Section */
+.ridersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 2px;
+}
+
+.sectionLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.sectionActionBtn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3B82F6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ridersList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Rider Row Card */
+.riderCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid #EEF0F4;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.riderCard:hover {
+  border-color: #E2E8F0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.riderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatarCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #FFEDD5;
+  color: #EA580C;
+  font-size: 14.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.riderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.riderName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.riderPhone {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748B;
+  margin: 0;
+}
+
+.riderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.riderAmount {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #F97316;
+}
+
+.chevronIcon {
+  color: #94A3B8;
+  transition: color 0.15s ease;
+}
+
+.riderCard:hover .chevronIcon {
+  color: #0F172A;
+}
+
+/* Empty State */
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: #64748B;
+  font-weight: 500;
+}
+

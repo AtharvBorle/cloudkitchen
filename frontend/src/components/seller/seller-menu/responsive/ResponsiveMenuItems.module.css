@@ -1,0 +1,637 @@
+/* ResponsiveMenuItems.module.css */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #ECEEF2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+  box-sizing: border-box;
+  padding: 16px 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .screenWrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    background-color: #F5F6F8;
+  }
+}
+
+/* 390px Mobile container */
+.mobileContainer {
+  width: 100%;
+  max-width: 390px;
+  min-height: 874px;
+  background-color: #F5F6F8;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .mobileContainer {
+    border-radius: 0;
+    max-width: 100%;
+    width: 100%;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
+
+/* Top Navigation Bar */
+.topBar {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #EEF0F4;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.backButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.backButton:hover {
+  background-color: #F1F5F9;
+}
+
+.backButton:active {
+  transform: scale(0.95);
+}
+
+.headerTitle {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.iconButton {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: #F1F5F9;
+}
+
+.iconButton:active {
+  transform: scale(0.95);
+}
+
+.headerPlaceholder {
+  width: 38px;
+  height: 38px;
+}
+
+
+/* Main Form Area */
+.contentArea {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+/* 1. Upload Photo Banner */
+.uploadDropzone {
+  width: 100%;
+  background-color: #FFF7ED;
+  border: 1.5px dashed #FB923C;
+  border-radius: 16px;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.uploadDropzone:hover {
+  background-color: #FFEDD5;
+  border-color: #F97316;
+}
+
+.fileInputHidden {
+  display: none;
+}
+
+.cameraCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F97316;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.18);
+  margin-bottom: 8px;
+}
+
+.uploadTitle {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #EA580C;
+  margin-bottom: 3px;
+}
+
+.uploadSubtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94A3B8;
+}
+
+.previewContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewImage {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.changePhotoText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #F97316;
+  text-decoration: underline;
+}
+
+/* 2. General Form Fields */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.textInput {
+  width: 100%;
+  height: 46px;
+  background-color: #FFFFFF;
+  border: 1px solid #EEF0F4;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0F172A;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.textInput:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.textInput::placeholder {
+  color: #94A3B8;
+}
+
+/* Price Input with Currency Prefix */
+.priceInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.pricePrefix {
+  position: absolute;
+  left: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  pointer-events: none;
+}
+
+.priceInput {
+  padding-left: 30px;
+}
+
+/* Select Dropdown */
+.selectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.selectInput {
+  width: 100%;
+  height: 46px;
+  background-color: #FFFFFF;
+  border: 1px solid #EEF0F4;
+  border-radius: 12px;
+  padding: 0 36px 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0F172A;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.selectInput:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.selectArrow {
+  position: absolute;
+  right: 14px;
+  color: #64748B;
+  pointer-events: none;
+}
+
+/* Textarea for Description */
+.textAreaInput {
+  width: 100%;
+  min-height: 80px;
+  background-color: #FFFFFF;
+  border: 1px solid #EEF0F4;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #0F172A;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.textAreaInput:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+/* 3. Section Headers */
+.sectionTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 4px 0 0 0;
+}
+
+/* 4. Day-wise Operational Hours */
+.scheduleList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scheduleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  border: 1px solid #EEF0F4;
+  border-radius: 12px;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  gap: 8px;
+}
+
+.dayLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+  min-width: 76px;
+  flex-shrink: 0;
+}
+
+.timeWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+}
+
+.timeBox {
+  height: 30px;
+  width: 78px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #0F172A;
+  background-color: #FFFFFF;
+  outline: none;
+  text-align: center;
+  padding: 0 4px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.timeBox:focus {
+  border-color: #F97316;
+}
+
+.toText {
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+/* Toggle Switch */
+.toggleSwitch {
+  width: 44px;
+  height: 24px;
+  border-radius: 9999px;
+  background-color: #E2E8F0;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s ease;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toggleSwitchActive {
+  background-color: #F97316;
+}
+
+.toggleThumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+  transform: translateX(0);
+}
+
+.toggleSwitchActive .toggleThumb {
+  transform: translateX(20px);
+}
+
+/* 5. Variants & Add-ons */
+.variantsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.variantRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  border: 1px solid #EEF0F4;
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  gap: 10px;
+}
+
+.variantNameInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+  background: transparent;
+  font-family: inherit;
+  padding: 4px 0;
+}
+
+.variantNameInput::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.variantPriceWrapper {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+}
+
+.variantCurrency {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.variantPriceInput {
+  width: 44px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+  outline: none;
+  text-align: right;
+  font-family: inherit;
+}
+
+.deleteVariantBtn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.deleteVariantBtn:hover {
+  color: #EF4444;
+  background-color: #FEE2E2;
+}
+
+.addVariantBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  background-color: #FFFFFF;
+  border: 1px dashed #FDBA74;
+  border-radius: 12px;
+  color: #F97316;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.addVariantBtn:hover {
+  background-color: #FFF7ED;
+  border-color: #F97316;
+}
+
+/* 6. In Stock Section */
+.stockCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  border: 1px solid #EEF0F4;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.stockInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stockTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.stockSubtitle {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.stockControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stockQtyInput {
+  width: 48px;
+  height: 34px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.stockQtyInput:focus {
+  border-color: #F97316;
+}
+
+/* 7. Save Item Button */
+.saveButton {
+  width: 100%;
+  height: 50px;
+  background-color: #F97316;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 14px;
+  font-size: 15.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  font-family: inherit;
+}
+
+.saveButton:hover {
+  background-color: #EA580C;
+}
+
+.saveButton:active {
+  transform: scale(0.98);
+}
+

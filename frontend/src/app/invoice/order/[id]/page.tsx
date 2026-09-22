@@ -86,8 +86,51 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
     };
 
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#F1F5F9', padding: '40px 20px' }} className="invoice-outer-bg">
+        <div className="invoice-outer-bg">
             <style jsx global>{`
+                .invoice-outer-bg {
+                    min-height: 100vh;
+                    background-color: #F1F5F9;
+                    padding: 40px 20px;
+                }
+                .invoice-container {
+                    max-width: 850px;
+                    margin: 0 auto;
+                    background-color: white;
+                    padding: 50px;
+                    border-radius: 16px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+                    border: 1px solid #E2E8F0;
+                }
+                .table-responsive-wrapper {
+                    width: 100%;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    margin-bottom: 30px;
+                }
+                .calculation-wrapper {
+                    display: flex;
+                    justify-content: flex-end;
+                    margin-bottom: 50px;
+                }
+                .calculation-card {
+                    width: 320px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                @media (max-width: 768px) {
+                    .invoice-outer-bg {
+                        padding: 16px 12px;
+                    }
+                    .invoice-container {
+                        padding: 24px 18px;
+                        border-radius: 14px;
+                    }
+                    .calculation-card {
+                        width: 100%;
+                    }
+                }
                 @media print {
                     body {
                         background-color: white !important;
@@ -113,7 +156,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
             `}</style>
 
             {/* Back & Print Bar (Hidden on Print) */}
-            <div className="no-print" style={{ maxWidth: '850px', margin: '0 auto 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="no-print" style={{ maxWidth: '850px', margin: '0 auto 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <button 
                     onClick={() => window.close()} 
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#475569', backgroundColor: 'white', border: '1px solid #CBD5E1', padding: '10px 18px', borderRadius: '10px', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'all 0.2s' }}
@@ -129,7 +172,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Invoice Container */}
-            <div className="invoice-container" style={{ maxWidth: '850px', margin: '0 auto', backgroundColor: 'white', padding: '50px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid #E2E8F0' }}>
+            <div className="invoice-container">
                 
                 {/* Header Banner */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #F1F5F9', paddingBottom: '30px', marginBottom: '30px', flexWrap: 'wrap', gap: '20px' }}>
@@ -170,7 +213,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                 </div>
 
                 {/* Billing Addresses Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px', marginBottom: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '30px', marginBottom: '40px' }}>
                     
                     {/* Billed By (Seller) */}
                     <div>
@@ -223,33 +266,35 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                     </div>
                 </div>
 
-                {/* Items Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '2px solid #E2E8F0', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', color: '#64748B', textAlign: 'left' }}>
-                            <th style={{ padding: '12px 8px', width: '40px' }}>#</th>
-                            <th style={{ padding: '12px 8px' }}>Description / Item Name</th>
-                            <th style={{ padding: '12px 8px', textAlign: 'center', width: '80px' }}>Qty</th>
-                            <th style={{ padding: '12px 8px', textAlign: 'right', width: '120px' }}>Rate</th>
-                            <th style={{ padding: '12px 8px', textAlign: 'right', width: '120px' }}>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {items.map((item: any, index: number) => (
-                            <tr key={index} style={{ borderBottom: '1px solid #F1F5F9', fontSize: '0.9rem', color: '#334155' }}>
-                                <td style={{ padding: '14px 8px', color: '#94A3B8' }}>{index + 1}</td>
-                                <td style={{ padding: '14px 8px', fontWeight: '600', color: '#1E293B' }}>{item.name}</td>
-                                <td style={{ padding: '14px 8px', textAlign: 'center' }}>{item.quantity}</td>
-                                <td style={{ padding: '14px 8px', textAlign: 'right' }}>₹{(item.price || 0).toFixed(2)}</td>
-                                <td style={{ padding: '14px 8px', textAlign: 'right', fontWeight: '600' }}>₹{(item.price * item.quantity).toFixed(2)}</td>
+                {/* Items Table with horizontal scroll wrapper */}
+                <div className="table-responsive-wrapper">
+                    <table style={{ width: '100%', minWidth: '460px', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '2px solid #E2E8F0', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', color: '#64748B', textAlign: 'left' }}>
+                                <th style={{ padding: '12px 8px', width: '40px' }}>#</th>
+                                <th style={{ padding: '12px 8px' }}>Description / Item Name</th>
+                                <th style={{ padding: '12px 8px', textAlign: 'center', width: '70px' }}>Qty</th>
+                                <th style={{ padding: '12px 8px', textAlign: 'right', width: '100px' }}>Rate</th>
+                                <th style={{ padding: '12px 8px', textAlign: 'right', width: '100px' }}>Total</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {items.map((item: any, index: number) => (
+                                <tr key={index} style={{ borderBottom: '1px solid #F1F5F9', fontSize: '0.9rem', color: '#334155' }}>
+                                    <td style={{ padding: '14px 8px', color: '#94A3B8' }}>{index + 1}</td>
+                                    <td style={{ padding: '14px 8px', fontWeight: '600', color: '#1E293B' }}>{item.name}</td>
+                                    <td style={{ padding: '14px 8px', textAlign: 'center' }}>{item.quantity}</td>
+                                    <td style={{ padding: '14px 8px', textAlign: 'right' }}>₹{(item.price || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '14px 8px', textAlign: 'right', fontWeight: '600' }}>₹{(item.price * item.quantity).toFixed(2)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
                 {/* Calculation Summary */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '50px' }}>
-                    <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="calculation-wrapper">
+                    <div className="calculation-card">
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#475569' }}>
                             <span>Subtotal:</span>
                             <span style={{ fontWeight: '600' }}>₹{subtotal.toFixed(2)}</span>
@@ -260,10 +305,6 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                                 <span style={{ fontWeight: '600' }}>-₹{discountAmount.toFixed(2)}</span>
                             </div>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#475569' }}>
-                            <span>Delivery Fee & Taxes:</span>
-                            <span style={{ fontWeight: '600' }}>₹0.00</span>
-                        </div>
                         <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: '800', color: '#1E293B' }}>
                             <span>Total Paid:</span>
                             <span style={{ color: 'var(--coral, #F16F68)' }}>₹{order.totalAmount.toFixed(2)}</span>

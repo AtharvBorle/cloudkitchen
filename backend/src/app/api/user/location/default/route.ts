@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 export async function GET(req: Request) {
     try {
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
 
         const user = await db.user.findUnique({
             where: { id: session.user.id },
-            select: { pincode: true }
+            select: { pincode: true, city: true }
         });
 
         const addresses = await db.address.findMany({
@@ -20,10 +21,16 @@ export async function GET(req: Request) {
             select: {
                 id: true,
                 type: true,
+                houseNumber: true,
+                street: true,
+                landmark: true,
                 pincode: true,
+                latitude: true,
+                longitude: true,
                 isDefault: true
             },
-            take: 5
+            orderBy: { createdAt: "desc" },
+            take: 10
         });
 
         const activeDefaultAddress = addresses.find((a: any) => a.isDefault === true);
@@ -35,10 +42,17 @@ export async function GET(req: Request) {
 
         // If user has set a different active location (GPS / map / manual) or has no default address marked
         if (user && user.pincode) {
+            const fallbackCoords = getPincodeCoordinates(user.pincode);
+            const matchedAddr = addresses.find((a: any) => a.pincode === user.pincode && a.latitude && a.longitude);
+
             return successResponse({
-                id: "virtual-gps",
+                id: matchedAddr?.id || "virtual-gps",
                 type: "Current Location",
                 pincode: user.pincode,
+                locality: fallbackCoords?.locality || "Current Location",
+                city: user.city || fallbackCoords?.city || "Pune",
+                latitude: matchedAddr?.latitude ?? fallbackCoords?.lat ?? null,
+                longitude: matchedAddr?.longitude ?? fallbackCoords?.lng ?? null,
                 isDefault: true
             });
         }

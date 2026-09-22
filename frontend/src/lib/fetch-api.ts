@@ -1,12 +1,29 @@
 export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     let target = input;
     if (typeof target === "string" && target.startsWith("/api/")) {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-        target = `${apiBase.replace(/\/$/, "")}${target}`;
+        if (typeof window === "undefined") {
+            const internalBase = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+            target = `${internalBase.replace(/\/$/, "")}${target}`;
+        } else {
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+            if (apiBase && !apiBase.includes("localhost") && !apiBase.includes("127.0.0.1")) {
+                target = `${apiBase.replace(/\/$/, "")}${target}`;
+            }
+        }
     }
+    const headers = new Headers(init?.headers);
+    if (!headers.has("Cache-Control")) {
+        headers.set("Cache-Control", "no-cache");
+    }
+    if (!headers.has("Pragma")) {
+        headers.set("Pragma", "no-cache");
+    }
+
     const res = await fetch(target, {
         credentials: "include",
-        ...init
+        cache: init?.cache || "no-store",
+        ...init,
+        headers,
     });
     const contentType = res.headers.get("content-type");
 
@@ -39,7 +56,22 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
         }
     }
 
-    return res;
+    return new Proxy(res, {
+        get(target, prop) {
+            if (prop === 'json') {
+                return async () => {
+                    try {
+                        const cloned = target.clone();
+                        return await cloned.json();
+                    } catch (e) {
+                        return { message: "Non-JSON response from server" };
+                    }
+                };
+            }
+            const value = (target as any)[prop];
+            return typeof value === 'function' ? value.bind(target) : value;
+        }
+    });
 }
 
 export function uploadWithProgress(
@@ -52,7 +84,9 @@ export function uploadWithProgress(
         let target = url;
         if (target.startsWith("/api/")) {
             const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-            target = `${apiBase.replace(/\/$/, "")}${target}`;
+            if (apiBase && !apiBase.includes("localhost") && !apiBase.includes("127.0.0.1")) {
+                target = `${apiBase.replace(/\/$/, "")}${target}`;
+            }
         }
         
         xhr.open("POST", target);

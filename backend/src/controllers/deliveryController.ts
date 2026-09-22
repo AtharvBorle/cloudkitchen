@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
+import { emitOrderUpdated } from "@/lib/realtime-events";
 
 export const getDeliveryOrders = async () => {
     const session = await getAuthSession();
@@ -23,6 +24,28 @@ export const getDeliveryOrders = async () => {
         where: {
             deliveryPersonId: deliveryProfile.id,
             status: { in: ["PENDING", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"] }
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    city: true,
+                    pincode: true
+                }
+            },
+            seller: {
+                select: {
+                    id: true,
+                    businessName: true,
+                    addressFlat: true,
+                    addressLocality: true,
+                    addressLandmark: true,
+                    trackingId: true
+                }
+            }
         },
         orderBy: { createdAt: 'desc' }
     });
@@ -105,6 +128,12 @@ export const verifyDeliveryPayment = async (req: Request, orderId: string) => {
         }
     });
 
+    try {
+        emitOrderUpdated(updatedOrder);
+    } catch (e) {
+        console.error("Realtime event emission error in delivery payment:", e);
+    }
+
     return updatedOrder;
 };
 
@@ -151,6 +180,12 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
 
         return uo;
     });
+
+    try {
+        emitOrderUpdated(updatedOrder);
+    } catch (e) {
+        console.error("Realtime event emission error in delivery update:", e);
+    }
 
     return { order: updatedOrder };
 };

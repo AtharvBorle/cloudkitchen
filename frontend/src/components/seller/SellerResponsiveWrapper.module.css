@@ -1,0 +1,23 @@
+.container {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.desktopView {
+  display: block;
+  width: 100%;
+}
+
+.mobileView {
+  display: none;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .desktopView {
+    display: none !important;
+  }
+  .mobileView {
+    display: block !important;
+  }
+}

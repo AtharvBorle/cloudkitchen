@@ -1,0 +1,617 @@
+.cardContainer {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 25px -2px rgba(0, 0, 0, 0.04);
+  padding: 36px 44px;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.headerGroup {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.015em;
+}
+
+.subtitle {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.required {
+  color: #f97316;
+  margin-left: 2px;
+}
+
+.inputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  font-size: 14px;
+  color: #1e293b;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.input::placeholder {
+  color: #94a3b8;
+}
+
+/* Segmented Control for Seller Type */
+.segmentedControl {
+  background-color: #edf2f7;
+  border-radius: 12px;
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+  height: 46px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.segmentBtn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.segmentBtnActive {
+  background-color: #ffffff;
+  color: #f97316;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Category & Cuisine Tags */
+.categorySectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.categoryCountBadge {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ea580c;
+  background-color: #fff7ed;
+  border: 1px solid #ffedd5;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.categorySubtitle {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0 0 10px 0;
+}
+
+.categorySearchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.categorySearchIcon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.categorySearchInput {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 36px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  font-size: 13px;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.categorySearchInput:focus {
+  border-color: #f97316;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
+}
+
+.selectableCategoriesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  min-height: 52px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.selectableCategoryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+}
+
+.selectableCategoryChip:hover {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.selectableCategoryChipActive {
+  background-color: #fff7ed !important;
+  border-color: #ea580c !important;
+  color: #c2410c !important;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.15);
+}
+
+.selectableCategoryChipActive:hover {
+  background-color: #ffedd5 !important;
+  border-color: #c2410c !important;
+}
+
+.chipCheckIcon {
+  color: #ea580c;
+}
+
+.chipPlusIcon {
+  color: #94a3b8;
+}
+
+.loadingCategories {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+  padding: 10px;
+}
+
+.noCategoriesFound {
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 8px;
+  font-style: italic;
+}
+
+.customCategorySection {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categoryError {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.addMoreBtn {
+  background-color: #ffffff;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.addMoreBtn:hover {
+  background-color: #f8fafc;
+  border-color: #f97316;
+  color: #ea580c;
+}
+
+.addCategoryInputWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.addCategoryInput {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 14px;
+  border: 1px solid #f97316;
+  font-size: 12px;
+  outline: none;
+  width: 140px;
+}
+
+.addTagConfirmBtn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background-color: #f97316;
+  color: #ffffff;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addTagCancelBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+/* Select Box */
+.selectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.select {
+  width: 100%;
+  height: 48px;
+  padding: 0 38px 0 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  font-size: 14px;
+  color: #1e293b;
+  box-sizing: border-box;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.chevronIcon {
+  position: absolute;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  color: #334155;
+  pointer-events: none;
+}
+
+/* Textarea Address */
+.textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #1e293b;
+  box-sizing: border-box;
+  outline: none;
+  resize: none;
+  line-height: 1.45;
+  transition: all 0.2s ease;
+}
+
+.textarea:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Pin Location Map Box */
+.pinLocationCard {
+  background-color: #e5ebf2;
+  border-radius: 12px;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pinLocationCard:hover {
+  opacity: 0.95;
+}
+
+.pinIconWrapper {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pinIcon {
+  width: 24px;
+  height: 24px;
+  color: #f97316;
+}
+
+.pinTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* Action Row / Bottom Continue */
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backBtn:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.continueBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #f97316;
+  color: #ffffff;
+  border: none;
+  padding: 11px 28px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+}
+
+.continueBtn:hover {
+  background-color: #ea580c;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+}
+
+.btnArrow {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tablet Responsive Overrides */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .cardContainer {
+    padding: 32px 36px 28px 36px;
+    max-width: 100%;
+    margin-bottom: 32px;
+  }
+}
+
+/* Responsive Mobile Layout */
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 16px 14px;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    margin-bottom: 90px;
+  }
+
+  .headerGroup {
+    display: none;
+  }
+
+  .form {
+    gap: 14px;
+  }
+
+  .label {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .input {
+    height: 44px;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 0 12px;
+  }
+
+  .segmentedControl {
+    height: 42px;
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .segmentBtn {
+    font-size: 12.5px;
+    border-radius: 7px;
+  }
+
+  .categoryContainer {
+    min-height: 44px;
+    padding: 5px 8px;
+    gap: 6px;
+    border-radius: 10px;
+  }
+
+  .categoryPill {
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border-radius: 14px;
+  }
+
+  .addMoreBtn {
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border-radius: 14px;
+  }
+
+  .select {
+    height: 44px;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 0 34px 0 12px;
+  }
+
+  .chevronIcon {
+    right: 12px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .textarea {
+    font-size: 12.5px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    min-height: 64px;
+    line-height: 1.4;
+  }
+
+  .pinLocationCard {
+    padding: 18px 12px;
+    border-radius: 10px;
+    gap: 6px;
+  }
+
+  .pinIcon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .pinTitle {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .actionRow {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    padding: 12px 16px 18px 16px;
+    border-top: 1px solid #f1f5f9;
+    z-index: 50;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+    margin-top: 0;
+  }
+
+  .backBtn {
+    display: none;
+  }
+
+  .continueBtn {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  .btnArrow {
+    display: none;
+  }
+}

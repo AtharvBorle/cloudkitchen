@@ -51,8 +51,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
         const { foodExpiry, propertyExpiry } = getCategoryExpiries(seller.subscriptions);
         const isFoodActive = foodExpiry ? foodExpiry > new Date() : false;
         const isPropertyActive = propertyExpiry ? propertyExpiry > new Date() : false;
+        const isApproved = seller.verificationStatus === "APPROVED";
 
-        if (!isFoodActive && !isPropertyActive) {
+        if (!isFoodActive && !isPropertyActive && !isApproved) {
             throw new ApiError("Shop is currently inactive (No active subscription)", 404);
         }
 

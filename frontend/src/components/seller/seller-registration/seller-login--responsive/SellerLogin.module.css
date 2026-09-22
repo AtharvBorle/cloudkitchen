@@ -1,0 +1,293 @@
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+  padding: 48px 20px;
+  margin: 0;
+}
+
+@media (max-width: 500px) {
+  .screenWrapper {
+    background: #F8FAFC;
+    padding: 0;
+    align-items: stretch;
+  }
+}
+
+.mobileFrame {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+@media (max-width: 500px) {
+  .mobileFrame {
+    max-width: 100%;
+    min-height: 100vh;
+    padding: 32px 18px 32px 18px;
+    justify-content: space-between;
+  }
+}
+
+/* 1. Header Area */
+.headerArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logoBadge {
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  background-color: #FFF1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.14);
+  margin-bottom: 16px;
+  transition: transform 0.2s ease;
+}
+
+.logoBadge:hover {
+  transform: scale(1.03);
+}
+
+.badgeImage {
+  width: 66px;
+  height: 66px;
+  object-fit: contain;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.4px;
+}
+
+/* 2. Login Form Card */
+.formCard {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 500px) {
+  .formCard {
+    padding: 24px 20px;
+    border-radius: 18px;
+    border-color: #F1F5F9;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+  }
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1E293B;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.requiredStar {
+  color: #EA580C;
+  font-weight: 700;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  font-size: 14.5px;
+  color: #0F172A;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.inputWithIcon {
+  padding-right: 46px;
+}
+
+.input:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14);
+}
+
+.input::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.togglePasswordBtn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  transition: color 0.15s ease;
+}
+
+.togglePasswordBtn:hover {
+  color: #0F172A;
+}
+
+.forgotPasswordRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -2px;
+}
+
+.forgotPasswordLink {
+  color: #F97316;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.forgotPasswordLink:hover {
+  opacity: 0.85;
+  text-decoration: underline;
+}
+
+.loginBtn {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, #FF6600 0%, #EA580C 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 22px rgba(249, 115, 22, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
+.loginBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(249, 115, 22, 0.42);
+}
+
+.loginBtn:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.errorMessage {
+  background-color: #FEF2F2;
+  color: #DC2626;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #FCA5A5;
+  line-height: 1.4;
+}
+
+/* 3. Bottom Action Section */
+.bottomSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.dividerRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.dividerLine {
+  width: 100%;
+  height: 1px;
+  background-color: #CBD5E1;
+}
+
+.dividerText {
+  position: absolute;
+  background-color: #F8FAFC;
+  padding: 0 14px;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.createAccountBtn {
+  width: 100%;
+  height: 52px;
+  background-color: #FFFFFF;
+  border: 1.5px solid #F97316;
+  border-radius: 14px;
+  color: #F97316;
+  font-size: 15.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.createAccountBtn:hover {
+  background-color: #FFF1E8;
+  transform: translateY(-1px);
+}
+
+.createAccountBtn:active {
+  transform: translateY(1px);
+}

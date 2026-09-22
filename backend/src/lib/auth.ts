@@ -15,6 +15,8 @@ const cookiePrefix = useSecureCookies ? "__Secure-" : "";
 const cookieSameSite = useSecureCookies ? "none" as const : "lax" as const;
 
 export const authConfig: NextAuthConfig = {
+    trustHost: true,
+    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "super_secret_for_local_testing_dev_only",
     cookies: {
         sessionToken: {
             name: `${cookiePrefix}next-auth.session-token`,
@@ -110,8 +112,12 @@ export const authConfig: NextAuthConfig = {
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.role = user.role;
-                token.id = user.id;
+                return {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    role: user.role,
+                };
             }
             return token;
         },
@@ -119,6 +125,8 @@ export const authConfig: NextAuthConfig = {
             if (session.user) {
                 session.user.role = token.role as string;
                 session.user.id = token.id as string;
+                session.user.email = token.email as string;
+                session.user.name = token.name as string;
             }
             return session;
         },
@@ -127,7 +135,8 @@ export const authConfig: NextAuthConfig = {
             const allowedOrigins = [
                 "https://cloudkitchen-rose.vercel.app",
                 "http://localhost:3000",
-                "http://localhost:3001"
+                "http://localhost:3001",
+                "http://localhost:5000"
             ];
             try {
                 const targetOrigin = new URL(url).origin;
@@ -141,7 +150,7 @@ export const authConfig: NextAuthConfig = {
         }
     },
     pages: {
-        signIn: '/auth/login',
+        signIn: '/login',
     },
     session: {
         strategy: "jwt",

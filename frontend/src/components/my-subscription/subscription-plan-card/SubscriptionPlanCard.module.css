@@ -1,0 +1,198 @@
+.cardContainer {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #eef2f6;
+  padding: 28px 32px 24px 32px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  margin-bottom: 24px;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.leftInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.iconCircle {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background-color: #fff7ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ffedd5;
+  flex-shrink: 0;
+}
+
+.icon {
+  color: #f97316;
+}
+
+.pauseIcon {
+  color: #eab308;
+}
+
+.titleWithTier {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.planTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.tierPill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.planSubtitle {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 4px 0 0 0;
+  font-weight: 500;
+}
+
+.activeBadge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.activeBadgeGreen {
+  background-color: #dcfce7;
+  color: #22c55e;
+}
+
+.pausedBadge {
+  background-color: #fef9c3;
+  color: #a16207;
+}
+
+.cancelledBadge {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding-top: 20px;
+  gap: 20px;
+}
+
+.statCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.priceValue {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #f97316;
+}
+
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 18px 16px;
+    border-radius: 18px;
+    margin-bottom: 16px;
+  }
+
+  .topRow {
+    padding-bottom: 16px;
+  }
+
+  .planTitle {
+    font-size: 1.1rem;
+  }
+
+  .planSubtitle {
+    font-size: 0.8rem;
+  }
+
+  .activeBadge {
+    padding: 4px 12px;
+    font-size: 0.68rem;
+  }
+
+  .statsRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 16px;
+  }
+
+  .statLabel {
+    font-size: 0.65rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .statValue {
+    font-size: 0.86rem;
+    white-space: nowrap;
+  }
+
+  .priceValue {
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .statsRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .statLabel {
+    font-size: 0.58rem;
+  }
+
+  .statValue {
+    font-size: 0.78rem;
+  }
+
+  .priceValue {
+    font-size: 0.82rem;
+  }
+}

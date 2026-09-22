@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, MessageSquare, RefreshCw, LogOut, LifeBuoy } from "lucide-react";
@@ -14,10 +15,9 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
     const toggleSidebar = () => setIsCollapsed(prev => !prev);
 
     useEffect(() => {
-        if (status === "unauthenticated") {
-            router.replace("/auth/login/admin");
-        } else if (status === "authenticated" && session?.user?.role !== "SUPPORT" && session?.user?.role !== "SUPERADMIN") {
-            router.replace("/explore/food");
+        if (status === "loading") return;
+        if (!session || (session?.user?.role !== "SUPPORT" && session?.user?.role !== "SUPERADMIN")) {
+            router.replace("/admin");
         }
     }, [status, session, router]);
 
@@ -111,7 +111,7 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
 
                 <div style={{ padding: "1.5rem 1rem", borderTop: "1px solid #334155" }}>
                     <button
-                        onClick={() => signOut({ callbackUrl: window.location.origin + "/admin" })}
+                        onClick={() => performLogout({ role: "SUPPORT" })}
                         style={{
                             width: "100%",
                             display: "flex",

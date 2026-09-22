@@ -14,8 +14,12 @@ export const requestSellerRevision = async (req: Request) => {
         where: { userId: session.user.id }
     });
 
-    if (!profile || profile.verificationStatus !== "REVISION") {
-        throw new ApiError("Profile not in Revision state.", 400);
+    if (!profile) {
+        throw new ApiError("Seller profile not found.", 404);
+    }
+
+    if (profile.verificationStatus === "APPROVED") {
+        throw new ApiError("Profile is already approved.", 400);
     }
 
     const formData = await req.formData();
@@ -39,18 +43,27 @@ export const requestSellerRevision = async (req: Request) => {
         updateData.propertyVerificationStatus = "PENDING";
     }
 
-    const adhaarFile = formData.get("adhaarFile") as File;
-    const adhaarFrontFile = formData.get("adhaarFrontFile") as File;
-    const adhaarBackFile = formData.get("adhaarBackFile") as File;
-    const fssaiFile = formData.get("fssaiFile") as File;
-    const lightBillFile = formData.get("lightBillFile") as File;
-    const passbookFile = formData.get("passbookFile") as File;
+    const businessAddress = (formData.get("businessAddress") || formData.get("address")) as string | null;
+    if (businessAddress && businessAddress.trim()) {
+        updateData.addressLocality = businessAddress.trim();
+    }
+    const businessName = formData.get("businessName") as string | null;
+    if (businessName && businessName.trim()) {
+        updateData.businessName = businessName.trim();
+    }
+
+    const adhaarFile = (formData.get("adhaarFile") || formData.get("identityProofFile") || formData.get("panFile")) as File | null;
+    const adhaarFrontFile = formData.get("adhaarFrontFile") as File | null;
+    const adhaarBackFile = formData.get("adhaarBackFile") as File | null;
+    const fssaiFile = (formData.get("fssaiFile") || formData.get("fssaiDocumentFile")) as File | null;
+    const lightBillFile = (formData.get("lightBillFile") || formData.get("utilityBillFile")) as File | null;
+    const passbookFile = (formData.get("passbookFile") || formData.get("bankDocumentFile")) as File | null;
 
     const kitchenFiles: File[] = [];
     let hasNewKitchenImages = false;
-    for (let i = 0; i < 3; i++) {
-        const kFile = formData.get(`kitchenImage_${i}`) as File;
-        if (kFile) {
+    for (let i = 0; i < 5; i++) {
+        const kFile = formData.get(`kitchenImage_${i}`) as File | null;
+        if (kFile && typeof kFile !== "string" && kFile.size > 0) {
             kitchenFiles.push(kFile);
             hasNewKitchenImages = true;
         }
@@ -58,9 +71,9 @@ export const requestSellerRevision = async (req: Request) => {
 
     const cuisineFiles: File[] = [];
     let hasNewCuisineImages = false;
-    for (let i = 0; i < 3; i++) {
-        const cFile = formData.get(`cuisineImage_${i}`) as File;
-        if (cFile) {
+    for (let i = 0; i < 5; i++) {
+        const cFile = formData.get(`cuisineImage_${i}`) as File | null;
+        if (cFile && typeof cFile !== "string" && cFile.size > 0) {
             cuisineFiles.push(cFile);
             hasNewCuisineImages = true;
         }
@@ -68,15 +81,15 @@ export const requestSellerRevision = async (req: Request) => {
 
     const roomFiles: File[] = [];
     let hasNewRoomImages = false;
-    for (let i = 0; i < 3; i++) {
-        const rFile = formData.get(`roomImage_${i}`) as File;
-        if (rFile) {
+    for (let i = 0; i < 5; i++) {
+        const rFile = formData.get(`roomImage_${i}`) as File | null;
+        if (rFile && typeof rFile !== "string" && rFile.size > 0) {
             roomFiles.push(rFile);
             hasNewRoomImages = true;
         }
     }
 
-    // Fire all these securely and concurrently
+    // Fire all uploads concurrently
     const [savedAdhaar, savedAdhaarFront, savedAdhaarBack, savedFssai, savedLightBill, savedPassbook, resolvedKitchen, resolvedCuisine, resolvedRooms] = await Promise.all([
         saveFile(adhaarFile),
         saveFile(adhaarFrontFile),
@@ -102,23 +115,73 @@ export const requestSellerRevision = async (req: Request) => {
 
     if (hasNewKitchenImages) {
         const kImages = resolvedKitchen.filter(Boolean) as string[];
-        updateData.kitchenImages = JSON.stringify(kImages);
+        if (kImages.length > 0) updateData.kitchenImages = JSON.stringify(kImages);
     }
 
     if (hasNewCuisineImages) {
         const cImages = resolvedCuisine.filter(Boolean) as string[];
-        updateData.cuisineImages = JSON.stringify(cImages);
+        if (cImages.length > 0) updateData.cuisineImages = JSON.stringify(cImages);
     }
 
     if (hasNewRoomImages) {
         const rImages = resolvedRooms.filter(Boolean) as string[];
-        updateData.roomImages = JSON.stringify(rImages);
+        if (rImages.length > 0) updateData.roomImages = JSON.stringify(rImages);
     }
 
-    await db.sellerProfile.update({
+    const updatedProfile = await db.sellerProfile.update({
         where: { id: profile.id },
         data: updateData
     });
 
-    return null;
+    return updatedProfile;
+};
+
+export const getSellerRevisionDetails = async () => {
+    const session = await getAuthSession();
+
+    if (!session || !session.user || session.user.role !== "SELLER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const profile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id },
+        include: { user: { select: { name: true, email: true, phone: true } } }
+    });
+
+    if (!profile) {
+        throw new ApiError("Seller profile not found.", 404);
+    }
+
+    let parsedKitchen: string[] = [];
+    let parsedCuisine: string[] = [];
+    let parsedRoom: string[] = [];
+
+    try {
+        if (profile.kitchenImages) parsedKitchen = JSON.parse(profile.kitchenImages);
+    } catch {}
+    try {
+        if (profile.cuisineImages) parsedCuisine = JSON.parse(profile.cuisineImages);
+    } catch {}
+    try {
+        if (profile.roomImages) parsedRoom = JSON.parse(profile.roomImages);
+    } catch {}
+
+    return {
+        id: profile.id,
+        businessName: profile.businessName,
+        businessCategory: profile.businessCategory,
+        verificationStatus: profile.verificationStatus,
+        verificationNote: profile.verificationNote,
+        foodVerificationStatus: profile.foodVerificationStatus,
+        propertyVerificationStatus: profile.propertyVerificationStatus,
+        addressLocality: profile.addressLocality,
+        adhaarUrl: profile.adhaarUrl,
+        fssaiUrl: profile.fssaiUrl,
+        lightBillUrl: profile.lightBillUrl,
+        passbookUrl: profile.passbookUrl,
+        kitchenImages: parsedKitchen,
+        cuisineImages: parsedCuisine,
+        roomImages: parsedRoom,
+        user: profile.user,
+    };
 };

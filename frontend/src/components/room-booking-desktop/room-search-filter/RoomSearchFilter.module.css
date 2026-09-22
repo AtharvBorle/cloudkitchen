@@ -1,0 +1,104 @@
+.filterContainer {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  padding: 14px 16px 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  margin-bottom: 28px;
+  gap: 16px;
+}
+
+.filtersGroup {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.filterSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  padding: 6px 16px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.filterSection:hover {
+  background-color: #f8fafc;
+}
+
+.filterInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filterLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.filterValue {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.chevronIcon {
+  color: #94a3b8;
+  margin-left: 12px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.filterSection:hover .chevronIcon {
+  color: #ea580c;
+  transform: translateY(1px);
+}
+
+.divider {
+  width: 1px;
+  height: 38px;
+  background-color: #e2e8f0;
+  flex-shrink: 0;
+}
+
+/* Search Action Button */
+.searchButton {
+  background: #c63a22;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 14px 30px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(198, 58, 34, 0.3);
+}
+
+.searchButton:hover {
+  background: #b0321d;
+  box-shadow: 0 6px 18px rgba(198, 58, 34, 0.4);
+  transform: translateY(-1px);
+}
+
+.searchButton:active {
+  transform: translateY(0);
+}

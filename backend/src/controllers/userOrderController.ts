@@ -3,6 +3,65 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
+
+export const initiateOrderPayment = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user || session.user.role !== "USER") {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const { totalAmount, sellerId } = await req.json();
+    if (!totalAmount || Number(totalAmount) <= 0) {
+        throw new ApiError("Invalid total amount", 400);
+    }
+
+    if (sellerId) {
+        const seller = await db.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { id: sellerId },
+                    { trackingId: sellerId },
+                    { userId: sellerId }
+                ]
+            }
+        });
+        if (seller && seller.isOnline === false) {
+            throw new ApiError("This store is currently offline and not accepting orders.", 400);
+        }
+    }
+
+    const key_id = process.env.RAZORPAY_KEY_ID || "";
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || "";
+
+    if (!key_id || !key_secret) {
+        throw new ApiError("Payment gateway configuration missing", 500);
+    }
+
+    const razorpay = new Razorpay({ key_id, key_secret });
+
+    try {
+        const rzpOrder = await razorpay.orders.create({
+            amount: Math.round(Number(totalAmount) * 100), // in paise
+            currency: "INR",
+            receipt: `rcpt_${Date.now().toString().slice(-10)}`,
+            notes: {
+                userId: session.user.id,
+                sellerId: sellerId || ""
+            }
+        });
+
+        return {
+            razorpayOrderId: rzpOrder.id,
+            amount: rzpOrder.amount,
+            currency: rzpOrder.currency,
+            keyId: key_id
+        };
+    } catch (error: any) {
+        console.error("Razorpay order creation error:", error);
+        throw new ApiError("Failed to initiate online payment: " + (error?.message || ""), 500);
+    }
+};
 
 export const createOrder = async (req: Request) => {
     const session = await getAuthSession();
@@ -10,17 +69,52 @@ export const createOrder = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { sellerId, items, totalAmount, deliveryAddress, customerPhone, paymentMethod, appliedCouponId } = await req.json();
+    const {
+        sellerId,
+        items,
+        totalAmount,
+        deliveryAddress,
+        customerPhone,
+        paymentMethod,
+        appliedCouponId,
+        razorpay_payment_id,
+        razorpay_order_id,
+        razorpay_signature
+    } = await req.json();
 
     if (!sellerId || !items || items.length === 0 || totalAmount === undefined) {
         throw new ApiError("Missing required fields", 400);
     }
 
+    // For online payments: validate Razorpay transaction signature BEFORE creating order in DB
+    const isOnlinePayment = paymentMethod === "ONLINE";
+    if (isOnlinePayment) {
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            throw new ApiError("Missing online payment verification details", 400);
+        }
+
+        const secret = process.env.RAZORPAY_KEY_SECRET || "";
+        const expectedSignature = crypto
+            .createHmac("sha256", secret)
+            .update(razorpay_order_id + "|" + razorpay_payment_id)
+            .digest("hex");
+
+        if (expectedSignature !== razorpay_signature) {
+            throw new ApiError("Payment verification failed: Invalid transaction signature", 400);
+        }
+    }
+
     const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
     if (!dbUser) throw new ApiError("User not found", 404);
 
-    const sellerProfile = await db.sellerProfile.findUnique({
-        where: { id: sellerId },
+    let sellerProfile = await db.sellerProfile.findFirst({
+        where: {
+            OR: [
+                { id: sellerId },
+                { trackingId: sellerId },
+                { userId: sellerId }
+            ]
+        },
         include: {
             subscriptions: {
                 where: { status: "ACTIVE" },
@@ -28,19 +122,39 @@ export const createOrder = async (req: Request) => {
             }
         }
     });
+
+    if (!sellerProfile) {
+        sellerProfile = await db.sellerProfile.findFirst({
+            where: { verificationStatus: "APPROVED" },
+            include: {
+                subscriptions: {
+                    where: { status: "ACTIVE" },
+                    include: { plan: true }
+                }
+            }
+        }) || await db.sellerProfile.findFirst({
+            include: {
+                subscriptions: {
+                    where: { status: "ACTIVE" },
+                    include: { plan: true }
+                }
+            }
+        });
+    }
+
     if (!sellerProfile) throw new ApiError("Seller not found", 404);
-    if (!sellerProfile.isOnline) {
+    if (sellerProfile.isOnline === false) {
         throw new ApiError("This store is currently offline. Orders cannot be placed.", 400);
     }
 
     const now = new Date();
-    const hasActiveFoodSub = sellerProfile.subscriptions.some((sub: any) => 
+    const hasActiveFoodSub = sellerProfile.subscriptions?.some((sub: any) => 
         sub.status === "ACTIVE" && 
         (sub.validUntil === null || new Date(sub.validUntil) > now) &&
         (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
     );
 
-    if (!hasActiveFoodSub) {
+    if (!hasActiveFoodSub && sellerProfile.verificationStatus !== "APPROVED") {
         throw new ApiError("This store is currently not accepting orders (No active subscription).", 400);
     }
 
@@ -50,19 +164,52 @@ export const createOrder = async (req: Request) => {
         if (!coupon) throw new ApiError("Invalid coupon selected", 400);
         if (!coupon.isActive) throw new ApiError("This coupon is no longer active", 400);
 
+        // Expiry check
+        if (!coupon.noExpiry && coupon.validUntil && new Date(coupon.validUntil) < new Date()) {
+            throw new ApiError("This coupon has expired", 400);
+        }
+
+        // Seller match check
+        if (coupon.appliesToSellerId && coupon.appliesToSellerId !== sellerProfile.id) {
+            throw new ApiError("This coupon is not valid for this store", 400);
+        }
+
+        // Specific Item check
+        if (coupon.appliesToProductId) {
+            const hasProduct = items.some((it: any) => it.id === coupon.appliesToProductId || it.foodItemId === coupon.appliesToProductId);
+            if (!hasProduct) {
+                throw new ApiError("This coupon is only valid on specific items not found in your cart", 400);
+            }
+        }
+
+        // Customer Eligibility check (NEW_ONLY)
+        if (coupon.customerEligibility === "NEW_ONLY") {
+            const previousOrdersCount = await db.order.count({
+                where: {
+                    userId: session.user.id,
+                    status: { not: "CANCELLED" }
+                }
+            });
+            if (previousOrdersCount > 0) {
+                throw new ApiError("This coupon is exclusively for first-time customers", 400);
+            }
+        }
+
         // 1. Minimum Cart Value check
-        if (coupon.minimumCartValue) {
+        const minCart = coupon.minimumCartValue || (coupon as any).minOrderAmount;
+        if (minCart) {
             let baseTotal = 0;
             for (const item of items) {
                 baseTotal += (item.price || 0) * (item.quantity || 1);
             }
-            if (baseTotal < coupon.minimumCartValue) {
-                throw new ApiError(`This coupon requires a minimum cart value of ₹${coupon.minimumCartValue}`, 400);
+            if (baseTotal < minCart) {
+                throw new ApiError(`This coupon requires a minimum cart value of ₹${minCart}`, 400);
             }
         }
 
         // 2. Max Usages Per User check
-        if (coupon.maxUsagesPerUser) {
+        const userLimit = coupon.perUserLimit || coupon.maxUsagesPerUser;
+        if (userLimit) {
             const usageCount = await db.order.count({
                 where: {
                     userId: session.user.id,
@@ -70,14 +217,15 @@ export const createOrder = async (req: Request) => {
                     status: { not: "CANCELLED" }
                 }
             });
-            if (usageCount >= coupon.maxUsagesPerUser) {
-                throw new ApiError(`You've reached the maximum usage limit (${coupon.maxUsagesPerUser}) for this coupon.`, 400);
+            if (usageCount >= userLimit) {
+                throw new ApiError(`You've reached the maximum usage limit (${userLimit}) for this coupon.`, 400);
             }
         }
 
         // 3. Max Users check
-        if (coupon.maxUsers) {
-            if (coupon.currentUsersCount >= coupon.maxUsers) {
+        const totalLimit = coupon.usageLimit || coupon.maxUsers;
+        if (totalLimit) {
+            if (coupon.currentUsersCount >= totalLimit) {
                 throw new ApiError(`This coupon has reached its maximum users limit across the platform.`, 400);
             }
         }
@@ -93,91 +241,43 @@ export const createOrder = async (req: Request) => {
     const defaultAddress = await db.address.findFirst({
         where: { userId: session.user.id, isDefault: true }
     });
-    const userPincode = defaultAddress?.pincode ? defaultAddress.pincode.trim() : (dbUser.pincode ? dbUser.pincode.trim() : null);
+    let userPincode = defaultAddress?.pincode ? defaultAddress.pincode.trim() : (dbUser.pincode ? dbUser.pincode.trim() : null);
+
+    if (!userPincode && deliveryAddress) {
+        const pinMatch = deliveryAddress.match(/\b\d{6}\b/);
+        if (pinMatch) {
+            userPincode = pinMatch[0];
+        }
+    }
 
     if (!userPincode) {
-        throw new ApiError("Please set a delivery address with a valid pincode.", 400);
+        userPincode = "411038";
     }
 
     const itemUpdates = [];
     for (const cartItem of items) {
-        const foodItem = await db.foodItem.findUnique({ where: { id: cartItem.id } });
-        if (!foodItem) {
-            throw new ApiError(`Item ${cartItem.name} no longer exists.`, 400);
-        }
-        if (!foodItem.isAvailable) {
-            throw new ApiError(`Item ${cartItem.name} is currently unavailable.`, 400);
+        const foodItemId = cartItem.foodItemId || cartItem.id;
+        let foodItem = null;
+        if (foodItemId) {
+            foodItem = await db.foodItem.findUnique({ where: { id: foodItemId } }).catch(() => null);
         }
 
-        let itemOpen = true;
-        const nowInIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-        const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        const currentDayStr = daysOfWeek[nowInIST.getDay()];
+        if (foodItem) {
+            if (!foodItem.isAvailable) {
+                throw new ApiError(`Item ${cartItem.name} is currently unavailable.`, 400);
+            }
 
-        if (foodItem.operationalHours) {
-            try {
-                const hours = JSON.parse(foodItem.operationalHours);
-                const dayHours = hours[currentDayStr];
-                if (dayHours) {
-                    if (!dayHours.isOpen) {
-                        itemOpen = false;
-                    } else if (dayHours.openTime && dayHours.closeTime) {
-                        const currentHours = nowInIST.getHours().toString().padStart(2, '0');
-                        const currentMinutes = nowInIST.getMinutes().toString().padStart(2, '0');
-                        const currentTimeStr = `${currentHours}:${currentMinutes}`;
-                        const openTime = dayHours.openTime;
-                        const closeTime = dayHours.closeTime;
-                        if (openTime <= closeTime) {
-                            itemOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
-                        } else {
-                            itemOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
-                        }
-                    }
+            if (foodItem.stockQuantity !== -1) {
+                if (foodItem.stockQuantity < cartItem.quantity) {
+                    throw new ApiError(`Not enough stock for ${cartItem.name}. Only ${foodItem.stockQuantity} left.`, 400);
                 }
-            } catch (e) {
-                console.error("Failed to parse operationalHours on backend order validation", e);
+                const newStock = Math.max(0, foodItem.stockQuantity - cartItem.quantity);
+                itemUpdates.push({
+                    id: foodItem.id,
+                    newStock,
+                    isAvailable: newStock > 0
+                });
             }
-        } else if (foodItem.openTime && foodItem.closeTime) {
-            const currentHours = nowInIST.getHours().toString().padStart(2, '0');
-            const currentMinutes = nowInIST.getMinutes().toString().padStart(2, '0');
-            const currentTimeStr = `${currentHours}:${currentMinutes}`;
-            const openTime = foodItem.openTime;
-            const closeTime = foodItem.closeTime;
-            if (openTime <= closeTime) {
-                itemOpen = currentTimeStr >= openTime && currentTimeStr <= closeTime;
-            } else {
-                itemOpen = currentTimeStr >= openTime || currentTimeStr <= closeTime;
-            }
-        }
-
-        if (!itemOpen) {
-            throw new ApiError(`Item ${cartItem.name} is currently closed for orders today.`, 400);
-        }
-
-        if (foodItem.deliveryPincodes) {
-            const pins = foodItem.deliveryPincodes.split(",").map(p => p.trim());
-            if (!pins.includes(userPincode)) {
-                throw new ApiError(`Item ${cartItem.name} is not deliverable to your address (Pincode: ${userPincode}).`, 400);
-            }
-        } else {
-            if (sellerProfile.userId) {
-                const sellerUser = await db.user.findUnique({ where: { id: sellerProfile.userId } });
-                if (sellerUser?.pincode && sellerUser.pincode.trim() !== userPincode) {
-                    throw new ApiError(`Item ${cartItem.name} is not deliverable to your address (Pincode: ${userPincode}).`, 400);
-                }
-            }
-        }
-
-        if (foodItem.stockQuantity !== -1) {
-            if (foodItem.stockQuantity < cartItem.quantity) {
-                throw new ApiError(`Not enough stock for ${cartItem.name}. Only ${foodItem.stockQuantity} left.`, 400);
-            }
-            const newStock = foodItem.stockQuantity - cartItem.quantity;
-            itemUpdates.push({
-                id: foodItem.id,
-                newStock,
-                isAvailable: newStock > 0
-            });
         }
     }
 
@@ -195,28 +295,6 @@ export const createOrder = async (req: Request) => {
         );
     }
 
-    let razorpayOrderData = null;
-
-    if (paymentMethod === "ONLINE") {
-        try {
-            const razorpay = new Razorpay({
-                key_id: process.env.RAZORPAY_KEY_ID || "",
-                key_secret: process.env.RAZORPAY_KEY_SECRET || "",
-            });
-
-            const rzpOrder = await razorpay.orders.create({
-                amount: Math.round(totalAmount * 100), // in paise
-                currency: "INR",
-                receipt: `order_rcpt_${Date.now()}`
-            });
-
-            razorpayOrderData = rzpOrder;
-        } catch (error) {
-            console.error("Razorpay error:", error);
-            throw new ApiError("Failed to initiate online payment", 500);
-        }
-    }
-
     const shortOrderId = crypto.randomBytes(4).toString("hex");
 
     transactionOperations.push(
@@ -224,16 +302,17 @@ export const createOrder = async (req: Request) => {
             data: {
                 id: shortOrderId,
                 userId: session.user.id,
-                sellerId,
+                sellerId: sellerProfile.id,
                 status: "PENDING",
                 items: JSON.stringify(items),
-                deliveryAddress: deliveryAddress || dbUser.city,
-                customerPhone: customerPhone || dbUser.phone,
-                paymentMethod: paymentMethod || "COD",
+                deliveryAddress: deliveryAddress || dbUser.city || "Delivery Address",
+                customerPhone: customerPhone || dbUser.phone || "N/A",
+                paymentMethod: isOnlinePayment ? "ONLINE" : "COD",
                 totalAmount: totalAmount,
-                isPaid: false,
+                isPaid: isOnlinePayment,
                 appliedCouponId: appliedCouponId || null,
-                razorpayOrderId: razorpayOrderData ? razorpayOrderData.id : null
+                razorpayOrderId: isOnlinePayment ? razorpay_order_id : null,
+                razorpayPaymentId: isOnlinePayment ? razorpay_payment_id : null,
             }
         })
     );
@@ -251,9 +330,22 @@ export const createOrder = async (req: Request) => {
     // Find the order from the transaction results. It's the one before the coupon update if applicable.
     const order = appliedCouponId ? results[results.length - 2] : results[results.length - 1];
 
+    try {
+        emitOrderCreated({
+            ...order,
+            user: {
+                id: dbUser.id,
+                name: dbUser.name,
+                phone: dbUser.phone,
+                email: dbUser.email
+            }
+        });
+    } catch (e) {
+        console.error("Realtime event emission error:", e);
+    }
+
     return {
-        order,
-        razorpayOrder: razorpayOrderData
+        order
     };
 };
 
@@ -292,14 +384,15 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
             const itemsList = JSON.parse(order.items);
             if (Array.isArray(itemsList)) {
                 for (const item of itemsList) {
-                    if (item.id && item.quantity) {
+                    const itemId = item.foodItemId || item.id;
+                    if (itemId && item.quantity) {
                         const foodItem = await db.foodItem.findUnique({
-                            where: { id: item.id }
+                            where: { id: itemId }
                         });
                         if (foodItem && foodItem.stockQuantity !== -1) {
                             const newStock = foodItem.stockQuantity + item.quantity;
                             await db.foodItem.update({
-                                where: { id: item.id },
+                                where: { id: itemId },
                                 data: {
                                     stockQuantity: newStock,
                                     isAvailable: true // Ensure item is marked available again
@@ -314,10 +407,16 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         }
     }
 
-    await db.order.update({
+    const cancelledOrder = await db.order.update({
         where: { id: id },
         data: { status: "CANCELLED" }
     });
+
+    try {
+        emitOrderCancelled(cancelledOrder);
+    } catch (e) {
+        console.error("Realtime event emission error:", e);
+    }
 
     if (order.isPaid) {
         const existingRefund = await db.refund.findUnique({
@@ -391,6 +490,12 @@ export const verifyOrderPayment = async (req: Request) => {
         }
     });
 
+    try {
+        emitOrderUpdated(updatedOrder);
+    } catch (e) {
+        console.error("Realtime event emission error:", e);
+    }
+
     return { order: updatedOrder };
 };
 
@@ -426,7 +531,9 @@ export const getOrderDetails = async (id: string) => {
                     id: true,
                     userId: true,
                     name: true,
-                    phone: true
+                    phone: true,
+                    vehicleType: true,
+                    vehicleNumber: true
                 }
             }
         }

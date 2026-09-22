@@ -19,115 +19,216 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
+    const isMountedRef = useRef<boolean>(true);
     const [mapLoaded, setMapLoaded] = useState(false);
 
     useEffect(() => {
-        // Load Leaflet dynamically
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
+        isMountedRef.current = true;
 
-        const script = document.createElement("script");
-        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        script.async = true;
-        document.body.appendChild(script);
+        // Ensure Leaflet CSS is present in document head
+        if (!document.querySelector('link[href*="leaflet.css"]')) {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+            document.head.appendChild(link);
+        }
 
         const initMap = (lat: number, lng: number) => {
+            if (!isMountedRef.current || !mapContainerRef.current) return;
             const L = (window as any).L;
-            if (!L || !mapContainerRef.current) return;
+            if (!L) return;
 
-            // If coordinates exist, use them. Otherwise use standard fallback.
-            const initialLat = latitude || lat;
-            const initialLng = longitude || lng;
+            const container = mapContainerRef.current;
 
-            const map = L.map(mapContainerRef.current).setView([initialLat, initialLng], 16);
-            mapRef.current = map;
-
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-
-            const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
-            markerRef.current = marker;
-
-            const updateCoords = async (newLat: number, newLng: number) => {
+            // 1. Safely remove and detach any previous map instance from mapRef
+            if (mapRef.current) {
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        const address = data.address || {};
-                        
-                        // Extract address parts intelligently
-                        const pincode = address.postcode || "";
-                        const street = address.road || address.suburb || address.neighbourhood || address.city_district || "";
-                        const landmark = address.amenity || address.shop || address.commercial || address.retail || address.suburb || "";
-                        const houseNumber = address.house_number || address.building || "";
-                        
-                        onChange(newLat, newLng, { pincode, street, landmark, houseNumber });
-                    } else {
-                        onChange(newLat, newLng);
-                    }
+                    mapRef.current.off();
+                    mapRef.current.remove();
                 } catch (e) {
-                    console.error("Reverse geocoding error in HouseMapPicker:", e);
-                    onChange(newLat, newLng);
+                    // Ignore removal error
                 }
-            };
-
-            // Trigger initial geocoding if we are using the fallback/gps location
-            if (latitude === null || longitude === null) {
-                updateCoords(initialLat, initialLng);
+                mapRef.current = null;
             }
 
-            marker.on("dragend", () => {
-                const pos = marker.getLatLng();
-                updateCoords(pos.lat, pos.lng);
-            });
+            // 2. Prevent Leaflet "Map container is already initialized" by deleting _leaflet_id from the DOM element
+            if ((container as any)._leaflet_id) {
+                try {
+                    delete (container as any)._leaflet_id;
+                } catch (e) {
+                    (container as any)._leaflet_id = undefined;
+                }
+            }
 
-            map.on("click", (e: any) => {
-                const { lat, lng } = e.latlng;
-                marker.setLatLng([lat, lng]);
-                updateCoords(lat, lng);
-            });
+            const initialLat = latitude !== null && latitude !== undefined ? latitude : lat;
+            const initialLng = longitude !== null && longitude !== undefined ? longitude : lng;
+
+            try {
+                const map = L.map(container, {
+                    center: [initialLat, initialLng],
+                    zoom: 16,
+                    zoomControl: true,
+                });
+                mapRef.current = map;
+
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19,
+                }).addTo(map);
+
+                const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+                markerRef.current = marker;
+
+                // Invalidate size shortly after mounting in case modal is animating
+                setTimeout(() => {
+                    if (isMountedRef.current && mapRef.current) {
+                        mapRef.current.invalidateSize();
+                    }
+                }, 200);
+
+                const updateCoords = async (newLat: number, newLng: number) => {
+                    if (!isMountedRef.current) return;
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            const address = data.address || {};
+                            
+                            // Extract address parts intelligently
+                            const pincode = address.postcode || "";
+                            const street = address.road || address.suburb || address.neighbourhood || address.city_district || "";
+                            const landmark = address.amenity || address.shop || address.commercial || address.retail || address.suburb || "";
+                            const houseNumber = address.house_number || address.building || "";
+                            
+                            if (isMountedRef.current) {
+                                onChange(newLat, newLng, { pincode, street, landmark, houseNumber });
+                            }
+                        } else if (isMountedRef.current) {
+                            onChange(newLat, newLng);
+                        }
+                    } catch (e) {
+                        console.error("Reverse geocoding error in HouseMapPicker:", e);
+                        if (isMountedRef.current) {
+                            onChange(newLat, newLng);
+                        }
+                    }
+                };
+
+                // Trigger initial geocoding if we are using the fallback/gps location
+                if (latitude === null || longitude === null) {
+                    updateCoords(initialLat, initialLng);
+                }
+
+                marker.on("dragend", () => {
+                    const pos = marker.getLatLng();
+                    updateCoords(pos.lat, pos.lng);
+                });
+
+                map.on("click", (e: any) => {
+                    const { lat: clickLat, lng: clickLng } = e.latlng;
+                    marker.setLatLng([clickLat, clickLng]);
+                    updateCoords(clickLat, clickLng);
+                });
+
+                if (isMountedRef.current) {
+                    setMapLoaded(true);
+                }
+            } catch (err) {
+                console.warn("Leaflet map initialization warning in HouseMapPicker:", err);
+            }
         };
 
-        script.onload = () => {
-            setMapLoaded(true);
-            if (navigator.geolocation) {
+        const startInit = () => {
+            const fallbackLat = latitude || 18.5204;
+            const fallbackLng = longitude || 73.8567;
+
+            if (latitude !== null && longitude !== null) {
+                initMap(latitude, longitude);
+            } else if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        initMap(pos.coords.latitude, pos.coords.longitude);
+                        if (isMountedRef.current) {
+                            initMap(pos.coords.latitude, pos.coords.longitude);
+                        }
                     },
                     () => {
-                        initMap(19.0760, 72.8777); // Mumbai fallback
+                        if (isMountedRef.current) {
+                            initMap(fallbackLat, fallbackLng);
+                        }
                     },
                     { enableHighAccuracy: true, timeout: 5000 }
                 );
             } else {
-                initMap(19.0760, 72.8777);
+                initMap(fallbackLat, fallbackLng);
             }
         };
 
+        if ((window as any).L) {
+            startInit();
+        } else {
+            let script = document.querySelector('script[src*="leaflet.js"]') as HTMLScriptElement;
+            if (!script) {
+                script = document.createElement("script");
+                script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+                script.async = true;
+                document.body.appendChild(script);
+            }
+
+            const handleScriptLoad = () => {
+                if (isMountedRef.current) {
+                    startInit();
+                }
+            };
+
+            script.addEventListener("load", handleScriptLoad);
+            if ((window as any).L) {
+                handleScriptLoad();
+            }
+
+            return () => {
+                isMountedRef.current = false;
+                script.removeEventListener("load", handleScriptLoad);
+                if (mapRef.current) {
+                    try {
+                        mapRef.current.off();
+                        mapRef.current.remove();
+                    } catch (e) {}
+                    mapRef.current = null;
+                }
+                if (mapContainerRef.current && (mapContainerRef.current as any)._leaflet_id) {
+                    delete (mapContainerRef.current as any)._leaflet_id;
+                }
+            };
+        }
+
         return () => {
-            try {
-                if (document.head.contains(link)) document.head.removeChild(link);
-                if (document.body.contains(script)) document.body.removeChild(script);
-            } catch (e) {}
+            isMountedRef.current = false;
             if (mapRef.current) {
-                mapRef.current.remove();
+                try {
+                    mapRef.current.off();
+                    mapRef.current.remove();
+                } catch (e) {}
+                mapRef.current = null;
+            }
+            if (mapContainerRef.current && (mapContainerRef.current as any)._leaflet_id) {
+                delete (mapContainerRef.current as any)._leaflet_id;
             }
         };
     }, []);
 
-    // Update marker position if coordinates change externally (e.g. during form initialization or selection)
+    // Update marker position if coordinates change externally
     useEffect(() => {
-        if (mapRef.current && markerRef.current && latitude && longitude) {
+        if (mapRef.current && markerRef.current && latitude !== null && longitude !== null) {
             const L = (window as any).L;
             if (L) {
-                const currentLatLng = markerRef.current.getLatLng();
-                if (currentLatLng.lat !== latitude || currentLatLng.lng !== longitude) {
-                    markerRef.current.setLatLng([latitude, longitude]);
-                    mapRef.current.panTo([latitude, longitude]);
+                try {
+                    const currentLatLng = markerRef.current.getLatLng();
+                    if (currentLatLng && (currentLatLng.lat !== latitude || currentLatLng.lng !== longitude)) {
+                        markerRef.current.setLatLng([latitude, longitude]);
+                        mapRef.current.panTo([latitude, longitude]);
+                    }
+                } catch (e) {
+                    // Ignore transient pan error
                 }
             }
         }
@@ -160,3 +261,5 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
         </div>
     );
 }
+
+export default HouseMapPicker;

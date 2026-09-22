@@ -1,0 +1,388 @@
+/* ==========================================================================
+   Mobile Responsive Seller / Owner Login Stylesheet
+   ========================================================================== */
+
+.screenWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(180deg, #FFFBF7 0%, #F8FAFC 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  box-sizing: border-box;
+  padding: 32px 16px;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .screenWrapper {
+    padding: 20px 14px;
+    align-items: flex-start;
+  }
+}
+
+.mobileFrame {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* 1. Header Area */
+.headerArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logoBadgeWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  margin-bottom: 12px;
+}
+
+.logoBadge {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background-color: #FFF1E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.16);
+  transition: transform 0.2s ease;
+}
+
+.logoBadge:hover {
+  transform: scale(1.04);
+}
+
+.badgeImage {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.brandLabel {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #F97316;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #64748B;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 320px;
+}
+
+/* 2. Login Form Card */
+.formCard {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05), 0 20px 48px -12px rgba(249, 115, 22, 0.06);
+  padding: 28px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .formCard {
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+}
+
+.errorMessage {
+  background-color: #FEF2F2;
+  color: #DC2626;
+  font-size: 0.825rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #FECACA;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1E293B;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  height: 48px;
+  padding: 0 14px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.inputWrapper:focus-within {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14);
+}
+
+.fieldIcon {
+  color: #94A3B8;
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+
+.input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.925rem;
+  color: #0F172A;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.input::placeholder {
+  color: #94A3B8;
+  font-size: 0.875rem;
+}
+
+.togglePasswordBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.togglePasswordBtn:hover {
+  color: #0F172A;
+}
+
+/* Options Row */
+.optionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -2px;
+}
+
+.checkboxContainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hiddenCheckbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.customCheckbox {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.checkboxChecked {
+  background-color: #F97316;
+  border-color: #F97316;
+}
+
+.checkboxLabel {
+  font-size: 0.825rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.forgotPasswordLink {
+  color: #F97316;
+  font-size: 0.825rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.forgotPasswordLink:hover {
+  color: #EA580C;
+  text-decoration: underline;
+}
+
+/* Submit Button */
+.loginBtn {
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(135deg, #FF6B00 0%, #F97316 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.975rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.32);
+  transition: all 0.2s ease;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
+.loginBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #EA580C 0%, #D94E06 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+}
+
+.loginBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #FFFFFF;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 3. Bottom Action Section */
+.bottomSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.dividerRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.dividerLine {
+  width: 100%;
+  height: 1px;
+  background-color: #E2E8F0;
+}
+
+.dividerText {
+  position: absolute;
+  background-color: #FFFBF7;
+  padding: 0 12px;
+  color: #64748B;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.onboardingBtn {
+  width: 100%;
+  height: 48px;
+  background-color: #FFFFFF;
+  border: 1.5px solid #F97316;
+  border-radius: 12px;
+  color: #F97316;
+  font-size: 0.925rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+}
+
+.onboardingBtn:hover {
+  background-color: #FFF1E8;
+  transform: translateY(-1px);
+}
+
+/* Footer Legal */
+.footerArea {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.legalText {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.legalLink {
+  color: #F97316;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.legalLink:hover {
+  text-decoration: underline;
+}

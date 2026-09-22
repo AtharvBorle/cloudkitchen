@@ -1,0 +1,123 @@
+.actionsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.cancellationNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+  max-width: 480px;
+}
+
+.noticeIcon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.buttonsGroup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.cancelBtn {
+  background: #ffffff;
+  border: 1.5px solid #fca5a5;
+  color: #ef4444;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  transform: translateY(-1px);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.changePlanBtn {
+  background: #f97316;
+  border: 1.5px solid #f97316;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.changePlanBtn:hover:not(:disabled) {
+  background-color: #ea580c;
+  border-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.35);
+}
+
+.changePlanBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnIcon {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .actionsContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-top: 24px;
+    width: 100%;
+  }
+
+  .cancellationNotice {
+    max-width: 100%;
+  }
+
+  .buttonsGroup {
+    flex-direction: column-reverse;
+    gap: 12px;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .cancelBtn,
+  .changePlanBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px;
+    box-sizing: border-box;
+  }
+}

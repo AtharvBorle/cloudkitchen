@@ -7,6 +7,7 @@ import { Banknote, ShieldCheck, Tag, Zap, ChevronLeft, ChevronRight, Calendar as
 import Script from "next/script";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -284,7 +285,9 @@ function CheckoutContent() {
     // For Room booking direct bypass
     const searchParams = useSearchParams();
     const isRoomBooking = searchParams?.get("type") === "room";
+    const roomIdParam = searchParams?.get("roomId");
     const [roomDetails, setRoomDetails] = useState<any>(null);
+    const [roomLoadingError, setRoomLoadingError] = useState("");
     const [bookingDates, setBookingDates] = useState({ start: "", end: "" });
 
     const [paymentMethod, setPaymentMethod] = useState("COD");
@@ -309,14 +312,109 @@ function CheckoutContent() {
     const [isFetchingSeller, setIsFetchingSeller] = useState(false);
     const [sellerDetails, setSellerDetails] = useState<any>(null);
 
-    // Hydration fix for localStorage contexts
+    // Hydration fix & dynamic room loading (from sessionStorage or /api/public/rooms/[id])
     useEffect(() => {
         setIsClient(true);
-        if (isRoomBooking) {
-            const savedRoom = sessionStorage.getItem("active_room_booking");
-            if (savedRoom) setRoomDetails(JSON.parse(savedRoom));
+        if (!isRoomBooking) return;
+
+        let loaded = false;
+        const savedRoom = sessionStorage.getItem("active_room_booking");
+        if (savedRoom) {
+            try {
+                const parsed = JSON.parse(savedRoom);
+                if (parsed && (!roomIdParam || parsed.id === roomIdParam)) {
+                    setRoomDetails(parsed);
+                    loaded = true;
+                }
+            } catch (e) {
+                console.error("Failed to parse saved room booking:", e);
+            }
         }
-    }, [isRoomBooking]);
+
+        if (!loaded && roomIdParam) {
+            const fetchRoomData = async () => {
+                try {
+                    const res = await fetchApi(`/api/public/rooms/${roomIdParam}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        const r = json.data || json;
+                        if (r && r.id) {
+                            const formatted = {
+                                id: r.id,
+                                title: r.title || "Deluxe Room",
+                                price: Number(r.price) || 2800,
+                                sellerId: r.sellerId || r.seller?.id,
+                                sellerName: r.seller?.restaurantName || r.sellerName || "Property Host",
+                                description: r.description || "",
+                                capacity: r.capacity || 1,
+                                images: r.images,
+                            };
+                            setRoomDetails(formatted);
+                            sessionStorage.setItem("active_room_booking", JSON.stringify(formatted));
+                        } else {
+                            setRoomLoadingError("Room details could not be found.");
+                        }
+                    } else {
+                        setRoomLoadingError("Failed to load room details. Please try again.");
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch room details for checkout:", err);
+                    setRoomLoadingError("An error occurred while loading room details.");
+                }
+            };
+            fetchRoomData();
+        }
+    }, [isRoomBooking, roomIdParam]);
+
+    // Set default check-in and check-out for room bookings
+    useEffect(() => {
+        if (isRoomBooking && !bookingDates.start) {
+            const checkInParam = searchParams?.get("checkIn");
+            const checkOutParam = searchParams?.get("checkOut");
+
+            let initialStart = "";
+            let initialEnd = "";
+
+            if (checkInParam && checkOutParam) {
+                initialStart = checkInParam;
+                initialEnd = checkOutParam;
+            } else {
+                const savedRoomStr = sessionStorage.getItem("active_room_booking");
+                if (savedRoomStr) {
+                    try {
+                        const parsed = JSON.parse(savedRoomStr);
+                        if (parsed.checkIn && parsed.checkOut) {
+                            initialStart = parsed.checkIn;
+                            initialEnd = parsed.checkOut;
+                        }
+                    } catch {}
+                }
+            }
+
+            if (!initialStart || !initialEnd) {
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const dayAfter = new Date(tomorrow);
+                dayAfter.setDate(dayAfter.getDate() + 1);
+
+                const formatYMD = (d: Date) => {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, "0");
+                    const day = String(d.getDate()).padStart(2, "0");
+                    return `${y}-${m}-${day}`;
+                };
+
+                initialStart = formatYMD(tomorrow);
+                initialEnd = formatYMD(dayAfter);
+            }
+
+            setBookingDates({
+                start: initialStart,
+                end: initialEnd,
+            });
+        }
+    }, [isRoomBooking, bookingDates.start, searchParams]);
 
     // Fetch User Profile for Phone & Addresses
     useEffect(() => {
@@ -346,11 +444,9 @@ function CheckoutContent() {
         if (isClient && session?.user?.role === "USER") {
             fetchUserProfile();
         } else if (isClient && status === "unauthenticated") {
-            setPhone("");
-            setAddresses([]);
-            setAddressId("");
+            router.push(`/login?callbackUrl=${encodeURIComponent("/dashboard/user/checkout")}`);
         }
-    }, [isClient, defaultAddress, session, status]);
+    }, [isClient, defaultAddress, session, status, router]);
 
     // Fetch Seller data when items or room are confirmed
     useEffect(() => {
@@ -484,8 +580,9 @@ function CheckoutContent() {
             try {
                 const res = await fetchApi(`/api/public/rooms/${roomDetails.id}/availability`);
                 if (res.ok) {
-                    const data = await res.json();
-                    setBookedDates(data);
+                    const json = await res.json();
+                    const list = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+                    setBookedDates(list);
                 }
             } catch (err) {
                 console.error("Failed to fetch room availability", err);
@@ -593,10 +690,17 @@ function CheckoutContent() {
         }
 
         if (appliedCoupon.discountPercentage) {
-            setDiscountAmount(Math.round((baseTotal * appliedCoupon.discountPercentage) / 100));
+            let calcDiscount = Math.round((baseTotal * appliedCoupon.discountPercentage) / 100);
+            if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
+                calcDiscount = appliedCoupon.maxDiscountAmount;
+            }
+            setDiscountAmount(Math.min(calcDiscount, baseTotal));
         } else if (appliedCoupon.discountAmount) {
-            // Don't discount more than the order value
-            setDiscountAmount(Math.min(appliedCoupon.discountAmount, baseTotal));
+            let calcDiscount = appliedCoupon.discountAmount;
+            if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
+                calcDiscount = appliedCoupon.maxDiscountAmount;
+            }
+            setDiscountAmount(Math.min(calcDiscount, baseTotal));
         }
     }, [appliedCoupon, cartTotal, isRoomBooking, roomDetails, bookingDates]);
 
@@ -791,13 +895,28 @@ function CheckoutContent() {
             <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '15px' }}>Your Cart is Empty</h2>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Looks like you haven't added any delicious food yet!</p>
-                <button onClick={() => router.push(session ? "/dashboard/user/food" : "/explore/food")} className="btn btn-primary">Browse Menus</button>
+                <button onClick={() => router.push(session ? "/dashboard/user/food" : "/explore-desktop")} className="btn btn-primary">Browse Menus</button>
             </div>
         );
     }
 
     if (isRoomBooking && !roomDetails) {
-        return <div style={{ textAlign: 'center', padding: '40px' }}>Loading Room Details...</div>;
+        if (roomLoadingError) {
+            return (
+                <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#DC2626', marginBottom: '15px' }}>Room Not Available</h2>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>{roomLoadingError}</p>
+                    <button onClick={() => router.push("/room-booking")} className="btn btn-primary">
+                        Browse Available Rooms
+                    </button>
+                </div>
+            );
+        }
+        return (
+            <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-muted)' }}>Loading Room Details...</div>
+            </div>
+        );
     }
 
     // Dynamic upi string construction
@@ -846,14 +965,12 @@ function CheckoutContent() {
                         <div style={{ marginBottom: "25px" }}>
                             <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "15px" }}>Contact Details</h3>
                             <div style={{ marginBottom: "15px" }}>
-                                <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "5px" }}>Phone Number</label>
-                                <input
-                                    type="tel"
-                                    readOnly
+                                <PhoneInput
+                                    label="Phone Number"
                                     value={phone}
-                                    className="input-field"
-                                    style={{ backgroundColor: '#F9FAFB', color: 'var(--text-muted)', cursor: 'not-allowed' }}
-                                    placeholder="Phone missing - update in profile"
+                                    onChange={(val) => setPhone(val)}
+                                    placeholder="98765 43210"
+                                    required
                                 />
                                 <p style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '5px' }}><a href="/dashboard/user/profile" style={{ textDecoration: 'underline' }}>Update phone number in Profile</a></p>
                             </div>
@@ -931,8 +1048,8 @@ function CheckoutContent() {
                                                 className="input-field"
                                                 placeholder="Select on calendar"
                                             />
-                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                                🕑 Check-in from 12:00 PM
+                                            <div style={{ fontSize: "0.78rem", color: "#EA580C", fontWeight: "600", marginTop: "4px" }}>
+                                                🕑 Check-in from 12:00 PM (Entry Time)
                                             </div>
                                         </div>
                                         <div style={{ flex: 1 }} onClick={() => setShowCalendar(true)}>
@@ -946,8 +1063,8 @@ function CheckoutContent() {
                                                 className="input-field"
                                                 placeholder="Select on calendar"
                                             />
-                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                                                🕛 Check-out by 11:00 AM
+                                            <div style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: "600", marginTop: "4px" }}>
+                                                🕛 Check-out by 11:00 AM (Exit Time)
                                             </div>
                                         </div>
                                     </div>
@@ -1145,23 +1262,57 @@ function CheckoutContent() {
                 ) : (
                     <div>
                         <div style={{ marginBottom: "20px", maxHeight: "400px", overflowY: "auto", paddingRight: "10px" }}>
-                            {cartItems.map((item) => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #f9fafb' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '500' }}>{item.name}</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>₹{item.price} each</div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #EAEAEA', borderRadius: '6px', overflow: 'hidden' }}>
-                                            <button type="button" onClick={() => decreaseQuantity(item.id)} style={{ padding: '4px 10px', backgroundColor: '#F9FAFB', borderRight: '1px solid #EAEAEA', cursor: 'pointer', border: 'none' }}>-</button>
-                                            <span style={{ padding: '0 12px', fontSize: '0.9rem', fontWeight: '500' }}>{item.quantity}</span>
-                                            <button type="button" onClick={() => addToCart({ ...item, quantity: 1 })} style={{ padding: '4px 10px', backgroundColor: '#F9FAFB', borderLeft: '1px solid #EAEAEA', cursor: 'pointer', border: 'none' }}>+</button>
+                            {cartItems.map((item) => {
+                                const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+                                const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+                                const isAtMaxStock = stockLimit !== -1 && item.quantity >= stockLimit;
+                                const itemImg = item.imageUrl || item.image;
+
+                                return (
+                                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid #f9fafb' }}>
+                                        {itemImg && (
+                                            <img
+                                                src={itemImg}
+                                                alt={item.name}
+                                                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', marginRight: '12px', flexShrink: 0 }}
+                                                onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                            />
+                                        )}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: '600', fontSize: '0.95rem', color: '#1E293B' }}>{item.name}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>₹{item.price} each</div>
+                                            {stockLimit !== -1 && (
+                                                <div style={{ fontSize: '0.72rem', color: isAtMaxStock ? '#EF4444' : '#10B981', fontWeight: 600, marginTop: '2px' }}>
+                                                    {isAtMaxStock ? `Max stock reached (${stockLimit})` : `${stockLimit} in stock`}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div style={{ fontWeight: 'bold', minWidth: '60px', textAlign: 'right' }}>₹{item.price * item.quantity}</div>
-                                        <button type="button" onClick={() => removeFromCart(item.id)} style={{ padding: '6px', color: '#EF4444', backgroundColor: '#FEF2F2', borderRadius: '6px', cursor: 'pointer', border: 'none', fontSize: '0.8rem' }}>Remove</button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #EAEAEA', borderRadius: '6px', overflow: 'hidden' }}>
+                                                <button type="button" onClick={() => decreaseQuantity(item.id)} style={{ padding: '4px 10px', backgroundColor: '#F9FAFB', borderRight: '1px solid #EAEAEA', cursor: 'pointer', border: 'none' }}>-</button>
+                                                <span style={{ padding: '0 12px', fontSize: '0.9rem', fontWeight: '600' }}>{item.quantity}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addToCart({ ...item, quantity: 1 })}
+                                                    disabled={isAtMaxStock}
+                                                    style={{
+                                                        padding: '4px 10px',
+                                                        backgroundColor: '#F9FAFB',
+                                                        borderLeft: '1px solid #EAEAEA',
+                                                        cursor: isAtMaxStock ? 'not-allowed' : 'pointer',
+                                                        opacity: isAtMaxStock ? 0.35 : 1,
+                                                        border: 'none'
+                                                    }}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                            <div style={{ fontWeight: 'bold', minWidth: '60px', textAlign: 'right', color: '#0F172A' }}>₹{item.price * item.quantity}</div>
+                                            <button type="button" onClick={() => removeFromCart(item.id)} style={{ padding: '6px 10px', color: '#EF4444', backgroundColor: '#FEF2F2', borderRadius: '6px', cursor: 'pointer', border: 'none', fontSize: '0.8rem', fontWeight: 600 }}>Remove</button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         <hr style={{ border: 'none', borderTop: '1px solid #EEE', marginBottom: '20px' }} />
 

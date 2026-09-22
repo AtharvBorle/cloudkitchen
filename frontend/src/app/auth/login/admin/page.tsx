@@ -4,6 +4,8 @@ import { signIn, getSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { discardExistingSession } from "@/lib/logout";
 
 export default function AdminLoginPage() {
     const router = useRouter();
@@ -31,6 +33,7 @@ export default function AdminLoginPage() {
         }
 
         try {
+            await discardExistingSession();
             const res = await signIn("credentials", {
                 redirect: false,
                 email,
@@ -63,7 +66,7 @@ export default function AdminLoginPage() {
                     } else if (role === "SUPPORT") {
                         redirectPath = "/dashboard/support";
                     } else if (role === "SELLER") {
-                        redirectPath = "/dashboard/seller";
+                        redirectPath = "/seller/dashboard";
                     } else if (role === "DELIVERY") {
                         redirectPath = "/dashboard/delivery";
                     } else if (role === "USER") {
@@ -102,15 +105,15 @@ export default function AdminLoginPage() {
                         />
                     </div>
 
-                    <div className="input-group">
-                        <input
+                    <div className="input-group" style={{ marginBottom: "16px" }}>
+                        <PasswordInput
                             id="password"
-                            type="password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="input-field"
+                            onChange={(val) => setPassword(val)}
                             placeholder="Password"
                             required
+                            autoComplete="current-password"
+                            minLength={6}
                         />
                     </div>
 

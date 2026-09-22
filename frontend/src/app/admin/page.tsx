@@ -14,17 +14,13 @@ export default function AdminPortalRoot() {
             const role = session.user.role;
             if (role === "SUPERADMIN") {
                 router.push("/dashboard/superadmin");
-            } else if (role === "AGENT") {
+            } else if (role === "AGENT" || role === "ADMIN") {
                 router.push("/dashboard/admin");
             } else if (role === "SUPPORT") {
                 router.push("/dashboard/support");
-            } else if (role === "SELLER") {
-                router.push("/dashboard/seller");
-            } else if (role === "DELIVERY") {
-                router.push("/dashboard/delivery");
-            } else {
-                router.push("/dashboard/user");
             }
+            // If the user is logged in with a non-admin role (e.g. USER, SELLER, DELIVERY),
+            // do NOT auto-redirect away. Let them see Admin login so they can log into Admin.
         }
     }, [session, status, router]);
 
@@ -32,7 +28,9 @@ export default function AdminPortalRoot() {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#1A252F', color: '#FFFFFF' }}>Loading Admin Portal...</div>;
     }
 
-    if (status === "unauthenticated" || !session) {
+    const isAdminRole = session?.user?.role === "SUPERADMIN" || session?.user?.role === "ADMIN" || session?.user?.role === "AGENT" || session?.user?.role === "SUPPORT";
+
+    if (status === "unauthenticated" || !session || !isAdminRole) {
         return <AdminLoginPage />;
     }
 

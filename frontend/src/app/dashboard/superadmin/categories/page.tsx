@@ -377,7 +377,17 @@ export default function FoodCategoriesPage() {
                                 id="cat-image-input"
                                 type="file"
                                 accept="image/*"
-                                onChange={(e) => setCatImage(e.target.files?.[0] || null)}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0] || null;
+                                    if (file && file.size > 5 * 1024 * 1024) {
+                                        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                        alert(`Category image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
+                                        e.target.value = "";
+                                        setCatImage(null);
+                                        return;
+                                    }
+                                    setCatImage(file);
+                                }}
                                 style={{
                                     flex: 1,
                                     fontSize: "0.8rem",
@@ -606,7 +616,16 @@ export default function FoodCategoriesPage() {
                                                                 id={`sub-image-input-${fc.id}`}
                                                                 type="file"
                                                                 accept="image/*"
-                                                                onChange={(e) => setSubImages({ ...subImages, [fc.id]: e.target.files?.[0] || null })}
+                                                                onChange={(e) => {
+                                                                    const file = e.target.files?.[0] || null;
+                                                                    if (file && file.size > 5 * 1024 * 1024) {
+                                                                        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                                                        alert(`Subcategory image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
+                                                                        e.target.value = "";
+                                                                        return;
+                                                                    }
+                                                                    setSubImages({ ...subImages, [fc.id]: file });
+                                                                }}
                                                                 style={{
                                                                     flex: 1,
                                                                     fontSize: "0.75rem",
@@ -736,6 +755,13 @@ export default function FoodCategoriesPage() {
                                         accept="image/*"
                                         onChange={(e) => {
                                             const file = e.target.files?.[0] || null;
+                                            if (file && file.size > 5 * 1024 * 1024) {
+                                                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                                alert(`Image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
+                                                e.target.value = "";
+                                                setEditCatImage(null);
+                                                return;
+                                            }
                                             setEditCatImage(file);
                                             if (file) {
                                                 setEditCatImagePreview(URL.createObjectURL(file));
@@ -827,6 +853,13 @@ export default function FoodCategoriesPage() {
                                         accept="image/*"
                                         onChange={(e) => {
                                             const file = e.target.files?.[0] || null;
+                                            if (file && file.size > 5 * 1024 * 1024) {
+                                                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                                alert(`Image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
+                                                e.target.value = "";
+                                                setEditSubImage(null);
+                                                return;
+                                            }
                                             setEditSubImage(file);
                                             if (file) {
                                                 setEditSubImagePreview(URL.createObjectURL(file));

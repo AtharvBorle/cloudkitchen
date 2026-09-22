@@ -5,22 +5,33 @@ const prisma = new PrismaClient();
 import bcrypt from "bcryptjs";
 
 async function check() {
-    const users = await prisma.user.findMany();
-    console.log("Total users:", users.length);
-
-    const admin = await prisma.user.findUnique({
-        where: { email: "superadmin@admin.com" }
+    const sellers = await prisma.sellerProfile.findMany({
+        include: {
+            user: true,
+            subscriptions: { include: { plan: true } },
+            foodItems: true,
+            rooms: true,
+            orders: true,
+            deliveryPersons: true,
+        },
     });
 
-    if (admin) {
-        console.log("Superadmin found!");
-        console.log("Email:", admin.email);
-        console.log("PasswordHash:", admin.passwordHash);
-
-        const isValid = await bcrypt.compare("password123", admin.passwordHash);
-        console.log("Is password 'password123' valid for this hash?", isValid);
-    } else {
-        console.log("Superadmin NOT found!");
+    console.log("Found", sellers.length, "sellers:");
+    for (const s of sellers) {
+        console.log({
+            id: s.id,
+            email: s.user.email,
+            businessName: s.businessName,
+            trackingId: s.trackingId,
+            verificationStatus: s.verificationStatus,
+            foodVerificationStatus: s.foodVerificationStatus,
+            propertyVerificationStatus: s.propertyVerificationStatus,
+            foodItemsCount: s.foodItems.length,
+            roomsCount: s.rooms.length,
+            ordersCount: s.orders.length,
+            deliveryPersonsCount: s.deliveryPersons.length,
+            subscriptionsCount: s.subscriptions.length,
+        });
     }
 }
 

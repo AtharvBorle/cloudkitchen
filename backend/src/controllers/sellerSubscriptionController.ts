@@ -205,7 +205,7 @@ export const verifySubscriptionPayment = async (req: Request) => {
         }
     });
 
-    // Update seller businessCategory if plan category is BOTH or counterpart
+    // Update seller businessCategory and verification statuses if applicable
     let targetCategory = sellerProfile.businessCategory;
 
     if (planCategory === "BOTH") {
@@ -216,10 +216,24 @@ export const verifySubscriptionPayment = async (req: Request) => {
         targetCategory = "BOTH";
     }
 
+    const updateData: any = {};
     if (targetCategory !== sellerProfile.businessCategory) {
+        updateData.businessCategory = targetCategory;
+    }
+
+    if (sellerProfile.verificationStatus === "APPROVED") {
+        if ((planCategory === "FOOD" || planCategory === "BOTH") && sellerProfile.foodVerificationStatus !== "APPROVED") {
+            updateData.foodVerificationStatus = "APPROVED";
+        }
+        if ((planCategory === "PROPERTY" || planCategory === "BOTH") && sellerProfile.propertyVerificationStatus !== "APPROVED") {
+            updateData.propertyVerificationStatus = "APPROVED";
+        }
+    }
+
+    if (Object.keys(updateData).length > 0) {
         await db.sellerProfile.update({
             where: { id: sellerProfile.id },
-            data: { businessCategory: targetCategory }
+            data: updateData
         });
     }
 

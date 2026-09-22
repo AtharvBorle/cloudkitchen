@@ -29,11 +29,60 @@ const checkFoodCategoryActive = async (userId: string) => {
     const { foodExpiry } = getCategoryExpiries(activeSubs);
     const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
 
-    if (!isFoodActive) {
+    if (!isFoodActive && sellerProfile.verificationStatus !== "APPROVED") {
         throw new ApiError("Food subscription not active or approved", 403);
     }
 
     return sellerProfile;
+};
+
+export const normalizeFoodItemType = (raw: string | null | undefined): string => {
+    if (!raw) return "VEG";
+    const valid = ["VEG", "NON_VEG", "JAIN", "VEGAN"];
+    const parts = String(raw)
+        .split(",")
+        .map(s => s.trim().toUpperCase().replace(/\s+/g, '_').replace(/-/g, '_'))
+        .map(s => (s === "NON-VEG" || s === "NON_VEG" || s === "NON VEG") ? "NON_VEG" : s)
+        .filter(s => valid.includes(s));
+
+    const unique = Array.from(new Set(parts));
+    if (unique.includes("NON_VEG")) return "NON_VEG";
+    return unique.length > 0 ? unique.join(",") : "VEG";
+};
+
+export const extractCategoryNames = (typeStr?: string | null, businessCategoryStr?: string | null): string[] => {
+    const rawList: string[] = [];
+    
+    const processStr = (str?: string | null) => {
+        if (!str || !str.trim()) return;
+        let cleaned = str.trim();
+        if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
+            try {
+                const parsed = JSON.parse(cleaned);
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(p => {
+                        if (typeof p === "string" && p.trim()) rawList.push(p.trim());
+                    });
+                    return;
+                }
+            } catch {
+                cleaned = cleaned.slice(1, -1);
+            }
+        }
+        cleaned.split(",").forEach(part => {
+            const clean = part.replace(/^['"\s]+|['"\s]+$/g, "").trim();
+            if (clean && clean.toUpperCase() !== "FOOD" && clean.toUpperCase() !== "PROPERTY" && clean.toUpperCase() !== "BOTH") {
+                rawList.push(clean);
+            }
+        });
+    };
+
+    processStr(typeStr);
+    if (rawList.length === 0) {
+        processStr(businessCategoryStr);
+    }
+
+    return Array.from(new Set(rawList));
 };
 
 export const getMenuItems = async () => {
@@ -58,20 +107,43 @@ export const getMenuItems = async () => {
         orderBy: { pincode: 'asc' }
     });
 
-    // Find the Category matching the seller's type (e.g. Bakery)
-    const matchingCategory = await db.category.findFirst({
-        where: {
-            name: { equals: sellerProfile.type, mode: "insensitive" },
-            type: "FOOD"
-        }
-    });
-
+    // Find FoodCategory records associated with seller's selected business categories
+    const categoryNames = extractCategoryNames(sellerProfile.type, sellerProfile.businessCategory);
     let foodCategories: any[] = [];
-    if (matchingCategory) {
+
+    if (categoryNames.length > 0) {
+        const matchingCategories = await db.category.findMany({
+            where: {
+                OR: categoryNames.map(name => ({
+                    name: { equals: name, mode: "insensitive" }
+                }))
+            }
+        });
+        const matchingCategoryIds = matchingCategories.map(c => c.id);
+        if (matchingCategoryIds.length > 0) {
+            foodCategories = await db.foodCategory.findMany({
+                where: {
+                    categories: {
+                        some: {
+                            id: { in: matchingCategoryIds }
+                        }
+                    }
+                },
+                include: {
+                    subCategories: {
+                        orderBy: { name: 'asc' }
+                    }
+                },
+                orderBy: { name: 'asc' }
+            });
+        }
+    } else {
         foodCategories = await db.foodCategory.findMany({
             where: {
                 categories: {
-                    some: { id: matchingCategory.id }
+                    some: {
+                        type: "FOOD"
+                    }
                 }
             },
             include: {
@@ -83,7 +155,20 @@ export const getMenuItems = async () => {
         });
     }
 
-    return { items, servedPincodes, foodType: sellerProfile.foodType, foodCategories };
+    return { 
+        items, 
+        servedPincodes, 
+        foodType: sellerProfile.foodType, 
+        foodCategories,
+        seller: {
+            id: sellerProfile.id,
+            businessName: sellerProfile.businessName,
+            isOnline: sellerProfile.isOnline,
+            trackingId: sellerProfile.trackingId,
+            type: sellerProfile.type,
+            addressLocality: sellerProfile.addressLocality,
+        }
+    };
 };
 
 export const createMenuItem = async (req: Request) => {
@@ -100,31 +185,111 @@ export const createMenuItem = async (req: Request) => {
     const description = formData.get("description") as string;
     const availableDays = formData.get("availableDays") as string;
     const stockQuantityStr = formData.get("stockQuantity") as string;
-    const stockQuantity = stockQuantityStr && !isNaN(parseInt(stockQuantityStr)) ? parseInt(stockQuantityStr) : -1;
+    const stockQuantity = stockQuantityStr !== undefined && stockQuantityStr !== null && stockQuantityStr !== '' && !isNaN(parseInt(stockQuantityStr)) ? Math.max(0, parseInt(stockQuantityStr)) : 0;
     const deliveryPincodes = formData.get("deliveryPincodes") as string | null;
     const openTime = formData.get("openTime") as string | null;
     const closeTime = formData.get("closeTime") as string | null;
     const operationalHours = formData.get("operationalHours") as string | null;
     const imageFile = formData.get("image") as File | null;
-    const itemType = sellerProfile.foodType === "VEG" ? "VEG" : (formData.get("itemType") as string || "VEG");
-    const foodCategoryId = formData.get("foodCategoryId") as string | null;
+    const rawItemType = formData.get("itemType") as string | null;
+    if (!rawItemType || !rawItemType.trim()) {
+        throw new ApiError("Food type is required", 400);
+    }
+    const itemType = normalizeFoodItemType(rawItemType);
+
+    const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
+    let addonsStr = "[]";
+    if (rawAddons) {
+        try {
+            const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                for (let i = 0; i < parsed.length; i++) {
+                    const a = parsed[i];
+                    if (!a || !a.name || !String(a.name).trim()) {
+                        throw new ApiError(`Add-on #${i + 1} name is required`, 400);
+                    }
+                    const addonPrice = parseFloat(a.price);
+                    if (isNaN(addonPrice) || addonPrice < 0) {
+                        throw new ApiError(`Add-on "${a.name}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                    }
+                }
+                const cleaned = parsed.map((a: any, idx: number) => ({
+                    id: String(a.id || `addon_${idx + 1}`),
+                    name: String(a.name || "").trim(),
+                    price: Math.max(0, parseFloat(a.price) || 0)
+                }));
+                addonsStr = JSON.stringify(cleaned);
+            }
+        } catch (e: any) {
+            if (e instanceof ApiError) throw e;
+            console.error("Failed to parse addons JSON in createMenuItem:", e);
+        }
+    }
+
+    let foodCategoryId = formData.get("foodCategoryId") as string | null;
     const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
-    if (!name || isNaN(price)) {
-        throw new ApiError("Name and Price are required", 400);
+    if (!name || !name.trim()) {
+        throw new ApiError("Item Name is required", 400);
+    }
+    if (isNaN(price) || price <= 0) {
+        throw new ApiError("Valid Price (greater than 0) is required", 400);
+    }
+    if (!description || !description.trim()) {
+        throw new ApiError("Description is required", 400);
     }
 
     if (!foodCategoryId) {
-        throw new ApiError("Food Category is required", 400);
+        const categoryNames = extractCategoryNames(sellerProfile.type, sellerProfile.businessCategory);
+        if (categoryNames.length > 0) {
+            const matchingCategories = await db.category.findMany({
+                where: {
+                    OR: categoryNames.map(catName => ({
+                        name: { equals: catName, mode: "insensitive" }
+                    }))
+                }
+            });
+            const matchingCategoryIds = matchingCategories.map(c => c.id);
+            if (matchingCategoryIds.length > 0) {
+                const anyCat = await db.foodCategory.findFirst({
+                    where: {
+                        categories: {
+                            some: { id: { in: matchingCategoryIds } }
+                        }
+                    }
+                });
+                if (anyCat) {
+                    foodCategoryId = anyCat.id;
+                }
+            }
+        }
+        if (!foodCategoryId) {
+            const anyCat = await db.foodCategory.findFirst();
+            if (anyCat) {
+                foodCategoryId = anyCat.id;
+            }
+        }
     }
 
-    if (!imageFile || imageFile.size === 0) {
-        throw new ApiError("Image is required", 400);
+    if (!foodCategoryId) {
+        throw new ApiError("Category is required", 400);
     }
 
-    const bytes = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
+    const providedImgUrl = formData.get("imageUrl") as string | null;
+    if ((!imageFile || imageFile.size === 0) && (!providedImgUrl || !providedImgUrl.trim())) {
+        throw new ApiError("Dish image is mandatory. Please upload an image.", 400);
+    }
+
+    let imageUrl = providedImgUrl && providedImgUrl.trim() ? providedImgUrl.trim() : "";
+    if (imageFile && imageFile.size > 0) {
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
+    }
+
+    if (!imageUrl) {
+        throw new ApiError("Dish image is mandatory. Please upload an image.", 400);
+    }
 
     const foodItem = await db.foodItem.create({
         data: {
@@ -140,6 +305,8 @@ export const createMenuItem = async (req: Request) => {
             operationalHours: operationalHours || null,
             imageUrl,
             itemType,
+            variants: addonsStr,
+            addons: addonsStr,
             foodCategoryId: foodCategoryId || null,
             foodSubCategoryId: foodSubCategoryId || null
         }
@@ -167,6 +334,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
 
     const contentType = req.headers.get("content-type") || "";
     const dataToUpdate: any = {};
+    const validItemTypes = ["VEG", "NON_VEG", "JAIN", "VEGAN"];
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -179,6 +347,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         const closeTime = formData.get("closeTime") as string | null;
         const operationalHours = formData.get("operationalHours") as string | null;
         const itemType = formData.get("itemType") as string | null;
+        const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
         const isAvailable = formData.get("isAvailable") as string | null;
         const imageFile = formData.get("image") as File | null;
         const foodCategoryId = formData.get("foodCategoryId") as string | null;
@@ -188,7 +357,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (description !== null) dataToUpdate.description = description;
         if (price !== null && !isNaN(parseFloat(price))) dataToUpdate.price = parseFloat(price);
         if (isAvailable !== null) dataToUpdate.isAvailable = isAvailable === "true";
-        if (stockQuantity !== null && !isNaN(parseInt(stockQuantity))) dataToUpdate.stockQuantity = parseInt(stockQuantity);
+        if (stockQuantity !== null && !isNaN(parseInt(stockQuantity))) dataToUpdate.stockQuantity = Math.max(0, parseInt(stockQuantity));
         if (deliveryPincodes !== null) {
             dataToUpdate.deliveryPincodes = deliveryPincodes.trim() || null;
         }
@@ -196,7 +365,37 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (closeTime !== null) dataToUpdate.closeTime = closeTime;
         if (operationalHours !== null) dataToUpdate.operationalHours = operationalHours;
         if (itemType !== null) {
-            dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : itemType;
+            dataToUpdate.itemType = normalizeFoodItemType(itemType);
+        }
+        if (rawAddons !== null) {
+            try {
+                const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    for (let i = 0; i < parsed.length; i++) {
+                        const a = parsed[i];
+                        if (!a || !a.name || !String(a.name).trim()) {
+                            throw new ApiError(`Add-on #${i + 1} name is required`, 400);
+                        }
+                        const addonPrice = parseFloat(a.price);
+                        if (isNaN(addonPrice) || addonPrice < 0) {
+                            throw new ApiError(`Add-on "${a.name}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                        }
+                    }
+                    const cleaned = parsed.map((a: any, idx: number) => ({
+                        id: String(a.id || `addon_${idx + 1}`),
+                        name: String(a.name || "").trim(),
+                        price: Math.max(0, parseFloat(a.price) || 0)
+                    }));
+                    dataToUpdate.addons = JSON.stringify(cleaned);
+                    dataToUpdate.variants = JSON.stringify(cleaned);
+                } else if (Array.isArray(parsed) && parsed.length === 0) {
+                    dataToUpdate.addons = "[]";
+                    dataToUpdate.variants = "[]";
+                }
+            } catch (e: any) {
+                if (e instanceof ApiError) throw e;
+                console.error("Failed to parse addons in updateMenuItem:", e);
+            }
         }
         if (foodCategoryId !== null) dataToUpdate.foodCategoryId = foodCategoryId || null;
         if (foodSubCategoryId !== null) dataToUpdate.foodSubCategoryId = foodSubCategoryId || null;
@@ -212,7 +411,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.description !== undefined) dataToUpdate.description = body.comment !== undefined ? body.comment : body.description;
         if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
         if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
-        if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = parseInt(body.stockQuantity);
+        if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = Math.max(0, parseInt(body.stockQuantity));
         if (body.deliveryPincodes !== undefined) {
             dataToUpdate.deliveryPincodes = body.deliveryPincodes ? body.deliveryPincodes.trim() || null : null;
         }
@@ -220,7 +419,26 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
         if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
         if (body.itemType !== undefined) {
-            dataToUpdate.itemType = existingItem.seller.foodType === "VEG" ? "VEG" : body.itemType;
+            dataToUpdate.itemType = normalizeFoodItemType(body.itemType);
+        }
+        const rawAddonsBody = body.addons !== undefined ? body.addons : body.variants;
+        if (rawAddonsBody !== undefined) {
+            try {
+                const parsed = typeof rawAddonsBody === "string" ? JSON.parse(rawAddonsBody) : rawAddonsBody;
+                if (Array.isArray(parsed)) {
+                    const cleaned = parsed
+                        .filter((a: any) => a && (a.name || "").trim())
+                        .map((a: any, idx: number) => ({
+                            id: String(a.id || `addon_${idx + 1}`),
+                            name: String(a.name || "").trim(),
+                            price: Math.max(0, parseFloat(a.price) || 0)
+                        }));
+                    dataToUpdate.addons = JSON.stringify(cleaned);
+                    dataToUpdate.variants = JSON.stringify(cleaned);
+                }
+            } catch (e) {
+                console.error("Failed to parse addons JSON in updateMenuItem:", e);
+            }
         }
         if (body.foodCategoryId !== undefined) dataToUpdate.foodCategoryId = body.foodCategoryId || null;
         if (body.foodSubCategoryId !== undefined) dataToUpdate.foodSubCategoryId = body.foodSubCategoryId || null;

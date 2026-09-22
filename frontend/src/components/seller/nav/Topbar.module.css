@@ -1,0 +1,280 @@
+.sellerTopbar {
+  width: 100%;
+  height: 64px;
+  min-height: 64px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mobileMenuTrigger {
+  display: none;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  color: #0f172a;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fafc;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.mobileMenuTrigger:hover {
+  background-color: #f1f5f9;
+  color: #ff5500;
+  border-color: #cbd5e1;
+}
+
+.mobileMenuTrigger:active {
+  transform: scale(0.95);
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rightControls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 250px;
+  height: 38px;
+  background-color: #f1f5f9;
+  border-radius: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.searchIcon {
+  margin-right: 8px;
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.searchInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  font-size: 13px;
+  color: #0f172a;
+  font-family: inherit;
+}
+
+.searchInput::placeholder {
+  color: #94a3b8;
+}
+
+.notificationBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  position: relative;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #ffffff;
+  box-sizing: border-box;
+}
+
+.notificationBtn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+
+.profilePill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.avatarCircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #ff5500;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255, 85, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.ownerName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.partnerRole {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+  .sellerTopbar {
+    padding: 0 16px;
+    height: 56px;
+    min-height: 56px;
+  }
+
+  .leftSection {
+    gap: 14px;
+  }
+
+  .mobileMenuTrigger {
+    display: flex;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    color: #0F172A;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileMenuTrigger:hover {
+    background-color: transparent;
+    color: #0F172A;
+    border-color: transparent;
+  }
+
+  .title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0F172A;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .notificationBtn {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    color: #0F172A;
+  }
+
+  .notificationBtn:hover {
+    background-color: transparent;
+    color: #0F172A;
+  }
+
+  .notificationBadge {
+    display: none;
+  }
+
+  .searchWrapper {
+    display: none;
+  }
+
+  .partnerRole {
+    display: none;
+  }
+
+  .profilePill {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .sellerTopbar {
+    padding: 0 16px;
+    height: 56px;
+    min-height: 56px;
+  }
+
+  .title {
+    font-size: 17px;
+    max-width: none;
+  }
+
+  .ownerName {
+    display: none;
+  }
+}
+

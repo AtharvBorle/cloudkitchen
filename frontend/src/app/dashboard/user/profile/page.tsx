@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { User, Phone, MapPin, Plus, Star, Edit, Trash2 } from "lucide-react";
 import { useLocation } from "@/components/location-provider";
 import { HouseMapPicker } from "@/components/house-map-picker";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 export default function UserProfilePage() {
     const [profile, setProfile] = useState<any>(null);
@@ -174,27 +175,30 @@ export default function UserProfilePage() {
                     </div>
 
                     <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "8px", fontWeight: '500' }}>Phone Number</label>
-                        <div style={{ display: "flex", gap: "10px" }}>
-                            <div style={{ display: "flex", flex: 1, alignItems: "center", gap: "10px", backgroundColor: "#F8FAFC", padding: "12px 16px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
-                                <Phone size={16} color="#64748B" />
-                                <input
-                                    type="text"
-                                    value={phoneInput}
-                                    onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    placeholder="Enter 10-digit number"
-                                    style={{ border: 'none', background: 'none', width: '100%', outline: 'none', fontSize: '0.95rem', fontWeight: '600', color: '#1E293B' }}
-                                />
-                            </div>
-                            <button
-                                onClick={handleUpdatePhone}
-                                disabled={isSavingPhone}
-                                className="btn btn-primary"
-                                style={{ padding: '0 24px', fontSize: '0.9rem', width: 'auto', whiteSpace: 'nowrap' }}
-                            >
-                                {isSavingPhone ? "Saving..." : "Save"}
-                            </button>
-                        </div>
+                        <PhoneInput
+                            label="Phone Number"
+                            value={phoneInput}
+                            onChange={(val) => setPhoneInput(val)}
+                            placeholder="98765 43210"
+                            rightAction={
+                                <button
+                                    onClick={handleUpdatePhone}
+                                    disabled={isSavingPhone || phoneInput.length !== 10}
+                                    className="btn btn-primary"
+                                    style={{
+                                        padding: '6px 16px',
+                                        fontSize: '0.85rem',
+                                        height: '36px',
+                                        borderRadius: '8px',
+                                        whiteSpace: 'nowrap',
+                                        border: 'none',
+                                        cursor: phoneInput.length === 10 ? 'pointer' : 'not-allowed',
+                                    }}
+                                >
+                                    {isSavingPhone ? "Saving..." : "Save"}
+                                </button>
+                            }
+                        />
                     </div>
                 </div>
 

@@ -1,0 +1,689 @@
+.menuContainer {
+  display: flex;
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background-color: #F8FAFC;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  box-sizing: border-box;
+}
+
+.rightSection {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #F8FAFC;
+}
+
+.mainContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 32px 36px 48px 36px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Header Row */
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.headerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.92rem;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Add New Dish Button */
+.addDishBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: #F97316;
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.addDishBtn:hover {
+  background-color: #EA580C;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+  transform: translateY(-1px);
+}
+
+.addDishBtn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 680px) {
+  .headerRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* 2. Store Operations Banner Card */
+.operationsCard {
+  background-color: #FFFFFF;
+  border: 1px solid #F1F5F9;
+  border-radius: 14px;
+  padding: 16px 24px;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+
+.opItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.opLabel {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #0F172A;
+  margin: 0;
+}
+
+.toggleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Toggle Switch in Brand Orange */
+.toggleSwitch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  background-color: #E2E8F0;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+
+.toggleSwitchActive {
+  background-color: #F97316;
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background-color: #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggleThumbActive {
+  transform: translateX(22px);
+}
+
+.statusTextOrange {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #F97316;
+  letter-spacing: 0.02em;
+}
+
+.statusTextMuted {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #94A3B8;
+  letter-spacing: 0.02em;
+}
+
+.verticalDivider,
+.opDivider {
+  width: 1px;
+  height: 32px;
+  background-color: #E2E8F0;
+}
+
+.opMetaGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.opMetaHeader {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.opMetaValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+}
+
+/* 3. Search and Category Filter Row */
+.searchFilterRow,
+.filtersRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.searchInputWrapper,
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 0 14px;
+  height: 42px;
+  width: 280px;
+  max-width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.searchInputWrapper:focus-within,
+.searchBox:focus-within {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.searchIcon {
+  color: #94A3B8;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.88rem;
+  color: #0F172A;
+  width: 100%;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.searchInput::placeholder {
+  color: #94A3B8;
+}
+
+/* Category Filter Pills */
+.categoryPillsGroup,
+.categoryTabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.categoryPill,
+.categoryTab {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.categoryPill:hover:not(.activeCategoryPill):not(.categoryPillActive):not(.categoryTabActive),
+.categoryTab:hover:not(.activeCategoryPill):not(.categoryPillActive):not(.categoryTabActive) {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+.activeCategoryPill,
+.categoryPillActive,
+.categoryTabActive {
+  background-color: #FFF1E8 !important;
+  border: 1px solid #FDBA74 !important;
+  color: #EA580C !important;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .operationsCard {
+    gap: 16px;
+  }
+  .verticalDivider {
+    display: none;
+  }
+  .searchFilterRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .searchInputWrapper {
+    width: 100%;
+  }
+}
+
+/* 4. Menu Inventory Dishes Table Card */
+.dishTableCard {
+  background-color: #FFFFFF;
+  border: 1px solid #F1F5F9;
+  border-radius: 16px;
+  padding: 12px 24px 20px 24px;
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.dishTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.dishTable th {
+  padding: 18px 16px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1.5px solid #F1F5F9;
+}
+
+.dishTable th:first-child {
+  padding-left: 8px;
+}
+
+.dishTable th:last-child {
+  text-align: right;
+  padding-right: 12px;
+}
+
+.dishTable td {
+  padding: 18px 16px;
+  border-bottom: 1px solid #F8FAFC;
+  color: #334155;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.dishTable td:first-child {
+  padding-left: 8px;
+}
+
+.dishTable td:last-child {
+  text-align: right;
+  padding-right: 12px;
+}
+
+.dishTable tr:last-child td {
+  border-bottom: none;
+}
+
+.dishTable tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.dishTable tbody tr:hover {
+  background-color: #FAFAFC;
+}
+
+/* First Column: Square Thumbnail + Dish Name */
+.dishNameCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dishThumbnailWrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dishThumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dishPlaceholderIcon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FFF7ED;
+  color: #EA580C;
+}
+
+.dishNameInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dishNameText {
+  font-weight: 600;
+  color: #0F172A;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.variantBadgeText {
+  font-size: 0.72rem;
+  color: #EA580C;
+  font-weight: 600;
+}
+
+/* Actions Column: Edit & Delete Buttons */
+.dishActionsCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.editDishBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.editDishBtn:hover {
+  background-color: #FFF1E8;
+  border-color: #FDBA74;
+  color: #F97316;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(249, 115, 22, 0.15);
+}
+
+.editDishBtn:active {
+  transform: translateY(0);
+}
+
+.deleteDishBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: #FEF2F2;
+  border: 1px solid #FEE2E2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #EF4444;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.deleteDishBtn:hover {
+  background-color: #EF4444;
+  border-color: #EF4444;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.25);
+}
+
+.deleteDishBtn:active {
+  transform: translateY(0);
+}
+
+.categoryText {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.priceText {
+  font-weight: 500;
+  color: #0F172A;
+  font-size: 0.95rem;
+}
+
+/* Food Type Badges */
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.typeVeg {
+  color: #16A34A;
+}
+
+.typeNonVeg {
+  color: #DC2626;
+}
+
+.typeJain {
+  color: #16A34A;
+}
+
+.typeVegan {
+  color: #059669;
+}
+
+.vegSymbol {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #16A34A;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.vegDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #16A34A;
+}
+
+.nonVegSymbol {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #DC2626;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.nonVegDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #DC2626;
+}
+
+.jainSymbol {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #16A34A;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.jainDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #16A34A;
+}
+
+.veganSymbol {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #059669;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.veganDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #059669;
+}
+
+/* Stock Quantity */
+.stockQtyText {
+  font-weight: 500;
+  color: #0F172A;
+}
+
+.stockQtyLow {
+  font-weight: 500;
+  color: #DC2626;
+}
+
+/* Row In-Stock Status with Mini Toggle Switch */
+.stockStatusCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.inStockText {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #EA580C;
+}
+
+.outOfStockText {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.miniToggle {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  background-color: #E2E8F0;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+
+.miniToggleActive {
+  background-color: #F97316;
+}
+
+.miniToggleInactive {
+  background-color: #64748B;
+}
+
+.miniThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background-color: #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.miniThumbActive {
+  transform: translateX(16px);
+}

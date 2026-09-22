@@ -2,8 +2,26 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 export default function NotFound() {
+    const { data: session } = useSession();
+    const role = session?.user?.role?.toUpperCase();
+
+    let targetHref = '/';
+    let buttonText = 'GO HOME';
+
+    if (role === 'SELLER') {
+        targetHref = '/seller/dashboard';
+        buttonText = 'GO TO SELLER DASHBOARD';
+    } else if (role === 'ADMIN' || role === 'SUPERADMIN') {
+        targetHref = '/dashboard/admin';
+        buttonText = 'GO TO ADMIN CONSOLE';
+    } else if (role === 'DELIVERY') {
+        targetHref = '/dashboard/delivery';
+        buttonText = 'GO TO DELIVERY DASHBOARD';
+    }
+
     return (
         <div style={{
             position: 'relative',
@@ -27,7 +45,7 @@ export default function NotFound() {
                 }}
             />
             
-            {/* Visible Neon sci-fi "GO HOME" Button positioned overlay */}
+            {/* Visible Neon sci-fi Button positioned overlay */}
             <div style={{
                 position: 'absolute',
                 top: '82%',
@@ -35,7 +53,7 @@ export default function NotFound() {
                 transform: 'translate(-50%, -50%)',
                 zIndex: 10
             }}>
-                <Link href="/" style={{ textDecoration: 'none' }}>
+                <Link href={targetHref} style={{ textDecoration: 'none' }}>
                     <span
                         style={{
                             display: 'inline-block',
@@ -67,7 +85,7 @@ export default function NotFound() {
                             e.currentTarget.style.transform = 'scale(1)';
                         }}
                     >
-                        GO HOME
+                        {buttonText}
                     </span>
                 </Link>
             </div>

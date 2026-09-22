@@ -1,0 +1,425 @@
+.propertiesWrapper {
+  width: 100%;
+  background: transparent;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.propertiesContainer {
+  width: 100%;
+  max-width: 1283px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 40px;
+  box-sizing: border-box;
+}
+
+/* ================= 1. SIDEBAR FILTERS (Desktop only) ================= */
+.sidebarFilters {
+  width: 260px;
+  min-width: 260px;
+  height: auto;
+  min-height: 683px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.filterHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filterHeaderTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.clearAllBtn {
+  color: #f97316;
+  font-size: 14px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  transition: color 0.2s ease;
+}
+
+.clearAllBtn:hover {
+  color: #ea580c;
+}
+
+.filterSections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.filterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filterSectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.filterItemList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filterItemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filterItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkboxBox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.checkboxChecked {
+  border: 1.5px solid #f97316;
+  background-color: #f97316;
+}
+
+.checkboxUnchecked {
+  border: 1.5px solid #94a3b8;
+  background-color: #ffffff;
+}
+
+.filterItemLabel {
+  font-size: 14px;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.filterItemLabelChecked {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.filterItemLabelUnchecked {
+  color: #475569;
+  font-weight: 400;
+}
+
+.filterItemCount {
+  font-size: 14px;
+  color: #94a3b8;
+  font-weight: 400;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.priceButtonGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.priceTierBtn {
+  flex: 1;
+  height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  font-size: 14px;
+}
+
+.priceTierSelected {
+  border: 1.5px solid #f97316;
+  background-color: #fff7ed;
+  color: #f97316;
+  font-weight: 700;
+}
+
+.priceTierUnselected {
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #334155;
+  font-weight: 600;
+}
+
+/* ================= 2. RIGHT COLUMN CONTENT ================= */
+.propertiesRight {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.sectionTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.3px;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.seeAllLink {
+  color: #f97316;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+/* ================= 3. PLACES GRID / ROW ================= */
+.placesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.placeCard {
+  text-decoration: none;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  height: 175px;
+  background-color: #1e293b;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-sizing: border-box;
+}
+
+.placeCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+}
+
+.placeCard:hover .placeCardImg {
+  transform: scale(1.06);
+}
+
+.placeImgWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #1e293b;
+}
+
+.placeCardImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.darkGradientOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 30%,
+    rgba(0, 0, 0, 0.55) 65%,
+    rgba(0, 0, 0, 0.92) 100%
+  );
+  z-index: 1;
+}
+
+.placeCardInfo {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 2;
+  box-sizing: border-box;
+}
+
+.placeTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.placeMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.placeMetaText {
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1024px) {
+  .propertiesContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .sidebarFilters {
+    display: none !important;
+  }
+
+  .propertiesRight {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .placesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .propertiesWrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .propertiesContainer {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .sidebarFilters {
+    display: none !important;
+  }
+
+  .propertiesRight {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .headerRow {
+    margin-bottom: 0;
+  }
+
+  .sectionTitle {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+  }
+
+  .seeAllLink {
+    display: none !important;
+  }
+
+  /* Horizontal single scrollable row */
+  .placesGrid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 12px !important;
+    padding: 2px 0 6px 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .placesGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .placeCard {
+    flex: 0 0 138px !important;
+    width: 138px !important;
+    min-width: 138px !important;
+    max-width: 138px !important;
+    height: 138px !important;
+    min-height: 138px !important;
+    max-height: 138px !important;
+    flex-shrink: 0 !important;
+    border-radius: 18px !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .placeImgWrapper {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .placeCardInfo {
+    padding: 8px 10px 10px 10px !important;
+    gap: 2px !important;
+  }
+
+  .placeTitle {
+    font-size: 13px !important;
+  }
+
+  .placeMetaRow {
+    font-size: 11px !important;
+    gap: 4px !important;
+  }
+}

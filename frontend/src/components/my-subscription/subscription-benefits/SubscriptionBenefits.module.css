@@ -1,0 +1,63 @@
+.cardContainer {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #eef2f6;
+  padding: 26px 30px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  flex: 1;
+}
+
+.cardHeading {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
+}
+
+.benefitsList {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.benefitRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checkBadge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.checkIcon {
+  color: #16a34a;
+}
+
+.benefitText {
+  font-size: 0.9rem;
+  color: #334155;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .cardContainer {
+    padding: 18px 16px;
+    border-radius: 18px;
+  }
+
+  .benefitText {
+    font-size: 0.82rem;
+  }
+}
+

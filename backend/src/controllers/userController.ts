@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import bcrypt from "bcryptjs";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 export const getUserProfile = async () => {
     const session = await getAuthSession();
@@ -15,6 +17,8 @@ export const getUserProfile = async () => {
             name: true,
             email: true,
             phone: true,
+            city: true,
+            pincode: true,
             role: true,
             addresses: {
                 orderBy: {
@@ -37,18 +41,72 @@ export const updateUserProfile = async (req: Request) => {
         throw new ApiError("Unauthorized", 401);
     }
 
-    const { phone } = await req.json();
+    const body = await req.json();
+    const dataToUpdate: any = {};
 
-    if (!phone) {
-        throw new ApiError("Phone number is required", 400);
+    if (body.name && typeof body.name === "string") dataToUpdate.name = body.name.trim();
+    
+    if (body.phone !== undefined) {
+        const rawPhone = String(body.phone).trim();
+        const rawDigits = rawPhone.replace(/\D/g, "");
+        const digitsOnly = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+        if (rawPhone !== "" && digitsOnly.length !== 10) {
+            throw new ApiError("Please provide a valid 10-digit phone number", 400);
+        }
+        dataToUpdate.phone = digitsOnly;
+    }
+
+    if (body.city !== undefined && typeof body.city === "string") dataToUpdate.city = body.city.trim();
+    if (body.pincode !== undefined && typeof body.pincode === "string") {
+        const rawPincode = body.pincode.trim();
+        if (rawPincode !== "" && rawPincode.length !== 6) {
+            throw new ApiError("Pincode must be exactly 6 digits", 400);
+        }
+        dataToUpdate.pincode = rawPincode;
+    }
+
+    // Password Update & Validation
+    if (body.newPassword) {
+        if (typeof body.newPassword !== "string" || body.newPassword.length < 6) {
+            throw new ApiError("New password must be at least 6 characters long", 400);
+        }
+        if (!body.currentPassword) {
+            throw new ApiError("Current password is required to set a new password", 400);
+        }
+
+        const currentUser = await db.user.findUnique({
+            where: { id: session.user.id },
+        });
+
+        if (currentUser?.passwordHash) {
+            const isMatch = await bcrypt.compare(body.currentPassword, currentUser.passwordHash);
+            if (!isMatch) {
+                throw new ApiError("Current password is incorrect", 400);
+            }
+        }
+
+        dataToUpdate.passwordHash = await bcrypt.hash(body.newPassword, 10);
+    }
+
+    if (Object.keys(dataToUpdate).length === 0) {
+        throw new ApiError("No valid fields provided to update", 400);
     }
 
     const updatedUser = await db.user.update({
         where: { id: session.user.id },
-        data: { phone }
+        data: dataToUpdate,
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            city: true,
+            pincode: true,
+            role: true,
+        }
     });
 
-    return { user: { id: updatedUser.id, phone: updatedUser.phone } };
+    return { user: updatedUser };
 };
 
 export const getUserDashboard = async () => {
@@ -78,14 +136,11 @@ export const getUserDashboard = async () => {
     const sellers = await db.sellerProfile.findMany({
         where: {
             verificationStatus: "APPROVED",
-            user: { isActive: true },
-            OR: [
-                { user: { pincode: userPincode } },
-                { foodItems: { some: { deliveryPincodes: { contains: userPincode } } } }
-            ]
+            user: { isActive: true }
         },
         include: {
             user: { select: { name: true, city: true, pincode: true, phone: true } },
+            servedPincodes: true,
             foodItems: {
                 where: { isAvailable: true },
                 include: {
@@ -111,25 +166,25 @@ export const getUserDashboard = async () => {
         );
         if (!hasActiveFoodSub) return [];
 
-        return seller.foodItems
-            .filter(item => {
-                if (item.deliveryPincodes) {
-                    const pins = item.deliveryPincodes.split(",").map(p => p.trim());
-                    return pins.includes(userPincode);
-                }
-                return seller.user.pincode === userPincode;
-            })
-            .map(item => ({
-                ...item,
-                sellerName: seller.businessName || seller.user.name,
-                sellerCity: seller.user.city,
-                sellerPincode: seller.user.pincode,
-                sellerLocality: seller.addressLocality,
-                sellerLandmark: seller.addressLandmark,
-                sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline,
-                sellerFoodType: seller.foodType
-            }));
+        const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+        const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+        const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
+        return seller.foodItems.map(item => ({
+            ...item,
+            sellerName: seller.businessName || seller.user.name,
+            sellerCity: seller.user.city,
+            sellerPincode: seller.user.pincode,
+            sellerLocality: seller.addressLocality,
+            sellerLandmark: seller.addressLandmark,
+            sellerTrackingId: seller.trackingId,
+            sellerIsOnline: seller.isOnline,
+            sellerFoodType: seller.foodType,
+            sellerLatitude: resolvedLat,
+            sellerLongitude: resolvedLng,
+            sellerIsLocationPinned: seller.isLocationPinned,
+            servedPincodes: seller.servedPincodes.map(p => p.pincode),
+        }));
     });
 
     const availableRooms = sellers.flatMap(seller => {
@@ -140,18 +195,23 @@ export const getUserDashboard = async () => {
         );
         if (!hasActivePropertySub) return [];
 
-        return seller.rooms
-            .filter(room => seller.user.pincode === userPincode)
-            .map(room => ({
-                ...room,
-                sellerName: seller.businessName || seller.user.name,
-                sellerCity: seller.user.city,
-                sellerPincode: seller.user.pincode,
-                sellerLocality: seller.addressLocality,
-                sellerLandmark: seller.addressLandmark,
-                sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline
-            }));
+        const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+        const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+        const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
+        return seller.rooms.map(room => ({
+            ...room,
+            sellerName: seller.businessName || seller.user.name,
+            sellerCity: seller.user.city,
+            sellerPincode: seller.user.pincode,
+            sellerLocality: seller.addressLocality,
+            sellerLandmark: seller.addressLandmark,
+            sellerTrackingId: seller.trackingId,
+            sellerIsOnline: seller.isOnline,
+            sellerLatitude: resolvedLat,
+            sellerLongitude: resolvedLng,
+            sellerIsLocationPinned: seller.isLocationPinned,
+        }));
     });
 
     return {

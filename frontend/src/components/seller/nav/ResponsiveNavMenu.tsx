@@ -1,0 +1,429 @@
+"use client";
+
+import React, { useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import {
+  X,
+  LayoutGrid,
+  ShoppingBag,
+  BookOpen,
+  Bed,
+  CalendarCheck,
+  Truck,
+  CreditCard,
+  UserCircle,
+  Settings,
+  Bell,
+  RefreshCw,
+  ChevronRight,
+  LogOut,
+  Percent,
+  Star,
+  Headphones,
+  Lock,
+} from "lucide-react";
+import { performLogout } from "@/lib/logout";
+import styles from "./ResponsiveNavMenu.module.css";
+
+export interface NavItemConfig {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
+  href: string;
+}
+
+export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, href: "/seller/dashboard" },
+  { id: "orders", label: "Orders", icon: ShoppingBag, href: "/seller/orders" },
+  { id: "menu", label: "Menu Management", icon: BookOpen, href: "/seller/menu" },
+  { id: "rooms", label: "Rooms Config", icon: Bed, href: "/seller/rooms" },
+  { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
+  { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/delivery" },
+  { id: "reviews", label: "Reviews & Feedback", icon: Star, href: "/seller/reviews" },
+  { id: "subscription", label: "Meal Subscriptions", icon: CreditCard, href: "/seller/subscription" },
+  { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
+  { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/profile" },
+  { id: "offers", label: "Offers & Coupons", icon: Percent, href: "/seller/offers" },
+  { id: "notifications", label: "Notifications", icon: Bell, href: "/seller/notifications" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/seller/settings" },
+];
+
+
+
+import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { fetchApi } from "@/lib/fetch-api";
+
+export interface ResponsiveNavMenuProps {
+  isOpen: boolean;
+  onClose: () => void;
+  activeItemId?: string;
+  ownerName?: string;
+  roleTagText?: string;
+  onSyncDevices?: () => void;
+}
+
+export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
+  isOpen,
+  onClose,
+  activeItemId,
+  ownerName,
+  roleTagText = "OWNER ROLE",
+  onSyncDevices,
+}) => {
+  const seller = useSellerProfile();
+  const effectiveOwnerName =
+    ownerName && !isGenericFallbackName(ownerName)
+      ? ownerName
+      : (seller.businessName || seller.ownerName);
+  const pathname = usePathname();
+  const [statusData, setStatusData] = React.useState<any>(null);
+
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        const res = await fetchApi("/api/seller/dashboard/status");
+        if (res.ok) {
+          const data = await res.json();
+          setStatusData(data.data || data);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    loadStatus();
+  }, []);
+
+  const handleNavItemClick = (e: React.MouseEvent, item: NavItemConfig) => {
+    const isFoodTab =
+      item.id === "orders" ||
+      item.id === "menu" ||
+      item.id === "delivery" ||
+      item.id === "subscription" ||
+      item.id === "offers" ||
+      item.id === "reviews";
+    const isPropertyTab = item.id === "rooms" || item.id === "rooms-seller" || item.id === "bookings";
+
+    if (statusData) {
+      const hasActiveSub = Boolean(statusData.hasActiveSub);
+      const isFoodActive = Boolean(statusData.isFoodActive);
+      const isPropertyActive = Boolean(statusData.isPropertyActive);
+
+      if (isFoodTab) {
+        if (!hasActiveSub) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "FOOD" } }));
+          onClose();
+          return;
+        }
+        if (!isFoodActive) {
+          e.preventDefault();
+          const foodVerification = statusData?.sellerProfile?.foodVerificationStatus;
+          if (foodVerification === "APPROVED") {
+            window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "FOOD" } }));
+          } else {
+            window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "FOOD" } }));
+          }
+          onClose();
+          return;
+        }
+      } else if (isPropertyTab) {
+        if (!hasActiveSub) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "PROPERTY" } }));
+          onClose();
+          return;
+        }
+        if (!isPropertyActive) {
+          e.preventDefault();
+          const propVerification = statusData?.sellerProfile?.propertyVerificationStatus;
+          if (propVerification === "APPROVED") {
+            window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "PROPERTY" } }));
+          } else {
+            window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } }));
+          }
+          onClose();
+          return;
+        }
+      }
+    }
+
+    onClose();
+  };
+
+  // Close drawer on Esc key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  const isItemActive = (item: NavItemConfig) => {
+    if (activeItemId) {
+      return activeItemId === item.id;
+    }
+    if (item.id === "dashboard") {
+      return (
+        pathname === "/seller/res/dashboard" ||
+        pathname?.startsWith("/seller/dashboard") ||
+        pathname === "/seller"
+      );
+    }
+    if (item.id === "orders") {
+      return (
+        pathname === "/seller/res/orders" ||
+        pathname?.startsWith("/seller/res/orders") ||
+        pathname?.startsWith("/seller/orders") ||
+        pathname?.startsWith("/seller/order-default")
+      );
+    }
+    if (item.id === "menu") {
+      return (
+        pathname === "/seller/res/menu" ||
+        pathname?.startsWith("/seller/res/menu") ||
+        pathname?.startsWith("/seller/menu") ||
+        pathname?.startsWith("/seller/edit-menu")
+      );
+    }
+    if (item.id === "rooms") {
+      return (
+        pathname === "/seller/res/rooms" ||
+        pathname?.startsWith("/seller/res/rooms") ||
+        pathname?.startsWith("/seller/rooms")
+      );
+    }
+    if (item.id === "bookings") {
+      return (
+        pathname === "/seller/res/booking" ||
+        pathname?.startsWith("/seller/res/booking") ||
+        pathname?.startsWith("/seller/booking")
+      );
+    }
+    if (item.id === "delivery") {
+      return (
+        pathname === "/seller/res/delivery" ||
+        pathname?.startsWith("/seller/res/delivery") ||
+        pathname?.startsWith("/seller/delivery") ||
+        pathname?.startsWith("/seller/riderMng")
+      );
+    }
+    if (item.id === "subscription") {
+      return (
+        pathname === "/seller/res/subscription" ||
+        pathname?.startsWith("/seller/res/subscription") ||
+        pathname?.startsWith("/seller/payment") ||
+        pathname?.startsWith("/seller/res/payment") ||
+        pathname?.startsWith("/seller/subscription")
+      );
+    }
+    if (item.id === "profile") {
+      return (
+        pathname === "/seller/res/profile" ||
+        pathname?.startsWith("/seller/res/profile") ||
+        pathname?.startsWith("/seller/profile")
+      );
+    }
+    if (item.id === "support") {
+      return (
+        pathname === "/seller/res/support" ||
+        pathname?.startsWith("/seller/res/support") ||
+        pathname?.startsWith("/seller/support")
+      );
+    }
+    if (item.id === "offers") {
+      return (
+        pathname === "/seller/res/offers" ||
+        pathname?.startsWith("/seller/res/offers") ||
+        pathname?.startsWith("/seller/offers")
+      );
+    }
+    if (item.id === "reviews") {
+      return (
+        pathname === "/seller/res/reviews" ||
+        pathname?.startsWith("/seller/res/reviews") ||
+        pathname?.startsWith("/seller/reviews")
+      );
+    }
+    if (item.id === "notifications") {
+      return (
+        pathname === "/seller/res/notifications" ||
+        pathname?.startsWith("/seller/res/notifications") ||
+        pathname?.startsWith("/seller/notifications")
+      );
+    }
+    if (item.id === "settings") {
+      return (
+        pathname === "/seller/res/settings" ||
+        pathname?.startsWith("/seller/res/settings") ||
+        pathname?.startsWith("/seller/settings")
+      );
+    }
+
+    return Boolean(pathname?.startsWith(item.href));
+  };
+
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      {isOpen && (
+        <div
+          className={`${styles.overlay} ${styles.open}`}
+          onClick={onClose}
+          aria-hidden="false"
+        />
+      )}
+
+      {/* Drawer */}
+      <aside
+        className={`${styles.drawer} ${isOpen ? styles.open : ""}`}
+        aria-label="Navigation Menu"
+      >
+        {/* Header */}
+        <div className={styles.drawerHeader}>
+          <div className={styles.brandGroup}>
+            <div className={styles.logoIcon}>
+              <Image
+                src="/images/logo-nav.png"
+                alt="Neo Cloud Bites Logo"
+                width={36}
+                height={36}
+                className={styles.logoImage}
+                priority
+              />
+            </div>
+            <div className={styles.brandInfo}>
+              <span className={styles.brandName}>NEO CLOUD BITES</span>
+              <span className={styles.roleTag}>{roleTagText}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Profile Info Card */}
+        <div className={styles.profileCard}>
+          <div className={styles.avatar}>{computeInitials(effectiveOwnerName)}</div>
+          <div className={styles.profileDetails}>
+            <span className={styles.profileName}>{effectiveOwnerName}</span>
+            <span className={styles.profileStatus}>
+              <span className={styles.statusDot} />
+              Store Online
+            </span>
+          </div>
+        </div>
+
+        {/* Navigation List */}
+        <nav className={styles.navList}>
+          <span className={styles.sectionLabel}>Operations Menu</span>
+          {RESPONSIVE_SELLER_NAV_ITEMS.map((item) => {
+            const active = isItemActive(item);
+            const IconComponent = item.icon;
+            const isFood =
+              item.id === "orders" ||
+              item.id === "menu" ||
+              item.id === "delivery" ||
+              item.id === "subscription" ||
+              item.id === "offers" ||
+              item.id === "reviews";
+            const isProp = item.id === "rooms" || item.id === "rooms-seller" || item.id === "bookings";
+            const isLocked = Boolean(
+              statusData &&
+                ((isFood && !statusData.isFoodActive) ||
+                  (isProp && !statusData.isPropertyActive))
+            );
+
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={`${styles.navItem} ${active ? styles.active : ""}`}
+                onClick={(e) => handleNavItemClick(e, item)}
+                style={isLocked ? { color: "#94A3B8" } : undefined}
+              >
+                <IconComponent size={19} />
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {isLocked && <Lock size={14} color="#CBD5E1" style={{ marginLeft: "auto" }} />}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className={styles.drawerFooter} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <button
+            type="button"
+            className={styles.syncButton}
+            onClick={() => {
+              if (onSyncDevices) onSyncDevices();
+              onClose();
+            }}
+          >
+            <RefreshCw size={14} />
+            <span>Sync Live Orders</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              performLogout({ role: "SELLER" });
+            }}
+            style={{
+              width: "100%",
+              height: "40px",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              border: "1px solid #FEE2E2",
+              background: "#FEF2F2",
+              color: "#EF4444",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+              transition: "all 0.18s ease",
+            }}
+          >
+            <LogOut size={16} color="#EF4444" />
+            <span>Log Out</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+};
+
+export default ResponsiveNavMenu;

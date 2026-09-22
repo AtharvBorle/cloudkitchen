@@ -4,7 +4,8 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
 const formatDisplayName = (name: string) => {
     return name
@@ -186,8 +187,8 @@ export default function SuperadminSellersPage() {
         }
     };
 
-    const handleLogout = async () => {
-        await signOut({ callbackUrl: window.location.origin + "/admin" });
+    const handleLogout = () => {
+        performLogout({ role: "SUPERADMIN" });
     };
 
     const getStatusBadge = (status: string) => {
@@ -403,8 +404,13 @@ export default function SuperadminSellersPage() {
                                 </div>
 
                                 <div className="input-group">
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Phone</label>
-                                    <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input-field" required />
+                                    <PhoneInput
+                                        label="Phone"
+                                        value={editPhone}
+                                        onChange={(val) => setEditPhone(val)}
+                                        placeholder="98765 43210"
+                                        required
+                                    />
                                 </div>
                             </div>
 

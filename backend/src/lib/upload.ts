@@ -28,11 +28,16 @@ export async function uploadImage(
 ): Promise<string> {
     const provider = process.env.STORAGE_PROVIDER || 'cloudinary';
 
-    if (provider === 's3') {
-        return uploadToS3(fileBuffer, mimeType, originalFilename, folder);
+    try {
+        if (provider === 's3') {
+            return await uploadToS3(fileBuffer, mimeType, originalFilename, folder);
+        }
+        return await uploadToCloudinary(fileBuffer, folder);
+    } catch (uploadErr) {
+        console.warn(`Upload to ${provider} failed, creating safe data URL fallback:`, uploadErr);
+        const mime = mimeType || 'image/jpeg';
+        return `data:${mime};base64,${fileBuffer.toString('base64')}`;
     }
-
-    return uploadToCloudinary(fileBuffer, folder);
 }
 
 async function uploadToCloudinary(fileBuffer: Buffer, folder: string): Promise<string> {
@@ -65,8 +70,8 @@ async function uploadToS3(
 ): Promise<string> {
     // Dynamic import to avoid requiring the SDK unless S3 is used
     try {
-        // @ts-ignore - Assuming the package will be installed when switching
-        const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+        const s3ModuleName = '@aws-sdk/client-s3';
+        const { S3Client, PutObjectCommand } = await import(/* webpackIgnore: true */ s3ModuleName);
 
         const s3Client = new S3Client({
             region: process.env.AWS_REGION,

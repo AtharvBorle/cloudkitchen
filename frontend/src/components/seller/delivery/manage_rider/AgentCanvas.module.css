@@ -1,0 +1,507 @@
+.pageWrapper {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+  box-sizing: border-box;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+}
+
+/* Header Area */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justifyContent: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 4px;
+  transition: color 0.15s ease;
+}
+
+.backLink:hover {
+  color: #F97316;
+}
+
+.pageTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.4px;
+  line-height: 1.25;
+}
+
+.badgeNew {
+  background-color: #FFF4EC;
+  color: #F97316;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #FFEDD5;
+}
+
+.pageSubtitle {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* 2-Column Content Grid */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Card Styling */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.cardIconBox {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justifyContent: center;
+  flex-shrink: 0;
+}
+
+.cardIconBoxOrange {
+  background-color: #FFF4EC;
+  color: #F97316;
+}
+
+.cardIconBoxBlue {
+  background-color: #EFF6FF;
+  color: #3B82F6;
+}
+
+.cardIconBoxPurple {
+  background-color: #F5F3FF;
+  color: #8B5CF6;
+}
+
+.cardIconBoxEmerald {
+  background-color: #ECFDF5;
+  color: #10B981;
+}
+
+.cardHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.cardSubtitle {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Form Fields */
+.formGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .formGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.requiredStar {
+  color: #EF4444;
+}
+
+.fieldInput {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0F172A;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.fieldInput:focus {
+  background-color: #FFFFFF;
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.fieldInput::placeholder {
+  color: #94A3B8;
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+/* Phone Input Container */
+.phoneInputContainer {
+  display: flex;
+  align-items: center;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.phoneInputContainer:focus-within {
+  background-color: #FFFFFF;
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.phonePrefix {
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #475569;
+  border-right: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  background-color: #F1F5F9;
+  user-select: none;
+}
+
+.phoneField {
+  flex: 1;
+  height: 44px;
+  border: none;
+  background: transparent;
+  padding: 0 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0F172A;
+  outline: none;
+}
+
+/* Password Input */
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordField {
+  width: 100%;
+  height: 44px;
+  padding: 0 44px 0 14px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0F172A;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.passwordField:focus {
+  background-color: #FFFFFF;
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.passwordToggle:hover {
+  color: #475569;
+}
+
+/* Security Callout */
+.securityNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #166534;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+/* Error Alert Box */
+.errorAlert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  color: #DC2626;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+/* Actions Bar */
+.actionsBar {
+  display: flex;
+  align-items: center;
+  justifyContent: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.cancelBtn {
+  padding: 11px 22px;
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.cancelBtn:hover {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 26px;
+  background-color: #F97316;
+  background-image: linear-gradient(135deg, #FF5500 0%, #F97316 100%);
+  border: none;
+  border-radius: 10px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+  transition: all 0.18s ease;
+}
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Side Column Info Cards */
+.guideStepList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.guideStepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guideStepNumber {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #FFF4EC;
+  color: #F97316;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.guideStepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.guideStepTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.guideStepDesc {
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+.bulletList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.bulletItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.bulletDot {
+  color: #F97316;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.appLinkBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.appLinkText {
+  font-size: 12.5px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.appBadge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #2563EB;
+  background-color: #EFF6FF;
+  padding: 3px 8px;
+  border-radius: 6px;
+}

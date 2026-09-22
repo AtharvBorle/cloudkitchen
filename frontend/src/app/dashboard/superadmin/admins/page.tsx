@@ -5,7 +5,9 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
+import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 
 export default function SuperadminDashboard() {
     const router = useRouter();
@@ -175,8 +177,8 @@ export default function SuperadminDashboard() {
         }
     };
 
-    const handleLogout = async () => {
-        await signOut({ callbackUrl: window.location.origin + "/admin" });
+    const handleLogout = () => {
+        performLogout({ role: "SUPERADMIN" });
     };
 
     return (
@@ -214,8 +216,26 @@ export default function SuperadminDashboard() {
                 <form onSubmit={handleCreateAdmin} style={{ display: 'flex', gap: '15px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <input type="text" value={newName} onChange={e => setNewName(e.target.value)} className="input-field" placeholder="Admin Name" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
                     <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="input-field" placeholder="Email" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
-                    <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="input-field" placeholder="Phone" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
-                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-field" placeholder="Password" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} required />
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                        <PhoneInput
+                            value={newPhone}
+                            onChange={(val) => setNewPhone(val)}
+                            placeholder="98765 43210"
+                            showHelperText={false}
+                            required
+                        />
+                    </div>
+                    <div style={{ flex: 1, minWidth: '180px' }}>
+                        <PasswordInput
+                            value={newPassword}
+                            onChange={(val) => setNewPassword(val)}
+                            placeholder="Password"
+                            showHelperText={false}
+                            required
+                            minLength={6}
+                            autoComplete="new-password"
+                        />
+                    </div>
                     <select value={newRole} onChange={e => setNewRole(e.target.value)} className="input-field" style={{ flex: 1, minWidth: '150px', marginBottom: 0, appearance: 'auto', border: '1px solid #cbd5e1' }} required>
                         <option value="AGENT">Regional Agent</option>
                         <option value="SUPPORT">Support Admin</option>
@@ -297,13 +317,24 @@ export default function SuperadminDashboard() {
                                     </div>
 
                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Phone</label>
-                                        <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input-field" style={{ marginBottom: 0 }} required />
+                                        <PhoneInput
+                                            label="Phone"
+                                            value={editPhone}
+                                            onChange={(val) => setEditPhone(val)}
+                                            placeholder="98765 43210"
+                                            required
+                                        />
                                     </div>
 
                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>New Password (optional)</label>
-                                        <input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="input-field" placeholder="Leave blank to keep current" style={{ marginBottom: 0 }} />
+                                        <PasswordInput
+                                            label="New Password (optional)"
+                                            value={editPassword}
+                                            onChange={(val) => setEditPassword(val)}
+                                            placeholder="Leave blank to keep current"
+                                            minLength={6}
+                                            required={false}
+                                        />
                                     </div>
                                 </div>
 

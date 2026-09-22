@@ -1,0 +1,464 @@
+/* 1. Backdrop Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.overlayOpen {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 2. Slide-out Drawer Container */
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(82vw, 300px);
+  height: 100vh;
+  height: 100dvh;
+  background-color: #ffffff;
+  z-index: 1000;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.drawerOpen {
+  transform: translateX(0);
+}
+
+/* 3. Header */
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px 18px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.brandGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoCircle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid #fed7aa;
+}
+
+.logoImg {
+  object-fit: contain;
+  width: 32px;
+  height: 32px;
+}
+
+.brandText {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f97316;
+  letter-spacing: -0.01em;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:active {
+  background-color: #f1f5f9;
+}
+
+/* 4. User Profile Card */
+.profileSection {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.avatarWrapper {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  border: 2.5px solid #f97316;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15);
+}
+
+.avatarImg {
+  object-fit: cover;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.userName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.goldBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  width: fit-content;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.3);
+}
+
+/* 5. Nav Items List */
+.navContainer {
+  flex: 1;
+  padding: 14px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #334155;
+  transition: all 0.15s ease;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.navItem:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.navItemActive {
+  background-color: #fff3e3 !important;
+  color: #f97316 !important;
+  font-weight: 700 !important;
+}
+
+.navItemActive .navItemLeft {
+  color: #f97316;
+}
+
+.navItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.navIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.navItemActive .navIcon {
+  color: #f97316;
+}
+
+.navChevron {
+  color: #94a3b8;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.navItemActive .navChevron {
+  color: #f97316;
+}
+
+.newBadge {
+  background-color: #f97316;
+  color: #ffffff;
+  fontSize: 9.5px;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+}
+
+/* 5.1 Dropdown Container & Submenu */
+.dropdownContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.dropdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-radius: 12px;
+  color: #334155;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dropdownHeader:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.dropdownHeaderActive {
+  background-color: #fff3e3 !important;
+  color: #f97316 !important;
+  font-weight: 700 !important;
+}
+
+.dropdownHeaderActive .navItemLeft {
+  color: #f97316;
+}
+
+.dropdownRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdownToggleBtn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.dropdownToggleBtn:hover {
+  background-color: rgba(249, 115, 22, 0.1);
+}
+
+.dropdownChevron {
+  color: #94a3b8;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
+}
+
+.dropdownChevronOpen {
+  transform: rotate(180deg);
+  color: #f97316;
+}
+
+/* Accordion Grid Animation */
+.subnavWrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.subnavWrapperOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.subnavInner {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 6px 14px;
+  margin-left: 12px;
+  border-left: 2px solid #fed7aa;
+}
+
+@keyframes subnavSlideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.subnavItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: subnavSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  position: relative;
+}
+
+.subnavItem:hover {
+  background-color: #fff7ed;
+  color: #ea580c;
+  transform: translateX(4px);
+}
+
+.subnavItemActive {
+  background: linear-gradient(90deg, #fff3e3 0%, #fff7ed 100%) !important;
+  color: #f97316 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 4px rgba(249, 115, 22, 0.08);
+}
+
+.subnavItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subnavIcon {
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.subnavItem:hover .subnavIcon,
+.subnavItemActive .subnavIcon {
+  color: #f97316;
+  transform: scale(1.1);
+}
+
+.subnavActiveBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #f97316;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(249, 115, 22, 0.35);
+  animation: badgePop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 6. Footer Section */
+.drawerFooter {
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px)) 18px;
+  border-top: 1px solid #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background-color: #ffffff;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #f97316;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  width: fit-content;
+}
+
+.logoutBtn:hover {
+  color: #ea580c;
+}
+
+.logoutIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.footerBrandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.versionText {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.footerBrandText {
+  font-size: 11px;
+  color: #f97316;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+

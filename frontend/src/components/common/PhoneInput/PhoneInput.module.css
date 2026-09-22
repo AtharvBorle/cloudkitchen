@@ -1,0 +1,203 @@
+﻿.phoneContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.required {
+  color: #ea580c;
+  font-weight: 700;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background-color: #ffffff;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.inputWrapper:focus-within {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.inputSuccess {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+}
+
+.inputError {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.countryCodePrefix {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  height: 44px;
+  background-color: #f8fafc;
+  border-right: 1.5px solid #e2e8f0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #334155;
+  user-select: none;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.compactPrefix {
+  height: 38px;
+  padding: 0 9px;
+  font-size: 0.82rem;
+}
+
+.flagIcon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.phoneField {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 40px 0 12px;
+  border: none;
+  outline: none;
+  font-size: 0.92rem;
+  color: #0f172a;
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.compactField {
+  height: 38px;
+  padding: 0 36px 0 10px;
+  font-size: 0.85rem;
+}
+
+.phoneField::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.statusIconBox {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.statusIconBoxWithAction {
+  position: relative;
+  right: auto;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.actionWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 6px;
+  flex-shrink: 0;
+}
+
+.validCheckIcon {
+  color: #10b981;
+  animation: popIn 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.invalidAlertIcon {
+  color: #ef4444;
+  animation: popIn 0.2s ease;
+}
+
+.helperTextSuccess {
+  font-size: 0.76rem;
+  color: #10b981;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: fadeIn 0.2s ease;
+}
+
+.helperTextError {
+  font-size: 0.76rem;
+  color: #ef4444;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: fadeIn 0.2s ease;
+}
+
+.digitCounter {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.digitCounterIncomplete {
+  color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.digitCounterComplete {
+  color: #10b981;
+  background-color: #ecfdf5;
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

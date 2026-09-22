@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 const prisma = new PrismaClient();
 
@@ -9,8 +10,17 @@ export const getPublicCategories = unstable_cache(
         const categories = await db.category.findMany({
             orderBy: { name: 'asc' }
         });
+        const foodCategories = await db.foodCategory.findMany({
+            include: {
+                categories: true,
+                subCategories: {
+                    orderBy: { name: 'asc' }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
 
-        return { categories };
+        return { categories, foodCategories };
     },
     ["public-categories"],
     { revalidate: 60, tags: ["categories"] }
@@ -27,11 +37,16 @@ export const getPublicExploreData = unstable_cache(
                 user: {
                     select: { name: true, city: true, pincode: true, phone: true }
                 },
+                servedPincodes: true,
+                reviews: {
+                    select: { rating: true, comment: true }
+                },
                 foodItems: {
                     where: { isAvailable: true },
                     include: {
                         category: true,
-                        foodCategory: true
+                        foodCategory: true,
+                        itemRatings: true
                     }
                 },
                 rooms: {
@@ -50,33 +65,88 @@ export const getPublicExploreData = unstable_cache(
 
         const now = new Date();
 
+        const activeSellersList: any[] = [];
+
         const foodItems = sellers.flatMap(seller => {
-            const hasActiveFoodSub = seller.subscriptions.some(sub => 
+            const hasActiveFoodSub = seller.verificationStatus === "APPROVED" || seller.subscriptions.some(sub => 
                 sub.status === "ACTIVE" && 
                 (sub.validUntil === null || new Date(sub.validUntil) > now) &&
                 (sub.plan?.category === "FOOD" || sub.plan?.category === "BOTH")
             );
             if (!hasActiveFoodSub) return [];
-            return seller.foodItems.map(item => ({
-                ...item,
-                sellerName: seller.businessName || seller.user.name,
-                sellerCity: seller.user.city,
-                sellerPincode: seller.user.pincode,
-                sellerLocality: seller.addressLocality,
-                sellerLandmark: seller.addressLandmark,
-                sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline,
-                sellerFoodType: seller.foodType
-            }));
+
+            const reviewsCount = seller.reviews.length;
+            const avgRating = reviewsCount > 0
+                ? Number((seller.reviews.reduce((acc, r) => acc + r.rating, 0) / reviewsCount).toFixed(1))
+                : 4.8;
+
+            let parsedKitchenImages: string[] = [];
+            try {
+                parsedKitchenImages = typeof seller.kitchenImages === "string" ? JSON.parse(seller.kitchenImages) : seller.kitchenImages;
+            } catch {
+                parsedKitchenImages = [];
+            }
+
+            const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+            const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
+            activeSellersList.push({
+                id: seller.id,
+                name: seller.businessName || seller.user.name,
+                trackingId: seller.trackingId,
+                type: seller.type,
+                city: seller.user.city,
+                pincode: seller.user.pincode,
+                locality: seller.addressLocality,
+                landmark: seller.addressLandmark,
+                latitude: resolvedLat,
+                longitude: resolvedLng,
+                isLocationPinned: seller.isLocationPinned,
+                rating: avgRating,
+                reviewsCount,
+                imageUrl: parsedKitchenImages[0] || seller.bannerImageUrl || "/images/places/place-pizza.png",
+                isOnline: seller.isOnline,
+                foodType: seller.foodType,
+                servedPincodes: seller.servedPincodes.map(p => p.pincode),
+            });
+
+            return seller.foodItems.map(item => {
+                const itemRatingCount = item.itemRatings?.length || 0;
+                const itemAvgRating = itemRatingCount > 0
+                    ? Number((item.itemRatings.reduce((acc: number, r: any) => acc + r.rating, 0) / itemRatingCount).toFixed(1))
+                    : avgRating;
+
+                return {
+                    ...item,
+                    rating: itemAvgRating,
+                    sellerName: seller.businessName || seller.user.name,
+                    sellerCity: seller.user.city,
+                    sellerPincode: seller.user.pincode,
+                    sellerLocality: seller.addressLocality,
+                    sellerLandmark: seller.addressLandmark,
+                    sellerTrackingId: seller.trackingId,
+                    sellerIsOnline: seller.isOnline,
+                    sellerFoodType: seller.foodType,
+                    sellerLatitude: resolvedLat,
+                    sellerLongitude: resolvedLng,
+                    sellerIsLocationPinned: seller.isLocationPinned,
+                    servedPincodes: seller.servedPincodes.map(p => p.pincode),
+                };
+            });
         });
 
         const availableRooms = sellers.flatMap(seller => {
-            const hasActivePropertySub = seller.subscriptions.some(sub => 
+            const hasActivePropertySub = seller.verificationStatus === "APPROVED" || seller.subscriptions.some(sub => 
                 sub.status === "ACTIVE" && 
                 (sub.validUntil === null || new Date(sub.validUntil) > now) &&
                 (sub.plan?.category === "PROPERTY" || sub.plan?.category === "BOTH")
             );
             if (!hasActivePropertySub) return [];
+            const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+            const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
             return seller.rooms.map(room => ({
                 ...room,
                 sellerName: seller.businessName || seller.user.name,
@@ -85,11 +155,14 @@ export const getPublicExploreData = unstable_cache(
                 sellerLocality: seller.addressLocality,
                 sellerLandmark: seller.addressLandmark,
                 sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline
+                sellerIsOnline: seller.isOnline,
+                sellerLatitude: resolvedLat,
+                sellerLongitude: resolvedLng,
+                sellerIsLocationPinned: seller.isLocationPinned,
             }));
         });
 
-        return { foodItems, availableRooms, foodCategories };
+        return { foodItems, availableRooms, foodCategories, kitchens: activeSellersList };
     },
     ["public-explore-data"],
     { revalidate: 30, tags: ["explore"] }
@@ -169,12 +242,19 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             id: c.id,
             code: c.code,
             description: c.description,
+            discountType: c.discountType || (c.discountPercentage ? "PERCENTAGE" : "FLAT"),
             discountPercentage: c.discountPercentage,
             discountAmount: c.discountAmount,
             minimumCartValue: c.minimumCartValue,
-            maxUsagesPerUser: c.maxUsagesPerUser,
-            maxUsers: c.maxUsers,
-            currentUsersCount: c.currentUsersCount
+            maxDiscountAmount: c.maxDiscountAmount,
+            customerEligibility: c.customerEligibility || "ALL",
+            appliesTo: c.appliesTo || "ALL",
+            appliesToProductId: c.appliesToProductId || null,
+            maxUsagesPerUser: c.maxUsagesPerUser || c.perUserLimit || 1,
+            maxUsers: c.maxUsers || c.usageLimit || null,
+            currentUsersCount: c.currentUsersCount,
+            noExpiry: c.noExpiry,
+            validUntil: c.validUntil
         }));
 
         return safeCoupons;

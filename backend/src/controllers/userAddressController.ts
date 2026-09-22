@@ -2,6 +2,20 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 
+export const getUserAddresses = async () => {
+    const session = await getAuthSession();
+    if (!session || !session.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    const addresses = await db.address.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" }
+    });
+
+    return { addresses };
+};
+
 export const createAddress = async (req: Request) => {
     const session = await getAuthSession();
     if (!session || !session.user) {

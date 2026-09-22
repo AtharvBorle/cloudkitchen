@@ -1,0 +1,625 @@
+/* =========================================================
+   Seller Reviews & Feedback Styles with Performance Animations
+   ========================================================= */
+
+@keyframes starPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+  80% {
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.2);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(249, 115, 22, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+}
+
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.headerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mainTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subTitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Top Overview Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+  border-color: #CBD5E1;
+}
+
+.cardHeader {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 16px;
+}
+
+/* Overall Rating Card */
+.ratingBody {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.bigRatingNumber {
+  font-size: 42px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  min-width: 65px;
+}
+
+.starsAndBased {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.starsRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.animatedStar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: starPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: center center;
+}
+
+.basedText {
+  font-size: 12.5px;
+  color: #64748B;
+  line-height: 1.3;
+}
+
+.trendGreen {
+  font-size: 13px;
+  font-weight: 600;
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+}
+
+/* Review Count Card */
+.bigCountNumber {
+  font-size: 42px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1;
+  margin-bottom: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.countSubtext {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: auto;
+}
+
+/* Ratings Distribution Top Card */
+.distList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.distRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.distLabel {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.distValue {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+/* Main Split Content Section */
+.contentRow {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.reviewsListCol {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Controls Bar */
+.controlsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filterSortGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.controlDropdownWrapper {
+  position: relative;
+}
+
+.pillButton {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  user-select: none;
+}
+
+.pillButton:hover {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+.pillButton.activeDropdown {
+  border-color: #F97316;
+  color: #EA580C;
+  background-color: #FFF7ED;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  min-width: 170px;
+  z-index: 50;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: fadeInUp 0.2s ease both;
+}
+
+.dropdownItem {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-family: inherit;
+  transition: background-color 0.12s ease;
+}
+
+.dropdownItem:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+.dropdownItemActive {
+  background-color: #FFF1E8 !important;
+  color: #EA580C !important;
+  font-weight: 600;
+}
+
+.showingCount {
+  font-size: 13px;
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+/* Reviews List */
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reviewCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reviewCard:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.reviewerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nameAndBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.customerName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.orderIdPill {
+  background-color: #F1F5F9;
+  color: #64748B;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.reviewDate {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.commentQuoteBox {
+  border-left: 3px solid #EF4444;
+  padding-left: 12px;
+  margin: 2px 0;
+}
+
+.commentText {
+  font-size: 14px;
+  color: #1E293B;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.italicComment {
+  font-size: 14px;
+  color: #475569;
+  font-style: italic;
+  margin: 0;
+}
+
+.tagList {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.itemTag {
+  background-color: #F1F5F9;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.managerResponseBox {
+  background-color: #F8FAFC;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  border: 1px solid #F1F5F9;
+}
+
+.managerResponseHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.managerResponseTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.managerResponseDate {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.managerResponseText {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Sidebar Column (Rating Breakdown, Recent Activity & Alerts) */
+.sidebarCol {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.breakdownCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.breakdownHeader {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.breakdownSubtitle {
+  font-size: 12.5px;
+  color: #94A3B8;
+  margin: 0 0 18px 0;
+}
+
+.breakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.breakdownRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.breakdownStarLabel {
+  width: 44px;
+  color: #475569;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 8px;
+  background-color: #F1F5F9;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBarFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
+}
+
+.breakdownCountValue {
+  width: 32px;
+  text-align: right;
+  color: #0F172A;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.breakdownInsight {
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.45;
+  margin: 22px 0 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.recentActivityCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  min-height: 140px;
+  animation: fadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.recentActivityHeader {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 12px 0;
+}
+
+.recentActivityEmpty {
+  font-size: 13px;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.alertsCard {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.alertsHeader {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 12px 0;
+}
+
+.alertsText {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.emptyReviewsState {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 40px;
+  text-align: center;
+  color: #64748B;
+  font-size: 14px;
+}
+
+@media (max-width: 1100px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contentRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .mainTitle {
+    font-size: 22px;
+  }
+
+  .card, .reviewCard, .breakdownCard, .recentActivityCard, .alertsCard {
+    padding: 18px;
+  }
+}

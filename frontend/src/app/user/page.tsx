@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import LoginPage from "@/app/auth/login/page";
+import LoginPage from "@/app/login/page";
 
 export default function UserPortalRoot() {
     const { data: session, status } = useSession();
@@ -14,17 +14,9 @@ export default function UserPortalRoot() {
             const role = session.user.role;
             if (role === "USER") {
                 router.push("/dashboard/user");
-            } else if (role === "SUPERADMIN") {
-                router.push("/dashboard/superadmin");
-            } else if (role === "AGENT") {
-                router.push("/dashboard/admin");
-            } else if (role === "SUPPORT") {
-                router.push("/dashboard/support");
-            } else if (role === "SELLER") {
-                router.push("/dashboard/seller");
-            } else if (role === "DELIVERY") {
-                router.push("/dashboard/delivery");
             }
+            // If the user is logged in with a non-customer role (e.g. SELLER, ADMIN, DELIVERY),
+            // do NOT auto-redirect away. Let them see Customer login so they can log in cleanly.
         }
     }, [session, status, router]);
 
@@ -32,7 +24,9 @@ export default function UserPortalRoot() {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#FAFAFA' }}>Loading Customer Portal...</div>;
     }
 
-    if (status === "unauthenticated" || !session) {
+    const isCustomerRole = session?.user?.role === "USER";
+
+    if (status === "unauthenticated" || !session || !isCustomerRole) {
         return <LoginPage />;
     }
 

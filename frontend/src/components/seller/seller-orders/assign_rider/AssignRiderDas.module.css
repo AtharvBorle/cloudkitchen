@@ -1,0 +1,463 @@
+.layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  background-color: #F7F8FB;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.mainWrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #F7F8FB;
+}
+
+.canvasContainer {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 28px 64px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748B;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 2px;
+  transition: color 0.15s ease;
+}
+
+.backBtn:hover {
+  color: #F97316;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.4px;
+  line-height: 1.25;
+}
+
+.orderBadge {
+  background: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FFEDD5;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pageSubtitle {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+  font-weight: 400;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.addRiderBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #FF5500 0%, #F97316 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.28);
+  transition: all 0.18s ease;
+  font-family: inherit;
+  text-decoration: none;
+}
+
+.addRiderBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.38);
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* Card Styling */
+.card {
+  background: #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 14px;
+}
+
+.cardTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.statusPill {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+/* Order Info Details */
+.infoStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.infoBlock {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #F8FAFC;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #F1F5F9;
+}
+
+.infoIconBox {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #FFF1E8;
+  color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.infoContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.infoLabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.infoValue {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.infoSub {
+  font-size: 12.5px;
+  color: #64748B;
+  line-height: 1.35;
+}
+
+.phoneLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #F97316;
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 2px;
+}
+
+.phoneLink:hover {
+  text-decoration: underline;
+}
+
+/* Items List */
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px dashed #E2E8F0;
+  padding-top: 14px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+}
+
+.itemName {
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.itemQty {
+  color: #64748B;
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+.itemPrice {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1.5px solid #CBD5E1;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+/* Riders Squad List */
+.ridersList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.riderCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-radius: 12px;
+  background: #FAFAFA;
+  border: 1px solid #E2E8F0;
+  transition: all 0.15s ease;
+}
+
+.riderCard:hover {
+  background: #FFFFFF;
+  border-color: #FDBA74;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.08);
+}
+
+.riderCardAssigned {
+  background: #F0FDF4;
+  border-color: #86EFAC;
+}
+
+.riderLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.riderAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #FFF1E8;
+  color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.riderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.riderNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.riderName {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.dutyBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.onDuty {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.offDuty {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+.riderMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #64748B;
+}
+
+.vehicleTag {
+  background: #EFF6FF;
+  color: #2563EB;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11.5px;
+}
+
+.assignBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #FF5500 0%, #F97316 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.25);
+  transition: all 0.15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.assignBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.35);
+}
+
+.assignBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.assignedBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: default;
+}
+
+/* Empty State */
+.emptyState {
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #64748B;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.emptySub {
+  font-size: 13px;
+  color: #64748B;
+  max-width: 360px;
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}

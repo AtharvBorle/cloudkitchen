@@ -29,8 +29,12 @@ export function Providers({ children }: { children: ReactNode }) {
         };
     }, []);
 
+    const authBasePath = apiBaseUrl && !apiBaseUrl.includes("localhost") && !apiBaseUrl.includes("127.0.0.1")
+        ? `${apiBaseUrl.replace(/\/$/, "")}/api/auth`
+        : "/api/auth";
+
     return (
-        <SessionProvider basePath={`${apiBaseUrl}/api/auth`} refetchOnWindowFocus={false}>
+        <SessionProvider basePath={authBasePath} refetchOnWindowFocus={false}>
             {children}
         </SessionProvider>
     );

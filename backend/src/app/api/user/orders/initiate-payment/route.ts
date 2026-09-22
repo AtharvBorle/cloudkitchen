@@ -1,0 +1,16 @@
+import { initiateOrderPayment } from "@/controllers/userOrderController";
+import { successResponse, errorResponse } from "@/lib/api-response";
+import { ApiError } from "@/lib/api-error";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(req: Request) {
+    try {
+        const data = await initiateOrderPayment(req);
+        return successResponse(data, "Payment initiated successfully", 200);
+    } catch (error: any) {
+        if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
+        console.error("Initiate payment error:", error);
+        return errorResponse("An error occurred while initiating payment", 500);
+    }
+}

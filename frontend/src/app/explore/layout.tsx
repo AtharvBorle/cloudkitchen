@@ -8,7 +8,9 @@ import { useState, useEffect, useRef } from "react";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useLocation, LocationProvider } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
+import { Footer } from "@/components/explore-desktop/footer";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -94,32 +96,48 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
             const L = (window as any).L;
             if (!L || !mapContainerRef.current) return;
 
-            // Zoom level 16 for close house-level detail
-            const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
-            mapRef.current = map;
+            if (mapRef.current) {
+                try {
+                    mapRef.current.off();
+                    mapRef.current.remove();
+                } catch (e) {}
+                mapRef.current = null;
+            }
 
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            if ((mapContainerRef.current as any)._leaflet_id) {
+                delete (mapContainerRef.current as any)._leaflet_id;
+            }
 
-            const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-            markerRef.current = marker;
+            try {
+                // Zoom level 16 for close house-level detail
+                const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
+                mapRef.current = map;
 
-            setCoords({ lat, lng });
-            handleGeocode(lat, lng);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
 
-            marker.on("dragend", () => {
-                const position = marker.getLatLng();
-                setCoords({ lat: position.lat, lng: position.lng });
-                handleGeocode(position.lat, position.lng);
-            });
+                const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                markerRef.current = marker;
 
-            map.on("click", (e: any) => {
-                const { lat, lng } = e.latlng;
-                marker.setLatLng([lat, lng]);
                 setCoords({ lat, lng });
                 handleGeocode(lat, lng);
-            });
+
+                marker.on("dragend", () => {
+                    const position = marker.getLatLng();
+                    setCoords({ lat: position.lat, lng: position.lng });
+                    handleGeocode(position.lat, position.lng);
+                });
+
+                map.on("click", (e: any) => {
+                    const { lat: clickLat, lng: clickLng } = e.latlng;
+                    marker.setLatLng([clickLat, clickLng]);
+                    setCoords({ lat: clickLat, lng: clickLng });
+                    handleGeocode(clickLat, clickLng);
+                });
+            } catch (err) {
+                console.warn("Leaflet map initialization warning:", err);
+            }
         };
 
         script.onload = () => {
@@ -144,7 +162,14 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
                 if (document.body.contains(script)) document.body.removeChild(script);
             } catch (e) {}
             if (mapRef.current) {
-                mapRef.current.remove();
+                try {
+                    mapRef.current.off();
+                    mapRef.current.remove();
+                } catch (e) {}
+                mapRef.current = null;
+            }
+            if (mapContainerRef.current && (mapContainerRef.current as any)._leaflet_id) {
+                delete (mapContainerRef.current as any)._leaflet_id;
             }
         };
     }, []);
@@ -338,12 +363,13 @@ export function ExploreHeader() {
         }
     }, [isAddressModalOpen]);
 
-    // Auto-open modal if no default location is configured
+    // Auto-open modal if no default location is configured (only for regular user or guest)
     useEffect(() => {
-        if (!isLocationLoading && !defaultAddress) {
+        const isNonCustomer = Boolean(session?.user?.role && session.user.role !== "USER");
+        if (!isLocationLoading && !defaultAddress && !isNonCustomer) {
             setIsAddressModalOpen(true);
         }
-    }, [isLocationLoading, defaultAddress]);
+    }, [isLocationLoading, defaultAddress, session]);
 
     const fetchUserAddresses = async () => {
         if (!session || !session.user) return [];
@@ -516,8 +542,8 @@ export function ExploreHeader() {
 
     const navLinks = [
         { href: "/", label: "Home", exact: true },
-        { href: "/explore/food", label: "Order Food" },
-        { href: "/explore/rooms", label: "Book a Room" },
+        { href: "/explore-desktop", label: "Order Food" },
+        { href: "/room-booking", label: "Book a Room" },
     ];
 
     const isActive = (href: string, exact?: boolean) => {
@@ -608,7 +634,7 @@ export function ExploreHeader() {
             </div>
 
             <div className="desktop-only" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                <button onClick={() => router.push("/dashboard/user/checkout")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
+                <button onClick={() => router.push("/user/cart")} className="btn btn-secondary" style={{ borderRadius: "var(--radius-full)", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", whiteSpace: "nowrap", width: "auto" }}>
                     <ShoppingCart size={18} /> Cart ({totalCount})
                 </button>
                 {session ? (
@@ -616,12 +642,12 @@ export function ExploreHeader() {
                         <Link href="/dashboard/user" className="btn btn-secondary" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             Dashboard
                         </Link>
-                        <button className="btn btn-primary" onClick={() => signOut({ callbackUrl: window.location.origin + "/" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                        <button className="btn btn-primary" onClick={() => performLogout({ role: "USER" })} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                             <LogOut size={18} /> Sign Out
                         </button>
                     </>
                 ) : (
-                    <Link href="/user" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
+                    <Link href="/login" className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap", width: "auto" }}>
                         <LogIn size={18} /> Sign In
                     </Link>
                 )}
@@ -664,7 +690,7 @@ export function ExploreHeader() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "auto", paddingTop: "20px", borderTop: "1px solid var(--surface-border)" }}>
-                    <button onClick={() => { setIsMenuOpen(false); router.push("/dashboard/user/checkout"); }} className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontWeight: "bold" }}>
+                    <button onClick={() => { setIsMenuOpen(false); router.push("/user/cart"); }} className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontWeight: "bold" }}>
                         <ShoppingCart size={18} /> Cart ({totalCount})
                     </button>
                     {session ? (
@@ -672,12 +698,12 @@ export function ExploreHeader() {
                             <Link href="/dashboard/user" className="btn btn-secondary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                                 Dashboard
                             </Link>
-                            <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); signOut({ callbackUrl: window.location.origin + "/" }); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                            <button className="btn btn-primary" onClick={() => { setIsMenuOpen(false); performLogout({ role: "USER" }); }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                                 <LogOut size={18} /> Sign Out
                             </button>
                         </>
                     ) : (
-                        <Link href="/user" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <Link href="/login" className="btn btn-primary" onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                             <LogIn size={18} /> Sign In
                         </Link>
                     )}
@@ -1068,6 +1094,7 @@ export default function ExploreLayout({ children }: { children: React.ReactNode 
                 <main style={{ flex: 1, padding: "var(--spacing-8) var(--spacing-6)", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
                     {children}
                 </main>
+                <Footer />
             </div>
         </LocationProvider>
     );
