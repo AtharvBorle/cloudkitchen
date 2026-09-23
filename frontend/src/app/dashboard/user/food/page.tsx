@@ -70,24 +70,61 @@ export default function UserFoodPage() {
             if (status === "loading") return;
             setLoading(true);
             try {
-                const url = (status === "authenticated") ? "/api/user/dashboard" : "/api/public/explore";
-                const res = await fetchApi(url);
-                const data = await res.json();
-                if (res.ok) {
-                    let items = data.foodItems || [];
-                    if (status !== "authenticated" && defaultAddress?.pincode) {
-                        const guestPin = defaultAddress.pincode.trim();
-                        items = items.filter((item: any) => {
-                            if (item.deliveryPincodes) {
-                                const pins = item.deliveryPincodes.split(",").map((p: any) => p.trim());
-                                return pins.includes(guestPin);
-                            }
-                            return item.sellerPincode === guestPin;
-                        });
-                    }
-                    setFoodItems(items);
-                    setFoodCategories(data.foodCategories || []);
+                let items: any[] = [];
+                let cats: any[] = [];
+                let activePin = (defaultAddress?.pincode || "").trim() || null;
+
+                const exploreRes = await fetchApi("/api/public/explore");
+                if (exploreRes.ok) {
+                    const exploreData = await exploreRes.json();
+                    items = exploreData.foodItems || [];
+                    cats = exploreData.foodCategories || [];
                 }
+
+                if (status === "authenticated") {
+                    try {
+                        const userDashRes = await fetchApi("/api/user/dashboard");
+                        if (userDashRes.ok) {
+                            const userDashData = await userDashRes.json();
+                            if (userDashData?.userPincode && !activePin) {
+                                activePin = userDashData.userPincode.trim();
+                            }
+                            if (Array.isArray(userDashData?.foodItems) && userDashData.foodItems.length > 0) {
+                                items = userDashData.foodItems;
+                            }
+                        }
+                    } catch {
+                        // Fallback to explore catalogue data
+                    }
+                }
+
+                if (activePin) {
+                    const cleanPin = activePin.trim();
+                    items = items.filter((item: any) => {
+                        if (item.sellerPincode && item.sellerPincode.trim() === cleanPin) return true;
+                        if (Array.isArray(item.servedPincodes)) {
+                            for (const sp of item.servedPincodes) {
+                                if (typeof sp === "string" && (sp.trim() === cleanPin || sp.includes(cleanPin))) return true;
+                            }
+                        }
+                        if (item.deliveryPincodes) {
+                            const pins = String(item.deliveryPincodes).split(",").map((p: any) => p.trim());
+                            if (pins.includes(cleanPin)) return true;
+                        }
+                        if (item.sellerLocality) {
+                            const locPins = item.sellerLocality.match(/\b\d{6}\b/g);
+                            if (locPins && locPins.includes(cleanPin)) return true;
+                        }
+                        if (item.sellerLandmark) {
+                            const landPins = item.sellerLandmark.match(/\b\d{6}\b/g);
+                            if (landPins && landPins.includes(cleanPin)) return true;
+                        }
+                        return false;
+                    });
+                }
+
+                setFoodItems(items);
+                setFoodCategories(cats);
             } catch (error) {
                 console.error("Failed to fetch food items", error);
             } finally {

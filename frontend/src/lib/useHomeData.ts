@@ -371,6 +371,43 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     };
   }, []);
 
+  // Helper to check if a kitchen/dish serves or belongs to a pincode
+  const isPincodeServiced = (
+    targetPin: string,
+    mainPincode?: string,
+    servedPincodes?: string[],
+    locality?: string,
+    landmark?: string
+  ): boolean => {
+    const cleanPin = targetPin.trim();
+    if (!cleanPin) return true;
+
+    // 1. Direct registered / seller pincode match
+    if (mainPincode && mainPincode.trim() === cleanPin) return true;
+
+    // 2. Served operational pincodes match
+    if (Array.isArray(servedPincodes)) {
+      for (const sp of servedPincodes) {
+        if (typeof sp === 'string') {
+          const clean = sp.trim();
+          if (clean === cleanPin || clean.includes(cleanPin)) return true;
+        }
+      }
+    }
+
+    // 3. 6-digit pincode contained in address locality or landmark text
+    if (locality) {
+      const locPins = locality.match(/\b\d{6}\b/g);
+      if (locPins && locPins.includes(cleanPin)) return true;
+    }
+    if (landmark) {
+      const landPins = landmark.match(/\b\d{6}\b/g);
+      if (landPins && landPins.includes(cleanPin)) return true;
+    }
+
+    return false;
+  };
+
   // Compute active pincode from filter options or active location
   const activePincode = (options?.pincode || defaultAddress?.pincode || '').trim() || null;
 
@@ -379,9 +416,13 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     return foodItems.filter((item) => {
       // 1. Pincode match check
       if (activePincode) {
-        const itemPin = (item.sellerPincode || '').trim();
-        const servedPins = Array.isArray(item.servedPincodes) ? item.servedPincodes.map((p) => p.trim()) : [];
-        const matchPin = itemPin === activePincode || servedPins.includes(activePincode);
+        const matchPin = isPincodeServiced(
+          activePincode,
+          item.sellerPincode,
+          item.servedPincodes,
+          item.sellerLocality,
+          item.sellerLandmark
+        );
         if (!matchPin) return false;
       }
 
@@ -422,9 +463,13 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     return kitchens.filter((k) => {
       // 1. Pincode match check
       if (activePincode) {
-        const kPin = (k.pincode || '').trim();
-        const servedPins = Array.isArray(k.servedPincodes) ? k.servedPincodes.map((p) => p.trim()) : [];
-        const matchPin = kPin === activePincode || servedPins.includes(activePincode);
+        const matchPin = isPincodeServiced(
+          activePincode,
+          k.pincode,
+          k.servedPincodes,
+          k.locality,
+          k.landmark
+        );
         if (!matchPin) return false;
       }
 

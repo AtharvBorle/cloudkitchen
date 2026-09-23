@@ -311,12 +311,17 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   };
 
   const handleSaveChanges = async () => {
+    const cleanPin = registeredAddress?.match(/\b\d{6}\b/)?.[0] || seller.pincode || "";
+    const cleanCity = seller.city || "Pune";
+
     const payload = {
       ownerName,
       mobileNumber,
       primaryEmail,
       outletName,
       registeredAddress,
+      pincode: cleanPin,
+      city: cleanCity,
       latitude,
       longitude,
       isLocationPinned: Boolean(latitude && longitude),
@@ -330,6 +335,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       email: primaryEmail,
       phone: mobileNumber,
       address: registeredAddress,
+      pincode: cleanPin,
+      city: cleanCity,
       latitude,
       longitude,
       isLocationPinned: Boolean(latitude && longitude),
@@ -351,6 +358,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             email: primaryEmail,
             outletName,
             registeredAddress,
+            pincode: cleanPin,
+            city: cleanCity,
             latitude,
             longitude,
             isLocationPinned: Boolean(latitude && longitude),
