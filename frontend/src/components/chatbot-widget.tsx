@@ -70,10 +70,20 @@ export default function ChatbotWidget() {
     const pathname = usePathname();
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [history, setHistory] = useState<Message[][]>([]);
     const [inputText, setInputText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 640);
+        };
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
+        return () => window.removeEventListener("resize", checkMobile);
+    }, []);
 
     // Active Ticket Form states inside Chatbot (for pre-filled or custom ticket)
     const [ticketCategory, setTicketCategory] = useState("FOOD");
@@ -102,35 +112,40 @@ export default function ChatbotWidget() {
 
     const toggleOpen = (open: boolean) => {
         if (open) {
-            setPosition(prev => {
-                if (!prev) return null;
-                const openWidth = Math.min(420, window.innerWidth * 0.92);
-                const openHeight = Math.min(640, window.innerHeight - 80);
-                const dx = openWidth - 62;
-                const dy = openHeight - 62;
-                return {
-                    x: Math.max(0, prev.x - dx),
-                    y: Math.max(0, prev.y - dy)
-                };
-            });
+            if (!isMobile) {
+                setPosition(prev => {
+                    if (!prev) return null;
+                    const openWidth = Math.min(420, window.innerWidth * 0.92);
+                    const openHeight = Math.min(640, window.innerHeight - 80);
+                    const dx = openWidth - 62;
+                    const dy = openHeight - 62;
+                    return {
+                        x: Math.max(0, prev.x - dx),
+                        y: Math.max(0, prev.y - dy)
+                    };
+                });
+            }
             setIsOpen(true);
         } else {
-            setPosition(prev => {
-                if (!prev) return null;
-                const openWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : Math.min(420, window.innerWidth * 0.92);
-                const openHeight = containerRef.current ? containerRef.current.getBoundingClientRect().height : Math.min(640, window.innerHeight - 80);
-                const dx = openWidth - 62;
-                const dy = openHeight - 62;
-                return {
-                    x: prev.x + dx,
-                    y: prev.y + dy
-                };
-            });
+            if (!isMobile) {
+                setPosition(prev => {
+                    if (!prev) return null;
+                    const openWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : Math.min(420, window.innerWidth * 0.92);
+                    const openHeight = containerRef.current ? containerRef.current.getBoundingClientRect().height : Math.min(640, window.innerHeight - 80);
+                    const dx = openWidth - 62;
+                    const dy = openHeight - 62;
+                    return {
+                        x: prev.x + dx,
+                        y: prev.y + dy
+                    };
+                });
+            }
             setIsOpen(false);
         }
     };
 
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement | HTMLButtonElement>) => {
+        if (isMobile && isOpen) return;
         const target = e.target as HTMLElement;
         if (target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
             return;
@@ -156,6 +171,7 @@ export default function ChatbotWidget() {
     };
 
     const handleMouseMove = (e: MouseEvent) => {
+        if (isMobile && isOpen) return;
         const dx = e.clientX - dragRef.current.startX;
         const dy = e.clientY - dragRef.current.startY;
         
@@ -184,6 +200,7 @@ export default function ChatbotWidget() {
     };
 
     const handleTouchStart = (e: React.TouchEvent<HTMLDivElement | HTMLButtonElement>) => {
+        if (isMobile && isOpen) return;
         const target = e.target as HTMLElement;
         if (target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
             return;
@@ -1222,19 +1239,32 @@ Details: Category request submitted via chatbot assistant.`;
         return parts.length > 0 ? parts : text;
     };
 
-    const currentStyle: React.CSSProperties = position 
+    const currentStyle: React.CSSProperties = (isOpen && isMobile)
         ? {
             position: "fixed",
-            left: `${position.x}px`,
-            top: `${position.y}px`,
-            zIndex: 9999,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100vw",
+            height: "100dvh",
+            zIndex: 99999,
+            margin: 0,
+            padding: 0
           }
-        : {
-            position: "fixed",
-            bottom: "30px",
-            right: "30px",
-            zIndex: 9999,
-          };
+        : position 
+            ? {
+                position: "fixed",
+                left: `${position.x}px`,
+                top: `${position.y}px`,
+                zIndex: 9999,
+              }
+            : {
+                position: "fixed",
+                bottom: "30px",
+                right: "30px",
+                zIndex: 9999,
+              };
 
     return (
         <div ref={containerRef} style={currentStyle}>
@@ -1306,15 +1336,16 @@ Details: Category request submitted via chatbot assistant.`;
             {/* Chatbot Window */}
             {isOpen && (
                 <div style={{
-                    width: "min(420px, 92vw)",
-                    height: "min(640px, calc(100vh - 80px))",
+                    width: isMobile ? "100vw" : "min(420px, 92vw)",
+                    height: isMobile ? "100dvh" : "min(640px, calc(100vh - 80px))",
+                    maxHeight: isMobile ? "100dvh" : undefined,
                     backgroundColor: "#FFFDFB",
-                    borderRadius: "24px",
-                    boxShadow: "0 20px 50px rgba(15, 23, 42, 0.18), 0 6px 20px rgba(239, 68, 68, 0.08)",
+                    borderRadius: isMobile ? "0px" : "24px",
+                    boxShadow: isMobile ? "none" : "0 20px 50px rgba(15, 23, 42, 0.18), 0 6px 20px rgba(239, 68, 68, 0.08)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
-                    border: "1.5px solid #FDE8E1",
+                    border: isMobile ? "none" : "1.5px solid #FDE8E1",
                     transition: isDragging ? "none" : "all 0.3s ease"
                 }}>
                     
@@ -1325,13 +1356,15 @@ Details: Category request submitted via chatbot assistant.`;
                         onTouchStart={handleTouchStart}
                         style={{
                             backgroundColor: "#FFF9F6",
-                            padding: "16px 20px",
+                            padding: isMobile ? "14px 16px" : "16px 20px",
+                            paddingTop: isMobile ? "max(14px, env(safe-area-inset-top, 14px))" : "16px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
-                            cursor: isDragging ? "grabbing" : "grab",
+                            cursor: isMobile ? "default" : isDragging ? "grabbing" : "grab",
                             userSelect: "none",
-                            borderBottom: "1.5px solid #FDE8E1"
+                            borderBottom: "1.5px solid #FDE8E1",
+                            flexShrink: 0
                         }}
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -1411,56 +1444,72 @@ Details: Category request submitted via chatbot assistant.`;
                             <button
                                 onClick={() => loadGreeting()}
                                 style={{
-                                    width: "32px",
-                                    height: "32px",
+                                    width: "36px",
+                                    height: "36px",
                                     borderRadius: "50%",
                                     backgroundColor: "#FFFFFF",
-                                    border: "1px solid #FCDCD2",
+                                    border: "1.5px solid #FCDFD7",
                                     color: "#EF4444",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     cursor: "pointer",
-                                    transition: "all 0.2s"
+                                    boxShadow: "0 2px 6px rgba(239, 68, 68, 0.05)",
+                                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                                    padding: 0
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = "#FEECE5";
-                                    e.currentTarget.style.transform = "scale(1.05)";
+                                    e.currentTarget.style.backgroundColor = "#FFF5F1";
+                                    e.currentTarget.style.borderColor = "#FCA5A5";
+                                    e.currentTarget.style.transform = "scale(1.06)";
                                 }}
                                 onMouseLeave={(e) => {
                                     e.currentTarget.style.backgroundColor = "#FFFFFF";
+                                    e.currentTarget.style.borderColor = "#FCDFD7";
                                     e.currentTarget.style.transform = "scale(1)";
                                 }}
                                 title="Menu / Reset"
                             >
-                                <Menu size={16} />
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.8" strokeLinecap="round">
+                                    <line x1="4" y1="6" x2="20" y2="6" />
+                                    <line x1="4" y1="12" x2="20" y2="12" />
+                                    <line x1="4" y1="18" x2="20" y2="18" />
+                                </svg>
                             </button>
                             <button
                                 onClick={() => toggleOpen(false)}
                                 style={{
-                                    width: "32px",
-                                    height: "32px",
+                                    width: "36px",
+                                    height: "36px",
                                     borderRadius: "50%",
                                     backgroundColor: "#FFFFFF",
-                                    border: "1px solid #FCDCD2",
+                                    border: "1.5px solid #FCDFD7",
                                     color: "#EF4444",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     cursor: "pointer",
-                                    transition: "all 0.2s"
+                                    boxShadow: "0 2px 6px rgba(239, 68, 68, 0.05)",
+                                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                                    padding: 0
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = "#FEECE5";
-                                    e.currentTarget.style.transform = "scale(1.05)";
+                                    e.currentTarget.style.backgroundColor = "#FFF5F1";
+                                    e.currentTarget.style.borderColor = "#FCA5A5";
+                                    e.currentTarget.style.transform = "scale(1.06)";
                                 }}
                                 onMouseLeave={(e) => {
                                     e.currentTarget.style.backgroundColor = "#FFFFFF";
+                                    e.currentTarget.style.borderColor = "#FCDFD7";
                                     e.currentTarget.style.transform = "scale(1)";
                                 }}
                                 title="Close"
                             >
-                                <X size={16} />
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="9.5" strokeWidth="2.2" />
+                                    <line x1="9" y1="9" x2="15" y2="15" strokeWidth="2.6" />
+                                    <line x1="15" y1="9" x2="9" y2="15" strokeWidth="2.6" />
+                                </svg>
                             </button>
                         </div>
                     </div>
@@ -1795,8 +1844,8 @@ Details: Category request submitted via chatbot assistant.`;
                                                                         display: "flex",
                                                                         alignItems: "center",
                                                                         justifyContent: "center",
-                                                                        height: "48px",
-                                                                        marginBottom: "10px",
+                                                                        height: "56px",
+                                                                        marginBottom: "8px",
                                                                         width: "100%"
                                                                     }}>
                                                                         {imgIcon ? (
@@ -1804,9 +1853,12 @@ Details: Category request submitted via chatbot assistant.`;
                                                                                 src={imgIcon}
                                                                                 alt={parsed.text}
                                                                                 style={{
-                                                                                    maxHeight: "44px",
-                                                                                    maxWidth: "70px",
-                                                                                    objectFit: "contain"
+                                                                                    maxHeight: (imgIcon.includes("box") || imgIcon.includes("scooter")) ? "56px" : "44px",
+                                                                                    maxWidth: (imgIcon.includes("box") || imgIcon.includes("scooter")) ? "84px" : "76px",
+                                                                                    width: "auto",
+                                                                                    height: "auto",
+                                                                                    objectFit: "contain",
+                                                                                    transition: "transform 0.2s ease"
                                                                                 }}
                                                                             />
                                                                         ) : (
@@ -2051,12 +2103,14 @@ Details: Category request submitted via chatbot assistant.`;
 
                     {/* Bottom Input bar */}
                     <div style={{
-                        padding: "10px 14px 12px 14px",
+                        padding: isMobile ? "10px 12px 14px 12px" : "10px 14px 12px 14px",
+                        paddingBottom: isMobile ? "max(12px, env(safe-area-inset-bottom, 12px))" : "12px",
                         display: "flex",
                         alignItems: "center",
                         gap: "10px",
                         backgroundColor: "white",
-                        borderTop: "1px solid #F3E8E2"
+                        borderTop: "1px solid #F3E8E2",
+                        flexShrink: 0
                     }}>
                         <input
                             type="file"
