@@ -31,6 +31,8 @@ export interface DynamicFoodItem {
   rating?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
+  distanceKm?: number;
+  isWithin5km?: boolean;
 }
 
 export interface DynamicRoom {
@@ -82,6 +84,10 @@ export interface DynamicKitchen {
   isOnline: boolean;
   foodType?: string;
   servedPincodes?: string[];
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number;
+  isWithin5km?: boolean;
 }
 
 export interface HomeDataFilterOptions {
@@ -113,6 +119,47 @@ export interface HomeDataState {
   isLoading: boolean;
   error: string | null;
   isUsingFallback: boolean;
+}
+
+export const PINCODE_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "411001": { lat: 18.5204, lng: 73.8567 }, // Pune Station / Camp / Shaniwar Peth
+  "411002": { lat: 18.5135, lng: 73.8553 }, // Shukrawar Peth / Budhwar Peth
+  "411004": { lat: 18.5175, lng: 73.8398 }, // Deccan Gymkhana / FC Road
+  "411005": { lat: 18.5308, lng: 73.8475 }, // Shivajinagar
+  "411006": { lat: 18.5492, lng: 73.8967 }, // Yerwada / Kalyani Nagar
+  "411007": { lat: 18.5626, lng: 73.8087 }, // Aundh
+  "411011": { lat: 18.5262, lng: 73.8683 }, // Kasba Peth / Rasta Peth
+  "411014": { lat: 18.5679, lng: 73.9143 }, // Viman Nagar
+  "411016": { lat: 18.5293, lng: 73.8344 }, // Model Colony / Gokhalenagar
+  "411028": { lat: 18.5089, lng: 73.9260 }, // Hadapsar / Magarpatta
+  "411030": { lat: 18.5080, lng: 73.8490 }, // Sadashiv Peth / Narayan Peth
+  "411038": { lat: 18.5074, lng: 73.8077 }, // Kothrud / Paud Road / Karve Road
+  "411041": { lat: 18.4680, lng: 73.8180 }, // Vadgaon Budruk / Sinhagad Road
+  "411045": { lat: 18.5590, lng: 73.7868 }, // Baner / Balewadi
+  "411048": { lat: 18.4710, lng: 73.8790 }, // Kondhwa
+  "411051": { lat: 18.4960, lng: 73.8390 }, // Dattawadi / Parvati / Sahakar Nagar
+  "411052": { lat: 18.4900, lng: 73.8200 }, // Karve Nagar / Hingne
+  "411057": { lat: 18.5913, lng: 73.7389 }, // Hinjawadi / Wakad
+  "411058": { lat: 18.4480, lng: 73.8560 }, // Katraj / Dhankawadi
+};
+
+export function calculateDistanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(2));
 }
 
 export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
@@ -411,96 +458,159 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   // Compute active pincode from filter options or active location
   const activePincode = (options?.pincode || defaultAddress?.pincode || '').trim() || null;
 
-  // Compute filtered food items based on activePincode + passed filter options
+  // Resolve user coordinates from active address GPS or active pincode center
+  const userLat = defaultAddress?.latitude ?? (activePincode ? PINCODE_COORDINATES[activePincode]?.lat : undefined);
+  const userLng = defaultAddress?.longitude ?? (activePincode ? PINCODE_COORDINATES[activePincode]?.lng : undefined);
+
+  // Compute filtered food items based on 5km radius + pincode matching + options
   const filteredFoodItems = useMemo(() => {
-    return foodItems.filter((item) => {
-      // 1. Pincode match check
-      if (activePincode) {
-        const matchPin = isPincodeServiced(
-          activePincode,
-          item.sellerPincode,
-          item.servedPincodes,
-          item.sellerLocality,
-          item.sellerLandmark
-        );
-        if (!matchPin) return false;
+    const list: Array<DynamicFoodItem & { distanceKm?: number; isWithin5km?: boolean }> = [];
+
+    foodItems.forEach((item) => {
+      const kLat = item.sellerPincode ? PINCODE_COORDINATES[item.sellerPincode]?.lat : undefined;
+      const kLng = item.sellerPincode ? PINCODE_COORDINATES[item.sellerPincode]?.lng : undefined;
+
+      let distanceKm: number | undefined;
+      let isWithin5km = false;
+
+      if (userLat !== undefined && userLng !== undefined && kLat !== undefined && kLng !== undefined) {
+        distanceKm = calculateDistanceKm(userLat, userLng, kLat, kLng);
+        if (distanceKm <= 5.0) {
+          isWithin5km = true;
+        }
       }
 
-      if (!options) return true;
-      const { searchQuery, category, vegOnly, minPrice, maxPrice, minRating } = options;
+      const isPinMatched = activePincode
+        ? isPincodeServiced(
+            activePincode,
+            item.sellerPincode,
+            item.servedPincodes,
+            item.sellerLocality,
+            item.sellerLandmark
+          )
+        : true;
 
-      if (vegOnly && (item.itemType === "NON_VEG" || item.itemType?.includes("NON_VEG"))) return false;
-
-      if (category && category !== "all" && category !== "food") {
-        const c = category.toLowerCase();
-        const matchCat =
-          item.categoryName?.toLowerCase().includes(c) ||
-          item.name.toLowerCase().includes(c) ||
-          item.description.toLowerCase().includes(c);
-        if (!matchCat) return false;
+      // Match if within 5km radius OR explicitly matching/serving the pincode
+      if (activePincode && !isWithin5km && !isPinMatched) {
+        return;
       }
 
-      if (searchQuery && searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchQuery =
-          item.name.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q) ||
-          item.sellerName.toLowerCase().includes(q) ||
-          item.categoryName?.toLowerCase().includes(q);
-        if (!matchQuery) return false;
+      if (options) {
+        const { searchQuery, category, vegOnly, minPrice, maxPrice, minRating } = options;
+
+        if (vegOnly && (item.itemType === "NON_VEG" || item.itemType?.includes("NON_VEG"))) return;
+
+        if (category && category !== "all" && category !== "food") {
+          const c = category.toLowerCase();
+          const matchCat =
+            item.categoryName?.toLowerCase().includes(c) ||
+            item.name.toLowerCase().includes(c) ||
+            item.description.toLowerCase().includes(c);
+          if (!matchCat) return;
+        }
+
+        if (searchQuery && searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchQuery =
+            item.name.toLowerCase().includes(q) ||
+            item.description.toLowerCase().includes(q) ||
+            item.sellerName.toLowerCase().includes(q) ||
+            item.categoryName?.toLowerCase().includes(q);
+          if (!matchQuery) return;
+        }
+
+        if (minPrice !== undefined && item.price < minPrice) return;
+        if (maxPrice !== undefined && item.price > maxPrice) return;
+        if (minRating !== undefined && (item.rating || 0) < minRating) return;
       }
 
-      if (minPrice !== undefined && item.price < minPrice) return false;
-      if (maxPrice !== undefined && item.price > maxPrice) return false;
-      if (minRating !== undefined && (item.rating || 0) < minRating) return false;
-
-      return true;
+      list.push({
+        ...item,
+        distanceKm,
+        isWithin5km,
+      });
     });
-  }, [foodItems, activePincode, options]);
 
-  // Compute filtered kitchens based on activePincode + passed filter options
+    return list.sort((a, b) => {
+      if (a.isWithin5km && !b.isWithin5km) return -1;
+      if (!a.isWithin5km && b.isWithin5km) return 1;
+      if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
+        return a.distanceKm - b.distanceKm;
+      }
+      return (b.rating || 0) - (a.rating || 0);
+    });
+  }, [foodItems, activePincode, userLat, userLng, options]);
+
+  // Compute filtered kitchens based on 5km radius + pincode matching + options
   const filteredKitchens = useMemo(() => {
-    return kitchens.filter((k) => {
-      // 1. Pincode match check
-      if (activePincode) {
-        const matchPin = isPincodeServiced(
-          activePincode,
-          k.pincode,
-          k.servedPincodes,
-          k.locality,
-          k.landmark
-        );
-        if (!matchPin) return false;
+    const list: Array<DynamicKitchen & { distanceKm?: number; isWithin5km?: boolean }> = [];
+
+    kitchens.forEach((k) => {
+      const kLat = k.latitude ?? (k.pincode ? PINCODE_COORDINATES[k.pincode]?.lat : undefined);
+      const kLng = k.longitude ?? (k.pincode ? PINCODE_COORDINATES[k.pincode]?.lng : undefined);
+
+      let distanceKm: number | undefined;
+      let isWithin5km = false;
+
+      if (userLat !== undefined && userLng !== undefined && kLat !== undefined && kLng !== undefined) {
+        distanceKm = calculateDistanceKm(userLat, userLng, kLat, kLng);
+        if (distanceKm <= 5.0) {
+          isWithin5km = true;
+        }
       }
 
-      if (!options) return true;
-      const { searchQuery, category, vegOnly, minRating } = options;
+      // 1. Pincode / Service area check
+      const isPinMatched = activePincode
+        ? isPincodeServiced(activePincode, k.pincode, k.servedPincodes, k.locality, k.landmark)
+        : true;
 
-      if (vegOnly && k.foodType === "NON_VEG") return false;
-
-      if (category && category !== "all" && category !== "food" && category !== "rooms") {
-        const c = category.toLowerCase();
-        const matchCat =
-          k.category?.toLowerCase().includes(c) ||
-          k.name.toLowerCase().includes(c);
-        if (!matchCat) return false;
+      // Match if within 5km radius OR explicitly matching/serving the pincode
+      if (activePincode && !isWithin5km && !isPinMatched) {
+        return;
       }
 
-      if (searchQuery && searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchQuery =
-          k.name.toLowerCase().includes(q) ||
-          k.category?.toLowerCase().includes(q) ||
-          k.locality?.toLowerCase().includes(q) ||
-          k.city?.toLowerCase().includes(q);
-        if (!matchQuery) return false;
+      if (options) {
+        const { searchQuery, category, vegOnly, minRating } = options;
+
+        if (vegOnly && k.foodType === "NON_VEG") return;
+
+        if (category && category !== "all" && category !== "food" && category !== "rooms") {
+          const c = category.toLowerCase();
+          const matchCat =
+            k.category?.toLowerCase().includes(c) ||
+            k.name.toLowerCase().includes(c);
+          if (!matchCat) return;
+        }
+
+        if (searchQuery && searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchQuery =
+            k.name.toLowerCase().includes(q) ||
+            k.category?.toLowerCase().includes(q) ||
+            k.locality?.toLowerCase().includes(q) ||
+            k.city?.toLowerCase().includes(q);
+          if (!matchQuery) return;
+        }
+
+        if (minRating !== undefined && (k.rating || 0) < minRating) return;
       }
 
-      if (minRating !== undefined && (k.rating || 0) < minRating) return false;
-
-      return true;
+      list.push({
+        ...k,
+        distanceKm,
+        isWithin5km,
+      });
     });
-  }, [kitchens, activePincode, options]);
+
+    return list.sort((a, b) => {
+      if (a.isWithin5km && !b.isWithin5km) return -1;
+      if (!a.isWithin5km && b.isWithin5km) return 1;
+      if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
+        return a.distanceKm - b.distanceKm;
+      }
+      return (b.rating || 0) - (a.rating || 0);
+    });
+  }, [kitchens, activePincode, userLat, userLng, options]);
 
   return {
     categories,
