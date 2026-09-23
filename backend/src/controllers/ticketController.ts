@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api-error";
 export const createTicket = async (req: Request) => {
     const session = await getAuthSession();
     if (!session?.user) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to create a support ticket.", 401);
     }
 
     const { title, description, category, userId } = await req.json();
@@ -41,7 +41,7 @@ export const createTicket = async (req: Request) => {
 export const listTickets = async () => {
     const session = await getAuthSession();
     if (!session?.user) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to view your support tickets.", 401);
     }
 
     const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
@@ -68,7 +68,7 @@ export const listTickets = async () => {
 export const getTicketDetails = async (id: string) => {
     const session = await getAuthSession();
     if (!session?.user) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to view ticket details.", 401);
     }
 
     const ticket = await db.ticket.findUnique({
@@ -104,7 +104,7 @@ export const getTicketDetails = async (id: string) => {
 
     const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
     if (!isSuperAdmin && ticket.userId !== session.user.id) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You do not have permission to view this ticket.", 403);
     }
 
     return ticket;
@@ -113,7 +113,7 @@ export const getTicketDetails = async (id: string) => {
 export const updateTicketStatus = async (id: string, req: Request) => {
     const session = await getAuthSession();
     if (!session?.user) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to update ticket status.", 401);
     }
 
     const { status } = await req.json();
@@ -133,7 +133,7 @@ export const updateTicketStatus = async (id: string, req: Request) => {
     const isOwner = ticket.userId === session.user.id;
 
     if (!isAdmin && !isOwner) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You do not have permission to update this ticket.", 403);
     }
 
     if (!isAdmin && status !== "RESOLVED" && status !== "OPEN") {
@@ -151,7 +151,7 @@ export const updateTicketStatus = async (id: string, req: Request) => {
 export const sendTicketMessage = async (id: string, req: Request) => {
     const session = await getAuthSession();
     if (!session?.user) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to send a reply.", 401);
     }
 
     const ticket = await db.ticket.findUnique({ where: { id } });
@@ -165,7 +165,7 @@ export const sendTicketMessage = async (id: string, req: Request) => {
 
     const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
     if (!isSuperAdmin && ticket.userId !== session.user.id) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You do not have permission to reply to this ticket.", 403);
     }
 
     const { message } = await req.json();

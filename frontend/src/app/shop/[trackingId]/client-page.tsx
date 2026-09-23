@@ -117,7 +117,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
 
         const fetchShop = async () => {
             try {
-                const res = await fetchApi(`/api/public/shop/${trackingId}`);
+                const res = await fetchApi(`/api/public/shop/${encodeURIComponent(trackingId)}`);
                 if (res.ok) {
                     const data = await res.json();
                     setSeller(data.data || data);

@@ -4,15 +4,18 @@ import { ApiError } from "@/lib/api-error";
 
 export const getSystemSetting = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view system settings.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const url = new URL(req.url);
     const key = url.searchParams.get("key");
 
     if (!key) {
-        throw new ApiError("Key parameter is required", 400);
+        throw new ApiError("Key parameter is required.", 400);
     }
 
     const setting = await db.systemSettings.findUnique({
@@ -28,14 +31,17 @@ export const getSystemSetting = async (req: Request) => {
 
 export const updateSystemSetting = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update system settings.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const { key, value } = await req.json();
 
     if (!key || value === undefined) {
-        throw new ApiError("Key and value are required", 400);
+        throw new ApiError("Setting key and value are required.", 400);
     }
 
     const updatedSetting = await db.systemSettings.upsert({

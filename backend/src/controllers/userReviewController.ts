@@ -4,8 +4,11 @@ import { ApiError } from "@/lib/api-error";
 
 export const getOrderReview = async (orderId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your order review.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const review = await db.review.findFirst({
@@ -23,8 +26,11 @@ export const getOrderReview = async (orderId: string) => {
 
 export const submitOrderReview = async (orderId: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to submit a review.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     // Find the order
@@ -37,7 +43,7 @@ export const submitOrderReview = async (orderId: string, req: Request) => {
     }
 
     if (order.userId !== session.user.id) {
-        throw new ApiError("Unauthorized to review this order", 403);
+        throw new ApiError("Access denied. You can only review orders placed from your own account.", 403);
     }
 
     if (order.status !== "DELIVERED") {
@@ -153,13 +159,13 @@ export const submitAppFeedback = async (req: Request) => {
         data: {
             userId: userId,
             sellerId: sellerId,
-            orderId: null,
+            orderId: null as any,
             rating: parsedRating,
             comment: comment ? String(comment).trim() : null,
             aspects: aspectsJson,
             tags: tagsJson,
             sentiment: sentiment ? String(sentiment).trim() : null
-        },
+        } as any,
         include: {
             user: {
                 select: { name: true, email: true }
@@ -213,9 +219,9 @@ export const getAppFeedback = async () => {
 
     const formattedReviews = reviews.map((r) => ({
         ...r,
-        aspects: parseJsonArray(r.aspects),
-        tags: parseJsonArray(r.tags),
-        sentiment: r.sentiment || null,
+        aspects: parseJsonArray((r as any).aspects),
+        tags: parseJsonArray((r as any).tags),
+        sentiment: (r as any).sentiment || null,
         managerResponse: r.sellerReply ? {
             text: r.sellerReply,
             createdAt: r.repliedAt || r.updatedAt,

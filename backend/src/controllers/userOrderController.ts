@@ -7,8 +7,11 @@ import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/re
 
 export const initiateOrderPayment = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to proceed with payment.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required to place orders.", 403);
     }
 
     const { totalAmount, sellerId } = await req.json();
@@ -65,8 +68,11 @@ export const initiateOrderPayment = async (req: Request) => {
 
 export const createOrder = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to place your order.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required to place orders.", 403);
     }
 
     const {
@@ -351,8 +357,11 @@ export const createOrder = async (req: Request) => {
 
 export const cancelOrder = async (id: string, ticketId?: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || (session.user.role !== "USER" && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT" && session.user.role !== "AGENT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to cancel an order.", 401);
+    }
+    if (session.user.role !== "USER" && session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT" && session.user.role !== "AGENT") {
+        throw new ApiError("Access denied. You do not have permission to cancel orders.", 403);
     }
 
     const order = await db.order.findUnique({
@@ -361,12 +370,12 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
     });
 
     if (!order) {
-        throw new ApiError("Order not found", 404);
+        throw new ApiError("Order not found.", 404);
     }
 
     const isAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT" || session.user.role === "AGENT";
     if (order.userId !== session.user.id && !isAdmin) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You can only cancel orders placed from your own account.", 403);
     }
 
     if (order.status === "CANCELLED" || order.status === "DELIVERED") {
@@ -446,8 +455,11 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
 
 export const verifyOrderPayment = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to verify your payment.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = await req.json();
@@ -465,7 +477,7 @@ export const verifyOrderPayment = async (req: Request) => {
     }
 
     if (order.userId !== session.user.id) {
-        throw new ApiError("Unauthorized access to order", 403);
+        throw new ApiError("Access denied. You can only verify payments for your own orders.", 403);
     }
 
     if (order.razorpayOrderId !== razorpay_order_id) {
@@ -501,8 +513,8 @@ export const verifyOrderPayment = async (req: Request) => {
 
 export const getOrderDetails = async (id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view order details.", 401);
     }
 
     const order = await db.order.findUnique({
@@ -549,7 +561,7 @@ export const getOrderDetails = async (id: string) => {
     const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN" || session.user.role === "SUPPORT" || session.user.role === "AGENT";
 
     if (!isBuyer && !isSeller && !isDeliveryBoy && !isAdmin) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You do not have permission to view this order.", 403);
     }
 
     let appliedCoupon = null;
@@ -572,8 +584,8 @@ export const getOrderDetails = async (id: string) => {
 
 export const validateReorder = async (orderId: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to reorder.", 401);
     }
 
     if (!orderId) {

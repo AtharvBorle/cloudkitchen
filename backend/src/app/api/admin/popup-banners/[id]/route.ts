@@ -18,8 +18,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to delete popup banners.", error: "Please log in first to delete popup banners." }, { status: 401 });
+        }
+        if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Admin privileges required.", error: "Access denied. Admin privileges required." }, { status: 403 });
         }
 
         if (session.user.role === "AGENT") {
@@ -27,7 +30,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
                 where: { userId: session.user.id }
             });
             if (!agentProfile || !agentProfile.canManageBanners) {
-                return NextResponse.json({ message: "You do not have permission to manage popup banners" }, { status: 403 });
+                return NextResponse.json({ success: false, message: "You do not have permission to manage popup banners.", error: "You do not have permission to manage popup banners." }, { status: 403 });
             }
         }
 

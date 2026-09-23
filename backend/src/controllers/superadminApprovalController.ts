@@ -4,8 +4,11 @@ import { ApiError } from "@/lib/api-error";
 
 export const getPendingApprovals = async () => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view pending approvals.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const pendingBanners = await db.popupBanner.findMany({
@@ -23,15 +26,18 @@ export const getPendingApprovals = async () => {
 
 export const updateApprovalStatus = async (req: Request, type: string, id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update approval status.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const body = await req.json();
     const { action, adminNote } = body;
 
     if (!["APPROVE", "REJECT", "REVISION"].includes(action)) {
-        throw new ApiError("Invalid action", 400);
+        throw new ApiError("Invalid action specified (must be APPROVE, REJECT, or REVISION).", 400);
     }
 
     const status = action === "APPROVE" ? "APPROVED" : action === "REJECT" ? "REJECTED" : "REVISION";
@@ -49,6 +55,6 @@ export const updateApprovalStatus = async (req: Request, type: string, id: strin
         });
         return { coupon: updated };
     } else {
-        throw new ApiError("Invalid item type", 400);
+        throw new ApiError("Invalid item type specified.", 400);
     }
 };

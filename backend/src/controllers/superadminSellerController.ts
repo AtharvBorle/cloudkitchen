@@ -4,8 +4,11 @@ import { ApiError } from "@/lib/api-error";
 
 export const getSuperadminSellers = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view sellers.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const sellers = await db.user.findMany({

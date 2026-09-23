@@ -6,8 +6,11 @@ import crypto from "crypto";
 
 export const createBooking = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to book a room.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required to book rooms.", 403);
     }
 
     const { roomId, startDate, endDate, totalAmount, paymentMethod } = await req.json();
@@ -81,8 +84,11 @@ export const createBooking = async (req: Request) => {
 
 export const initiateBookingPayment = async (req: Request, bookingId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to pay for your booking.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const booking = await db.booking.findUnique({
@@ -94,7 +100,7 @@ export const initiateBookingPayment = async (req: Request, bookingId: string) =>
     }
 
     if (booking.userId !== session.user.id) {
-        throw new ApiError("Unauthorized access to booking", 403);
+        throw new ApiError("Access denied. You can only pay for your own room bookings.", 403);
     }
 
     if (booking.status !== "CONFIRMED") {
@@ -139,8 +145,11 @@ export const initiateBookingPayment = async (req: Request, bookingId: string) =>
 
 export const verifyBookingPayment = async (req: Request, bookingId: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to verify your booking payment.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
@@ -158,7 +167,7 @@ export const verifyBookingPayment = async (req: Request, bookingId: string) => {
     }
 
     if (booking.userId !== session.user.id) {
-        throw new ApiError("Unauthorized access to booking", 403);
+        throw new ApiError("Access denied. You can only verify payments for your own bookings.", 403);
     }
 
     if (booking.razorpayOrderId !== razorpay_order_id) {

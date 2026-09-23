@@ -36,7 +36,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
 
     async function loadLiveSeller() {
       try {
-        const res = await fetchApi(`/api/public/shop/${kitchenId}`);
+        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(kitchenId)}`);
         if (res.ok) {
           const resData = await res.json();
           const liveData = resData?.data || resData;
@@ -44,7 +44,8 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             let mealPlansData: any[] = liveData.mealPlans || [];
             if ((!mealPlansData || mealPlansData.length === 0) && (liveData.id || liveData.trackingId || kitchenId)) {
               try {
-                const plansRes = await fetchApi(`/api/public/meal-plans?sellerId=${liveData.id || liveData.trackingId || kitchenId}`);
+                const targetSellerParam = encodeURIComponent(liveData.id || liveData.trackingId || kitchenId);
+                const plansRes = await fetchApi(`/api/public/meal-plans?sellerId=${targetSellerParam}`);
                 if (plansRes.ok) {
                   const plansJson = await plansRes.json();
                   mealPlansData = plansJson.data || plansJson;

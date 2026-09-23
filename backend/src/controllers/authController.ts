@@ -345,7 +345,7 @@ export const loginUser = async (req: Request) => {
     const { email, password } = await req.json();
 
     if (!email || !password) {
-        throw new ApiError("Email and password are required", 400);
+        throw new ApiError("Email and password are required. Please enter your credentials.", 400);
     }
 
     const normalizedEmail = email.toLowerCase();
@@ -355,13 +355,13 @@ export const loginUser = async (req: Request) => {
     });
 
     if (!user) {
-        throw new ApiError("Invalid credentials", 401);
+        throw new ApiError("Invalid email or password. Please check your credentials and try again.", 401);
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
-        throw new ApiError("Invalid credentials", 401);
+        throw new ApiError("Invalid email or password. Please check your credentials and try again.", 401);
     }
 
     // Use NEXTAUTH_SECRET as the JWT secret, or a fallback for dev

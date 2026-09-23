@@ -4,8 +4,11 @@ import { ApiError } from "@/lib/api-error";
 
 export const getSubscriptionPlans = async () => {
     const session = await getAuthSession();
-    if (!session || (session.user.role !== "SUPERADMIN" && session.user.role !== "SELLER")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view subscription plans.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Authorized account required.", 403);
     }
 
     const whereClause = session.user.role === "SUPERADMIN" ? {} : { isActive: true };
@@ -20,14 +23,17 @@ export const getSubscriptionPlans = async () => {
 
 export const createSubscriptionPlan = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create subscription plans.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const { name, price, durationMonths, features, category } = await req.json();
 
     if (!name || isNaN(price) || isNaN(durationMonths)) {
-        throw new ApiError("Name, price, and duration are required", 400);
+        throw new ApiError("Plan name, price, and duration are required.", 400);
     }
 
     const plan = await db.subscriptionPlan.create({

@@ -2,13 +2,17 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 
 export const getSellerProfile = async () => {
     const session = await getAuthSession();
 
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your seller profile.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const user = await db.user.findUnique({
@@ -30,7 +34,7 @@ export const getSellerProfile = async () => {
     });
 
     if (!user || !user.sellerProfile) {
-        throw new ApiError("Profile not found", 404);
+        throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
     }
 
     return {
@@ -42,8 +46,11 @@ export const getSellerProfile = async () => {
 export const updateSellerProfile = async (req: Request) => {
     const session = await getAuthSession();
 
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update your seller profile.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const contentType = req.headers.get("content-type") || "";
@@ -124,7 +131,7 @@ export const updateSellerProfile = async (req: Request) => {
             }
         });
         if (existingUser) {
-            throw new ApiError("Email is already in use by another account", 400);
+            throw new ApiError("This email address is already in use by another account.", 400);
         }
         userDataToUpdate.email = cleanEmail;
     }
@@ -137,10 +144,10 @@ export const updateSellerProfile = async (req: Request) => {
 
     if (newPassword) {
         if (typeof newPassword !== "string" || newPassword.length < 6) {
-            throw new ApiError("New password must be at least 6 characters long", 400);
+            throw new ApiError("New password must be at least 6 characters long.", 400);
         }
         if (!currentPassword) {
-            throw new ApiError("Current password is required to set a new password", 400);
+            throw new ApiError("Please provide your current password to set a new password.", 400);
         }
 
         const currentUser = await db.user.findUnique({
@@ -150,7 +157,7 @@ export const updateSellerProfile = async (req: Request) => {
         if (currentUser?.passwordHash) {
             const isMatch = await bcrypt.compare(currentPassword, currentUser.passwordHash);
             if (!isMatch) {
-                throw new ApiError("Current password is incorrect", 400);
+                throw new ApiError("Your current password does not match our records.", 400);
             }
         }
 
@@ -195,6 +202,15 @@ export const updateSellerProfile = async (req: Request) => {
             where: { userId: session.user.id },
             data: profileUpdateData
         });
+
+        try {
+            revalidateTag("explore", {});
+            revalidateTag("public-explore-data", {});
+            revalidateTag("categories", {});
+            revalidateTag("public-categories", {});
+        } catch (e) {
+            // Context fallback
+        }
     }
 
     const user = await db.user.findUnique({
@@ -220,8 +236,11 @@ export const updateSellerProfile = async (req: Request) => {
 
 export const getSellerStatus = async () => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to check kitchen online status.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const profile = await db.sellerProfile.findUnique({
@@ -230,7 +249,7 @@ export const getSellerStatus = async () => {
     });
 
     if (!profile) {
-        throw new ApiError("Profile not found", 404);
+        throw new ApiError("Seller profile could not be found.", 404);
     }
 
     return { isOnline: profile.isOnline };
@@ -238,15 +257,18 @@ export const getSellerStatus = async () => {
 
 export const updateSellerStatus = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update kitchen online status.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const body = await req.json();
     const { isOnline } = body;
 
     if (typeof isOnline !== 'boolean') {
-        throw new ApiError("Invalid status value", 400);
+        throw new ApiError("Please provide a valid online/offline status (true/false).", 400);
     }
 
     const updatedProfile = await db.sellerProfile.update({
@@ -259,15 +281,25 @@ export const updateSellerStatus = async (req: Request) => {
 
 export const getSellerById = async (id: string) => {
     if (!id) {
-        throw new ApiError("Seller ID is required", 400);
+        throw new ApiError("Seller ID is required.", 400);
     }
+    const cleanId = decodeURIComponent(id).trim();
 
-    const seller = await db.sellerProfile.findUnique({
-        where: { id: id },
+    const seller = await db.sellerProfile.findFirst({
+        where: {
+            OR: [
+                { id: cleanId },
+                { trackingId: { equals: cleanId, mode: 'insensitive' } },
+                { userId: cleanId },
+                { businessName: { equals: cleanId, mode: 'insensitive' } }
+            ]
+        },
         include: {
             user: {
                 select: {
-                    pincode: true
+                    name: true,
+                    pincode: true,
+                    city: true
                 }
             },
             foodItems: {
@@ -285,7 +317,7 @@ export const getSellerById = async (id: string) => {
     });
 
     if (!seller) {
-        throw new ApiError("Seller not found", 404);
+        throw new ApiError("The requested seller/restaurant could not be found.", 404);
     }
 
     return seller;

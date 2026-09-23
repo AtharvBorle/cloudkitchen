@@ -6,8 +6,8 @@ import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 export const getUserProfile = async () => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your profile.", 401);
     }
 
     const user = await db.user.findUnique({
@@ -29,7 +29,7 @@ export const getUserProfile = async () => {
     });
 
     if (!user) {
-        throw new ApiError("User not found", 404);
+        throw new ApiError("User account not found.", 404);
     }
 
     return user;
@@ -37,8 +37,8 @@ export const getUserProfile = async () => {
 
 export const updateUserProfile = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update your profile.", 401);
     }
 
     const body = await req.json();
@@ -111,8 +111,11 @@ export const updateUserProfile = async (req: Request) => {
 
 export const getUserDashboard = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your dashboard.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const currentUser = await db.user.findUnique({
@@ -224,8 +227,11 @@ export const getUserDashboard = async () => {
 
 export const updateUserLocation = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update your location.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const { pincode: clientPincode, lat, lng } = await req.json();

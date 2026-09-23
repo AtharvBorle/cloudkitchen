@@ -4,8 +4,8 @@ import { ApiError } from "@/lib/api-error";
 
 export const getUserMealSubscriptions = async () => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized. Please log in to view subscriptions.", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your meal subscriptions.", 401);
     }
 
     const subscriptions = await db.userMealSubscription.findMany({
@@ -89,8 +89,8 @@ export const getUserMealSubscriptions = async () => {
 
 export const createUserMealSubscription = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized. Please log in to subscribe.", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to subscribe to a meal plan.", 401);
     }
 
     const body = await req.json();
@@ -154,8 +154,8 @@ export const createUserMealSubscription = async (req: Request) => {
 
 export const cancelUserMealSubscription = async (subscriptionId: string, reason?: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized. Please log in.", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage your meal subscription.", 401);
     }
 
     const subscription = await db.userMealSubscription.findFirst({
@@ -167,7 +167,7 @@ export const cancelUserMealSubscription = async (subscriptionId: string, reason?
     });
 
     if (!subscription) {
-        throw new ApiError("Subscription not found or unauthorized", 404);
+        throw new ApiError("Subscription not found or you do not have permission to cancel it.", 404);
     }
 
     // Dynamic seller policy enforcement: check if seller allowed cancellation
@@ -203,8 +203,8 @@ export const cancelUserMealSubscription = async (subscriptionId: string, reason?
 
 export const changeUserMealPlan = async (subscriptionId: string, newPlanId: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized. Please log in.", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to change your meal plan.", 401);
     }
 
     if (!newPlanId) {
@@ -285,8 +285,8 @@ export const changeUserMealPlan = async (subscriptionId: string, newPlanId: stri
 
 export const togglePauseUserMealSubscription = async (subscriptionId: string, isPaused: boolean) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized. Please log in.", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage your subscription status.", 401);
     }
 
     const subscription = await db.userMealSubscription.findFirst({

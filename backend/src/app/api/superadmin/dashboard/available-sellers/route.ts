@@ -6,8 +6,11 @@ import { ApiError } from "@/lib/api-error";
 export async function GET() {
     try {
         const session = await getAuthSession();
-        if (!session || !session.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
-            throw new ApiError("Unauthorized", 401);
+        if (!session?.user) {
+            throw new ApiError("Please log in first to view available sellers.", 401);
+        }
+        if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN") {
+            throw new ApiError("Access denied. Admin privileges required.", 403);
         }
 
         let availableSellers = [];

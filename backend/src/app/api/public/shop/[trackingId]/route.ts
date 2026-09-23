@@ -5,54 +5,89 @@ import { getCategoryExpiries } from "@/lib/subscription";
 
 export async function GET(req: Request, { params }: { params: Promise<{ trackingId: string }> }) {
     try {
-        const { trackingId } = await params;
+        const rawParam = (await params).trackingId || "";
+        const trackingId = decodeURIComponent(rawParam).trim();
 
-        const seller = await db.sellerProfile.findFirst({
-            where: {
-                OR: [
-                    { trackingId: trackingId },
-                    { id: trackingId },
-                    { userId: trackingId }
-                ]
+        if (!trackingId) {
+            throw new ApiError("Shop identifier is required", 400);
+        }
+
+        const includeRelations = {
+            user: true,
+            servedPincodes: true,
+            foodItems: {
+                where: { isAvailable: true },
+                include: {
+                    itemRatings: true,
+                    foodCategory: true,
+                    foodSubCategory: true
+                }
             },
-            include: {
-                user: true,
-                foodItems: {
-                    where: { isAvailable: true },
-                    include: {
-                        itemRatings: true,
-                        foodCategory: true,
-                        foodSubCategory: true
-                    }
-                },
-                rooms: {
-                    where: { isAvailable: true }
-                },
-                subscriptions: {
-                    where: { status: "ACTIVE" },
-                    include: { plan: true }
-                },
-                mealPlans: {
-                    where: { status: "Live" },
-                    orderBy: { weeklyPrice: "asc" }
-                },
-                reviews: {
-                    include: {
-                        user: {
-                            select: { name: true }
-                        },
-                        itemRatings: {
-                            include: {
-                                foodItem: {
-                                    select: { name: true }
-                                }
+            rooms: {
+                where: { isAvailable: true }
+            },
+            subscriptions: {
+                where: { status: "ACTIVE" },
+                include: { plan: true }
+            },
+            mealPlans: {
+                where: { status: "Live" },
+                orderBy: { weeklyPrice: "asc" as const }
+            },
+            reviews: {
+                include: {
+                    user: {
+                        select: { name: true }
+                    },
+                    itemRatings: {
+                        include: {
+                            foodItem: {
+                                select: { name: true }
                             }
                         }
-                    },
-                    orderBy: { createdAt: "desc" }
-                }
+                    }
+                },
+                orderBy: { createdAt: "desc" as const }
             }
+        };
+
+        // 1. Direct and case-insensitive match on trackingId, id, userId, or businessName
+        let seller = await db.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { trackingId: { equals: trackingId, mode: 'insensitive' } },
+                    { id: trackingId },
+                    { userId: trackingId },
+                    { businessName: { equals: trackingId, mode: 'insensitive' } },
+                    { user: { name: { equals: trackingId, mode: 'insensitive' } } }
+                ]
+            },
+            include: includeRelations
         });
+
+        // 2. Slug and normalized fallback matching if not found
+        if (!seller) {
+            const cleanSlug = trackingId.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const withoutKitchenPrefix = trackingId.replace(/^kitchen[-_ ]?/i, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+            const allSellers = await db.sellerProfile.findMany({
+                where: { user: { isActive: true } },
+                include: includeRelations
+            });
+
+            seller = allSellers.find((s) => {
+                const sTracking = (s.trackingId || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const sBusiness = (s.businessName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const sUser = (s.user?.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const sId = (s.id || "").toLowerCase();
+
+                return (
+                    (cleanSlug && (sTracking === cleanSlug || sBusiness === cleanSlug || sUser === cleanSlug)) ||
+                    sId === trackingId.toLowerCase() ||
+                    (withoutKitchenPrefix && (sBusiness === withoutKitchenPrefix || sTracking === withoutKitchenPrefix))
+                );
+            }) || null;
+        }
 
         if (!seller || !seller.user.isActive) {
             throw new ApiError("Shop not found", 404);

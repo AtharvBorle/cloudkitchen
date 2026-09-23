@@ -6,8 +6,11 @@ import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-eve
 
 export const getSellerOrders = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view kitchen orders.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required to view kitchen orders.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -15,7 +18,7 @@ export const getSellerOrders = async () => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const orders = await db.order.findMany({
@@ -51,8 +54,11 @@ export const getSellerOrders = async () => {
 
 export const getSellerOrderById = async (orderId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view order details.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -60,7 +66,7 @@ export const getSellerOrderById = async (orderId: string) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const cleanId = orderId.replace("#NCR-", "").replace("#ncr-", "").replace("#", "").trim();
@@ -120,8 +126,11 @@ export const getSellerOrderById = async (orderId: string) => {
 
 export const updateSellerOrder = async (req: Request, orderId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update order status.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -129,7 +138,7 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const { status, isPaid, deliveryPersonId } = await req.json();

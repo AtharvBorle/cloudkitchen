@@ -6,8 +6,11 @@ import { ApiError } from "@/lib/api-error";
 
 export const createSubscriptionOrder = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to purchase a subscription.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -15,18 +18,18 @@ export const createSubscriptionOrder = async (req: Request) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
     }
 
     if (sellerProfile.verificationStatus !== "APPROVED") {
-        throw new ApiError("Profile must be approved first", 403);
+        throw new ApiError("Your seller profile must be approved by admin before purchasing a subscription.", 403);
     }
 
     const body = await req.json();
     const { planId, couponCode } = body;
 
     if (!planId) {
-        throw new ApiError("Subscription Plan ID is required", 400);
+        throw new ApiError("Subscription Plan ID is required.", 400);
     }
 
     let priceAmount = 0;
@@ -38,12 +41,12 @@ export const createSubscriptionOrder = async (req: Request) => {
         if (plan) {
             priceAmount = plan.price;
         } else {
-            throw new ApiError("Invalid Plan ID", 404);
+            throw new ApiError("The selected subscription plan could not be found.", 404);
         }
     } catch (e: any) {
         if (e instanceof ApiError) throw e;
         console.error("Could not fetch plan pricing details:", e);
-        throw new ApiError("Database Error", 500);
+        throw new ApiError("Unable to load plan details. Please try again.", 500);
     }
 
     // Coupon Validation Logic securely on the backend
@@ -53,15 +56,15 @@ export const createSubscriptionOrder = async (req: Request) => {
         });
 
         if (!coupon) {
-            throw new ApiError("Invalid coupon code", 404);
+            throw new ApiError("The entered coupon code is invalid.", 404);
         }
 
         if (!coupon.isActive) {
-            throw new ApiError("This coupon is no longer active", 400);
+            throw new ApiError("This coupon code has expired or is no longer active.", 400);
         }
 
         if (coupon.planId && coupon.planId !== planId) {
-            throw new ApiError("This coupon is not valid for the selected plan", 400);
+            throw new ApiError("This coupon is not applicable to the selected subscription plan.", 400);
         }
 
         const isCategoryMatch = 
@@ -71,11 +74,11 @@ export const createSubscriptionOrder = async (req: Request) => {
             coupon.category === plan.category;
 
         if (!isCategoryMatch) {
-            throw new ApiError(`This coupon is only valid for ${coupon.category} plans`, 400);
+            throw new ApiError(`This coupon is only valid for ${coupon.category} subscription plans.`, 400);
         }
 
         if (coupon.maxUsage > 0 && coupon.currentUsage >= coupon.maxUsage) {
-            throw new ApiError("This coupon has reached its maximum usage limit", 400);
+            throw new ApiError("This coupon has reached its maximum usage limit.", 400);
         }
 
         let discount = 0;
@@ -106,7 +109,7 @@ export const createSubscriptionOrder = async (req: Request) => {
     const order = await razorpay.orders.create(options);
 
     if (!order) {
-        throw new ApiError("Failed to create Razorpay order", 500);
+        throw new ApiError("Failed to initiate payment gateway order. Please try again.", 500);
     }
 
     return {
@@ -118,15 +121,18 @@ export const createSubscriptionOrder = async (req: Request) => {
 
 export const verifySubscriptionPayment = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to verify your subscription payment.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const body = await req.json();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amountPaid } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-        throw new ApiError("Missing payment details", 400);
+        throw new ApiError("Payment verification details are incomplete.", 400);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -134,7 +140,7 @@ export const verifySubscriptionPayment = async (req: Request) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile could not be found.", 404);
     }
 
     const secret = process.env.RAZORPAY_KEY_SECRET || "";
@@ -144,7 +150,7 @@ export const verifySubscriptionPayment = async (req: Request) => {
         .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-        throw new ApiError("Invalid payment signature", 400);
+        throw new ApiError("Payment signature verification failed. Please try again.", 400);
     }
 
     const razorpay = new (require("razorpay"))({
@@ -156,14 +162,14 @@ export const verifySubscriptionPayment = async (req: Request) => {
     const couponCode = order?.notes?.couponCode;
 
     if (!planId) {
-        throw new ApiError("Invalid payment format: Subscription Plan ID missing", 400);
+        throw new ApiError("Invalid payment format: Subscription Plan ID missing.", 400);
     }
 
     const plan = await db.subscriptionPlan.findUnique({
         where: { id: planId }
     });
     if (!plan) {
-        throw new ApiError("Subscription Plan no longer exists", 404);
+        throw new ApiError("The requested subscription plan is no longer available.", 404);
     }
 
     const durationMonths = plan.durationMonths || 1;

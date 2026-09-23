@@ -4,8 +4,8 @@ import { ApiError } from "@/lib/api-error";
 
 export const getUserAddresses = async () => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view saved addresses.", 401);
     }
 
     const addresses = await db.address.findMany({
@@ -18,8 +18,8 @@ export const getUserAddresses = async () => {
 
 export const createAddress = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to add a delivery address.", 401);
     }
 
     const { type, houseNumber, street, landmark, pincode, latitude, longitude, isDefault } = await req.json();
@@ -83,8 +83,8 @@ export const createAddress = async (req: Request) => {
 
 export const updateAddress = async (req: Request, id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update your delivery address.", 401);
     }
 
     const { type, houseNumber, street, landmark, pincode, latitude, longitude } = await req.json();
@@ -94,7 +94,7 @@ export const updateAddress = async (req: Request, id: string) => {
     });
 
     if (!existingAddress || existingAddress.userId !== session.user.id) {
-        throw new ApiError("Address not found or forbidden", 403);
+        throw new ApiError("Address not found or you do not have permission to modify it.", 403);
     }
 
     if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
@@ -119,8 +119,8 @@ export const updateAddress = async (req: Request, id: string) => {
 
 export const deleteAddress = async (id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete a delivery address.", 401);
     }
 
     const existingAddress = await db.address.findUnique({
@@ -128,7 +128,7 @@ export const deleteAddress = async (id: string) => {
     });
 
     if (!existingAddress || existingAddress.userId !== session.user.id) {
-        throw new ApiError("Address not found or forbidden", 403);
+        throw new ApiError("Address not found or you do not have permission to delete it.", 403);
     }
 
     await db.address.delete({
@@ -160,8 +160,8 @@ export const deleteAddress = async (id: string) => {
 
 export const setDefaultAddress = async (id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to set your default address.", 401);
     }
 
     const addressToMakeDefault = await db.address.findUnique({
@@ -169,7 +169,7 @@ export const setDefaultAddress = async (id: string) => {
     });
 
     if (!addressToMakeDefault || addressToMakeDefault.userId !== session.user.id) {
-        throw new ApiError("Address not found or forbidden", 403);
+        throw new ApiError("Address not found or you do not have permission to modify it.", 403);
     }
 
     await db.$transaction([
