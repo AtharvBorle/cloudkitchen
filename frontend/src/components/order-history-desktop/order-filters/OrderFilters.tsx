@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styles from "./OrderFilters.module.css";
-import { Calendar, ChevronDown } from "lucide-react";
+import { Calendar, ChevronDown, Check, X } from "lucide-react";
 
 export type OrderFilterTab = "all" | "delivered" | "cancelled";
 
@@ -24,15 +24,30 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({
   const [selectedTab, setSelectedTab] = useState<OrderFilterTab>(activeTab);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState(dateRangeText);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Sync state if props change
-  React.useEffect(() => {
+  useEffect(() => {
     setSelectedTab(activeTab);
   }, [activeTab]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setSelectedRange(dateRangeText);
   }, [dateRangeText]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const handleTabClick = (tab: OrderFilterTab) => {
     setSelectedTab(tab);
@@ -49,17 +64,24 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({
     }
   };
 
+  const handleResetDate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleRangeSelect("All Time");
+  };
+
   const dateOptions = [
-    "All Time",
-    "Today",
-    "Yesterday",
-    "This Week",
-    "This Month",
-    "Last 7 Days",
-    "Last 30 Days",
-    "Last 3 Months",
-    "This Year",
+    { label: "All Time", desc: "All previous orders" },
+    { label: "Today", desc: "Day wise - orders placed today" },
+    { label: "Yesterday", desc: "Orders placed yesterday" },
+    { label: "This Week", desc: "Week wise - current calendar week" },
+    { label: "Last 7 Days", desc: "Past 7 days orders" },
+    { label: "This Month", desc: "Month wise - current calendar month" },
+    { label: "Last 30 Days", desc: "Past 30 days orders" },
+    { label: "Last 3 Months", desc: "Past 90 days quarterly orders" },
+    { label: "This Year", desc: "All orders placed in 2026" },
   ];
+
+  const isCustomFilterActive = selectedRange && selectedRange !== "All Time";
 
   return (
     <div className={styles.filterBar}>
@@ -97,17 +119,29 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({
       </div>
 
       {/* Right: Date Range Dropdown */}
-      <div className={styles.datePickerContainer}>
+      <div className={styles.datePickerContainer} ref={dropdownRef}>
         <button
           type="button"
-          className={styles.datePickerBtn}
+          className={`${styles.datePickerBtn} ${isCustomFilterActive ? styles.datePickerBtnActive : ""}`}
           onClick={() => {
             setIsDropdownOpen(!isDropdownOpen);
             if (onDateRangeClick) onDateRangeClick();
           }}
+          aria-expanded={isDropdownOpen}
+          aria-haspopup="listbox"
         >
-          <Calendar size={17} className={styles.calendarIcon} />
+          <Calendar size={17} className={isCustomFilterActive ? styles.calendarIconActive : styles.calendarIcon} />
           <span className={styles.dateText}>{selectedRange}</span>
+          {isCustomFilterActive && (
+            <span
+              onClick={handleResetDate}
+              className={styles.clearFilterBtn}
+              title="Reset date filter"
+              role="button"
+            >
+              <X size={14} />
+            </span>
+          )}
           <ChevronDown
             size={16}
             className={`${styles.chevronIcon} ${
@@ -117,18 +151,29 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({
         </button>
 
         {isDropdownOpen && (
-          <div className={styles.dropdownMenu}>
-            {dateOptions.map((option) => (
-              <div
-                key={option}
-                className={`${styles.dropdownOption} ${
-                  selectedRange === option ? styles.selectedOption : ""
-                }`}
-                onClick={() => handleRangeSelect(option)}
-              >
-                {option}
-              </div>
-            ))}
+          <div className={styles.dropdownMenu} role="listbox">
+            {dateOptions.map((opt) => {
+              const isSelected = selectedRange === opt.label;
+              return (
+                <div
+                  key={opt.label}
+                  className={`${styles.dropdownOption} ${
+                    isSelected ? styles.selectedOption : ""
+                  }`}
+                  onClick={() => handleRangeSelect(opt.label)}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
+                    <span style={{ fontWeight: 600 }}>{opt.label}</span>
+                    <span style={{ fontSize: "11px", color: isSelected ? "#ea580c" : "#94a3b8" }}>
+                      {opt.desc}
+                    </span>
+                  </div>
+                  {isSelected && <Check size={16} className={styles.checkIcon} />}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

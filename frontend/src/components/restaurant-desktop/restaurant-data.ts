@@ -52,6 +52,7 @@ export interface KitchenData {
   items: FoodCardItem[];
   isOnline?: boolean;
   mealPlans?: any[];
+  bannerImageUrl?: string;
 }
 
 export const KITCHENS_REGISTRY: Record<string, KitchenData> = {

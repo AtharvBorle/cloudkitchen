@@ -31,6 +31,8 @@ export interface SellerProfileData {
   email: string;
   outletName: string;
   registeredAddress: string;
+  pincode?: string;
+  city?: string;
   latitude?: number | null;
   longitude?: number | null;
   isLocationPinned?: boolean;
@@ -67,12 +69,17 @@ export default function MainCanvas({
   const [internalFormData, setInternalFormData] = useState<SellerProfileData>(() => {
     const owner = initialData?.ownerName || (!isGenericFallbackName(seller.userFullName) ? seller.userFullName : "") || seller.ownerName;
     const outlet = initialData?.outletName || seller.businessName || seller.ownerName;
+    const addr = initialData?.registeredAddress || seller.address || "";
+    const extractedPin = initialData?.pincode || seller.pincode || addr.match(/\b\d{6}\b/)?.[0] || "";
+    const extractedCity = initialData?.city || seller.city || "Pune";
     return {
       ownerName: owner,
       mobileNumber: initialData?.mobileNumber || seller.phone || "",
       email: initialData?.email || seller.email || "",
       outletName: outlet,
-      registeredAddress: initialData?.registeredAddress || seller.address || "",
+      registeredAddress: addr,
+      pincode: extractedPin,
+      city: extractedCity,
       latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
       longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
       isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
@@ -139,13 +146,18 @@ export default function MainCanvas({
         const owner = prev.ownerName && !isGenericFallbackName(prev.ownerName)
           ? prev.ownerName
           : (seller.userFullName || seller.ownerName);
+        const addr = seller.address || prev.registeredAddress;
+        const extractedPin = prev.pincode || seller.pincode || addr.match(/\b\d{6}\b/)?.[0] || "";
+        const extractedCity = prev.city || seller.city || "Pune";
         return {
           ...prev,
           ownerName: owner,
           mobileNumber: seller.phone || prev.mobileNumber,
           email: seller.email || prev.email,
           outletName: outlet,
-          registeredAddress: seller.address || prev.registeredAddress,
+          registeredAddress: addr,
+          pincode: extractedPin,
+          city: extractedCity,
           latitude: seller.latitude !== undefined && seller.latitude !== null ? seller.latitude : prev.latitude,
           longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
           isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
@@ -155,7 +167,7 @@ export default function MainCanvas({
         };
       });
     }
-  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned, seller.upiId, seller.trackingId]);
+  }, [seller.ownerName, seller.userFullName, seller.phone, seller.email, seller.businessName, seller.address, seller.pincode, seller.city, seller.latitude, seller.longitude, seller.isLocationPinned, seller.upiId, seller.trackingId]);
 
   const formData = externalFormData || internalFormData;
 
@@ -179,8 +191,15 @@ export default function MainCanvas({
     setSaving(true);
     setSuccessMessage("");
 
+    const addr = formData.registeredAddress || "";
+    const extractedPin = formData.pincode || addr.match(/\b\d{6}\b/)?.[0] || "";
+    const payload = {
+      ...formData,
+      pincode: extractedPin || formData.pincode,
+    };
+
     if (onSave) {
-      onSave(formData);
+      onSave(payload);
     }
 
     setTimeout(() => {
@@ -1274,12 +1293,14 @@ export default function MainCanvas({
                   longitude={formData.longitude ?? null}
                   isPinned={formData.isLocationPinned}
                   onChange={(lat, lng, formattedAddress) => {
+                    const detectedPin = formattedAddress?.match(/\b\d{6}\b/)?.[0] || formData.pincode;
                     const updated = {
                       ...formData,
                       latitude: lat,
                       longitude: lng,
                       isLocationPinned: true,
                       registeredAddress: formattedAddress || formData.registeredAddress,
+                      pincode: detectedPin || formData.pincode,
                     };
                     setInternalFormData(updated);
                     if (onDataChange) onDataChange(updated);
@@ -1300,7 +1321,17 @@ export default function MainCanvas({
                 </label>
                 <textarea
                   value={formData.registeredAddress}
-                  onChange={(e) => handleChange("registeredAddress", e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const extracted = val.match(/\b\d{6}\b/)?.[0];
+                    const updated = {
+                      ...formData,
+                      registeredAddress: val,
+                      ...(extracted ? { pincode: extracted } : {}),
+                    };
+                    setInternalFormData(updated);
+                    if (onDataChange) onDataChange(updated);
+                  }}
                   placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                   rows={2}
                   style={{

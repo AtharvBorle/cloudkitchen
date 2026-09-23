@@ -32,6 +32,7 @@ export interface ResponsiveMenuProps {
 }
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 const EMPTY_DISHES: ResponsiveDishItem[] = [];
 
@@ -45,6 +46,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -182,7 +184,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
               title="Notifications"
             >
               <Bell size={22} />
-              <span className={styles.notificationDot} />
+              {unreadCount > 0 && <span className={styles.notificationDot} />}
             </button>
             <button
               type="button"

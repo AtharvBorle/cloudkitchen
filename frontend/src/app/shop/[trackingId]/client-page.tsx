@@ -94,11 +94,22 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
         }
         if (!userAddress || !userAddress.pincode) return true;
         const userPincode = userAddress.pincode.trim();
-        if (item?.deliveryPincodes) {
-            const pins = item.deliveryPincodes.split(",").map((p: string) => p.trim());
-            return pins.includes(userPincode);
+        if (seller?.user?.pincode && seller.user.pincode.trim() === userPincode) return true;
+        if (Array.isArray(seller?.servedPincodes)) {
+            for (const sp of seller.servedPincodes) {
+                const pin = typeof sp === "string" ? sp : sp?.pincode;
+                if (pin && (pin.trim() === userPincode || pin.includes(userPincode))) return true;
+            }
         }
-        return seller?.user?.pincode === userPincode;
+        if (item?.deliveryPincodes) {
+            const pins = String(item.deliveryPincodes).split(",").map((p: string) => p.trim());
+            if (pins.includes(userPincode)) return true;
+        }
+        if (seller?.addressLocality) {
+            const locPins = seller.addressLocality.match(/\b\d{6}\b/g);
+            if (locPins && locPins.includes(userPincode)) return true;
+        }
+        return false;
     };
 
     useEffect(() => {

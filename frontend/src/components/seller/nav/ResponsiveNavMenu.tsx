@@ -53,6 +53,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
 
 
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { fetchApi } from "@/lib/fetch-api";
 
 export interface ResponsiveNavMenuProps {
@@ -73,6 +74,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   onSyncDevices,
 }) => {
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
@@ -373,6 +375,24 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
               >
                 <IconComponent size={19} />
                 <span style={{ flex: 1 }}>{item.label}</span>
+                {item.id === "notifications" && unreadCount > 0 && (
+                  <span
+                    style={{
+                      backgroundColor: "#EF4444",
+                      color: "#FFFFFF",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      borderRadius: "10px",
+                      padding: "1px 7px",
+                      lineHeight: "16px",
+                      minWidth: "18px",
+                      textAlign: "center",
+                      marginRight: "4px",
+                    }}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
                 {isLocked && <Lock size={14} color="#CBD5E1" style={{ marginLeft: "auto" }} />}
               </Link>
             );

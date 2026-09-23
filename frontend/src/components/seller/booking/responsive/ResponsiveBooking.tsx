@@ -8,6 +8,7 @@ import { Menu as MenuIcon, Calendar, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveBooking.module.css";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export type BookingStatusTab = "Requested" | "Confirmed" | "Paid";
 
@@ -44,6 +45,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -168,6 +170,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
             title="Notifications"
           >
             <Bell size={22} />
+            {unreadCount > 0 && <span className={styles.notificationDot} />}
           </button>
         </header>
 

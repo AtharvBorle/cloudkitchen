@@ -18,6 +18,9 @@ import {
   Star,
   Shield,
   MapPin,
+  ImagePlus,
+  Upload,
+  Save,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
@@ -192,6 +195,7 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
 };
 
 import { useSellerProfile, toggleSellerOnlineStatus, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { fetchApi } from "@/lib/fetch-api";
 
 export interface ResponsiveSellerSettingsProps {
@@ -214,6 +218,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const router = useRouter();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -222,7 +227,17 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     ownerName !== "Kitchen Owner"
       ? ownerName
       : seller.ownerName;
-  const [activeTab, setActiveTab] = useState<SettingsTabType>(initialTab);
+
+  const [activeTab, setActiveTab] = useState<SettingsTabType>(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam) {
+      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTabType[]).find(
+        (t) => t.toLowerCase() === tabParam.toLowerCase()
+      );
+      if (matched) return matched;
+    }
+    return initialTab;
+  });
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({
@@ -293,6 +308,76 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
   const [saving, setSaving] = useState(false);
   const [toastData, setToastData] = useState<{ title: string; status: "ON" | "OFF" | null } | null>(null);
+
+  // Storefront Banner State
+  const [bannerPreview, setBannerPreview] = useState<string>(
+    seller.bannerImageUrl || (seller.profile as any)?.bannerImageUrl || ""
+  );
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (seller.bannerImageUrl && !bannerFile) {
+      setBannerPreview(seller.bannerImageUrl);
+    }
+  }, [seller.bannerImageUrl, bannerFile]);
+
+  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+      return;
+    }
+    setBannerFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setBannerPreview(localUrl);
+    setToastData({ title: "Banner selected. Tap Save to apply.", status: "ON" });
+  };
+
+  const handleQuickUploadBanner = async () => {
+    if (!bannerFile) return;
+    setIsUploadingBanner(true);
+    try {
+      const data = new FormData();
+      data.append("bannerImageFile", bannerFile);
+      data.append("businessName", formData.businessName || seller.businessName);
+      data.append("phone", formData.phoneNumber || seller.phone);
+      data.append("email", formData.businessEmail || seller.email);
+      data.append("address", formData.address || seller.address);
+      if (formData.latitude) data.append("latitude", String(formData.latitude));
+      if (formData.longitude) data.append("longitude", String(formData.longitude));
+      data.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload banner");
+      }
+
+      const json = await res.json();
+      const updatedBannerUrl = json.data?.profile?.bannerImageUrl || json.profile?.bannerImageUrl || bannerPreview;
+      setBannerPreview(updatedBannerUrl);
+      setBannerFile(null);
+      updateCachedProfile({ bannerImageUrl: updatedBannerUrl });
+      setToastData({ title: "Banner updated successfully!", status: "ON" });
+    } catch (err: any) {
+      console.error("Banner upload error:", err);
+      setToastData({ title: err.message || "Banner upload failed", status: "OFF" });
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleResetBanner = () => {
+    setBannerFile(null);
+    setBannerPreview("");
+    updateCachedProfile({ bannerImageUrl: "" });
+    setToastData({ title: "Banner reset to default theme", status: "ON" });
+  };
 
   const NOTIFICATION_TITLES: Partial<Record<keyof ResponsiveSellerSettingsData, string>> = {
     emailNotifications: "Email Notifications",
@@ -392,23 +477,48 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       }
 
       // 2. Persist Restaurant Information to backend database
-      const res = await fetchApi("/api/seller/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName: formData.businessName,
-          email: formData.businessEmail,
-          phone: formData.phoneNumber,
-          address: formData.address,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          isLocationPinned: Boolean(formData.latitude && formData.longitude),
-        }),
-      });
+      let res: Response;
+      if (bannerFile) {
+        const fd = new FormData();
+        fd.append("businessName", formData.businessName);
+        fd.append("email", formData.businessEmail);
+        fd.append("phone", formData.phoneNumber);
+        fd.append("address", formData.address);
+        if (formData.latitude) fd.append("latitude", String(formData.latitude));
+        if (formData.longitude) fd.append("longitude", String(formData.longitude));
+        fd.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+        fd.append("bannerImageFile", bannerFile);
+
+        res = await fetchApi("/api/seller/profile", {
+          method: "POST",
+          body: fd,
+        });
+      } else {
+        res = await fetchApi("/api/seller/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            businessName: formData.businessName,
+            email: formData.businessEmail,
+            phone: formData.phoneNumber,
+            address: formData.address,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            isLocationPinned: Boolean(formData.latitude && formData.longitude),
+          }),
+        });
+      }
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to update settings");
+      }
+
+      const resJson = await res.json().catch(() => ({}));
+      const updatedBannerUrl = resJson.data?.profile?.bannerImageUrl || resJson.profile?.bannerImageUrl || bannerPreview;
+      if (bannerFile) {
+        setBannerFile(null);
+        setBannerPreview(updatedBannerUrl);
       }
 
       // 3. Update cached profile state
@@ -421,6 +531,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         latitude: formData.latitude,
         longitude: formData.longitude,
         isLocationPinned: Boolean(formData.latitude && formData.longitude),
+        bannerImageUrl: updatedBannerUrl,
         avatarInitials: computeInitials(formData.businessName),
       });
 
@@ -504,7 +615,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             title="Notifications"
           >
             <Bell size={22} />
-            <span className={styles.notificationDot} />
+            {unreadCount > 0 && <span className={styles.notificationDot} />}
           </button>
         </header>
 
@@ -526,6 +637,207 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         <main className={styles.contentArea}>
           {activeTab === "General" && (
             <>
+              {/* 0. Storefront Cover Banner Card */}
+              <div className={styles.card}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "8px",
+                        backgroundColor: "#FFF7ED",
+                        border: "1px solid #FED7AA",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#EA580C",
+                      }}
+                    >
+                      <ImagePlus size={17} />
+                    </div>
+                    <div>
+                      <h2 className={styles.cardTitle} style={{ margin: 0, fontSize: "15px" }}>
+                        Storefront Cover Banner
+                      </h2>
+                      <p style={{ fontSize: "11px", color: "#64748B", margin: "1px 0 0 0" }}>
+                        Hero banner shown on explore pages
+                      </p>
+                    </div>
+                  </div>
+                  {bannerPreview ? (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        color: "#16A34A",
+                        backgroundColor: "#F0FDF4",
+                        padding: "2px 8px",
+                        borderRadius: "16px",
+                        border: "1px solid #BBF7D0",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "3px",
+                      }}
+                    >
+                      <CheckCircle2 size={11} /> Live
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        color: "#64748B",
+                        backgroundColor: "#F1F5F9",
+                        padding: "2px 8px",
+                        borderRadius: "16px",
+                        border: "1px solid #E2E8F0",
+                      }}
+                    >
+                      Default
+                    </span>
+                  )}
+                </div>
+
+                {/* Banner Preview Frame */}
+                <div
+                  style={{
+                    width: "100%",
+                    height: "135px",
+                    borderRadius: "10px",
+                    overflow: "hidden",
+                    position: "relative",
+                    backgroundColor: "#0F172A",
+                    marginTop: "10px",
+                    border: "1px solid #E2E8F0",
+                  }}
+                >
+                  <img
+                    src={bannerPreview || "/images/places/place-pizza.png"}
+                    alt="Storefront Banner Preview"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/images/places/place-pizza.png";
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: "linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.05) 60%)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <span style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.8px", color: "#FDBA74", fontWeight: 700 }}>
+                      Customer View
+                    </span>
+                    <h3 style={{ margin: "1px 0 0 0", color: "#FFFFFF", fontSize: "14px", fontWeight: 700 }}>
+                      {formData.businessName || seller.businessName || "Your Kitchen"}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    marginTop: "12px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <input
+                      type="file"
+                      id="mobile-banner-file-input"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      style={{ display: "none" }}
+                      onChange={handleBannerFileSelect}
+                    />
+                    <label
+                      htmlFor="mobile-banner-file-input"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "7px 13px",
+                        backgroundColor: "#EA580C",
+                        color: "#FFFFFF",
+                        borderRadius: "7px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Upload size={13} />
+                      <span>{bannerPreview ? "Replace" : "Upload"}</span>
+                    </label>
+
+                    {bannerFile && (
+                      <button
+                        type="button"
+                        onClick={handleQuickUploadBanner}
+                        disabled={isUploadingBanner}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "7px 12px",
+                          backgroundColor: "#16A34A",
+                          color: "#FFFFFF",
+                          borderRadius: "7px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          border: "none",
+                        }}
+                      >
+                        {isUploadingBanner ? <Loader2 size={13} className={styles.spinner} /> : <Save size={13} />}
+                        <span>{isUploadingBanner ? "Saving..." : "Apply"}</span>
+                      </button>
+                    )}
+
+                    {bannerPreview && (
+                      <button
+                        type="button"
+                        onClick={handleResetBanner}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          padding: "7px 10px",
+                          backgroundColor: "#FFF1F2",
+                          color: "#E11D48",
+                          border: "1px solid #FECDD3",
+                          borderRadius: "7px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <Trash2 size={13} />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <span style={{ fontSize: "10px", color: "#94A3B8" }}>
+                    3:1 (1200x400) Max 5MB
+                  </span>
+                </div>
+              </div>
+
               {/* 1. Restaurant Information */}
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Restaurant Information</h2>

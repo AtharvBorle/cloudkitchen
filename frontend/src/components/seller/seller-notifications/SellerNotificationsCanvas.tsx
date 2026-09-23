@@ -17,12 +17,15 @@ import {
   Trash2,
   ChevronRight,
   SlidersHorizontal,
+  PlusCircle,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import {
   SellerNotificationItem,
   NotificationCategory,
-  INITIAL_SELLER_NOTIFICATIONS,
 } from "./notificationData";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./SellerNotificationsCanvas.module.css";
 
 export type FilterTab = "all" | "unread" | "orders" | "stock" | "delivery" | "timings" | "bookings";
@@ -33,14 +36,23 @@ export interface SellerNotificationsCanvasProps {
 }
 
 export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps> = ({
-  initialNotifications = INITIAL_SELLER_NOTIFICATIONS,
   onNotificationAction,
 }) => {
-  const [notifications, setNotifications] = useState<SellerNotificationItem[]>(initialNotifications);
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    toggleRead,
+    deleteNotification,
+    markAllAsRead,
+    clearAllNotifications,
+    generateSampleAlert,
+    resetToDefaults,
+  } = useSellerNotifications();
+
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const [showBanner, setShowBanner] = useState(true);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -48,32 +60,38 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
   };
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+    markAsRead(id);
   };
 
   const handleToggleRead = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-    );
+    toggleRead(id);
   };
 
   const handleDeleteNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    deleteNotification(id);
     showToast("Notification dismissed");
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllAsRead();
     showToast("All notifications marked as read");
   };
 
   const handleClearAll = () => {
-    setNotifications([]);
+    clearAllNotifications();
     showToast("All notifications cleared");
+  };
+
+  const handleGenerateAlert = (category: NotificationCategory) => {
+    const alert = generateSampleAlert(category);
+    showToast(`New ${category} notification alert created!`);
+  };
+
+  const handleResetDefaults = () => {
+    resetToDefaults();
+    showToast("Notifications reset to initial 4 alerts");
   };
 
   // Filtered Notifications
@@ -163,8 +181,12 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
         <div className={styles.titleGroup}>
           <div className={styles.titleRow}>
             <h1 className={styles.title}>Notifications Center</h1>
-            {unreadCount > 0 && (
+            {unreadCount > 0 ? (
               <span className={styles.unreadCountBadge}>{unreadCount} Unread</span>
+            ) : (
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#16A34A", backgroundColor: "#F0FDF4", padding: "3px 10px", borderRadius: "20px", border: "1px solid #BBF7D0" }}>
+                All Read
+              </span>
             )}
           </div>
           <p className={styles.subtitle}>
@@ -195,25 +217,191 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
             </button>
           )}
 
-          <Link href="/seller/settings" className={styles.actionBtn}>
+          <Link href="/seller/settings?tab=notifications" className={styles.actionBtn}>
             <Settings size={16} />
             <span>Preferences</span>
           </Link>
         </div>
       </div>
 
-      {/* 2. Settings Notification Preferences Banner */}
-      <div className={styles.settingsBanner}>
-        <div className={styles.settingsBannerLeft}>
-          <SlidersHorizontal size={18} className={styles.settingsBannerIcon} />
-          <p className={styles.settingsBannerText}>
-            Notifications are delivered based on your active preferences in <strong>Settings &gt; Notifications</strong>. You can customize audio chimes, low-stock thresholds, and closing alerts at any time.
-          </p>
+      {/* Quick Test Alert Bar (Allows Seller to simulate real-time alerts and observe live bell icon counter updates) */}
+      <div
+        style={{
+          backgroundColor: "#FFFFFF",
+          border: "1px solid #E2E8F0",
+          borderRadius: "12px",
+          padding: "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "10px",
+          boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <PlusCircle size={16} color="#EA580C" />
+          <span style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>
+            Generate Real-Time Alerts:
+          </span>
+          <span style={{ fontSize: "11px", color: "#64748B" }}>
+            (Increases unread count in Topbar)
+          </span>
         </div>
-        <Link href="/seller/settings" className={styles.settingsLink}>
-          Manage Alerts
-        </Link>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => handleGenerateAlert("orders")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#FFF7ED",
+              color: "#C2410C",
+              border: "1px solid #FED7AA",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + New Order
+          </button>
+          <button
+            type="button"
+            onClick={() => handleGenerateAlert("stock")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#FEF3C7",
+              color: "#B45309",
+              border: "1px solid #FDE68A",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Low Stock
+          </button>
+          <button
+            type="button"
+            onClick={() => handleGenerateAlert("delivery")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#EFF6FF",
+              color: "#1D4ED8",
+              border: "1px solid #BFDBFE",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Rider Update
+          </button>
+          <button
+            type="button"
+            onClick={() => handleGenerateAlert("bookings")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#F5F3FF",
+              color: "#6D28D9",
+              border: "1px solid #DDD6FE",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Booking
+          </button>
+          <button
+            type="button"
+            onClick={() => handleGenerateAlert("timings")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#F0FDF4",
+              color: "#15803D",
+              border: "1px solid #BBF7D0",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Shop Timing
+          </button>
+          <button
+            type="button"
+            onClick={() => handleGenerateAlert("reviews")}
+            style={{
+              padding: "5px 11px",
+              backgroundColor: "#FFFBEB",
+              color: "#B45309",
+              border: "1px solid #FDE68A",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            + Review
+          </button>
+          <button
+            type="button"
+            onClick={handleResetDefaults}
+            style={{
+              padding: "5px 10px",
+              backgroundColor: "#F8FAFC",
+              color: "#64748B",
+              border: "1px solid #E2E8F0",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <RotateCcw size={12} /> Reset
+          </button>
+        </div>
       </div>
+
+      {/* 2. Settings Notification Preferences Banner */}
+      {showBanner && (
+        <div className={styles.settingsBanner}>
+          <div className={styles.settingsBannerLeft}>
+            <SlidersHorizontal size={18} className={styles.settingsBannerIcon} />
+            <p className={styles.settingsBannerText}>
+              Notifications are delivered based on your active preferences in <strong>Settings &gt; Notifications</strong>. You can customize audio chimes, low-stock thresholds, and closing alerts at any time.
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+            <Link href="/seller/settings?tab=notifications" className={styles.settingsLink}>
+              Manage Alerts
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowBanner(false)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "4px",
+                color: "#C2410C",
+                display: "inline-flex",
+                alignItems: "center",
+                opacity: 0.8,
+              }}
+              title="Dismiss banner"
+              aria-label="Dismiss banner"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 3. Filter Tabs */}
       <div className={styles.tabsContainer} role="tablist">

@@ -14,6 +14,9 @@ export interface OrderItemData {
   totalAmount: number;
   deliveryAddress: string;
   hasViewDetails?: boolean;
+  rawItems?: any[];
+  sellerId?: string;
+  imageUrl?: string;
 }
 
 export interface OrderListProps {

@@ -16,9 +16,14 @@ export const getSellerReviews = async () => {
         throw new ApiError("Seller profile not found", 404);
     }
 
-    // Fetch all reviews for this seller
+    // Fetch all reviews for this seller (including platform reviews)
     const reviews = await db.review.findMany({
-        where: { sellerId: sellerProfile.id },
+        where: {
+            OR: [
+                { sellerId: sellerProfile.id },
+                { sellerId: null }
+            ]
+        },
         include: {
             user: {
                 select: { name: true, email: true }
@@ -90,8 +95,21 @@ export const getSellerReviews = async () => {
         };
     });
 
+    const parseJsonArray = (val: string | null | undefined): string[] => {
+        if (!val) return [];
+        try {
+            const parsed = JSON.parse(val);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    };
+
     const formattedReviews = reviews.map((r) => ({
         ...r,
+        aspects: parseJsonArray(r.aspects),
+        tags: parseJsonArray(r.tags),
+        sentiment: r.sentiment || null,
         managerResponse: r.sellerReply ? {
             text: r.sellerReply,
             createdAt: r.repliedAt || r.updatedAt,
@@ -132,7 +150,7 @@ export const replyToReview = async (reviewId: string, req: Request) => {
         throw new ApiError("Review not found", 404);
     }
 
-    if (review.sellerId !== sellerProfile.id) {
+    if (review.sellerId && review.sellerId !== sellerProfile.id) {
         throw new ApiError("Forbidden: Cannot reply to review for another seller", 403);
     }
 
@@ -147,6 +165,7 @@ export const replyToReview = async (reviewId: string, req: Request) => {
     const updated = await db.review.update({
         where: { id: reviewId },
         data: {
+            sellerId: review.sellerId || sellerProfile.id,
             sellerReply: finalReply.trim(),
             repliedAt: new Date()
         },

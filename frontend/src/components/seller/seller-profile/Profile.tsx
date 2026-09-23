@@ -123,6 +123,10 @@ export default function Profile({
   };
 
   const handleSave = async (data: SellerProfileData) => {
+    const addr = data.registeredAddress || "";
+    const cleanPin = data.pincode || addr.match(/\b\d{6}\b/)?.[0] || "";
+    const cleanCity = data.city || "Pune";
+
     updateCachedProfile({
       ownerName: data.outletName || data.ownerName,
       businessName: data.outletName,
@@ -130,6 +134,8 @@ export default function Profile({
       email: data.email,
       phone: data.mobileNumber,
       address: data.registeredAddress,
+      pincode: cleanPin,
+      city: cleanCity,
       latitude: data.latitude,
       longitude: data.longitude,
       isLocationPinned: Boolean(data.latitude && data.longitude),
@@ -139,7 +145,7 @@ export default function Profile({
     });
 
     if (customOnSave) {
-      customOnSave(data);
+      customOnSave({ ...data, pincode: cleanPin, city: cleanCity });
       return;
     }
     try {
@@ -152,6 +158,8 @@ export default function Profile({
           email: data.email,
           outletName: data.outletName,
           registeredAddress: data.registeredAddress,
+          pincode: cleanPin,
+          city: cleanCity,
           latitude: data.latitude,
           longitude: data.longitude,
           isLocationPinned: Boolean(data.latitude && data.longitude),

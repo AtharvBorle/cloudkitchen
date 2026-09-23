@@ -8,6 +8,7 @@ import Script from "next/script";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { broadcastBookingAlert } from "@/hooks/useSellerNotifications";
 
 const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -760,6 +761,15 @@ function CheckoutContent() {
 
                 if (res.ok) {
                     sessionStorage.removeItem("active_room_booking");
+                    try {
+                        broadcastBookingAlert({
+                            roomName: roomDetails.title || roomDetails.name || "Room Suite",
+                            guestName: session?.user?.name || "Guest",
+                            nightsCount: days,
+                            totalAmount: totalAmount,
+                            checkInDate: bookingDates.start,
+                        });
+                    } catch {}
                     alert("Room booked successfully! Awaiting host confirmation.");
                     router.push("/dashboard/user");
                 } else {

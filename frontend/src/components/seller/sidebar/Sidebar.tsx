@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import styles from "./ConsoleSidebar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface NavItem {
   id: string;
@@ -103,6 +104,7 @@ export default function SellerSidebar({
 }: SellerSidebarProps) {
   const pathname = usePathname();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
 
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
@@ -674,6 +676,37 @@ export default function SellerSidebar({
                   <span style={{ lineHeight: 1, whiteSpace: "nowrap", flex: 1 }}>
                     {item.label}
                   </span>
+                )}
+                {!isEffectiveCollapsed && item.id === "notifications" && unreadCount > 0 && (
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      backgroundColor: "#EF4444",
+                      color: "#FFFFFF",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      borderRadius: "10px",
+                      padding: "1px 6px",
+                      lineHeight: "16px",
+                      minWidth: "18px",
+                      textAlign: "center",
+                    }}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+                {isEffectiveCollapsed && item.id === "notifications" && unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "8px",
+                      right: "12px",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      backgroundColor: "#EF4444",
+                    }}
+                  />
                 )}
                 {!isEffectiveCollapsed && isLocked && (
                   <Lock size={13} color="#CBD5E1" style={{ marginLeft: "auto", flexShrink: 0 }} />

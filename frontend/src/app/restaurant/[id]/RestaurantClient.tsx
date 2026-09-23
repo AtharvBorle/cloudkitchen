@@ -170,6 +170,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   : "Veg & Non-Veg 🍱",
               offerText: liveData.offerText || "",
               isOnline: liveData.isOnline !== false,
+              bannerImageUrl: liveData.bannerImageUrl || (Array.isArray(liveData.kitchenImages) ? liveData.kitchenImages[0] : "") || prev.bannerImageUrl || "",
               categories:
                 uniqueCats.length > 0 ? ["All", ...uniqueCats] : [],
               items: liveItems.length > 0 ? liveItems : prev.items,
@@ -275,6 +276,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             initialVegOnly={isVegOnly}
             onVegToggle={(veg) => setIsVegOnly(veg)}
             isOnline={kitchenData.isOnline !== false}
+            bannerImageUrl={kitchenData.bannerImageUrl}
           />
 
           {subscriptionPlans.length > 0 && (
