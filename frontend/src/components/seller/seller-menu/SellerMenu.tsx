@@ -143,6 +143,12 @@ export default function SellerMenu({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
+  useEffect(() => {
+    if (dishes && dishes.length > 0) {
+      setDishList(dishes);
+    }
+  }, [dishes]);
+
   // Fetch live menu items and served pincodes from DB
   useEffect(() => {
     let isMounted = true;
@@ -152,10 +158,14 @@ export default function SellerMenu({
         if (res.ok && isMounted) {
           const json = await res.json();
           const data = json.data || json;
-          const rawItems = Array.isArray(data)
-            ? data
-            : Array.isArray(data?.items)
+          const rawItems: any[] = Array.isArray(data?.items)
             ? data.items
+            : Array.isArray(data?.data?.items)
+            ? data.data.items
+            : Array.isArray(data)
+            ? data
+            : Array.isArray(json?.items)
+            ? json.items
             : [];
 
           const mapped: DishItem[] = rawItems.map((item: any) => {
