@@ -19,6 +19,7 @@ import {
   Shield,
   MapPin,
   ImagePlus,
+  LayoutGrid,
   Upload,
   Save,
 } from "lucide-react";
@@ -309,6 +310,101 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const [saving, setSaving] = useState(false);
   const [toastData, setToastData] = useState<{ title: string; status: "ON" | "OFF" | null } | null>(null);
 
+  // Kitchen Card Grid Photo State
+  const [cardPreview, setCardPreview] = useState<string>(
+    seller.cardImageUrl || ""
+  );
+  const [cardFile, setCardFile] = useState<File | null>(null);
+  const [isUploadingCard, setIsUploadingCard] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (seller.cardImageUrl && !cardFile) {
+      setCardPreview(seller.cardImageUrl);
+    }
+  }, [seller.cardImageUrl, cardFile]);
+
+  const handleCardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+      return;
+    }
+    setCardFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setCardPreview(localUrl);
+    setToastData({ title: "Card photo selected. Tap Save to apply.", status: "ON" });
+  };
+
+  const handleQuickUploadCard = async () => {
+    if (!cardFile) return;
+    setIsUploadingCard(true);
+    try {
+      const data = new FormData();
+      data.append("cardImageFile", cardFile);
+      data.append("businessName", formData.businessName || seller.businessName);
+      data.append("phone", formData.phoneNumber || seller.phone);
+      data.append("email", formData.businessEmail || seller.email);
+      data.append("address", formData.address || seller.address);
+      if (formData.latitude) data.append("latitude", String(formData.latitude));
+      if (formData.longitude) data.append("longitude", String(formData.longitude));
+      data.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload card grid image");
+      }
+
+      const json = await res.json();
+      const profileData = json.data?.profile || json.profile;
+      let rawKImages: string[] = [];
+      if (profileData?.kitchenImages) {
+        try {
+          rawKImages = typeof profileData.kitchenImages === "string" ? JSON.parse(profileData.kitchenImages) : profileData.kitchenImages;
+        } catch {
+          rawKImages = [];
+        }
+      }
+      const updatedCardUrl = (Array.isArray(rawKImages) && rawKImages[0]) || profileData?.bannerImageUrl || cardPreview;
+      setCardPreview(updatedCardUrl);
+      setCardFile(null);
+      updateCachedProfile({ cardImageUrl: updatedCardUrl, kitchenImages: rawKImages.length > 0 ? rawKImages : [updatedCardUrl] });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { cardImageUrl: updatedCardUrl } }));
+      }
+      setToastData({ title: "Card photo updated successfully!", status: "ON" });
+    } catch (err: any) {
+      console.error("Card upload error:", err);
+      setToastData({ title: err.message || "Card upload failed", status: "OFF" });
+    } finally {
+      setIsUploadingCard(false);
+    }
+  };
+
+  const handleResetCard = async () => {
+    setCardFile(null);
+    setCardPreview("");
+    updateCachedProfile({ cardImageUrl: "", kitchenImages: [] });
+    try {
+      const data = new FormData();
+      data.append("removeCardImage", "true");
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: {} }));
+      }
+      setToastData({ title: "Card photo reset to default theme", status: "ON" });
+    } catch {
+      setToastData({ title: "Card photo reset to default theme", status: "ON" });
+    }
+  };
+
   // Storefront Banner State
   const [bannerPreview, setBannerPreview] = useState<string>(
     seller.bannerImageUrl || (seller.profile as any)?.bannerImageUrl || ""
@@ -363,6 +459,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       setBannerPreview(updatedBannerUrl);
       setBannerFile(null);
       updateCachedProfile({ bannerImageUrl: updatedBannerUrl });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { bannerImageUrl: updatedBannerUrl } }));
+      }
       setToastData({ title: "Banner updated successfully!", status: "ON" });
     } catch (err: any) {
       console.error("Banner upload error:", err);
@@ -372,11 +471,24 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     }
   };
 
-  const handleResetBanner = () => {
+  const handleResetBanner = async () => {
     setBannerFile(null);
     setBannerPreview("");
     updateCachedProfile({ bannerImageUrl: "" });
-    setToastData({ title: "Banner reset to default theme", status: "ON" });
+    try {
+      const data = new FormData();
+      data.append("removeBannerImage", "true");
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: {} }));
+      }
+      setToastData({ title: "Banner removed and reset to default theme", status: "ON" });
+    } catch {
+      setToastData({ title: "Banner reset to default theme", status: "ON" });
+    }
   };
 
   const NOTIFICATION_TITLES: Partial<Record<keyof ResponsiveSellerSettingsData, string>> = {
@@ -476,9 +588,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         console.error("Failed to save regional settings in responsive:", err);
       }
 
-      // 2. Persist Restaurant Information to backend database
+      // 2. Persist Restaurant Information, Card Photo & Banner to backend database
       let res: Response;
-      if (bannerFile) {
+      if (cardFile || bannerFile) {
         const fd = new FormData();
         fd.append("businessName", formData.businessName);
         fd.append("email", formData.businessEmail);
@@ -487,7 +599,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         if (formData.latitude) fd.append("latitude", String(formData.latitude));
         if (formData.longitude) fd.append("longitude", String(formData.longitude));
         fd.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
-        fd.append("bannerImageFile", bannerFile);
+        if (cardFile) fd.append("cardImageFile", cardFile);
+        if (bannerFile) fd.append("bannerImageFile", bannerFile);
 
         res = await fetchApi("/api/seller/profile", {
           method: "POST",
@@ -515,7 +628,22 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       }
 
       const resJson = await res.json().catch(() => ({}));
-      const updatedBannerUrl = resJson.data?.profile?.bannerImageUrl || resJson.profile?.bannerImageUrl || bannerPreview;
+      const profileData = resJson.data?.profile || resJson.profile;
+      let rawKImages: string[] = [];
+      if (profileData?.kitchenImages) {
+        try {
+          rawKImages = typeof profileData.kitchenImages === "string" ? JSON.parse(profileData.kitchenImages) : profileData.kitchenImages;
+        } catch {
+          rawKImages = [];
+        }
+      }
+      const updatedCardUrl = (Array.isArray(rawKImages) && rawKImages[0]) || profileData?.bannerImageUrl || cardPreview;
+      const updatedBannerUrl = profileData?.bannerImageUrl || bannerPreview;
+
+      if (cardFile) {
+        setCardFile(null);
+        setCardPreview(updatedCardUrl);
+      }
       if (bannerFile) {
         setBannerFile(null);
         setBannerPreview(updatedBannerUrl);
@@ -531,9 +659,14 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         latitude: formData.latitude,
         longitude: formData.longitude,
         isLocationPinned: Boolean(formData.latitude && formData.longitude),
+        cardImageUrl: updatedCardUrl,
         bannerImageUrl: updatedBannerUrl,
+        kitchenImages: rawKImages.length > 0 ? rawKImages : undefined,
         avatarInitials: computeInitials(formData.businessName),
       });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { cardImageUrl: updatedCardUrl, bannerImageUrl: updatedBannerUrl } }));
+      }
 
       // 4. Toggle store online status if needed
       await toggleSellerOnlineStatus(formData.storeOnline);
@@ -637,7 +770,251 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         <main className={styles.contentArea}>
           {activeTab === "General" && (
             <>
-              {/* 0. Storefront Cover Banner Card */}
+              {/* 0A. Kitchen Card Grid Photo Card */}
+              <div className={styles.card}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "8px",
+                        backgroundColor: "#EEF2FF",
+                        border: "1px solid #C7D2FE",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#4F46E5",
+                      }}
+                    >
+                      <LayoutGrid size={17} />
+                    </div>
+                    <div>
+                      <h2 className={styles.cardTitle} style={{ margin: 0, fontSize: "15px" }}>
+                        Kitchen Card Grid Photo
+                      </h2>
+                      <p style={{ fontSize: "11px", color: "#64748B", margin: "1px 0 0 0" }}>
+                        Main photo shown on explore &amp; customer cards
+                      </p>
+                    </div>
+                  </div>
+                  {cardPreview ? (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        color: "#16A34A",
+                        backgroundColor: "#F0FDF4",
+                        padding: "2px 8px",
+                        borderRadius: "16px",
+                        border: "1px solid #BBF7D0",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "3px",
+                      }}
+                    >
+                      <CheckCircle2 size={11} /> Live
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        color: "#64748B",
+                        backgroundColor: "#F1F5F9",
+                        padding: "2px 8px",
+                        borderRadius: "16px",
+                        border: "1px solid #E2E8F0",
+                      }}
+                    >
+                      Default
+                    </span>
+                  )}
+                </div>
+
+                {/* Mobile Card Mockup Preview */}
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth: "280px",
+                    margin: "10px auto 0 auto",
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: "14px",
+                    overflow: "hidden",
+                    border: "1.5px solid #E2E8F0",
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.05)",
+                  }}
+                >
+                  <div style={{ width: "100%", height: "135px", position: "relative", backgroundColor: "#FFEBD8" }}>
+                    <img
+                      src={cardPreview || "/images/places/place-pizza.png"}
+                      alt="Kitchen Card Preview"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = "/images/places/place-pizza.png";
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        left: "8px",
+                        backgroundColor: "rgba(15, 23, 42, 0.75)",
+                        color: "#FFFFFF",
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        backdropFilter: "blur(4px)",
+                      }}
+                    >
+                      Explore Grid Card
+                    </div>
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "8px",
+                        right: "8px",
+                        backgroundColor: "#16A34A",
+                        color: "#FFFFFF",
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      OPEN
+                    </div>
+                  </div>
+
+                  <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <h3
+                      style={{
+                        margin: 0,
+                        fontSize: "13.5px",
+                        fontWeight: 700,
+                        color: "#0F172A",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formData.businessName || seller.businessName || "Your Kitchen"}
+                    </h3>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "2px",
+                          backgroundColor: "#F0FDF4",
+                          color: "#16A34A",
+                          padding: "1px 5px",
+                          borderRadius: "4px",
+                          fontSize: "10.5px",
+                          fontWeight: 700,
+                          border: "1px solid #BBF7D0",
+                        }}
+                      >
+                        <Star size={9} fill="#16A34A" /> 4.8
+                      </span>
+                      <span style={{ fontSize: "10.5px", color: "#64748B", fontWeight: 600 }}>20-30 mins</span>
+                      <span style={{ fontSize: "10.5px", color: "#EA580C", fontWeight: 600 }}>Free Delivery</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Card Action Buttons */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginTop: "12px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <input
+                    type="file"
+                    id="res-card-file-input"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    style={{ display: "none" }}
+                    onChange={handleCardFileSelect}
+                  />
+                  <label
+                    htmlFor="res-card-file-input"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "7px 13px",
+                      backgroundColor: "#EA580C",
+                      color: "#FFFFFF",
+                      borderRadius: "7px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Upload size={13} />
+                    <span>{cardPreview ? "Replace Photo" : "Upload Photo"}</span>
+                  </label>
+
+                  {cardFile && (
+                    <button
+                      type="button"
+                      onClick={handleQuickUploadCard}
+                      disabled={isUploadingCard}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "7px 11px",
+                        backgroundColor: "#16A34A",
+                        color: "#FFFFFF",
+                        borderRadius: "7px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        border: "none",
+                        cursor: isUploadingCard ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {isUploadingCard ? <Loader2 size={13} className={styles.spinner} /> : <Save size={13} />}
+                      <span>{isUploadingCard ? "Saving..." : "Save Photo"}</span>
+                    </button>
+                  )}
+
+                  {cardPreview && (
+                    <button
+                      type="button"
+                      onClick={handleResetCard}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "7px 10px",
+                        backgroundColor: "#FFF1F2",
+                        color: "#E11D48",
+                        border: "1px solid #FECDD3",
+                        borderRadius: "7px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      <span>Reset</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 0B. Storefront Cover Banner Card */}
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
