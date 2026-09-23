@@ -96,19 +96,20 @@ export default function SellerMenu({
 }: SellerMenuProps) {
   const router = useRouter();
   const seller = useSellerProfile();
-  const [isOpen, setIsOpen] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("seller_is_online");
-        if (stored !== null) return stored === "true";
-      } catch {}
-    }
-    return typeof initialIsOpen === "boolean" ? initialIsOpen : true;
-  });
+  const [isOpen, setIsOpen] = useState<boolean>(typeof initialIsOpen === "boolean" ? initialIsOpen : true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
   const [dishList, setDishList] = useState<DishItem[]>(dishes || []);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("seller_is_online");
+      if (stored !== null) {
+        setIsOpen(stored === "true");
+      }
+    } catch {}
+  }, []);
   const [servedPincodes, setServedPincodes] = useState<ServedPincodeItem[]>(() => {
     if (operationalPincodes) {
       return operationalPincodes
@@ -527,21 +528,22 @@ export default function SellerMenu({
             {/* Store Operations Switch */}
             <div className={styles.opItem}>
               <span className={styles.opLabel}>Store Operations:</span>
-              <div className={styles.toggleWrapper}>
+              <div className={styles.toggleWrapper} suppressHydrationWarning>
                 <button
                   type="button"
                   onClick={handleToggleStore}
-                  className={`${styles.toggleSwitch} ${isOpen ? styles.toggleSwitchActive : ""
-                    }`}
+                  className={`${styles.toggleSwitch} ${isOpen ? styles.toggleSwitchActive : ""}`}
                   aria-label="Toggle store status"
+                  suppressHydrationWarning
                 >
                   <span
-                    className={`${styles.toggleThumb} ${isOpen ? styles.toggleThumbActive : ""
-                      }`}
+                    className={`${styles.toggleThumb} ${isOpen ? styles.toggleThumbActive : ""}`}
+                    suppressHydrationWarning
                   />
                 </button>
                 <span
                   className={isOpen ? styles.statusTextOrange : styles.statusTextMuted}
+                  suppressHydrationWarning
                 >
                   {isOpen ? "OPEN" : "CLOSED"}
                 </span>
