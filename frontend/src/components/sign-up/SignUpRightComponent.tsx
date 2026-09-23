@@ -296,17 +296,7 @@ export default function SignUpRightComponent({
         }
       } else {
         const data = await res.json().catch(() => ({}));
-        const rawMsg = data.message || "";
-        if (
-          rawMsg.toLowerCase().includes("already exists") ||
-          rawMsg.toLowerCase().includes("duplicate") ||
-          rawMsg.toLowerCase().includes("login instead") ||
-          res.status === 409
-        ) {
-          setError("An account with this email or mobile number already exists. Please Sign In to continue.");
-        } else {
-          setError(rawMsg || "Registration failed. Please try again.");
-        }
+        setError(data.message || "Registration failed. Please try again.");
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -334,7 +324,7 @@ export default function SignUpRightComponent({
       }}
       className="signUpRightFormContainer"
     >
-      {/* Properties Inner Wrapper (Width: 500px) */}
+      {/* Properties Inner Wrapper (Width: 500px, Gap: 16px) */}
       <div
         style={{
           width: "100%",
@@ -344,6 +334,53 @@ export default function SignUpRightComponent({
           gap: "14px",
         }}
       >
+        {/* TopRow Header: "Already have an account?" (Left) + "Sign In" (Right) */}
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "500px",
+            height: "36px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0 2px",
+            boxSizing: "border-box",
+          }}
+          className="signup-top-row"
+        >
+          <span
+            style={{
+              fontSize: "14px",
+              color: "#475569",
+              fontWeight: 500,
+              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+            }}
+          >
+            Already have an account?
+          </span>
+          <Link
+            href={signInUrl}
+            style={{
+              padding: "7px 22px",
+              borderRadius: "9999px",
+              border: "1.5px solid #FF5500",
+              color: "#FF5500",
+              fontSize: "14px",
+              fontWeight: 600,
+              textDecoration: "none",
+              backgroundColor: "transparent",
+              transition: "all 0.2s ease",
+              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            className="signin-btn"
+          >
+            Sign In
+          </Link>
+        </div>
+
         {/* FormCard Container */}
         <div
           style={{
@@ -393,37 +430,15 @@ export default function SignUpRightComponent({
             <div
               style={{
                 backgroundColor: "#FEF2F2",
-                border: "1.5px solid #FCA5A5",
+                border: "1px solid #FCA5A5",
                 color: "#DC2626",
-                padding: "12px 16px",
-                borderRadius: "12px",
-                fontSize: "13.5px",
+                padding: "10px 14px",
+                borderRadius: "10px",
+                fontSize: "13px",
                 fontWeight: 500,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: "8px",
               }}
             >
-              <span>{error}</span>
-              {error.toLowerCase().includes("already exists") && (
-                <Link
-                  href={signInUrl}
-                  style={{
-                    backgroundColor: "#DC2626",
-                    color: "#FFFFFF",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    padding: "4px 10px",
-                    borderRadius: "6px",
-                    textDecoration: "none",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Sign In Now →
-                </Link>
-              )}
+              {error}
             </div>
           )}
 
@@ -998,39 +1013,6 @@ export default function SignUpRightComponent({
               <span>{loading ? "Creating Account..." : "Register & Explore"}</span>
               {!loading && <ArrowRight size={18} strokeWidth={2.5} />}
             </button>
-
-            {/* 8. Footer Link: Already have an account? Sign In */}
-            <div
-              style={{
-                marginTop: "14px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                fontSize: "14px",
-                color: "#64748B",
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              }}
-            >
-              <span>Already have an account?</span>
-              <Link
-                href={signInUrl}
-                style={{
-                  color: "#FF5500",
-                  fontWeight: 700,
-                  textDecoration: "none",
-                  transition: "color 0.15s ease",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.textDecoration = "underline";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.textDecoration = "none";
-                }}
-              >
-                Sign In
-              </Link>
-            </div>
           </form>
         </div>
       </div>
