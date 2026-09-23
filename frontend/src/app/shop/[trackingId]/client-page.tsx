@@ -88,25 +88,88 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
 
     useEffect(() => {
         if (!trackingId) return;
+        let isMounted = true;
 
-        const fetchShop = async () => {
+        const fetchShop = async (isSilent = false) => {
             try {
+                if (!isSilent) {
+                    setLoading(true);
+                }
                 const res = await fetchApi(`/api/public/shop/${trackingId}`);
-                if (res.ok) {
+                if (res.ok && isMounted) {
                     const data = await res.json();
                     setSeller(data.data || data);
-                } else {
+                    setError(false);
+                } else if (!isSilent && isMounted) {
                     setError(true);
                 }
             } catch (err) {
                 console.error("Error fetching public shop:", err);
-                setError(true);
+                if (!isSilent && isMounted) {
+                    setError(true);
+                }
             } finally {
-                setLoading(false);
+                if (!isSilent && isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
-        fetchShop();
+        fetchShop(false);
+
+        // Live polling interval (every 4 seconds)
+        const interval = setInterval(() => {
+            if (document.visibilityState === "visible") {
+                fetchShop(true);
+            }
+        }, 4000);
+
+        const handleSync = () => {
+            fetchShop(true);
+        };
+
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                fetchShop(true);
+            }
+        };
+
+        if (typeof window !== "undefined") {
+            window.addEventListener("focus", handleSync);
+            window.addEventListener("seller-status-updated", handleSync);
+            window.addEventListener("cloudkitchen-new-notification", handleSync);
+            window.addEventListener("storage", handleSync);
+            document.addEventListener("visibilitychange", handleVisibility);
+        }
+
+        let bcStatus: BroadcastChannel | null = null;
+        let bcNotif: BroadcastChannel | null = null;
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+            try {
+                bcStatus = new BroadcastChannel("cloudkitchen_seller_status_bc");
+                bcStatus.onmessage = () => handleSync();
+                bcNotif = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+                bcNotif.onmessage = () => handleSync();
+            } catch {}
+        }
+
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+            if (typeof window !== "undefined") {
+                window.removeEventListener("focus", handleSync);
+                window.removeEventListener("seller-status-updated", handleSync);
+                window.removeEventListener("cloudkitchen-new-notification", handleSync);
+                window.removeEventListener("storage", handleSync);
+                document.removeEventListener("visibilitychange", handleVisibility);
+            }
+            if (bcStatus) {
+                try { bcStatus.close(); } catch {}
+            }
+            if (bcNotif) {
+                try { bcNotif.close(); } catch {}
+            }
+        };
     }, [trackingId]);
 
     if (loading) {

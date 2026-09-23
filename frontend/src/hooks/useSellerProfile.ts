@@ -96,6 +96,17 @@ export async function toggleSellerOnlineStatus(newStatus?: boolean): Promise<boo
       const json = await res.json();
       const confirmedStatus = json.data?.isOnline ?? targetStatus;
       updateCachedProfile({ isOnline: confirmedStatus });
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("seller_is_online", String(confirmedStatus));
+          window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { isOnline: confirmedStatus } }));
+          if ("BroadcastChannel" in window) {
+            const bc = new BroadcastChannel("cloudkitchen_seller_status_bc");
+            bc.postMessage({ type: "SELLER_STATUS_CHANGED", isOnline: confirmedStatus });
+            bc.close();
+          }
+        } catch {}
+      }
       return confirmedStatus;
     } else {
       // Revert if error
