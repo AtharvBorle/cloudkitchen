@@ -1247,11 +1247,11 @@ Details: Category request submitted via chatbot assistant.`;
                         width: "62px",
                         height: "62px",
                         borderRadius: "50%",
-                        backgroundColor: "#FFFFFF",
+                        backgroundColor: "#EE3524",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: "0 10px 30px rgba(239, 68, 68, 0.25), 0 4px 12px rgba(0,0,0,0.1)",
+                        boxShadow: "0 10px 30px rgba(238, 53, 36, 0.35), 0 4px 12px rgba(0,0,0,0.1)",
                         border: "2.5px solid #FFFFFF",
                         cursor: isDragging ? "grabbing" : "grab",
                         transition: isDragging ? "none" : "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -1272,7 +1272,7 @@ Details: Category request submitted via chatbot assistant.`;
                         height: "100%",
                         borderRadius: "50%",
                         overflow: "hidden",
-                        backgroundColor: "#FFF5F1"
+                        backgroundColor: "#EE3524"
                     }}>
                         <img
                             src="/images/bitey-mascot.png"
@@ -1332,9 +1332,9 @@ Details: Category request submitted via chatbot assistant.`;
                                 borderRadius: "50%",
                                 overflow: "hidden",
                                 border: "2px solid #FFFFFF",
-                                boxShadow: "0 2px 8px rgba(239, 68, 68, 0.15)",
+                                boxShadow: "0 2px 10px rgba(238, 53, 36, 0.25)",
                                 flexShrink: 0,
-                                backgroundColor: "#FFEAE4"
+                                backgroundColor: "#EE3524"
                             }}>
                                 <img
                                     src="/images/bitey-mascot.png"
