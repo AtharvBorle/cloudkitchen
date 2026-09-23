@@ -56,6 +56,15 @@ const parseOption = (label: string) => {
     };
 };
 
+const getOptionImage = (label: string) => {
+    const l = label.toLowerCase();
+    if (l.includes("order") && !l.includes("assigned")) return "/images/bot/icon-box.png";
+    if (l.includes("courier") || l.includes("delivery") || l.includes("assigned order")) return "/images/bot/icon-scooter.png";
+    if (l.includes("payment") || l.includes("refund") || l.includes("payout") || l.includes("wallet")) return "/images/bot/icon-card.png";
+    if (l.includes("ticket")) return "/images/bot/icon-ticket.png";
+    return null;
+};
+
 export default function ChatbotWidget() {
     const { data: session, status } = useSession();
     const pathname = usePathname();
@@ -1752,45 +1761,57 @@ Details: Category request submitted via chatbot assistant.`;
                                                     }}>
                                                         {gridOptions.map((opt, i) => {
                                                             const parsed = parseOption(opt.label);
+                                                            const imgIcon = getOptionImage(opt.label);
                                                             return (
                                                                 <button
                                                                     key={i}
                                                                     onClick={opt.action}
                                                                     style={{
                                                                         backgroundColor: "#FFFFFF",
-                                                                        border: "1.5px solid #FEEFEA",
-                                                                        borderRadius: "16px",
-                                                                        padding: "14px 12px",
+                                                                        border: "1.5px solid #FDE8E1",
+                                                                        borderRadius: "20px",
+                                                                        padding: "16px 14px 14px 14px",
                                                                         display: "flex",
                                                                         flexDirection: "column",
                                                                         justifyContent: "space-between",
-                                                                        minHeight: "105px",
+                                                                        minHeight: "115px",
                                                                         cursor: "pointer",
                                                                         textAlign: "left",
-                                                                        boxShadow: "0 3px 10px rgba(239, 68, 68, 0.03)",
+                                                                        boxShadow: "0 4px 14px rgba(239, 68, 68, 0.03)",
                                                                         transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
                                                                     }}
                                                                     onMouseEnter={(e) => {
                                                                         e.currentTarget.style.borderColor = "#FCA5A5";
                                                                         e.currentTarget.style.transform = "translateY(-2px)";
-                                                                        e.currentTarget.style.boxShadow = "0 8px 18px rgba(239, 68, 68, 0.1)";
+                                                                        e.currentTarget.style.boxShadow = "0 8px 20px rgba(239, 68, 68, 0.1)";
                                                                     }}
                                                                     onMouseLeave={(e) => {
-                                                                        e.currentTarget.style.borderColor = "#FEEFEA";
+                                                                        e.currentTarget.style.borderColor = "#FDE8E1";
                                                                         e.currentTarget.style.transform = "translateY(0)";
-                                                                        e.currentTarget.style.boxShadow = "0 3px 10px rgba(239, 68, 68, 0.03)";
+                                                                        e.currentTarget.style.boxShadow = "0 4px 14px rgba(239, 68, 68, 0.03)";
                                                                     }}
                                                                 >
                                                                     <div style={{
                                                                         display: "flex",
                                                                         alignItems: "center",
                                                                         justifyContent: "center",
-                                                                        fontSize: "30px",
-                                                                        lineHeight: 1,
-                                                                        marginBottom: "8px",
+                                                                        height: "48px",
+                                                                        marginBottom: "10px",
                                                                         width: "100%"
                                                                     }}>
-                                                                        {parsed.icon || "💬"}
+                                                                        {imgIcon ? (
+                                                                            <img
+                                                                                src={imgIcon}
+                                                                                alt={parsed.text}
+                                                                                style={{
+                                                                                    maxHeight: "44px",
+                                                                                    maxWidth: "70px",
+                                                                                    objectFit: "contain"
+                                                                                }}
+                                                                            />
+                                                                        ) : (
+                                                                            <span style={{ fontSize: "32px", lineHeight: 1 }}>{parsed.icon || "💬"}</span>
+                                                                        )}
                                                                     </div>
                                                                     <div style={{
                                                                         display: "flex",
@@ -1800,14 +1821,14 @@ Details: Category request submitted via chatbot assistant.`;
                                                                         gap: "4px"
                                                                     }}>
                                                                         <span style={{
-                                                                            fontSize: "0.78rem",
+                                                                            fontSize: "0.82rem",
                                                                             fontWeight: "700",
-                                                                            color: "#334155",
+                                                                            color: "#1E293B",
                                                                             lineHeight: "1.25"
                                                                         }}>
                                                                             {parsed.text}
                                                                         </span>
-                                                                        <ChevronRight size={15} color="#EF4444" style={{ flexShrink: 0, marginBottom: "1px" }} />
+                                                                        <ChevronRight size={16} color="#EF4444" style={{ flexShrink: 0, marginBottom: "1px" }} />
                                                                     </div>
                                                                 </button>
                                                             );
