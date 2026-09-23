@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, SquarePen, Sparkles, Trash2, Utensils } from "lucide-react";
+import { Plus, Search, SquarePen, Sparkles, Trash2, Utensils, MapPin, Edit3, X, Check, AlertCircle, Loader2 } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
@@ -56,6 +56,12 @@ export interface DishItem {
   inStock: boolean;
 }
 
+export interface ServedPincodeItem {
+  id: string;
+  pincode: string;
+  name: string;
+}
+
 export interface SellerMenuProps {
   ownerName?: string;
   partnerRole?: string;
@@ -94,14 +100,41 @@ export default function SellerMenu({
   const [selectedCategory, setSelectedCategory] = useState<string>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
   const [dishList, setDishList] = useState<DishItem[]>(dishes || []);
-  const [pincodesStr, setPincodesStr] = useState(operationalPincodes || seller.pincode || "Not configured");
+  const [servedPincodes, setServedPincodes] = useState<ServedPincodeItem[]>(() => {
+    if (operationalPincodes) {
+      return operationalPincodes
+        .split(",")
+        .map((p, idx) => ({
+          id: `prop-pin-${idx}`,
+          pincode: p.trim(),
+          name: `Area ${p.trim()}`,
+        }))
+        .filter((p) => p.pincode);
+    }
+    return [
+      {
+        id: "default-pin-1",
+        pincode: "411051",
+        name: "Kothrud, Pune",
+      },
+    ];
+  });
+  const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
+  const [newPincode, setNewPincode] = useState("");
+  const [newPlaceName, setNewPlaceName] = useState("");
+  const [editingPincodeId, setEditingPincodeId] = useState<string | null>(null);
+  const [editPincodeValue, setEditPincodeValue] = useState("");
+  const [editPlaceNameValue, setEditPlaceNameValue] = useState("");
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+  const [pincodeError, setPincodeError] = useState("");
+  const [pincodeSuccess, setPincodeSuccess] = useState("");
   const [loading, setLoading] = useState(true);
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
-  // Fetch live menu items from DB
+  // Fetch live menu items and served pincodes from DB
   useEffect(() => {
     let isMounted = true;
     async function loadMenu() {
@@ -146,9 +179,25 @@ export default function SellerMenu({
             });
             setDishList(mapped);
 
-            if (data.servedPincodes && Array.isArray(data.servedPincodes) && data.servedPincodes.length > 0) {
-              setPincodesStr(data.servedPincodes.map((sp: any) => sp.pincode).join(", "));
+            if (data.servedPincodes && Array.isArray(data.servedPincodes)) {
+              if (data.servedPincodes.length > 0) {
+                const list: ServedPincodeItem[] = data.servedPincodes.map((sp: any) => ({
+                  id: String(sp.id || `pin-${sp.pincode}`),
+                  pincode: String(sp.pincode),
+                  name: String(sp.name || ""),
+                }));
+                setServedPincodes(list);
+              } else if (seller.pincode) {
+                setServedPincodes([
+                  {
+                    id: "primary-pin",
+                    pincode: String(seller.pincode),
+                    name: seller.city || "Primary Area",
+                  },
+                ]);
+              }
             }
+
             if (data.seller) {
               if (typeof data.seller.isOnline === "boolean") setIsOpen(data.seller.isOnline);
             }
@@ -164,7 +213,130 @@ export default function SellerMenu({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [seller.pincode, seller.city]);
+
+  const handleAddPincode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setPincodeError("");
+    setPincodeSuccess("");
+
+    const cleanPin = newPincode.trim();
+    const cleanName = newPlaceName.trim() || `Area ${cleanPin}`;
+
+    if (!cleanPin) {
+      setPincodeError("Please enter a 6-digit pincode.");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(cleanPin)) {
+      setPincodeError("Please enter a valid 6-digit numerical pincode (e.g., 411051).");
+      return;
+    }
+
+    if (servedPincodes.some((p) => p.pincode === cleanPin)) {
+      setPincodeError(`Pincode ${cleanPin} is already added in your operational areas.`);
+      return;
+    }
+
+    try {
+      setPincodeLoading(true);
+      const res = await fetchApi("/api/seller/menu/pincodes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pincode: cleanPin, name: cleanName }),
+      });
+
+      let newId = `pin-${Date.now()}`;
+      if (res.ok) {
+        const json = await res.json();
+        const d = json.data?.pincode || json.data || json;
+        if (d && d.id) newId = d.id;
+      }
+
+      setServedPincodes((prev) => [...prev, { id: newId, pincode: cleanPin, name: cleanName }]);
+      setNewPincode("");
+      setNewPlaceName("");
+      setPincodeSuccess(`Pincode ${cleanPin} (${cleanName}) added successfully!`);
+    } catch (err: any) {
+      console.error("Failed to add pincode:", err);
+      setServedPincodes((prev) => [...prev, { id: `pin-${Date.now()}`, pincode: cleanPin, name: cleanName }]);
+      setNewPincode("");
+      setNewPlaceName("");
+      setPincodeSuccess(`Pincode ${cleanPin} added.`);
+    } finally {
+      setPincodeLoading(false);
+    }
+  };
+
+  const handleDeletePincode = async (pincodeItem: ServedPincodeItem) => {
+    setPincodeError("");
+    setPincodeSuccess("");
+    setServedPincodes((prev) =>
+      prev.filter((p) => p.id !== pincodeItem.id && p.pincode !== pincodeItem.pincode)
+    );
+
+    try {
+      if (
+        pincodeItem.id &&
+        !pincodeItem.id.startsWith("default-") &&
+        !pincodeItem.id.startsWith("primary-") &&
+        !pincodeItem.id.startsWith("prop-")
+      ) {
+        await fetchApi(`/api/seller/menu/pincodes/${pincodeItem.id}`, {
+          method: "DELETE",
+        });
+      }
+      setPincodeSuccess(`Pincode ${pincodeItem.pincode} removed successfully.`);
+    } catch (err) {
+      console.error("Failed to delete pincode:", err);
+    }
+  };
+
+  const handleStartEdit = (item: ServedPincodeItem) => {
+    setEditingPincodeId(item.id);
+    setEditPincodeValue(item.pincode);
+    setEditPlaceNameValue(item.name || "");
+    setPincodeError("");
+    setPincodeSuccess("");
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    const cleanPin = editPincodeValue.trim();
+    const cleanName = editPlaceNameValue.trim() || `Area ${cleanPin}`;
+
+    if (!cleanPin || !/^\d{6}$/.test(cleanPin)) {
+      setPincodeError("Please enter a valid 6-digit pincode.");
+      return;
+    }
+
+    if (servedPincodes.some((p) => p.id !== id && p.pincode === cleanPin)) {
+      setPincodeError(`Pincode ${cleanPin} is already in the list.`);
+      return;
+    }
+
+    try {
+      setPincodeLoading(true);
+      await fetchApi("/api/seller/menu/pincodes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pincode: cleanPin, name: cleanName }),
+      });
+
+      setServedPincodes((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, pincode: cleanPin, name: cleanName } : p))
+      );
+      setEditingPincodeId(null);
+      setPincodeSuccess(`Pincode updated to ${cleanPin} (${cleanName})!`);
+    } catch (err) {
+      console.error("Failed to update pincode:", err);
+      setServedPincodes((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, pincode: cleanPin, name: cleanName } : p))
+      );
+      setEditingPincodeId(null);
+    } finally {
+      setPincodeLoading(false);
+    }
+  };
 
   const defaultPills: string[] = ["All Items", "Veg", "Non-Veg", "Jain", "Vegan"];
   const dynamicCategories = Array.from(
@@ -358,9 +530,67 @@ export default function SellerMenu({
             <div className={styles.verticalDivider} />
 
             {/* Operational Pincodes */}
-            <div className={styles.opItem}>
-              <span className={styles.opLabel}>Operational Pincodes:</span>
-              <span className={styles.opValue}>{pincodesStr}</span>
+            <div className={styles.opItem} style={{ flexWrap: "wrap", maxWidth: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <MapPin size={16} color="#EA580C" strokeWidth={2.2} />
+                <span className={styles.opLabel}>Operational Pincodes:</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                {servedPincodes.length === 0 ? (
+                  <span className={styles.opValue} style={{ color: "#94A3B8" }}>None configured</span>
+                ) : (
+                  servedPincodes.slice(0, 3).map((p) => (
+                    <span
+                      key={p.id}
+                      style={{
+                        backgroundColor: "#FFF7ED",
+                        border: "1px solid #FED7AA",
+                        color: "#EA580C",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                      title={p.name ? `${p.pincode} - ${p.name}` : p.pincode}
+                    >
+                      {p.pincode}
+                      {p.name && <span style={{ color: "#9A3412", fontWeight: 400, fontSize: "11px" }}>({p.name.split(",")[0]})</span>}
+                    </span>
+                  ))
+                )}
+                {servedPincodes.length > 3 && (
+                  <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>
+                    +{servedPincodes.length - 3} more
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsPincodeModalOpen(true)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    background: "linear-gradient(135deg, #FFF7ED, #FFEDD5)",
+                    border: "1px solid #FDBA74",
+                    color: "#C2410C",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    padding: "4px 10px",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    marginLeft: "4px",
+                    transition: "all 0.15s ease",
+                  }}
+                  title="Edit, Add, Change, or Remove Operational Pincodes"
+                >
+                  <Edit3 size={13} />
+                  <span>Change / Edit</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -582,6 +812,485 @@ export default function SellerMenu({
           </div>
         </main>
       </div>
+
+      {/* Operational Pincodes Management Modal */}
+      {isPincodeModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(15, 23, 42, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px",
+            boxSizing: "border-box",
+          }}
+          onClick={() => setIsPincodeModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
+              maxWidth: "540px",
+              width: "100%",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              border: "1px solid #E2E8F0",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #F1F5F9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#F8FAFC",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FFF7ED",
+                    color: "#EA580C",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MapPin size={20} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#0F172A" }}>
+                    Manage Operational Pincodes
+                  </h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#64748B" }}>
+                    Configure areas where your kitchen accepts delivery orders
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPincodeModalOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94A3B8",
+                  padding: "6px",
+                  borderRadius: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-label="Close modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              style={{
+                padding: "20px 24px",
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: "18px",
+              }}
+            >
+              {/* Add New Pincode Form */}
+              <div
+                style={{
+                  backgroundColor: "#FAFAFA",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "12px",
+                  padding: "16px",
+                }}
+              >
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#334155",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Add New Delivery Pincode
+                </label>
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Pincode (e.g. 411051)"
+                    value={newPincode}
+                    onChange={(e) => setNewPincode(e.target.value.replace(/\D/g, ""))}
+                    style={{
+                      flex: "1 1 140px",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #CBD5E1",
+                      fontSize: "13.5px",
+                      color: "#0F172A",
+                      outline: "none",
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Area Name (e.g. Kothrud, Pune)"
+                    value={newPlaceName}
+                    onChange={(e) => setNewPlaceName(e.target.value)}
+                    style={{
+                      flex: "2 1 180px",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #CBD5E1",
+                      fontSize: "13.5px",
+                      color: "#0F172A",
+                      outline: "none",
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddPincode()}
+                    disabled={pincodeLoading || !newPincode.trim()}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      backgroundColor:
+                        pincodeLoading || !newPincode.trim() ? "#CBD5E1" : "#EA580C",
+                      color: "#FFFFFF",
+                      border: "none",
+                      padding: "9px 16px",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor:
+                        pincodeLoading || !newPincode.trim() ? "not-allowed" : "pointer",
+                      transition: "background 0.2s ease",
+                    }}
+                  >
+                    <Plus size={16} strokeWidth={2.4} />
+                    <span>Add</span>
+                  </button>
+                </div>
+
+                {pincodeError && (
+                  <p
+                    style={{
+                      margin: "8px 0 0",
+                      fontSize: "12px",
+                      color: "#DC2626",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {pincodeError}
+                  </p>
+                )}
+                {pincodeSuccess && (
+                  <p
+                    style={{
+                      margin: "8px 0 0",
+                      fontSize: "12px",
+                      color: "#16A34A",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {pincodeSuccess}
+                  </p>
+                )}
+              </div>
+
+              {/* Active Pincodes List */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}>
+                    Active Operational Pincodes ({servedPincodes.length})
+                  </span>
+                  <span style={{ fontSize: "11.5px", color: "#94A3B8" }}>
+                    Orders will be accepted from these areas
+                  </span>
+                </div>
+
+                {servedPincodes.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "28px 16px",
+                      backgroundColor: "#F8FAFC",
+                      borderRadius: "10px",
+                      border: "1px dashed #CBD5E1",
+                    }}
+                  >
+                    <MapPin size={24} color="#94A3B8" style={{ marginBottom: "6px" }} />
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "#475569",
+                      }}
+                    >
+                      No operational pincodes configured
+                    </p>
+                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#94A3B8" }}>
+                      Add your kitchen&apos;s delivery pincodes using the form above.
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                      maxHeight: "260px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {servedPincodes.map((item) => {
+                      const isEditing = editingPincodeId === item.id;
+                      if (isEditing) {
+                        return (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              backgroundColor: "#FFF7ED",
+                              border: "1px solid #FDBA74",
+                              borderRadius: "10px",
+                              padding: "8px 12px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={editPincodeValue}
+                              onChange={(e) =>
+                                setEditPincodeValue(e.target.value.replace(/\D/g, ""))
+                              }
+                              style={{
+                                width: "100px",
+                                padding: "6px 10px",
+                                borderRadius: "6px",
+                                border: "1px solid #CBD5E1",
+                                fontSize: "13px",
+                                fontWeight: 600,
+                              }}
+                            />
+                            <input
+                              type="text"
+                              value={editPlaceNameValue}
+                              onChange={(e) => setEditPlaceNameValue(e.target.value)}
+                              placeholder="Area Name"
+                              style={{
+                                flex: 1,
+                                minWidth: "120px",
+                                padding: "6px 10px",
+                                borderRadius: "6px",
+                                border: "1px solid #CBD5E1",
+                                fontSize: "13px",
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEdit(item.id)}
+                              style={{
+                                backgroundColor: "#EA580C",
+                                color: "#FFFFFF",
+                                border: "none",
+                                padding: "6px 12px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingPincodeId(null)}
+                              style={{
+                                backgroundColor: "transparent",
+                                color: "#64748B",
+                                border: "1px solid #CBD5E1",
+                                padding: "6px 10px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            backgroundColor: "#FFFFFF",
+                            border: "1px solid #E2E8F0",
+                            borderRadius: "10px",
+                            padding: "10px 14px",
+                            transition: "border-color 0.15s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                backgroundColor: "#FFF7ED",
+                                color: "#EA580C",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <MapPin size={15} />
+                            </div>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <span
+                                  style={{
+                                    fontSize: "14px",
+                                    fontWeight: 700,
+                                    color: "#0F172A",
+                                  }}
+                                >
+                                  {item.pincode}
+                                </span>
+                                {item.name && (
+                                  <span
+                                    style={{
+                                      fontSize: "12.5px",
+                                      color: "#64748B",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    • {item.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(item)}
+                              style={{
+                                background: "none",
+                                border: "1px solid #E2E8F0",
+                                padding: "5px 9px",
+                                borderRadius: "6px",
+                                color: "#475569",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                              title="Edit pincode details"
+                            >
+                              <Edit3 size={13} />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePincode(item)}
+                              style={{
+                                background: "none",
+                                border: "1px solid #FEE2E2",
+                                padding: "5px 9px",
+                                borderRadius: "6px",
+                                color: "#DC2626",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                              title="Remove pincode"
+                            >
+                              <Trash2 size={13} />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #F1F5F9",
+                display: "flex",
+                justifyContent: "flex-end",
+                backgroundColor: "#F8FAFC",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsPincodeModalOpen(false)}
+                style={{
+                  backgroundColor: "#0F172A",
+                  color: "#FFFFFF",
+                  border: "none",
+                  padding: "9px 20px",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

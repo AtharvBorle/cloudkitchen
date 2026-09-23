@@ -5,8 +5,11 @@ import { uploadImage } from "@/lib/upload";
 
 export const getFoodCategories = async () => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view food categories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const foodCategories = await db.foodCategory.findMany({
@@ -29,8 +32,11 @@ export const getFoodCategories = async () => {
 
 export const createFoodCategory = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create food categories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const formData = await req.formData();
@@ -39,17 +45,17 @@ export const createFoodCategory = async (req: Request) => {
     const imageFile = formData.get("image") as File | null;
 
     if (!name || !name.trim()) {
-        throw new ApiError("Category name is required", 400);
+        throw new ApiError("Category name is required.", 400);
     }
     if (!categoryIdsString) {
-        throw new ApiError("At least one parent category is required", 400);
+        throw new ApiError("At least one parent category is required.", 400);
     }
 
     const cleanedName = name.trim();
     const categoryIds = categoryIdsString ? categoryIdsString.split(",").map(id => id.trim()).filter(Boolean) : [];
 
     if (categoryIds.length === 0) {
-        throw new ApiError("At least one parent category is required", 400);
+        throw new ApiError("At least one parent category is required.", 400);
     }
 
     // Check if food category already exists under any of the selected parent categories
@@ -65,7 +71,7 @@ export const createFoodCategory = async (req: Request) => {
     });
 
     if (existing) {
-        throw new ApiError("Food category already exists under one of the selected parent categories", 400);
+        throw new ApiError("A food category with this name already exists under one of the selected parent categories.", 400);
     }
 
     let imageUrl = null;
@@ -94,12 +100,15 @@ export const createFoodCategory = async (req: Request) => {
 
 export const deleteFoodCategory = async (id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete food categories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     if (!id) {
-        throw new ApiError("Category ID is required", 400);
+        throw new ApiError("Category ID is required.", 400);
     }
 
     await db.foodCategory.delete({
@@ -111,8 +120,11 @@ export const deleteFoodCategory = async (id: string) => {
 
 export const createFoodSubCategory = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create food subcategories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const formData = await req.formData();
@@ -121,10 +133,10 @@ export const createFoodSubCategory = async (req: Request) => {
     const imageFile = formData.get("image") as File | null;
 
     if (!name || !name.trim()) {
-        throw new ApiError("Sub-category name is required", 400);
+        throw new ApiError("Sub-category name is required.", 400);
     }
     if (!foodCategoryId) {
-        throw new ApiError("Parent food category is required", 400);
+        throw new ApiError("Parent food category is required.", 400);
     }
 
     const cleanedName = name.trim();
@@ -138,7 +150,7 @@ export const createFoodSubCategory = async (req: Request) => {
     });
 
     if (existing) {
-        throw new ApiError("Sub-category already exists under this food category", 400);
+        throw new ApiError("A sub-category with this name already exists under this food category.", 400);
     }
 
     let imageUrl = null;
@@ -161,12 +173,15 @@ export const createFoodSubCategory = async (req: Request) => {
 
 export const deleteFoodSubCategory = async (id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete food subcategories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     if (!id) {
-        throw new ApiError("Sub-category ID is required", 400);
+        throw new ApiError("Sub-category ID is required.", 400);
     }
 
     await db.foodSubCategory.delete({
@@ -178,12 +193,15 @@ export const deleteFoodSubCategory = async (id: string) => {
 
 export const updateFoodCategory = async (id: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update food categories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     if (!id) {
-        throw new ApiError("Category ID is required", 400);
+        throw new ApiError("Category ID is required.", 400);
     }
 
     const formData = await req.formData();
@@ -223,12 +241,15 @@ export const updateFoodCategory = async (id: string, req: Request) => {
 
 export const updateFoodSubCategory = async (id: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update food subcategories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     if (!id) {
-        throw new ApiError("Sub-category ID is required", 400);
+        throw new ApiError("Sub-category ID is required.", 400);
     }
 
     const formData = await req.formData();

@@ -6,8 +6,11 @@ import { revalidateTag } from "next/cache";
 export async function DELETE(req: Request, { params }: { params: Promise<{ categoryId: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session?.user || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to delete categories.", error: "Please log in first to delete categories." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const { categoryId } = await params;

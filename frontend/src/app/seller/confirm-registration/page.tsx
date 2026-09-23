@@ -98,7 +98,8 @@ export default function ConfirmRegistrationPage() {
       formData.append("address", activeDraft.address.trim());
       formData.append("addressFlat", "");
       formData.append("city", activeDraft.city || "Pune");
-      formData.append("pincode", activeDraft.pincode || "411038");
+      const extractedPin = activeDraft.address?.match(/\b\d{6}\b/)?.[0];
+      formData.append("pincode", activeDraft.pincode || extractedPin || "411038");
       if (activeDraft.locationCoordinates?.lat !== undefined && activeDraft.locationCoordinates?.lat !== null) {
         formData.append("latitude", String(activeDraft.locationCoordinates.lat));
         formData.append("lat", String(activeDraft.locationCoordinates.lat));

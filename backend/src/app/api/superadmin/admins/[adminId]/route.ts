@@ -6,8 +6,11 @@ import bcrypt from "bcryptjs";
 export async function PUT(req: Request, { params }: { params: Promise<{ adminId: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session?.user || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to update administrator details.", error: "Please log in first to update administrator details." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const body = await req.json();
@@ -16,19 +19,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
 
         const existingUser = await db.user.findUnique({ where: { id: adminId } });
         if (!existingUser || !["AGENT", "SUPPORT"].includes(existingUser.role)) {
-            return NextResponse.json({ message: "Admin not found" }, { status: 404 });
+            return NextResponse.json({ success: false, message: "The specified administrator could not be found.", error: "The specified administrator could not be found." }, { status: 404 });
         }
 
         if (name !== undefined) {
             if (!name.trim() || name.trim().length < 2) {
-                return NextResponse.json({ message: "Name must be at least 2 characters long" }, { status: 400 });
+                return NextResponse.json({ success: false, message: "Name must be at least 2 characters long.", error: "Name must be at least 2 characters long." }, { status: 400 });
             }
         }
 
         if (email !== undefined) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
-                return NextResponse.json({ message: "Invalid email format" }, { status: 400 });
+                return NextResponse.json({ success: false, message: "Please provide a valid email address.", error: "Please provide a valid email address." }, { status: 400 });
             }
             const emailInUse = await db.user.findFirst({
                 where: {
@@ -37,20 +40,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
                 }
             });
             if (emailInUse) {
-                return NextResponse.json({ message: "Email already in use by another user" }, { status: 409 });
+                return NextResponse.json({ success: false, message: "This email address is already in use by another account.", error: "This email address is already in use by another account." }, { status: 409 });
             }
         }
 
         if (phone !== undefined && phone !== "") {
             const phoneRegex = /^[0-9]{10}$/;
             if (!phoneRegex.test(phone)) {
-                return NextResponse.json({ message: "Phone number must be exactly 10 digits" }, { status: 400 });
+                return NextResponse.json({ success: false, message: "Phone number must be exactly 10 digits.", error: "Phone number must be exactly 10 digits." }, { status: 400 });
             }
         }
 
         if (password !== undefined && password !== "") {
             if (password.length < 6) {
-                return NextResponse.json({ message: "Password must be at least 6 characters long" }, { status: 400 });
+                return NextResponse.json({ success: false, message: "Password must be at least 6 characters long.", error: "Password must be at least 6 characters long." }, { status: 400 });
             }
         }
 
@@ -118,8 +121,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
 export async function DELETE(req: Request, { params }: { params: Promise<{ adminId: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session?.user || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to delete administrator accounts.", error: "Please log in first to delete administrator accounts." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const { adminId } = await params;

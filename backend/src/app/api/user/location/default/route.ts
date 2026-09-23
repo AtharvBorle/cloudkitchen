@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     try {
         const session = await getAuthSession();
         if (!session?.user?.id) {
-            return errorResponse("Unauthorized", 401);
+            return errorResponse("Please log in first to fetch default location.", 401);
         }
 
         const user = await db.user.findUnique({

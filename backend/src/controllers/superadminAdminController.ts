@@ -5,8 +5,11 @@ import { ApiError } from "@/lib/api-error";
 
 export const getAdmins = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view administrators.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const admins = await db.user.findMany({
@@ -33,8 +36,11 @@ export const getAdmins = async () => {
 
 export const createAdmin = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create admin accounts.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const body = await req.json();
@@ -42,32 +48,32 @@ export const createAdmin = async (req: Request) => {
     const targetRole = role === "SUPPORT" ? "SUPPORT" : "AGENT";
 
     if (!name || !email || !password) {
-        throw new ApiError("Missing required fields", 400);
+        throw new ApiError("Name, email address, and password are required.", 400);
     }
 
     if (name.trim().length < 2) {
-        throw new ApiError("Name must be at least 2 characters long", 400);
+        throw new ApiError("Name must be at least 2 characters long.", 400);
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-        throw new ApiError("Invalid email format", 400);
+        throw new ApiError("Please provide a valid email address.", 400);
     }
 
     if (phone) {
         const phoneRegex = /^[0-9]{10}$/;
         if (!phoneRegex.test(phone)) {
-            throw new ApiError("Phone number must be exactly 10 digits", 400);
+            throw new ApiError("Phone number must be exactly 10 digits.", 400);
         }
     }
 
     if (password.length < 6) {
-        throw new ApiError("Password must be at least 6 characters long", 400);
+        throw new ApiError("Password must be at least 6 characters long.", 400);
     }
 
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) {
-        throw new ApiError("User with this email already exists", 409);
+        throw new ApiError("A user with this email address already exists.", 409);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

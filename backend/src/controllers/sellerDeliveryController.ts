@@ -6,8 +6,11 @@ import bcrypt from "bcryptjs";
 
 export const getSellerDeliveryPersons = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage delivery personnel.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -15,7 +18,7 @@ export const getSellerDeliveryPersons = async () => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const deliveryPersons = await db.deliveryPerson.findMany({
@@ -43,8 +46,11 @@ export const getSellerDeliveryPersons = async () => {
 
 export const createSellerDeliveryPerson = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to add a delivery agent.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -52,7 +58,7 @@ export const createSellerDeliveryPerson = async (req: Request) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const body = await req.json();
@@ -133,8 +139,11 @@ export const createSellerDeliveryPerson = async (req: Request) => {
 
 export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update delivery person.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -142,7 +151,7 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const { name, phone, isActive } = await req.json();
@@ -190,8 +199,11 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
 
 export const deleteSellerDeliveryPerson = async (id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete delivery person.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -199,7 +211,7 @@ export const deleteSellerDeliveryPerson = async (id: string) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const existing = await db.deliveryPerson.findFirst({
@@ -223,8 +235,11 @@ export const deleteSellerDeliveryPerson = async (id: string) => {
 
 export const assignDeliveryPersonToOrder = async (req: Request, orderId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to assign delivery person.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -232,7 +247,7 @@ export const assignDeliveryPersonToOrder = async (req: Request, orderId: string)
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const { deliveryPersonId } = await req.json();
@@ -271,8 +286,11 @@ export const assignDeliveryPersonToOrder = async (req: Request, orderId: string)
 
 export const collectDeliveryCash = async (req: Request, deliveryPersonId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to collect cash.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -280,7 +298,7 @@ export const collectDeliveryCash = async (req: Request, deliveryPersonId: string
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const deliveryPerson = await db.deliveryPerson.findFirst({
@@ -329,7 +347,7 @@ export const collectDeliveryCash = async (req: Request, deliveryPersonId: string
 export const getDeliveryTransactions = async (deliveryPersonId: string) => {
     const session = await getAuthSession();
     if (!session?.user || !["SELLER", "ADMIN", "SUPERADMIN", "AGENT"].includes(session.user.role)) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to view delivery transactions.", 401);
     }
 
     const transactions = await db.deliveryTransaction.findMany({
@@ -344,7 +362,7 @@ export const getDeliveryTransactions = async (deliveryPersonId: string) => {
 export const adjustDeliveryBalance = async (req: Request, deliveryPersonId: string) => {
     const session = await getAuthSession();
     if (!session?.user || !["ADMIN", "SUPERADMIN", "AGENT"].includes(session.user.role)) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first with admin credentials to adjust balance.", 401);
     }
 
     const { amount, type, description } = await req.json(); // type: "INCREMENT" or "DECREMENT"

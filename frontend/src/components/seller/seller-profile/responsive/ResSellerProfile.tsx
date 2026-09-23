@@ -31,6 +31,7 @@ import SellerMapPicker from "@/components/seller/seller-registration/business-in
 import styles from "./ResSellerProfile.module.css";
 
 import { useSellerProfile, isGenericFallbackName, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface PlanServiceItem {
   id: string;
@@ -74,6 +75,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   // Form State
@@ -309,12 +311,17 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   };
 
   const handleSaveChanges = async () => {
+    const cleanPin = registeredAddress?.match(/\b\d{6}\b/)?.[0] || seller.pincode || "";
+    const cleanCity = seller.city || "Pune";
+
     const payload = {
       ownerName,
       mobileNumber,
       primaryEmail,
       outletName,
       registeredAddress,
+      pincode: cleanPin,
+      city: cleanCity,
       latitude,
       longitude,
       isLocationPinned: Boolean(latitude && longitude),
@@ -328,6 +335,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
       email: primaryEmail,
       phone: mobileNumber,
       address: registeredAddress,
+      pincode: cleanPin,
+      city: cleanCity,
       latitude,
       longitude,
       isLocationPinned: Boolean(latitude && longitude),
@@ -349,6 +358,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             email: primaryEmail,
             outletName,
             registeredAddress,
+            pincode: cleanPin,
+            city: cleanCity,
             latitude,
             longitude,
             isLocationPinned: Boolean(latitude && longitude),
@@ -507,7 +518,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
               title="Notifications"
             >
               <Bell size={22} />
-              <span className={styles.notificationDot} />
+              {unreadCount > 0 && <span className={styles.notificationDot} />}
             </button>
           </div>
         </header>

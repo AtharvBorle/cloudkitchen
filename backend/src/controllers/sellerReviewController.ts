@@ -4,8 +4,11 @@ import { ApiError } from "@/lib/api-error";
 
 export const getSellerReviews = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view customer reviews.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -13,12 +16,17 @@ export const getSellerReviews = async () => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
     }
 
-    // Fetch all reviews for this seller
+    // Fetch all reviews for this seller (including platform reviews)
     const reviews = await db.review.findMany({
-        where: { sellerId: sellerProfile.id },
+        where: {
+            OR: [
+                { sellerId: sellerProfile.id },
+                { sellerId: null as any }
+            ]
+        },
         include: {
             user: {
                 select: { name: true, email: true }
@@ -90,8 +98,21 @@ export const getSellerReviews = async () => {
         };
     });
 
+    const parseJsonArray = (val: string | null | undefined): string[] => {
+        if (!val) return [];
+        try {
+            const parsed = JSON.parse(val);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    };
+
     const formattedReviews = reviews.map((r) => ({
         ...r,
+        aspects: parseJsonArray((r as any).aspects),
+        tags: parseJsonArray((r as any).tags),
+        sentiment: (r as any).sentiment || null,
         managerResponse: r.sellerReply ? {
             text: r.sellerReply,
             createdAt: r.repliedAt || r.updatedAt,
@@ -112,8 +133,11 @@ export const getSellerReviews = async () => {
 
 export const replyToReview = async (reviewId: string, req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to reply to reviews.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -121,7 +145,7 @@ export const replyToReview = async (reviewId: string, req: Request) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
     }
 
     const review = await db.review.findUnique({
@@ -129,11 +153,11 @@ export const replyToReview = async (reviewId: string, req: Request) => {
     });
 
     if (!review) {
-        throw new ApiError("Review not found", 404);
+        throw new ApiError("The requested review could not be found.", 404);
     }
 
-    if (review.sellerId !== sellerProfile.id) {
-        throw new ApiError("Forbidden: Cannot reply to review for another seller", 403);
+    if (review.sellerId && review.sellerId !== sellerProfile.id) {
+        throw new ApiError("Access denied. You cannot reply to reviews for another seller.", 403);
     }
 
     const body = await req.json();
@@ -141,12 +165,13 @@ export const replyToReview = async (reviewId: string, req: Request) => {
     const finalReply = replyText || response || text || comment;
 
     if (!finalReply || !finalReply.trim()) {
-        throw new ApiError("Reply content is required", 400);
+        throw new ApiError("Reply content cannot be empty.", 400);
     }
 
     const updated = await db.review.update({
         where: { id: reviewId },
         data: {
+            sellerId: review.sellerId || sellerProfile.id,
             sellerReply: finalReply.trim(),
             repliedAt: new Date()
         },

@@ -26,6 +26,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useLocation } from "@/components/location-provider";
 import { Footer } from "@/components/explore-desktop/footer";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { broadcastOrderToSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./SecureCheckout.module.css";
 
 export interface CheckoutSummaryItem {
@@ -97,7 +98,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     let isMounted = true;
     async function checkSellerStatus() {
       try {
-        const res = await fetchApi(`/api/public/shop/${sellerId}`);
+        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sellerId)}`);
         if (res.ok && isMounted) {
           const json = await res.json();
           const sellerObj = json.data || json;
@@ -481,6 +482,22 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 }
               }
 
+              // Real-time broadcast to Seller Operations Console & Bell Notification Counter
+              try {
+                broadcastOrderToSellerNotifications({
+                  orderId: finalOrderId,
+                  customerName: fullName.trim() || "Customer",
+                  customerPhone: phoneNumber.trim(),
+                  deliveryAddress: fullDeliveryAddress,
+                  items: checkoutItems.map((ci) => ({ name: ci.name, qty: ci.qty, price: ci.price })),
+                  totalAmount: grandTotal,
+                  paymentMethod: "Online Payment (Paid)",
+                  sellerId: sellerId || "seller",
+                });
+              } catch (bErr) {
+                console.error("Failed to broadcast order to seller notifications:", bErr);
+              }
+
               setIsOrderPlaced(true);
               clearCart();
               showToast("Payment Verified! Order Placed Successfully!");
@@ -582,6 +599,22 @@ const loadRazorpayScript = (): Promise<boolean> => {
         } catch (e) {
           console.error("Failed to save confirmed order to session storage:", e);
         }
+      }
+
+      // Real-time broadcast to Seller Operations Console & Bell Notification Counter
+      try {
+        broadcastOrderToSellerNotifications({
+          orderId: finalOrderId,
+          customerName: fullName.trim() || "Customer",
+          customerPhone: phoneNumber.trim(),
+          deliveryAddress: fullDeliveryAddress,
+          items: checkoutItems.map((ci) => ({ name: ci.name, qty: ci.qty, price: ci.price })),
+          totalAmount: grandTotal,
+          paymentMethod: "Cash on Delivery",
+          sellerId: sellerId || "seller",
+        });
+      } catch (bErr) {
+        console.error("Failed to broadcast COD order to seller notifications:", bErr);
       }
 
       setIsOrderPlaced(true);

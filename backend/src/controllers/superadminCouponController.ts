@@ -5,8 +5,11 @@ import { revalidateTag } from "next/cache";
 
 export const getCoupons = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view coupons.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const coupons = await db.coupon.findMany({
@@ -23,14 +26,17 @@ export const getCoupons = async () => {
 
 export const createCoupon = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SUPERADMIN") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create coupons.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
     const { code, discountPercentage, appliesToSellerId, category } = await req.json();
 
     if (!code || discountPercentage === undefined) {
-        throw new ApiError("Code and discount percentage are required", 400);
+        throw new ApiError("Coupon code and discount percentage are required.", 400);
     }
 
     const coupon = await db.coupon.create({

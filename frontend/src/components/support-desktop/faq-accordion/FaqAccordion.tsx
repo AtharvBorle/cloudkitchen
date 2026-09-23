@@ -101,7 +101,6 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({ onContactSupport }) 
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("open-chatbot"));
       }
-      router.push("/dashboard/user/support");
     }
   };
 

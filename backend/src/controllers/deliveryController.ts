@@ -8,8 +8,11 @@ import { emitOrderUpdated } from "@/lib/realtime-events";
 
 export const getDeliveryOrders = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "DELIVERY") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to access delivery partner tasks.", 401);
+    }
+    if (session.user.role !== "DELIVERY") {
+        throw new ApiError("Access denied. Delivery partner account required.", 403);
     }
 
     const deliveryProfile = await db.deliveryPerson.findUnique({
@@ -17,7 +20,7 @@ export const getDeliveryOrders = async () => {
     });
 
     if (!deliveryProfile) {
-        throw new ApiError("Delivery profile not found", 404);
+        throw new ApiError("Delivery partner profile could not be found. Please contact support.", 404);
     }
 
     const orders = await db.order.findMany({
@@ -55,19 +58,20 @@ export const getDeliveryOrders = async () => {
 
 export const initiateDeliveryPayment = async (orderId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "DELIVERY") throw new ApiError("Unauthorized", 401);
+    if (!session?.user) throw new ApiError("Please log in first to initiate delivery payment.", 401);
+    if (session.user.role !== "DELIVERY") throw new ApiError("Access denied. Delivery partner account required.", 403);
 
     const deliveryPerson = await db.deliveryPerson.findUnique({ where: { userId: session.user.id } });
-    if (!deliveryPerson) throw new ApiError("Delivery profile not found", 404);
+    if (!deliveryPerson) throw new ApiError("Delivery partner profile could not be found.", 404);
 
     const order = await db.order.findUnique({ where: { id: orderId } });
-    if (!order) throw new ApiError("Order not found", 404);
+    if (!order) throw new ApiError("The requested order could not be found.", 404);
 
     if (order.deliveryPersonId !== deliveryPerson.id) {
-        throw new ApiError("You are not assigned to this order", 403);
+        throw new ApiError("You are not assigned to collect payment for this order.", 403);
     }
     if (order.isPaid) {
-        throw new ApiError("Order is already paid", 400);
+        throw new ApiError("This order has already been marked as paid.", 400);
     }
 
     try {
@@ -90,23 +94,24 @@ export const initiateDeliveryPayment = async (orderId: string) => {
         return rzpOrder;
     } catch (error) {
         console.error("Razorpay initiation error:", error);
-        throw new ApiError("Failed to initiate payment", 500);
+        throw new ApiError("Failed to initiate payment. Please try again.", 500);
     }
 };
 
 export const verifyDeliveryPayment = async (req: Request, orderId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "DELIVERY") throw new ApiError("Unauthorized", 401);
+    if (!session?.user) throw new ApiError("Please log in first to verify delivery payment.", 401);
+    if (session.user.role !== "DELIVERY") throw new ApiError("Access denied. Delivery partner account required.", 403);
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-        throw new ApiError("Missing verification details", 400);
+        throw new ApiError("Payment verification details are missing.", 400);
     }
 
     const order = await db.order.findUnique({ where: { id: orderId } });
     if (!order || order.razorpayOrderId !== razorpay_order_id) {
-        throw new ApiError("Invalid order details", 400);
+        throw new ApiError("Order details do not match the payment record.", 400);
     }
 
     const secret = process.env.RAZORPAY_KEY_SECRET || "";
@@ -116,7 +121,7 @@ export const verifyDeliveryPayment = async (req: Request, orderId: string) => {
         .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-        throw new ApiError("Invalid transaction signature", 400);
+        throw new ApiError("Payment signature verification failed. Please try again.", 400);
     }
 
     const updatedOrder = await db.order.update({
@@ -139,8 +144,11 @@ export const verifyDeliveryPayment = async (req: Request, orderId: string) => {
 
 export const updateOrderStatus = async (req: Request, orderId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "DELIVERY") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update order delivery status.", 401);
+    }
+    if (session.user.role !== "DELIVERY") {
+        throw new ApiError("Access denied. Delivery partner account required.", 403);
     }
 
     const deliveryProfile = await db.deliveryPerson.findUnique({
@@ -148,13 +156,13 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
     });
 
     if (!deliveryProfile) {
-        throw new ApiError("Delivery profile not found", 404);
+        throw new ApiError("Delivery partner profile could not be found.", 404);
     }
 
     const { status } = await req.json();
 
     if (!["OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) {
-        throw new ApiError("Invalid status update for delivery", 400);
+        throw new ApiError("Invalid status transition for delivery.", 400);
     }
 
     const order = await db.order.findFirst({
@@ -162,7 +170,7 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
     });
 
     if (!order) {
-        throw new ApiError("Order not assigned to you", 404);
+        throw new ApiError("This order is not assigned to your delivery account.", 404);
     }
 
     const updatedOrder = await db.$transaction(async (tx) => {
@@ -192,8 +200,11 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
 
 export const getDeliveryProfile = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "DELIVERY") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your delivery profile.", 401);
+    }
+    if (session.user.role !== "DELIVERY") {
+        throw new ApiError("Access denied. Delivery partner account required.", 403);
     }
 
     const deliveryProfile = await db.deliveryPerson.findUnique({
@@ -220,7 +231,7 @@ export const getDeliveryProfile = async () => {
     });
 
     if (!deliveryProfile) {
-        throw new ApiError("Delivery profile not found", 404);
+        throw new ApiError("Delivery partner profile could not be found.", 404);
     }
 
     return { profile: deliveryProfile };
@@ -228,8 +239,11 @@ export const getDeliveryProfile = async () => {
 
 export const updateDeliveryProfile = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "DELIVERY") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update your delivery profile.", 401);
+    }
+    if (session.user.role !== "DELIVERY") {
+        throw new ApiError("Access denied. Delivery partner account required.", 403);
     }
 
     const { name, phone, city, pincode } = await req.json();
@@ -240,7 +254,7 @@ export const updateDeliveryProfile = async (req: Request) => {
     });
 
     if (!deliveryProfile) {
-        throw new ApiError("Delivery profile not found", 404);
+        throw new ApiError("Delivery partner profile could not be found.", 404);
     }
 
     // Update User record
@@ -287,8 +301,11 @@ export const updateDeliveryProfile = async (req: Request) => {
 
 export const getDeliveryPersonTransactions = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "DELIVERY") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view delivery transactions.", 401);
+    }
+    if (session.user.role !== "DELIVERY") {
+        throw new ApiError("Access denied. Delivery partner account required.", 403);
     }
 
     const deliveryProfile = await db.deliveryPerson.findUnique({
@@ -296,7 +313,7 @@ export const getDeliveryPersonTransactions = async () => {
     });
 
     if (!deliveryProfile) {
-        throw new ApiError("Delivery profile not found", 404);
+        throw new ApiError("Delivery partner profile could not be found.", 404);
     }
 
     const transactions = await db.deliveryTransaction.findMany({

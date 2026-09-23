@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag, Bike } from "lucide-react";
+import { LayoutDashboard, Users, Image as ImageIcon, LogOut, ShieldCheck, Tag, Bike, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function adminLayout({ children }: { children: React.ReactNode }) {

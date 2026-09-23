@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
 import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
 import { PopularFood } from "@/components/restaurant-desktop/popularfood";
+import { SubscriptionPlans, PlanItem, SubscribeModal, SubscribeModalPlan } from "@/components/restaurant-desktop/subscriptionplans";
 import { RestaurantMobileView } from "@/components/restaurant-desktop/restaurant-mobile";
 import { getKitchenById, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
 import { useCart } from "@/context/CartContext";
@@ -17,21 +20,84 @@ interface RestaurantClientProps {
 }
 
 export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
+  const router = useRouter();
+  const { data: session } = useSession();
   const { addToCart, decreaseQuantity } = useCart();
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(false);
   const [addonModalItem, setAddonModalItem] = useState<FoodCardItem | null>(null);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<PlanItem[]>([]);
+  const [rawMealPlans, setRawMealPlans] = useState<any[]>([]);
+  const [selectedModalPlan, setSelectedModalPlan] = useState<SubscribeModalPlan | null>(null);
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadLiveSeller() {
       try {
-        const res = await fetchApi(`/api/public/shop/${kitchenId}`);
+        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(kitchenId)}`);
         if (res.ok) {
           const resData = await res.json();
           const liveData = resData?.data || resData;
           if (liveData && isMounted) {
+            let mealPlansData: any[] = liveData.mealPlans || [];
+            if ((!mealPlansData || mealPlansData.length === 0) && (liveData.id || liveData.trackingId || kitchenId)) {
+              try {
+                const targetSellerParam = encodeURIComponent(liveData.id || liveData.trackingId || kitchenId);
+                const plansRes = await fetchApi(`/api/public/meal-plans?sellerId=${targetSellerParam}`);
+                if (plansRes.ok) {
+                  const plansJson = await plansRes.json();
+                  mealPlansData = plansJson.data || plansJson;
+                }
+              } catch (err) {
+                console.error("Failed to load seller meal plans:", err);
+              }
+            }
+
+            if (Array.isArray(mealPlansData) && mealPlansData.length > 0 && isMounted) {
+              setRawMealPlans(mealPlansData);
+              const formatted: PlanItem[] = mealPlansData.map((plan: any) => {
+                let features: string[] = [];
+                if (Array.isArray(plan.features)) {
+                  features = plan.features;
+                } else if (typeof plan.features === "string") {
+                  try {
+                    features = JSON.parse(plan.features);
+                  } catch {
+                    features = [];
+                  }
+                }
+                if (features.length === 0) {
+                  features = [
+                    "Fresh & hot home-style delivery",
+                    plan.mealTimings && plan.mealTimings.length
+                      ? `Served for ${Array.isArray(plan.mealTimings) ? plan.mealTimings.join(", ") : plan.mealTimings}`
+                      : "Daily breakfast, lunch or dinner",
+                    "Zero delivery fee on subscription",
+                    "Pause or cancel anytime",
+                  ];
+                }
+
+                const weeklyNum = typeof plan.weeklyPrice === "number"
+                  ? plan.weeklyPrice
+                  : parseFloat(String(plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 499;
+
+                return {
+                  id: plan.id,
+                  name: plan.name,
+                  subtitle: plan.description || `${plan.tier || "Standard"} meal plan curated daily by ${liveData.businessName || liveData.user?.name || "our chef"}.`,
+                  price: `₹${weeklyNum.toFixed(0)}`,
+                  period: "/week",
+                  badge: plan.tier?.toUpperCase() === "GOLD" ? "Best Value" : (plan.tier?.toUpperCase() === "SILVER" ? "Popular" : undefined),
+                  features: features,
+                  buttonText: "Subscribe Now",
+                  isPremium: plan.tier?.toUpperCase() === "GOLD",
+                };
+              });
+              setSubscriptionPlans(formatted);
+            }
+
             const rawFoodItems = liveData.foodItems || [];
             const liveItems: FoodCardItem[] = rawFoodItems.map((item: any) => {
               let parsedAddons: Array<{ id: string; name: string; price: number }> = [];
@@ -105,6 +171,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   : "Veg & Non-Veg 🍱",
               offerText: liveData.offerText || "",
               isOnline: liveData.isOnline !== false,
+              bannerImageUrl: liveData.bannerImageUrl || (Array.isArray(liveData.kitchenImages) ? liveData.kitchenImages[0] : "") || prev.bannerImageUrl || "",
               categories:
                 uniqueCats.length > 0 ? ["All", ...uniqueCats] : [],
               items: liveItems.length > 0 ? liveItems : prev.items,
@@ -159,6 +226,30 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     decreaseQuantity(itemId);
   };
 
+  const handleSelectPlan = (plan: PlanItem) => {
+    if (!session) {
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : `/restaurant/${kitchenId}`)}`);
+      return;
+    }
+
+    const raw = rawMealPlans.find((p) => p.id === plan.id);
+    const weeklyNum = raw?.weeklyPrice || parseFloat(plan.price.replace(/[^\d.]/g, "")) || 499;
+    const monthlyNum = raw?.monthlyPrice || (weeklyNum * 4);
+
+    setSelectedModalPlan({
+      id: plan.id,
+      name: plan.name,
+      tier: raw?.tier || (plan.isPremium ? "Gold" : "Bronze"),
+      weeklyPrice: weeklyNum,
+      monthlyPrice: monthlyNum,
+      description: plan.subtitle,
+      features: plan.features,
+      mealTimings: raw?.mealTimings || [],
+      sellerName: kitchenData.restaurantName,
+    });
+    setIsSubscribeModalOpen(true);
+  };
+
   const displayedItems = isVegOnly
     ? kitchenData.items.filter((item) => item.isVeg)
     : kitchenData.items;
@@ -186,7 +277,15 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             initialVegOnly={isVegOnly}
             onVegToggle={(veg) => setIsVegOnly(veg)}
             isOnline={kitchenData.isOnline !== false}
+            bannerImageUrl={kitchenData.bannerImageUrl}
           />
+
+          {subscriptionPlans.length > 0 && (
+            <SubscriptionPlans
+              plans={subscriptionPlans}
+              onSelectPlan={handleSelectPlan}
+            />
+          )}
 
           <PopularFood
             heading={`Popular at ${kitchenData.restaurantName}`}
@@ -209,6 +308,8 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           onVegToggle={(veg) => setIsVegOnly(veg)}
           onAddItem={handleAddItem}
           onDecreaseItem={handleDecreaseItem}
+          subscriptionPlans={subscriptionPlans}
+          onSelectPlan={handleSelectPlan}
         />
         <Footer />
       </div>
@@ -254,6 +355,22 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               addons: addonModalItem.addons,
             });
             setAddonModalItem(null);
+          }}
+        />
+      )}
+
+      {isSubscribeModalOpen && selectedModalPlan && (
+        <SubscribeModal
+          isOpen={isSubscribeModalOpen}
+          onClose={() => {
+            setIsSubscribeModalOpen(false);
+            setSelectedModalPlan(null);
+          }}
+          plan={selectedModalPlan}
+          onSubscribed={(_newSub) => {
+            setIsSubscribeModalOpen(false);
+            setSelectedModalPlan(null);
+            router.push("/my-subscription");
           }}
         />
       )}

@@ -9,8 +9,11 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     try {
         const session = await getAuthSession();
-        if (!session || !session.user || session.user.role !== "SELLER") {
-            throw new ApiError("Unauthorized", 401);
+        if (!session?.user) {
+            throw new ApiError("Please log in first to view dashboard overview.", 401);
+        }
+        if (session.user.role !== "SELLER") {
+            throw new ApiError("Access denied. Seller account required.", 403);
         }
 
         const sellerProfile = await db.sellerProfile.findUnique({
@@ -18,7 +21,7 @@ export async function GET() {
         });
 
         if (!sellerProfile) {
-            throw new ApiError("Seller profile not found", 404);
+            throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
         }
 
         const menuItemsCount = await db.foodItem.count({ where: { sellerId: sellerProfile.id } });

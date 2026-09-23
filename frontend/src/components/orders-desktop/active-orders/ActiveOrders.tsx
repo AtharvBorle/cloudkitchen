@@ -158,7 +158,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
 
                   {/* Footer */}
                   <div className={styles.cardFooter}>
-                    <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                    <Link href="/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
                       Need Help?
                     </Link>
                     {order.invoiceUrl ? (
@@ -179,7 +179,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
               <Package size={48} color="#A0AEC0" style={{ marginBottom: "12px" }} />
               <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#2D3748", marginBottom: "6px" }}>No Active Food Orders</h3>
               <p style={{ color: "#718096", fontSize: "0.95rem", marginBottom: "16px" }}>You don&apos;t have any orders in progress right now.</p>
-              <Link href="/food" style={{ display: "inline-block", backgroundColor: "#E28743", color: "#fff", padding: "10px 22px", borderRadius: "10px", fontWeight: 600, textDecoration: "none" }}>
+              <Link href="/explore-desktop" style={{ display: "inline-block", backgroundColor: "#E28743", color: "#fff", padding: "10px 22px", borderRadius: "10px", fontWeight: 600, textDecoration: "none" }}>
                 Explore Cloud Kitchens
               </Link>
             </div>
@@ -217,7 +217,7 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
 
                 {/* Footer */}
                 <div className={styles.cardFooter}>
-                  <Link href="/dashboard/user/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
+                  <Link href="/support" className={styles.helpLink} style={{ textDecoration: "none" }}>
                     Need Help?
                   </Link>
                   <Link href={`/dashboard/user/bookings`} className={styles.actionBtn} style={{ textDecoration: "none" }}>

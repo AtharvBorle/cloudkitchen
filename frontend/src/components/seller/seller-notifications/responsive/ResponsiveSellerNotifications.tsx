@@ -47,6 +47,7 @@ const TABS: TabItem[] = [
 ];
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveSellerNotificationsProps {
   ownerName?: string;
@@ -66,13 +67,22 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
     ownerName !== "Kitchen Owner"
       ? ownerName
       : seller.ownerName;
-  const [notifications, setNotifications] = useState<SellerNotificationItem[]>(
-    INITIAL_SELLER_NOTIFICATIONS
-  );
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    toggleRead,
+    deleteNotification,
+    markAllAsRead,
+    clearAllNotifications,
+    generateSampleAlert,
+    resetToDefaults,
+  } = useSellerNotifications();
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showBanner, setShowBanner] = useState(true);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -81,32 +91,26 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
     }, 2500);
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
   const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllAsRead();
     showToast("All notifications marked as read");
   };
 
   const handleToggleRead = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-    );
+    toggleRead(id);
   };
 
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    deleteNotification(id);
     showToast("Notification dismissed");
   };
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
     // Auto mark read on expansion
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+    markAsRead(id);
   };
 
   // Filtered list
@@ -240,14 +244,36 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         </header>
 
         {/* Settings Notice Banner */}
-        <div className={styles.settingsBanner}>
-          <p className={styles.settingsBannerText}>
-            Notifications reflect your active preferences in <strong>Settings &gt; Notifications</strong>.
-          </p>
-          <Link href="/seller/settings" className={styles.settingsBannerLink}>
-            Edit
-          </Link>
-        </div>
+        {showBanner && (
+          <div className={styles.settingsBanner}>
+            <p className={styles.settingsBannerText}>
+              Notifications reflect your active preferences in <strong>Settings &gt; Notifications</strong>.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Link href="/seller/settings?tab=notifications" className={styles.settingsBannerLink}>
+                Edit
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowBanner(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "2px",
+                  color: "#C2410C",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  opacity: 0.8,
+                }}
+                title="Dismiss"
+                aria-label="Dismiss banner"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Horizontal Scrollable Tabs */}
         <div className={styles.pillsContainer}>

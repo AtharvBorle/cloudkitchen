@@ -8,6 +8,7 @@ import { Menu as MenuIcon, ChevronRight, Settings, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveDelivery.module.css";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveRiderItem {
   id: string;
@@ -34,6 +35,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
     ownerName &&
     ownerName !== "Rahul Sharma" &&
@@ -105,7 +107,7 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
               title="Notifications"
             >
               <Bell size={22} />
-              <span className={styles.notificationDot} />
+              {unreadCount > 0 && <span className={styles.notificationDot} />}
             </button>
             <button
               type="button"

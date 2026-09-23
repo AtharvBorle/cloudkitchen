@@ -87,15 +87,83 @@ export default function UserDashboard() {
             if (status === "loading") return;
             setLoading(true);
             try {
-                const url = (status === "authenticated") ? "/api/user/dashboard" : "/api/public/explore";
-                const res = await fetchApi(url);
-                const data = await res.json();
-                if (res.ok) {
-                    setFoodItems(data.foodItems || []);
-                    setRooms(data.availableRooms || []);
-                    setFoodCategories(data.foodCategories || []);
-                    setActivePincode(data.userPincode || defaultAddress?.pincode || null);
+                let items: any[] = [];
+                let availableRooms: any[] = [];
+                let cats: any[] = [];
+                let activePin = (defaultAddress?.pincode || "").trim() || null;
+
+                // 1. Fetch explore data (which contains full active catalogue and servedPincodes)
+                const exploreRes = await fetchApi("/api/public/explore");
+                if (exploreRes.ok) {
+                    const exploreData = await exploreRes.json();
+                    items = exploreData.foodItems || [];
+                    availableRooms = exploreData.availableRooms || [];
+                    cats = exploreData.foodCategories || [];
                 }
+
+                // 2. If authenticated, try user dashboard endpoint to also check active user profile pincode
+                if (status === "authenticated") {
+                    try {
+                        const userDashRes = await fetchApi("/api/user/dashboard");
+                        if (userDashRes.ok) {
+                            const userDashData = await userDashRes.json();
+                            if (userDashData?.userPincode && !activePin) {
+                                activePin = userDashData.userPincode.trim();
+                            }
+                            if (Array.isArray(userDashData?.foodItems) && userDashData.foodItems.length > 0) {
+                                items = userDashData.foodItems;
+                            }
+                            if (Array.isArray(userDashData?.availableRooms) && userDashData.availableRooms.length > 0) {
+                                availableRooms = userDashData.availableRooms;
+                            }
+                        }
+                    } catch {
+                        // Fallback to explore catalogue data
+                    }
+                }
+
+                // 3. Robust Pincode Filtering
+                if (activePin) {
+                    const cleanPin = activePin.trim();
+                    const isPincodeMatch = (item: any) => {
+                        if (item.sellerPincode && item.sellerPincode.trim() === cleanPin) return true;
+                        if (Array.isArray(item.servedPincodes)) {
+                            for (const sp of item.servedPincodes) {
+                                if (typeof sp === "string" && (sp.trim() === cleanPin || sp.includes(cleanPin))) return true;
+                            }
+                        }
+                        if (item.deliveryPincodes) {
+                            const pins = String(item.deliveryPincodes).split(",").map((p: any) => p.trim());
+                            if (pins.includes(cleanPin)) return true;
+                        }
+                        if (item.sellerLocality) {
+                            const locPins = item.sellerLocality.match(/\b\d{6}\b/g);
+                            if (locPins && locPins.includes(cleanPin)) return true;
+                        }
+                        if (item.sellerLandmark) {
+                            const landPins = item.sellerLandmark.match(/\b\d{6}\b/g);
+                            if (landPins && landPins.includes(cleanPin)) return true;
+                        }
+                        return false;
+                    };
+
+                    const isRoomMatch = (room: any) => {
+                        if (room.sellerPincode && room.sellerPincode.trim() === cleanPin) return true;
+                        if (room.sellerLocality) {
+                            const locPins = room.sellerLocality.match(/\b\d{6}\b/g);
+                            if (locPins && locPins.includes(cleanPin)) return true;
+                        }
+                        return false;
+                    };
+
+                    items = items.filter(isPincodeMatch);
+                    availableRooms = availableRooms.filter(isRoomMatch);
+                }
+
+                setFoodItems(items);
+                setRooms(availableRooms);
+                setFoodCategories(cats);
+                setActivePincode(activePin);
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);
             } finally {

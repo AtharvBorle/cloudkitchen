@@ -36,12 +36,45 @@ export default function UserRoomsPage() {
             if (status === "loading") return;
             setLoading(true);
             try {
-                const url = (status === "authenticated") ? "/api/user/dashboard" : "/api/public/explore";
-                const res = await fetchApi(url);
-                const data = await res.json();
-                if (res.ok) {
-                    setRooms(data.availableRooms || []);
+                let availableRooms: any[] = [];
+                let activePin = (defaultAddress?.pincode || "").trim() || null;
+
+                const exploreRes = await fetchApi("/api/public/explore");
+                if (exploreRes.ok) {
+                    const exploreData = await exploreRes.json();
+                    availableRooms = exploreData.availableRooms || [];
                 }
+
+                if (status === "authenticated") {
+                    try {
+                        const userDashRes = await fetchApi("/api/user/dashboard");
+                        if (userDashRes.ok) {
+                            const userDashData = await userDashRes.json();
+                            if (userDashData?.userPincode && !activePin) {
+                                activePin = userDashData.userPincode.trim();
+                            }
+                            if (Array.isArray(userDashData?.availableRooms) && userDashData.availableRooms.length > 0) {
+                                availableRooms = userDashData.availableRooms;
+                            }
+                        }
+                    } catch {
+                        // Fallback to explore catalogue data
+                    }
+                }
+
+                if (activePin) {
+                    const cleanPin = activePin.trim();
+                    availableRooms = availableRooms.filter((room: any) => {
+                        if (room.sellerPincode && room.sellerPincode.trim() === cleanPin) return true;
+                        if (room.sellerLocality) {
+                            const locPins = room.sellerLocality.match(/\b\d{6}\b/g);
+                            if (locPins && locPins.includes(cleanPin)) return true;
+                        }
+                        return false;
+                    });
+                }
+
+                setRooms(availableRooms);
             } catch (error) {
                 console.error("Failed to fetch rooms", error);
             } finally {

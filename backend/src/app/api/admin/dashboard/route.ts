@@ -6,8 +6,11 @@ import { ApiError } from "@/lib/api-error";
 export async function GET() {
     try {
         const session = await getAuthSession();
-        if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-            throw new ApiError("Unauthorized", 401);
+        if (!session?.user) {
+            throw new ApiError("Please log in first to view the admin dashboard.", 401);
+        }
+        if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+            throw new ApiError("Access denied. Admin privileges required.", 403);
         }
 
         const pendingProfiles = await db.sellerProfile.findMany({

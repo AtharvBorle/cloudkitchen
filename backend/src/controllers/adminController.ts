@@ -6,14 +6,17 @@ import { uploadImage } from "@/lib/upload";
 export const deleteSellerBanner = async (req: Request) => {
     const session = await getAuthSession();
 
-    if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage seller banners.", 401);
+    }
+    if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const { sellerId } = await req.json();
 
     if (!sellerId) {
-        throw new ApiError("Seller ID is required", 400);
+        throw new ApiError("Seller ID is required.", 400);
     }
 
     const updatedProfile = await db.sellerProfile.update({
@@ -36,8 +39,11 @@ export const deleteSellerBanner = async (req: Request) => {
 
 export const getPopupBanners = async () => {
     const session = await getAuthSession();
-    if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view popup banners.", 401);
+    }
+    if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     let canManageBanners = true;
@@ -74,8 +80,11 @@ export const getPopupBanners = async () => {
 
 export const createPopupBanner = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create popup banners.", 401);
+    }
+    if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const formData = await req.formData();
@@ -85,7 +94,7 @@ export const createPopupBanner = async (req: Request) => {
     const imageFile = formData.get("image") as File | null;
 
     if (!title || !imageFile) {
-        throw new ApiError("Title and Image file are required", 400);
+        throw new ApiError("Banner title and image file are required.", 400);
     }
 
     let isGlobal = appliesToSellerId === "GLOBAL";
@@ -98,7 +107,7 @@ export const createPopupBanner = async (req: Request) => {
         });
 
         if (!agentProfile || !agentProfile.canManageBanners) {
-            throw new ApiError("You do not have permission to manage popup banners", 403);
+            throw new ApiError("You do not have permission to manage popup banners.", 403);
         }
 
         if (isGlobal) {
@@ -125,8 +134,11 @@ export const createPopupBanner = async (req: Request) => {
 
 export const updatePopupBanner = async (req: Request, id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update popup banners.", 401);
+    }
+    if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     if (session.user.role === "AGENT") {
@@ -134,7 +146,7 @@ export const updatePopupBanner = async (req: Request, id: string) => {
             where: { userId: session.user.id }
         });
         if (!agentProfile || !agentProfile.canManageBanners) {
-            throw new ApiError("You do not have permission to manage popup banners", 403);
+            throw new ApiError("You do not have permission to manage popup banners.", 403);
         }
     }
 
@@ -183,15 +195,18 @@ export const updatePopupBanner = async (req: Request, id: string) => {
 export const updateSellerRegistrationStatus = async (req: Request) => {
     const session = await getAuthSession();
 
-    if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update seller registration.", 401);
+    }
+    if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const body = await req.json();
     const { sellerId, action, verificationNote } = body;
 
     if (!sellerId || !action || !["APPROVE", "REJECT", "REVISION"].includes(action)) {
-        throw new ApiError("Invalid request data", 400);
+        throw new ApiError("Invalid seller registration action request.", 400);
     }
 
     const status = action === "APPROVE" ? "APPROVED" : (action === "REVISION" ? "REVISION" : "REJECTED");
@@ -211,7 +226,7 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
     });
 
     if (!seller) {
-        throw new ApiError("Seller not found", 404);
+        throw new ApiError("The specified seller profile could not be found.", 404);
     }
 
     const updateData: any = {

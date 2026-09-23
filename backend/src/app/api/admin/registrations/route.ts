@@ -7,8 +7,11 @@ import { updateSellerRegistrationStatus } from "@/controllers/adminController";
 export async function GET(req: Request) {
     try {
         const session = await getAuthSession();
-        if (!session || !session.user || (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN")) {
-            throw new ApiError("Unauthorized", 401);
+        if (!session?.user) {
+            throw new ApiError("Please log in first to view seller registrations.", 401);
+        }
+        if (session.user.role !== "AGENT" && session.user.role !== "SUPERADMIN") {
+            throw new ApiError("Access denied. Admin privileges required.", 403);
         }
 
         const url = new URL(req.url);

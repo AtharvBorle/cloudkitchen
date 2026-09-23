@@ -413,7 +413,44 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     };
   }, []);
 
-  // Compute active pincode and coordinates from default address or filter options
+  // Helper to check if a kitchen/dish serves or belongs to a pincode
+  const isPincodeServiced = (
+    targetPin: string,
+    mainPincode?: string,
+    servedPincodes?: string[],
+    locality?: string,
+    landmark?: string
+  ): boolean => {
+    const cleanPin = targetPin.trim();
+    if (!cleanPin) return true;
+
+    // 1. Direct registered / seller pincode match
+    if (mainPincode && mainPincode.trim() === cleanPin) return true;
+
+    // 2. Served operational pincodes match
+    if (Array.isArray(servedPincodes)) {
+      for (const sp of servedPincodes) {
+        if (typeof sp === 'string') {
+          const clean = sp.trim();
+          if (clean === cleanPin || clean.includes(cleanPin)) return true;
+        }
+      }
+    }
+
+    // 3. 6-digit pincode contained in address locality or landmark text
+    if (locality) {
+      const locPins = locality.match(/\b\d{6}\b/g);
+      if (locPins && locPins.includes(cleanPin)) return true;
+    }
+    if (landmark) {
+      const landPins = landmark.match(/\b\d{6}\b/g);
+      if (landPins && landPins.includes(cleanPin)) return true;
+    }
+
+    return false;
+  };
+
+  // Compute active pincode from filter options or active location
   const activePincode = (options?.pincode || defaultAddress?.pincode || '').trim() || null;
 
   const userLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) ? Number(defaultAddress.latitude) : null;
@@ -457,12 +494,14 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     });
   }, [kitchens, hasUserCoords, activeUserLat, activeUserLng]);
 
-  // Helper to check 5 km distance deliverability
+  // Helper to check 5 km distance deliverability with pincode fallback
   const isSellerDeliverable = (
     sellerLat?: number | null,
     sellerLng?: number | null,
     sellerPin?: string,
-    servedPins?: string[]
+    servedPins?: string[],
+    locality?: string,
+    landmark?: string
   ) => {
     // 1. If coordinates exist on both sides, strictly enforce 5.0 km radius
     if (hasUserCoords && sellerLat != null && sellerLng != null && !isNaN(Number(sellerLat)) && !isNaN(Number(sellerLng))) {
@@ -471,9 +510,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     }
     // 2. Fallback: Pincode serviceability match
     if (activePincode) {
-      const pin = (sellerPin || '').trim();
-      const pins = Array.isArray(servedPins) ? servedPins.map((p) => p.trim()) : [];
-      return pin === activePincode || pins.includes(activePincode);
+      return isPincodeServiced(activePincode, sellerPin, servedPins, locality, landmark);
     }
     return true;
   };
@@ -487,7 +524,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           item.sellerLatitude,
           item.sellerLongitude,
           item.sellerPincode,
-          item.servedPincodes
+          item.servedPincodes,
+          item.sellerLocality,
+          item.sellerLandmark
         );
         if (!deliverable) return false;
       }
@@ -549,7 +588,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           k.latitude,
           k.longitude,
           k.pincode,
-          k.servedPincodes
+          k.servedPincodes,
+          k.locality,
+          k.landmark
         );
         if (!deliverable) return false;
       }

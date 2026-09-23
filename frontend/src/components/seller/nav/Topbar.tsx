@@ -1,10 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, Bell, Menu, X } from "lucide-react";
+import Link from "next/link";
+import {
+  Search,
+  Bell,
+  Menu,
+  X,
+  ShoppingBag,
+  Package,
+  Truck,
+  Calendar,
+  Clock,
+  Star,
+  CheckCheck,
+  ChevronRight,
+  Inbox,
+  AlertCircle,
+  DollarSign,
+} from "lucide-react";
 import styles from "./Topbar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
+import { useSellerNotifications, broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
+import { NotificationCategory } from "../seller-notifications/notificationData";
 
 export interface TopbarProps {
   title?: string;
@@ -25,7 +44,7 @@ export default function Topbar({
   partnerRole,
   avatarInitials,
   searchPlaceholder,
-  unreadCount = 4,
+  unreadCount: unreadCountProp,
   onSearch,
   onNotificationClick,
   onMenuToggle,
@@ -34,8 +53,31 @@ export default function Topbar({
   const router = useRouter();
   const pathname = usePathname();
   const seller = useSellerProfile();
+  const {
+    notifications,
+    unreadCount: liveUnreadCount,
+    markAsRead,
+    markAllAsRead,
+  } = useSellerNotifications();
+  const effectiveUnreadCount = typeof unreadCountProp === "number" ? unreadCountProp : liveUnreadCount;
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const handleMenu = onMenuToggle || onMenuClick;
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
@@ -48,12 +90,55 @@ export default function Topbar({
       ? avatarInitials
       : (seller.avatarInitials || computeInitials(effectiveOwnerName));
 
+  const getCategoryIcon = (category: NotificationCategory) => {
+    switch (category) {
+      case "orders":
+        return <ShoppingBag size={16} />;
+      case "stock":
+        return <Package size={16} />;
+      case "delivery":
+        return <Truck size={16} />;
+      case "bookings":
+        return <Calendar size={16} />;
+      case "timings":
+        return <Clock size={16} />;
+      case "reviews":
+        return <Star size={16} />;
+      case "settlements":
+        return <DollarSign size={16} />;
+      default:
+        return <AlertCircle size={16} />;
+    }
+  };
+
+  const getCategoryClass = (category: NotificationCategory) => {
+    switch (category) {
+      case "orders":
+        return styles.iconOrders;
+      case "stock":
+        return styles.iconStock;
+      case "delivery":
+        return styles.iconDelivery;
+      case "bookings":
+        return styles.iconBookings;
+      case "timings":
+        return styles.iconTimings;
+      case "reviews":
+        return styles.iconReviews;
+      default:
+        return styles.iconOrders;
+    }
+  };
+
   const getDynamicPlaceholder = () => {
     if (searchPlaceholder && searchPlaceholder !== "Search order, room, dish...") {
       return searchPlaceholder;
     }
     if (pathname?.startsWith("/seller/menu") || pathname?.startsWith("/seller/res/menu") || pathname?.startsWith("/seller/edit-menu")) {
       return "Search dishes by name, category, or type...";
+    }
+    if (pathname === "/seller/dashboard" || pathname === "/seller" || pathname?.startsWith("/seller/dashboard") || pathname?.startsWith("/seller/res/dashboard")) {
+      return "Search by customer name or order ID...";
     }
     if (pathname?.startsWith("/seller/orders") || pathname?.startsWith("/seller/res/orders") || pathname?.startsWith("/seller/order-default")) {
       return "Search orders by ID, customer, dish, room...";
@@ -83,7 +168,7 @@ export default function Topbar({
     if (onNotificationClick) {
       onNotificationClick();
     } else {
-      router.push("/seller/notifications");
+      setIsDropdownOpen((prev) => !prev);
     }
   };
 
@@ -176,7 +261,11 @@ export default function Topbar({
         <button
           type="button"
           onClick={async () => {
-            await toggleSellerOnlineStatus(!seller.isOnline);
+            const nextStatus = !seller.isOnline;
+            await toggleSellerOnlineStatus(nextStatus);
+            try {
+              broadcastShopTimingAlert({ isOpen: nextStatus });
+            } catch {}
           }}
           className={`${styles.statusToggleBtn || ""} topbar-status-toggle`}
           title={seller.isOnline ? "Store is ONLINE (Click to switch to Offline)" : "Store is OFFLINE (Click to switch to Online)"}
@@ -210,21 +299,109 @@ export default function Topbar({
           <span>{seller.isOnline ? "Store Open" : "Store Closed"}</span>
         </button>
 
-        {/* Notification Button */}
-        <button
-          type="button"
-          onClick={handleNotificationClick}
-          className={`${styles.notificationBtn} notification-btn`}
-          title="Notifications"
-          aria-label="Notifications"
-        >
-          <Bell size={22} strokeWidth={2.2} />
-          {unreadCount > 0 && (
-            <span className={styles.notificationBadge}>
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
+        {/* Notification Button & Interactive Popup */}
+        <div className={styles.notificationWrapper} ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={handleNotificationClick}
+            className={`${styles.notificationBtn} notification-btn`}
+            title="Notifications"
+            aria-label="Notifications"
+          >
+            <Bell size={22} strokeWidth={2.2} />
+            {effectiveUnreadCount > 0 && (
+              <span className={styles.notificationBadge}>
+                {effectiveUnreadCount > 99 ? "99+" : effectiveUnreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Popup Dropdown */}
+          {isDropdownOpen && (
+            <div className={styles.notificationDropdown} role="dialog" aria-label="Notifications list">
+              {/* Header */}
+              <div className={styles.dropdownHeader}>
+                <div className={styles.dropdownHeaderLeft}>
+                  <h4 className={styles.dropdownTitle}>Notifications</h4>
+                  {effectiveUnreadCount > 0 ? (
+                    <span className={styles.dropdownBadge}>{effectiveUnreadCount} New</span>
+                  ) : (
+                    <span style={{ fontSize: "11px", fontWeight: 600, color: "#16A34A" }}>
+                      All caught up
+                    </span>
+                  )}
+                </div>
+
+                {effectiveUnreadCount > 0 && (
+                  <button
+                    type="button"
+                    className={styles.markAllReadBtn}
+                    onClick={() => {
+                      markAllAsRead();
+                    }}
+                  >
+                    <CheckCheck size={14} />
+                    <span>Mark all read</span>
+                  </button>
+                )}
+              </div>
+
+              {/* List */}
+              <div className={styles.dropdownList}>
+                {notifications.length === 0 ? (
+                  <div className={styles.dropdownEmpty}>
+                    <Inbox size={28} color="#94A3B8" />
+                    <p className={styles.dropdownEmptyTitle}>No Notifications</p>
+                    <p className={styles.dropdownEmptyDesc}>You are completely caught up!</p>
+                  </div>
+                ) : (
+                  notifications.slice(0, 6).map((item) => (
+                    <div
+                      key={item.id}
+                      className={`${styles.dropdownItem} ${!item.isRead ? styles.unreadItem : ""}`}
+                      onClick={() => {
+                        markAsRead(item.id);
+                        setIsDropdownOpen(false);
+                        if (item.actionHref) {
+                          router.push(item.actionHref);
+                        }
+                      }}
+                    >
+                      <div className={`${styles.dropdownIconWrapper} ${getCategoryClass(item.category)}`}>
+                        {getCategoryIcon(item.category)}
+                      </div>
+                      <div className={styles.dropdownItemContent}>
+                        <div className={styles.dropdownItemHeader}>
+                          <h5 className={styles.dropdownItemTitle}>
+                            {!item.isRead && <span className={styles.unreadDot} />}
+                            {item.title}
+                          </h5>
+                          <span className={styles.dropdownItemTime}>{item.timeAgo}</span>
+                        </div>
+                        <p className={styles.dropdownItemMessage}>{item.message}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className={styles.dropdownFooter}>
+                <button
+                  type="button"
+                  className={styles.viewAllBtn}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    router.push("/seller/notifications");
+                  }}
+                >
+                  <span>Open Notifications Center</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
           )}
-        </button>
+        </div>
 
 
         {/* User Profile Pill */}

@@ -7,8 +7,11 @@ const prisma = new PrismaClient();
 export async function GET() {
     try {
         const session = await getAuthSession();
-        if (!session || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to view subscriptions.", error: "Please log in first to view subscriptions." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const subscriptions = await prisma.subscription.findMany({

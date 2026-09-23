@@ -5,8 +5,11 @@ import { getAuthSession } from "@/lib/auth";
 export async function PUT(req: Request, { params }: { params: Promise<{ sellerId: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session?.user || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to update seller information.", error: "Please log in first to update seller information." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const body = await req.json();
@@ -19,7 +22,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
         });
 
         if (!existingUser || existingUser.role !== "SELLER") {
-            return NextResponse.json({ message: "Seller not found" }, { status: 404 });
+            return NextResponse.json({ success: false, message: "The specified seller account could not be found.", error: "The specified seller account could not be found." }, { status: 404 });
         }
 
         // Update the user
@@ -88,8 +91,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
 export async function DELETE(req: Request, { params }: { params: Promise<{ sellerId: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session?.user || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to delete seller accounts.", error: "Please log in first to delete seller accounts." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const { sellerId } = await params;
@@ -97,7 +103,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ selle
         // Ensure we are only deleting SELLERs
         const existingUser = await db.user.findUnique({ where: { id: sellerId } });
         if (!existingUser || existingUser.role !== "SELLER") {
-            return NextResponse.json({ message: "Seller not found or invalid type" }, { status: 404 });
+            return NextResponse.json({ success: false, message: "The specified seller account could not be found.", error: "The specified seller account could not be found." }, { status: 404 });
         }
 
         // Manually clean up immediate Seller relation to help SQLite bypass tight 

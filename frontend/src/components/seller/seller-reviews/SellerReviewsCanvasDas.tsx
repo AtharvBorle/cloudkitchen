@@ -16,6 +16,9 @@ export interface ReviewItem {
   date: string;
   rating: number;
   comment?: string;
+  aspects?: string[];
+  tags?: string[];
+  sentiment?: string;
   itemsOrdered: string[];
   managerResponse?: {
     date: string;
@@ -241,7 +244,7 @@ export default function SellerReviewsCanvasDas({
             const mapped: ReviewItem[] = rawList.map((r: any) => ({
               id: r.id,
               customerName: r.user?.name || "Customer",
-              orderId: r.orderId ? r.orderId.slice(-8) : r.id.slice(-8),
+              orderId: r.orderId ? r.orderId.slice(-8) : (r.id ? r.id.slice(-8) : "N/A"),
               date: new Date(r.createdAt).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "long",
@@ -249,6 +252,9 @@ export default function SellerReviewsCanvasDas({
               }),
               rating: r.rating || 5,
               comment: r.comment || "No comment left for this order.",
+              aspects: Array.isArray(r.aspects) ? r.aspects : (typeof r.aspects === "string" ? (() => { try { return JSON.parse(r.aspects); } catch { return []; } })() : []),
+              tags: Array.isArray(r.tags) ? r.tags : (typeof r.tags === "string" ? (() => { try { return JSON.parse(r.tags); } catch { return []; } })() : []),
+              sentiment: r.sentiment || undefined,
               itemsOrdered: r.itemRatings?.map((ir: any) => ir.foodItem?.name || "Item") || [],
               managerResponse: r.managerResponse
                 ? {
@@ -570,6 +576,20 @@ export default function SellerReviewsCanvasDas({
                               <div className={styles.nameAndBadge}>
                                 <span className={styles.customerName}>{review.customerName}</span>
                                 <span className={styles.orderIdPill}>Order ID: {review.orderId}</span>
+                                {review.sentiment && (
+                                  <span style={{
+                                    fontSize: "11px",
+                                    fontWeight: 600,
+                                    backgroundColor: "#FEF3C7",
+                                    color: "#B45309",
+                                    padding: "2px 8px",
+                                    borderRadius: "12px",
+                                    display: "inline-flex",
+                                    alignItems: "center"
+                                  }}>
+                                    {review.sentiment}
+                                  </span>
+                                )}
                               </div>
                               <span className={styles.reviewDate}>{review.date}</span>
                             </div>
@@ -586,6 +606,44 @@ export default function SellerReviewsCanvasDas({
                               <p className={isNoComment ? styles.italicComment : styles.commentText}>
                                 {review.comment}
                               </p>
+                            </div>
+                          )}
+
+                          {/* Aspects & Quick Tags */}
+                          {((review.aspects && review.aspects.length > 0) || (review.tags && review.tags.length > 0)) && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px", marginBottom: "4px" }}>
+                              {review.aspects?.map((aspect, i) => (
+                                <span
+                                  key={`asp-${i}`}
+                                  style={{
+                                    fontSize: "11px",
+                                    fontWeight: 500,
+                                    backgroundColor: "#EFF6FF",
+                                    color: "#2563EB",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #DBEAFE"
+                                  }}
+                                >
+                                  ✓ {aspect}
+                                </span>
+                              ))}
+                              {review.tags?.map((tag, i) => (
+                                <span
+                                  key={`tag-${i}`}
+                                  style={{
+                                    fontSize: "11px",
+                                    fontWeight: 500,
+                                    backgroundColor: "#F0FDF4",
+                                    color: "#16A34A",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #DCFCE7"
+                                  }}
+                                >
+                                  ★ {tag}
+                                </span>
+                              ))}
                             </div>
                           )}
 

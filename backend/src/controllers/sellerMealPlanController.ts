@@ -5,8 +5,11 @@ import { getCategoryExpiries } from "@/lib/subscription";
 
 export const getAuthenticatedSellerProfile = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized. Seller login required.", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage meal plans.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required to manage meal plans.", 403);
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -14,7 +17,7 @@ export const getAuthenticatedSellerProfile = async () => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
     const activeSubs = await db.subscription.findMany({
@@ -34,7 +37,7 @@ export const getAuthenticatedSellerProfile = async () => {
     const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
 
     if (!isFoodActive && sellerProfile.verificationStatus !== "APPROVED") {
-        throw new ApiError("Active Food Subscription required to manage meal plans", 403);
+        throw new ApiError("An active Food subscription and approved verification are required to manage meal plans.", 403);
     }
 
     return { session, sellerProfile };
@@ -158,7 +161,7 @@ export const getSellerMealPlanById = async (planId: string) => {
     });
 
     if (!plan) {
-        throw new ApiError("Meal subscription plan not found or unauthorized", 404);
+        throw new ApiError("Meal subscription plan could not be found or you do not have permission to access it.", 404);
     }
 
     let parsedFeatures: string[] = [];
@@ -293,7 +296,7 @@ export const updateSellerMealPlan = async (req: Request) => {
     });
 
     if (!existingPlan) {
-        throw new ApiError("Meal subscription plan not found or unauthorized", 404);
+        throw new ApiError("Meal subscription plan could not be found or you do not have permission to access it.", 404);
     }
 
     const updateData: any = {};
@@ -393,7 +396,7 @@ export const deleteSellerMealPlan = async (req: Request) => {
     });
 
     if (!existingPlan) {
-        throw new ApiError("Meal subscription plan not found or unauthorized", 404);
+        throw new ApiError("Meal subscription plan could not be found or you do not have permission to access it.", 404);
     }
 
     await db.sellerMealPlan.delete({
@@ -413,7 +416,23 @@ export const getPublicMealPlans = async (req: Request) => {
     };
 
     if (sellerId) {
-        whereClause.sellerId = sellerId;
+        const cleanSellerId = decodeURIComponent(sellerId).trim();
+        const matchedSeller = await db.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { id: cleanSellerId },
+                    { trackingId: { equals: cleanSellerId, mode: 'insensitive' } },
+                    { userId: cleanSellerId },
+                    { businessName: { equals: cleanSellerId, mode: 'insensitive' } }
+                ]
+            },
+            select: { id: true }
+        });
+        if (matchedSeller) {
+            whereClause.sellerId = matchedSeller.id;
+        } else {
+            whereClause.sellerId = cleanSellerId;
+        }
     }
     if (tier && tier !== "All") {
         whereClause.tier = tier;
@@ -435,23 +454,40 @@ export const getPublicMealPlans = async (req: Request) => {
         orderBy: { weeklyPrice: "asc" }
     });
 
-    return plans.map((p) => ({
-        id: p.id,
-        sellerId: p.sellerId,
-        sellerName: p.seller?.businessName || "Kitchen Partner",
-        sellerLocality: p.seller?.addressLocality || "",
-        foodType: p.seller?.foodType || "BOTH",
-        name: p.name,
-        tier: p.tier,
-        description: p.description,
-        weeklyPrice: p.weeklyPrice,
-        monthlyPrice: p.monthlyPrice || p.weeklyPrice * 4,
-        quarterlyPrice: p.quarterlyPrice || p.weeklyPrice * 12 * 0.9,
-        yearlyPrice: p.yearlyPrice || p.weeklyPrice * 52 * 0.8,
-        duration: p.duration,
-        features: JSON.parse(p.features || "[]"),
-        mealTimings: JSON.parse(p.mealTimings || "[]"),
-        allowCancel: p.allowCancel,
-        pauseBillingPeriod: p.pauseBillingPeriod,
-    }));
+    return plans.map((p) => {
+        let parsedFeatures: string[] = [];
+        try {
+            parsedFeatures = typeof p.features === "string" ? JSON.parse(p.features) : (p.features || []);
+        } catch {
+            parsedFeatures = [];
+        }
+
+        let parsedTimings: string[] = [];
+        try {
+            parsedTimings = typeof p.mealTimings === "string" ? JSON.parse(p.mealTimings) : (p.mealTimings || []);
+        } catch {
+            parsedTimings = [];
+        }
+
+        return {
+            id: p.id,
+            sellerId: p.sellerId,
+            sellerName: p.seller?.businessName || "Kitchen Partner",
+            sellerLocality: p.seller?.addressLocality || "",
+            foodType: p.seller?.foodType || "BOTH",
+            name: p.name,
+            tier: p.tier,
+            description: p.description,
+            weeklyPrice: p.weeklyPrice,
+            monthlyPrice: p.monthlyPrice || p.weeklyPrice * 4,
+            quarterlyPrice: p.quarterlyPrice || p.weeklyPrice * 12 * 0.9,
+            yearlyPrice: p.yearlyPrice || p.weeklyPrice * 52 * 0.8,
+            duration: p.duration,
+            features: parsedFeatures,
+            mealTimings: parsedTimings,
+            allowCancel: p.allowCancel,
+            pauseBillingPeriod: p.pauseBillingPeriod,
+        };
+    });
 };
+

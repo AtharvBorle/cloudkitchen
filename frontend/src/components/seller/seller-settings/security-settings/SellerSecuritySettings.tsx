@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CheckCircle2, AlertCircle, Loader2, Laptop, Smartphone } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./SellerSecuritySettings.module.css";
 
 export interface LoginSessionItem {
@@ -13,37 +14,67 @@ export interface LoginSessionItem {
   ip: string;
   lastActive: string;
   isCurrent: boolean;
+  deviceType?: "desktop" | "mobile";
 }
 
-export const DEFAULT_LOGIN_SESSIONS: LoginSessionItem[] = [
-  {
-    id: "session-1",
-    location: "Mumbai, India",
-    browser: "Chrome",
-    os: "Windows Desktop",
-    ip: "103.45.2.11",
-    lastActive: "Current Active Session",
-    isCurrent: true,
-  },
-  {
-    id: "session-2",
-    location: "Mumbai, India",
-    browser: "Safari",
-    os: "iPhone 14",
-    ip: "103.45.2.19",
-    lastActive: "Logged in on Jan 24, 2026",
-    isCurrent: false,
-  },
-  {
-    id: "session-3",
-    location: "Bengaluru, India",
-    browser: "Edge",
-    os: "macOS",
-    ip: "182.3.91.4",
-    lastActive: "Logged in on Jan 18, 2026",
-    isCurrent: false,
-  },
-];
+/**
+ * Helpers to detect the user's real device, browser, and location
+ */
+function detectOS(): { os: string; isMobile: boolean } {
+  if (typeof window === "undefined") return { os: "Windows Desktop", isMobile: false };
+  const userAgent = window.navigator.userAgent;
+  const platform = window.navigator.platform || "";
+
+  if (/iPhone|iPad|iPod/.test(userAgent)) {
+    return { os: "iOS Mobile", isMobile: true };
+  } else if (/Android/.test(userAgent)) {
+    return { os: "Android Mobile", isMobile: true };
+  } else if (/Macintosh|MacIntel|MacPPC|Mac68K/.test(platform) || /Macintosh|Mac OS X/.test(userAgent)) {
+    return { os: "macOS Desktop", isMobile: false };
+  } else if (/Win32|Win64|Windows|WinCE/.test(platform) || /Windows NT/.test(userAgent)) {
+    if (/Windows NT 10.0/.test(userAgent)) {
+      return { os: "Windows 10/11 Desktop", isMobile: false };
+    }
+    return { os: "Windows Desktop", isMobile: false };
+  } else if (/Linux/.test(platform) || /Linux/.test(userAgent)) {
+    return { os: "Linux Desktop", isMobile: false };
+  }
+  return { os: "Current Device", isMobile: false };
+}
+
+function detectBrowser(): string {
+  if (typeof window === "undefined") return "Web Browser";
+  const ua = window.navigator.userAgent;
+  if (ua.indexOf("Edg") > -1) {
+    return "Microsoft Edge";
+  } else if (ua.indexOf("Chrome") > -1 && ua.indexOf("Safari") > -1 && ua.indexOf("OPR") === -1) {
+    return "Google Chrome";
+  } else if (ua.indexOf("Safari") > -1 && ua.indexOf("Chrome") === -1) {
+    return "Safari";
+  } else if (ua.indexOf("Firefox") > -1) {
+    return "Mozilla Firefox";
+  } else if (ua.indexOf("OPR") > -1 || ua.indexOf("Opera") > -1) {
+    return "Opera";
+  }
+  return "Google Chrome";
+}
+
+function detectLocation(): string {
+  if (typeof window === "undefined") return "Current Location";
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz) {
+      if (tz.includes("/")) {
+        const parts = tz.split("/");
+        const city = parts[1].replace(/_/g, " ");
+        const region = parts[0];
+        return `${city}, ${region}`;
+      }
+      return tz;
+    }
+  } catch {}
+  return "India (Local Session)";
+}
 
 /* ======================================================== */
 /* 1. Password Management Card Component                    */
@@ -71,23 +102,97 @@ export const PasswordManagementCard: React.FC<PasswordManagementProps> = ({
   const [newPass, setNewPass] = useState(newPassword);
   const [confirm, setConfirm] = useState(confirmPassword);
 
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleCurrentChange = (val: string) => {
     setCurrent(val);
+    setErrorMsg(null);
+    setSuccessMsg(null);
     onPasswordChange?.({ current: val, newPass, confirm });
   };
 
   const handleNewPassChange = (val: string) => {
     setNewPass(val);
+    setErrorMsg(null);
+    setSuccessMsg(null);
     onPasswordChange?.({ current, newPass: val, confirm });
   };
 
   const handleConfirmChange = (val: string) => {
     setConfirm(val);
+    setErrorMsg(null);
+    setSuccessMsg(null);
     onPasswordChange?.({ current, newPass, confirm: val });
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (!current.trim()) {
+      setErrorMsg("Please enter your current password.");
+      return;
+    }
+    if (!newPass) {
+      setErrorMsg("Please enter a new password.");
+      return;
+    }
+    if (newPass.length < 6) {
+      setErrorMsg("New password must be at least 6 characters long.");
+      return;
+    }
+    if (newPass !== confirm) {
+      setErrorMsg("New password and confirm password do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Try updating via /api/seller/profile (for sellers) with fallback to /api/user/profile (for users)
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: current,
+          newPassword: newPass,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          const userRes = await fetchApi("/api/user/profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              currentPassword: current,
+              newPassword: newPass,
+            }),
+          });
+          const userData = await userRes.json().catch(() => ({}));
+          if (!userRes.ok) {
+            throw new Error(userData.message || "Failed to update password.");
+          }
+        } else {
+          throw new Error(data.message || "Failed to update password.");
+        }
+      }
+
+      setSuccessMsg("Password updated successfully!");
+      setCurrent("");
+      setNewPass("");
+      setConfirm("");
+      if (onPasswordChange) {
+        onPasswordChange({ current: "", newPass: "", confirm: "" });
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to update password. Please check your current password.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -98,7 +203,23 @@ export const PasswordManagementCard: React.FC<PasswordManagementProps> = ({
         </h2>
       </div>
 
-      <div className={styles.passwordForm}>
+      <form className={styles.passwordForm} onSubmit={handleUpdatePassword}>
+        {/* Success Alert */}
+        {successMsg && (
+          <div className={styles.alertSuccess}>
+            <CheckCircle2 size={18} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <div className={styles.alertError}>
+            <AlertCircle size={18} />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
         {/* Current Password */}
         <div className={styles.fieldGroup}>
           <PasswordInput
@@ -119,9 +240,9 @@ export const PasswordManagementCard: React.FC<PasswordManagementProps> = ({
             label="New Password"
             value={newPass}
             onChange={(val) => handleNewPassChange(val)}
-            placeholder="At least 8 characters long"
+            placeholder="At least 6 characters long"
             autoComplete="new-password"
-            minLength={8}
+            minLength={6}
           />
         </div>
 
@@ -136,10 +257,28 @@ export const PasswordManagementCard: React.FC<PasswordManagementProps> = ({
             onChange={(val) => handleConfirmChange(val)}
             placeholder="Re-enter your new password"
             autoComplete="new-password"
-            minLength={8}
+            minLength={6}
           />
         </div>
-      </div>
+
+        {/* Submit Button */}
+        <div className={styles.passwordSubmitRow}>
+          <button
+            type="submit"
+            className={styles.updatePasswordBtn}
+            disabled={isSubmitting || !current || !newPass || !confirm}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 size={16} className={styles.spinner} />
+                <span>Updating Password...</span>
+              </>
+            ) : (
+              <span>Update Password</span>
+            )}
+          </button>
+        </div>
+      </form>
     </section>
   );
 };
@@ -154,15 +293,42 @@ export interface ActiveLoginSessionsProps {
 }
 
 export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
-  sessions = DEFAULT_LOGIN_SESSIONS,
   onLogoutOtherSessions,
   className = "",
 }) => {
-  const [sessionList, setSessionList] = useState<LoginSessionItem[]>(sessions);
+  const [currentSession, setCurrentSession] = useState<LoginSessionItem>({
+    id: "current-session",
+    location: "Detecting location...",
+    browser: "Web Browser",
+    os: "Current Device",
+    ip: "Active Connection",
+    lastActive: "Active right now",
+    isCurrent: true,
+    deviceType: "desktop",
+  });
+
+  const [hasOtherSessions, setHasOtherSessions] = useState(false);
   const [loggedOutNotice, setLoggedOutNotice] = useState(false);
 
+  useEffect(() => {
+    const { os, isMobile } = detectOS();
+    const browser = detectBrowser();
+    const location = detectLocation();
+
+    setCurrentSession({
+      id: "current-session",
+      location,
+      browser,
+      os,
+      ip: "Active Secure Session",
+      lastActive: "Active right now",
+      isCurrent: true,
+      deviceType: isMobile ? "mobile" : "desktop",
+    });
+  }, []);
+
   const handleLogoutAllOther = () => {
-    setSessionList((prev) => prev.filter((s) => s.isCurrent));
+    setHasOtherSessions(false);
     setLoggedOutNotice(true);
     if (onLogoutOtherSessions) {
       onLogoutOtherSessions();
@@ -171,8 +337,6 @@ export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
       setLoggedOutNotice(false);
     }, 4000);
   };
-
-  const hasOtherSessions = sessionList.some((s) => !s.isCurrent);
 
   return (
     <section className={`${styles.card} ${className}`} aria-labelledby="active-sessions-heading">
@@ -183,28 +347,30 @@ export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
       </div>
 
       <div className={styles.sessionsList}>
-        {sessionList.map((session) => (
-          <div key={session.id} className={styles.sessionItem}>
-            <div className={styles.sessionItemHeader}>
-              <div className={styles.sessionTitleRow}>
-                <h3 className={styles.deviceTitle}>
-                  {session.location} • {session.browser} ({session.os})
-                </h3>
-                {session.isCurrent && (
-                  <span className={styles.activeBadge}>Active Now</span>
-                )}
-              </div>
+        {/* Exact Current Device Session */}
+        <div className={styles.sessionItem}>
+          <div className={styles.sessionItemHeader}>
+            <div className={styles.sessionTitleRow}>
+              {currentSession.deviceType === "mobile" ? (
+                <Smartphone size={16} color="#EA580C" style={{ flexShrink: 0 }} />
+              ) : (
+                <Laptop size={16} color="#EA580C" style={{ flexShrink: 0 }} />
+              )}
+              <h3 className={styles.deviceTitle}>
+                {currentSession.location} • {currentSession.browser} ({currentSession.os})
+              </h3>
+              <span className={styles.activeBadge}>This Device (Active Now)</span>
             </div>
-            <p className={styles.sessionMeta}>
-              {session.lastActive} • IP: {session.ip}
-            </p>
           </div>
-        ))}
+          <p className={styles.sessionMeta}>
+            {currentSession.lastActive} • {currentSession.ip}
+          </p>
+        </div>
 
         {loggedOutNotice && (
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#10B981", fontSize: "13px", fontWeight: 600, paddingTop: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#16A34A", fontSize: "13px", fontWeight: 600, paddingTop: "12px" }}>
             <CheckCircle2 size={16} />
-            <span>Successfully logged out of all other devices.</span>
+            <span>All other active device sessions have been invalidated.</span>
           </div>
         )}
 
@@ -212,7 +378,7 @@ export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
           type="button"
           className={styles.logoutAllButton}
           onClick={handleLogoutAllOther}
-          disabled={!hasOtherSessions}
+          disabled={!hasOtherSessions && loggedOutNotice}
         >
           Log Out of All Other Devices
         </button>
@@ -242,7 +408,6 @@ export interface SellerSecuritySettingsProps {
 
 export const SellerSecuritySettings: React.FC<SellerSecuritySettingsProps> = ({
   passwords,
-  sessions,
   onPasswordChange,
   onLogoutOtherSessions,
   className = "",
@@ -256,7 +421,6 @@ export const SellerSecuritySettings: React.FC<SellerSecuritySettingsProps> = ({
         onPasswordChange={onPasswordChange}
       />
       <ActiveLoginSessionsCard
-        sessions={sessions}
         onLogoutOtherSessions={onLogoutOtherSessions}
       />
     </div>

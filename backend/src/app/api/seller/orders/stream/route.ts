@@ -21,9 +21,19 @@ export async function OPTIONS() {
 export async function GET(req: NextRequest) {
   try {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "SELLER") {
-      return new Response(JSON.stringify({ error: "Unauthorized. SELLER role required." }), {
+    if (!session?.user) {
+      return new Response(JSON.stringify({ success: false, message: "Please log in first to connect to the kitchen order stream.", error: "Please log in first to connect to the kitchen order stream." }), {
         status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": "true",
+        },
+      });
+    }
+    if (session.user.role !== "SELLER") {
+      return new Response(JSON.stringify({ success: false, message: "Access denied. Seller account required.", error: "Access denied. Seller account required." }), {
+        status: 403,
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",

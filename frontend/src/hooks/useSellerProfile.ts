@@ -19,6 +19,7 @@ export interface SellerProfileData {
   latitude?: number | null;
   longitude?: number | null;
   isLocationPinned?: boolean;
+  bannerImageUrl?: string;
   avatarInitials: string;
   partnerRole: string;
   isOnline: boolean;
@@ -156,6 +157,7 @@ export function useSellerProfile() {
       latitude: isSeller ? (cachedProfile?.latitude ?? null) : null,
       longitude: isSeller ? (cachedProfile?.longitude ?? null) : null,
       isLocationPinned: isSeller ? (cachedProfile?.isLocationPinned ?? false) : false,
+      bannerImageUrl: isSeller ? (cachedProfile?.bannerImageUrl || cachedProfile?.profile?.bannerImageUrl || "") : "",
       avatarInitials: isSeller ? (cachedProfile?.avatarInitials || computeInitials(name)) : "SK",
       partnerRole: isSeller ? (cachedProfile?.partnerRole || "Neo Cloud Partner") : "",
       isOnline: isSeller ? (cachedProfile?.isOnline ?? true) : true,
@@ -252,6 +254,7 @@ export function useSellerProfile() {
           const rawOnline = typeof profile?.isOnline === "boolean" ? profile.isOnline : true;
           const rawTrackingId = profile?.trackingId || "";
           const rawUpiId = profile?.upiId || "";
+          const rawBannerImageUrl = profile?.bannerImageUrl || "";
 
           cachedProfile = {
             id: profile?.id || user?.sellerProfile?.id || user?.id || "",
@@ -268,6 +271,7 @@ export function useSellerProfile() {
             latitude: rawLat,
             longitude: rawLng,
             isLocationPinned: rawPinned,
+            bannerImageUrl: rawBannerImageUrl,
             avatarInitials: rawInitials,
             partnerRole: "Neo Cloud Partner",
             isOnline: rawOnline,
@@ -293,6 +297,7 @@ export function useSellerProfile() {
               latitude: rawLat,
               longitude: rawLng,
               isLocationPinned: rawPinned,
+              bannerImageUrl: rawBannerImageUrl,
               avatarInitials: rawInitials,
               partnerRole: "Neo Cloud Partner",
               isOnline: rawOnline,
