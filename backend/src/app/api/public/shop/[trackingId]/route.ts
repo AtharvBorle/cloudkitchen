@@ -7,8 +7,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
     try {
         const { trackingId } = await params;
 
-        const seller = await db.sellerProfile.findUnique({
-            where: { trackingId: trackingId },
+        const seller = await db.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { trackingId: trackingId },
+                    { id: trackingId },
+                    { userId: trackingId }
+                ]
+            },
             include: {
                 user: true,
                 foodItems: {
@@ -25,6 +31,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
                 subscriptions: {
                     where: { status: "ACTIVE" },
                     include: { plan: true }
+                },
+                mealPlans: {
+                    where: { status: "Live" },
+                    orderBy: { weeklyPrice: "asc" }
                 },
                 reviews: {
                     include: {
@@ -84,10 +94,40 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
             };
         });
 
-        // Construct response with rating stats
+        // Process active meal subscription plans
+        const processedMealPlans = (seller.mealPlans || []).map((plan: any) => {
+            let parsedFeatures: string[] = [];
+            try {
+                parsedFeatures = typeof plan.features === "string" ? JSON.parse(plan.features) : (plan.features || []);
+            } catch {
+                parsedFeatures = [];
+            }
+
+            let parsedTimings: string[] = [];
+            try {
+                parsedTimings = typeof plan.mealTimings === "string" ? JSON.parse(plan.mealTimings) : (plan.mealTimings || []);
+            } catch {
+                parsedTimings = [];
+            }
+
+            return {
+                ...plan,
+                sellerId: seller.id,
+                sellerName: seller.businessName || seller.user?.name || "Kitchen Partner",
+                weeklyPrice: plan.weeklyPrice,
+                monthlyPrice: plan.monthlyPrice || plan.weeklyPrice * 4,
+                quarterlyPrice: plan.quarterlyPrice || plan.weeklyPrice * 12 * 0.9,
+                yearlyPrice: plan.yearlyPrice || plan.weeklyPrice * 52 * 0.8,
+                features: parsedFeatures,
+                mealTimings: parsedTimings,
+            };
+        });
+
+        // Construct response with rating stats and active meal plans
         const responseData = {
             ...seller,
             foodItems: processedFoodItems,
+            mealPlans: processedMealPlans,
             averageRating,
             totalReviews
         };

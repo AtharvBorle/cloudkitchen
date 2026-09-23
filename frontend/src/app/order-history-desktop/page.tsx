@@ -6,8 +6,10 @@ import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar"
 import { OrderHistoryHeader } from "@/components/order-history-desktop/order-history-header";
 import { OrderFilters, OrderFilterTab } from "@/components/order-history-desktop/order-filters";
 import { OrderList, OrderItemData } from "@/components/order-history-desktop/order-list";
+import { ReorderModal, ReorderModalType, ReorderItemInfo } from "@/components/order-history-desktop/reorder-modal";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { useCart, CartItem } from "@/context/CartContext";
 import { Footer } from "@/components/explore-desktop/footer";
 
 import styles from "./OrderHistoryPage.module.css";
@@ -16,10 +18,29 @@ import { useRouter } from "next/navigation";
 
 export default function OrderHistoryDesktopPage() {
   const router = useRouter();
+  const { cartItems, addMultipleToCart } = useCart();
+
   const [activeTab, setActiveTab] = useState<OrderFilterTab>("all");
   const [selectedDateRange, setSelectedDateRange] = useState<string>("All Time");
   const [liveOrders, setLiveOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
+
+  // Modal State for Alerts and Confirmation Popups
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: ReorderModalType;
+    sellerName?: string;
+    sellerId?: string;
+    currentCartSellerName?: string;
+    availableItems?: ReorderItemInfo[];
+    unavailableItems?: ReorderItemInfo[];
+    rawAvailableItems?: CartItem[];
+    errorMessage?: string;
+  }>({
+    isOpen: false,
+    type: "ERROR",
+  });
 
   const loadOrders = async (initial = false) => {
     if (initial) setLoading(true);
@@ -77,7 +98,7 @@ export default function OrderHistoryDesktopPage() {
 
       return {
         id: o.id,
-        restaurantName: o.seller?.businessName || "Neo Cloud Kitchen",
+        restaurantName: o.seller?.businessName || o.seller?.user?.name || "Neo Cloud Kitchen",
         orderNumber: `Order #${o.id.slice(0, 8).toUpperCase()}`,
         orderDate: dateStr,
         rawDate,
@@ -138,8 +159,133 @@ export default function OrderHistoryDesktopPage() {
     router.push(`/order-confirmation?orderId=${orderId}`);
   };
 
-  const handleReorderMeal = (orderId: string) => {
-    router.push("/food");
+  const handleReorderMeal = async (orderId: string) => {
+    setReorderingOrderId(orderId);
+    try {
+      const res = await fetchApi("/api/user/orders/validate-reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+
+      const json = await res.json();
+      const data = json.data !== undefined ? json.data : json;
+
+      if (!res.ok || json.success === false) {
+        setModalState({
+          isOpen: true,
+          type: "ERROR",
+          errorMessage: data?.message || json?.error || "Unable to validate order for reorder. Please try again.",
+        });
+        return;
+      }
+
+      // Check 1: Kitchen offline
+      if (data.sellerOnline === false) {
+        setModalState({
+          isOpen: true,
+          type: "OFFLINE",
+          sellerName: data.sellerName || "Cloud Kitchen",
+          sellerId: data.sellerId,
+        });
+        return;
+      }
+
+      // Check 2: No items available
+      if (!data.availableItems || data.availableItems.length === 0) {
+        setModalState({
+          isOpen: true,
+          type: "ALL_UNAVAILABLE",
+          sellerName: data.sellerName || "Cloud Kitchen",
+          sellerId: data.sellerId,
+          unavailableItems: data.unavailableItems || [],
+        });
+        return;
+      }
+
+      // Check 3: Partial items available
+      if (data.unavailableItems && data.unavailableItems.length > 0) {
+        setModalState({
+          isOpen: true,
+          type: "PARTIAL",
+          sellerName: data.sellerName || "Cloud Kitchen",
+          sellerId: data.sellerId,
+          availableItems: data.availableItems,
+          unavailableItems: data.unavailableItems,
+          rawAvailableItems: data.availableItems,
+        });
+        return;
+      }
+
+      // Check 4: Full reorder available - check for cart kitchen conflict
+      const targetSellerId = data.sellerId;
+      if (cartItems.length > 0 && cartItems[0].sellerId && targetSellerId && cartItems[0].sellerId !== targetSellerId) {
+        setModalState({
+          isOpen: true,
+          type: "CART_CONFLICT",
+          sellerName: data.sellerName || "Cloud Kitchen",
+          sellerId: data.sellerId,
+          currentCartSellerName: cartItems[0].sellerName || "another kitchen",
+          availableItems: data.availableItems,
+          rawAvailableItems: data.availableItems,
+        });
+        return;
+      }
+
+      // Everything is clear: Add items to cart and redirect to /cart
+      addMultipleToCart(data.availableItems, false);
+      router.push("/cart");
+    } catch (err: any) {
+      console.error("Reorder error:", err);
+      setModalState({
+        isOpen: true,
+        type: "ERROR",
+        errorMessage: err.message || "An unexpected error occurred while processing your reorder.",
+      });
+    } finally {
+      setReorderingOrderId(null);
+    }
+  };
+
+  const handleConfirmClearAndReorder = () => {
+    if (modalState.rawAvailableItems && modalState.rawAvailableItems.length > 0) {
+      addMultipleToCart(modalState.rawAvailableItems, true);
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+      router.push("/cart");
+    }
+  };
+
+  const handleConfirmPartialReorder = () => {
+    if (!modalState.rawAvailableItems || modalState.rawAvailableItems.length === 0) return;
+
+    const targetSellerId = modalState.sellerId;
+    if (cartItems.length > 0 && cartItems[0].sellerId && targetSellerId && cartItems[0].sellerId !== targetSellerId) {
+      // User has conflict with existing cart
+      setModalState((prev) => ({
+        ...prev,
+        type: "CART_CONFLICT",
+        currentCartSellerName: cartItems[0].sellerName || "another kitchen",
+      }));
+      return;
+    }
+
+    addMultipleToCart(modalState.rawAvailableItems, false);
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    router.push("/cart");
+  };
+
+  const handleExploreOtherKitchens = () => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    router.push("/explore-desktop");
+  };
+
+  const handleExploreSellerMenu = () => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    if (modalState.sellerId) {
+      router.push(`/restaurant/${modalState.sellerId}`);
+    } else {
+      router.push("/explore-desktop");
+    }
   };
 
   return (
@@ -176,15 +322,34 @@ export default function OrderHistoryDesktopPage() {
                 orders={filteredOrders}
                 onViewDetails={handleViewDetails}
                 onReorderMeal={handleReorderMeal}
+                reorderingOrderId={reorderingOrderId}
               />
             )}
           </div>
         </div>
       </main>
 
+      {/* Reorder Modal for Alerts, Out-of-Stock, Offline & Cart Conflict Handling */}
+      <ReorderModal
+        isOpen={modalState.isOpen}
+        type={modalState.type}
+        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        sellerName={modalState.sellerName}
+        sellerId={modalState.sellerId}
+        currentCartSellerName={modalState.currentCartSellerName}
+        availableItems={modalState.availableItems}
+        unavailableItems={modalState.unavailableItems}
+        errorMessage={modalState.errorMessage}
+        onConfirmClearAndReorder={handleConfirmClearAndReorder}
+        onConfirmPartialReorder={handleConfirmPartialReorder}
+        onExploreOtherKitchens={handleExploreOtherKitchens}
+        onExploreSellerMenu={handleExploreSellerMenu}
+      />
+
       {/* Global Responsive Footer */}
       <Footer />
     </div>
   );
 }
+
 

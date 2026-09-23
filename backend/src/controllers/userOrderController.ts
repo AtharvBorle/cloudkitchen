@@ -570,3 +570,230 @@ export const getOrderDetails = async (id: string) => {
     };
 };
 
+export const validateReorder = async (orderId: string) => {
+    const session = await getAuthSession();
+    if (!session || !session.user) {
+        throw new ApiError("Unauthorized", 401);
+    }
+
+    if (!orderId) {
+        throw new ApiError("Order ID is required", 400);
+    }
+
+    const order = await db.order.findUnique({
+        where: { id: orderId },
+        include: {
+            seller: {
+                include: {
+                    user: {
+                        select: {
+                            name: true,
+                            city: true
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    if (!order) {
+        throw new ApiError("Order not found", 404);
+    }
+
+    if (order.userId !== session.user.id && session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("You do not have permission to reorder from this order.", 403);
+    }
+
+    const seller = order.seller;
+    const sellerName = seller?.businessName || seller?.user?.name || "Cloud Kitchen";
+    const isSellerOnline = seller ? seller.isOnline !== false : false;
+
+    // Parse order items
+    let rawItems: any[] = [];
+    try {
+        const parsed = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
+        if (Array.isArray(parsed)) {
+            rawItems = parsed;
+        }
+    } catch (e) {
+        rawItems = [];
+    }
+
+    if (rawItems.length === 0) {
+        return {
+            orderId: order.id,
+            sellerId: seller?.id || order.sellerId,
+            sellerName,
+            sellerOnline: isSellerOnline,
+            canReorderFull: false,
+            canReorderPartial: false,
+            totalItemsCount: 0,
+            availableItemsCount: 0,
+            unavailableItemsCount: 0,
+            availableItems: [],
+            unavailableItems: [],
+            allItems: [],
+            message: "This order contains no items to reorder."
+        };
+    }
+
+    if (!isSellerOnline) {
+        return {
+            orderId: order.id,
+            sellerId: seller?.id || order.sellerId,
+            sellerName,
+            sellerOnline: false,
+            canReorderFull: false,
+            canReorderPartial: false,
+            totalItemsCount: rawItems.length,
+            availableItemsCount: 0,
+            unavailableItemsCount: rawItems.length,
+            availableItems: [],
+            unavailableItems: rawItems.map((item: any) => ({
+                id: item.id || item.foodItemId,
+                name: item.name || "Meal Item",
+                reason: `The kitchen (${sellerName}) is currently offline.`
+            })),
+            allItems: [],
+            message: `${sellerName} is currently offline and not accepting orders.`
+        };
+    }
+
+    const availableItems: any[] = [];
+    const unavailableItems: any[] = [];
+    const allItems: any[] = [];
+
+    for (const item of rawItems) {
+        const foodItemId = item.foodItemId || item.id;
+        let foodItem = null;
+
+        if (foodItemId) {
+            foodItem = await db.foodItem.findUnique({
+                where: { id: foodItemId }
+            }).catch(() => null);
+        }
+
+        if (!foodItem && item.name && order.sellerId) {
+            foodItem = await db.foodItem.findFirst({
+                where: {
+                    sellerId: order.sellerId,
+                    name: item.name
+                }
+            }).catch(() => null);
+        }
+
+        const requestedQty = Math.max(1, Number(item.quantity || item.qty || 1));
+        const itemImage = foodItem?.imageUrl || item.imageUrl || item.image || "/images/places/place-biryani.png";
+
+        if (!foodItem) {
+            const unItem = {
+                id: foodItemId || item.id || `unavail-${item.name}`,
+                foodItemId: foodItemId || item.id,
+                name: item.name || "Food Item",
+                quantity: requestedQty,
+                price: item.price || 0,
+                imageUrl: itemImage,
+                isAvailable: false,
+                inStock: false,
+                stockQuantity: 0,
+                reason: "This item is no longer on the kitchen menu."
+            };
+            unavailableItems.push(unItem);
+            allItems.push(unItem);
+            continue;
+        }
+
+        if (!foodItem.isAvailable) {
+            const unItem = {
+                id: foodItem.id,
+                foodItemId: foodItem.id,
+                name: foodItem.name,
+                quantity: requestedQty,
+                price: foodItem.price !== undefined ? foodItem.price : (item.price || 0),
+                imageUrl: itemImage,
+                isAvailable: false,
+                inStock: foodItem.stockQuantity !== 0,
+                stockQuantity: foodItem.stockQuantity,
+                reason: "This item is currently unavailable."
+            };
+            unavailableItems.push(unItem);
+            allItems.push(unItem);
+            continue;
+        }
+
+        if (foodItem.stockQuantity !== -1 && foodItem.stockQuantity <= 0) {
+            const unItem = {
+                id: foodItem.id,
+                foodItemId: foodItem.id,
+                name: foodItem.name,
+                quantity: requestedQty,
+                price: foodItem.price !== undefined ? foodItem.price : (item.price || 0),
+                imageUrl: itemImage,
+                isAvailable: true,
+                inStock: false,
+                stockQuantity: 0,
+                reason: "This item is currently out of stock."
+            };
+            unavailableItems.push(unItem);
+            allItems.push(unItem);
+            continue;
+        }
+
+        let finalQty = requestedQty;
+        let stockWarning: string | null = null;
+        if (foodItem.stockQuantity !== -1 && foodItem.stockQuantity < requestedQty) {
+            finalQty = foodItem.stockQuantity;
+            stockWarning = `Only ${foodItem.stockQuantity} item(s) available in stock (you previously ordered ${requestedQty}).`;
+        }
+
+        const availItem = {
+            id: foodItem.id,
+            foodItemId: foodItem.id,
+            name: foodItem.name,
+            price: foodItem.price !== undefined ? foodItem.price : (item.price || 0),
+            basePrice: foodItem.price !== undefined ? foodItem.price : (item.basePrice || item.price || 0),
+            quantity: finalQty,
+            sellerId: seller?.id || order.sellerId,
+            sellerName,
+            image: itemImage,
+            imageUrl: itemImage,
+            stockQuantity: foodItem.stockQuantity,
+            maxStock: foodItem.stockQuantity,
+            itemType: foodItem.itemType || item.itemType || "VEG",
+            selectedAddons: item.selectedAddons || [],
+            addonsTotal: item.addonsTotal || 0,
+            addons: item.addons || [],
+            isAvailable: true,
+            inStock: true,
+            warning: stockWarning
+        };
+
+        availableItems.push(availItem);
+        allItems.push(availItem);
+    }
+
+    const canReorderFull = isSellerOnline && unavailableItems.length === 0 && availableItems.length > 0;
+    const canReorderPartial = isSellerOnline && availableItems.length > 0;
+
+    return {
+        orderId: order.id,
+        sellerId: seller?.id || order.sellerId,
+        sellerName,
+        sellerOnline: isSellerOnline,
+        canReorderFull,
+        canReorderPartial,
+        totalItemsCount: rawItems.length,
+        availableItemsCount: availableItems.length,
+        unavailableItemsCount: unavailableItems.length,
+        availableItems,
+        unavailableItems,
+        allItems,
+        message: canReorderFull 
+            ? "All items from this order are available for reorder."
+            : canReorderPartial
+            ? `Some items are unavailable (${unavailableItems.length} unavailable).`
+            : "None of the items from this order are currently available."
+    };
+};
+
+

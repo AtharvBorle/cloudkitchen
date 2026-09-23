@@ -197,6 +197,23 @@
   box-shadow: 0 6px 16px rgba(249, 115, 22, 0.35);
 }
 
+.reorderBtnLoading {
+  opacity: 0.75;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
 @media (max-width: 768px) {
   .ordersContainer {
     gap: 16px;

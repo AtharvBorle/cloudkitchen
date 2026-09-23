@@ -32,6 +32,7 @@ export type CartItem = {
 type CartContextType = {
     cartItems: CartItem[];
     addToCart: (item: CartItem) => void;
+    addMultipleToCart: (items: CartItem[], clearExisting?: boolean) => void;
     updateQuantity: (itemId: string, quantity: number) => void;
     updateItemAddons: (itemId: string, selectedAddons: AddonItem[]) => void;
     decreaseQuantity: (itemId: string) => void;
@@ -142,6 +143,76 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
+    const addMultipleToCart = (items: CartItem[], clearExisting = false) => {
+        if (!items || items.length === 0) return;
+
+        setCartItems(prev => {
+            let baseList = clearExisting ? [] : [...prev];
+            const targetSellerId = items[0]?.sellerId;
+
+            if (baseList.length > 0 && baseList[0].sellerId && targetSellerId && baseList[0].sellerId !== targetSellerId) {
+                if (!clearExisting) {
+                    alert("You can only order from one kitchen at a time. Please clear your cart first.");
+                    return prev;
+                }
+                baseList = [];
+            }
+
+            let updatedList = [...baseList];
+
+            for (const item of items) {
+                const addons = item.selectedAddons || [];
+                const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+                const basePrice = item.basePrice !== undefined ? Number(item.basePrice) : (item.price !== undefined ? Number(item.price) : 0);
+                const finalUnitPrice = basePrice + addonsSum;
+
+                const normalizedItem: CartItem = {
+                    ...item,
+                    basePrice,
+                    addonsTotal: addonsSum,
+                    price: finalUnitPrice,
+                    selectedAddons: addons,
+                };
+
+                const existingIndex = updatedList.findIndex(i => i.id === item.id);
+                const existing = existingIndex !== -1 ? updatedList[existingIndex] : null;
+                const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
+                const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+                const itemImage = item.imageUrl || item.image || (existing ? (existing.imageUrl || existing.image) : undefined);
+
+                if (existingIndex !== -1 && existing) {
+                    const addQty = item.quantity !== undefined ? item.quantity : 1;
+                    const newQty = existing.quantity + addQty;
+                    const finalQty = stockLimit !== -1 ? Math.min(stockLimit, newQty) : newQty;
+
+                    updatedList[existingIndex] = {
+                        ...existing,
+                        ...normalizedItem,
+                        quantity: Math.max(1, finalQty),
+                        maxStock: stockLimit,
+                        stockQuantity: stockLimit,
+                        image: itemImage,
+                        imageUrl: itemImage,
+                    };
+                } else {
+                    const initialQty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
+                    const finalQty = stockLimit !== -1 ? Math.min(stockLimit, initialQty) : initialQty;
+
+                    updatedList.push({
+                        ...normalizedItem,
+                        quantity: Math.max(1, finalQty),
+                        maxStock: stockLimit,
+                        stockQuantity: stockLimit,
+                        image: itemImage,
+                        imageUrl: itemImage,
+                    });
+                }
+            }
+
+            return updatedList;
+        });
+    };
+
     const updateQuantity = (itemId: string, newQuantity: number) => {
         setCartItems(prev => {
             const existing = prev.find(i => i.id === itemId);
@@ -209,7 +280,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, updateQuantity, updateItemAddons, decreaseQuantity, removeFromCart, clearCart, cartTotal, initiateRoomBooking }}>
+        <CartContext.Provider value={{ cartItems, addToCart, addMultipleToCart, updateQuantity, updateItemAddons, decreaseQuantity, removeFromCart, clearCart, cartTotal, initiateRoomBooking }}>
             {children}
         </CartContext.Provider>
     );

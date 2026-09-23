@@ -413,7 +413,21 @@ export const getPublicMealPlans = async (req: Request) => {
     };
 
     if (sellerId) {
-        whereClause.sellerId = sellerId;
+        const matchedSeller = await db.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { id: sellerId },
+                    { trackingId: sellerId },
+                    { userId: sellerId }
+                ]
+            },
+            select: { id: true }
+        });
+        if (matchedSeller) {
+            whereClause.sellerId = matchedSeller.id;
+        } else {
+            whereClause.sellerId = sellerId;
+        }
     }
     if (tier && tier !== "All") {
         whereClause.tier = tier;
@@ -435,23 +449,40 @@ export const getPublicMealPlans = async (req: Request) => {
         orderBy: { weeklyPrice: "asc" }
     });
 
-    return plans.map((p) => ({
-        id: p.id,
-        sellerId: p.sellerId,
-        sellerName: p.seller?.businessName || "Kitchen Partner",
-        sellerLocality: p.seller?.addressLocality || "",
-        foodType: p.seller?.foodType || "BOTH",
-        name: p.name,
-        tier: p.tier,
-        description: p.description,
-        weeklyPrice: p.weeklyPrice,
-        monthlyPrice: p.monthlyPrice || p.weeklyPrice * 4,
-        quarterlyPrice: p.quarterlyPrice || p.weeklyPrice * 12 * 0.9,
-        yearlyPrice: p.yearlyPrice || p.weeklyPrice * 52 * 0.8,
-        duration: p.duration,
-        features: JSON.parse(p.features || "[]"),
-        mealTimings: JSON.parse(p.mealTimings || "[]"),
-        allowCancel: p.allowCancel,
-        pauseBillingPeriod: p.pauseBillingPeriod,
-    }));
+    return plans.map((p) => {
+        let parsedFeatures: string[] = [];
+        try {
+            parsedFeatures = typeof p.features === "string" ? JSON.parse(p.features) : (p.features || []);
+        } catch {
+            parsedFeatures = [];
+        }
+
+        let parsedTimings: string[] = [];
+        try {
+            parsedTimings = typeof p.mealTimings === "string" ? JSON.parse(p.mealTimings) : (p.mealTimings || []);
+        } catch {
+            parsedTimings = [];
+        }
+
+        return {
+            id: p.id,
+            sellerId: p.sellerId,
+            sellerName: p.seller?.businessName || "Kitchen Partner",
+            sellerLocality: p.seller?.addressLocality || "",
+            foodType: p.seller?.foodType || "BOTH",
+            name: p.name,
+            tier: p.tier,
+            description: p.description,
+            weeklyPrice: p.weeklyPrice,
+            monthlyPrice: p.monthlyPrice || p.weeklyPrice * 4,
+            quarterlyPrice: p.quarterlyPrice || p.weeklyPrice * 12 * 0.9,
+            yearlyPrice: p.yearlyPrice || p.weeklyPrice * 52 * 0.8,
+            duration: p.duration,
+            features: parsedFeatures,
+            mealTimings: parsedTimings,
+            allowCancel: p.allowCancel,
+            pauseBillingPeriod: p.pauseBillingPeriod,
+        };
+    });
 };
+

@@ -199,6 +199,79 @@
   text-decoration: none;
 }
 
+.passwordSubmitRow {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 6px;
+}
+
+.updatePasswordBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #EA580C;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.2);
+}
+
+.updatePasswordBtn:hover:not(:disabled) {
+  background-color: #C2410C;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+
+.updatePasswordBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alertSuccess {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #166534;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.alertError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .card {

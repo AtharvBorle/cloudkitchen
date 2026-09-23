@@ -21,6 +21,7 @@ import {
 import styles from "./RestaurantMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { SubscriptionPlans, PlanItem } from "../subscriptionplans";
 import heroPhoto from "../foodherobanner/FoodHeroPhoto.jpg";
 import { KitchenData, FoodCardItem } from "../restaurant-data";
 import { useCart } from "@/context/CartContext";
@@ -32,6 +33,8 @@ export interface RestaurantMobileViewProps {
   onAddItem: (item: FoodCardItem) => void;
   onDecreaseItem?: (itemId: string) => void;
   onRemoveItem?: (itemId: string) => void;
+  subscriptionPlans?: PlanItem[];
+  onSelectPlan?: (plan: PlanItem) => void;
 }
 
 export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
@@ -41,6 +44,8 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   onAddItem,
   onDecreaseItem,
   onRemoveItem,
+  subscriptionPlans,
+  onSelectPlan,
 }) => {
   const router = useRouter();
   const { cartItems, decreaseQuantity, removeFromCart, cartTotal } = useCart();
@@ -322,6 +327,16 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* 2.5 Active Weekly/Monthly Subscription Plans */}
+        {subscriptionPlans && subscriptionPlans.length > 0 && (
+          <div style={{ marginTop: "16px", marginBottom: "8px" }}>
+            <SubscriptionPlans
+              plans={subscriptionPlans}
+              onSelectPlan={onSelectPlan}
+            />
+          </div>
+        )}
 
         {/* 3. Category Filter Chips (Horizontal Scroll) */}
         {dynamicCategories.length > 1 && (

@@ -957,7 +957,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               {/* 1. Password Management Card (Matching Reference Image) */}
               <PasswordManagementCard />
 
-              {/* 2. Authentication & Access Control Card */}
+              {/* 2. Authentication & Access Control Card (Disabled via comment - uncomment to re-enable) */}
+              {/*
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                   <Shield size={18} color="#F97316" />
@@ -1011,13 +1012,15 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   </div>
                 </div>
               </div>
+              */}
             </div>
 
             <div className={styles.rightColumn}>
               {/* 3. Active Login Sessions Card (Matching Reference Image) */}
               <ActiveLoginSessionsCard />
 
-              {/* 4. Login & Recovery Controls Card */}
+              {/* 4. Login & Recovery Controls Card (Disabled via comment - uncomment to re-enable) */}
+              {/*
               <div className={styles.card}>
                 <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
                   Login &amp; Recovery Controls
@@ -1055,6 +1058,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   </div>
                 </div>
               </div>
+              */}
             </div>
           </div>
         )}

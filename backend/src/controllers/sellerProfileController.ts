@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import bcrypt from "bcryptjs";
 
 export const getSellerProfile = async () => {
     const session = await getAuthSession();
@@ -57,6 +58,8 @@ export const updateSellerProfile = async (req: Request) => {
     let latitude: number | undefined;
     let longitude: number | undefined;
     let isLocationPinned: boolean | undefined;
+    let currentPassword: string | undefined;
+    let newPassword: string | undefined;
     let bannerImageFile: File | null = null;
 
     if (contentType.includes("multipart/form-data")) {
@@ -69,6 +72,8 @@ export const updateSellerProfile = async (req: Request) => {
         pincode = formData.get("pincode") as string;
         infoAddress = (formData.get("infoAddress") as string) || (formData.get("registeredAddress") as string) || (formData.get("address") as string) || (formData.get("addressLocality") as string);
         upiId = formData.get("upiId") as string;
+        currentPassword = formData.get("currentPassword") as string;
+        newPassword = formData.get("newPassword") as string;
         const rawLat = formData.get("latitude") || formData.get("lat");
         const rawLng = formData.get("longitude") || formData.get("lng");
         const rawPinned = formData.get("isLocationPinned");
@@ -86,6 +91,8 @@ export const updateSellerProfile = async (req: Request) => {
         pincode = body.pincode;
         infoAddress = body.infoAddress || body.registeredAddress || body.address || body.addressLocality;
         upiId = body.upiId;
+        currentPassword = body.currentPassword;
+        newPassword = body.newPassword;
         if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
             latitude = parseFloat(body.latitude);
         } else if (body.lat !== undefined && body.lat !== null && body.lat !== "") {
@@ -126,6 +133,28 @@ export const updateSellerProfile = async (req: Request) => {
     }
     if (pincode !== undefined && typeof pincode === "string") {
         userDataToUpdate.pincode = pincode.trim();
+    }
+
+    if (newPassword) {
+        if (typeof newPassword !== "string" || newPassword.length < 6) {
+            throw new ApiError("New password must be at least 6 characters long", 400);
+        }
+        if (!currentPassword) {
+            throw new ApiError("Current password is required to set a new password", 400);
+        }
+
+        const currentUser = await db.user.findUnique({
+            where: { id: session.user.id },
+        });
+
+        if (currentUser?.passwordHash) {
+            const isMatch = await bcrypt.compare(currentPassword, currentUser.passwordHash);
+            if (!isMatch) {
+                throw new ApiError("Current password is incorrect", 400);
+            }
+        }
+
+        userDataToUpdate.passwordHash = await bcrypt.hash(newPassword, 10);
     }
 
     if (Object.keys(userDataToUpdate).length > 0) {
