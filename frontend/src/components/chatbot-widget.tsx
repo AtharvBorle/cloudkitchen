@@ -4,7 +4,24 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare, X, Send, User, ChevronRight, Loader2, Sparkles, ShoppingBag, BedDouble } from "lucide-react";
+import {
+    MessageSquare,
+    X,
+    Send,
+    User,
+    ChevronRight,
+    Loader2,
+    Sparkles,
+    ShoppingBag,
+    BedDouble,
+    Paperclip,
+    Smile,
+    Menu,
+    Phone,
+    Zap,
+    Utensils,
+    ArrowLeft
+} from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 
 interface Message {
@@ -24,6 +41,20 @@ interface Message {
     ordersList?: any[];
     bookingsList?: any[];
 }
+
+const parseOption = (label: string) => {
+    const match = label.match(/^([\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\uD83C-\uD83E][\uDC00-\uDFFF]|[\uE000-\uF8FF]|\p{Extended_Pictographic}|\p{Emoji})\s*(.*)$/u);
+    if (match) {
+        return {
+            icon: match[1],
+            text: match[2]
+        };
+    }
+    return {
+        icon: null,
+        text: label
+    };
+};
 
 export default function ChatbotWidget() {
     const { data: session, status } = useSession();
@@ -45,6 +76,9 @@ export default function ChatbotWidget() {
     const [reqCategoryType, setReqCategoryType] = useState("FOOD"); // "FOOD" or "ROOM"
     const [reqCategoryName, setReqCategoryName] = useState("");
 
+    // Hidden file input ref for attachment
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     // Draggable chatbot widget states
     const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -61,10 +95,10 @@ export default function ChatbotWidget() {
         if (open) {
             setPosition(prev => {
                 if (!prev) return null;
-                const openWidth = Math.min(400, window.innerWidth * 0.9);
-                const openHeight = Math.min(600, window.innerHeight - 100);
-                const dx = openWidth - 60;
-                const dy = openHeight - 60;
+                const openWidth = Math.min(420, window.innerWidth * 0.92);
+                const openHeight = Math.min(640, window.innerHeight - 80);
+                const dx = openWidth - 62;
+                const dy = openHeight - 62;
                 return {
                     x: Math.max(0, prev.x - dx),
                     y: Math.max(0, prev.y - dy)
@@ -74,10 +108,10 @@ export default function ChatbotWidget() {
         } else {
             setPosition(prev => {
                 if (!prev) return null;
-                const openWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : Math.min(400, window.innerWidth * 0.9);
-                const openHeight = containerRef.current ? containerRef.current.getBoundingClientRect().height : Math.min(600, window.innerHeight - 100);
-                const dx = openWidth - 60;
-                const dy = openHeight - 60;
+                const openWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : Math.min(420, window.innerWidth * 0.92);
+                const openHeight = containerRef.current ? containerRef.current.getBoundingClientRect().height : Math.min(640, window.innerHeight - 80);
+                const dx = openWidth - 62;
+                const dy = openHeight - 62;
                 return {
                     x: prev.x + dx,
                     y: prev.y + dy
@@ -255,7 +289,7 @@ export default function ChatbotWidget() {
                 {
                     id: "welcome",
                     sender: "bot",
-                    text: "Hello! I am Mansi, your seller assistant. How can I assist you with your business today? Please select an option:",
+                    text: "Hello! I am Bitey, your seller assistant.\nHow can I assist you with your business today? Please select an option below:",
                     timestamp: new Date(),
                     options: [
                         { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
@@ -270,11 +304,12 @@ export default function ChatbotWidget() {
                 {
                     id: "welcome",
                     sender: "bot",
-                    text: "Hello! I am Mansi, your delivery assistant. How can I help you with your deliveries or wallet today? Please select an option:",
+                    text: "Hello! I am Bitey, your delivery assistant.\nHow can I help you with your deliveries or wallet today? Please select an option below:",
                     timestamp: new Date(),
                     options: [
                         { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
                         { label: "💰 Wallet & Earnings", action: () => handleSelectOption("delivery_wallet") },
+                        { label: "⚙️ Shift Duty & Profile Status", action: () => handleSelectOption("delivery_duty") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ]
                 }
@@ -284,13 +319,12 @@ export default function ChatbotWidget() {
                 {
                     id: "welcome",
                     sender: "bot",
-                    text: "Hello! I am Mansi, your support assistant. What can I help you with today? Please select an option below:",
+                    text: "Hello! I am Bitey, your virtual kitchen assistant.\nHow can I satisfy your support cravings today? Please choose one of the options below:",
                     timestamp: new Date(),
                     options: [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
-                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
-                        { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
-                        { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
+                        { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
+                        { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ]
                 }
@@ -313,7 +347,7 @@ export default function ChatbotWidget() {
         const handleOpenChatbot = () => {
             toggleOpen(true);
             setMessages(prev => {
-                if (prev.length > 0 && prev[prev.length - 1].text.includes("resolve your issue here first")) {
+                if (prev.length > 0 && prev[prev.length - 1].text.includes("satisfy your support cravings")) {
                     return prev;
                 }
                 const isSeller = session?.user?.role === "SELLER";
@@ -330,14 +364,14 @@ export default function ChatbotWidget() {
                     supportOptions = [
                         { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
                         { label: "💰 Wallet, Cash Owed & Earnings", action: () => handleSelectOption("delivery_wallet") },
+                        { label: "⚙️ Shift Duty & Profile Status", action: () => handleSelectOption("delivery_duty") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ];
                 } else {
                     supportOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
-                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
-                        { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
-                        { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
+                        { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
+                        { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ];
                 }
@@ -347,7 +381,7 @@ export default function ChatbotWidget() {
                     {
                         id: `support_prompt_${Date.now()}`,
                         sender: "bot",
-                        text: "Let's see if we can resolve your issue here first! Please select a relevant option below. If you don't find the answer, click 'Raise a custom support ticket' to submit a ticket directly to support.",
+                        text: "Hello! I am Bitey, your virtual kitchen assistant.\nHow can I satisfy your support cravings today? Please choose one of the options below:",
                         timestamp: new Date(),
                         options: supportOptions
                     }
@@ -380,6 +414,7 @@ export default function ChatbotWidget() {
         let userText = "";
         switch (optionType) {
             case "orders": userText = "📦 Issues with an Order"; break;
+            case "track_delivery": userText = "🛵 Track Delivery Courier"; break;
             case "seller_orders": userText = "📈 Received Orders & Sales"; break;
             case "seller_listings": userText = "🍱 Menu & Listings Query"; break;
             case "seller_payouts": userText = "💰 Payouts & Subscriptions"; break;
@@ -388,7 +423,7 @@ export default function ChatbotWidget() {
             case "delivery_duty": userText = "⚙️ Shift Duty & Profile Status"; break;
             case "bookings": userText = "🛌 Issues with a Room Booking"; break;
             case "seller_info": userText = "🚀 Register as a Seller"; break;
-            case "payments_info": userText = "💳 Payment & Refund policy"; break;
+            case "payments_info": userText = "💳 Payment & Refund Policy"; break;
             case "custom_ticket": userText = "🎟️ Raise a custom support ticket"; break;
             case "show_order_options": userText = `Order Details #${payload.id.slice(0, 8)}`; break;
             case "show_booking_options": userText = `Booking Details #${payload.id.slice(0, 8)}`; break;
@@ -412,7 +447,64 @@ export default function ChatbotWidget() {
                 return;
             }
 
-            if (optionType === "delivery_orders") {
+            if (optionType === "track_delivery") {
+                if (status !== "authenticated") {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: "To track your live delivery courier and active orders, please log in first.",
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🔑 Log In", action: () => router.push("/login") },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                    return;
+                }
+
+                try {
+                    const res = await fetchApi("/api/user/orders");
+                    const data = await res.json();
+                    const orders = (data.data || data || []).slice(0, 4);
+
+                    if (orders.length === 0) {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "You don't have any active delivery orders right now. Once you place an order, live tracking details will appear here!",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    } else {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "Here are your recent orders. Select an order to track delivery status or report courier delays:",
+                            timestamp: new Date(),
+                            ordersList: orders,
+                            options: [
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    }
+                } catch (error) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: "Unable to retrieve courier status right now. Please raise a support ticket below.",
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🎟️ Raise a support ticket", action: () => handleSelectOption("custom_ticket") },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                }
+            }
+
+            else if (optionType === "delivery_orders") {
                 if (status !== "authenticated") {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
@@ -429,7 +521,7 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/delivery/orders");
                     const data = await res.json();
-                    const orders = (data.orders || []).slice(0, 4); // top 4 recent orders
+                    const orders = (data.orders || []).slice(0, 4);
 
                     if (orders.length === 0) {
                         setMessages(prev => [...prev, {
@@ -511,7 +603,7 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/user/orders");
                     const data = await res.json();
-                    const orders = (data.data || data || []).slice(0, 4); // top 4 recent orders
+                    const orders = (data.data || data || []).slice(0, 4);
 
                     if (orders.length === 0) {
                         setMessages(prev => [...prev, {
@@ -567,7 +659,7 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/seller/orders");
                     const data = await res.json();
-                    const orders = (data.orders || data.data?.orders || data.data || data || []).slice(0, 4); // top 4 recent orders
+                    const orders = (data.orders || data.data?.orders || data.data || data || []).slice(0, 4);
 
                     if (orders.length === 0) {
                         setMessages(prev => [...prev, {
@@ -605,76 +697,30 @@ export default function ChatbotWidget() {
                 }
             }
 
-            else if (optionType === "show_order_options") {
-                const order = payload;
-                const isSeller = session?.user?.role === "SELLER";
-                const isDelivery = session?.user?.role === "DELIVERY";
-                if (isSeller) {
-                    setMessages(prev => [...prev, {
-                        id: `b_${Date.now()}`,
-                        sender: "bot",
-                        text: `Received Order #${order.id.slice(0, 8)} details:\n- Total Sales: ₹${order.totalAmount}\n- Status: ${order.status}\n- Customer Name: ${order.user?.name || "Customer"}\n\nWhat is the nature of your concern?`,
-                        timestamp: new Date(),
-                        options: [
-                            { label: "🛵 Issue with Delivery Boy / Assignment", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🛵 Delivery Boy issue", issueType: "DELIVERY_ISSUE" }) },
-                            { label: "🍕 Food preparation / stock issue", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Prep / stock issue", issueType: "PREP_ISSUE" }) },
-                            { label: "❌ Request cancellation of this order", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "❌ Request cancellation", issueType: "CANCEL_REQUEST" }) },
-                            { label: "🎟️ Other issues (talk to customer care)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other issues", issueType: "OTHER_ORDER_ISSUE" }) },
-                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                        ]
-                    }]);
-                } else if (isDelivery) {
-                    setMessages(prev => [...prev, {
-                        id: `b_${Date.now()}`,
-                        sender: "bot",
-                        text: `Assigned Order #${order.id.slice(0, 8)} details:\n- Total Price: ₹${order.totalAmount}\n- Status: ${order.status}\n- Address: ${order.deliveryAddress ? order.deliveryAddress.split(" | Loc:")[0] : ""}\n\nWhat is the nature of your concern?`,
-                        timestamp: new Date(),
-                        options: [
-                            { label: "📍 Customer address incorrect / unreachable", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "📍 Unreachable customer / bad address", issueType: "ADDRESS_ISSUE" }) },
-                            { label: "🍕 Food item damaged / spilled during transit", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Damaged food transit", issueType: "DAMAGE_ISSUE" }) },
-                            { label: "💵 COD Cash Collection issues", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "💵 Cash Collection issue", issueType: "CASH_ISSUE" }) },
-                            { label: "🎟️ Other issues", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other delivery issues", issueType: "OTHER_DELIVERY_ISSUE" }) },
-                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                        ]
-                    }]);
-                } else {
-                    setMessages(prev => [...prev, {
-                        id: `b_${Date.now()}`,
-                        sender: "bot",
-                        text: `Order #${order.id.slice(0, 8)} details:\n- Total: ₹${order.totalAmount}\n- Status: ${order.status}\n- Kitchen: ${order.seller?.businessName || "Partner Seller"}\n\nWhat is the nature of your concern?`,
-                        timestamp: new Date(),
-                        options: [
-                            { label: "🍕 Problem with items (missing/spoiled)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🍕 Problem with items", issueType: "ITEM_ISSUE" }) },
-                            { label: "🛵 Delivery delayed / didn't arrive", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🛵 Delivery delayed", issueType: "DELAYED" }) },
-                            { label: "❌ Request to Cancel this order", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "❌ Request cancellation", issueType: "CANCEL_REQUEST" }) },
-                            { label: "💰 Charged incorrect amount", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "💰 Charged incorrect amount", issueType: "CHARGE_ISSUE" }) },
-                            { label: "🎟️ Other issues (talk to customer care)", action: () => handleSelectOption("select_order_issue", { order, issueLabel: "🎟️ Other issues", issueType: "OTHER_ORDER_ISSUE" }) },
-                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                        ]
-                    }]);
-                }
-            }
-
-            else if (optionType === "select_order_issue") {
-                const { order, issueLabel } = payload;
-                const generatedTitle = `Order Issue: ${issueLabel} (#${order.id.slice(0, 8)})`;
-                const generatedDesc = `Order Reference: #${order.id}\nIssue Type: ${issueLabel}\nOrder Date: ${new Date(order.createdAt).toLocaleDateString()}\nTotal Amount: ₹${order.totalAmount}\nStatus: ${order.status}\n\nPlease describe the details or submit directly.`;
-
-                setTicketCategory("FOOD");
-                setTicketTitle(generatedTitle);
-                setTicketDesc(generatedDesc);
-
+            else if (optionType === "seller_listings") {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "I have prepared a support ticket based on the order details. Customize details below and submit to log with customer care:",
+                    text: "You can manage your Food Menu and Room Listings in the **Manage Listings** section of your Seller Dashboard.\n\nWhat would you like assistance with?",
                     timestamp: new Date(),
-                    isTicketForm: true,
-                    ticketData: {
-                        title: generatedTitle,
-                        category: "FOOD",
-                        description: generatedDesc
-                    }
+                    options: [
+                        { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\n\nDetails: Category request submitted via assistant." }) },
+                        { label: "🎟️ Raise listing configuration ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Listing Issue", desc: "I am experiencing an issue updating or publishing my menu/room items." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ]
+                }]);
+            }
+
+            else if (optionType === "seller_payouts") {
+                setMessages(prev => [...prev, {
+                    id: `b_${Date.now()}`,
+                    sender: "bot",
+                    text: "Seller payouts are processed on a weekly schedule. Track your active subscription plans and billing receipts in the **Subscriptions** tab.\n\nNeed to raise a payout discrepancy?",
+                    timestamp: new Date(),
+                    options: [
+                        { label: "🎟️ Payout discrepancy ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Seller Payout Discrepancy", desc: "I have a question or discrepancy regarding my weekly payout settlement or plan deduction." }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ]
                 }]);
             }
 
@@ -683,7 +729,7 @@ export default function ChatbotWidget() {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
                         sender: "bot",
-                        text: "To view your bookings and raise stay-specific queries, you need to sign in.",
+                        text: "To view your room bookings, please log in first.",
                         timestamp: new Date(),
                         options: [
                             { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
@@ -695,16 +741,16 @@ export default function ChatbotWidget() {
                 try {
                     const res = await fetchApi("/api/user/bookings");
                     const data = await res.json();
-                    const bookings = (data.data || data || []).slice(0, 4); // top 4 recent bookings
+                    const bookings = (data.data || data || []).slice(0, 4);
 
                     if (bookings.length === 0) {
                         setMessages(prev => [...prev, {
                             id: `b_${Date.now()}`,
                             sender: "bot",
-                            text: "I couldn't find any recent stays or bookings. Would you like to raise a custom support ticket?",
+                            text: "I couldn't find any recent bookings under your account. Would you like to raise a general support ticket?",
                             timestamp: new Date(),
                             options: [
-                                { label: "🎟️ Raise ticket", action: () => handleSelectOption("custom_ticket") },
+                                { label: "🎟️ Yes, raise custom ticket", action: () => handleSelectOption("custom_ticket") },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -712,7 +758,7 @@ export default function ChatbotWidget() {
                         setMessages(prev => [...prev, {
                             id: `b_${Date.now()}`,
                             sender: "bot",
-                            text: "Please select the stay/room booking you are experiencing issues with:",
+                            text: "Please select the stay booking you need help with:",
                             timestamp: new Date(),
                             bookingsList: bookings,
                             options: [
@@ -724,52 +770,69 @@ export default function ChatbotWidget() {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
                         sender: "bot",
-                        text: "An error occurred while fetching your bookings.",
+                        text: "An error occurred while fetching your bookings. Please raise a general support ticket.",
                         timestamp: new Date(),
                         options: [
+                            { label: "🎟️ Raise ticket", action: () => handleSelectOption("custom_ticket") },
                             { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                         ]
                     }]);
                 }
             }
 
-            else if (optionType === "show_booking_options") {
-                const booking = payload;
+            else if (optionType === "show_order_options") {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: `Booking Stay Details:\n- Room: ${booking.room?.title || "Property Room"}\n- Price: ₹${booking.totalPrice}\n- Check-In: ${new Date(booking.checkIn).toLocaleDateString()}\n- Check-Out: ${new Date(booking.checkOut).toLocaleDateString()}\n- Status: ${booking.status}\n\nWhat concern do you have?`,
+                    text: `Support for Order #${payload.id.slice(0, 8)} (Status: ${payload.status}):\nWhat issue are you experiencing?`,
                     timestamp: new Date(),
                     options: [
-                        { label: "❌ Request Stay Cancellation", action: () => handleSelectOption("select_booking_issue", { booking, issueLabel: "❌ Request Stay Cancellation", issueType: "CANCEL" }) },
-                        { label: "🔑 Check-In / Check-Out issues", action: () => handleSelectOption("select_booking_issue", { booking, issueLabel: "🔑 Check-in/out issues", issueType: "CHECKIN" }) },
-                        { label: "🏡 Bad room condition / lack of services", action: () => handleSelectOption("select_booking_issue", { booking, issueLabel: "🏡 Bad room condition", issueType: "CONDITION" }) },
-                        { label: "🎟️ Other room support", action: () => handleSelectOption("select_booking_issue", { booking, issueLabel: "🎟️ Other room support", issueType: "OTHER" }) },
+                        { label: "🛵 Delivery Delay / Not Received", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Delivery Delay / Not Received", defaultDesc: `Order #${payload.id} is delayed or has not been delivered on time.` }) },
+                        { label: "🍲 Missing / Wrong Food Item", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Missing / Wrong Food Item", defaultDesc: `Items were missing or incorrect in Order #${payload.id}.` }) },
+                        { label: "💸 Refund / Cancellation Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Refund / Cancellation Request", defaultDesc: `I would like to request a cancellation/refund for Order #${payload.id}.` }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
                 }]);
             }
 
-            else if (optionType === "select_booking_issue") {
-                const { booking, issueLabel } = payload;
-                const generatedTitle = `Stay Issue: ${issueLabel} (#${booking.id.slice(0, 8)})`;
-                const generatedDesc = `Booking Reference: #${booking.id}\nRoom Title: ${booking.room?.title || "Stay"}\nCheck-in: ${new Date(booking.checkIn).toLocaleDateString()}\nCheck-out: ${new Date(booking.checkOut).toLocaleDateString()}\nTotal Paid: ₹${booking.totalPrice}\nStatus: ${booking.status}\n\nProblem details: [${issueLabel}]`;
-
-                setTicketCategory("ROOM");
-                setTicketTitle(generatedTitle);
-                setTicketDesc(generatedDesc);
-
+            else if (optionType === "show_booking_options") {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "I have compiled stay details for your support ticket. Please customize below and submit:",
+                    text: `Support for Booking #${payload.id.slice(0, 8)}:\nWhat issue are you experiencing?`,
                     timestamp: new Date(),
-                    isTicketForm: true,
-                    ticketData: {
-                        title: generatedTitle,
-                        category: "ROOM",
-                        description: generatedDesc
-                    }
+                    options: [
+                        { label: "📅 Reschedule / Modify Dates", action: () => handleSelectOption("select_booking_issue", { bookingId: payload.id, issueLabel: "Reschedule / Modify Dates", defaultDesc: `I would like to request modifying the dates for Booking #${payload.id}.` }) },
+                        { label: "❌ Cancellation & Refund", action: () => handleSelectOption("select_booking_issue", { bookingId: payload.id, issueLabel: "Cancellation & Refund", defaultDesc: `I would like to cancel Booking #${payload.id} and receive a refund.` }) },
+                        { label: "🏨 Amenities / Check-in Problem", action: () => handleSelectOption("select_booking_issue", { bookingId: payload.id, issueLabel: "Amenities / Check-in Problem", defaultDesc: `I encountered an issue with room amenities or check-in for Booking #${payload.id}.` }) },
+                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                    ]
+                }]);
+            }
+
+            else if (optionType === "select_order_issue") {
+                setTicketCategory("FOOD");
+                setTicketTitle(`Order Issue: ${payload.issueLabel} (#${payload.orderId.slice(0, 8)})`);
+                setTicketDesc(payload.defaultDesc);
+                setMessages(prev => [...prev, {
+                    id: `b_${Date.now()}`,
+                    sender: "bot",
+                    text: `I have pre-filled a support ticket for your order issue. You can review or edit the details below and submit:`,
+                    timestamp: new Date(),
+                    isTicketForm: true
+                }]);
+            }
+
+            else if (optionType === "select_booking_issue") {
+                setTicketCategory("ROOM");
+                setTicketTitle(`Booking Issue: ${payload.issueLabel} (#${payload.bookingId.slice(0, 8)})`);
+                setTicketDesc(payload.defaultDesc);
+                setMessages(prev => [...prev, {
+                    id: `b_${Date.now()}`,
+                    sender: "bot",
+                    text: `I have pre-filled a support ticket for your booking issue. You can review or edit the details below and submit:`,
+                    timestamp: new Date(),
+                    isTicketForm: true
                 }]);
             }
 
@@ -777,11 +840,11 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "Want to partner with us as a Seller? You can register directly by clicking the button below. Please prepare your business details, Aadhaar card front/back, and FSSAI certificate. If you have registration issues, raise a ticket below:",
+                    text: "To partner with us as a Seller, prepare your Aadhaar front/back and FSSAI certificate, then complete our easy registration form!\n\nClick below to open the registration portal:",
                     timestamp: new Date(),
                     options: [
-                        { label: "🤝 Become a Seller", action: () => { window.open("/seller/registration", "_blank"); } },
-                        { label: "🎟️ Raise ticket for Seller support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have inquiries about registering as a seller on the platform." }) },
+                        { label: "🚀 Register as a Seller", action: () => { window.open("/seller/registration", "_blank"); } },
+                        { label: "🎟️ Seller Registration Inquiry", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Question", desc: "I have questions regarding registering as a Cloud Kitchen seller." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
                 }]);
@@ -791,48 +854,23 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "We support Cash on Delivery (COD) and Online Payments via secure Razorpay interface. Refunds for cancellations are initiated immediately and reflected within 24-48 business hours. If you faced payment deduction without booking, please submit details:",
+                    text: "💳 **Payment & Refund Policy**\n\n• **Online Payments**: Processed securely via Razorpay.\n• **Cash on Delivery (COD)**: Available for supported zones.\n• **Refunds**: Automatically initiated upon cancellation and processed back to your original payment method in 24-48 business hours.\n• **Payment Deducted but Order Failed?** Submit a ticket below for immediate reversal.",
                     timestamp: new Date(),
                     options: [
-                        { label: "🎟️ Raise ticket for Payment deduction", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Payment deduction failure", desc: "Money was deducted from my account but booking/order failed. Please verify." }) },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ]
-                }]);
-            }
-
-            else if (optionType === "seller_listings") {
-                setMessages(prev => [...prev, {
-                    id: `b_${Date.now()}`,
-                    sender: "bot",
-                    text: "To manage your food menu items, kitchen settings, or room stay listings, please navigate to the respective tabs in your Seller Dashboard:\n- 'Manage Menu': Update availability/prices/add items.\n- 'Manage Rooms': Add rooms, check bookings.\n\nIf you want to request a new item/room category or need general support, select an option below:",
-                    timestamp: new Date(),
-                    options: [
-                        { label: "🎟️ Raise ticket for Listings support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Menu/Room listing assistance request", desc: "I need help with configuring my menu items or room stay details." }) },
-                        { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\nParent Category ID: [Enter Parent Category ID]\nParent Category Name: [Enter Parent Category Name]\n\nDetails: Please add more description here..." }) },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ]
-                }]);
-            }
-
-            else if (optionType === "seller_payouts") {
-                setMessages(prev => [...prev, {
-                    id: `b_${Date.now()}`,
-                    sender: "bot",
-                    text: "Payout details are processed weekly. You can track your subscription plan validity, payouts, and billing cycles in the 'Subscriptions' section of your Seller Dashboard.\n\nIf you missed a payout or have pricing inquiries, raise a ticket:",
-                    timestamp: new Date(),
-                    options: [
-                        { label: "🎟️ Raise ticket for Payout issue", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Seller payout query", desc: "I am raising a query regarding my recent payout cycle or active subscription plan." }) },
+                        { label: "🎟️ Payment / Deduction Issue Ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Payment Failure / Deduction Query", desc: "Money was deducted from my account but the order or booking was not confirmed." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
                 }]);
             }
 
             else if (optionType === "custom_ticket_prefilled") {
-                const { category, title, desc } = payload;
+                const category = payload?.category || "FOOD";
+                const title = payload?.title || "Support Request";
+                const desc = payload?.desc || "";
+
                 setTicketCategory(category);
                 setTicketTitle(title);
                 setTicketDesc(desc);
-
                 if (category === "NEW_CATEGORY_REQUEST") {
                     setReqCategoryType("FOOD");
                     setReqCategoryName("");
@@ -841,12 +879,12 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "Please verify and submit your support ticket details:",
+                    text: "I've drafted a ticket based on your selection. Review or add additional details below and click Submit Ticket:",
                     timestamp: new Date(),
                     isTicketForm: true,
                     ticketData: {
-                        title,
                         category,
+                        title,
                         description: desc
                     }
                 }]);
@@ -890,9 +928,8 @@ export default function ChatbotWidget() {
             const isSeller = session?.user?.role === "SELLER";
             const isDelivery = session?.user?.role === "DELIVERY";
             if (isDelivery) {
-                // Delivery Query Routing
                 if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
-                    replyText = "Hello! I am Mansi, your delivery assistant. How can I help you with your deliveries or wallet today?";
+                    replyText = "Hello! I am Bitey, your delivery assistant. How can I help you with your deliveries or wallet today?";
                     generatedOptions = [
                         { label: "🛵 My Assigned Orders", action: () => handleSelectOption("delivery_orders") },
                         { label: "💰 Wallet & Earnings", action: () => handleSelectOption("delivery_wallet") },
@@ -923,9 +960,8 @@ export default function ChatbotWidget() {
                     ];
                 }
             } else if (isSeller) {
-                // Seller Query Routing
                 if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
-                    replyText = "Hello! I am Mansi, your seller assistant. How can I assist you with your business today?";
+                    replyText = "Hello! I am Bitey, your seller assistant. How can I assist you with your business today?";
                     generatedOptions = [
                         { label: "📈 Received Orders & Sales", action: () => handleSelectOption("seller_orders") },
                         { label: "🍱 Menu & Listings", action: () => handleSelectOption("seller_listings") },
@@ -945,7 +981,7 @@ export default function ChatbotWidget() {
                     replyText = "To manage your products:\n- **Food Menu**: Go to the 'Manage Menu' section of your Seller Dashboard to add food items, set prices, and update availability.\n- **Room Stays**: Go to the 'Manage Rooms' section to add room types, set prices, and check bookings.\n\nIf the category you need is not listed, you can request a new item/room category or raise a listing ticket:";
                     generatedOptions = [
                         { label: "🎟️ Raise listing ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Listing configuration support", desc: "I need help configuring my kitchen food menu or room booking listings." }) },
-                        { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\nParent Category ID: [Enter Parent Category ID]\nParent Category Name: [Enter Parent Category Name]\n\nDetails: Please add more description here..." }) },
+                        { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\n\nDetails: Category request submitted via assistant." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
@@ -980,12 +1016,19 @@ export default function ChatbotWidget() {
             } else {
                 // User / Customer Query Routing
                 if (normalizedText.includes("hello") || normalizedText.includes("hi") || normalizedText.includes("hey") || normalizedText.includes("greetings")) {
-                    replyText = "Hello! I am Mansi, your support assistant. How can I help you today? Please choose an issue area or type your question:";
+                    replyText = "Hello! I am Bitey, your virtual kitchen assistant. How can I satisfy your support cravings today? Please choose an option or ask a question:";
                     generatedOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
-                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
-                        { label: "🤝 Become a Seller", action: () => handleSelectOption("seller_info") },
-                        { label: "💳 Payment & Refund policy", action: () => handleSelectOption("payments_info") },
+                        { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
+                        { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
+                        { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
+                    ];
+                }
+                else if (normalizedText.includes("track") || normalizedText.includes("courier") || normalizedText.includes("where") || normalizedText.includes("status")) {
+                    replyText = "You can track your live orders and courier location right here. Select your recent order below to view the latest delivery progress:";
+                    generatedOptions = [
+                        { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
+                        { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
@@ -998,7 +1041,7 @@ export default function ChatbotWidget() {
                     ];
                 }
                 else if (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay") || normalizedText.includes("hotel") || normalizedText.includes("check-in") || normalizedText.includes("checkin") || normalizedText.includes("check-out") || normalizedText.includes("checkout") || normalizedText.includes("time") || normalizedText.includes("date")) {
-                    replyText = "You can book comfortable stays on our [Book a Room](/room-booking) page. Note these rules:\n- **Check-in time**: 12:00 PM\n- **Check-out time**: 11:00 AM\n- **Overlapping dates**: Check-in on day X is allowed if the previous booking checkout was on day X at 11:00 AM.\n- **Calendar status**: Available dates are colored **green**, booked dates are **red**.\n\nTo view or manage bookings, select below:";
+                    replyText = "You can book comfortable stays on our [Book a Room](/room-booking) page. Note these rules:\n- **Check-in time**: 12:00 PM\n- **Check-out time**: 11:00 AM\n- **Overlapping dates**: Check-in on day X is allowed if the previous booking checkout was on day X at 11:00 AM.\n- **Calendar status**: Available dates are colored green, booked dates are red.\n\nTo view or manage bookings, select below:";
                     generatedOptions = [
                         { label: "🛌 View Stay Bookings", action: () => handleSelectOption("bookings") },
                         { label: "🎟️ Stay support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "ROOM", title: "Room stay assistance request", desc: "I have inquiries or issues with my room booking/dates." }) },
@@ -1016,7 +1059,7 @@ export default function ChatbotWidget() {
                 else if (normalizedText.includes("seller") || normalizedText.includes("partner") || normalizedText.includes("register") || normalizedText.includes("shop") || normalizedText.includes("business")) {
                     replyText = "Want to partner with us as a Seller? You can register directly by clicking the button below. Please prepare your business details, Aadhaar card front/back, and FSSAI certificate. If you have registration issues, raise a ticket below:";
                     generatedOptions = [
-                        { label: "🤝 Become a Seller", action: () => { window.open("/seller/registration", "_blank"); } },
+                        { label: "🚀 Register as a Seller", action: () => { window.open("/seller/registration", "_blank"); } },
                         { label: "🎟️ Raise ticket for Seller support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have inquiries about registering as a seller on the platform." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
@@ -1048,7 +1091,6 @@ export default function ChatbotWidget() {
 
     const handleTicketSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Save current messages to history before submitting ticket
         setHistory(prev => [...prev, messages]);
         if (status !== "authenticated") {
             alert("Please log in to raise a support ticket.");
@@ -1089,12 +1131,10 @@ Details: Category request submitted via chatbot assistant.`;
             });
             const data = await res.json();
             if (res.ok) {
-                // Clear inputs
                 setTicketTitle("");
                 setTicketDesc("");
                 setReqCategoryName("");
                 
-                // Clear active forms and show ticket creation success message
                 setMessages(prev => {
                     const cleaned = prev.map(m => m.isTicketForm ? { ...m, isTicketForm: false, text: "Support Ticket request submitted." } : m);
                     return [
@@ -1145,7 +1185,7 @@ Details: Category request submitted via chatbot assistant.`;
                         href={linkUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline" }}
+                        style={{ color: "#EF4444", fontWeight: "700", textDecoration: "underline" }}
                     >
                         {linkText}
                     </a>
@@ -1155,7 +1195,7 @@ Details: Category request submitted via chatbot assistant.`;
                     <Link
                         key={index}
                         href={linkUrl}
-                        style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline" }}
+                        style={{ color: "#EF4444", fontWeight: "700", textDecoration: "underline" }}
                         onClick={() => toggleOpen(false)}
                     >
                         {linkText}
@@ -1190,7 +1230,7 @@ Details: Category request submitted via chatbot assistant.`;
     return (
         <div ref={containerRef} style={currentStyle}>
             
-            {/* Chatbot Toggle Button */}
+            {/* Chatbot Toggle Button (When Closed) */}
             {!isOpen && (
                 <button
                     className="drag-handle-btn"
@@ -1204,37 +1244,52 @@ Details: Category request submitted via chatbot assistant.`;
                         toggleOpen(true);
                     }}
                     style={{
-                        width: "60px",
-                        height: "60px",
+                        width: "62px",
+                        height: "62px",
                         borderRadius: "50%",
-                        backgroundColor: "#1E293B",
-                        color: "white",
+                        backgroundColor: "#FFFFFF",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-                        border: "none",
+                        boxShadow: "0 10px 30px rgba(239, 68, 68, 0.25), 0 4px 12px rgba(0,0,0,0.1)",
+                        border: "2.5px solid #FFFFFF",
                         cursor: isDragging ? "grabbing" : "grab",
-                        transition: isDragging ? "none" : "all 0.3s ease",
-                        position: "relative"
+                        transition: isDragging ? "none" : "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        position: "relative",
+                        overflow: "visible",
+                        padding: 0
                     }}
                     onMouseEnter={(e) => {
-                        if (!isDragging) e.currentTarget.style.transform = "scale(1.1)";
+                        if (!isDragging) e.currentTarget.style.transform = "scale(1.1) translateY(-2px)";
                     }}
                     onMouseLeave={(e) => {
-                        if (!isDragging) e.currentTarget.style.transform = "scale(1)";
+                        if (!isDragging) e.currentTarget.style.transform = "scale(1) translateY(0)";
                     }}
+                    title="Chat with Bitey"
                 >
-                    <MessageSquare size={28} />
+                    <div style={{
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        backgroundColor: "#FFF5F1"
+                    }}>
+                        <img
+                            src="/images/bitey-mascot.png"
+                            alt="Bitey Mascot"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                    </div>
                     <span style={{
                         position: "absolute",
-                        top: "-5px",
-                        right: "-5px",
-                        backgroundColor: "#F16F68",
-                        width: "12px",
-                        height: "12px",
+                        top: "-2px",
+                        right: "-2px",
+                        backgroundColor: "#10B981",
+                        width: "15px",
+                        height: "15px",
                         borderRadius: "50%",
-                        border: "2px solid white"
+                        border: "2.5px solid white",
+                        boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
                     }} />
                 </button>
             )}
@@ -1242,15 +1297,15 @@ Details: Category request submitted via chatbot assistant.`;
             {/* Chatbot Window */}
             {isOpen && (
                 <div style={{
-                    width: "min(400px, 90vw)",
-                    height: "min(600px, calc(100vh - 100px))",
-                    backgroundColor: "white",
-                    borderRadius: "20px",
-                    boxShadow: "0 12px 40px rgba(0, 0, 0, 0.15)",
+                    width: "min(420px, 92vw)",
+                    height: "min(640px, calc(100vh - 80px))",
+                    backgroundColor: "#FFFDFB",
+                    borderRadius: "24px",
+                    boxShadow: "0 20px 50px rgba(15, 23, 42, 0.18), 0 6px 20px rgba(239, 68, 68, 0.08)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
-                    border: "1px solid #E2E8F0",
+                    border: "1.5px solid #FDE8E1",
                     transition: isDragging ? "none" : "all 0.3s ease"
                 }}>
                     
@@ -1260,89 +1315,170 @@ Details: Category request submitted via chatbot assistant.`;
                         onMouseDown={handleMouseDown}
                         onTouchStart={handleTouchStart}
                         style={{
-                            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-                            padding: "20px",
-                            color: "white",
+                            backgroundColor: "#FFF9F6",
+                            padding: "16px 20px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
                             cursor: isDragging ? "grabbing" : "grab",
-                            userSelect: "none"
+                            userSelect: "none",
+                            borderBottom: "1.5px solid #FDE8E1"
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <div style={{
+                                width: "46px",
+                                height: "46px",
+                                borderRadius: "50%",
+                                overflow: "hidden",
+                                border: "2px solid #FFFFFF",
+                                boxShadow: "0 2px 8px rgba(239, 68, 68, 0.15)",
+                                flexShrink: 0,
+                                backgroundColor: "#FFEAE4"
+                            }}>
+                                <img
+                                    src="/images/bitey-mascot.png"
+                                    alt="Bitey Mascot"
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span style={{ fontWeight: "800", fontSize: "1.05rem", color: "#1E293B", letterSpacing: "-0.2px" }}>
+                                        Bitey
+                                    </span>
+                                    <span style={{
+                                        backgroundColor: "#EF4444",
+                                        color: "white",
+                                        fontSize: "9.5px",
+                                        fontWeight: "800",
+                                        padding: "2px 6px",
+                                        borderRadius: "5px",
+                                        letterSpacing: "0.5px",
+                                        lineHeight: 1
+                                    }}>
+                                        BOT
+                                    </span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
+                                    <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: "#10B981" }} />
+                                    <span style={{ fontSize: "0.72rem", color: "#10B981", fontWeight: "700" }}>
+                                        Support Assistant (Online)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             {history.length > 0 && (
                                 <button
                                     onClick={handleGoBack}
                                     style={{
-                                        background: "none",
-                                        border: "none",
-                                        color: "white",
-                                        opacity: 0.8,
-                                        cursor: "pointer",
-                                        padding: "4px",
+                                        width: "32px",
+                                        height: "32px",
+                                        borderRadius: "50%",
+                                        backgroundColor: "#FFFFFF",
+                                        border: "1px solid #FCDCD2",
+                                        color: "#64748B",
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
-                                        marginRight: "4px",
-                                        transition: "transform 0.2s"
+                                        cursor: "pointer",
+                                        transition: "all 0.2s"
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.15)"}
-                                    onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = "#FEECE5";
+                                        e.currentTarget.style.color = "#EF4444";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = "#FFFFFF";
+                                        e.currentTarget.style.color = "#64748B";
+                                    }}
                                     title="Go back"
                                 >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                        <line x1="19" y1="12" x2="5" y2="12"></line>
-                                        <polyline points="12 19 5 12 12 5"></polyline>
-                                    </svg>
+                                    <ArrowLeft size={16} />
                                 </button>
                             )}
-                            <div style={{
-                                width: "40px",
-                                height: "40px",
-                                borderRadius: "50%",
-                                backgroundColor: "#334155",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "2px solid #10B981"
-                            }}>
-                                <User size={20} color="#10B981" />
-                            </div>
-                            <div>
-                                <div style={{ fontWeight: "700", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "5px" }}>
-                                    Mansi <Sparkles size={14} color="#10B981" fill="#10B981" />
-                                </div>
-                                <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "600" }}>● Support Assistant (Online)</span>
-                            </div>
+                            <button
+                                onClick={() => loadGreeting()}
+                                style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#FFFFFF",
+                                    border: "1px solid #FCDCD2",
+                                    color: "#EF4444",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s"
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#FEECE5";
+                                    e.currentTarget.style.transform = "scale(1.05)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#FFFFFF";
+                                    e.currentTarget.style.transform = "scale(1)";
+                                }}
+                                title="Menu / Reset"
+                            >
+                                <Menu size={16} />
+                            </button>
+                            <button
+                                onClick={() => toggleOpen(false)}
+                                style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#FFFFFF",
+                                    border: "1px solid #FCDCD2",
+                                    color: "#EF4444",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s"
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#FEECE5";
+                                    e.currentTarget.style.transform = "scale(1.05)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#FFFFFF";
+                                    e.currentTarget.style.transform = "scale(1)";
+                                }}
+                                title="Close"
+                            >
+                                <X size={16} />
+                            </button>
                         </div>
-                        <button
-                            onClick={() => toggleOpen(false)}
-                            style={{
-                                background: "none",
-                                border: "none",
-                                color: "white",
-                                opacity: 0.7,
-                                cursor: "pointer",
-                                padding: "4px"
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.7"}
-                        >
-                            <X size={20} />
-                        </button>
                     </div>
 
                     {/* Chat Messages Body */}
                     <div style={{
                         flex: 1,
-                        padding: "20px",
+                        padding: "16px 18px",
                         overflowY: "auto",
-                        backgroundColor: "#F8FAFC",
+                        backgroundColor: "#FFFDFB",
                         display: "flex",
                         flexDirection: "column",
-                        gap: "15px"
+                        gap: "14px"
                     }}>
+                        {/* Centered Date Header */}
+                        <div style={{
+                            textAlign: "center",
+                            margin: "4px 0 6px 0",
+                            color: "#94A3B8",
+                            fontSize: "0.7rem",
+                            fontWeight: "700",
+                            letterSpacing: "0.8px",
+                            textTransform: "uppercase"
+                        }}>
+                            TODAY · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+
                         {messages.map((msg) => (
                             <div key={msg.id} style={{ display: "flex", flexDirection: "column" }}>
                                 
@@ -1350,15 +1486,15 @@ Details: Category request submitted via chatbot assistant.`;
                                     /* Support Ticket Form */
                                     <div style={{
                                         backgroundColor: "white",
-                                        padding: "16px",
-                                        borderRadius: "14px",
-                                        border: "1px solid #E2E8F0",
-                                        boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-                                        maxWidth: "92%",
+                                        padding: "18px",
+                                        borderRadius: "18px",
+                                        border: "1.5px solid #FDE8E1",
+                                        boxShadow: "0 4px 16px rgba(239, 68, 68, 0.05)",
+                                        maxWidth: "96%",
                                         alignSelf: "flex-start",
-                                        marginTop: "5px"
+                                        marginTop: "4px"
                                     }}>
-                                        <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "#1E293B", marginBottom: "12px", borderBottom: "1px solid #F1F5F9", paddingBottom: "6px" }}>
+                                        <div style={{ fontWeight: "800", fontSize: "0.88rem", color: "#1E293B", marginBottom: "12px", borderBottom: "1.5px solid #FEEFEA", paddingBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
                                             📝 Submit Support Ticket
                                         </div>
                                         {status !== "authenticated" ? (
@@ -1369,39 +1505,31 @@ Details: Category request submitted via chatbot assistant.`;
                                                 <Link
                                                     href="/login"
                                                     style={{
-                                                        backgroundColor: "#1E293B",
+                                                        backgroundColor: "#EF4444",
                                                         color: "white",
                                                         padding: "8px 20px",
-                                                        borderRadius: "8px",
-                                                        fontSize: "0.8rem",
+                                                        borderRadius: "10px",
+                                                        fontSize: "0.82rem",
                                                         fontWeight: "700",
                                                         textDecoration: "none",
                                                         textAlign: "center",
                                                         transition: "all 0.2s ease",
                                                         cursor: "pointer",
-                                                        boxShadow: "0 4px 12px rgba(30, 41, 59, 0.15)",
+                                                        boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)",
                                                         display: "inline-block"
-                                                    }}
-                                                    onMouseOver={(e) => {
-                                                        e.currentTarget.style.backgroundColor = "#0F172A";
-                                                        e.currentTarget.style.transform = "translateY(-1px)";
-                                                    }}
-                                                    onMouseOut={(e) => {
-                                                        e.currentTarget.style.backgroundColor = "#1E293B";
-                                                        e.currentTarget.style.transform = "translateY(0)";
                                                     }}
                                                 >
                                                     🔑 Log In
                                                 </Link>
                                             </div>
                                         ) : (
-                                            <form onSubmit={handleTicketSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                            <form onSubmit={handleTicketSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                                 <div>
-                                                    <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>CATEGORY</label>
+                                                    <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>CATEGORY</label>
                                                     <select
                                                         value={ticketCategory}
                                                         onChange={(e) => setTicketCategory(e.target.value)}
-                                                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                        style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", outline: "none", backgroundColor: "#F8FAFC" }}
                                                     >
                                                         <option value="FOOD">{session?.user?.role === "DELIVERY" ? "Delivery / Order Issue" : "Food Delivery"}</option>
                                                         {session?.user?.role !== "DELIVERY" && <option value="ROOM">Room Stay</option>}
@@ -1415,50 +1543,49 @@ Details: Category request submitted via chatbot assistant.`;
                                                 {ticketCategory === "NEW_CATEGORY_REQUEST" ? (
                                                     <>
                                                         <div>
-                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>REQUESTED CATEGORY TYPE</label>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>REQUESTED CATEGORY TYPE</label>
                                                             <select
                                                                 value={reqCategoryType}
                                                                 onChange={(e) => setReqCategoryType(e.target.value)}
-                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                                style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", outline: "none", backgroundColor: "#F8FAFC" }}
                                                             >
                                                                 <option value="FOOD">Food Category</option>
                                                                 {session?.user?.role !== "DELIVERY" && <option value="ROOM">Room Category</option>}
                                                             </select>
                                                         </div>
                                                         <div>
-                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>REQUESTED CATEGORY NAME</label>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>REQUESTED CATEGORY NAME</label>
                                                             <input
                                                                 type="text"
                                                                 placeholder="e.g. Mocktails, Milkshakes, Suites..."
                                                                 value={reqCategoryName}
                                                                 onChange={(e) => setReqCategoryName(e.target.value)}
-                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                                style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", outline: "none" }}
                                                                 required
                                                             />
                                                         </div>
-
                                                     </>
                                                 ) : (
                                                     <>
                                                         <div>
-                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>TITLE / SUBJECT</label>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>TITLE / SUBJECT</label>
                                                             <input
                                                                 type="text"
                                                                 placeholder="Title Summary..."
                                                                 value={ticketTitle}
                                                                 onChange={(e) => setTicketTitle(e.target.value)}
-                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.8rem" }}
+                                                                style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", outline: "none" }}
                                                                 required
                                                             />
                                                         </div>
                                                         <div>
-                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "700", color: "#64748B", marginBottom: "4px" }}>DESCRIPTION</label>
+                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>DESCRIPTION</label>
                                                             <textarea
                                                                 placeholder="Explain the problem..."
                                                                 rows={3}
                                                                 value={ticketDesc}
                                                                 onChange={(e) => setTicketDesc(e.target.value)}
-                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "0.85rem", resize: "none" }}
+                                                                style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", resize: "none", outline: "none" }}
                                                                 required
                                                             />
                                                         </div>
@@ -1470,18 +1597,18 @@ Details: Category request submitted via chatbot assistant.`;
                                                     style={{
                                                         width: "100%",
                                                         padding: "10px",
-                                                        borderRadius: "8px",
-                                                        backgroundColor: "#10B981",
+                                                        borderRadius: "10px",
+                                                        backgroundColor: "#EF4444",
                                                         color: "white",
-                                                        fontWeight: "700",
-                                                        fontSize: "0.8rem",
+                                                        fontWeight: "800",
+                                                        fontSize: "0.82rem",
                                                         border: "none",
                                                         cursor: "pointer",
                                                         display: "flex",
                                                         alignItems: "center",
                                                         justifyContent: "center",
                                                         gap: "6px",
-                                                        boxShadow: "0 2px 6px rgba(16, 185, 129, 0.2)"
+                                                        boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)"
                                                     }}
                                                 >
                                                     {submittingTicket ? <Loader2 className="animate-spin" size={14} /> : "Submit Ticket"}
@@ -1492,24 +1619,24 @@ Details: Category request submitted via chatbot assistant.`;
                                 ) : (
                                     /* Normal Text Bubble */
                                     <div style={{
-                                        maxWidth: "85%",
-                                        padding: "12px 16px",
-                                        borderRadius: "14px",
+                                        maxWidth: "86%",
+                                        padding: "13px 16px",
+                                        borderRadius: msg.sender === "bot" ? "18px 18px 18px 4px" : "18px 18px 4px 18px",
                                         fontSize: "0.85rem",
-                                        lineHeight: "1.4",
+                                        lineHeight: "1.45",
                                         alignSelf: msg.sender === "bot" ? "flex-start" : "flex-end",
-                                        backgroundColor: msg.sender === "bot" ? "white" : "#1E293B",
-                                        color: msg.sender === "bot" ? "#334155" : "white",
-                                        boxShadow: msg.sender === "bot" ? "0 2px 8px rgba(0,0,0,0.03)" : "none",
-                                        border: msg.sender === "bot" ? "1px solid #E2E8F0" : "none",
+                                        backgroundColor: msg.sender === "bot" ? "#FFFFFF" : "#EF4444",
+                                        color: msg.sender === "bot" ? "#334155" : "#FFFFFF",
+                                        boxShadow: msg.sender === "bot" ? "0 2px 10px rgba(0,0,0,0.02)" : "0 4px 12px rgba(239, 68, 68, 0.25)",
+                                        border: msg.sender === "bot" ? "1.5px solid #FDE8E1" : "none",
                                         whiteSpace: "pre-line"
                                     }}>
                                         {renderMessageText(msg.text)}
                                         {msg.isTicketSuccess && msg.ticketId && (
-                                            <div style={{ marginTop: "10px", borderTop: "1px solid #E2E8F0", paddingTop: "8px" }}>
+                                            <div style={{ marginTop: "10px", borderTop: "1.5px solid #FDE8E1", paddingTop: "8px" }}>
                                                 <Link
-                                                    href={session?.user.role === "SELLER" ? "/seller/support" : session?.user.role === "DELIVERY" ? "/dashboard/delivery" : "/dashboard/user/support"}
-                                                    style={{ color: "#10B981", fontWeight: "700", textDecoration: "underline", fontSize: "0.8rem", display: "inline-flex", alignItems: "center" }}
+                                                    href={session?.user?.role === "SELLER" ? "/seller/support" : session?.user?.role === "DELIVERY" ? "/dashboard/delivery" : "/dashboard/user/support"}
+                                                    style={{ color: "#EF4444", fontWeight: "700", textDecoration: "underline", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "2px" }}
                                                     onClick={() => toggleOpen(false)}
                                                 >
                                                     View Ticket Status <ChevronRight size={14} />
@@ -1521,7 +1648,7 @@ Details: Category request submitted via chatbot assistant.`;
 
                                 {/* Render Interactive Order Selection Cards */}
                                 {msg.ordersList && (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px", maxWidth: "90%", alignSelf: "flex-start" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px", maxWidth: "92%", alignSelf: "flex-start" }}>
                                         {msg.ordersList.map(order => (
                                             <button
                                                 key={order.id}
@@ -1531,21 +1658,22 @@ Details: Category request submitted via chatbot assistant.`;
                                                     flexDirection: "column",
                                                     alignItems: "flex-start",
                                                     backgroundColor: "white",
-                                                    border: "1px solid #CBD5E1",
+                                                    border: "1.5px solid #FEEFEA",
                                                     padding: "12px",
-                                                    borderRadius: "10px",
+                                                    borderRadius: "14px",
                                                     cursor: "pointer",
                                                     textAlign: "left",
                                                     width: "100%",
-                                                    transition: "transform 0.15s, border-color 0.15s"
+                                                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.04)",
+                                                    transition: "all 0.2s ease"
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = "var(--coral, #F16F68)";
-                                                    e.currentTarget.style.transform = "scale(1.02)";
+                                                    e.currentTarget.style.borderColor = "#FCA5A5";
+                                                    e.currentTarget.style.transform = "translateY(-1px)";
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.currentTarget.style.borderColor = "#CBD5E1";
-                                                    e.currentTarget.style.transform = "scale(1)";
+                                                    e.currentTarget.style.borderColor = "#FEEFEA";
+                                                    e.currentTarget.style.transform = "translateY(0)";
                                                 }}
                                             >
                                                 <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#64748B", display: "flex", alignItems: "center", gap: "4px" }}>
@@ -1554,7 +1682,7 @@ Details: Category request submitted via chatbot assistant.`;
                                                 <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#1E293B", marginTop: "4px" }}>
                                                     ₹{order.totalAmount} • {new Date(order.createdAt).toLocaleDateString()}
                                                 </span>
-                                                <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "600", marginTop: "2px" }}>
+                                                <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "700", marginTop: "2px" }}>
                                                     Status: {order.status}
                                                 </span>
                                             </button>
@@ -1564,7 +1692,7 @@ Details: Category request submitted via chatbot assistant.`;
 
                                 {/* Render Interactive Booking Selection Cards */}
                                 {msg.bookingsList && (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px", maxWidth: "90%", alignSelf: "flex-start" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px", maxWidth: "92%", alignSelf: "flex-start" }}>
                                         {msg.bookingsList.map(booking => (
                                             <button
                                                 key={booking.id}
@@ -1574,21 +1702,22 @@ Details: Category request submitted via chatbot assistant.`;
                                                     flexDirection: "column",
                                                     alignItems: "flex-start",
                                                     backgroundColor: "white",
-                                                    border: "1px solid #CBD5E1",
+                                                    border: "1.5px solid #FEEFEA",
                                                     padding: "12px",
-                                                    borderRadius: "10px",
+                                                    borderRadius: "14px",
                                                     cursor: "pointer",
                                                     textAlign: "left",
                                                     width: "100%",
-                                                    transition: "transform 0.15s, border-color 0.15s"
+                                                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.04)",
+                                                    transition: "all 0.2s ease"
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = "var(--coral, #F16F68)";
-                                                    e.currentTarget.style.transform = "scale(1.02)";
+                                                    e.currentTarget.style.borderColor = "#FCA5A5";
+                                                    e.currentTarget.style.transform = "translateY(-1px)";
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.currentTarget.style.borderColor = "#CBD5E1";
-                                                    e.currentTarget.style.transform = "scale(1)";
+                                                    e.currentTarget.style.borderColor = "#FEEFEA";
+                                                    e.currentTarget.style.transform = "translateY(0)";
                                                 }}
                                             >
                                                 <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#64748B", display: "flex", alignItems: "center", gap: "4px" }}>
@@ -1605,37 +1734,158 @@ Details: Category request submitted via chatbot assistant.`;
                                     </div>
                                 )}
 
-                                {/* Interactive Quick Action Buttons/Chips */}
+                                {/* Interactive Quick Action Buttons/Cards */}
                                 {msg.options && msg.options.length > 0 && (
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px", maxWidth: "95%", alignSelf: "flex-start" }}>
-                                        {msg.options.map((opt, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={opt.action}
-                                                style={{
-                                                    padding: "6px 12px",
-                                                    borderRadius: "16px",
-                                                    border: "1px solid #CBD5E1",
-                                                    backgroundColor: "white",
-                                                    fontSize: "0.75rem",
-                                                    fontWeight: "600",
-                                                    color: "#475569",
-                                                    cursor: "pointer",
-                                                    transition: "all 0.15s"
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "#F1F5F9";
-                                                    e.currentTarget.style.borderColor = "#94A3B8";
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "white";
-                                                    e.currentTarget.style.borderColor = "#CBD5E1";
-                                                }}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    (() => {
+                                        const gridOptions = msg.options.filter(opt => !opt.label.toLowerCase().includes("back to menu") && !opt.label.toLowerCase().includes("back to main"));
+                                        const backOptions = msg.options.filter(opt => opt.label.toLowerCase().includes("back to menu") || opt.label.toLowerCase().includes("back to main"));
+                                        const isGrid = gridOptions.length >= 2;
+
+                                        return (
+                                            <div style={{ marginTop: "10px", width: "100%", maxWidth: "100%" }}>
+                                                {isGrid ? (
+                                                    <div style={{
+                                                        display: "grid",
+                                                        gridTemplateColumns: "1fr 1fr",
+                                                        gap: "10px",
+                                                        width: "100%"
+                                                    }}>
+                                                        {gridOptions.map((opt, i) => {
+                                                            const parsed = parseOption(opt.label);
+                                                            return (
+                                                                <button
+                                                                    key={i}
+                                                                    onClick={opt.action}
+                                                                    style={{
+                                                                        backgroundColor: "#FFFFFF",
+                                                                        border: "1.5px solid #FEEFEA",
+                                                                        borderRadius: "16px",
+                                                                        padding: "14px 12px",
+                                                                        display: "flex",
+                                                                        flexDirection: "column",
+                                                                        justifyContent: "space-between",
+                                                                        minHeight: "105px",
+                                                                        cursor: "pointer",
+                                                                        textAlign: "left",
+                                                                        boxShadow: "0 3px 10px rgba(239, 68, 68, 0.03)",
+                                                                        transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.borderColor = "#FCA5A5";
+                                                                        e.currentTarget.style.transform = "translateY(-2px)";
+                                                                        e.currentTarget.style.boxShadow = "0 8px 18px rgba(239, 68, 68, 0.1)";
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.currentTarget.style.borderColor = "#FEEFEA";
+                                                                        e.currentTarget.style.transform = "translateY(0)";
+                                                                        e.currentTarget.style.boxShadow = "0 3px 10px rgba(239, 68, 68, 0.03)";
+                                                                    }}
+                                                                >
+                                                                    <div style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "center",
+                                                                        fontSize: "30px",
+                                                                        lineHeight: 1,
+                                                                        marginBottom: "8px",
+                                                                        width: "100%"
+                                                                    }}>
+                                                                        {parsed.icon || "💬"}
+                                                                    </div>
+                                                                    <div style={{
+                                                                        display: "flex",
+                                                                        alignItems: "flex-end",
+                                                                        justifyContent: "space-between",
+                                                                        width: "100%",
+                                                                        gap: "4px"
+                                                                    }}>
+                                                                        <span style={{
+                                                                            fontSize: "0.78rem",
+                                                                            fontWeight: "700",
+                                                                            color: "#334155",
+                                                                            lineHeight: "1.25"
+                                                                        }}>
+                                                                            {parsed.text}
+                                                                        </span>
+                                                                        <ChevronRight size={15} color="#EF4444" style={{ flexShrink: 0, marginBottom: "1px" }} />
+                                                                    </div>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                                        {gridOptions.map((opt, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={opt.action}
+                                                                style={{
+                                                                    padding: "8px 14px",
+                                                                    borderRadius: "16px",
+                                                                    border: "1.5px solid #FEEFEA",
+                                                                    backgroundColor: "white",
+                                                                    fontSize: "0.8rem",
+                                                                    fontWeight: "700",
+                                                                    color: "#334155",
+                                                                    cursor: "pointer",
+                                                                    boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+                                                                    transition: "all 0.15s"
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = "#FFF7F4";
+                                                                    e.currentTarget.style.borderColor = "#FCA5A5";
+                                                                    e.currentTarget.style.color = "#EF4444";
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = "white";
+                                                                    e.currentTarget.style.borderColor = "#FEEFEA";
+                                                                    e.currentTarget.style.color = "#334155";
+                                                                }}
+                                                            >
+                                                                {opt.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Back button(s) */}
+                                                {backOptions.length > 0 && (
+                                                    <div style={{ marginTop: "8px", display: "flex", gap: "6px" }}>
+                                                        {backOptions.map((opt, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={opt.action}
+                                                                style={{
+                                                                    padding: "6px 12px",
+                                                                    borderRadius: "14px",
+                                                                    border: "1px solid #E2E8F0",
+                                                                    backgroundColor: "#F8FAFC",
+                                                                    fontSize: "0.75rem",
+                                                                    fontWeight: "600",
+                                                                    color: "#64748B",
+                                                                    cursor: "pointer",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: "4px",
+                                                                    transition: "all 0.15s"
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = "#F1F5F9";
+                                                                    e.currentTarget.style.color = "#1E293B";
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = "#F8FAFC";
+                                                                    e.currentTarget.style.color = "#64748B";
+                                                                }}
+                                                            >
+                                                                {opt.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()
                                 )}
 
                                 <span style={{
@@ -1652,10 +1902,10 @@ Details: Category request submitted via chatbot assistant.`;
 
                         {/* Typing indicator */}
                         {isTyping && (
-                            <div style={{ display: "flex", gap: "6px", alignSelf: "flex-start", backgroundColor: "white", padding: "12px 18px", borderRadius: "14px", border: "1px solid #E2E8F0" }}>
-                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#94A3B8", animation: "bounce 1.4s infinite ease-in-out both" }} />
-                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#94A3B8", animation: "bounce 1.4s infinite ease-in-out both 0.2s" }} />
-                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#94A3B8", animation: "bounce 1.4s infinite ease-in-out both 0.4s" }} />
+                            <div style={{ display: "flex", gap: "6px", alignSelf: "flex-start", backgroundColor: "white", padding: "12px 18px", borderRadius: "14px", border: "1.5px solid #FDE8E1" }}>
+                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#EF4444", animation: "bounce 1.4s infinite ease-in-out both" }} />
+                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#EF4444", animation: "bounce 1.4s infinite ease-in-out both 0.2s" }} />
+                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#EF4444", animation: "bounce 1.4s infinite ease-in-out both 0.4s" }} />
                                 <style jsx>{`
                                     @keyframes bounce {
                                         0%, 80%, 100% { transform: scale(0); }
@@ -1668,47 +1918,250 @@ Details: Category request submitted via chatbot assistant.`;
                         <div ref={messageEndRef} />
                     </div>
 
+                    {/* Quick Action Chips */}
+                    <div style={{
+                        padding: "6px 14px 8px 14px",
+                        display: "flex",
+                        gap: "8px",
+                        overflowX: "auto",
+                        backgroundColor: "#FFFFFF",
+                        borderTop: "1px solid #FDF2ED",
+                        scrollbarWidth: "none"
+                    }}>
+                        <button
+                            onClick={() => handleSelectOption("orders")}
+                            style={{
+                                padding: "5px 12px",
+                                borderRadius: "9999px",
+                                backgroundColor: "#FFF7F4",
+                                border: "1px solid #FEE0D5",
+                                color: "#475569",
+                                fontSize: "0.72rem",
+                                fontWeight: "700",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                whiteSpace: "nowrap",
+                                transition: "all 0.15s ease"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FEECE5";
+                                e.currentTarget.style.color = "#EF4444";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FFF7F4";
+                                e.currentTarget.style.color = "#475569";
+                            }}
+                        >
+                            <Zap size={12} color="#F59E0B" fill="#F59E0B" /> Quick Status
+                        </button>
+                        <button
+                            onClick={() => {
+                                setMessages(prev => [...prev, {
+                                    id: `b_${Date.now()}`,
+                                    sender: "bot",
+                                    text: "📞 Customer Support Helpline\n\nNeed immediate phone assistance? You can reach our 24/7 priority desk at:\n+91 98765 43210\n\nOr click below to raise a priority support ticket for an agent callback:",
+                                    timestamp: new Date(),
+                                    options: [
+                                        { label: "🎟️ Request Agent Callback Ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Customer Care Call Request", desc: "I am requesting a phone callback from a customer support representative." }) },
+                                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                                    ]
+                                }]);
+                            }}
+                            style={{
+                                padding: "5px 12px",
+                                borderRadius: "9999px",
+                                backgroundColor: "#FFF7F4",
+                                border: "1px solid #FEE0D5",
+                                color: "#475569",
+                                fontSize: "0.72rem",
+                                fontWeight: "700",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                whiteSpace: "nowrap",
+                                transition: "all 0.15s ease"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FEECE5";
+                                e.currentTarget.style.color = "#EF4444";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FFF7F4";
+                                e.currentTarget.style.color = "#475569";
+                            }}
+                        >
+                            <Phone size={12} color="#10B981" /> Call Agent
+                        </button>
+                        <button
+                            onClick={() => {
+                                toggleOpen(false);
+                                router.push("/explore-desktop");
+                            }}
+                            style={{
+                                padding: "5px 12px",
+                                borderRadius: "9999px",
+                                backgroundColor: "#FFF7F4",
+                                border: "1px solid #FEE0D5",
+                                color: "#475569",
+                                fontSize: "0.72rem",
+                                fontWeight: "700",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                whiteSpace: "nowrap",
+                                transition: "all 0.15s ease"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FEECE5";
+                                e.currentTarget.style.color = "#EF4444";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FFF7F4";
+                                e.currentTarget.style.color = "#475569";
+                            }}
+                        >
+                            <Utensils size={12} color="#EF4444" /> Menu list
+                        </button>
+                    </div>
+
                     {/* Bottom Input bar */}
                     <div style={{
-                        padding: "15px",
-                        borderTop: "1px solid #E2E8F0",
+                        padding: "10px 14px 12px 14px",
                         display: "flex",
                         alignItems: "center",
                         gap: "10px",
-                        backgroundColor: "white"
+                        backgroundColor: "white",
+                        borderTop: "1px solid #F3E8E2"
                     }}>
                         <input
-                            type="text"
-                            placeholder="Type details or query..."
-                            value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSendMessage(inputText)}
-                            style={{
-                                flex: 1,
-                                padding: "10px 14px",
-                                borderRadius: "24px",
-                                border: "1px solid #CBD5E1",
-                                fontSize: "0.85rem",
-                                outline: "none"
+                            type="file"
+                            ref={fileInputRef}
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                    const file = e.target.files[0];
+                                    setMessages(prev => [...prev, {
+                                        id: `u_${Date.now()}`,
+                                        sender: "user",
+                                        text: `📎 Attached file: ${file.name}`,
+                                        timestamp: new Date()
+                                    }]);
+                                    showTypingIndicator(() => {
+                                        setMessages(prev => [...prev, {
+                                            id: `b_${Date.now()}`,
+                                            sender: "bot",
+                                            text: `Received file "${file.name}". Would you like to log this file with a support ticket?`,
+                                            timestamp: new Date(),
+                                            options: [
+                                                { label: "🎟️ Submit Ticket with Attachment", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: `Attachment Query: ${file.name}`, desc: `User attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)` }) },
+                                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                                            ]
+                                        }]);
+                                    });
+                                }
                             }}
                         />
                         <button
-                            onClick={() => handleSendMessage(inputText)}
+                            onClick={() => fileInputRef.current?.click()}
                             style={{
                                 width: "38px",
                                 height: "38px",
                                 borderRadius: "50%",
-                                backgroundColor: "#1E293B",
+                                backgroundColor: "#F1F5F9",
+                                color: "#64748B",
+                                border: "none",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                                flexShrink: 0,
+                                transition: "all 0.2s"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#E2E8F0";
+                                e.currentTarget.style.color = "#1E293B";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#F1F5F9";
+                                e.currentTarget.style.color = "#64748B";
+                            }}
+                            title="Attach file / screenshot"
+                        >
+                            <Paperclip size={18} />
+                        </button>
+
+                        <div style={{
+                            flex: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            backgroundColor: "#F1F3F6",
+                            borderRadius: "24px",
+                            padding: "0 12px",
+                            height: "40px"
+                        }}>
+                            <input
+                                type="text"
+                                placeholder="Type details or query..."
+                                value={inputText}
+                                onChange={(e) => setInputText(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSendMessage(inputText)}
+                                style={{
+                                    flex: 1,
+                                    border: "none",
+                                    outline: "none",
+                                    backgroundColor: "transparent",
+                                    fontSize: "0.85rem",
+                                    color: "#1E293B"
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setInputText(prev => prev + " 😊")}
+                                style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#64748B",
+                                    cursor: "pointer",
+                                    padding: "4px",
+                                    display: "flex",
+                                    alignItems: "center"
+                                }}
+                                title="Emoji"
+                            >
+                                <Smile size={18} />
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => handleSendMessage(inputText)}
+                            style={{
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "50%",
+                                backgroundColor: "#EF4444",
                                 color: "white",
                                 border: "none",
                                 display: "flex",
                                 alignItems: "center",
+                                justifyContent: "center",
                                 cursor: "pointer",
-                                transition: "all 0.2s",
-                                padding: "0",
-                                alignSelf: "center",
-                                justifyContent: "center"
+                                flexShrink: 0,
+                                boxShadow: "0 4px 12px rgba(239, 68, 68, 0.35)",
+                                transition: "all 0.2s"
                             }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#DC2626";
+                                e.currentTarget.style.transform = "scale(1.05)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#EF4444";
+                                e.currentTarget.style.transform = "scale(1)";
+                            }}
+                            title="Send message"
                         >
                             <Send size={16} />
                         </button>
