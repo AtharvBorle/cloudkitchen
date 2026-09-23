@@ -20,6 +20,8 @@ import {
   Compass,
   ArrowRight,
   Receipt,
+  XCircle,
+  AlertOctagon,
 } from "lucide-react";
 import Navbar from "@/components/navbar/Navbar";
 import { Footer } from "@/components/explore-desktop/footer";
@@ -289,58 +291,75 @@ export default function OrderConfirmation() {
   const isDelivered = status === "DELIVERED";
   const isCancelled = status === "CANCELLED";
 
-  const timelineSteps = [
-    {
-      id: 1,
-      title: "Order Placed",
-      time: orderData.orderTime || "Just now",
-      desc: "Order received and submitted to the seller.",
-      icon: CheckCircle2,
-      status: "done",
-    },
-    {
-      id: 2,
-      title: "Store Confirmation",
-      time: isPending ? "Waiting for Store ⏳" : (isCancelled ? "Cancelled" : "Confirmed ✅"),
-      desc: isPending
-        ? `Awaiting confirmation from ${orderData.sellerName || "the kitchen"}.`
-        : isCancelled
-        ? "Order was not confirmed or cancelled."
-        : `Accepted & confirmed by ${orderData.sellerName || "the kitchen"}.`,
-      icon: CheckCircle2,
-      status: isCancelled ? "pending" : (isPending ? "active" : "done"),
-    },
-    {
-      id: 3,
-      title: "Kitchen Preparation",
-      time: isPreparing ? "In Progress 🍳" : (isOutForDelivery || isDelivered ? "Completed" : "Waiting"),
-      desc: isPreparing
-        ? "Fresh ingredients are currently being cooked with high hygiene standards."
-        : (isOutForDelivery || isDelivered ? "Food preparation was freshly completed." : "Kitchen will begin cooking once confirmed."),
-      icon: ChefHat,
-      status: isCancelled ? "pending" : (isPreparing ? "active" : isOutForDelivery || isDelivered ? "done" : "pending"),
-    },
-    {
-      id: 4,
-      title: orderData.deliveryPerson?.name ? `Rider ${orderData.deliveryPerson.name}` : "Delivery Partner Assignment",
-      time: isOutForDelivery ? "On The Way 🛵" : (isDelivered ? "Delivered" : (orderData.deliveryPerson ? "Assigned" : "Assigning shortly")),
-      desc: orderData.deliveryPerson
-        ? `${orderData.deliveryPerson.name}${orderData.deliveryPerson.vehicleType ? ` (${orderData.deliveryPerson.vehicleType}${orderData.deliveryPerson.vehicleNumber ? ` - ${orderData.deliveryPerson.vehicleNumber}` : ""})` : ""} is assigned for delivery.`
-        : "A delivery partner will be assigned shortly once food preparation starts.",
-      icon: Bike,
-      status: isCancelled ? "pending" : (isOutForDelivery ? "active" : isDelivered ? "done" : (orderData.deliveryPerson ? "done" : "pending")),
-    },
-    {
-      id: 5,
-      title: "Delivered to Doorstep",
-      time: isDelivered ? "Delivered 🎉" : `Est. ${orderData.estimatedDelivery}`,
-      desc: isDelivered
-        ? `Handover completed at ${orderData.deliveryAddress.streetAddress}.`
-        : `Will be delivered to ${orderData.deliveryAddress.streetAddress}.`,
-      icon: MapPin,
-      status: isCancelled ? "pending" : (isDelivered ? "done" : "pending"),
-    },
-  ];
+  const timelineSteps = isCancelled
+    ? [
+        {
+          id: 1,
+          title: "Order Placed",
+          time: orderData.orderTime || "Just now",
+          desc: "Order was received and submitted to the seller.",
+          icon: CheckCircle2,
+          status: "done",
+        },
+        {
+          id: 2,
+          title: "Store Confirmation: Cancelled",
+          time: "Request Rejected",
+          desc: `The kitchen (${orderData.sellerName || "the store"}) was unable to accept your order request.`,
+          icon: XCircle,
+          status: "cancelled",
+        },
+      ]
+    : [
+        {
+          id: 1,
+          title: "Order Placed",
+          time: orderData.orderTime || "Just now",
+          desc: "Order received and submitted to the seller.",
+          icon: CheckCircle2,
+          status: "done",
+        },
+        {
+          id: 2,
+          title: "Store Confirmation",
+          time: isPending ? "Waiting for Store ⏳" : "Confirmed ✅",
+          desc: isPending
+            ? `Awaiting confirmation from ${orderData.sellerName || "the kitchen"}.`
+            : `Accepted & confirmed by ${orderData.sellerName || "the kitchen"}.`,
+          icon: CheckCircle2,
+          status: isPending ? "active" : "done",
+        },
+        {
+          id: 3,
+          title: "Kitchen Preparation",
+          time: isPreparing ? "In Progress 🍳" : (isOutForDelivery || isDelivered ? "Completed" : "Waiting"),
+          desc: isPreparing
+            ? "Fresh ingredients are currently being cooked with high hygiene standards."
+            : (isOutForDelivery || isDelivered ? "Food preparation was freshly completed." : "Kitchen will begin cooking once confirmed."),
+          icon: ChefHat,
+          status: isPreparing ? "active" : isOutForDelivery || isDelivered ? "done" : "pending",
+        },
+        {
+          id: 4,
+          title: orderData.deliveryPerson?.name ? `Rider ${orderData.deliveryPerson.name}` : "Delivery Partner Assignment",
+          time: isOutForDelivery ? "On The Way 🛵" : (isDelivered ? "Delivered" : (orderData.deliveryPerson ? "Assigned" : "Assigning shortly")),
+          desc: orderData.deliveryPerson
+            ? `${orderData.deliveryPerson.name}${orderData.deliveryPerson.vehicleType ? ` (${orderData.deliveryPerson.vehicleType}${orderData.deliveryPerson.vehicleNumber ? ` - ${orderData.deliveryPerson.vehicleNumber}` : ""})` : ""} is assigned for delivery.`
+            : "A delivery partner will be assigned shortly once food preparation starts.",
+          icon: Bike,
+          status: isOutForDelivery ? "active" : isDelivered ? "done" : (orderData.deliveryPerson ? "done" : "pending"),
+        },
+        {
+          id: 5,
+          title: "Delivered to Doorstep",
+          time: isDelivered ? "Delivered 🎉" : `Est. ${orderData.estimatedDelivery}`,
+          desc: isDelivered
+            ? `Handover completed at ${orderData.deliveryAddress.streetAddress}.`
+            : `Will be delivered to ${orderData.deliveryAddress.streetAddress}.`,
+          icon: MapPin,
+          status: isDelivered ? "done" : "pending",
+        },
+      ];
 
   return (
     <div className={styles.pageWrapper}>
@@ -348,7 +367,7 @@ export default function OrderConfirmation() {
       <Navbar />
 
       {/* Celebratory Floating Confetti */}
-      {showConfetti && (
+      {showConfetti && !isCancelled && (
         <div className={styles.confettiCanvas} aria-hidden="true">
           {confettiPieces.map((piece) => (
             <div
@@ -384,8 +403,12 @@ export default function OrderConfirmation() {
 
           <div className={styles.stepperLineDone} />
 
-          <div className={styles.stepPillActive}>
-            <Sparkles size={15} color="#EA580C" />
+          <div className={isCancelled ? styles.stepPillCancelled : styles.stepPillActive}>
+            {isCancelled ? (
+              <XCircle size={15} color="#DC2626" />
+            ) : (
+              <Sparkles size={15} color="#EA580C" />
+            )}
             <span>
               {isCancelled
                 ? "3. Order Cancelled"
@@ -400,10 +423,14 @@ export default function OrderConfirmation() {
         <section className={styles.heroCard}>
           <div className={styles.heroBackgroundGlow} />
 
-          {/* Animated Success Checkmark Ring */}
-          <div className={styles.successIconWrapper}>
-            <div className={styles.pulsingRing} />
-            <CheckCircle2 size={54} strokeWidth={2.4} color={isCancelled ? "#EF4444" : isPending ? "#F59E0B" : "#22C55E"} />
+          {/* Animated Success / Cancelled Checkmark Ring */}
+          <div className={isCancelled ? styles.cancelledIconWrapper : styles.successIconWrapper}>
+            <div className={isCancelled ? styles.pulsingRingCancelled : styles.pulsingRing} />
+            {isCancelled ? (
+              <XCircle size={54} strokeWidth={2.4} color="#FFFFFF" />
+            ) : (
+              <CheckCircle2 size={54} strokeWidth={2.4} color={isPending ? "#F59E0B" : "#22C55E"} />
+            )}
           </div>
 
           <h1 className={styles.heroTitle}>
@@ -453,9 +480,9 @@ export default function OrderConfirmation() {
             <div className={styles.metaDivider} />
 
             <div className={styles.metaItem}>
-              <Clock size={16} color="#EA580C" />
+              <Clock size={16} color={isCancelled ? "#DC2626" : "#EA580C"} />
               <span className={styles.metaLabel}>Est. Delivery:</span>
-              <span className={styles.metaValue}>{orderData.estimatedDelivery}</span>
+              <span className={styles.metaValue}>{isCancelled ? "Cancelled" : orderData.estimatedDelivery}</span>
             </div>
 
             <div className={styles.metaDivider} />
@@ -474,24 +501,34 @@ export default function OrderConfirmation() {
           <section className={styles.card}>
             <div className={styles.cardHeader}>
               <div className={styles.cardTitleGroup}>
-                <div className={styles.cardIconBox}>
-                  <ChefHat size={22} />
+                <div
+                  className={styles.cardIconBox}
+                  style={isCancelled ? { background: "#fee2e2", color: "#dc2626" } : undefined}
+                >
+                  {isCancelled ? <AlertOctagon size={22} /> : <ChefHat size={22} />}
                 </div>
                 <div>
                   <h2 className={styles.cardTitle}>Live Order Status</h2>
                 </div>
               </div>
-              <div className={styles.estimatedBadge}>
-                <Clock size={14} />
-                <span>On Time • {orderData.estimatedDelivery}</span>
-              </div>
+              {isCancelled ? (
+                <div className={styles.cancelledBadge}>
+                  <AlertOctagon size={14} />
+                  <span>Order Cancelled</span>
+                </div>
+              ) : (
+                <div className={styles.estimatedBadge}>
+                  <Clock size={14} />
+                  <span>{isDelivered ? "Delivered" : `On Time • ${orderData.estimatedDelivery}`}</span>
+                </div>
+              )}
             </div>
 
             <div className={styles.timelineContainer}>
               {timelineSteps.map((step, idx) => {
                 const isDone = step.status === "done";
                 const isActive = step.status === "active";
-                const isPending = step.status === "pending";
+                const isCancelledStep = step.status === "cancelled";
                 const isLast = idx === timelineSteps.length - 1;
 
                 const IconComponent = step.icon;
@@ -501,20 +538,24 @@ export default function OrderConfirmation() {
                     <div className={styles.timelineLeft}>
                       <div
                         className={`${styles.timelineDot} ${
-                          isDone
+                          isCancelledStep
+                            ? styles.timelineDotCancelled
+                            : isDone
                             ? styles.timelineDotDone
                             : isActive
                             ? styles.timelineDotActive
                             : styles.timelineDotPending
                         }`}
                       >
-                        <IconComponent size={20} strokeWidth={isActive ? 2.4 : 2} />
+                        <IconComponent size={20} strokeWidth={isCancelledStep || isActive ? 2.4 : 2} />
                       </div>
 
                       {!isLast && (
                         <div
                           className={`${styles.timelineConnector} ${
-                            isDone
+                            isCancelledStep
+                              ? styles.timelineConnectorCancelled
+                              : isDone
                               ? styles.timelineConnectorDone
                               : isActive
                               ? styles.timelineConnectorActive
@@ -528,12 +569,22 @@ export default function OrderConfirmation() {
                       <div className={styles.timelineTitleRow}>
                         <h3
                           className={`${styles.timelineTitle} ${
-                            isActive ? styles.timelineTitleActive : ""
+                            isCancelledStep
+                              ? styles.timelineTitleCancelled
+                              : isActive
+                              ? styles.timelineTitleActive
+                              : ""
                           }`}
                         >
                           {step.title}
                         </h3>
-                        <span className={styles.timelineTime}>{step.time}</span>
+                        <span
+                          className={
+                            isCancelledStep ? styles.timelineTimeCancelled : styles.timelineTime
+                          }
+                        >
+                          {step.time}
+                        </span>
                       </div>
                       <p className={styles.timelineDesc}>{step.desc}</p>
                     </div>
@@ -663,8 +714,22 @@ export default function OrderConfirmation() {
                   </div>
                 </div>
 
-                {/* Delivery Partner Status Box */}
-                {orderData.deliveryPerson ? (
+                {/* Delivery Partner Status Box / Cancellation Notice */}
+                {isCancelled ? (
+                  <div className={styles.infoBox} style={{ background: "#fef2f2", borderColor: "#fecaca" }}>
+                    <div className={styles.infoIconBox} style={{ background: "#fee2e2", color: "#dc2626" }}>
+                      <AlertOctagon size={18} />
+                    </div>
+                    <div className={styles.infoContent}>
+                      <h4 className={styles.infoTitle} style={{ color: "#991b1b" }}>
+                        Order Cancellation & Refund Notice
+                      </h4>
+                      <p className={styles.infoText} style={{ color: "#b91c1c" }}>
+                        This order request was cancelled by the store. If you made an online payment, a full refund of ₹{orderData.grandTotal.toLocaleString("en-IN")} will be credited to your original payment method within 2-4 business hours.
+                      </p>
+                    </div>
+                  </div>
+                ) : orderData.deliveryPerson ? (
                   <div className={styles.infoBox} style={{ background: "#f0fdf4", borderColor: "#bbf7d0" }}>
                     <div className={styles.infoIconBox} style={{ background: "#dcfce7", color: "#16a34a" }}>
                       <Bike size={18} />
