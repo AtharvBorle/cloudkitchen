@@ -6,7 +6,8 @@ import { Plus, Search, SquarePen, Sparkles, Trash2, Utensils, MapPin, Edit3, X, 
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
+import { broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
 import styles from "./SellerMenu.module.css";
 
 export type MenuCategoryFilter = string;
@@ -95,11 +96,20 @@ export default function SellerMenu({
 }: SellerMenuProps) {
   const router = useRouter();
   const seller = useSellerProfile();
-  const [isOpen, setIsOpen] = useState(initialIsOpen);
+  const [isOpen, setIsOpen] = useState<boolean>(typeof initialIsOpen === "boolean" ? initialIsOpen : true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
   const [dishList, setDishList] = useState<DishItem[]>(dishes || []);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("seller_is_online");
+      if (stored !== null) {
+        setIsOpen(stored === "true");
+      }
+    } catch {}
+  }, []);
   const [servedPincodes, setServedPincodes] = useState<ServedPincodeItem[]>(() => {
     if (operationalPincodes) {
       return operationalPincodes
@@ -134,73 +144,91 @@ export default function SellerMenu({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
+  useEffect(() => {
+    if (dishes && dishes.length > 0) {
+      setDishList(dishes);
+    }
+  }, [dishes]);
+
   // Fetch live menu items and served pincodes from DB
   useEffect(() => {
     let isMounted = true;
     async function loadMenu() {
       try {
         const res = await fetchApi("/api/seller/menu");
-        if (res.ok) {
+        if (res.ok && isMounted) {
           const json = await res.json();
           const data = json.data || json;
-          if (data && data.items && Array.isArray(data.items) && isMounted) {
-            const mapped: DishItem[] = data.items.map((item: any) => {
-              let addonsList: Array<{ id: string; name: string; price: number }> = [];
-              const rawAddons = item.addons || item.variants;
-              if (rawAddons) {
-                try {
-                  const parsed = typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons;
-                  if (Array.isArray(parsed)) {
-                    addonsList = parsed
-                      .filter((a: any) => a && (a.name || '').trim())
-                      .map((a: any) => ({
-                        id: String(a.id || ''),
-                        name: String(a.name || '').trim(),
-                        price: Number(a.price) || 0,
-                      }));
-                  }
-                } catch {}
-              }
+          const rawItems: any[] = Array.isArray(data?.items)
+            ? data.items
+            : Array.isArray(data?.data?.items)
+            ? data.data.items
+            : Array.isArray(data)
+            ? data
+            : Array.isArray(json?.items)
+            ? json.items
+            : [];
 
-              const foodTypes = parseFoodTypes(item.itemType);
-
-              return {
-                id: item.id,
-                name: item.name,
-                category: item.foodCategory?.name || item.foodSubCategory?.name || "General",
-                price: `₹${item.price}`,
-                imageUrl: item.imageUrl || null,
-                type: foodTypes[0] || "VEG",
-                types: foodTypes,
-                addons: addonsList,
-                stockQty: item.stockQuantity !== null && item.stockQuantity !== undefined && item.stockQuantity >= 0 ? item.stockQuantity : 0,
-                inStock: item.isAvailable,
-              };
-            });
-            setDishList(mapped);
-
-            if (data.servedPincodes && Array.isArray(data.servedPincodes)) {
-              if (data.servedPincodes.length > 0) {
-                const list: ServedPincodeItem[] = data.servedPincodes.map((sp: any) => ({
-                  id: String(sp.id || `pin-${sp.pincode}`),
-                  pincode: String(sp.pincode),
-                  name: String(sp.name || ""),
-                }));
-                setServedPincodes(list);
-              } else if (seller.pincode) {
-                setServedPincodes([
-                  {
-                    id: "primary-pin",
-                    pincode: String(seller.pincode),
-                    name: seller.city || "Primary Area",
-                  },
-                ]);
-              }
+          const mapped: DishItem[] = rawItems.map((item: any) => {
+            let addonsList: Array<{ id: string; name: string; price: number }> = [];
+            const rawAddons = item.addons || item.variants;
+            if (rawAddons) {
+              try {
+                const parsed = typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons;
+                if (Array.isArray(parsed)) {
+                  addonsList = parsed
+                    .filter((a: any) => a && (a.name || '').trim())
+                    .map((a: any) => ({
+                      id: String(a.id || ''),
+                      name: String(a.name || '').trim(),
+                      price: Number(a.price) || 0,
+                    }));
+                }
+              } catch {}
             }
 
-            if (data.seller) {
-              if (typeof data.seller.isOnline === "boolean") setIsOpen(data.seller.isOnline);
+            const foodTypes = parseFoodTypes(item.itemType);
+
+            return {
+              id: item.id,
+              name: item.name,
+              category: item.foodCategory?.name || item.foodSubCategory?.name || "General",
+              price: `₹${item.price}`,
+              imageUrl: item.imageUrl || null,
+              type: foodTypes[0] || "VEG",
+              types: foodTypes,
+              addons: addonsList,
+              stockQty: item.stockQuantity !== null && item.stockQuantity !== undefined && item.stockQuantity >= 0 ? item.stockQuantity : 0,
+              inStock: item.isAvailable,
+            };
+          });
+          setDishList(mapped);
+
+          const servedPins = data.servedPincodes || (data.data && data.data.servedPincodes);
+          if (servedPins && Array.isArray(servedPins)) {
+            if (servedPins.length > 0) {
+              const list: ServedPincodeItem[] = servedPins.map((sp: any) => ({
+                id: String(sp.id || `pin-${sp.pincode}`),
+                pincode: String(sp.pincode),
+                name: String(sp.name || ""),
+              }));
+              setServedPincodes(list);
+            } else if (seller.pincode) {
+              setServedPincodes([
+                {
+                  id: "primary-pin",
+                  pincode: String(seller.pincode),
+                  name: seller.city || "Primary Area",
+                },
+              ]);
             }
+          }
+
+          if (data?.seller && typeof data.seller.isOnline === "boolean") {
+            setIsOpen(data.seller.isOnline);
+            try {
+              localStorage.setItem("seller_is_online", String(data.seller.isOnline));
+            } catch {}
           }
         }
       } catch (err) {
@@ -213,7 +241,7 @@ export default function SellerMenu({
     return () => {
       isMounted = false;
     };
-  }, [seller.pincode, seller.city]);
+  }, []);
 
   const handleAddPincode = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -356,11 +384,13 @@ export default function SellerMenu({
     setIsOpen(newState);
     if (onToggleStore) onToggleStore(newState);
     try {
-      await fetchApi("/api/seller/profile/status", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isOnline: newState }),
-      });
+      localStorage.setItem("seller_is_online", String(newState));
+    } catch {}
+    try {
+      await toggleSellerOnlineStatus(newState);
+      try {
+        broadcastShopTimingAlert({ isOpen: newState });
+      } catch {}
     } catch (err) {
       console.error("Failed to update store status:", err);
     }
@@ -498,21 +528,22 @@ export default function SellerMenu({
             {/* Store Operations Switch */}
             <div className={styles.opItem}>
               <span className={styles.opLabel}>Store Operations:</span>
-              <div className={styles.toggleWrapper}>
+              <div className={styles.toggleWrapper} suppressHydrationWarning>
                 <button
                   type="button"
                   onClick={handleToggleStore}
-                  className={`${styles.toggleSwitch} ${isOpen ? styles.toggleSwitchActive : ""
-                    }`}
+                  className={`${styles.toggleSwitch} ${isOpen ? styles.toggleSwitchActive : ""}`}
                   aria-label="Toggle store status"
+                  suppressHydrationWarning
                 >
                   <span
-                    className={`${styles.toggleThumb} ${isOpen ? styles.toggleThumbActive : ""
-                      }`}
+                    className={`${styles.toggleThumb} ${isOpen ? styles.toggleThumbActive : ""}`}
+                    suppressHydrationWarning
                   />
                 </button>
                 <span
                   className={isOpen ? styles.statusTextOrange : styles.statusTextMuted}
+                  suppressHydrationWarning
                 >
                   {isOpen ? "OPEN" : "CLOSED"}
                 </span>

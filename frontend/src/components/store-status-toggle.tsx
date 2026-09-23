@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Power, PowerOff } from "lucide-react";
-import { fetchApi } from "@/lib/fetch-api";
+import { toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
+import { broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
 
 export function StoreStatusToggle({ initialStatus }: { initialStatus: boolean }) {
     const [isOnline, setIsOnline] = useState(initialStatus);
@@ -11,17 +12,12 @@ export function StoreStatusToggle({ initialStatus }: { initialStatus: boolean })
     const toggleStatus = async () => {
         setLoading(true);
         try {
-            const res = await fetchApi("/api/seller/profile/status", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ isOnline: !isOnline })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setIsOnline(data.isOnline);
-            } else {
-                alert("Failed to update store status, please try again.");
-            }
+            const nextStatus = !isOnline;
+            const confirmedStatus = await toggleSellerOnlineStatus(nextStatus);
+            setIsOnline(confirmedStatus);
+            try {
+                broadcastShopTimingAlert({ isOpen: confirmedStatus });
+            } catch {}
         } catch (error) {
             console.error("Error toggling store status:", error);
             alert("An error occurred.");

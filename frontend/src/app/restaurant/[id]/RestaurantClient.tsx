@@ -196,8 +196,58 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
 
     loadLiveSeller();
 
+    // Periodic live sync (every 4 seconds)
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadLiveSeller();
+      }
+    }, 4000);
+
+    const handleSync = () => {
+      loadLiveSeller();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadLiveSeller();
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", handleSync);
+      window.addEventListener("seller-status-updated", handleSync);
+      window.addEventListener("cloudkitchen-new-notification", handleSync);
+      window.addEventListener("storage", handleSync);
+      document.addEventListener("visibilitychange", handleVisibility);
+    }
+
+    let bcStatus: BroadcastChannel | null = null;
+    let bcNotif: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        bcStatus = new BroadcastChannel("cloudkitchen_seller_status_bc");
+        bcStatus.onmessage = () => handleSync();
+        bcNotif = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bcNotif.onmessage = () => handleSync();
+      } catch {}
+    }
+
     return () => {
       isMounted = false;
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", handleSync);
+        window.removeEventListener("seller-status-updated", handleSync);
+        window.removeEventListener("cloudkitchen-new-notification", handleSync);
+        window.removeEventListener("storage", handleSync);
+        document.removeEventListener("visibilitychange", handleVisibility);
+      }
+      if (bcStatus) {
+        try { bcStatus.close(); } catch {}
+      }
+      if (bcNotif) {
+        try { bcNotif.close(); } catch {}
+      }
     };
   }, [kitchenId]);
 

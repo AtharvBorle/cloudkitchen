@@ -42,6 +42,8 @@ export interface DynamicFoodItem {
   rating?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
+  distanceKm?: number;
+  isWithin5km?: boolean;
 }
 
 export interface DynamicRoom {
@@ -103,6 +105,10 @@ export interface DynamicKitchen {
   isOnline: boolean;
   foodType?: string;
   servedPincodes?: string[];
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number;
+  isWithin5km?: boolean;
 }
 
 export interface HomeDataFilterOptions {
@@ -136,6 +142,47 @@ export interface HomeDataState {
   isUsingFallback: boolean;
 }
 
+export const PINCODE_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "411001": { lat: 18.5204, lng: 73.8567 }, // Pune Station / Camp / Shaniwar Peth
+  "411002": { lat: 18.5135, lng: 73.8553 }, // Shukrawar Peth / Budhwar Peth
+  "411004": { lat: 18.5175, lng: 73.8398 }, // Deccan Gymkhana / FC Road
+  "411005": { lat: 18.5308, lng: 73.8475 }, // Shivajinagar
+  "411006": { lat: 18.5492, lng: 73.8967 }, // Yerwada / Kalyani Nagar
+  "411007": { lat: 18.5626, lng: 73.8087 }, // Aundh
+  "411011": { lat: 18.5262, lng: 73.8683 }, // Kasba Peth / Rasta Peth
+  "411014": { lat: 18.5679, lng: 73.9143 }, // Viman Nagar
+  "411016": { lat: 18.5293, lng: 73.8344 }, // Model Colony / Gokhalenagar
+  "411028": { lat: 18.5089, lng: 73.9260 }, // Hadapsar / Magarpatta
+  "411030": { lat: 18.5080, lng: 73.8490 }, // Sadashiv Peth / Narayan Peth
+  "411038": { lat: 18.5074, lng: 73.8077 }, // Kothrud / Paud Road / Karve Road
+  "411041": { lat: 18.4680, lng: 73.8180 }, // Vadgaon Budruk / Sinhagad Road
+  "411045": { lat: 18.5590, lng: 73.7868 }, // Baner / Balewadi
+  "411048": { lat: 18.4710, lng: 73.8790 }, // Kondhwa
+  "411051": { lat: 18.4960, lng: 73.8390 }, // Dattawadi / Parvati / Sahakar Nagar
+  "411052": { lat: 18.4900, lng: 73.8200 }, // Karve Nagar / Hingne
+  "411057": { lat: 18.5913, lng: 73.7389 }, // Hinjawadi / Wakad
+  "411058": { lat: 18.4480, lng: 73.8560 }, // Katraj / Dhankawadi
+};
+
+export function calculateDistanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(2));
+}
+
 export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   const { defaultAddress } = useLocation();
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
@@ -151,9 +198,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadData() {
+    async function loadData(isBackground = false) {
       try {
-        setIsLoading(true);
+        if (!isBackground) {
+          setIsLoading(true);
+        }
 
         const explorePromise = fetchApi('/api/public/explore')
           .then((res) => (res.ok ? res.json() : null))
@@ -396,20 +445,73 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
       } catch (err: any) {
         if (isMounted) {
           console.error('Error loading home data:', err);
-          setError(err?.message || 'Failed to load live data');
+          if (!isBackground) {
+            setError(err?.message || 'Failed to load live data');
+          }
           setIsUsingFallback(false);
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && !isBackground) {
           setIsLoading(false);
         }
       }
     }
 
-    loadData();
+    // Initial load
+    loadData(false);
+
+    // Live background polling interval (every 4 seconds)
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    }, 4000);
+
+    const handleSync = () => {
+      loadData(true);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", handleSync);
+      window.addEventListener("seller-status-updated", handleSync);
+      window.addEventListener("cloudkitchen-new-notification", handleSync);
+      window.addEventListener("storage", handleSync);
+      document.addEventListener("visibilitychange", handleVisibility);
+    }
+
+    let bcStatus: BroadcastChannel | null = null;
+    let bcNotif: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        bcStatus = new BroadcastChannel("cloudkitchen_seller_status_bc");
+        bcStatus.onmessage = () => handleSync();
+        bcNotif = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bcNotif.onmessage = () => handleSync();
+      } catch {}
+    }
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", handleSync);
+        window.removeEventListener("seller-status-updated", handleSync);
+        window.removeEventListener("cloudkitchen-new-notification", handleSync);
+        window.removeEventListener("storage", handleSync);
+        document.removeEventListener("visibilitychange", handleVisibility);
+      }
+      if (bcStatus) {
+        try { bcStatus.close(); } catch {}
+      }
+      if (bcNotif) {
+        try { bcNotif.close(); } catch {}
+      }
     };
   }, []);
 
