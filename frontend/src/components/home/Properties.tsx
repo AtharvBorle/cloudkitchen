@@ -667,7 +667,7 @@ export default function Properties({ places }: PropertiesProps) {
                   }}
                 >
                   <Image
-                    src={place.imageUrl}
+                    src={place.imageUrl || "/images/places/place-pizza.png"}
                     alt={place.name}
                     fill
                     sizes="(max-width: 768px) 100vw, 250px"

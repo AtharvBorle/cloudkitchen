@@ -171,6 +171,8 @@ export function useSellerProfile() {
       longitude: isSeller ? (cachedProfile?.longitude ?? null) : null,
       isLocationPinned: isSeller ? (cachedProfile?.isLocationPinned ?? false) : false,
       bannerImageUrl: isSeller ? (cachedProfile?.bannerImageUrl || cachedProfile?.profile?.bannerImageUrl || "") : "",
+      cardImageUrl: isSeller ? (cachedProfile?.cardImageUrl || "") : "",
+      kitchenImages: isSeller ? (cachedProfile?.kitchenImages || []) : [],
       avatarInitials: isSeller ? (cachedProfile?.avatarInitials || computeInitials(name)) : "SK",
       partnerRole: isSeller ? (cachedProfile?.partnerRole || "Neo Cloud Partner") : "",
       isOnline: isSeller ? (cachedProfile?.isOnline ?? true) : true,
