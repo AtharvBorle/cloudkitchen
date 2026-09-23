@@ -6,7 +6,8 @@ import { Plus, Search, SquarePen, Sparkles, Trash2, Utensils, MapPin, Edit3, X, 
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
+import { broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
 import styles from "./SellerMenu.module.css";
 
 export type MenuCategoryFilter = string;
@@ -95,7 +96,10 @@ export default function SellerMenu({
 }: SellerMenuProps) {
   const router = useRouter();
   const seller = useSellerProfile();
-  const [isOpen, setIsOpen] = useState(initialIsOpen);
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
+    if (typeof seller.isOnline === "boolean") return seller.isOnline;
+    return typeof initialIsOpen === "boolean" ? initialIsOpen : true;
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All Items");
   const [searchQuery, setSearchQuery] = useState("");
@@ -134,14 +138,35 @@ export default function SellerMenu({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
-  // Fetch live menu items and served pincodes from DB
+  // Keep isOpen synced with real-time seller profile status
+  useEffect(() => {
+    if (typeof seller.isOnline === "boolean") {
+      setIsOpen(seller.isOnline);
+    }
+  }, [seller.isOnline]);
+
+  // Fetch live menu items, store status, and served pincodes from DB
   useEffect(() => {
     let isMounted = true;
     async function loadMenu() {
       try {
-        const res = await fetchApi("/api/seller/menu");
-        if (res.ok) {
-          const json = await res.json();
+        const [res, statusRes] = await Promise.allSettled([
+          fetchApi("/api/seller/menu"),
+          fetchApi("/api/seller/profile/status"),
+        ]);
+
+        if (statusRes.status === "fulfilled" && statusRes.value.ok) {
+          try {
+            const sJson = await statusRes.value.json();
+            const sData = sJson.data || sJson;
+            if (typeof sData?.isOnline === "boolean" && isMounted) {
+              setIsOpen(sData.isOnline);
+            }
+          } catch {}
+        }
+
+        if (res.status === "fulfilled" && res.value.ok) {
+          const json = await res.value.json();
           const data = json.data || json;
           if (data && data.items && Array.isArray(data.items) && isMounted) {
             const mapped: DishItem[] = data.items.map((item: any) => {
@@ -356,11 +381,10 @@ export default function SellerMenu({
     setIsOpen(newState);
     if (onToggleStore) onToggleStore(newState);
     try {
-      await fetchApi("/api/seller/profile/status", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isOnline: newState }),
-      });
+      await toggleSellerOnlineStatus(newState);
+      try {
+        broadcastShopTimingAlert({ isOpen: newState });
+      } catch {}
     } catch (err) {
       console.error("Failed to update store status:", err);
     }
