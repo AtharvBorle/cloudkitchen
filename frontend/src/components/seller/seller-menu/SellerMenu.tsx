@@ -97,7 +97,12 @@ export default function SellerMenu({
   const router = useRouter();
   const seller = useSellerProfile();
   const [isOpen, setIsOpen] = useState<boolean>(() => {
-    if (typeof seller.isOnline === "boolean") return seller.isOnline;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("seller_is_online");
+        if (stored !== null) return stored === "true";
+      } catch {}
+    }
     return typeof initialIsOpen === "boolean" ? initialIsOpen : true;
   });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -138,94 +143,81 @@ export default function SellerMenu({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
-  // Keep isOpen synced with real-time seller profile status
-  useEffect(() => {
-    if (typeof seller.isOnline === "boolean") {
-      setIsOpen(seller.isOnline);
-    }
-  }, [seller.isOnline]);
-
-  // Fetch live menu items, store status, and served pincodes from DB
+  // Fetch live menu items and served pincodes from DB
   useEffect(() => {
     let isMounted = true;
     async function loadMenu() {
       try {
-        const [res, statusRes] = await Promise.allSettled([
-          fetchApi("/api/seller/menu"),
-          fetchApi("/api/seller/profile/status"),
-        ]);
-
-        if (statusRes.status === "fulfilled" && statusRes.value.ok) {
-          try {
-            const sJson = await statusRes.value.json();
-            const sData = sJson.data || sJson;
-            if (typeof sData?.isOnline === "boolean" && isMounted) {
-              setIsOpen(sData.isOnline);
-            }
-          } catch {}
-        }
-
-        if (res.status === "fulfilled" && res.value.ok) {
-          const json = await res.value.json();
+        const res = await fetchApi("/api/seller/menu");
+        if (res.ok && isMounted) {
+          const json = await res.json();
           const data = json.data || json;
-          if (data && data.items && Array.isArray(data.items) && isMounted) {
-            const mapped: DishItem[] = data.items.map((item: any) => {
-              let addonsList: Array<{ id: string; name: string; price: number }> = [];
-              const rawAddons = item.addons || item.variants;
-              if (rawAddons) {
-                try {
-                  const parsed = typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons;
-                  if (Array.isArray(parsed)) {
-                    addonsList = parsed
-                      .filter((a: any) => a && (a.name || '').trim())
-                      .map((a: any) => ({
-                        id: String(a.id || ''),
-                        name: String(a.name || '').trim(),
-                        price: Number(a.price) || 0,
-                      }));
-                  }
-                } catch {}
-              }
+          const rawItems = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.items)
+            ? data.items
+            : [];
 
-              const foodTypes = parseFoodTypes(item.itemType);
-
-              return {
-                id: item.id,
-                name: item.name,
-                category: item.foodCategory?.name || item.foodSubCategory?.name || "General",
-                price: `₹${item.price}`,
-                imageUrl: item.imageUrl || null,
-                type: foodTypes[0] || "VEG",
-                types: foodTypes,
-                addons: addonsList,
-                stockQty: item.stockQuantity !== null && item.stockQuantity !== undefined && item.stockQuantity >= 0 ? item.stockQuantity : 0,
-                inStock: item.isAvailable,
-              };
-            });
-            setDishList(mapped);
-
-            if (data.servedPincodes && Array.isArray(data.servedPincodes)) {
-              if (data.servedPincodes.length > 0) {
-                const list: ServedPincodeItem[] = data.servedPincodes.map((sp: any) => ({
-                  id: String(sp.id || `pin-${sp.pincode}`),
-                  pincode: String(sp.pincode),
-                  name: String(sp.name || ""),
-                }));
-                setServedPincodes(list);
-              } else if (seller.pincode) {
-                setServedPincodes([
-                  {
-                    id: "primary-pin",
-                    pincode: String(seller.pincode),
-                    name: seller.city || "Primary Area",
-                  },
-                ]);
-              }
+          const mapped: DishItem[] = rawItems.map((item: any) => {
+            let addonsList: Array<{ id: string; name: string; price: number }> = [];
+            const rawAddons = item.addons || item.variants;
+            if (rawAddons) {
+              try {
+                const parsed = typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons;
+                if (Array.isArray(parsed)) {
+                  addonsList = parsed
+                    .filter((a: any) => a && (a.name || '').trim())
+                    .map((a: any) => ({
+                      id: String(a.id || ''),
+                      name: String(a.name || '').trim(),
+                      price: Number(a.price) || 0,
+                    }));
+                }
+              } catch {}
             }
 
-            if (data.seller) {
-              if (typeof data.seller.isOnline === "boolean") setIsOpen(data.seller.isOnline);
+            const foodTypes = parseFoodTypes(item.itemType);
+
+            return {
+              id: item.id,
+              name: item.name,
+              category: item.foodCategory?.name || item.foodSubCategory?.name || "General",
+              price: `₹${item.price}`,
+              imageUrl: item.imageUrl || null,
+              type: foodTypes[0] || "VEG",
+              types: foodTypes,
+              addons: addonsList,
+              stockQty: item.stockQuantity !== null && item.stockQuantity !== undefined && item.stockQuantity >= 0 ? item.stockQuantity : 0,
+              inStock: item.isAvailable,
+            };
+          });
+          setDishList(mapped);
+
+          const servedPins = data.servedPincodes || (data.data && data.data.servedPincodes);
+          if (servedPins && Array.isArray(servedPins)) {
+            if (servedPins.length > 0) {
+              const list: ServedPincodeItem[] = servedPins.map((sp: any) => ({
+                id: String(sp.id || `pin-${sp.pincode}`),
+                pincode: String(sp.pincode),
+                name: String(sp.name || ""),
+              }));
+              setServedPincodes(list);
+            } else if (seller.pincode) {
+              setServedPincodes([
+                {
+                  id: "primary-pin",
+                  pincode: String(seller.pincode),
+                  name: seller.city || "Primary Area",
+                },
+              ]);
             }
+          }
+
+          if (data?.seller && typeof data.seller.isOnline === "boolean") {
+            setIsOpen(data.seller.isOnline);
+            try {
+              localStorage.setItem("seller_is_online", String(data.seller.isOnline));
+            } catch {}
           }
         }
       } catch (err) {
@@ -238,7 +230,7 @@ export default function SellerMenu({
     return () => {
       isMounted = false;
     };
-  }, [seller.pincode, seller.city]);
+  }, []);
 
   const handleAddPincode = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -380,6 +372,9 @@ export default function SellerMenu({
     const newState = !isOpen;
     setIsOpen(newState);
     if (onToggleStore) onToggleStore(newState);
+    try {
+      localStorage.setItem("seller_is_online", String(newState));
+    } catch {}
     try {
       await toggleSellerOnlineStatus(newState);
       try {
