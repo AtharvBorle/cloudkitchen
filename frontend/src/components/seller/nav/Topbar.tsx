@@ -137,6 +137,9 @@ export default function Topbar({
     if (pathname?.startsWith("/seller/menu") || pathname?.startsWith("/seller/res/menu") || pathname?.startsWith("/seller/edit-menu")) {
       return "Search dishes by name, category, or type...";
     }
+    if (pathname === "/seller/dashboard" || pathname === "/seller" || pathname?.startsWith("/seller/dashboard") || pathname?.startsWith("/seller/res/dashboard")) {
+      return "Search by customer name or order ID...";
+    }
     if (pathname?.startsWith("/seller/orders") || pathname?.startsWith("/seller/res/orders") || pathname?.startsWith("/seller/order-default")) {
       return "Search orders by ID, customer, dish, room...";
     }

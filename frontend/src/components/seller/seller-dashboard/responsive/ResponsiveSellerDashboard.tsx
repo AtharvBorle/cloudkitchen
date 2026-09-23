@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,8 @@ import {
   Calendar,
   DollarSign,
   ChevronRight,
+  Search,
+  X,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveSellerDashboard.module.css";
@@ -120,6 +122,20 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
       router.push("/seller/notifications");
     }
   };
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const displayedRecentOrders = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return recentOrders;
+    return recentOrders.filter(
+      (order) =>
+        (order.customerName || "").toLowerCase().includes(q) ||
+        (order.orderNumber || "").toLowerCase().includes(q) ||
+        (order.id || "").toLowerCase().includes(q) ||
+        (order.status || "").toLowerCase().includes(q)
+    );
+  }, [recentOrders, searchQuery]);
 
   return (
     <div className={styles.screenWrapper}>
@@ -235,9 +251,75 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
             </div>
           </section>
 
+          {/* Search Bar for Orders */}
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "12px",
+              border: "1px solid #E2E8F0",
+              padding: "9px 14px",
+              gap: "10px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+            }}
+          >
+            <Search size={17} color="#94A3B8" />
+            <input
+              type="text"
+              placeholder="Search by customer name or order ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                border: "none",
+                outline: "none",
+                width: "100%",
+                fontSize: "13.5px",
+                color: "#0F172A",
+                backgroundColor: "transparent",
+              }}
+              aria-label="Search orders"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  padding: "2px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+                aria-label="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
           {/* Section Header: RECENT ORDERS */}
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTitle}>RECENT ORDERS</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span className={styles.sectionTitle}>RECENT ORDERS</span>
+              {searchQuery.trim() && (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: "#EA580C",
+                    backgroundColor: "#FFF7ED",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  {displayedRecentOrders.length} found
+                </span>
+              )}
+            </div>
             <Link href="/seller/orders" className={styles.viewAllLink}>
               View all
               <ChevronRight size={14} />
@@ -246,13 +328,41 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
 
           {/* Recent Orders List */}
           <section className={styles.ordersList} aria-label="Recent Orders List">
-            {recentOrders.length === 0 ? (
+            {displayedRecentOrders.length === 0 ? (
               <div style={{ textAlign: "center", padding: "32px 16px", color: "#64748b", backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>No recent orders yet</p>
-                <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>New orders from customers will appear here.</p>
+                <Search size={24} color="#94A3B8" style={{ marginBottom: "6px" }} />
+                <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#1E293B" }}>
+                  {searchQuery.trim()
+                    ? `No orders matching "${searchQuery}"`
+                    : "No recent orders yet"}
+                </p>
+                <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {searchQuery.trim()
+                    ? "Try searching with a different customer name or order ID."
+                    : "New orders from customers will appear here."}
+                </p>
+                {searchQuery.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    style={{
+                      marginTop: "10px",
+                      backgroundColor: "#FFF7ED",
+                      border: "1px solid #FED7AA",
+                      color: "#EA580C",
+                      padding: "5px 12px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear Search
+                  </button>
+                )}
               </div>
             ) : (
-              recentOrders.map((order) => {
+              displayedRecentOrders.map((order) => {
                 const badgeClass = getStatusBadgeStyle(order.status);
                 const cardContent = (
                   <>

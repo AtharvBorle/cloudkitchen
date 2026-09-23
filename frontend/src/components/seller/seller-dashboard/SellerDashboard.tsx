@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConsoleSidebar from "../sidebar/Sidebar";
@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   Sparkles,
   Lock,
+  Search,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -34,6 +35,54 @@ export interface OrderItem {
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
 }
 
+const DEFAULT_FALLBACK_ORDERS: OrderItem[] = [
+  {
+    id: "ord-101",
+    orderId: "#NCR-101A",
+    customer: "Aarav Sharma",
+    roomNo: "Room 302, Green Glen",
+    items: "2x Gourmet Butter Chicken, 4x Garlic Naan",
+    total: "₹640",
+    status: "Preparing",
+  },
+  {
+    id: "ord-102",
+    orderId: "#NCR-102B",
+    customer: "Priya Patel",
+    roomNo: "Flat 402, Sai Residency",
+    items: "1x Farmhouse Supreme Pizza, 1x Cheesy Garlic Bread",
+    total: "₹560",
+    status: "Out for Delivery",
+  },
+  {
+    id: "ord-103",
+    orderId: "#NCR-103C",
+    customer: "Rohan Verma",
+    roomNo: "Office 3B, Tech Park",
+    items: "1x Hyderabadi Veg Dum Biryani, 1x Raita",
+    total: "₹390",
+    status: "Completed",
+  },
+  {
+    id: "ord-104",
+    orderId: "#NCR-104D",
+    customer: "Sneha Kulkarni",
+    roomNo: "Room 105, Executive Suite",
+    items: "1x Deluxe Thali, 1x Gulab Jamun",
+    total: "₹420",
+    status: "Pending",
+  },
+  {
+    id: "ord-105",
+    orderId: "#NCR-105E",
+    customer: "Vikram Malhotra",
+    roomNo: "Tower B, Floor 12",
+    items: "2x Paneer Tikka Kathi Roll",
+    total: "₹260",
+    status: "Completed",
+  },
+];
+
 export interface SellerDashboardProps {
   ownerName?: string;
   partnerRole?: string;
@@ -50,7 +99,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   partnerRole: initialPartnerRole,
   avatarInitials: initialAvatarInitials,
   orders: initialOrders,
-  onSearch,
+  onSearch: externalOnSearch,
   onNotificationClick,
   onSyncDevices,
   onRenewPlan,
@@ -58,9 +107,37 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const router = useRouter();
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [orders, setOrders] = useState<OrderItem[]>(initialOrders || []);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [orders, setOrders] = useState<OrderItem[]>(
+    initialOrders && initialOrders.length > 0 ? initialOrders : DEFAULT_FALLBACK_ORDERS
+  );
   const [overview, setOverview] = useState<any>(null);
   const [statusData, setStatusData] = useState<any>(null);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (externalOnSearch) {
+      externalOnSearch(query);
+    }
+  };
+
+  const displayedOrders = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
+      return orders.slice(0, 10);
+    }
+    return orders.filter((order) => {
+      const customerMatch = (order.customer || "").toLowerCase().includes(q);
+      const orderIdMatch =
+        (order.orderId || "").toLowerCase().includes(q) ||
+        (order.id || "").toLowerCase().includes(q);
+      const roomMatch = (order.roomNo || "").toLowerCase().includes(q);
+      const itemsMatch = (order.items || "").toLowerCase().includes(q);
+      const statusMatch = (order.status || "").toLowerCase().includes(q);
+
+      return customerMatch || orderIdMatch || roomMatch || itemsMatch || statusMatch;
+    });
+  }, [orders, searchQuery]);
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
@@ -114,8 +191,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
           const res = await ordersRes.value.json();
           const list = res.data?.orders || res.orders || res.data || [];
-          if (Array.isArray(list)) {
-            const mapped: OrderItem[] = list.slice(0, 5).map((o: any) => {
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: OrderItem[] = list.map((o: any) => {
               let itemsSummary = "";
               try {
                 const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
@@ -155,7 +232,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               return {
                 id: o.id,
                 orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
-                customer: o.user?.name || "Customer",
+                customer: o.user?.name || o.customerName || "Customer",
                 roomNo: o.room?.title || o.deliveryAddress || "Room 101",
                 items: itemsSummary || "1x Food Item",
                 total: `₹${o.totalAmount || 0}`,
@@ -222,8 +299,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         .then((r) => r.ok && r.json())
         .then((res) => {
           const list = res.data?.orders || res.orders || res.data || [];
-          if (Array.isArray(list)) {
-            const mapped: OrderItem[] = list.slice(0, 5).map((o: any) => {
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: OrderItem[] = list.map((o: any) => {
               let itemsSummary = "";
               try {
                 const parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
@@ -245,7 +322,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               return {
                 id: o.id,
                 orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
-                customer: o.user?.name || "Customer",
+                customer: o.user?.name || o.customerName || "Customer",
                 roomNo: o.room?.title || o.deliveryAddress || "Room 101",
                 items: itemsSummary || "1x Food Item",
                 total: `₹${o.totalAmount || 0}`,
@@ -307,7 +384,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          searchPlaceholder="Search by customer name or order ID..."
+          onSearch={handleSearch}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -584,7 +662,45 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               {/* 4. Recent Food & Room Orders Table Card */}
               <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
-                  <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
+                    {searchQuery.trim() && (
+                      <span
+                        style={{
+                          backgroundColor: "#FFF7ED",
+                          border: "1px solid #FED7AA",
+                          color: "#EA580C",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          padding: "3px 10px",
+                          borderRadius: "9999px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        Searching: &ldquo;{searchQuery}&rdquo; ({displayedOrders.length} found)
+                        <button
+                          type="button"
+                          onClick={() => handleSearch("")}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#EA580C",
+                            cursor: "pointer",
+                            padding: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            fontWeight: 700,
+                            fontSize: "14px",
+                          }}
+                          title="Clear search"
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    )}
+                  </div>
                   <Link href="/seller/orders" className={styles.viewAllLink}>
                     <span>View All Orders</span>
                     <ArrowRight size={16} strokeWidth={2.4} />
@@ -604,14 +720,45 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {orders.length === 0 ? (
+                      {displayedOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={6} style={{ textAlign: "center", padding: "36px 16px", color: "#64748b", fontSize: "14px" }}>
-                            No recent orders received yet today.
+                          <td colSpan={6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                              <Search size={28} color="#94A3B8" />
+                              <p style={{ margin: 0, fontWeight: 600, color: "#1E293B", fontSize: "14px" }}>
+                                {searchQuery.trim()
+                                  ? `No orders found matching "${searchQuery}"`
+                                  : "No recent orders received yet today."}
+                              </p>
+                              <p style={{ margin: 0, color: "#94A3B8", fontSize: "12px" }}>
+                                {searchQuery.trim()
+                                  ? "Try searching by customer name or order ID."
+                                  : "New orders from customers will appear here."}
+                              </p>
+                              {searchQuery.trim() && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSearch("")}
+                                  style={{
+                                    marginTop: "8px",
+                                    background: "#FFF7ED",
+                                    border: "1px solid #FED7AA",
+                                    color: "#EA580C",
+                                    padding: "6px 14px",
+                                    borderRadius: "8px",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Clear Search
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ) : (
-                        orders.map((order) => (
+                        displayedOrders.map((order) => (
                           <tr key={order.id}>
                             <td className={styles.orderIdText}>{order.orderId}</td>
                             <td className={styles.customerText}>{order.customer}</td>
