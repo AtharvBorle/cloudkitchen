@@ -42,6 +42,8 @@ export interface DynamicFoodItem {
   rating?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
+  distanceKm?: number;
+  isWithin5km?: boolean;
 }
 
 export interface DynamicRoom {
@@ -103,6 +105,10 @@ export interface DynamicKitchen {
   isOnline: boolean;
   foodType?: string;
   servedPincodes?: string[];
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number;
+  isWithin5km?: boolean;
 }
 
 export interface HomeDataFilterOptions {
@@ -151,9 +157,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadData() {
+    async function loadData(isBackground = false) {
       try {
-        setIsLoading(true);
+        if (!isBackground) {
+          setIsLoading(true);
+        }
 
         const explorePromise = fetchApi('/api/public/explore')
           .then((res) => (res.ok ? res.json() : null))
@@ -396,20 +404,73 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
       } catch (err: any) {
         if (isMounted) {
           console.error('Error loading home data:', err);
-          setError(err?.message || 'Failed to load live data');
+          if (!isBackground) {
+            setError(err?.message || 'Failed to load live data');
+          }
           setIsUsingFallback(false);
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && !isBackground) {
           setIsLoading(false);
         }
       }
     }
 
-    loadData();
+    // Initial load
+    loadData(false);
+
+    // Live background polling interval (every 4 seconds)
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    }, 4000);
+
+    const handleSync = () => {
+      loadData(true);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", handleSync);
+      window.addEventListener("seller-status-updated", handleSync);
+      window.addEventListener("cloudkitchen-new-notification", handleSync);
+      window.addEventListener("storage", handleSync);
+      document.addEventListener("visibilitychange", handleVisibility);
+    }
+
+    let bcStatus: BroadcastChannel | null = null;
+    let bcNotif: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        bcStatus = new BroadcastChannel("cloudkitchen_seller_status_bc");
+        bcStatus.onmessage = () => handleSync();
+        bcNotif = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bcNotif.onmessage = () => handleSync();
+      } catch {}
+    }
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", handleSync);
+        window.removeEventListener("seller-status-updated", handleSync);
+        window.removeEventListener("cloudkitchen-new-notification", handleSync);
+        window.removeEventListener("storage", handleSync);
+        document.removeEventListener("visibilitychange", handleVisibility);
+      }
+      if (bcStatus) {
+        try { bcStatus.close(); } catch {}
+      }
+      if (bcNotif) {
+        try { bcNotif.close(); } catch {}
+      }
     };
   }, []);
 

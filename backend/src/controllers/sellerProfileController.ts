@@ -68,6 +68,9 @@ export const updateSellerProfile = async (req: Request) => {
     let currentPassword: string | undefined;
     let newPassword: string | undefined;
     let bannerImageFile: File | null = null;
+    let cardImageFile: File | null = null;
+    let removeCardImage = false;
+    let removeBannerImage = false;
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -88,6 +91,9 @@ export const updateSellerProfile = async (req: Request) => {
         if (rawLng && rawLng !== "") longitude = parseFloat(rawLng as string);
         if (rawPinned !== null && rawPinned !== undefined) isLocationPinned = rawPinned === "true" || rawPinned === "1";
         bannerImageFile = formData.get("bannerImageFile") as File | null;
+        cardImageFile = (formData.get("cardImageFile") || formData.get("kitchenImageFile") || formData.get("cardGridImageFile")) as File | null;
+        if (formData.get("removeCardImage") === "true") removeCardImage = true;
+        if (formData.get("removeBannerImage") === "true") removeBannerImage = true;
     } else {
         const body = await req.json();
         name = body.name || body.ownerName || body.userFullName;
@@ -113,6 +119,8 @@ export const updateSellerProfile = async (req: Request) => {
         if (body.isLocationPinned !== undefined) {
             isLocationPinned = Boolean(body.isLocationPinned);
         }
+        if (body.removeCardImage) removeCardImage = true;
+        if (body.removeBannerImage) removeBannerImage = true;
     }
 
     const userDataToUpdate: any = {};
@@ -191,10 +199,21 @@ export const updateSellerProfile = async (req: Request) => {
     }
     if (isLocationPinned !== undefined) profileUpdateData.isLocationPinned = isLocationPinned;
 
+    if (cardImageFile && cardImageFile.size > 0) {
+        const bytes = await cardImageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const uploadedCardUrl = await uploadImage(buffer, cardImageFile.type, cardImageFile.name, "sellers");
+        profileUpdateData.kitchenImages = JSON.stringify([uploadedCardUrl]);
+    } else if (removeCardImage) {
+        profileUpdateData.kitchenImages = "[]";
+    }
+
     if (bannerImageFile && bannerImageFile.size > 0) {
         const bytes = await bannerImageFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
         profileUpdateData.bannerImageUrl = await uploadImage(buffer, bannerImageFile.type, bannerImageFile.name, "sellers");
+    } else if (removeBannerImage) {
+        profileUpdateData.bannerImageUrl = "";
     }
 
     if (Object.keys(profileUpdateData).length > 0) {

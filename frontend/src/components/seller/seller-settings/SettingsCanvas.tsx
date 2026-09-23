@@ -18,6 +18,7 @@ import {
   Lock,
   MapPin,
   ImagePlus,
+  LayoutGrid,
   Upload,
   Save,
 } from "lucide-react";
@@ -283,6 +284,101 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const [saving, setSaving] = useState(false);
   const [toastData, setToastData] = useState<{ title: string; status: "ON" | "OFF" | null } | null>(null);
 
+  // Kitchen Card Grid Photo State
+  const [cardPreview, setCardPreview] = useState<string>(
+    seller.cardImageUrl || ""
+  );
+  const [cardFile, setCardFile] = useState<File | null>(null);
+  const [isUploadingCard, setIsUploadingCard] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (seller.cardImageUrl && !cardFile) {
+      setCardPreview(seller.cardImageUrl);
+    }
+  }, [seller.cardImageUrl, cardFile]);
+
+  const handleCardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+      return;
+    }
+    setCardFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setCardPreview(localUrl);
+    setToastData({ title: "Card photo selected. Click Save to publish.", status: "ON" });
+  };
+
+  const handleQuickUploadCard = async () => {
+    if (!cardFile) return;
+    setIsUploadingCard(true);
+    try {
+      const data = new FormData();
+      data.append("cardImageFile", cardFile);
+      data.append("businessName", formData.businessName || seller.businessName);
+      data.append("phone", formData.phoneNumber || seller.phone);
+      data.append("email", formData.businessEmail || seller.email);
+      data.append("address", formData.address || seller.address);
+      if (formData.latitude) data.append("latitude", String(formData.latitude));
+      if (formData.longitude) data.append("longitude", String(formData.longitude));
+      data.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload card grid image");
+      }
+
+      const json = await res.json();
+      const profileData = json.data?.profile || json.profile;
+      let rawKImages: string[] = [];
+      if (profileData?.kitchenImages) {
+        try {
+          rawKImages = typeof profileData.kitchenImages === "string" ? JSON.parse(profileData.kitchenImages) : profileData.kitchenImages;
+        } catch {
+          rawKImages = [];
+        }
+      }
+      const updatedCardUrl = (Array.isArray(rawKImages) && rawKImages[0]) || profileData?.bannerImageUrl || cardPreview;
+      setCardPreview(updatedCardUrl);
+      setCardFile(null);
+      updateCachedProfile({ cardImageUrl: updatedCardUrl, kitchenImages: rawKImages.length > 0 ? rawKImages : [updatedCardUrl] });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { cardImageUrl: updatedCardUrl } }));
+      }
+      setToastData({ title: "Card grid photo uploaded and published live!", status: "ON" });
+    } catch (err: any) {
+      console.error("Card upload error:", err);
+      setToastData({ title: err.message || "Card upload failed", status: "OFF" });
+    } finally {
+      setIsUploadingCard(false);
+    }
+  };
+
+  const handleResetCard = async () => {
+    setCardFile(null);
+    setCardPreview("");
+    updateCachedProfile({ cardImageUrl: "", kitchenImages: [] });
+    try {
+      const data = new FormData();
+      data.append("removeCardImage", "true");
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: {} }));
+      }
+      setToastData({ title: "Card grid photo removed and reset to default theme", status: "ON" });
+    } catch {
+      setToastData({ title: "Card grid photo reset to default theme", status: "ON" });
+    }
+  };
+
   // Storefront Banner State
   const [bannerPreview, setBannerPreview] = useState<string>(
     seller.bannerImageUrl || (seller.profile as any)?.bannerImageUrl || ""
@@ -337,6 +433,9 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       setBannerPreview(updatedBannerUrl);
       setBannerFile(null);
       updateCachedProfile({ bannerImageUrl: updatedBannerUrl });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { bannerImageUrl: updatedBannerUrl } }));
+      }
       setToastData({ title: "Banner uploaded and published live!", status: "ON" });
     } catch (err: any) {
       console.error("Banner upload error:", err);
@@ -346,11 +445,24 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     }
   };
 
-  const handleResetBanner = () => {
+  const handleResetBanner = async () => {
     setBannerFile(null);
     setBannerPreview("");
     updateCachedProfile({ bannerImageUrl: "" });
-    setToastData({ title: "Banner reset to default theme image", status: "ON" });
+    try {
+      const data = new FormData();
+      data.append("removeBannerImage", "true");
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        body: data,
+      });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: {} }));
+      }
+      setToastData({ title: "Banner removed and reset to default theme", status: "ON" });
+    } catch {
+      setToastData({ title: "Banner reset to default theme image", status: "ON" });
+    }
   };
 
   const NOTIFICATION_TITLES: Partial<Record<keyof SettingsFormData, string>> = {
@@ -448,8 +560,10 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && typeof e.preventDefault === "function") {
+      e.preventDefault();
+    }
     setSaving(true);
 
     try {
@@ -470,9 +584,9 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         console.error("Failed to save regional settings to localStorage:", err);
       }
 
-      // 2. Persist Restaurant Information & Banner to backend database
+      // 2. Persist Restaurant Information, Card Photo & Banner to backend database
       let res: Response;
-      if (bannerFile) {
+      if (cardFile || bannerFile) {
         const fd = new FormData();
         fd.append("businessName", formData.businessName);
         fd.append("email", formData.businessEmail);
@@ -481,7 +595,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         if (formData.latitude) fd.append("latitude", String(formData.latitude));
         if (formData.longitude) fd.append("longitude", String(formData.longitude));
         fd.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
-        fd.append("bannerImageFile", bannerFile);
+        if (cardFile) fd.append("cardImageFile", cardFile);
+        if (bannerFile) fd.append("bannerImageFile", bannerFile);
 
         res = await fetchApi("/api/seller/profile", {
           method: "POST",
@@ -509,7 +624,22 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       }
 
       const resJson = await res.json().catch(() => ({}));
-      const updatedBannerUrl = resJson.data?.profile?.bannerImageUrl || resJson.profile?.bannerImageUrl || bannerPreview;
+      const profileData = resJson.data?.profile || resJson.profile;
+      let rawKImages: string[] = [];
+      if (profileData?.kitchenImages) {
+        try {
+          rawKImages = typeof profileData.kitchenImages === "string" ? JSON.parse(profileData.kitchenImages) : profileData.kitchenImages;
+        } catch {
+          rawKImages = [];
+        }
+      }
+      const updatedCardUrl = (Array.isArray(rawKImages) && rawKImages[0]) || profileData?.bannerImageUrl || cardPreview;
+      const updatedBannerUrl = profileData?.bannerImageUrl || bannerPreview;
+
+      if (cardFile) {
+        setCardFile(null);
+        setCardPreview(updatedCardUrl);
+      }
       if (bannerFile) {
         setBannerFile(null);
         setBannerPreview(updatedBannerUrl);
@@ -525,9 +655,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         latitude: formData.latitude,
         longitude: formData.longitude,
         isLocationPinned: Boolean(formData.latitude && formData.longitude),
+        cardImageUrl: updatedCardUrl,
         bannerImageUrl: updatedBannerUrl,
+        kitchenImages: rawKImages.length > 0 ? rawKImages : undefined,
         avatarInitials: computeInitials(formData.businessName),
       });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { cardImageUrl: updatedCardUrl, bannerImageUrl: updatedBannerUrl } }));
+      }
 
       if (onSave) {
         onSave(formData);
@@ -592,13 +727,264 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       </div>
 
       {/* 3. Form Body */}
-      <form onSubmit={handleSubmit}>
+      <div>
         {/* Tab 1: General (Matches the Exact Provided Image) */}
         {activeTab === "General" && (
           <div className={styles.mainGrid}>
             {/* Left Column: Storefront Banner & Restaurant Info & Language */}
             <div className={styles.leftColumn}>
-              {/* Card 0: Storefront Cover Banner */}
+              {/* Card 0A: Kitchen Card Grid Photo (Dashboard & Explore Listings) */}
+              <div className={styles.card}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        backgroundColor: "#EEF2FF",
+                        border: "1px solid #C7D2FE",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#4F46E5",
+                      }}
+                    >
+                      <LayoutGrid size={19} />
+                    </div>
+                    <div>
+                      <h2 className={styles.cardTitle} style={{ margin: 0, fontSize: "16px" }}>
+                        Kitchen Card Grid Photo
+                      </h2>
+                      <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0 0" }}>
+                        Main listing photo displayed on customer dashboard &amp; explore cards
+                      </p>
+                    </div>
+                  </div>
+                  {cardPreview ? (
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: "#16A34A",
+                        backgroundColor: "#F0FDF4",
+                        padding: "3px 10px",
+                        borderRadius: "20px",
+                        border: "1px solid #BBF7D0",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <CheckCircle2 size={12} /> Custom Photo Live
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "#64748B",
+                        backgroundColor: "#F1F5F9",
+                        padding: "3px 10px",
+                        borderRadius: "20px",
+                        border: "1px solid #E2E8F0",
+                      }}
+                    >
+                      Default Theme Photo
+                    </span>
+                  )}
+                </div>
+
+                {/* Live Card Mockup matching customer dashboard */}
+                <div style={{ display: "flex", gap: "20px", alignItems: "center", marginTop: "14px", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      width: "250px",
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "16px",
+                      overflow: "hidden",
+                      border: "1.5px solid #E2E8F0",
+                      boxShadow: "0 6px 18px rgba(0, 0, 0, 0.06)",
+                      display: "flex",
+                      flexDirection: "column",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ width: "100%", height: "145px", position: "relative", backgroundColor: "#FFEBD8" }}>
+                      <img
+                        src={cardPreview || "/images/places/place-pizza.png"}
+                        alt="Card Grid Preview"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = "/images/places/place-pizza.png";
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "8px",
+                          left: "8px",
+                          backgroundColor: "rgba(15, 23, 42, 0.75)",
+                          color: "#FFFFFF",
+                          fontSize: "9.5px",
+                          fontWeight: 700,
+                          padding: "2px 7px",
+                          borderRadius: "5px",
+                          backdropFilter: "blur(4px)",
+                        }}
+                      >
+                        Explore Card Mockup
+                      </div>
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "8px",
+                          right: "8px",
+                          backgroundColor: "#16A34A",
+                          color: "#FFFFFF",
+                          fontSize: "9.5px",
+                          fontWeight: 700,
+                          padding: "2px 6px",
+                          borderRadius: "5px",
+                        }}
+                      >
+                        OPEN
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: "14px",
+                          fontWeight: 700,
+                          color: "#0F172A",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formData.businessName || seller.businessName || "Your Kitchen"}
+                      </h3>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            backgroundColor: "#F0FDF4",
+                            color: "#16A34A",
+                            padding: "2px 6px",
+                            borderRadius: "5px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            border: "1px solid #BBF7D0",
+                          }}
+                        >
+                          <Star size={10} fill="#16A34A" /> 4.8
+                        </span>
+                        <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>20-30 mins</span>
+                        <span style={{ fontSize: "11px", color: "#EA580C", fontWeight: 600 }}>Free Delivery</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions & Instructions */}
+                  <div style={{ flex: 1, minWidth: "200px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <p style={{ fontSize: "12.5px", color: "#475569", margin: 0, lineHeight: 1.5 }}>
+                      Customize the card photo customers see in discovery lists, user dashboard, and category explore tiles.
+                    </p>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                      <input
+                        type="file"
+                        id="card-file-input"
+                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                        style={{ display: "none" }}
+                        onChange={handleCardFileSelect}
+                      />
+                      <label
+                        htmlFor="card-file-input"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "8px 16px",
+                          backgroundColor: "#EA580C",
+                          color: "#FFFFFF",
+                          borderRadius: "8px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "background-color 0.15s ease",
+                          boxShadow: "0 2px 8px rgba(234, 88, 12, 0.25)",
+                        }}
+                      >
+                        <Upload size={14} />
+                        <span>{cardPreview ? "Replace Card Photo" : "Upload Card Photo"}</span>
+                      </label>
+
+                      {cardFile && (
+                        <button
+                          type="button"
+                          onClick={handleQuickUploadCard}
+                          disabled={isUploadingCard}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            backgroundColor: "#16A34A",
+                            color: "#FFFFFF",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            border: "none",
+                            cursor: isUploadingCard ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {isUploadingCard ? <Loader2 size={14} className={styles.spinner} /> : <Save size={14} />}
+                          <span>{isUploadingCard ? "Uploading..." : "Save Photo"}</span>
+                        </button>
+                      )}
+
+                      {cardPreview && (
+                        <button
+                          type="button"
+                          onClick={handleResetCard}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "8px 12px",
+                            backgroundColor: "#FFF1F2",
+                            color: "#E11D48",
+                            border: "1px solid #FECDD3",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Trash2 size={14} />
+                          <span>Reset Default</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <span style={{ fontSize: "11px", color: "#94A3B8" }}>
+                      1:1 or 4:3 Ratio • JPG/PNG/WebP up to 5MB
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 0B: Storefront Cover Banner */}
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1551,7 +1937,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={saving}
             className={styles.saveBtn}
           >
@@ -1559,7 +1946,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             <span>Save Changes</span>
           </button>
         </div>
-      </form>
+      </div>
 
       {/* Delete Account Confirmation Modal */}
       {isDeleteModalOpen && (

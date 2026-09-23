@@ -20,6 +20,8 @@ export interface SellerProfileData {
   longitude?: number | null;
   isLocationPinned?: boolean;
   bannerImageUrl?: string;
+  cardImageUrl?: string;
+  kitchenImages?: string[];
   avatarInitials: string;
   partnerRole: string;
   isOnline: boolean;
@@ -96,6 +98,17 @@ export async function toggleSellerOnlineStatus(newStatus?: boolean): Promise<boo
       const json = await res.json();
       const confirmedStatus = json.data?.isOnline ?? targetStatus;
       updateCachedProfile({ isOnline: confirmedStatus });
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("seller_is_online", String(confirmedStatus));
+          window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { isOnline: confirmedStatus } }));
+          if ("BroadcastChannel" in window) {
+            const bc = new BroadcastChannel("cloudkitchen_seller_status_bc");
+            bc.postMessage({ type: "SELLER_STATUS_CHANGED", isOnline: confirmedStatus });
+            bc.close();
+          }
+        } catch {}
+      }
       return confirmedStatus;
     } else {
       // Revert if error
@@ -158,6 +171,8 @@ export function useSellerProfile() {
       longitude: isSeller ? (cachedProfile?.longitude ?? null) : null,
       isLocationPinned: isSeller ? (cachedProfile?.isLocationPinned ?? false) : false,
       bannerImageUrl: isSeller ? (cachedProfile?.bannerImageUrl || cachedProfile?.profile?.bannerImageUrl || "") : "",
+      cardImageUrl: isSeller ? (cachedProfile?.cardImageUrl || "") : "",
+      kitchenImages: isSeller ? (cachedProfile?.kitchenImages || []) : [],
       avatarInitials: isSeller ? (cachedProfile?.avatarInitials || computeInitials(name)) : "SK",
       partnerRole: isSeller ? (cachedProfile?.partnerRole || "Neo Cloud Partner") : "",
       isOnline: isSeller ? (cachedProfile?.isOnline ?? true) : true,
@@ -256,6 +271,16 @@ export function useSellerProfile() {
           const rawUpiId = profile?.upiId || "";
           const rawBannerImageUrl = profile?.bannerImageUrl || "";
 
+          let rawKitchenImages: string[] = [];
+          if (profile?.kitchenImages) {
+            try {
+              rawKitchenImages = typeof profile.kitchenImages === "string" ? JSON.parse(profile.kitchenImages) : profile.kitchenImages;
+            } catch {
+              rawKitchenImages = [];
+            }
+          }
+          const rawCardImageUrl = (Array.isArray(rawKitchenImages) && rawKitchenImages[0]) || rawBannerImageUrl || "";
+
           cachedProfile = {
             id: profile?.id || user?.sellerProfile?.id || user?.id || "",
             trackingId: rawTrackingId,
@@ -272,6 +297,8 @@ export function useSellerProfile() {
             longitude: rawLng,
             isLocationPinned: rawPinned,
             bannerImageUrl: rawBannerImageUrl,
+            cardImageUrl: rawCardImageUrl,
+            kitchenImages: rawKitchenImages,
             avatarInitials: rawInitials,
             partnerRole: "Neo Cloud Partner",
             isOnline: rawOnline,
@@ -298,6 +325,8 @@ export function useSellerProfile() {
               longitude: rawLng,
               isLocationPinned: rawPinned,
               bannerImageUrl: rawBannerImageUrl,
+              cardImageUrl: rawCardImageUrl,
+              kitchenImages: rawKitchenImages,
               avatarInitials: rawInitials,
               partnerRole: "Neo Cloud Partner",
               isOnline: rawOnline,

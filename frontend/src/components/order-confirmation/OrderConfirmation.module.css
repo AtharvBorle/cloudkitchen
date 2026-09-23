@@ -159,6 +159,73 @@
   z-index: 1;
 }
 
+.cancelledIconWrapper {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(239, 68, 68, 0.35);
+  margin-bottom: 20px;
+  animation: pulseScaleCancelled 2s infinite ease-in-out;
+  z-index: 1;
+}
+
+@keyframes pulseScaleCancelled {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 10px 24px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 14px 32px rgba(239, 68, 68, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 24px rgba(239, 68, 68, 0.35);
+  }
+}
+
+.pulsingRingCancelled {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  animation: ringSpreadCancelled 2.2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ringSpreadCancelled {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.stepPillCancelled {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1.5px solid #ef4444;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #dc2626;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
 @keyframes pulseScale {
   0% {
     transform: scale(1);
@@ -337,6 +404,19 @@
   font-weight: 700;
 }
 
+.cancelledBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 /* Animated Timeline Stepper */
 .timelineContainer {
   display: flex;
@@ -386,6 +466,26 @@
   animation: pulseDot 2s infinite;
 }
 
+.timelineDotCancelled {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border: 3px solid #fee2e2;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25);
+  animation: pulseDotCancelled 2s infinite;
+}
+
+@keyframes pulseDotCancelled {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @keyframes pulseDot {
   0% {
     transform: scale(1);
@@ -422,6 +522,10 @@
   background: linear-gradient(180deg, #22c55e 0%, #ea580c 100%);
 }
 
+.timelineConnectorCancelled {
+  background: linear-gradient(180deg, #22c55e 0%, #ef4444 100%);
+}
+
 .timelineContent {
   flex: 1;
   padding-top: 6px;
@@ -445,10 +549,24 @@
   color: #ea580c;
 }
 
+.timelineTitleCancelled {
+  color: #dc2626;
+}
+
 .timelineTime {
   font-size: 0.82rem;
   font-weight: 600;
   color: #94a3b8;
+}
+
+.timelineTimeCancelled {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  padding: 2px 8px;
+  border-radius: 9999px;
 }
 
 .timelineDesc {

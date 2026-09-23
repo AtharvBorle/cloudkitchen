@@ -32,9 +32,13 @@ export default function UserRoomsPage() {
     const hasUserCoords = finalUserLat !== null && finalUserLng !== null;
 
     useEffect(() => {
-        const fetchDashboardData = async () => {
+        let isMounted = true;
+
+        const fetchDashboardData = async (isSilent = false) => {
             if (status === "loading") return;
-            setLoading(true);
+            if (!isSilent) {
+                setLoading(true);
+            }
             try {
                 let availableRooms: any[] = [];
                 let activePin = (defaultAddress?.pincode || "").trim() || null;
@@ -74,15 +78,73 @@ export default function UserRoomsPage() {
                     });
                 }
 
-                setRooms(availableRooms);
+                if (isMounted) {
+                    setRooms(availableRooms);
+                }
             } catch (error) {
                 console.error("Failed to fetch rooms", error);
             } finally {
-                setLoading(false);
+                if (!isSilent && isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
-        fetchDashboardData();
+        fetchDashboardData(false);
+
+        // Live polling interval (every 4 seconds)
+        const interval = setInterval(() => {
+            if (document.visibilityState === "visible") {
+                fetchDashboardData(true);
+            }
+        }, 4000);
+
+        const handleSync = () => {
+            fetchDashboardData(true);
+        };
+
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                fetchDashboardData(true);
+            }
+        };
+
+        if (typeof window !== "undefined") {
+            window.addEventListener("focus", handleSync);
+            window.addEventListener("seller-status-updated", handleSync);
+            window.addEventListener("cloudkitchen-new-notification", handleSync);
+            window.addEventListener("storage", handleSync);
+            document.addEventListener("visibilitychange", handleVisibility);
+        }
+
+        let bcStatus: BroadcastChannel | null = null;
+        let bcNotif: BroadcastChannel | null = null;
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+            try {
+                bcStatus = new BroadcastChannel("cloudkitchen_seller_status_bc");
+                bcStatus.onmessage = () => handleSync();
+                bcNotif = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+                bcNotif.onmessage = () => handleSync();
+            } catch {}
+        }
+
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+            if (typeof window !== "undefined") {
+                window.removeEventListener("focus", handleSync);
+                window.removeEventListener("seller-status-updated", handleSync);
+                window.removeEventListener("cloudkitchen-new-notification", handleSync);
+                window.removeEventListener("storage", handleSync);
+                document.removeEventListener("visibilitychange", handleVisibility);
+            }
+            if (bcStatus) {
+                try { bcStatus.close(); } catch {}
+            }
+            if (bcNotif) {
+                try { bcNotif.close(); } catch {}
+            }
+        };
     }, [defaultAddress?.pincode, status]);
 
     const roomPlaceholder = "https://placehold.co/400x250?text=Cozy+Room";
