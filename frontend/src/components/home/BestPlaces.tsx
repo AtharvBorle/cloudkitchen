@@ -15,6 +15,7 @@ export interface DishItem {
   itemType?: string;
   sellerIsOnline?: boolean;
   isOnline?: boolean;
+  isAvailable?: boolean;
   distanceText?: string;
 }
 
@@ -107,7 +108,10 @@ export default function BestPlaces({
           className="popular-dishes-grid"
         >
           {displayDishes.slice(0, 4).map((dish) => {
-            const isClosed = dish.sellerIsOnline === false || dish.isOnline === false;
+            const isSellerClosed = dish.sellerIsOnline === false || dish.isOnline === false;
+            const isItemUnavailable = dish.isAvailable === false;
+            const isClosed = isSellerClosed || isItemUnavailable;
+
             return (
             <Link
               key={dish.id}
@@ -201,7 +205,7 @@ export default function BestPlaces({
                           border: "1px solid rgba(255,255,255,0.2)",
                         }}
                       >
-                        🔴 CLOSED
+                        {isSellerClosed ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
                       </span>
                     </div>
                   )}
@@ -234,7 +238,7 @@ export default function BestPlaces({
                     </h3>
                     {isClosed && (
                       <span style={{ fontSize: "9.5px", fontWeight: "700", color: "#64748B", backgroundColor: "#E2E8F0", padding: "1px 5px", borderRadius: "4px" }}>
-                        CLOSED
+                        {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
                       </span>
                     )}
                   </div>

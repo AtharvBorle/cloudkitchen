@@ -70,9 +70,13 @@ export default function ResponsiveSellerPayment() {
   const loadData = async () => {
     try {
       setLoading(true);
+      const planUrl = queryCategory
+        ? `/api/seller/subscription/plans?category=${encodeURIComponent(queryCategory)}`
+        : "/api/seller/subscription/plans";
+
       const [statusRes, plansRes] = await Promise.allSettled([
         fetchApi("/api/seller/dashboard/status"),
-        fetchApi("/api/seller/subscription/plans"),
+        fetchApi(planUrl),
       ]);
 
       if (statusRes.status === "fulfilled" && statusRes.value.ok) {
@@ -80,9 +84,15 @@ export default function ResponsiveSellerPayment() {
         const parsed = sData.data || sData;
         setStatusData(parsed);
 
-        if (!queryCategory && parsed.sellerProfile?.businessCategory) {
-          const bCat = parsed.sellerProfile.businessCategory;
-          if (bCat === "FOOD" || bCat === "PROPERTY") {
+        const bCat = parsed.sellerProfile?.businessCategory;
+        const foodApp = bCat === "FOOD" || bCat === "BOTH" || parsed.sellerProfile?.foodVerificationStatus === "APPROVED";
+        const propApp = bCat === "PROPERTY" || bCat === "BOTH" || parsed.sellerProfile?.propertyVerificationStatus === "APPROVED";
+        const dual = bCat === "BOTH" || (foodApp && propApp);
+
+        if (!queryCategory && bCat) {
+          if (dual) {
+            setActiveCategoryFilter("ALL");
+          } else if (bCat === "FOOD" || bCat === "PROPERTY") {
             setActiveCategoryFilter(bCat);
           }
         }
@@ -112,8 +122,8 @@ export default function ResponsiveSellerPayment() {
 
   const filteredPlans = plans.filter((p) => {
     if (activeCategoryFilter === "ALL") return true;
-    if (activeCategoryFilter === "FOOD") return p.category === "FOOD" || p.category === "BOTH";
-    if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY" || p.category === "BOTH";
+    if (activeCategoryFilter === "FOOD") return p.category === "FOOD";
+    if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
     if (activeCategoryFilter === "BOTH") return p.category === "BOTH";
     return true;
   });
@@ -235,6 +245,21 @@ export default function ResponsiveSellerPayment() {
 
   const finalAmount = appliedCoupon ? appliedCoupon.finalPrice : selectedPlan?.price || 0;
 
+  const hasFoodVerification =
+    statusData?.sellerProfile?.businessCategory === "FOOD" ||
+    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    statusData?.sellerProfile?.foodVerificationStatus === "APPROVED";
+
+  const hasPropertyVerification =
+    statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED";
+
+  const isDualVerified =
+    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    (hasFoodVerification && hasPropertyVerification) ||
+    !statusData?.sellerProfile;
+
   return (
     <div className={styles.mobileContainer}>
       {/* Top Header */}
@@ -267,34 +292,51 @@ export default function ResponsiveSellerPayment() {
 
         {/* Category Pills */}
         <div className={styles.categoryPills}>
-          <button
-            type="button"
-            className={`${styles.pillBtn} ${activeCategoryFilter === "ALL" ? styles.pillBtnActive : ""}`}
-            onClick={() => setActiveCategoryFilter("ALL")}
-          >
-            All Plans
-          </button>
-          <button
-            type="button"
-            className={`${styles.pillBtn} ${activeCategoryFilter === "FOOD" ? styles.pillBtnActive : ""}`}
-            onClick={() => setActiveCategoryFilter("FOOD")}
-          >
-            Food
-          </button>
-          <button
-            type="button"
-            className={`${styles.pillBtn} ${activeCategoryFilter === "PROPERTY" ? styles.pillBtnActive : ""}`}
-            onClick={() => setActiveCategoryFilter("PROPERTY")}
-          >
-            Rooms
-          </button>
-          <button
-            type="button"
-            className={`${styles.pillBtn} ${activeCategoryFilter === "BOTH" ? styles.pillBtnActive : ""}`}
-            onClick={() => setActiveCategoryFilter("BOTH")}
-          >
-            Hybrid
-          </button>
+          {isDualVerified ? (
+            <>
+              <button
+                type="button"
+                className={`${styles.pillBtn} ${activeCategoryFilter === "ALL" ? styles.pillBtnActive : ""}`}
+                onClick={() => setActiveCategoryFilter("ALL")}
+              >
+                All Plans
+              </button>
+              <button
+                type="button"
+                className={`${styles.pillBtn} ${activeCategoryFilter === "FOOD" ? styles.pillBtnActive : ""}`}
+                onClick={() => setActiveCategoryFilter("FOOD")}
+              >
+                Food
+              </button>
+              <button
+                type="button"
+                className={`${styles.pillBtn} ${activeCategoryFilter === "PROPERTY" ? styles.pillBtnActive : ""}`}
+                onClick={() => setActiveCategoryFilter("PROPERTY")}
+              >
+                Rooms
+              </button>
+              <button
+                type="button"
+                className={`${styles.pillBtn} ${activeCategoryFilter === "BOTH" ? styles.pillBtnActive : ""}`}
+                onClick={() => setActiveCategoryFilter("BOTH")}
+              >
+                Hybrid
+              </button>
+            </>
+          ) : (
+            <div
+              className={`${styles.pillBtn} ${styles.pillBtnActive}`}
+              style={{ cursor: "default" }}
+            >
+              {activeCategoryFilter === "FOOD"
+                ? "Food Kitchen Plans"
+                : activeCategoryFilter === "PROPERTY"
+                ? "Rooms & Stay Plans"
+                : activeCategoryFilter === "BOTH"
+                ? "Hybrid (Both) Plans"
+                : "Available Plans"} ({filteredPlans.length})
+            </div>
+          )}
         </div>
 
         {/* Plans List */}

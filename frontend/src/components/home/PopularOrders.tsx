@@ -20,6 +20,8 @@ export interface OfferCardData {
   sellerName?: string;
   foodItemId?: string;
   itemType?: string;
+  sellerIsOnline?: boolean;
+  isAvailable?: boolean;
 }
 
 interface PopularOrdersProps {
@@ -71,6 +73,8 @@ export default function PopularOrders({
   const [addedId, setAddedId] = useState<string | null>(null);
 
   const handleOrderNow = (offer: OfferCardData) => {
+    if (offer.sellerIsOnline === false || offer.isAvailable === false) return;
+
     const rawStock = (offer as any).maxStock !== undefined ? (offer as any).maxStock : (offer as any).stockQuantity;
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
 
@@ -158,7 +162,12 @@ export default function PopularOrders({
           }}
           className="offers-grid-layout"
         >
-          {displayOffers.map((offer) => (
+          {displayOffers.map((offer) => {
+            const isSellerClosed = offer.sellerIsOnline === false;
+            const isItemUnavailable = offer.isAvailable === false;
+            const isClosed = isSellerClosed || isItemUnavailable;
+
+            return (
             <div
               key={offer.id}
               style={{
@@ -166,13 +175,19 @@ export default function PopularOrders({
                 height: "302px",
                 borderRadius: "20px",
                 padding: "16px",
-                background: "linear-gradient(135deg, #FFDEB1 0%, #EEB06A 100%)",
+                background: isClosed
+                  ? "#F8FAFC"
+                  : "linear-gradient(135deg, #FFDEB1 0%, #EEB06A 100%)",
+                border: isClosed ? "1px solid #E2E8F0" : undefined,
                 display: "flex",
                 flexDirection: "column",
                 gap: "10px",
                 boxSizing: "border-box",
-                boxShadow: "0 6px 20px rgba(238, 176, 106, 0.25)",
+                boxShadow: isClosed
+                  ? "0 4px 12px rgba(0, 0, 0, 0.03)"
+                  : "0 6px 20px rgba(238, 176, 106, 0.25)",
                 transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                opacity: isClosed ? 0.85 : 1,
               }}
               className="offer-card"
             >
@@ -186,8 +201,8 @@ export default function PopularOrders({
               >
                 <div
                   style={{
-                    backgroundColor: "#FFFFFF",
-                    color: "#FF6B00",
+                    backgroundColor: isClosed ? "#E2E8F0" : "#FFFFFF",
+                    color: isClosed ? "#64748B" : "#FF6B00",
                     fontSize: "0.78rem",
                     fontWeight: "800",
                     padding: "4px 12px",
@@ -198,7 +213,7 @@ export default function PopularOrders({
                   {offer.discount}
                 </div>
 
-                <Ticket size={20} color="#EA580C" strokeWidth={2.2} />
+                <Ticket size={20} color={isClosed ? "#94A3B8" : "#EA580C"} strokeWidth={2.2} />
               </div>
 
               {/* Food Image */}
@@ -233,9 +248,41 @@ export default function PopularOrders({
                     height: "100%",
                     objectFit: "cover",
                     transition: "transform 0.3s ease",
+                    filter: isClosed ? "grayscale(100%)" : "none",
                   }}
                   className="offer-img"
                 />
+                {isClosed && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: "rgba(15, 23, 42, 0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 3,
+                    }}
+                  >
+                    <span
+                      style={{
+                        backgroundColor: "#0F172A",
+                        color: "#FFFFFF",
+                        fontSize: "9px",
+                        fontWeight: "800",
+                        letterSpacing: "0.6px",
+                        padding: "3px 8px",
+                        borderRadius: "10px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Info: Title & Coupon Code */}
@@ -244,7 +291,7 @@ export default function PopularOrders({
                   style={{
                     fontSize: "1.05rem",
                     fontWeight: "800",
-                    color: "#18181B",
+                    color: isClosed ? "#64748B" : "#18181B",
                     margin: 0,
                   }}
                 >
@@ -254,7 +301,7 @@ export default function PopularOrders({
                   style={{
                     fontSize: "0.82rem",
                     fontWeight: "600",
-                    color: "#475569",
+                    color: isClosed ? "#94A3B8" : "#475569",
                   }}
                 >
                   {offer.code}
@@ -265,31 +312,30 @@ export default function PopularOrders({
               <button
                 type="button"
                 onClick={() => handleOrderNow(offer)}
+                disabled={isClosed}
                 style={{
                   marginTop: "auto",
-                  backgroundColor: addedId === offer.id ? "#10B981" : "#FF6B00",
-                  color: "#FFFFFF",
+                  backgroundColor: isClosed
+                    ? "#F1F5F9"
+                    : addedId === offer.id
+                    ? "#10B981"
+                    : "#FF6B00",
+                  color: isClosed ? "#94A3B8" : "#FFFFFF",
+                  border: isClosed ? "1px solid #E2E8F0" : "none",
+                  borderRadius: "12px",
+                  padding: "10px",
                   fontSize: "0.92rem",
                   fontWeight: "700",
-                  padding: "9px 0",
-                  borderRadius: "12px",
-                  textAlign: "center",
-                  border: "none",
-                  cursor: "pointer",
-                  boxShadow: addedId === offer.id ? "0 4px 12px rgba(16, 185, 129, 0.3)" : "0 4px 12px rgba(255, 107, 0, 0.25)",
+                  cursor: isClosed ? "not-allowed" : "pointer",
                   transition: "all 0.2s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  width: "100%",
+                  boxShadow: isClosed ? "none" : "0 4px 12px rgba(255, 107, 0, 0.25)",
                 }}
-                className="offer-order-btn"
               >
-                {addedId === offer.id ? "✓ Added to Cart" : "Order Now"}
+                {isClosed ? (isSellerClosed ? "Closed" : "Unavailable") : addedId === offer.id ? "Added to Cart! ✓" : "Order Now"}
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

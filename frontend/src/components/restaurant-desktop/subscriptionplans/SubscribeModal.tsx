@@ -17,8 +17,11 @@ export interface SubscribeModalPlan {
   id: string;
   name: string;
   tier?: string;
+  price?: number | string;
   weeklyPrice?: number | string;
   monthlyPrice?: number | string;
+  duration?: string;
+  period?: string;
   description?: string;
   features?: string[];
   mealTimings?: string[];
@@ -38,7 +41,6 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   plan,
   onSubscribed,
 }) => {
-  const [cycle, setCycle] = useState<"WEEKLY" | "MONTHLY">("WEEKLY");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,15 +48,12 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
   if (!isOpen || !plan) return null;
 
-  const weeklyNum = typeof plan.weeklyPrice === "number"
+  const planDuration = plan.duration || "1 Week";
+  const planPriceNum = typeof plan.price === "number"
+    ? plan.price
+    : typeof plan.weeklyPrice === "number"
     ? plan.weeklyPrice
-    : parseFloat(String(plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 499;
-
-  const monthlyNum = typeof plan.monthlyPrice === "number"
-    ? plan.monthlyPrice
-    : parseFloat(String(plan.monthlyPrice || "0").replace(/[^\d.]/g, "")) || (weeklyNum * 4);
-
-  const selectedPrice = cycle === "MONTHLY" ? monthlyNum : weeklyNum;
+    : parseFloat(String(plan.price || plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 499;
 
   const handleConfirm = async () => {
     setIsSubmitting(true);
@@ -62,7 +61,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
     try {
       const res = await subscribeToMealPlan(plan.id, {
-        cycle,
+        cycle: planDuration,
         deliveryAddress,
         contactPhone,
       });
@@ -126,25 +125,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             )}
           </div>
 
-          {/* Billing cycle selector */}
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Select Subscription Cycle</label>
-            <div className={styles.cycleSelector}>
-              <div
-                className={`${styles.cycleOption} ${cycle === "WEEKLY" ? styles.cycleOptionSelected : ""}`}
-                onClick={() => setCycle("WEEKLY")}
-              >
-                <span className={styles.cycleTitle}>Weekly Cycle</span>
-                <span className={styles.cyclePrice}>₹{weeklyNum.toFixed(0)} <small style={{ fontSize: "0.75rem", color: "#64748B" }}>/ week</small></span>
-              </div>
-              <div
-                className={`${styles.cycleOption} ${cycle === "MONTHLY" ? styles.cycleOptionSelected : ""}`}
-                onClick={() => setCycle("MONTHLY")}
-              >
-                <span className={styles.cycleTitle}>Monthly Cycle</span>
-                <span className={styles.cyclePrice}>₹{monthlyNum.toFixed(0)} <small style={{ fontSize: "0.75rem", color: "#64748B" }}>/ month</small></span>
-              </div>
+          {/* Plan Duration & Billing Summary */}
+          <div className={styles.planDurationBox}>
+            <div className={styles.planDurationLabel}>
+              <span className={styles.planDurationTitle}>Plan Validity &amp; Duration</span>
+              <span className={styles.planDurationSubtitle}>Billed once for <strong>{planDuration}</strong></span>
             </div>
+            <span className={styles.planDurationPrice}>₹{planPriceNum.toFixed(0)}</span>
           </div>
 
           {/* Delivery Address */}
@@ -204,7 +191,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                 <span>Processing...</span>
               </>
             ) : (
-              <span>Confirm & Subscribe (₹{selectedPrice.toFixed(0)})</span>
+              <span>Confirm & Subscribe (₹{planPriceNum.toFixed(0)})</span>
             )}
           </button>
         </div>

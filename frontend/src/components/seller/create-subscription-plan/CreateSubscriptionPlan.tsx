@@ -172,7 +172,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
             <div className={styles.leftColumn}>
               {/* 1. Plan Basics Card */}
               <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Plan Basics</h2>
+                <h2 className={styles.cardTitle}>Plan Basics &amp; Duration</h2>
                 <div className={styles.twoColRow}>
                   <div className={styles.fieldGroup}>
                     <label className={styles.fieldLabel}>Plan Name</label>
@@ -200,30 +200,55 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Plan Duration Dropdown */}
+                <div className={styles.fieldGroup} style={{ marginTop: "6px" }}>
+                  <label className={styles.fieldLabel}>Plan Duration (Billing Cycle)</label>
+                  <div className={styles.selectWrapper}>
+                    <select
+                      className={styles.selectInput}
+                      value={planDuration}
+                      onChange={(e) => setPlanDuration(e.target.value)}
+                    >
+                      <option value="1 Week">1 Week (Weekly)</option>
+                      <option value="2 Weeks">2 Weeks (Bi-weekly)</option>
+                      <option value="1 Month">1 Month (Monthly)</option>
+                    </select>
+                    <span className={styles.selectArrow}>▼</span>
+                  </div>
+                  <p style={{ fontSize: "11.5px", color: "#64748B", margin: "4px 0 0 0" }}>
+                    Selected cycle: <strong>{planDuration}</strong>. Subscriptions will automatically operate and renew on this cycle.
+                  </p>
+                </div>
               </div>
 
               {/* 2. Plan Pricing Card */}
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Plan Pricing (₹ INR)</h2>
                 <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Weekly Price</label>
+                  <label className={styles.fieldLabel}>
+                    Price for {planDuration} (₹)
+                  </label>
                   <div className={styles.priceInputWrapper}>
                     <input
                       type="number"
                       step="0.01"
                       className={styles.priceInput}
-                      placeholder="₹ 0.00"
+                      placeholder={`Enter price for ${planDuration}`}
                       value={weeklyPrice}
                       onChange={(e) => setWeeklyPrice(e.target.value)}
                     />
                   </div>
+                  <p style={{ fontSize: "11.5px", color: "#64748B", margin: "4px 0 0 0" }}>
+                    Direct amount charged to subscribers for the entire <strong>{planDuration}</strong> duration.
+                  </p>
                 </div>
               </div>
 
-              {/* 3. Included in Weekly Plans Card */}
+              {/* 3. Included Features Card */}
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
-                  <h2 className={styles.cardTitle}>Included in Weekly Plans</h2>
+                  <h2 className={styles.cardTitle}>Included in Plan</h2>
                   <button
                     type="button"
                     className={styles.addBtn}
@@ -290,10 +315,10 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                 </div>
               </div>
 
-              {/* 4. Plan Timing & Schedule Card */}
+              {/* 4. Meal Serving Timings Card */}
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
-                  <h2 className={styles.cardTitle}>Plan Timing & Schedule</h2>
+                  <h2 className={styles.cardTitle}>Meal Serving Timings</h2>
                   <button
                     type="button"
                     className={styles.addBtn}
@@ -309,27 +334,8 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   </button>
                 </div>
 
-                {/* Plan Duration Dropdown */}
-                <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Plan Duration</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      className={styles.selectInput}
-                      value={planDuration}
-                      onChange={(e) => setPlanDuration(e.target.value)}
-                    >
-                      <option value="1 Week">1 Week</option>
-                      <option value="2 Weeks">2 Weeks</option>
-                      <option value="1 Month">1 Month</option>
-                      <option value="3 Months">3 Months</option>
-                    </select>
-                    <span className={styles.selectArrow}>▼</span>
-                  </div>
-                </div>
-
                 {/* Meal Serving Timings */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>Meal Serving Timings</label>
                   <div className={styles.mealTimingsList}>
                     {mealTimings.map((meal) => (
                       <div key={meal.id} className={styles.mealTimingRow}>
@@ -449,7 +455,9 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                     <span className={styles.previewPriceAmount}>
                       ₹{formattedPrice}
                     </span>
-                    <span className={styles.previewPriceCycle}> / mo</span>
+                    <span className={styles.previewPriceCycle}>
+                      {planDuration === "1 Week" ? " / week" : planDuration === "2 Weeks" ? " / 2 weeks" : " / month"}
+                    </span>
                   </div>
 
                   <div className={styles.previewDivider} />
@@ -474,8 +482,8 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                 {/* Metadata details */}
                 <div className={styles.metaDetails}>
                   <div className={styles.metaRow}>
-                    <span className={styles.metaKey}>Platform Class</span>
-                    <span className={styles.metaValue}>SaaS Premium</span>
+                    <span className={styles.metaKey}>Cycle Duration</span>
+                    <span className={styles.metaValue}>{planDuration}</span>
                   </div>
                   <div className={styles.metaRow}>
                     <span className={styles.metaKey}>Tax Model</span>
@@ -499,19 +507,41 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       return;
                     }
                     if (!weeklyPrice.trim() || isNaN(parseFloat(weeklyPrice))) {
-                      setErrorMessage('Please enter a valid Weekly Price (₹).');
+                      setErrorMessage(`Please enter a valid Price (₹) for ${planDuration}.`);
                       return;
                     }
 
                     setErrorMessage(null);
 
+                    const basePriceNum = parseFloat(weeklyPrice) || 0;
+                    let weeklyCalculated = basePriceNum;
+                    let monthlyCalculated = basePriceNum * 4;
+
+                    const durLower = planDuration.toLowerCase();
+                    if (durLower.includes("2 week")) {
+                      weeklyCalculated = basePriceNum / 2;
+                      monthlyCalculated = basePriceNum * 2;
+                    } else if (durLower.includes("1 week") || durLower.includes("week")) {
+                      weeklyCalculated = basePriceNum;
+                      monthlyCalculated = basePriceNum * 4;
+                    } else if (durLower.includes("1 month") || durLower.includes("month")) {
+                      monthlyCalculated = basePriceNum;
+                      weeklyCalculated = basePriceNum / 4;
+                    } else if (durLower.includes("6 month")) {
+                      monthlyCalculated = basePriceNum / 6;
+                      weeklyCalculated = basePriceNum / 26;
+                    } else if (durLower.includes("year")) {
+                      monthlyCalculated = basePriceNum / 12;
+                      weeklyCalculated = basePriceNum / 52;
+                    }
+
                     await saveMealPlan({
                       name: planName.trim(),
                       tier: planTier,
-                      weeklyPrice: weeklyPrice.trim(),
-                      monthlyPrice: `₹${((parseFloat(weeklyPrice) || 0) * 4).toFixed(0)}`,
-                      quarterlyPrice: `₹${((parseFloat(weeklyPrice) || 0) * 12 * 0.9).toFixed(0)}`,
-                      yearlyPrice: `₹${((parseFloat(weeklyPrice) || 0) * 52 * 0.8).toFixed(0)}`,
+                      weeklyPrice: String(basePriceNum),
+                      monthlyPrice: `₹${monthlyCalculated.toFixed(0)}`,
+                      quarterlyPrice: `₹${(monthlyCalculated * 3 * 0.9).toFixed(0)}`,
+                      yearlyPrice: `₹${(monthlyCalculated * 12 * 0.8).toFixed(0)}`,
                       duration: planDuration,
                       features: enabledFeatures.map((f) => f.label),
                       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),

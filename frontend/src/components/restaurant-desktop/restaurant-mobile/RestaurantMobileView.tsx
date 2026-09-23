@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   ChevronRight,
   Menu,
+  Utensils,
 } from "lucide-react";
 import styles from "./RestaurantMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
@@ -363,24 +364,38 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           <h2 className={styles.foodSectionTitle}>{getSectionTitle()}</h2>
 
           {finalDisplayItems.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px 16px", color: "#64748B", fontSize: "0.95rem" }}>
-              No items available in this category.
+            <div style={{ textAlign: "center", padding: "48px 16px", color: "#64748B", backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px dashed #E2E8F0", margin: "12px 0" }}>
+              <Utensils size={32} color="#94A3B8" style={{ margin: "0 auto 8px", display: "block" }} />
+              <div style={{ fontWeight: "700", fontSize: "1rem", color: "#1E293B", marginBottom: "4px" }}>
+                No dishes available.
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "#64748B" }}>
+                {baseItems.length === 0
+                  ? "This restaurant currently has no food items listed or published."
+                  : "No items available in this category."}
+              </div>
             </div>
           ) : (
             <div className={styles.foodList}>
               {finalDisplayItems.map((item) => {
                 const quantity = getItemQuantity(item.id);
                 const hasQuantity = quantity > 0;
-                const isClosed = kitchenData.isOnline === false;
+                const isStoreOffline = kitchenData.isOnline === false;
+                const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+                const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+                const isOutOfStock = stockLimit === 0;
+                const isItemDisabled = item.isAvailable === false || isOutOfStock;
+                const isGrey = isStoreOffline || isItemDisabled;
+                const isAtMaxStock = stockLimit !== -1 && quantity >= stockLimit;
 
                 return (
                   <div
                     key={item.id}
                     className={styles.foodCard}
                     style={{
-                      backgroundColor: isClosed ? "#F8FAFC" : undefined,
-                      opacity: isClosed ? 0.85 : 1,
-                      borderColor: isClosed ? "#E2E8F0" : undefined,
+                      backgroundColor: isGrey ? "#F8FAFC" : undefined,
+                      opacity: isGrey ? 0.85 : 1,
+                      borderColor: isGrey ? "#E2E8F0" : undefined,
                     }}
                   >
                     {/* Left Food Image */}
@@ -395,10 +410,10 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                         sizes="96px"
                         className={styles.foodThumbnail}
                         style={{
-                          filter: isClosed ? "grayscale(100%)" : "none",
+                          filter: isGrey ? "grayscale(100%)" : "none",
                         }}
                       />
-                      {isClosed && (
+                      {isGrey && (
                         <div
                           style={{
                             position: "absolute",
@@ -425,7 +440,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                               textTransform: "uppercase",
                             }}
                           >
-                            CLOSED
+                            {isStoreOffline ? "CLOSED" : isOutOfStock ? "OUT OF STOCK" : "UNAVAILABLE"}
                           </span>
                         </div>
                       )}
@@ -433,12 +448,12 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
                     {/* Right Content */}
                     <div className={styles.foodInfo}>
-                      <h3 className={styles.foodTitle} style={{ color: isClosed ? "#64748B" : undefined }}>{item.title}</h3>
+                      <h3 className={styles.foodTitle} style={{ color: isGrey ? "#64748B" : undefined }}>{item.title}</h3>
                       <p className={styles.foodDesc}>{item.description}</p>
 
                       {item.addons && item.addons.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "2px 0 6px 0" }}>
-                          <span style={{ fontSize: "0.68rem", fontWeight: "700", color: isClosed ? "#94A3B8" : "#EA580C", backgroundColor: isClosed ? "#F1F5F9" : "#FFF7ED", border: `1px solid ${isClosed ? "#E2E8F0" : "#FFEDD5"}`, padding: "1px 5px", borderRadius: "4px" }}>
+                          <span style={{ fontSize: "0.68rem", fontWeight: "700", color: isGrey ? "#94A3B8" : "#EA580C", backgroundColor: isGrey ? "#F1F5F9" : "#FFF7ED", border: `1px solid ${isGrey ? "#E2E8F0" : "#FFEDD5"}`, padding: "1px 5px", borderRadius: "4px" }}>
                             ✨ {item.addons.length} Add-on{item.addons.length > 1 ? "s" : ""} Available
                           </span>
                         </div>
@@ -446,9 +461,9 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
                       {/* Bottom Action Row */}
                       <div className={styles.foodBottomRow}>
-                        <span className={styles.foodPrice} style={{ color: isClosed ? "#94A3B8" : undefined }}>{item.price}</span>
+                        <span className={styles.foodPrice} style={{ color: isGrey ? "#94A3B8" : undefined }}>{item.price}</span>
 
-                        {isClosed ? (
+                        {isStoreOffline ? (
                           <button
                             type="button"
                             className={styles.addBtn}
@@ -462,6 +477,36 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                             }}
                           >
                             <span>Closed</span>
+                          </button>
+                        ) : item.isAvailable === false ? (
+                          <button
+                            type="button"
+                            className={styles.addBtn}
+                            disabled
+                            style={{
+                              backgroundColor: "#F1F5F9",
+                              color: "#94A3B8",
+                              border: "1px solid #E2E8F0",
+                              cursor: "not-allowed",
+                              fontWeight: "700",
+                            }}
+                          >
+                            <span>Unavailable</span>
+                          </button>
+                        ) : isOutOfStock ? (
+                          <button
+                            type="button"
+                            className={styles.addBtn}
+                            disabled
+                            style={{
+                              backgroundColor: "#F1F5F9",
+                              color: "#94A3B8",
+                              border: "1px solid #E2E8F0",
+                              cursor: "not-allowed",
+                              fontWeight: "700",
+                            }}
+                          >
+                            <span>Out of Stock</span>
                           </button>
                         ) : !hasQuantity ? (
                           <button
@@ -490,6 +535,11 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                                 className={styles.stepperBtn}
                                 onClick={() => handleIncrement(item)}
                                 aria-label="Increase quantity"
+                                disabled={isAtMaxStock}
+                                style={{
+                                  opacity: isAtMaxStock ? 0.4 : 1,
+                                  cursor: isAtMaxStock ? "not-allowed" : "pointer",
+                                }}
                               >
                                 <Plus size={12} strokeWidth={2.5} />
                               </button>
