@@ -560,8 +560,10 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && typeof e.preventDefault === "function") {
+      e.preventDefault();
+    }
     setSaving(true);
 
     try {
@@ -725,7 +727,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       </div>
 
       {/* 3. Form Body */}
-      <form onSubmit={handleSubmit}>
+      <div>
         {/* Tab 1: General (Matches the Exact Provided Image) */}
         {activeTab === "General" && (
           <div className={styles.mainGrid}>
@@ -1935,7 +1937,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={saving}
             className={styles.saveBtn}
           >
@@ -1943,7 +1946,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             <span>Save Changes</span>
           </button>
         </div>
-      </form>
+      </div>
 
       {/* Delete Account Confirmation Modal */}
       {isDeleteModalOpen && (
