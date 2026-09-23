@@ -43,10 +43,10 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
   return (
     <section
       className={styles.plansContainer}
-      aria-label="Weekly Subscription Plans"
+      aria-label="Meal Subscription Plans"
     >
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Weekly Subscription Plans</h2>
+        <h2 className={styles.sectionTitle}>Meal Subscription Plans</h2>
       </div>
 
       <div className={styles.cardsGrid}>

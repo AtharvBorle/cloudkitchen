@@ -11,6 +11,8 @@ export interface RecommendedDish {
   imageUrl: string;
   link?: string;
   itemType?: string;
+  sellerIsOnline?: boolean;
+  isAvailable?: boolean;
 }
 
 interface RecommendedForYouProps {
@@ -97,7 +99,12 @@ export default function RecommendedForYou({
           }}
           className="rec-dishes-grid"
         >
-          {items.slice(0, 4).map((dish) => (
+          {items.slice(0, 4).map((dish) => {
+            const isSellerClosed = dish.sellerIsOnline === false;
+            const isItemUnavailable = dish.isAvailable === false;
+            const isClosed = isSellerClosed || isItemUnavailable;
+
+            return (
             <Link
               key={dish.id}
               href={dish.link || "/explore-desktop"}
@@ -105,15 +112,16 @@ export default function RecommendedForYou({
                 textDecoration: "none",
                 display: "flex",
                 flexDirection: "column",
+                opacity: isClosed ? 0.85 : 1,
               }}
             >
               <div
                 style={{
                   width: "100%",
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                   borderRadius: "16px",
                   overflow: "hidden",
-                  border: "1px solid #E2E8F0",
+                  border: isClosed ? "1px solid #E2E8F0" : "1px solid #E2E8F0",
                   boxShadow: "0 2px 10px rgba(0, 0, 0, 0.03)",
                   display: "flex",
                   flexDirection: "column",
@@ -155,9 +163,41 @@ export default function RecommendedForYou({
                       height: "100%",
                       objectFit: "cover",
                       transition: "transform 0.3s ease",
+                      filter: isClosed ? "grayscale(100%)" : "none",
                     }}
                     className="rec-card-img"
                   />
+                  {isClosed && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.4)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2,
+                      }}
+                    >
+                      <span
+                        style={{
+                          backgroundColor: "#0F172A",
+                          color: "#FFFFFF",
+                          fontSize: "9px",
+                          fontWeight: "800",
+                          letterSpacing: "0.6px",
+                          padding: "3px 8px",
+                          borderRadius: "10px",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Info */}
@@ -173,7 +213,7 @@ export default function RecommendedForYou({
                     style={{
                       fontSize: "0.95rem",
                       fontWeight: "700",
-                      color: "#18181B",
+                      color: isClosed ? "#64748B" : "#18181B",
                       margin: 0,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -188,7 +228,7 @@ export default function RecommendedForYou({
                   <span
                     style={{
                       fontSize: "0.8rem",
-                      color: "#64748B",
+                      color: isClosed ? "#94A3B8" : "#64748B",
                       fontWeight: "500",
                     }}
                   >
@@ -197,7 +237,8 @@ export default function RecommendedForYou({
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
 

@@ -154,6 +154,16 @@ export const ChangePlanModal: React.FC<ChangePlanModalProps> = ({
                   }
                 }
 
+                const getPlanPeriod = (dur?: string) => {
+                  const d = (dur || "1 Week").toLowerCase();
+                  if (d.includes("2 week")) return "/2 weeks";
+                  if (d.includes("week")) return "/week";
+                  if (d.includes("6 month")) return "/6 months";
+                  if (d.includes("month")) return "/month";
+                  if (d.includes("year")) return "/year";
+                  return `/${dur || "week"}`;
+                };
+
                 return (
                   <div
                     key={plan.id}
@@ -186,7 +196,7 @@ export const ChangePlanModal: React.FC<ChangePlanModalProps> = ({
                               ? `₹${plan.weeklyPrice}`
                               : plan.weeklyPrice}
                           </span>
-                          <span className={styles.pricePeriod}>/week</span>
+                          <span className={styles.pricePeriod}>{getPlanPeriod(plan.duration)}</span>
                         </div>
                       )}
                     </div>
@@ -199,7 +209,7 @@ export const ChangePlanModal: React.FC<ChangePlanModalProps> = ({
                             ? `₹${plan.weeklyPrice}`
                             : plan.weeklyPrice}
                         </span>
-                        <span className={styles.pricePeriod}>/week</span>
+                        <span className={styles.pricePeriod}>{getPlanPeriod(plan.duration)}</span>
                       </div>
                     )}
 

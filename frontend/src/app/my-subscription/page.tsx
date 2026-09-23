@@ -212,10 +212,18 @@ export default function MySubscriptionPage() {
       })
     : "Auto-renew";
 
+  const getCycleSuffix = (cycle?: string, duration?: string) => {
+    const c = (cycle || duration || "1 Week").toLowerCase();
+    if (c.includes("2 week")) return "2 weeks";
+    if (c.includes("week")) return "week";
+    if (c.includes("6 month")) return "6 months";
+    if (c.includes("month")) return "month";
+    if (c.includes("year")) return "year";
+    return cycle || "period";
+  };
+
   const formattedPrice = subscription
-    ? `₹${(subscription.pricePaid || subscription.plan?.weeklyPrice || 0).toLocaleString("en-IN")}/${
-        subscription.cycle === "MONTHLY" ? "month" : "week"
-      }`
+    ? `₹${(subscription.pricePaid || subscription.plan?.weeklyPrice || 0).toLocaleString("en-IN")}/${getCycleSuffix(subscription.cycle, subscription.plan?.duration)}`
     : "";
 
   return (

@@ -235,7 +235,10 @@ function ExploreDesktopContent() {
                 }}
               >
                 {filteredFoodItems.map((item) => {
-                  const isClosed = item.sellerIsOnline === false;
+                  const isSellerClosed = item.sellerIsOnline === false;
+                  const isItemUnavailable = item.isAvailable === false;
+                  const isClosed = isSellerClosed || isItemUnavailable;
+
                   return (
                   <Link
                     key={item.id}
@@ -294,7 +297,7 @@ function ExploreDesktopContent() {
                               border: "1px solid rgba(255,255,255,0.2)",
                             }}
                           >
-                            🔴 CLOSED
+                            {isSellerClosed ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
                           </span>
                         </div>
                       )}
@@ -305,7 +308,7 @@ function ExploreDesktopContent() {
                         <span style={{ fontSize: "0.95rem", fontWeight: "800", color: isClosed ? "#94A3B8" : "#FF6B00" }}>₹{item.price}</span>
                       </div>
                       <span style={{ fontSize: "0.82rem", color: "#64748B" }}>
-                        {item.sellerName} {isClosed ? "• (Not accepting orders)" : ""}
+                        {item.sellerName} {isSellerClosed ? "• (Not accepting orders)" : isItemUnavailable ? "• (Currently unavailable)" : ""}
                       </span>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
                         <div

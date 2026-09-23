@@ -79,16 +79,26 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   ];
                 }
 
-                const weeklyNum = typeof plan.weeklyPrice === "number"
-                  ? plan.weeklyPrice
-                  : parseFloat(String(plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 499;
+                const rawPrice = plan.price !== undefined && plan.price !== null
+                  ? (typeof plan.price === "number" ? plan.price : parseFloat(String(plan.price).replace(/[^\d.]/g, "")) || 499)
+                  : (typeof plan.weeklyPrice === "number" ? plan.weeklyPrice : parseFloat(String(plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 499);
+
+                const getDurationPeriod = (dur?: string): string => {
+                  const d = (dur || "1 Week").toLowerCase();
+                  if (d.includes("2 week")) return "/2 weeks";
+                  if (d.includes("week")) return "/week";
+                  if (d.includes("6 month")) return "/6 months";
+                  if (d.includes("month")) return "/month";
+                  if (d.includes("year")) return "/year";
+                  return `/${dur || "week"}`;
+                };
 
                 return {
                   id: plan.id,
                   name: plan.name,
                   subtitle: plan.description || `${plan.tier || "Standard"} meal plan curated daily by ${liveData.businessName || liveData.user?.name || "our chef"}.`,
-                  price: `₹${weeklyNum.toFixed(0)}`,
-                  period: "/week",
+                  price: `₹${rawPrice.toFixed(0)}`,
+                  period: getDurationPeriod(plan.duration),
                   badge: plan.tier?.toUpperCase() === "GOLD" ? "Best Value" : (plan.tier?.toUpperCase() === "SILVER" ? "Popular" : undefined),
                   features: features,
                   buttonText: "Subscribe Now",
@@ -134,6 +144,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                 addons: parsedAddons,
                 stockQuantity: item.stockQuantity !== undefined ? item.stockQuantity : -1,
                 maxStock: item.stockQuantity !== undefined ? item.stockQuantity : -1,
+                isAvailable: item.isAvailable !== false,
                 itemType: item.itemType,
                 sellerId: liveData.id || liveData.trackingId,
                 sellerName: liveData.businessName || liveData.user?.name,
@@ -174,7 +185,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               bannerImageUrl: liveData.bannerImageUrl || (Array.isArray(liveData.kitchenImages) ? liveData.kitchenImages[0] : "") || prev.bannerImageUrl || "",
               categories:
                 uniqueCats.length > 0 ? ["All", ...uniqueCats] : [],
-              items: liveItems.length > 0 ? liveItems : prev.items,
+              items: liveItems,
             }));
           }
         }
@@ -193,6 +204,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const handleAddItem = (item: FoodCardItem) => {
     if (kitchenData.isOnline === false) {
       alert("This kitchen is currently closed and not accepting orders.");
+      return;
+    }
+
+    if (item.isAvailable === false || item.stockQuantity === 0) {
+      alert("This item is currently unavailable or out of stock.");
       return;
     }
 
@@ -233,15 +249,19 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     }
 
     const raw = rawMealPlans.find((p) => p.id === plan.id);
-    const weeklyNum = raw?.weeklyPrice || parseFloat(plan.price.replace(/[^\d.]/g, "")) || 499;
-    const monthlyNum = raw?.monthlyPrice || (weeklyNum * 4);
+    const planPrice = raw?.price !== undefined && raw?.price !== null
+      ? (typeof raw.price === "number" ? raw.price : parseFloat(String(raw.price).replace(/[^\d.]/g, "")) || 499)
+      : (typeof raw?.weeklyPrice === "number" ? raw.weeklyPrice : parseFloat(plan.price.replace(/[^\d.]/g, "")) || 499);
 
     setSelectedModalPlan({
       id: plan.id,
       name: plan.name,
       tier: raw?.tier || (plan.isPremium ? "Gold" : "Bronze"),
-      weeklyPrice: weeklyNum,
-      monthlyPrice: monthlyNum,
+      price: planPrice,
+      duration: raw?.duration || "1 Week",
+      period: plan.period,
+      weeklyPrice: planPrice,
+      monthlyPrice: raw?.monthlyPrice || (planPrice * 4),
       description: plan.subtitle,
       features: plan.features,
       mealTimings: raw?.mealTimings || [],

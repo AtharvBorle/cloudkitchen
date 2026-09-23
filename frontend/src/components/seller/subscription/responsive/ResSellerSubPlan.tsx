@@ -50,9 +50,6 @@ const DURATION_OPTIONS = [
   "1 Week",
   "2 Weeks",
   "1 Month",
-  "3 Months",
-  "6 Months",
-  "1 Year",
 ];
 
 export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
@@ -169,10 +166,13 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
 
   // Compute unit suffix for price preview (e.g., /wk, /mo, /yr)
   const getDurationSuffix = (dur: string) => {
-    if (dur.toLowerCase().includes("week")) return "/wk";
-    if (dur.toLowerCase().includes("month")) return "/mo";
-    if (dur.toLowerCase().includes("year")) return "/yr";
-    return "/plan";
+    const d = dur.toLowerCase();
+    if (d.includes("2 week")) return " / 2 wks";
+    if (d.includes("1 week") || d.includes("week")) return " / wk";
+    if (d.includes("6 month")) return " / 6 mos";
+    if (d.includes("1 month") || d.includes("month")) return " / mo";
+    if (d.includes("year")) return " / yr";
+    return ` / ${dur.toLowerCase()}`;
   };
 
   return (
@@ -213,9 +213,9 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
 
         {/* Form Content Area */}
         <main className={styles.contentArea}>
-          {/* Section 1: Plan Basics */}
+          {/* Section 1: Plan Basics & Duration */}
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Plan Basics</h2>
+            <h2 className={styles.cardTitle}>Plan Basics &amp; Duration</h2>
 
             <div className={styles.formGroup}>
               <label htmlFor="planName" className={styles.label}>
@@ -247,6 +247,46 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                 <option value="Gold">Gold Tier</option>
               </select>
             </div>
+
+            {/* Plan Duration Dropdown */}
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Plan Duration (Billing Cycle)</label>
+              <div className={styles.selectWrapper}>
+                <div
+                  className={styles.selectTrigger}
+                  onClick={() => setIsDurationMenuOpen((prev) => !prev)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <span style={{ fontWeight: 600 }}>{duration}</span>
+                  <ChevronDown size={18} color="#64748B" />
+                </div>
+
+                {isDurationMenuOpen && (
+                  <div className={styles.selectMenu}>
+                    {DURATION_OPTIONS.map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        className={`${styles.selectOption} ${
+                          duration === opt ? styles.selectOptionActive : ""
+                        }`}
+                        onClick={() => {
+                          setDuration(opt);
+                          setIsDurationMenuOpen(false);
+                        }}
+                      >
+                        <span>{opt}</span>
+                        {duration === opt && <Check size={14} color="#F97316" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: "11px", color: "#64748B", margin: "4px 0 0 0" }}>
+                Selected cycle: <strong>{duration}</strong>. Customers will be billed for this exact period.
+              </p>
+            </div>
           </section>
 
           {/* Section 2: Plan Pricing (₹ INR) */}
@@ -255,7 +295,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
 
             <div className={styles.formGroup}>
               <label htmlFor="weeklyPrice" className={styles.label}>
-                Weekly Price
+                Price for {duration} (₹)
               </label>
               <div className={styles.priceInputWrapper}>
                 <span className={styles.currencyPrefix}>₹</span>
@@ -264,11 +304,14 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                   type="number"
                   inputMode="decimal"
                   className={`${styles.input} ${styles.priceInput}`}
-                  placeholder="0.00"
+                  placeholder={`Price for ${duration}`}
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                 />
               </div>
+              <p style={{ fontSize: "11px", color: "#64748B", margin: "4px 0 0 0" }}>
+                Total amount for the <strong>{duration}</strong> subscription cycle.
+              </p>
             </div>
           </section>
 
@@ -335,43 +378,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
           {/* Section 4: Plan Timing & Schedule */}
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Plan Timing &amp; Schedule</h2>
-
-            {/* Plan Duration Dropdown */}
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Plan Duration</label>
-              <div className={styles.selectWrapper}>
-                <div
-                  className={styles.selectTrigger}
-                  onClick={() => setIsDurationMenuOpen((prev) => !prev)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <span>{duration}</span>
-                  <ChevronDown size={18} color="#64748B" />
-                </div>
-
-                {isDurationMenuOpen && (
-                  <div className={styles.selectMenu}>
-                    {DURATION_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        className={`${styles.selectOption} ${
-                          duration === opt ? styles.selectOptionActive : ""
-                        }`}
-                        onClick={() => {
-                          setDuration(opt);
-                          setIsDurationMenuOpen(false);
-                        }}
-                      >
-                        <span>{opt}</span>
-                        {duration === opt && <Check size={14} color="#F97316" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Meal Timings List */}
             <div className={styles.formGroup}>

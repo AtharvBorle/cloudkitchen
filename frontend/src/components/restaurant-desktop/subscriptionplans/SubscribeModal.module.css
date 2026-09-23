@@ -169,6 +169,41 @@
   gap: 10px;
 }
 
+.planDurationBox {
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.planDurationLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.planDurationTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #9a3412;
+  letter-spacing: 0.04em;
+}
+
+.planDurationSubtitle {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.planDurationPrice {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #c2410c;
+}
+
 .cycleOption {
   border: 2px solid #e2e8f0;
   background-color: #ffffff;

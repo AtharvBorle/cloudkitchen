@@ -381,16 +381,20 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 });
 
                             if (filteredFoodItems.length === 0) {
-                                let emptyMsg = "No items available at the moment.";
+                                let emptyMsg = (!seller.foodItems || seller.foodItems.length === 0)
+                                    ? "No dishes available."
+                                    : "No items available at the moment.";
                                 if (foodFilter === "VEG") emptyMsg = "No Veg items available.";
                                 else if (foodFilter === "NON_VEG") emptyMsg = "No Non-Veg items available.";
                                 else if (foodFilter === "JAIN") emptyMsg = "No Jain items available.";
                                 else if (foodFilter === "VEGAN") emptyMsg = "No Vegan items available.";
 
                                 return (
-                                    <p style={{ color: 'var(--text-muted)', marginBottom: '40px' }}>
-                                        {emptyMsg}
-                                    </p>
+                                    <div style={{ padding: '36px 16px', textAlign: 'center', backgroundColor: '#F9FAFB', borderRadius: '14px', border: '1px dashed #E5E7EB', marginBottom: '40px' }}>
+                                        <p style={{ color: 'var(--text-muted, #6B7280)', margin: 0, fontWeight: '600', fontSize: '1rem' }}>
+                                            {emptyMsg}
+                                        </p>
+                                    </div>
                                 );
                             }
 
@@ -464,16 +468,21 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                     description: item.description,
                                 };
 
+                                const isStoreOffline = !seller.isOnline;
+                                const isOutOfStock = item.stockQuantity === 0;
+                                const isItemDisabled = item.isAvailable === false || isOutOfStock;
+                                const isGrey = isStoreOffline || isItemDisabled;
+
                                 return (
                                     <div style={{
-                                        backgroundColor: !seller.isOnline ? '#F8FAFC' : 'white',
+                                        backgroundColor: isGrey ? '#F8FAFC' : 'white',
                                         borderRadius: '10px',
                                         overflow: 'hidden',
                                         boxShadow: 'var(--shadow-card)',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        opacity: !seller.isOnline ? 0.85 : 1,
-                                        border: !seller.isOnline ? '1px solid #E2E8F0' : undefined,
+                                        opacity: isGrey ? 0.85 : 1,
+                                        border: isGrey ? '1px solid #E2E8F0' : undefined,
                                     }}>
                                         <div style={{ height: '200px', backgroundColor: '#EEE', position: 'relative' }}>
                                             <img
@@ -483,13 +492,13 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                     width: '100%',
                                                     height: '100%',
                                                     objectFit: 'cover',
-                                                    filter: !seller.isOnline ? 'grayscale(100%)' : 'none',
+                                                    filter: isGrey ? 'grayscale(100%)' : 'none',
                                                 }}
                                             />
                                             <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 2 }}>
                                                 <DietaryTag itemType={item.itemType} size="sm" />
                                             </div>
-                                            {!seller.isOnline && (
+                                            {isGrey && (
                                                 <div
                                                     style={{
                                                         position: "absolute",
@@ -518,29 +527,29 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                             border: "1px solid rgba(255,255,255,0.2)",
                                                         }}
                                                     >
-                                                        🔴 CLOSED
+                                                        {isStoreOffline ? "🔴 CLOSED" : isOutOfStock ? "🔴 OUT OF STOCK" : "🔴 UNAVAILABLE"}
                                                     </span>
                                                 </div>
                                             )}
                                         </div>
                                         <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
-                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: isGrey ? '#64748B' : 'var(--text-main)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                         {item.name}
                                                     </span>
                                                     
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                                         {item.averageRating > 0 && (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px', width: 'fit-content' }}>
-                                                                <Star size={12} fill="#D97706" color="#D97706" />
-                                                                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#D97706' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: isGrey ? '#F1F5F9' : '#FEF3C7', padding: '2px 8px', borderRadius: '6px', width: 'fit-content' }}>
+                                                                <Star size={12} fill={isGrey ? "#94A3B8" : "#D97706"} color={isGrey ? "#94A3B8" : "#D97706"} />
+                                                                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: isGrey ? "#94A3B8" : '#D97706' }}>
                                                                     {item.averageRating} ({item.totalRatings})
                                                                 </span>
                                                             </div>
                                                         )}
                                                         {item.foodSubCategory && (
-                                                            <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <span style={{ backgroundColor: isGrey ? '#F1F5F9' : '#F0FDF4', color: isGrey ? '#64748B' : '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                                 {item.foodSubCategory.imageUrl ? (
                                                                     <img
                                                                         src={item.foodSubCategory.imageUrl}
@@ -553,14 +562,14 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                         )}
                                                     </div>
                                                 </h3>
-                                                <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.15rem' }}>₹{item.price}</span>
+                                                <span style={{ color: isGrey ? '#94A3B8' : 'var(--coral)', fontWeight: 'bold', fontSize: '1.15rem' }}>₹{item.price}</span>
                                             </div>
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
 
                                             {/* Add-ons available preview */}
                                             {addons.length > 0 && (
                                                 <div style={{ marginBottom: '12px' }}>
-                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: isGrey ? '#94A3B8' : '#64748B', marginBottom: '4px', textTransform: 'uppercase' }}>
                                                         Available Add-ons:
                                                     </div>
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -572,9 +581,9 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                                     borderRadius: '6px',
                                                                     fontSize: '0.78rem',
                                                                     fontWeight: '600',
-                                                                    border: '1px solid #FFEDD5',
-                                                                    backgroundColor: '#FFF7ED',
-                                                                    color: '#EA580C',
+                                                                    border: `1px solid ${isGrey ? '#E2E8F0' : '#FFEDD5'}`,
+                                                                    backgroundColor: isGrey ? '#F1F5F9' : '#FFF7ED',
+                                                                    color: isGrey ? '#94A3B8' : '#EA580C',
                                                                 }}
                                                             >
                                                                 + {a.name} (₹{a.price})
@@ -585,7 +594,9 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                             )}
 
                                             <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                                {item.stockQuantity === 0 ? (
+                                                {item.isAvailable === false ? (
+                                                    <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Unavailable</span>
+                                                ) : item.stockQuantity === 0 ? (
                                                     <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
                                                 ) : item.stockQuantity > 0 ? (
                                                     <span>Only {item.stockQuantity} left!</span>
@@ -610,7 +621,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                 </div>
                                             )}
 
-                                            <AddToCartButton item={cartPayload} disabled={!seller.isOnline || item.stockQuantity === 0 || !!(userAddress && !isDeliverable(item))} />
+                                            <AddToCartButton item={cartPayload} disabled={isGrey || !!(userAddress && !isDeliverable(item))} />
                                         </div>
                                     </div>
                                 );
@@ -662,23 +673,77 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '25px', borderBottom: '2px solid #EAEAEA', paddingBottom: '10px' }}>Rooms</h2>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '30px' }}>
-                                    {seller.rooms.map((room: any) => (
-                                        <div key={room.id} style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ height: '220px', backgroundColor: '#EEE' }}>
-                                                <img src={getFirstImage(room.images)} alt={room.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            </div>
-                                            <div style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                                    <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{room.title}</h3>
-                                                    <span style={{ color: 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{room.price}/night</span>
+                                    {seller.rooms.map((room: any) => {
+                                        const isRoomUnavailable = !seller.isOnline || room.isAvailable === false;
+                                        return (
+                                            <div key={room.id} style={{
+                                                backgroundColor: isRoomUnavailable ? '#F8FAFC' : 'white',
+                                                borderRadius: '10px',
+                                                overflow: 'hidden',
+                                                boxShadow: 'var(--shadow-card)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                opacity: isRoomUnavailable ? 0.85 : 1,
+                                                border: isRoomUnavailable ? '1px solid #E2E8F0' : undefined,
+                                            }}>
+                                                <div style={{ height: '220px', backgroundColor: '#EEE', position: 'relative' }}>
+                                                    <img
+                                                        src={getFirstImage(room.images)}
+                                                        alt={room.title}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                            filter: isRoomUnavailable ? 'grayscale(100%)' : 'none',
+                                                        }}
+                                                    />
+                                                    {isRoomUnavailable && (
+                                                        <div
+                                                            style={{
+                                                                position: "absolute",
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                bottom: 0,
+                                                                backgroundColor: "rgba(15, 23, 42, 0.4)",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                zIndex: 3,
+                                                            }}
+                                                        >
+                                                            <span
+                                                                style={{
+                                                                    backgroundColor: "#0F172A",
+                                                                    color: "#FFFFFF",
+                                                                    fontSize: "11px",
+                                                                    fontWeight: "800",
+                                                                    letterSpacing: "0.8px",
+                                                                    padding: "5px 12px",
+                                                                    borderRadius: "14px",
+                                                                    textTransform: "uppercase",
+                                                                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                                                                    border: "1px solid rgba(255,255,255,0.2)",
+                                                                }}
+                                                            >
+                                                                {!seller.isOnline ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', flex: 1, marginBottom: '15px' }}>{room.description}</p>
-                                                <p style={{ fontSize: '0.9rem', color: '#555', marginBottom: '25px', fontWeight: '500' }}>Capacity: {room.capacity} Guests</p>
+                                                <div style={{ padding: '25px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                                        <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: isRoomUnavailable ? '#64748B' : 'var(--text-main)' }}>{room.title}</h3>
+                                                        <span style={{ color: isRoomUnavailable ? '#94A3B8' : 'var(--coral)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{room.price}/night</span>
+                                                    </div>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', flex: 1, marginBottom: '15px' }}>{room.description}</p>
+                                                    <p style={{ fontSize: '0.9rem', color: '#555', marginBottom: '25px', fontWeight: '500' }}>Capacity: {room.capacity} Guests</p>
 
-                                                <BookRoomButton room={{ ...room, sellerCity: seller.user.city, sellerName: seller.businessName || seller.user.name }} disabled={!seller.isOnline} />
+                                                    <BookRoomButton room={{ ...room, sellerCity: seller.user.city, sellerName: seller.businessName || seller.user.name }} disabled={isRoomUnavailable} />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </>
                         )}
