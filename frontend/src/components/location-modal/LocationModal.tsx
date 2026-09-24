@@ -92,7 +92,11 @@ export const LocationModal: React.FC = () => {
 
   useEffect(() => {
     if (isLocationModalOpen && !isStaffOrSeller && !isNonCustomerRoute) {
-      const pin = defaultAddress?.pincode || "";
+      const pin =
+        defaultAddress?.pincode ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") || ""
+          : "");
       setPincodeInput(pin);
       const matched = POPULAR_AREAS.find((a) => a.pincode === pin) || null;
       setSelectedAreaInfo(matched);
@@ -225,15 +229,14 @@ export const LocationModal: React.FC = () => {
             const city = addr.city || addr.town || addr.state_district || addr.state || "Pune";
 
             if (pin && pin.length === 6) {
+              setGuestLocation(pin, locality, city, lat, lng);
               if (session?.user) {
                 await fetchApi("/api/user/location", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ pincode: pin, lat, lng }),
-                });
+                }).catch(() => {});
                 await refreshAddress();
-              } else {
-                setGuestLocation(pin, locality, city);
               }
 
               showNotification("success", `GPS Location Detected: ${locality} (${pin})`);

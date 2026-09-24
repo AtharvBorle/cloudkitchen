@@ -438,6 +438,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
       window.addEventListener("seller-status-updated", handleSync);
       window.addEventListener("cloudkitchen-new-notification", handleSync);
       window.addEventListener("storage", handleSync);
+      window.addEventListener("location-changed", handleSync);
       document.addEventListener("visibilitychange", handleVisibility);
     }
 
@@ -460,6 +461,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         window.removeEventListener("seller-status-updated", handleSync);
         window.removeEventListener("cloudkitchen-new-notification", handleSync);
         window.removeEventListener("storage", handleSync);
+        window.removeEventListener("location-changed", handleSync);
         document.removeEventListener("visibilitychange", handleVisibility);
       }
       if (bcStatus) {
