@@ -42,7 +42,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // OTP Login State
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -221,12 +221,44 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       }
 
       setIsLoading(true);
-      setTimeout(() => {
+      try {
+        await discardExistingSession();
+        const res = await signIn("credentials", {
+          redirect: false,
+          phone: phoneNumber.replace(/\D/g, ""),
+          otp: fullOtp,
+          loginType: "OTP_USER",
+        });
+
+        if (res?.error) {
+          if (
+            res.error === "USER_NOT_FOUND" ||
+            res.error.includes("USER_NOT_FOUND")
+          ) {
+            setError("No account found with this mobile number.");
+          } else if (
+            res.error === "INVALID_OTP" ||
+            res.error.includes("INVALID_OTP")
+          ) {
+            setError("Invalid OTP. Please try again.");
+          } else if (
+            res.error === "INVALID_PHONE" ||
+            res.error.includes("INVALID_PHONE")
+          ) {
+            setError("Please enter a valid 10-digit mobile number.");
+          } else {
+            setError("Login failed. Please try again.");
+          }
+        } else {
+          const params = new URLSearchParams(window.location.search);
+          const callbackUrl = params.get("callbackUrl") || "/";
+          window.location.href = callbackUrl;
+        }
+      } catch (err) {
+        setError("An unexpected error occurred. Please try again.");
+      } finally {
         setIsLoading(false);
-        const params = new URLSearchParams(window.location.search);
-        const callbackUrl = params.get("callbackUrl") || "/";
-        window.location.href = callbackUrl;
-      }, 500);
+      }
     }
   };
 

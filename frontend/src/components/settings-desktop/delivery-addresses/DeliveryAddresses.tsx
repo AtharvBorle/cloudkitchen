@@ -135,6 +135,10 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
       router.push("/login?callbackUrl=/profile");
       return;
     }
+    if (addresses.length >= 5) {
+      alert("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.");
+      return;
+    }
     setEditingAddressId(null);
     setAddressType("Home");
     setHouseNumber("");
@@ -166,6 +170,11 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
 
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!editingAddressId && addresses.length >= 5) {
+      alert("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.");
+      return;
+    }
 
     if (!houseNumber.trim()) {
       alert("Please enter Flat / House / Floor number.");
@@ -274,10 +283,13 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
           type="button"
           className={styles.addBtn}
           onClick={openAddModal}
+          disabled={addresses.length >= 5}
+          title={addresses.length >= 5 ? "Maximum 5 addresses limit reached" : "Add New Address"}
+          style={addresses.length >= 5 ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
           aria-label="Add New Address"
         >
           <Plus size={15} strokeWidth={3} />
-          <span>Add New Address</span>
+          <span>Add New Address ({addresses.length}/5)</span>
         </button>
       </div>
 

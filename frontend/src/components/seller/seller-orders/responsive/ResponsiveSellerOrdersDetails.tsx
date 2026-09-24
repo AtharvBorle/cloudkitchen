@@ -43,30 +43,26 @@ export interface ResponsiveSellerOrdersDetailsProps {
   onCallRider?: () => void;
 }
 
-const DEFAULT_ITEMS: ResponsiveOrderItemLine[] = [
-  { id: "1", name: "Butter Chicken", qty: 2, price: "₹450" },
-  { id: "2", name: "Naan", qty: 4, price: "₹120" },
-  { id: "3", name: "Dal Makhani", qty: 1, price: "₹280" },
-];
+const DEFAULT_ITEMS: ResponsiveOrderItemLine[] = [];
 
 export const ResponsiveSellerOrdersDetails: React.FC<
   ResponsiveSellerOrdersDetailsProps
 > = ({
-  orderId = "#1234",
-  customerName = "Priya Mehta",
-  customerPhone = "+919876543210",
-  deliveryAddress = "Flat 402, Powai, Mumbai - 400076",
-  riderName = "Rahul Kumar",
-  riderInitials = "RK",
-  riderPhone = "+919876500101",
-  riderEta = "Live ETA: ~12 min",
+  orderId = "",
+  customerName = "Customer",
+  customerPhone = "",
+  deliveryAddress = "",
+  riderName = "",
+  riderInitials = "",
+  riderPhone = "",
+  riderEta = "",
   items = DEFAULT_ITEMS,
-  subtotal,
-  deliveryFee,
+  subtotal = "₹0",
+  deliveryFee = "Free",
   discount,
-  total = "₹850",
+  total = "₹0",
   paymentMethod = "COD",
-  initialStatus = "Preparing",
+  initialStatus = "Order Placed",
   onBack,
   onCallRider,
 }) => {

@@ -81,33 +81,60 @@ function DetailsContent() {
   const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : totalNum;
   const discountNum = Math.max(0, subtotalNum - totalNum);
 
+  if (!loading && !order) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#F8FAFC", padding: "40px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+        <h2 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#1E293B", margin: "0 0 8px 0" }}>Order Not Found</h2>
+        <p style={{ fontSize: "0.88rem", color: "#64748B", margin: "0 0 20px 0" }}>The requested order could not be located or has expired.</p>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              if (window.history.length > 1) window.history.back();
+              else window.location.href = "/seller/orders";
+            }
+          }}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#FF5500",
+            color: "#FFFFFF",
+            borderRadius: "8px",
+            border: "none",
+            fontSize: "14px",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Back to Orders
+        </button>
+      </div>
+    );
+  }
+
   return (
     <ResponsiveSellerOrdersDetails
-      orderId={order ? `#${order.id.slice(0, 6)}` : rawId}
-      customerName={order?.user?.name || (order ? "Customer" : "Priya Mehta")}
-      customerPhone={order?.customerPhone || order?.user?.phone || "+91 98765 43210"}
-      deliveryAddress={
-        order?.deliveryAddress ||
-        "Flat 402, Building 5A, Horizon Heights, Powai, Mumbai - 400076"
-      }
-      riderName={order?.deliveryPerson?.name || "Rahul Kumar"}
+      orderId={order ? `#${order.id.slice(0, 6).toUpperCase()}` : rawId}
+      customerName={order?.user?.name || order?.customerName || "Customer"}
+      customerPhone={order?.customerPhone || order?.user?.phone || ""}
+      deliveryAddress={order?.deliveryAddress || order?.room?.title || ""}
+      riderName={order?.deliveryPerson?.name || ""}
       riderInitials={
         order?.deliveryPerson?.name
           ? order.deliveryPerson.name
               .split(" ")
               .map((n: string) => n[0])
               .join("")
-          : "RK"
+          : ""
       }
-      riderPhone={order?.deliveryPerson?.phone || "+919876500101"}
-      riderEta="Live ETA: ~12 min"
-      items={formattedItems}
+      riderPhone={order?.deliveryPerson?.phone || ""}
+      riderEta={order?.deliveryPerson ? "Assigned" : ""}
+      items={formattedItems || []}
       subtotal={`₹${subtotalNum}`}
       deliveryFee="Free"
       discount={discountNum > 0 ? `₹${discountNum}` : undefined}
       total={`₹${totalNum}`}
       paymentMethod={`${order?.paymentMethod || "COD"} (${order?.isPaid ? "Paid" : "Unpaid"})`}
-      initialStatus={order ? mapStatusToStep(order.status) : "Preparing"}
+      initialStatus={order ? mapStatusToStep(order.status) : "Order Placed"}
     />
   );
 }

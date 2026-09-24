@@ -97,7 +97,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const [isRoomsDropdownOpen, setIsRoomsDropdownOpen] = useState<boolean>(isRoomRoute);
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState<boolean>(isSettingsRoute);
 
-  const userName = customUserName || session?.user?.name || "Siddharth Sharma";
+  const userName = customUserName || session?.user?.name || (session ? "User" : "Guest User");
 
   // Lock body scroll and sync dropdown state when drawer is opened
   useEffect(() => {
@@ -224,56 +224,71 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     },
   ];
 
-  const settingsSubOptions = [
-    {
-      label: "General Overview",
-      href: "/settings-desktop",
-      icon: <Settings className={styles.subnavIcon} size={15} />,
-    },
-    {
-      label: "My Subscriptions",
-      href: "/my-subscriptions-desktop",
-      icon: <Calendar className={styles.subnavIcon} size={15} />,
-    },
-    /*
-    // PAYMENT METHODS (Disabled via comment - uncomment to re-enable in future)
-    {
-      label: "Payment Methods",
-      href: "/payment-methods-desktop",
-      icon: <CreditCard className={styles.subnavIcon} size={15} />,
-    },
-    */
-    {
-      label: "Delivery Addresses",
-      href: "/delivery-addresses-desktop",
-      icon: <MapPin className={styles.subnavIcon} size={15} />,
-    },
-    {
-      label: "Order History",
-      href: "/order-history-desktop",
-      icon: <History className={styles.subnavIcon} size={15} />,
-    },
-    {
-      label: "Help & FAQ",
-      href: "/support",
-      icon: <HelpCircle className={styles.subnavIcon} size={15} />,
-    },
-    {
-      label: "Terms & Conditions",
-      href: "/terms",
-      icon: <FileText className={styles.subnavIcon} size={15} />,
-    },
-    {
-      label: "Privacy Policy",
-      href: "/privacy",
-      icon: <Shield className={styles.subnavIcon} size={15} />,
-    },
-    {
-      label: "Rate Our App",
-      href: "/rate-app",
-      icon: <Star className={styles.subnavIcon} size={15} />,
-    },
-  ];
+  const settingsSubOptions = session?.user
+    ? [
+        {
+          label: "General Overview",
+          href: "/settings-desktop",
+          icon: <Settings className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "My Subscriptions",
+          href: "/my-subscriptions-desktop",
+          icon: <Calendar className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Delivery Addresses",
+          href: "/delivery-addresses-desktop",
+          icon: <MapPin className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Order History",
+          href: "/order-history-desktop",
+          icon: <History className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Help & FAQ",
+          href: "/support",
+          icon: <HelpCircle className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Terms & Conditions",
+          href: "/terms",
+          icon: <FileText className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Privacy Policy",
+          href: "/privacy",
+          icon: <Shield className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Rate Our App",
+          href: "/rate-app",
+          icon: <Star className={styles.subnavIcon} size={15} />,
+        },
+      ]
+    : [
+        {
+          label: "Privacy Policy",
+          href: "/privacy",
+          icon: <Shield className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Terms & Conditions",
+          href: "/terms",
+          icon: <FileText className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Help & FAQ",
+          href: "/support",
+          icon: <HelpCircle className={styles.subnavIcon} size={15} />,
+        },
+        {
+          label: "Rate Our App",
+          href: "/rate-app",
+          icon: <Star className={styles.subnavIcon} size={15} />,
+        },
+      ];
 
   const isLinkActive = (item: { label: string; href: string }) => {
     if (item.href === "/" && (pathname === "/" || activeItem === "Home")) return true;

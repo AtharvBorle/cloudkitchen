@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle } from "lucide-react";
+import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -339,25 +339,60 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
     );
   }
 
-  const activeOrderData = order || {
-    orderId: rawOrderId || "#NCR-8291",
-    placedTime: "Just now",
-    status: "Pending" as const,
-    rawStatus: "PENDING",
-    customerName: "Customer",
-    customerPhone: "+91 98765 43210",
-    contactNumber: "+91 98765 43210",
-    deliveryAddress: "Powai, Mumbai",
-    roomAssigned: "Room 101",
-    items: [],
-    subtotal: "₹0",
-    deliveryFee: "₹0",
-    serviceFee: "Free",
-    taxes: "₹0",
-    total: "₹0",
-    grandTotal: "₹0",
-    paymentMethod: "COD (Unpaid)",
-  };
+  if (!order) {
+    return (
+      <div className={styles.container}>
+        <ConsoleSidebar
+          activeItemId="orders"
+          isMobileOpen={isMobileOpen}
+          onClose={() => setIsMobileOpen(false)}
+          ownerName={ownerName}
+          partnerRole={partnerRole}
+          avatarInitials={avatarInitials}
+        />
+        <div className={styles.rightSection}>
+          <Topbar
+            title="Owner Operations Console"
+            ownerName={ownerName}
+            partnerRole={partnerRole}
+            avatarInitials={avatarInitials}
+            onSearch={onSearch}
+            onNotificationClick={onNotificationClick}
+            onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
+          />
+          <main className={styles.mainContent} style={{ textAlign: "center", padding: "80px 20px" }}>
+            <div style={{ maxWidth: "420px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Package size={48} color="#94A3B8" style={{ marginBottom: "16px" }} />
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#1E293B", margin: "0 0 8px 0" }}>Order Not Found</h2>
+              <p style={{ color: "#64748B", fontSize: "14px", margin: "0 0 24px 0" }}>
+                The requested order could not be located or has expired.
+              </p>
+              <Link
+                href="/seller/orders"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  backgroundColor: "#FF5500",
+                  color: "#FFFFFF",
+                  padding: "10px 20px",
+                  borderRadius: "10px",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Return to Orders</span>
+              </Link>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  const activeOrderData = order;
 
   return (
     <div className={styles.container}>

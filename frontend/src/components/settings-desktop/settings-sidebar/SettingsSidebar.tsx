@@ -142,88 +142,72 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
 
         {/* 2. Navigation Groups */}
         <div className={styles.navGroupsWrapper}>
-          {/* Group 1: General Settings */}
-          <div className={styles.navGroup}>
-            <span className={styles.groupLabel}>GENERAL SETTINGS</span>
+          {/* Group 1: General Settings (Authenticated Users Only) */}
+          {session?.user && (
+            <div className={styles.navGroup}>
+              <span className={styles.groupLabel}>GENERAL SETTINGS</span>
 
-            <button
-              type="button"
-              className={`${styles.navItem} ${
-                currentTab === "general-overview" ? styles.navItemActive : ""
-              }`}
-              onClick={() => handleTabClick("general-overview")}
-            >
-              <div className={styles.navItemLeft}>
-                <Settings size={18} className={styles.navIcon} />
-                <span>General Overview</span>
-              </div>
-              <ChevronRight size={16} className={styles.chevronIcon} />
-            </button>
+              <button
+                type="button"
+                className={`${styles.navItem} ${
+                  currentTab === "general-overview" ? styles.navItemActive : ""
+                }`}
+                onClick={() => handleTabClick("general-overview")}
+              >
+                <div className={styles.navItemLeft}>
+                  <Settings size={18} className={styles.navIcon} />
+                  <span>General Overview</span>
+                </div>
+                <ChevronRight size={16} className={styles.chevronIcon} />
+              </button>
 
-            <button
-              type="button"
-              className={`${styles.navItem} ${
-                currentTab === "my-subscriptions" ? styles.navItemActive : ""
-              }`}
-              onClick={() => handleTabClick("my-subscriptions")}
-            >
-              <div className={styles.navItemLeft}>
-                <Calendar size={18} className={styles.navIcon} />
-                <span>My Subscriptions</span>
-              </div>
-              <ChevronRight size={16} className={styles.chevronIcon} />
-            </button>
+              <button
+                type="button"
+                className={`${styles.navItem} ${
+                  currentTab === "my-subscriptions" ? styles.navItemActive : ""
+                }`}
+                onClick={() => handleTabClick("my-subscriptions")}
+              >
+                <div className={styles.navItemLeft}>
+                  <Calendar size={18} className={styles.navIcon} />
+                  <span>My Subscriptions</span>
+                </div>
+                <ChevronRight size={16} className={styles.chevronIcon} />
+              </button>
 
+              <button
+                type="button"
+                className={`${styles.navItem} ${
+                  currentTab === "delivery-addresses" ? styles.navItemActive : ""
+                }`}
+                onClick={() => handleTabClick("delivery-addresses")}
+              >
+                <div className={styles.navItemLeft}>
+                  <MapPin size={18} className={styles.navIcon} />
+                  <span>Delivery Addresses</span>
+                </div>
+                <ChevronRight size={16} className={styles.chevronIcon} />
+              </button>
 
-            {/* 
-              PAYMENT METHODS (Disabled via comment - uncomment to re-enable in future)
-            <button
-              type="button"
-              className={`${styles.navItem} ${
-                currentTab === "payment-methods" ? styles.navItemActive : ""
-              }`}
-              onClick={() => handleTabClick("payment-methods")}
-            >
-              <div className={styles.navItemLeft}>
-                <CreditCard size={18} className={styles.navIcon} />
-                <span>Payment Methods</span>
-              </div>
-              <ChevronRight size={16} className={styles.chevronIcon} />
-            </button>
-            */}
-
-            <button
-              type="button"
-              className={`${styles.navItem} ${
-                currentTab === "delivery-addresses" ? styles.navItemActive : ""
-              }`}
-              onClick={() => handleTabClick("delivery-addresses")}
-            >
-              <div className={styles.navItemLeft}>
-                <MapPin size={18} className={styles.navIcon} />
-                <span>Delivery Addresses</span>
-              </div>
-              <ChevronRight size={16} className={styles.chevronIcon} />
-            </button>
-
-            <button
-              type="button"
-              className={`${styles.navItem} ${
-                currentTab === "order-history" ? styles.navItemActive : ""
-              }`}
-              onClick={() => handleTabClick("order-history")}
-            >
-              <div className={styles.navItemLeft}>
-                <History size={18} className={styles.navIcon} />
-                <span>Order History</span>
-              </div>
-              <ChevronRight size={16} className={styles.chevronIcon} />
-            </button>
-          </div>
+              <button
+                type="button"
+                className={`${styles.navItem} ${
+                  currentTab === "order-history" ? styles.navItemActive : ""
+                }`}
+                onClick={() => handleTabClick("order-history")}
+              >
+                <div className={styles.navItemLeft}>
+                  <History size={18} className={styles.navIcon} />
+                  <span>Order History</span>
+                </div>
+                <ChevronRight size={16} className={styles.chevronIcon} />
+              </button>
+            </div>
+          )}
 
           {/* Group 2: Support & Legal */}
           <div className={styles.navGroup}>
-            <span className={styles.groupLabel}>SUPPORT & LEGAL</span>
+            <span className={styles.groupLabel}>{session?.user ? "SUPPORT & LEGAL" : "LEGAL & POLICIES"}</span>
 
             <button
               type="button"

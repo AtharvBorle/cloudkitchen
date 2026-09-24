@@ -502,6 +502,10 @@ export function ExploreHeader() {
 
     const handleCreateAddress = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (addresses.length >= 5) {
+            alert("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.");
+            return;
+        }
         if (!addressForm.houseNumber || !addressForm.street || !addressForm.pincode) {
             alert("Please fill in all required fields");
             return;
@@ -874,11 +878,26 @@ export function ExploreHeader() {
                                                 ))}
 
                                                 <button
-                                                    onClick={() => setShowAddForm(true)}
+                                                    onClick={() => {
+                                                        if (addresses.length >= 5) {
+                                                            alert("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.");
+                                                            return;
+                                                        }
+                                                        setShowAddForm(true);
+                                                    }}
                                                     className="btn btn-secondary"
-                                                    style={{ width: '100%', marginTop: '10px', fontSize: '0.9rem', padding: '10px' }}
+                                                    disabled={addresses.length >= 5}
+                                                    style={{
+                                                        width: '100%',
+                                                        marginTop: '10px',
+                                                        fontSize: '0.9rem',
+                                                        padding: '10px',
+                                                        opacity: addresses.length >= 5 ? 0.6 : 1,
+                                                        cursor: addresses.length >= 5 ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    title={addresses.length >= 5 ? "Maximum 5 addresses limit reached" : "Add New Address"}
                                                 >
-                                                    + Add New Address
+                                                    + Add New Address ({addresses.length}/5)
                                                 </button>
                                             </div>
                                         )}

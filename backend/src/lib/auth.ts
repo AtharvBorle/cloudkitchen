@@ -52,13 +52,61 @@ export const authConfig: NextAuthConfig = {
             credentials: {
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
+                phone: { label: "Phone", type: "text" },
+                otp: { label: "OTP", type: "text" },
                 loginType: { label: "LoginType", type: "text" }
             },
             async authorize(credentials) {
+                const loginType = (credentials?.loginType as string) || "USER";
+
+                // ── OTP-based login (phone + OTP) ──
+                if (loginType === "OTP_USER") {
+                    const phone = (credentials?.phone as string || "").replace(/\D/g, "");
+                    const otp = (credentials?.otp as string || "").trim();
+
+                    if (!phone || phone.length < 10) {
+                        throw new CustomAuthError("INVALID_PHONE");
+                    }
+                    if (!otp) {
+                        throw new CustomAuthError("INVALID_OTP");
+                    }
+
+                    // Master OTP for development
+                    const MASTER_OTP = "123456";
+                    if (otp !== MASTER_OTP) {
+                        console.log("Invalid OTP for phone:", phone);
+                        throw new CustomAuthError("INVALID_OTP");
+                    }
+
+                    // Look up user by phone (last 10 digits)
+                    const phoneDigits = phone.length > 10 ? phone.slice(-10) : phone;
+                    console.log("OTP login attempt for phone:", phoneDigits);
+
+                    const user = await db.user.findFirst({
+                        where: {
+                            phone: phoneDigits,
+                            role: "USER",
+                        }
+                    });
+
+                    if (!user) {
+                        console.log("User not found for phone:", phoneDigits);
+                        throw new CustomAuthError("USER_NOT_FOUND");
+                    }
+
+                    console.log("OTP login successful for:", user.email);
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role: user.role
+                    };
+                }
+
+                // ── Email + Password login ──
                 if (!credentials?.email || !credentials?.password) return null;
 
                 const email = (credentials.email as string).toLowerCase();
-                const loginType = (credentials.loginType as string) || "USER";
                 console.log("Login attempt for:", email, "with loginType:", loginType);
 
                 const user = await db.user.findUnique({

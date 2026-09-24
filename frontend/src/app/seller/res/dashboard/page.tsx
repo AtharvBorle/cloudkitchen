@@ -125,44 +125,7 @@ export default function ResponsiveSellerDashboardPage() {
 
   const dynamicRecentOrders: ResponsiveOrderSummary[] = useMemo(() => {
     if (!ordersList || ordersList.length === 0) {
-      return [
-        {
-          id: "ord-101",
-          orderNumber: "#NCR-101A",
-          customerName: "Aarav Sharma",
-          amount: "₹640",
-          timeAgo: "10 mins ago",
-          status: "Preparing",
-          href: "/seller/orders",
-        },
-        {
-          id: "ord-102",
-          orderNumber: "#NCR-102B",
-          customerName: "Priya Patel",
-          amount: "₹560",
-          timeAgo: "25 mins ago",
-          status: "New",
-          href: "/seller/orders",
-        },
-        {
-          id: "ord-103",
-          orderNumber: "#NCR-103C",
-          customerName: "Rohan Verma",
-          amount: "₹390",
-          timeAgo: "1 hour ago",
-          status: "Delivered",
-          href: "/seller/orders",
-        },
-        {
-          id: "ord-104",
-          orderNumber: "#NCR-104D",
-          customerName: "Sneha Kulkarni",
-          amount: "₹420",
-          timeAgo: "2 hours ago",
-          status: "New",
-          href: "/seller/orders",
-        },
-      ];
+      return [];
     }
     return ordersList.map((o: any) => {
       let statusText: "New" | "Preparing" | "Delivered" | "Cancelled" | string = "New";

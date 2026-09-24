@@ -16,8 +16,9 @@ export async function GET(req: NextRequest) {
         const exploreData = await getPublicExploreData();
         let foodItems = exploreData.foodItems || [];
         let kitchens = exploreData.kitchens || [];
+        let rooms = exploreData.availableRooms || [];
 
-        // 1. Keyword search (dish name, description, category, seller name)
+        // 1. Keyword search (dish name, description, category, seller name, kitchen details, room details)
         if (q) {
             foodItems = foodItems.filter((item: any) =>
                 item.name?.toLowerCase().includes(q) ||
@@ -31,7 +32,16 @@ export async function GET(req: NextRequest) {
                 k.name?.toLowerCase().includes(q) ||
                 k.type?.toLowerCase().includes(q) ||
                 k.locality?.toLowerCase().includes(q) ||
+                k.landmark?.toLowerCase().includes(q) ||
                 k.city?.toLowerCase().includes(q)
+            );
+
+            rooms = rooms.filter((r: any) =>
+                r.title?.toLowerCase().includes(q) ||
+                r.description?.toLowerCase().includes(q) ||
+                r.sellerName?.toLowerCase().includes(q) ||
+                r.sellerLocality?.toLowerCase().includes(q) ||
+                r.sellerCity?.toLowerCase().includes(q)
             );
         }
 
@@ -45,6 +55,10 @@ export async function GET(req: NextRequest) {
             kitchens = kitchens.filter((k: any) =>
                 k.pincode === pincode ||
                 (Array.isArray(k.servedPincodes) && k.servedPincodes.includes(pincode))
+            );
+
+            rooms = rooms.filter((r: any) =>
+                r.sellerPincode === pincode
             );
         }
 
@@ -66,9 +80,11 @@ export async function GET(req: NextRequest) {
         // 5. Price filter
         if (minPrice !== null && !isNaN(minPrice)) {
             foodItems = foodItems.filter((item: any) => item.price >= minPrice);
+            rooms = rooms.filter((r: any) => r.price >= minPrice);
         }
         if (maxPrice !== null && !isNaN(maxPrice)) {
             foodItems = foodItems.filter((item: any) => item.price <= maxPrice);
+            rooms = rooms.filter((r: any) => r.price <= maxPrice);
         }
 
         // 6. Rating filter
@@ -77,21 +93,24 @@ export async function GET(req: NextRequest) {
             kitchens = kitchens.filter((k: any) => (k.rating || 0) >= minRating);
         }
 
-        // Autocomplete suggestions (top unique dish names and kitchen names)
+        // Autocomplete suggestions (top unique dish names, kitchen names, room names)
         const suggestions = Array.from(
             new Set([
-                ...foodItems.slice(0, 5).map((f: any) => f.name),
+                ...foodItems.slice(0, 4).map((f: any) => f.name),
                 ...kitchens.slice(0, 3).map((k: any) => k.name),
+                ...rooms.slice(0, 2).map((r: any) => r.title),
             ])
-        ).slice(0, 6);
+        ).slice(0, 8);
 
         const response = successResponse({
             query: q,
             totalItems: foodItems.length,
             totalKitchens: kitchens.length,
+            totalRooms: rooms.length,
             suggestions,
             foodItems,
             kitchens,
+            rooms,
             categories: exploreData.foodCategories || []
         });
 

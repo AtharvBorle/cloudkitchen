@@ -217,6 +217,10 @@ export const LocationModal: React.FC = () => {
   // 4. Handle Save New Address
   const handleSaveNewAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savedAddresses && savedAddresses.length >= 5) {
+      showNotification("error", "You can add a maximum of 5 delivery addresses. Please delete an existing address first.");
+      return;
+    }
     if (!houseNumber.trim()) {
       showNotification("error", "Please enter house / flat number");
       return;
@@ -393,10 +397,17 @@ export const LocationModal: React.FC = () => {
                   <button
                     type="button"
                     className={styles.addAddressLinkBtn}
-                    onClick={() => setShowAddForm(true)}
+                    onClick={() => {
+                      if (savedAddresses && savedAddresses.length >= 5) {
+                        showNotification("error", "You can add a maximum of 5 delivery addresses. Please delete an existing address first.");
+                        return;
+                      }
+                      setShowAddForm(true);
+                    }}
+                    title={savedAddresses && savedAddresses.length >= 5 ? "Maximum 5 addresses reached" : "Add Address"}
                   >
                     <Plus size={14} strokeWidth={3} />
-                    <span>Add Address</span>
+                    <span>Add Address ({savedAddresses?.length || 0}/5)</span>
                   </button>
                 )}
               </div>

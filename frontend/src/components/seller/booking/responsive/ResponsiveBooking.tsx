@@ -59,7 +59,7 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
   const [bookingList, setBookingList] = useState<ResponsiveBookingItem[]>(bookings);
 
   useEffect(() => {
-    if (bookings && bookings !== EMPTY_BOOKINGS) {
+    if (bookings) {
       setBookingList(bookings);
     }
   }, [bookings]);

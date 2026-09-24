@@ -76,6 +76,10 @@ export default function UserProfilePage() {
 
     const handleSaveAddress = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!editingAddressId && profile?.addresses?.length >= 5) {
+            alert("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.");
+            return;
+        }
         if (addressForm.pincode.length !== 6) {
             alert("Pincode must be exactly 6 digits.");
             return;
@@ -209,8 +213,29 @@ export default function UserProfilePage() {
                             <MapPin size={24} color="var(--primary)" /> Saved Addresses
                         </h2>
                         {!showAddressForm && (
-                            <button onClick={() => { setEditingAddressId(null); setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", latitude: null, longitude: null, isDefault: false }); setShowAddressForm(true); }} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px' }}>
-                                <Plus size={18} /> Add New
+                            <button
+                                onClick={() => {
+                                    if (profile?.addresses?.length >= 5) {
+                                        alert("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.");
+                                        return;
+                                    }
+                                    setEditingAddressId(null);
+                                    setAddressForm({ type: "Home", houseNumber: "", street: "", landmark: "", pincode: "", latitude: null, longitude: null, isDefault: false });
+                                    setShowAddressForm(true);
+                                }}
+                                className="btn btn-secondary"
+                                disabled={profile?.addresses?.length >= 5}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '8px 16px',
+                                    opacity: profile?.addresses?.length >= 5 ? 0.6 : 1,
+                                    cursor: profile?.addresses?.length >= 5 ? 'not-allowed' : 'pointer'
+                                }}
+                                title={profile?.addresses?.length >= 5 ? "Maximum 5 addresses limit reached" : "Add New Address"}
+                            >
+                                <Plus size={18} /> Add New ({profile?.addresses?.length || 0}/5)
                             </button>
                         )}
                     </div>

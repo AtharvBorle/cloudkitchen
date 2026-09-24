@@ -35,53 +35,7 @@ export interface OrderItem {
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
 }
 
-const DEFAULT_FALLBACK_ORDERS: OrderItem[] = [
-  {
-    id: "ord-101",
-    orderId: "#NCR-101A",
-    customer: "Aarav Sharma",
-    roomNo: "Room 302, Green Glen",
-    items: "2x Gourmet Butter Chicken, 4x Garlic Naan",
-    total: "₹640",
-    status: "Preparing",
-  },
-  {
-    id: "ord-102",
-    orderId: "#NCR-102B",
-    customer: "Priya Patel",
-    roomNo: "Flat 402, Sai Residency",
-    items: "1x Farmhouse Supreme Pizza, 1x Cheesy Garlic Bread",
-    total: "₹560",
-    status: "Out for Delivery",
-  },
-  {
-    id: "ord-103",
-    orderId: "#NCR-103C",
-    customer: "Rohan Verma",
-    roomNo: "Office 3B, Tech Park",
-    items: "1x Hyderabadi Veg Dum Biryani, 1x Raita",
-    total: "₹390",
-    status: "Completed",
-  },
-  {
-    id: "ord-104",
-    orderId: "#NCR-104D",
-    customer: "Sneha Kulkarni",
-    roomNo: "Room 105, Executive Suite",
-    items: "1x Deluxe Thali, 1x Gulab Jamun",
-    total: "₹420",
-    status: "Pending",
-  },
-  {
-    id: "ord-105",
-    orderId: "#NCR-105E",
-    customer: "Vikram Malhotra",
-    roomNo: "Tower B, Floor 12",
-    items: "2x Paneer Tikka Kathi Roll",
-    total: "₹260",
-    status: "Completed",
-  },
-];
+const DEFAULT_FALLBACK_ORDERS: OrderItem[] = [];
 
 export interface SellerDashboardProps {
   ownerName?: string;
@@ -109,7 +63,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [orders, setOrders] = useState<OrderItem[]>(
-    initialOrders && initialOrders.length > 0 ? initialOrders : DEFAULT_FALLBACK_ORDERS
+    initialOrders && initialOrders.length > 0 ? initialOrders : []
   );
   const [overview, setOverview] = useState<any>(null);
   const [statusData, setStatusData] = useState<any>(null);
@@ -191,7 +145,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
           const res = await ordersRes.value.json();
           const list = res.data?.orders || res.orders || res.data || [];
-          if (Array.isArray(list) && list.length > 0) {
+          if (Array.isArray(list)) {
             const mapped: OrderItem[] = list.map((o: any) => {
               let itemsSummary = "";
               try {

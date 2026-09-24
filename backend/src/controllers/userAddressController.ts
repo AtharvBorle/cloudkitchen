@@ -36,6 +36,10 @@ export const createAddress = async (req: Request) => {
         where: { userId: session.user.id }
     });
 
+    if (addressCount >= 5) {
+        throw new ApiError("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.", 400);
+    }
+
     const makeDefault = isDefault || addressCount === 0;
 
     if (makeDefault) {
