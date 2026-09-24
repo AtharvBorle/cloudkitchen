@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image, { StaticImageData } from "next/image";
-import { Star, Plus, Minus } from "lucide-react";
+import { Star, Plus, Minus, Utensils } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { DietaryTag } from "@/components/common/DietaryTag";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
@@ -41,6 +41,7 @@ export interface FoodCardItem {
   itemType?: string;
   sellerId?: string;
   sellerName?: string;
+  isAvailable?: boolean;
 }
 
 export interface PopularFoodProps {
@@ -137,7 +138,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
           (it) => it.category?.toLowerCase() === activeCategory.toLowerCase()
         );
 
-  const displayedList = filteredItems.length > 0 ? filteredItems : items;
+  const displayedList = items.length === 0 ? [] : (filteredItems.length > 0 ? filteredItems : items);
 
   return (
     <section
@@ -148,43 +149,58 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
       <h2 className={styles.heading}>{heading}</h2>
 
       {/* 2. Category Tabs */}
-      <div className={styles.tabsRow} role="tablist" aria-label="Food Categories">
-        {categories.map((category) => {
-          const isActive = activeCategory === category;
-          return (
-            <button
-              key={category}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              className={`${styles.tabBtn} ${
-                isActive ? styles.tabBtnActive : ""
-              }`}
-              onClick={() => handleTabClick(category)}
-            >
-              {category}
-            </button>
-          );
-        })}
-      </div>
+      {items.length > 0 && categories.length > 0 && (
+        <div className={styles.tabsRow} role="tablist" aria-label="Food Categories">
+          {categories.map((category) => {
+            const isActive = activeCategory === category;
+            return (
+              <button
+                key={category}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`${styles.tabBtn} ${
+                  isActive ? styles.tabBtnActive : ""
+                }`}
+                onClick={() => handleTabClick(category)}
+              >
+                {category}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* 3. Food Card Grid or Empty State */}
       {displayedList.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px 24px", backgroundColor: "#FFFFFF", borderRadius: "18px", border: "1px dashed #E2E8F0" }}>
-          <p style={{ margin: 0, fontSize: "1rem", color: "#64748B", fontWeight: "600" }}>
-            No food items currently available in this category.
+        <div style={{ textAlign: "center", padding: "56px 24px", backgroundColor: "#FFFFFF", borderRadius: "18px", border: "1px dashed #E2E8F0", margin: "16px 0" }}>
+          <Utensils size={40} color="#94A3B8" style={{ margin: "0 auto 12px", display: "block" }} />
+          <h3 style={{ margin: "0 0 6px", fontSize: "1.15rem", color: "#1E293B", fontWeight: "700" }}>
+            No dishes available.
+          </h3>
+          <p style={{ margin: 0, fontSize: "0.92rem", color: "#64748B" }}>
+            {items.length === 0
+              ? "This restaurant currently has no food items listed or published."
+              : "No food items currently available in this category."}
           </p>
         </div>
       ) : (
         <div className={styles.foodGrid} role="region" aria-label="Food Items Grid">
-          {displayedList.map((item) => (
+          {displayedList.map((item) => {
+            const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+            const isOutOfStock = stockLimit === 0;
+            const isItemDisabled = item.isAvailable === false || isOutOfStock;
+            const isGrey = !isOnline || isItemDisabled;
+
+            return (
             <article
               key={item.id}
               className={styles.foodCard}
               style={{
-                backgroundColor: !isOnline ? "#F8FAFC" : undefined,
-                opacity: !isOnline ? 0.85 : 1,
-                borderColor: !isOnline ? "#E2E8F0" : undefined,
+                backgroundColor: isGrey ? "#F8FAFC" : undefined,
+                opacity: isGrey ? 0.85 : 1,
+                borderColor: isGrey ? "#E2E8F0" : undefined,
               }}
             >
               {/* Square Food Image */}
@@ -200,10 +216,10 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                   unoptimized={typeof item.image === "string"}
                   className={styles.foodImg}
                   style={{
-                    filter: !isOnline ? "grayscale(100%)" : "none",
+                    filter: isGrey ? "grayscale(100%)" : "none",
                   }}
                 />
-                {!isOnline && (
+                {isGrey && (
                   <div
                     style={{
                       position: "absolute",
@@ -230,7 +246,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                         textTransform: "uppercase",
                       }}
                     >
-                      CLOSED
+                      {!isOnline ? "CLOSED" : isOutOfStock ? "OUT OF STOCK" : "UNAVAILABLE"}
                     </span>
                   </div>
                 )}
@@ -240,11 +256,11 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
               <div className={styles.cardContent}>
                 <div>
                   <div className={styles.cardTopRow}>
-                    <h3 className={styles.foodTitle} title={item.title} style={{ color: !isOnline ? "#64748B" : undefined }}>
+                    <h3 className={styles.foodTitle} title={item.title} style={{ color: isGrey ? "#64748B" : undefined }}>
                       {item.title}
                     </h3>
                     <span className={styles.ratingBadge}>
-                      <Star size={11} fill={!isOnline ? "#94A3B8" : "#16a34a"} color={!isOnline ? "#94A3B8" : "#16a34a"} />
+                      <Star size={11} fill={isGrey ? "#94A3B8" : "#16a34a"} color={isGrey ? "#94A3B8" : "#16a34a"} />
                       <span>{item.rating}</span>
                     </span>
                   </div>
@@ -255,7 +271,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
 
                   {item.addons && item.addons.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "4px 0 6px 0" }}>
-                      <span style={{ fontSize: "0.7rem", fontWeight: "700", color: !isOnline ? "#94A3B8" : "#EA580C", backgroundColor: !isOnline ? "#F1F5F9" : "#FFF7ED", border: `1px solid ${!isOnline ? "#E2E8F0" : "#FFEDD5"}`, padding: "2px 6px", borderRadius: "5px" }}>
+                      <span style={{ fontSize: "0.7rem", fontWeight: "700", color: isGrey ? "#94A3B8" : "#EA580C", backgroundColor: isGrey ? "#F1F5F9" : "#FFF7ED", border: `1px solid ${isGrey ? "#E2E8F0" : "#FFEDD5"}`, padding: "2px 6px", borderRadius: "5px" }}>
                         ✨ {item.addons.length} Add-on{item.addons.length > 1 ? "s" : ""} Available
                       </span>
                     </div>
@@ -264,7 +280,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
 
                 {/* Price & Add / Quantity Stepper Button */}
                 <div className={styles.cardBottomRow}>
-                  <span className={styles.priceText} style={{ color: !isOnline ? "#94A3B8" : undefined }}>{item.price}</span>
+                  <span className={styles.priceText} style={{ color: isGrey ? "#94A3B8" : undefined }}>{item.price}</span>
                   {!isOnline ? (
                     <button
                       type="button"
@@ -281,12 +297,25 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                     >
                       Closed
                     </button>
+                  ) : item.isAvailable === false ? (
+                    <button
+                      type="button"
+                      className={styles.addBtn}
+                      disabled
+                      style={{
+                        backgroundColor: "#F1F5F9",
+                        color: "#94A3B8",
+                        border: "1px solid #E2E8F0",
+                        cursor: "not-allowed",
+                        fontWeight: "700",
+                        opacity: 0.8,
+                      }}
+                    >
+                      Unavailable
+                    </button>
                   ) : (() => {
                     const currentQty = getItemQuantity(item.id);
-                    const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
-                    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
                     const isAtMaxStock = stockLimit !== -1 && currentQty >= stockLimit;
-                    const isOutOfStock = stockLimit === 0;
 
                     if (currentQty === 0) {
                       return (
@@ -297,11 +326,15 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                           aria-label={`Add ${item.title} to order`}
                           disabled={isOutOfStock}
                           style={{
-                            opacity: isOutOfStock ? 0.5 : 1,
+                            backgroundColor: isOutOfStock ? "#F1F5F9" : undefined,
+                            color: isOutOfStock ? "#94A3B8" : undefined,
+                            border: isOutOfStock ? "1px solid #E2E8F0" : undefined,
+                            opacity: isOutOfStock ? 0.8 : 1,
                             cursor: isOutOfStock ? "not-allowed" : "pointer",
+                            fontWeight: isOutOfStock ? "700" : undefined,
                           }}
                         >
-                          {isOutOfStock ? "Out of Stock" : item.addons && item.addons.length > 0 ? "Add +" : "Add +"}
+                          {isOutOfStock ? "Out of Stock" : "Add +"}
                         </button>
                       );
                     }
@@ -336,7 +369,8 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
 

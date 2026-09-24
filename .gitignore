@@ -22,6 +22,12 @@ build/
 .env.production.local
 *.env
 *.env.*
+# Allow .env.example templates (no secrets)
+!*.env.example
+!.env.example
+
+# PM2 logs
+logs/
 
 # SQLite databases (if any local DB is created)
 *.db

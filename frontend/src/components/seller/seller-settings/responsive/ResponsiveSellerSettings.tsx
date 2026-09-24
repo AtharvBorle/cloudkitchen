@@ -1690,7 +1690,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               {/* 1. Password Management Card (Matching Reference Image) */}
               <PasswordManagementCard />
 
-              {/* 2. Security & Access Card */}
+              {/* 2. Security & Access Card (Disabled via comment - uncomment to re-enable) */}
+              {/*
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
                   <Shield size={17} className={styles.cardHeaderIcon} />
@@ -1748,11 +1749,13 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                   </div>
                 </div>
               </div>
+              */}
 
               {/* 3. Active Login Sessions Card (Matching Reference Image) */}
               <ActiveLoginSessionsCard />
 
-              {/* 4. Login & Recovery Controls Card */}
+              {/* 4. Login & Recovery Controls Card (Disabled via comment - uncomment to re-enable) */}
+              {/*
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Login &amp; Recovery Controls</h2>
 
@@ -1790,6 +1793,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                   </div>
                 </div>
               </div>
+              */}
             </>
           )}
 

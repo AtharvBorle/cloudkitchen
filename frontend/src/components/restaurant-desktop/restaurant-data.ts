@@ -32,6 +32,7 @@ export interface FoodCardItem {
   itemType?: string;
   sellerId?: string;
   sellerName?: string;
+  isAvailable?: boolean;
 }
 
 export interface KitchenData {
@@ -51,6 +52,7 @@ export interface KitchenData {
   defaultActiveCategory: string;
   items: FoodCardItem[];
   isOnline?: boolean;
+  mealPlans?: any[];
   bannerImageUrl?: string;
 }
 
@@ -482,41 +484,34 @@ export function formatTitleFromSlug(slug: string): string {
 export function getKitchenById(id: string): KitchenData {
   const normalized = (id || "").toLowerCase().trim();
 
-  // 1. Direct registry hit
+  // 1. Direct registry hit for predefined static demo kitchens
   if (KITCHENS_REGISTRY[normalized]) {
     return KITCHENS_REGISTRY[normalized];
   }
 
-  // 2. Lookup by trackingId
+  // 2. Lookup by trackingId in predefined static demo kitchens
   const byTracking = Object.values(KITCHENS_REGISTRY).find(
     (k) => (k.trackingId || "").toLowerCase() === normalized
   );
   if (byTracking) return byTracking;
 
-  // 3. Fallback matching (e.g. "pizza" in id -> pizza-palace, "biryani" in id -> spice-biryani)
-  if (normalized.includes("pizza")) return { ...KITCHENS_REGISTRY["pizza-palace"], id };
-  if (normalized.includes("biryani")) return { ...KITCHENS_REGISTRY["spice-biryani"], id };
-  if (normalized.includes("bakery") || normalized.includes("bake")) return { ...KITCHENS_REGISTRY["baker-delight"], id };
-  if (normalized.includes("arjun") || normalized.includes("curry")) return { ...KITCHENS_REGISTRY["chef-arjun"], id };
-  if (normalized.includes("wok") || normalized.includes("ramen")) return { ...KITCHENS_REGISTRY["wok-station"], id };
-
-  // 4. Dynamic fallback with formatted title
+  // 3. Dynamic seller template with empty items (will be populated from live database)
   const displayName = formatTitleFromSlug(id) + " Kitchen";
   return {
     id: id,
     trackingId: `NCK-${id.toUpperCase()}`,
     restaurantName: displayName,
-    location: "Kothrud, Pune, Maharashtra",
+    location: "Pune, Maharashtra",
     rating: 4.5,
-    reviewsCount: "(180+ reviews)",
+    reviewsCount: "",
     deliveryTime: "25-35 min",
     deliveryFeeText: "Free Delivery",
     dietType: "Multi-Cuisine",
-    offerText: "20% OFF on First Order",
+    offerText: "",
     chefName: "Head Chef " + formatTitleFromSlug(id),
-    chefDetails: "Specialized gourmet cloud chef",
-    categories: ["Popular", "Meals", "Starters", "Drinks"],
-    defaultActiveCategory: "Popular",
-    items: KITCHENS_REGISTRY["7-12-kitchen"].items,
+    chefDetails: "Gourmet cloud kitchen",
+    categories: [],
+    defaultActiveCategory: "All",
+    items: [],
   };
 }

@@ -176,7 +176,7 @@ export default function SubscriptionEditCanvas({
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  const durationOptions = ["1 Week", "2 Weeks", "1 Month", "3 Months", "6 Months", "1 Year"];
+  const durationOptions = ["1 Week", "2 Weeks", "1 Month"];
 
   // Form field update handlers
   const handleTextChange = (field: keyof SubscriptionPlanData, value: string) => {
@@ -501,7 +501,7 @@ export default function SubscriptionEditCanvas({
           }}
           className="form-column"
         >
-          {/* Card 1: Plan Basics */}
+          {/* Card 1: Plan Basics & Duration */}
           <div
             style={{
               backgroundColor: "#FFFFFF",
@@ -522,7 +522,7 @@ export default function SubscriptionEditCanvas({
                 margin: 0,
               }}
             >
-              Plan Basics
+              Plan Basics &amp; Duration
             </h2>
 
             <div
@@ -609,6 +609,97 @@ export default function SubscriptionEditCanvas({
                 </select>
               </div>
             </div>
+
+            {/* Plan Duration Dropdown */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+                position: "relative",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "#0F172A",
+                }}
+              >
+                Plan Duration (Billing Cycle)
+              </label>
+              <div
+                onClick={() => setIsDurationDropdownOpen((prev) => !prev)}
+                style={{
+                  width: "100%",
+                  borderRadius: "8px",
+                  border: "1px solid #E2E8F0",
+                  padding: "10px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: "13.5px",
+                  color: "#0F172A",
+                  cursor: "pointer",
+                  boxSizing: "border-box",
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{formData.planDuration || "1 Week"}</span>
+                <ChevronDown
+                  size={16}
+                  color="#64748B"
+                  style={{
+                    transform: isDurationDropdownOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                />
+              </div>
+
+              {/* Dropdown Menu */}
+              {isDurationDropdownOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    marginTop: "4px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "8px",
+                    boxShadow: "0 10px 20px rgba(0, 0, 0, 0.08)",
+                    zIndex: 20,
+                    overflow: "hidden",
+                  }}
+                >
+                  {durationOptions.map((opt) => (
+                    <div
+                      key={opt}
+                      onClick={() => {
+                        handleTextChange("planDuration", opt);
+                        setIsDurationDropdownOpen(false);
+                      }}
+                      style={{
+                        padding: "10px 14px",
+                        fontSize: "13px",
+                        color: formData.planDuration === opt ? "#FF5500" : "#334155",
+                        fontWeight: formData.planDuration === opt ? 600 : 400,
+                        backgroundColor:
+                          formData.planDuration === opt ? "#FFF1E8" : "transparent",
+                        cursor: "pointer",
+                        transition: "background-color 0.15s ease",
+                      }}
+                    >
+                      {opt}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <span style={{ fontSize: "11.5px", color: "#64748B" }}>
+                Selected cycle: <strong>{formData.planDuration || "1 Week"}</strong>. Customers will be billed and active for this exact period.
+              </span>
+            </div>
           </div>
 
           {/* Card 2: Plan Pricing (₹ INR) */}
@@ -643,7 +734,7 @@ export default function SubscriptionEditCanvas({
                 width: "100%",
               }}
             >
-              {/* Monthly Price */}
+              {/* Price for Plan Duration */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <label
                   style={{
@@ -652,10 +743,11 @@ export default function SubscriptionEditCanvas({
                     color: "#0F172A",
                   }}
                 >
-                  Monthly Price
+                  Price for {formData.planDuration || "1 Week"} (₹)
                 </label>
                 <input
                   type="text"
+                  placeholder={`Price for ${formData.planDuration || "1 Week"}`}
                   value={formData.monthlyPrice}
                   onChange={(e) => handleTextChange("monthlyPrice", e.target.value)}
                   style={{
@@ -975,94 +1067,6 @@ export default function SubscriptionEditCanvas({
                 <Plus size={14} strokeWidth={2.5} />
                 <span>Add</span>
               </button>
-            </div>
-
-            {/* Plan Duration Dropdown */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "6px",
-                position: "relative",
-              }}
-            >
-              <label
-                style={{
-                  fontSize: "12.5px",
-                  fontWeight: 600,
-                  color: "#0F172A",
-                }}
-              >
-                Plan Duration
-              </label>
-              <div
-                onClick={() => setIsDurationDropdownOpen((prev) => !prev)}
-                style={{
-                  width: "100%",
-                  borderRadius: "8px",
-                  border: "1px solid #E2E8F0",
-                  padding: "10px 14px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
-                  fontSize: "13.5px",
-                  color: "#0F172A",
-                  cursor: "pointer",
-                  boxSizing: "border-box",
-                }}
-              >
-                <span>{formData.planDuration}</span>
-                <ChevronDown
-                  size={16}
-                  color="#64748B"
-                  style={{
-                    transform: isDurationDropdownOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.2s ease",
-                  }}
-                />
-              </div>
-
-              {/* Dropdown Menu */}
-              {isDurationDropdownOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    marginTop: "4px",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "8px",
-                    boxShadow: "0 10px 20px rgba(0, 0, 0, 0.08)",
-                    zIndex: 20,
-                    overflow: "hidden",
-                  }}
-                >
-                  {durationOptions.map((opt) => (
-                    <div
-                      key={opt}
-                      onClick={() => {
-                        handleTextChange("planDuration", opt);
-                        setIsDurationDropdownOpen(false);
-                      }}
-                      style={{
-                        padding: "10px 14px",
-                        fontSize: "13px",
-                        color: formData.planDuration === opt ? "#FF5500" : "#334155",
-                        fontWeight: formData.planDuration === opt ? 600 : 400,
-                        backgroundColor:
-                          formData.planDuration === opt ? "#FFF1E8" : "transparent",
-                        cursor: "pointer",
-                        transition: "background-color 0.15s ease",
-                      }}
-                    >
-                      {opt}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Meal Serving Timings */}

@@ -31,9 +31,10 @@ import {
   ShieldCheck,
   ExternalLink,
 } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCart, CartItem } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
+import { ReorderModal, ReorderModalType, ReorderItemInfo } from "@/components/order-history-desktop/reorder-modal";
 import styles from "./MyOrdersView.module.css";
 
 export interface OrderItemData {
@@ -318,7 +319,22 @@ export default function MyOrdersView() {
   const initialTab = searchParams?.get("category") === "rooms" || searchParams?.get("tab") === "rooms" ? "ROOMS" : "FOODS";
 
   const { data: session, status: authStatus } = useSession();
-  const { addToCart } = useCart();
+  const { cartItems, addToCart, addMultipleToCart } = useCart();
+
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: ReorderModalType;
+    sellerName?: string;
+    sellerId?: string;
+    currentCartSellerName?: string;
+    availableItems?: ReorderItemInfo[];
+    unavailableItems?: ReorderItemInfo[];
+    rawAvailableItems?: CartItem[];
+    errorMessage?: string;
+  }>({
+    isOpen: false,
+    type: "ERROR",
+  });
 
   const [mainCategory, setMainCategory] = useState<MainCategory>(initialTab);
   const [orders, setOrders] = useState<OrderItemData[]>([]);
@@ -461,28 +477,141 @@ export default function MyOrdersView() {
     setIsSidebarOpen(true);
   };
 
-  const handleReorder = (order: OrderItemData) => {
-    if (order.rawItems && order.rawItems.length > 0) {
-      order.rawItems.forEach((item) => {
-        const itemImg = item.imageUrl || item.image || order.imageUrl;
-        const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
-        const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
-
-        addToCart({
-          id: item.id || `reorder-${item.name}`,
-          foodItemId: item.foodItemId || item.id,
-          name: item.name || "Delicious Meal",
-          price: item.price || 199,
-          quantity: item.quantity || item.qty || 1,
-          sellerId: item.sellerId || "k-1",
-          sellerName: order.vendorName,
-          image: itemImg,
-          imageUrl: itemImg,
-          stockQuantity: stockLimit,
-          maxStock: stockLimit,
-        });
+  const handleReorder = async (order: OrderItemData) => {
+    try {
+      const res = await fetchApi("/api/user/orders/validate-reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
       });
-      router.push("/user/cart");
+
+      const json = await res.json();
+      const data = json.data !== undefined ? json.data : json;
+
+      if (!res.ok || json.success === false) {
+        setModalState({
+          isOpen: true,
+          type: "ERROR",
+          errorMessage: data?.message || json?.error || "Unable to validate order for reorder. Please try again.",
+        });
+        return;
+      }
+
+      // Check 1: Kitchen offline
+      if (data.sellerOnline === false) {
+        setModalState({
+          isOpen: true,
+          type: "OFFLINE",
+          sellerName: data.sellerName || order.vendorName,
+          sellerId: data.sellerId,
+        });
+        return;
+      }
+
+      // Check 2: No items available
+      if (!data.availableItems || data.availableItems.length === 0) {
+        setModalState({
+          isOpen: true,
+          type: "ALL_UNAVAILABLE",
+          sellerName: data.sellerName || order.vendorName,
+          sellerId: data.sellerId,
+          unavailableItems: data.unavailableItems || [],
+        });
+        return;
+      }
+
+      // Check 3: Partial items available
+      if (data.unavailableItems && data.unavailableItems.length > 0) {
+        setModalState({
+          isOpen: true,
+          type: "PARTIAL",
+          sellerName: data.sellerName || order.vendorName,
+          sellerId: data.sellerId,
+          availableItems: data.availableItems,
+          unavailableItems: data.unavailableItems,
+          rawAvailableItems: data.availableItems,
+        });
+        return;
+      }
+
+      // Check 4: Full reorder available - check for cart kitchen conflict
+      const targetSellerId = data.sellerId;
+      if (cartItems.length > 0 && cartItems[0].sellerId && targetSellerId && cartItems[0].sellerId !== targetSellerId) {
+        setModalState({
+          isOpen: true,
+          type: "CART_CONFLICT",
+          sellerName: data.sellerName || order.vendorName,
+          sellerId: data.sellerId,
+          currentCartSellerName: cartItems[0].sellerName || "another kitchen",
+          availableItems: data.availableItems,
+          rawAvailableItems: data.availableItems,
+        });
+        return;
+      }
+
+      // Everything is clear: Add items to cart and redirect to /cart
+      addMultipleToCart(data.availableItems, false);
+      router.push("/cart");
+    } catch (err: any) {
+      console.error("Reorder error:", err);
+      // Fallback
+      if (order.rawItems && order.rawItems.length > 0) {
+        addMultipleToCart(
+          order.rawItems.map((item) => ({
+            id: item.id || `reorder-${item.name}`,
+            foodItemId: item.foodItemId || item.id,
+            name: item.name || "Delicious Meal",
+            price: item.price || 199,
+            quantity: item.quantity || item.qty || 1,
+            sellerId: item.sellerId || "k-1",
+            sellerName: order.vendorName,
+            image: item.imageUrl || item.image || order.imageUrl,
+            imageUrl: item.imageUrl || item.image || order.imageUrl,
+          })),
+          false
+        );
+        router.push("/cart");
+      } else {
+        router.push("/explore-desktop");
+      }
+    }
+  };
+
+  const handleConfirmClearAndReorder = () => {
+    if (modalState.rawAvailableItems && modalState.rawAvailableItems.length > 0) {
+      addMultipleToCart(modalState.rawAvailableItems, true);
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+      router.push("/cart");
+    }
+  };
+
+  const handleConfirmPartialReorder = () => {
+    if (!modalState.rawAvailableItems || modalState.rawAvailableItems.length === 0) return;
+
+    const targetSellerId = modalState.sellerId;
+    if (cartItems.length > 0 && cartItems[0].sellerId && targetSellerId && cartItems[0].sellerId !== targetSellerId) {
+      setModalState((prev) => ({
+        ...prev,
+        type: "CART_CONFLICT",
+        currentCartSellerName: cartItems[0].sellerName || "another kitchen",
+      }));
+      return;
+    }
+
+    addMultipleToCart(modalState.rawAvailableItems, false);
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    router.push("/cart");
+  };
+
+  const handleExploreOtherKitchens = () => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    router.push("/explore-desktop");
+  };
+
+  const handleExploreSellerMenu = () => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    if (modalState.sellerId) {
+      router.push(`/restaurant/${modalState.sellerId}`);
     } else {
       router.push("/explore-desktop");
     }
@@ -1500,7 +1629,25 @@ export default function MyOrdersView() {
           </>
         )}
       </div>
+
+      {/* Reorder Modal for Alerts, Out-of-Stock, Offline & Cart Conflict Handling */}
+      <ReorderModal
+        isOpen={modalState.isOpen}
+        type={modalState.type}
+        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
+        sellerName={modalState.sellerName}
+        sellerId={modalState.sellerId}
+        currentCartSellerName={modalState.currentCartSellerName}
+        availableItems={modalState.availableItems}
+        unavailableItems={modalState.unavailableItems}
+        errorMessage={modalState.errorMessage}
+        onConfirmClearAndReorder={handleConfirmClearAndReorder}
+        onConfirmPartialReorder={handleConfirmPartialReorder}
+        onExploreOtherKitchens={handleExploreOtherKitchens}
+        onExploreSellerMenu={handleExploreSellerMenu}
+      />
     </div>
   );
 }
+
 

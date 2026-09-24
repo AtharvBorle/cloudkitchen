@@ -23,6 +23,9 @@ import {
   Copy,
   ExternalLink,
   MapPin,
+  ShieldCheck,
+  Check,
+  X,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
@@ -384,13 +387,36 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     }
   };
 
-  const handleShareProfileQR = () => {
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isUpiTestModalOpen, setIsUpiTestModalOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedUpiUri, setCopiedUpiUri] = useState(false);
+  const [copiedUpiId, setCopiedUpiId] = useState(false);
+
+  const handleShareProfileQR = async () => {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: businessTitle,
+          text: `Order food online from ${businessTitle} on Neo Cloud Kitchen!`,
+          url: shopUrl,
+        });
+        showToast("Store link shared!");
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(shopUrl);
       showToast("Store link copied to clipboard!");
     } else {
       showToast("Store Link: " + shopUrl);
     }
+    setIsShareModalOpen(true);
   };
 
   const handleDownloadProfileQR = () => {
@@ -434,7 +460,8 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
         window.location.href = upiPaymentUri;
       }
     }
-    showToast("UPI URI copied! Scan with GPay/PhonePe to test.");
+    setIsUpiTestModalOpen(true);
+    showToast("UPI URI copied! Verify destination below.");
   };
 
   const handleDownloadPaymentQR = () => {
@@ -1127,6 +1154,566 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
           <div className={styles.toastNotification}>
             <CheckCircle2 size={18} color="#10B981" />
             <span>{toastMessage}</span>
+          </div>
+        )}
+
+        {/* 1. Share Store Profile Link Modal */}
+        {isShareModalOpen && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(4px)",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "16px",
+            }}
+            onClick={() => setIsShareModalOpen(false)}
+          >
+            <div
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: "20px",
+                width: "100%",
+                maxWidth: "420px",
+                padding: "20px",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                position: "relative",
+                boxSizing: "border-box",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      borderRadius: "10px",
+                      backgroundColor: "#FFF7ED",
+                      border: "1px solid #FFEDD5",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#EA580C",
+                    }}
+                  >
+                    <Share2 size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0F172A" }}>
+                      Share Store Profile
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "11.5px", color: "#64748B" }}>
+                      Customer ordering link for {businessTitle}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    color: "#64748B",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* QR & URL Content */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "14px",
+                  padding: "6px 0 14px 0",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    padding: "10px",
+                    borderRadius: "12px",
+                    border: "1.5px solid #E2E8F0",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  <QRCodeCanvas value={shopUrl} size={140} level="H" includeMargin={false} />
+                </div>
+
+                {/* URL Box */}
+                <div style={{ width: "100%" }}>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#475569", marginBottom: "5px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Public Store Link
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      backgroundColor: "#F8FAFC",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: "10px",
+                      padding: "8px 10px",
+                      gap: "6px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      readOnly
+                      value={shopUrl}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        flex: 1,
+                        fontSize: "12px",
+                        color: "#1E293B",
+                        fontWeight: 600,
+                        outline: "none",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(shopUrl);
+                          setCopiedLink(true);
+                          showToast("Store link copied!");
+                          setTimeout(() => setCopiedLink(false), 2500);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: copiedLink ? "#16A34A" : "#0F172A",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "5px 10px",
+                        fontSize: "11.5px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        transition: "background-color 0.2s",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {copiedLink ? <Check size={13} /> : <Copy size={13} />}
+                      <span>{copiedLink ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <a
+                    href={shopUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      flex: 1,
+                      height: "40px",
+                      borderRadius: "10px",
+                      backgroundColor: "#FF5500",
+                      backgroundImage: "linear-gradient(135deg, #FF5500 0%, #F97316 100%)",
+                      color: "#FFFFFF",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
+                    }}
+                  >
+                    <ExternalLink size={15} />
+                    <span>Open Store</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out our menu and order online from ${businessTitle}: ${shopUrl}`)}`;
+                      window.open(whatsappUrl, "_blank");
+                    }}
+                    style={{
+                      flex: 1,
+                      height: "40px",
+                      borderRadius: "10px",
+                      backgroundColor: "#25D366",
+                      color: "#FFFFFF",
+                      border: "none",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      boxShadow: "0 2px 8px rgba(37, 211, 102, 0.25)",
+                    }}
+                  >
+                    <span>WhatsApp</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(false)}
+                  style={{
+                    height: "36px",
+                    borderRadius: "8px",
+                    border: "1px solid #E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                    color: "#64748B",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. Test In-Store UPI Payment Modal */}
+        {isUpiTestModalOpen && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(4px)",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "16px",
+            }}
+            onClick={() => setIsUpiTestModalOpen(false)}
+          >
+            <div
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: "20px",
+                width: "100%",
+                maxWidth: "440px",
+                padding: "20px",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                position: "relative",
+                boxSizing: "border-box",
+                maxHeight: "90vh",
+                overflowY: "auto",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      borderRadius: "10px",
+                      backgroundColor: "#F0FDF4",
+                      border: "1px solid #BBF7D0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#16A34A",
+                    }}
+                  >
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0F172A" }}>
+                      Test In-Store UPI
+                    </h3>
+                    <p style={{ margin: 0, fontSize: "11.5px", color: "#64748B" }}>
+                      Verify receiver parameters &amp; destination
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsUpiTestModalOpen(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    color: "#64748B",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Status Banner */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  backgroundColor: "#F0FDF4",
+                  border: "1px solid #86EFAC",
+                  borderRadius: "10px",
+                  padding: "8px 12px",
+                  marginBottom: "14px",
+                }}
+              >
+                <CheckCircle2 size={16} color="#16A34A" />
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "#166534" }}>
+                  UPI Destination Configured &amp; Active
+                </span>
+              </div>
+
+              {/* QR & Parameters */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    padding: "8px",
+                    borderRadius: "12px",
+                    border: "1.5px solid #CBD5E1",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  <QRCodeCanvas id="canvas-res-modal-payment-qr" value={upiPaymentUri} size={140} level="H" includeMargin={false} />
+                </div>
+
+                {/* Parameter Details Table */}
+                <div
+                  style={{
+                    width: "100%",
+                    backgroundColor: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    boxSizing: "border-box",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Payee UPI ID:</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ color: "#0F172A", fontWeight: 700, fontFamily: "monospace" }}>{activeUpiId}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== "undefined" && navigator.clipboard) {
+                            navigator.clipboard.writeText(activeUpiId);
+                            setCopiedUpiId(true);
+                            showToast("UPI ID copied!");
+                            setTimeout(() => setCopiedUpiId(false), 2000);
+                          }
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: copiedUpiId ? "#16A34A" : "#64748B",
+                          padding: "2px",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {copiedUpiId ? <Check size={13} /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Payee Name:</span>
+                    <span style={{ color: "#0F172A", fontWeight: 700 }}>{businessTitle}</span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Note:</span>
+                    <span style={{ color: "#0F172A", fontWeight: 600 }}>Counter Payment</span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Currency:</span>
+                    <span style={{ color: "#0F172A", fontWeight: 700 }}>INR (₹)</span>
+                  </div>
+                </div>
+
+                {/* UPI Intent URI Box */}
+                <div style={{ width: "100%" }}>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#475569", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    UPI Intent Link
+                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      backgroundColor: "#F1F5F9",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: "8px",
+                      padding: "6px 8px",
+                      gap: "6px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      readOnly
+                      value={upiPaymentUri}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        flex: 1,
+                        fontSize: "11px",
+                        color: "#334155",
+                        fontFamily: "monospace",
+                        outline: "none",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(upiPaymentUri);
+                          setCopiedUpiUri(true);
+                          showToast("UPI URI copied!");
+                          setTimeout(() => setCopiedUpiUri(false), 2000);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: copiedUpiUri ? "#16A34A" : "#334155",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "5px",
+                        padding: "3px 6px",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "3px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {copiedUpiUri ? <Check size={11} /> : <Copy size={11} />}
+                      <span>{copiedUpiUri ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Verification Tip */}
+                <div
+                  style={{
+                    backgroundColor: "#FEF3C7",
+                    border: "1px solid #FDE68A",
+                    borderRadius: "8px",
+                    padding: "8px 10px",
+                    fontSize: "11.5px",
+                    color: "#92400E",
+                    textAlign: "left",
+                    lineHeight: 1.35,
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  💡 <strong>Test Guide:</strong> Scan the QR with <strong>Google Pay, PhonePe, Paytm, BHIM</strong> or tap <strong>Open in UPI App</strong> below to complete a ₹1 test payment.
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "14px" }}>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <a
+                    href={upiPaymentUri}
+                    style={{
+                      flex: 1,
+                      height: "38px",
+                      borderRadius: "10px",
+                      backgroundColor: "#16A34A",
+                      color: "#FFFFFF",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      boxShadow: "0 2px 8px rgba(22, 163, 74, 0.25)",
+                    }}
+                  >
+                    <ExternalLink size={15} />
+                    <span>Open in UPI App</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPaymentQR}
+                    style={{
+                      flex: 1,
+                      height: "38px",
+                      borderRadius: "10px",
+                      backgroundColor: "#FFFFFF",
+                      color: "#0F172A",
+                      border: "1px solid #CBD5E1",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <Download size={15} />
+                    <span>Download QR</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsUpiTestModalOpen(false)}
+                  style={{
+                    height: "34px",
+                    borderRadius: "8px",
+                    border: "1px solid #E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                    color: "#64748B",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

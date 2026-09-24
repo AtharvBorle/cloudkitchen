@@ -6,13 +6,16 @@ import { db } from "@/lib/db";
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to update subscription plans.", error: "Please log in first to update subscription plans." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const { id } = await params;
         if (!id) {
-            return NextResponse.json({ message: "ID is required" }, { status: 400 });
+            return NextResponse.json({ success: false, message: "Plan ID is required.", error: "Plan ID is required." }, { status: 400 });
         }
 
         const body = await req.json();
@@ -31,10 +34,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             data: updateData
         });
 
-        return NextResponse.json({ message: "Plan updated successfully", plan: updated });
+        return NextResponse.json({ success: true, message: "Plan updated successfully", plan: updated });
     } catch (error) {
         console.error("Error updating plan:", error);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ success: false, message: "Internal server error", error: "Internal server error" }, { status: 500 });
     }
 }
 
@@ -42,8 +45,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session || session.user.role !== "SUPERADMIN") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        if (!session?.user) {
+            return NextResponse.json({ success: false, message: "Please log in first to delete subscription plans.", error: "Please log in first to delete subscription plans." }, { status: 401 });
+        }
+        if (session.user.role !== "SUPERADMIN") {
+            return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
         const { id } = await params;

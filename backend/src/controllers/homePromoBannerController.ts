@@ -22,8 +22,11 @@ export const getPublicHomeBanners = async () => {
  */
 export const getSuperadminHomeBanners = async () => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view promo banners.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const banners = await (db as any).homePromoBanner.findMany({
@@ -40,8 +43,11 @@ export const getSuperadminHomeBanners = async () => {
  */
 export const createHomeBanner = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create promo banners.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const formData = await req.formData();
@@ -53,11 +59,11 @@ export const createHomeBanner = async (req: Request) => {
     const displayOrderStr = formData.get("displayOrder") as string | null;
 
     if (!title || !title.trim()) {
-        throw new ApiError("Banner title / campaign name is required", 400);
+        throw new ApiError("Banner title or campaign name is required.", 400);
     }
 
     if (!desktopImageFile || !(desktopImageFile instanceof File)) {
-        throw new ApiError("Desktop banner image is required", 400);
+        throw new ApiError("Desktop banner image is required.", 400);
     }
 
     // Upload desktop image to Cloudinary
@@ -103,8 +109,11 @@ export const createHomeBanner = async (req: Request) => {
  */
 export const updateHomeBanner = async (req: Request, id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update promo banners.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const existingBanner = await (db as any).homePromoBanner.findUnique({
@@ -112,7 +121,7 @@ export const updateHomeBanner = async (req: Request, id: string) => {
     });
 
     if (!existingBanner) {
-        throw new ApiError("Banner not found", 404);
+        throw new ApiError("The requested banner could not be found.", 404);
     }
 
     const contentType = req.headers.get("content-type") || "";
@@ -178,8 +187,11 @@ export const updateHomeBanner = async (req: Request, id: string) => {
  */
 export const deleteHomeBanner = async (id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete promo banners.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     await (db as any).homePromoBanner.delete({

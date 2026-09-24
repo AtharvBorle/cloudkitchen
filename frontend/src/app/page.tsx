@@ -160,6 +160,7 @@ export default function Home() {
           sellerId: matchedItem.sellerId || "",
           sellerName: matchedItem.sellerName || "Cloud Kitchen",
           sellerIsOnline: matchedItem.sellerIsOnline !== false,
+          isAvailable: matchedItem.isAvailable !== false,
           itemType: matchedItem.itemType || "VEG",
         });
       }
@@ -208,6 +209,8 @@ export default function Home() {
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
+      isAvailable: f.isAvailable !== false,
+      distanceText: f.distanceText,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -246,6 +249,8 @@ export default function Home() {
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
+      isAvailable: f.isAvailable !== false,
+      distanceText: f.distanceText,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 
@@ -278,6 +283,7 @@ export default function Home() {
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
+      isAvailable: f.isAvailable !== false,
     }));
   }, [homeData.foodItems, selectedCategory, activeFilters]);
 

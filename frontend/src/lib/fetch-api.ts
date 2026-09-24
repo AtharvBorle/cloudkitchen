@@ -2,13 +2,8 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
     let target = input;
     if (typeof target === "string" && target.startsWith("/api/")) {
         if (typeof window === "undefined") {
-            const internalBase = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+            const internalBase = process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:3001";
             target = `${internalBase.replace(/\/$/, "")}${target}`;
-        } else {
-            const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-            if (apiBase && !apiBase.includes("localhost") && !apiBase.includes("127.0.0.1")) {
-                target = `${apiBase.replace(/\/$/, "")}${target}`;
-            }
         }
     }
     const headers = new Headers(init?.headers);
@@ -81,13 +76,7 @@ export function uploadWithProgress(
 ): Promise<{ ok: boolean; status: number; json: () => Promise<any> }> {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        let target = url;
-        if (target.startsWith("/api/")) {
-            const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-            if (apiBase && !apiBase.includes("localhost") && !apiBase.includes("127.0.0.1")) {
-                target = `${apiBase.replace(/\/$/, "")}${target}`;
-            }
-        }
+        const target = url;
         
         xhr.open("POST", target);
         xhr.withCredentials = true;

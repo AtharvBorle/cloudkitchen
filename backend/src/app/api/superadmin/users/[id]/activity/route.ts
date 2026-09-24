@@ -6,8 +6,11 @@ import { db } from "@/lib/db";
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getAuthSession();
-        if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "SUPPORT")) {
-            throw new ApiError("Unauthorized", 401);
+        if (!session?.user) {
+            throw new ApiError("Please log in first to view user activity.", 401);
+        }
+        if (session.user.role !== "SUPERADMIN" && session.user.role !== "SUPPORT") {
+            throw new ApiError("Access denied. Admin privileges required.", 403);
         }
 
         const userId = (await params).id;

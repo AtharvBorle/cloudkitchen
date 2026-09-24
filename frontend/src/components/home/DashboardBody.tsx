@@ -15,6 +15,9 @@ export interface TopRatedItem {
   imageUrl: string;
   link?: string;
   itemType?: string;
+  distanceText?: string;
+  sellerIsOnline?: boolean;
+  isAvailable?: boolean;
 }
 
 interface DashboardBodyProps {
@@ -106,21 +109,27 @@ export default function DashboardBody({
           }}
           className="top-rated-grid"
         >
-          {displayItems.slice(0, 6).map((item) => (
+          {displayItems.slice(0, 6).map((item) => {
+            const isSellerClosed = item.sellerIsOnline === false;
+            const isItemUnavailable = item.isAvailable === false;
+            const isClosed = isSellerClosed || isItemUnavailable;
+
+            return (
             <div
               key={item.id}
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                backgroundColor: "#FFFFFF",
+                backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                 borderRadius: "16px",
                 padding: "12px 16px",
-                border: "1px solid #F1F5F9",
+                border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
                 boxSizing: "border-box",
                 transition: "all 0.2s ease",
                 gap: "12px",
+                opacity: isClosed ? 0.85 : 1,
               }}
               className="top-rated-card"
             >
@@ -143,6 +152,7 @@ export default function DashboardBody({
                     overflow: "hidden",
                     flexShrink: 0,
                     backgroundColor: "#F8FAFC",
+                    position: "relative",
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -153,6 +163,7 @@ export default function DashboardBody({
                       width: "100%",
                       height: "100%",
                       objectFit: "cover",
+                      filter: isClosed ? "grayscale(100%)" : "none",
                     }}
                   />
                 </div>
@@ -179,7 +190,7 @@ export default function DashboardBody({
                       style={{
                         fontSize: "0.95rem",
                         fontWeight: "700",
-                        color: "#18181B",
+                        color: isClosed ? "#64748B" : "#18181B",
                         margin: 0,
                         whiteSpace: "nowrap",
                         overflow: "hidden",
@@ -206,12 +217,12 @@ export default function DashboardBody({
                         gap: "3px",
                       }}
                     >
-                      <Star size={13} fill="#F59E0B" color="#F59E0B" />
+                      <Star size={13} fill={isClosed ? "#94A3B8" : "#F59E0B"} color={isClosed ? "#94A3B8" : "#F59E0B"} />
                       <span
                         style={{
                           fontSize: "0.8rem",
                           fontWeight: "700",
-                          color: "#18181B",
+                          color: isClosed ? "#94A3B8" : "#18181B",
                         }}
                       >
                         {item.rating}
@@ -230,33 +241,53 @@ export default function DashboardBody({
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {item.category} • ₹{item.price} • {item.time}
+                    {item.category} • ₹{item.price} {item.distanceText ? `• 📍 ${item.distanceText}` : ""} • {item.time}
                   </span>
                 </div>
               </div>
 
               {/* Right Column: Order Button */}
-              <Link
-                href={item.link || "/explore-desktop"}
-                style={{
-                  backgroundColor: "#FF6B00",
-                  color: "#FFFFFF",
-                  fontSize: "0.82rem",
-                  fontWeight: "700",
-                  padding: "6px 16px",
-                  borderRadius: "9999px",
-                  textDecoration: "none",
-                  boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
-                  transition: "all 0.2s ease",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-                className="top-rated-order-btn"
-              >
-                Order
-              </Link>
+              {isClosed ? (
+                <span
+                  style={{
+                    backgroundColor: "#F1F5F9",
+                    color: "#94A3B8",
+                    fontSize: "0.82rem",
+                    fontWeight: "700",
+                    padding: "6px 14px",
+                    borderRadius: "9999px",
+                    border: "1px solid #E2E8F0",
+                    cursor: "not-allowed",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  {isSellerClosed ? "Closed" : "Unavailable"}
+                </span>
+              ) : (
+                <Link
+                  href={item.link || "/explore-desktop"}
+                  style={{
+                    backgroundColor: "#FF6B00",
+                    color: "#FFFFFF",
+                    fontSize: "0.82rem",
+                    fontWeight: "700",
+                    padding: "6px 16px",
+                    borderRadius: "9999px",
+                    textDecoration: "none",
+                    boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
+                    transition: "all 0.2s ease",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                  className="top-rated-order-btn"
+                >
+                  Order
+                </Link>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

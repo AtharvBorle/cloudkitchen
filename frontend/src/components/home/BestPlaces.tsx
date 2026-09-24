@@ -15,6 +15,8 @@ export interface DishItem {
   itemType?: string;
   sellerIsOnline?: boolean;
   isOnline?: boolean;
+  isAvailable?: boolean;
+  distanceText?: string;
 }
 
 interface BestPlacesProps {
@@ -106,7 +108,10 @@ export default function BestPlaces({
           className="popular-dishes-grid"
         >
           {displayDishes.slice(0, 4).map((dish) => {
-            const isClosed = dish.sellerIsOnline === false || dish.isOnline === false;
+            const isSellerClosed = dish.sellerIsOnline === false || dish.isOnline === false;
+            const isItemUnavailable = dish.isAvailable === false;
+            const isClosed = isSellerClosed || isItemUnavailable;
+
             return (
             <Link
               key={dish.id}
@@ -200,7 +205,7 @@ export default function BestPlaces({
                           border: "1px solid rgba(255,255,255,0.2)",
                         }}
                       >
-                        🔴 CLOSED
+                        {isSellerClosed ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
                       </span>
                     </div>
                   )}
@@ -233,21 +238,37 @@ export default function BestPlaces({
                     </h3>
                     {isClosed && (
                       <span style={{ fontSize: "9.5px", fontWeight: "700", color: "#64748B", backgroundColor: "#E2E8F0", padding: "1px 5px", borderRadius: "4px" }}>
-                        CLOSED
+                        {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
                       </span>
                     )}
                   </div>
 
-                  {/* Price & Delivery Time */}
-                  <span
-                    style={{
-                      fontSize: "0.82rem",
-                      color: isClosed ? "#94A3B8" : "#64748B",
-                      fontWeight: "500",
-                    }}
-                  >
-                    {isClosed ? "Currently not accepting orders" : dish.time}
-                  </span>
+                  {/* Price, Distance & Delivery Time */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
+                    <span
+                      style={{
+                        fontSize: "0.82rem",
+                        color: isClosed ? "#94A3B8" : "#64748B",
+                        fontWeight: "500",
+                      }}
+                    >
+                      {isClosed ? "Currently not accepting orders" : dish.time}
+                    </span>
+                    {dish.distanceText && !isClosed && (
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "700",
+                          color: "#FF6B00",
+                          backgroundColor: "#FFF3EB",
+                          padding: "2px 6px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        📍 {dish.distanceText}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </Link>

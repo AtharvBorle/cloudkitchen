@@ -2,11 +2,12 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import bcrypt from "bcryptjs";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 export const getUserProfile = async () => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your profile.", 401);
     }
 
     const user = await db.user.findUnique({
@@ -28,7 +29,7 @@ export const getUserProfile = async () => {
     });
 
     if (!user) {
-        throw new ApiError("User not found", 404);
+        throw new ApiError("User account not found.", 404);
     }
 
     return user;
@@ -36,8 +37,8 @@ export const getUserProfile = async () => {
 
 export const updateUserProfile = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session || !session.user) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update your profile.", 401);
     }
 
     const body = await req.json();
@@ -110,8 +111,11 @@ export const updateUserProfile = async (req: Request) => {
 
 export const getUserDashboard = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your dashboard.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const currentUser = await db.user.findUnique({
@@ -135,14 +139,11 @@ export const getUserDashboard = async () => {
     const sellers = await db.sellerProfile.findMany({
         where: {
             verificationStatus: "APPROVED",
-            user: { isActive: true },
-            OR: [
-                { user: { pincode: userPincode } },
-                { foodItems: { some: { deliveryPincodes: { contains: userPincode } } } }
-            ]
+            user: { isActive: true }
         },
         include: {
             user: { select: { name: true, city: true, pincode: true, phone: true } },
+            servedPincodes: true,
             foodItems: {
                 where: { isAvailable: true },
                 include: {
@@ -168,25 +169,25 @@ export const getUserDashboard = async () => {
         );
         if (!hasActiveFoodSub) return [];
 
-        return seller.foodItems
-            .filter(item => {
-                if (item.deliveryPincodes) {
-                    const pins = item.deliveryPincodes.split(",").map(p => p.trim());
-                    return pins.includes(userPincode);
-                }
-                return seller.user.pincode === userPincode;
-            })
-            .map(item => ({
-                ...item,
-                sellerName: seller.businessName || seller.user.name,
-                sellerCity: seller.user.city,
-                sellerPincode: seller.user.pincode,
-                sellerLocality: seller.addressLocality,
-                sellerLandmark: seller.addressLandmark,
-                sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline,
-                sellerFoodType: seller.foodType
-            }));
+        const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+        const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+        const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
+        return seller.foodItems.map(item => ({
+            ...item,
+            sellerName: seller.businessName || seller.user.name,
+            sellerCity: seller.user.city,
+            sellerPincode: seller.user.pincode,
+            sellerLocality: seller.addressLocality,
+            sellerLandmark: seller.addressLandmark,
+            sellerTrackingId: seller.trackingId,
+            sellerIsOnline: seller.isOnline,
+            sellerFoodType: seller.foodType,
+            sellerLatitude: resolvedLat,
+            sellerLongitude: resolvedLng,
+            sellerIsLocationPinned: seller.isLocationPinned,
+            servedPincodes: seller.servedPincodes.map(p => p.pincode),
+        }));
     });
 
     const availableRooms = sellers.flatMap(seller => {
@@ -197,18 +198,23 @@ export const getUserDashboard = async () => {
         );
         if (!hasActivePropertySub) return [];
 
-        return seller.rooms
-            .filter(room => seller.user.pincode === userPincode)
-            .map(room => ({
-                ...room,
-                sellerName: seller.businessName || seller.user.name,
-                sellerCity: seller.user.city,
-                sellerPincode: seller.user.pincode,
-                sellerLocality: seller.addressLocality,
-                sellerLandmark: seller.addressLandmark,
-                sellerTrackingId: seller.trackingId,
-                sellerIsOnline: seller.isOnline
-            }));
+        const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+        const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
+        const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
+
+        return seller.rooms.map(room => ({
+            ...room,
+            sellerName: seller.businessName || seller.user.name,
+            sellerCity: seller.user.city,
+            sellerPincode: seller.user.pincode,
+            sellerLocality: seller.addressLocality,
+            sellerLandmark: seller.addressLandmark,
+            sellerTrackingId: seller.trackingId,
+            sellerIsOnline: seller.isOnline,
+            sellerLatitude: resolvedLat,
+            sellerLongitude: resolvedLng,
+            sellerIsLocationPinned: seller.isLocationPinned,
+        }));
     });
 
     return {
@@ -221,8 +227,11 @@ export const getUserDashboard = async () => {
 
 export const updateUserLocation = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "USER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update your location.", 401);
+    }
+    if (session.user.role !== "USER") {
+        throw new ApiError("Access denied. Customer account required.", 403);
     }
 
     const { pincode: clientPincode, lat, lng } = await req.json();

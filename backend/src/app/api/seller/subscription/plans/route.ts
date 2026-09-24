@@ -20,28 +20,58 @@ export async function GET(req: NextRequest) {
             }
         }
 
+        const hasFoodApproval =
+            sellerCategory === "FOOD" ||
+            sellerCategory === "BOTH" ||
+            (seller && seller.foodVerificationStatus === "APPROVED");
+
+        const hasPropertyApproval =
+            sellerCategory === "PROPERTY" ||
+            sellerCategory === "BOTH" ||
+            (seller && seller.propertyVerificationStatus === "APPROVED");
+
+        const isDualApproved =
+            sellerCategory === "BOTH" ||
+            (hasFoodApproval && hasPropertyApproval);
+
         let whereClause: any = { isActive: true };
-        if (category && category !== "BOTH") {
-            const hasFoodApproval = sellerCategory === "FOOD" || sellerCategory === "BOTH" || (seller && seller.foodVerificationStatus === "APPROVED");
-            const hasPropertyApproval = sellerCategory === "PROPERTY" || sellerCategory === "BOTH" || (seller && seller.propertyVerificationStatus === "APPROVED");
-            
-            if (category === "FOOD" && hasFoodApproval) {
-                whereClause.category = { in: ["FOOD", "BOTH"] };
-            } else if (category === "PROPERTY" && hasPropertyApproval) {
-                whereClause.category = { in: ["PROPERTY", "BOTH"] };
-            } else {
-                if (sellerCategory === "FOOD") {
+
+        if (category) {
+            const normCat = category.toUpperCase();
+            if (normCat === "FOOD") {
+                if (isDualApproved) {
                     whereClause.category = { in: ["FOOD", "BOTH"] };
-                } else if (sellerCategory === "PROPERTY") {
-                    whereClause.category = { in: ["PROPERTY", "BOTH"] };
+                } else {
+                    whereClause.category = "FOOD";
                 }
+            } else if (normCat === "PROPERTY" || normCat === "ROOM") {
+                if (isDualApproved) {
+                    whereClause.category = { in: ["PROPERTY", "BOTH"] };
+                } else {
+                    whereClause.category = "PROPERTY";
+                }
+            } else if (normCat === "BOTH") {
+                whereClause.category = "BOTH";
+            } else if (normCat === "ALL") {
+                if (!isDualApproved) {
+                    if (hasFoodApproval) {
+                        whereClause.category = "FOOD";
+                    } else if (hasPropertyApproval) {
+                        whereClause.category = "PROPERTY";
+                    }
+                }
+                // If isDualApproved, no whereClause.category restriction (returns all active plans)
             }
         } else {
-            if (sellerCategory === "FOOD") {
-                whereClause.category = { in: ["FOOD", "BOTH"] };
-            } else if (sellerCategory === "PROPERTY") {
-                whereClause.category = { in: ["PROPERTY", "BOTH"] };
+            // When no category query param is supplied:
+            if (!isDualApproved) {
+                if (hasFoodApproval || sellerCategory === "FOOD") {
+                    whereClause.category = "FOOD";
+                } else if (hasPropertyApproval || sellerCategory === "PROPERTY" || sellerCategory === "ROOM") {
+                    whereClause.category = "PROPERTY";
+                }
             }
+            // If isDualApproved (or sellerCategory === "BOTH" or null/guest), do not restrict whereClause.category (shows all plans: FOOD, PROPERTY, BOTH)
         }
 
         const dbPlans = await db.subscriptionPlan.findMany({

@@ -6,8 +6,11 @@ import { uploadImage } from "@/lib/upload";
 export const requestSellerRevision = async (req: Request) => {
     const session = await getAuthSession();
 
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to submit revision documents.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const profile = await db.sellerProfile.findUnique({
@@ -15,11 +18,11 @@ export const requestSellerRevision = async (req: Request) => {
     });
 
     if (!profile) {
-        throw new ApiError("Seller profile not found.", 404);
+        throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
     }
 
     if (profile.verificationStatus === "APPROVED") {
-        throw new ApiError("Profile is already approved.", 400);
+        throw new ApiError("Your seller profile is already approved.", 400);
     }
 
     const formData = await req.formData();
@@ -139,8 +142,11 @@ export const requestSellerRevision = async (req: Request) => {
 export const getSellerRevisionDetails = async () => {
     const session = await getAuthSession();
 
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view revision details.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const profile = await db.sellerProfile.findUnique({
@@ -149,7 +155,7 @@ export const getSellerRevisionDetails = async () => {
     });
 
     if (!profile) {
-        throw new ApiError("Seller profile not found.", 404);
+        throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
     }
 
     let parsedKitchen: string[] = [];

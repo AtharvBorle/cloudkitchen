@@ -508,3 +508,34 @@ export async function togglePauseUserSubscription(subscriptionId: string, isPaus
   }
 }
 
+export async function subscribeToMealPlan(
+  planId: string,
+  options?: { deliveryAddress?: string; contactPhone?: string; cycle?: string }
+): Promise<{ success: boolean; message: string; subscription?: any }> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        planId,
+        deliveryAddress: options?.deliveryAddress || "",
+        contactPhone: options?.contactPhone || "",
+        cycle: options?.cycle || "WEEKLY",
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to subscribe to meal plan");
+    }
+    return {
+      success: true,
+      message: json.message || "Subscribed to meal plan successfully!",
+      subscription: json.data?.subscription || json.data,
+    };
+  } catch (err: any) {
+    console.error("Error subscribing to meal plan:", err);
+    throw err;
+  }
+}
+
+

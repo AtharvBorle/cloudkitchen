@@ -10,7 +10,7 @@ const checkPropertyCategoryActive = async (userId: string) => {
     });
 
     if (!sellerProfile) {
-        throw new ApiError("Seller profile not found", 404);
+        throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
     }
 
     const activeSubs = await db.subscription.findMany({
@@ -30,7 +30,7 @@ const checkPropertyCategoryActive = async (userId: string) => {
     const isPropertyActive = (propertyExpiry ? propertyExpiry > new Date() : false) && sellerProfile.propertyVerificationStatus === "APPROVED";
 
     if (!isPropertyActive && sellerProfile.verificationStatus !== "APPROVED") {
-        throw new ApiError("Property subscription not active or approved", 403);
+        throw new ApiError("Property category subscription is not active or approved for your seller account.", 403);
     }
 
     return sellerProfile;
@@ -160,8 +160,11 @@ export function formatRoomDescription(about?: string | null, amenities?: any, ho
 
 export const createSellerRoom = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to list a new room.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
@@ -178,7 +181,7 @@ export const createSellerRoom = async (req: Request) => {
     const isAvailable = formData.has("isAvailable") ? formData.get("isAvailable") === "true" : true;
 
     if (!title || isNaN(price)) {
-        throw new ApiError("Title and Price are required", 400);
+        throw new ApiError("Room title and price per month/day are required.", 400);
     }
 
     let existingImages: string[] = [];
@@ -241,8 +244,11 @@ export const createSellerRoom = async (req: Request) => {
 
 export const deleteSellerRoom = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete a room.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
@@ -250,7 +256,7 @@ export const deleteSellerRoom = async (req: Request) => {
     const roomId = searchParams.get("id");
 
     if (!roomId) {
-        throw new ApiError("Room ID is required", 400);
+        throw new ApiError("Room ID is required.", 400);
     }
 
     const existingRoom = await db.room.findUnique({
@@ -258,7 +264,7 @@ export const deleteSellerRoom = async (req: Request) => {
     });
 
     if (!existingRoom) {
-        throw new ApiError("Room not found or unauthorized", 404);
+        throw new ApiError("Room could not be found or you do not have permission to delete it.", 404);
     }
 
     await db.room.delete({
@@ -270,8 +276,11 @@ export const deleteSellerRoom = async (req: Request) => {
 
 export const getSellerRooms = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view your rooms.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
@@ -305,8 +314,11 @@ export const getSellerRooms = async () => {
 
 export const getSellerBookings = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view room bookings.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
@@ -332,8 +344,11 @@ export const getSellerBookings = async () => {
 
 export const getSellerRoomById = async (roomId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view room details.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
@@ -343,7 +358,7 @@ export const getSellerRoomById = async (roomId: string) => {
     });
 
     if (!room) {
-        throw new ApiError("Room not found or unauthorized", 404);
+        throw new ApiError("Room could not be found or you do not have permission to view it.", 404);
     }
 
     const parsed = parseRoomDescription(room.description);
@@ -352,8 +367,11 @@ export const getSellerRoomById = async (roomId: string) => {
 
 export const updateSellerRoom = async (req: Request, roomIdOverride?: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update room details.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
@@ -463,7 +481,7 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
     }
 
     if (!roomId) {
-        throw new ApiError("Room ID is required", 400);
+        throw new ApiError("Room ID is required.", 400);
     }
 
     const existingRoom = await db.room.findUnique({
@@ -471,7 +489,7 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
     });
 
     if (!existingRoom) {
-        throw new ApiError("Room not found or unauthorized", 404);
+        throw new ApiError("Room could not be found or you do not have permission to modify it.", 404);
     }
 
     const existingParsed = parseRoomDescription(existingRoom.description);
@@ -507,8 +525,11 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
 
 export const updateSellerBookingStatus = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update booking status.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkPropertyCategoryActive(session.user.id);
@@ -516,7 +537,7 @@ export const updateSellerBookingStatus = async (req: Request) => {
     const { bookingId, status } = await req.json();
 
     if (!bookingId || !status || !["CONFIRMED", "CANCELLED"].includes(status)) {
-        throw new ApiError("Booking ID and valid status (CONFIRMED or CANCELLED) are required", 400);
+        throw new ApiError("Booking ID and a valid status (CONFIRMED or CANCELLED) are required.", 400);
     }
 
     const booking = await db.booking.findUnique({
@@ -525,11 +546,11 @@ export const updateSellerBookingStatus = async (req: Request) => {
     });
 
     if (!booking) {
-        throw new ApiError("Booking not found", 404);
+        throw new ApiError("The requested booking could not be found.", 404);
     }
 
     if (booking.room.sellerId !== sellerProfile.id) {
-        throw new ApiError("Unauthorized. This booking does not belong to your property.", 403);
+        throw new ApiError("Access denied. This booking does not belong to your property.", 403);
     }
 
     const updatedBooking = await db.booking.update({

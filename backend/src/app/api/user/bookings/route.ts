@@ -7,8 +7,11 @@ import { db } from "@/lib/db";
 export async function GET() {
     try {
         const session = await getAuthSession();
-        if (!session?.user || session.user.role !== "USER") {
-            throw new ApiError("Unauthorized", 401);
+        if (!session?.user) {
+            throw new ApiError("Please log in first to view your room bookings.", 401);
+        }
+        if (session.user.role !== "USER") {
+            throw new ApiError("Access denied. User account required.", 403);
         }
 
         const bookings = await db.booking.findMany({

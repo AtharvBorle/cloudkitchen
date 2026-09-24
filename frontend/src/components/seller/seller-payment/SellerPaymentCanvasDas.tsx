@@ -79,21 +79,31 @@ export default function SellerPaymentCanvasDas() {
   const loadData = async () => {
     try {
       setLoading(true);
+      const planUrl = queryCategory
+        ? `/api/seller/subscription/plans?category=${encodeURIComponent(queryCategory)}`
+        : "/api/seller/subscription/plans";
+
       const [statusRes, plansRes] = await Promise.allSettled([
         fetchApi("/api/seller/dashboard/status"),
-        fetchApi("/api/seller/subscription/plans"),
+        fetchApi(planUrl),
       ]);
 
+      let sCat: string | null = null;
       if (statusRes.status === "fulfilled" && statusRes.value.ok) {
         const sData = await statusRes.value.json();
         const parsed = sData.data || sData;
         setStatusData(parsed);
 
-        // If no queryCategory was provided, default filter to seller's registered category
-        if (!queryCategory && parsed.sellerProfile?.businessCategory) {
-          const bCat = parsed.sellerProfile.businessCategory;
-          if (bCat === "FOOD" || bCat === "PROPERTY") {
-            setActiveCategoryFilter(bCat);
+        sCat = parsed.sellerProfile?.businessCategory;
+        const foodApp = sCat === "FOOD" || sCat === "BOTH" || parsed.sellerProfile?.foodVerificationStatus === "APPROVED";
+        const propApp = sCat === "PROPERTY" || sCat === "BOTH" || parsed.sellerProfile?.propertyVerificationStatus === "APPROVED";
+        const dual = sCat === "BOTH" || (foodApp && propApp);
+
+        if (!queryCategory && sCat) {
+          if (dual) {
+            setActiveCategoryFilter("ALL");
+          } else if (sCat === "FOOD" || sCat === "PROPERTY") {
+            setActiveCategoryFilter(sCat);
           }
         }
       }
@@ -128,7 +138,10 @@ export default function SellerPaymentCanvasDas() {
         // Pick first plan matching current filter or simply first plan
         const matching = plans.filter((p) => {
           if (activeCategoryFilter === "ALL") return true;
-          return p.category === activeCategoryFilter || p.category === "BOTH";
+          if (activeCategoryFilter === "FOOD") return p.category === "FOOD";
+          if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
+          if (activeCategoryFilter === "BOTH") return p.category === "BOTH";
+          return p.category === activeCategoryFilter;
         });
         if (matching.length > 0) {
           setSelectedPlanId(matching[0].id);
@@ -139,11 +152,11 @@ export default function SellerPaymentCanvasDas() {
     }
   }, [activeCategoryFilter, plans, selectedPlanId]);
 
-  // Filtered plans list
+  // Filtered plans list - strictly isolate FOOD, PROPERTY, and BOTH
   const filteredPlans = plans.filter((p) => {
     if (activeCategoryFilter === "ALL") return true;
-    if (activeCategoryFilter === "FOOD") return p.category === "FOOD" || p.category === "BOTH";
-    if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY" || p.category === "BOTH";
+    if (activeCategoryFilter === "FOOD") return p.category === "FOOD";
+    if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
     if (activeCategoryFilter === "BOTH") return p.category === "BOTH";
     return true;
   });
@@ -334,6 +347,21 @@ export default function SellerPaymentCanvasDas() {
 
   const hasAnyActiveSub = Boolean(statusData?.hasActiveSub);
 
+  const hasFoodVerification =
+    statusData?.sellerProfile?.businessCategory === "FOOD" ||
+    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    statusData?.sellerProfile?.foodVerificationStatus === "APPROVED";
+
+  const hasPropertyVerification =
+    statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED";
+
+  const isDualVerified =
+    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    (hasFoodVerification && hasPropertyVerification) ||
+    !statusData?.sellerProfile;
+
   // Price calculations
   const basePrice = selectedPlan ? selectedPlan.price : 0;
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
@@ -438,34 +466,51 @@ export default function SellerPaymentCanvasDas() {
           {/* Category Filter Tabs */}
           <div className={styles.filterTabsWrapper}>
             <div className={styles.filterTabs}>
-              <button
-                type="button"
-                className={`${styles.filterTabBtn} ${activeCategoryFilter === "ALL" ? styles.filterTabBtnActive : ""}`}
-                onClick={() => setActiveCategoryFilter("ALL")}
-              >
-                All Plans ({plans.length})
-              </button>
-              <button
-                type="button"
-                className={`${styles.filterTabBtn} ${activeCategoryFilter === "FOOD" ? styles.filterTabBtnActive : ""}`}
-                onClick={() => setActiveCategoryFilter("FOOD")}
-              >
-                Food Kitchen
-              </button>
-              <button
-                type="button"
-                className={`${styles.filterTabBtn} ${activeCategoryFilter === "PROPERTY" ? styles.filterTabBtnActive : ""}`}
-                onClick={() => setActiveCategoryFilter("PROPERTY")}
-              >
-                Rooms & Stay
-              </button>
-              <button
-                type="button"
-                className={`${styles.filterTabBtn} ${activeCategoryFilter === "BOTH" ? styles.filterTabBtnActive : ""}`}
-                onClick={() => setActiveCategoryFilter("BOTH")}
-              >
-                Hybrid (Both)
-              </button>
+              {isDualVerified ? (
+                <>
+                  <button
+                    type="button"
+                    className={`${styles.filterTabBtn} ${activeCategoryFilter === "ALL" ? styles.filterTabBtnActive : ""}`}
+                    onClick={() => setActiveCategoryFilter("ALL")}
+                  >
+                    All Plans ({plans.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterTabBtn} ${activeCategoryFilter === "FOOD" ? styles.filterTabBtnActive : ""}`}
+                    onClick={() => setActiveCategoryFilter("FOOD")}
+                  >
+                    Food Kitchen
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterTabBtn} ${activeCategoryFilter === "PROPERTY" ? styles.filterTabBtnActive : ""}`}
+                    onClick={() => setActiveCategoryFilter("PROPERTY")}
+                  >
+                    Rooms & Stay
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterTabBtn} ${activeCategoryFilter === "BOTH" ? styles.filterTabBtnActive : ""}`}
+                    onClick={() => setActiveCategoryFilter("BOTH")}
+                  >
+                    Hybrid (Both)
+                  </button>
+                </>
+              ) : (
+                <div
+                  className={`${styles.filterTabBtn} ${styles.filterTabBtnActive}`}
+                  style={{ cursor: "default" }}
+                >
+                  {activeCategoryFilter === "FOOD"
+                    ? "Food Kitchen Plans"
+                    : activeCategoryFilter === "PROPERTY"
+                    ? "Rooms & Stay Plans"
+                    : activeCategoryFilter === "BOTH"
+                    ? "Hybrid (Both) Plans"
+                    : "Available Plans"} ({filteredPlans.length})
+                </div>
+              )}
             </div>
 
             <span style={{ fontSize: "13px", color: "#64748B", fontWeight: 500 }}>

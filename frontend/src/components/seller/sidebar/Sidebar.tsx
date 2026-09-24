@@ -876,7 +876,7 @@ export default function SellerSidebar({
                         )}
 
                         <Link
-                          href={`/seller/payment?planId=${plan.id}&category=${modalCategory}`}
+                          href={`/seller/payment?planId=${plan.id}&category=${plan.category || modalCategory}`}
                           onClick={() => setModalOpen(false)}
                           className={styles.planSelectBtn}
                         >
@@ -897,7 +897,13 @@ export default function SellerSidebar({
                     Close
                   </button>
                   <Link
-                    href={`/seller/payment?category=${modalCategory}`}
+                    href={
+                      statusData?.sellerProfile?.businessCategory === "BOTH" ||
+                      (statusData?.sellerProfile?.foodVerificationStatus === "APPROVED" &&
+                        statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED")
+                        ? "/seller/payment"
+                        : `/seller/payment?category=${modalCategory}`
+                    }
                     onClick={() => setModalOpen(false)}
                     className={styles.modalPrimaryBtn}
                   >

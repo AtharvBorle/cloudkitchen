@@ -82,9 +82,6 @@ const DURATION_OPTIONS = [
   "1 Week",
   "2 Weeks",
   "1 Month",
-  "3 Months",
-  "6 Months",
-  "1 Year",
 ];
 
 export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
@@ -344,9 +341,9 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             </div>
           </section>
 
-          {/* Section 2: Plan Basics */}
+          {/* Section 2: Plan Basics & Duration */}
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Plan Basics</h2>
+            <h2 className={styles.cardTitle}>Plan Basics &amp; Duration</h2>
 
             <div className={styles.formGroup}>
               <label htmlFor="editPlanName" className={styles.label}>
@@ -378,6 +375,46 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                 <option value="Gold">Gold Tier</option>
               </select>
             </div>
+
+            {/* Plan Duration Dropdown */}
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Plan Duration (Billing Cycle)</label>
+              <div className={styles.selectWrapper}>
+                <div
+                  className={styles.selectTrigger}
+                  onClick={() => setIsDurationMenuOpen((prev) => !prev)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <span style={{ fontWeight: 600 }}>{duration}</span>
+                  <ChevronDown size={18} color="#64748B" />
+                </div>
+
+                {isDurationMenuOpen && (
+                  <div className={styles.selectMenu}>
+                    {DURATION_OPTIONS.map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        className={`${styles.selectOption} ${
+                          duration === opt ? styles.selectOptionActive : ""
+                        }`}
+                        onClick={() => {
+                          setDuration(opt);
+                          setIsDurationMenuOpen(false);
+                        }}
+                      >
+                        <span>{opt}</span>
+                        {duration === opt && <Check size={14} color="#F97316" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: "11px", color: "#64748B", margin: "4px 0 0 0" }}>
+                Selected cycle: <strong>{duration}</strong>. Customers will be billed for this exact period.
+              </p>
+            </div>
           </section>
 
           {/* Section 3: Plan Pricing (₹ INR) */}
@@ -386,7 +423,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
 
             <div className={styles.formGroup}>
               <label htmlFor="editWeeklyPrice" className={styles.label}>
-                Weekly Price
+                Price for {duration} (₹)
               </label>
               <div className={styles.priceInputWrapper}>
                 <span className={styles.currencyPrefix}>₹</span>
@@ -395,18 +432,21 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                   type="text"
                   inputMode="decimal"
                   className={`${styles.input} ${styles.priceInput}`}
-                  placeholder="499.00"
+                  placeholder={`Price for ${duration}`}
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                 />
               </div>
+              <p style={{ fontSize: "11px", color: "#64748B", margin: "4px 0 0 0" }}>
+                Total amount for the <strong>{duration}</strong> subscription cycle.
+              </p>
             </div>
           </section>
 
-          {/* Section 4: Included in Weekly Plans */}
+          {/* Section 4: Included Features */}
           <section className={styles.card}>
             <div className={styles.cardHeaderRow}>
-              <h2 className={styles.cardTitle}>Included in Weekly Plans</h2>
+              <h2 className={styles.cardTitle}>Included Features</h2>
               <button
                 type="button"
                 className={styles.addFeatureBtn}
@@ -466,43 +506,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
           {/* Section 5: Plan Timing & Schedule */}
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Plan Timing &amp; Schedule</h2>
-
-            {/* Plan Duration Dropdown */}
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Plan Duration</label>
-              <div className={styles.selectWrapper}>
-                <div
-                  className={styles.selectTrigger}
-                  onClick={() => setIsDurationMenuOpen((prev) => !prev)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <span>{duration}</span>
-                  <ChevronDown size={18} color="#64748B" />
-                </div>
-
-                {isDurationMenuOpen && (
-                  <div className={styles.selectMenu}>
-                    {DURATION_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        className={`${styles.selectOption} ${
-                          duration === opt ? styles.selectOptionActive : ""
-                        }`}
-                        onClick={() => {
-                          setDuration(opt);
-                          setIsDurationMenuOpen(false);
-                        }}
-                      >
-                        <span>{opt}</span>
-                        {duration === opt && <Check size={14} color="#F97316" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Meal Serving Timings */}
             <div className={styles.formGroup}>

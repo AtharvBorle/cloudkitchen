@@ -5,8 +5,11 @@ import { revalidateTag } from "next/cache";
 
 export const getCategories = async () => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to view categories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const categories = await db.category.findMany({
@@ -23,14 +26,17 @@ export const getCategories = async () => {
 
 export const createCategory = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create categories.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Admin privileges required.", 403);
     }
 
     const { name, type } = await req.json();
 
     if (!name || !type) {
-        throw new ApiError("Name and type are required", 400);
+        throw new ApiError("Category name and type are required.", 400);
     }
 
     const category = await db.category.create({

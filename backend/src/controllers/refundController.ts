@@ -5,46 +5,46 @@ import { ApiError } from "@/lib/api-error";
 export const createRefundRequest = async (req: Request) => {
     const session = await getAuthSession();
     if (!session?.user) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to submit a refund request.", 401);
     }
 
     const { orderId, bookingId, reason, amount } = await req.json();
 
     if (!reason || !amount || amount <= 0) {
-        throw new ApiError("Reason and valid amount are required", 400);
+        throw new ApiError("Please provide a reason and a valid refund amount.", 400);
     }
 
     if (!orderId && !bookingId) {
-        throw new ApiError("Either orderId or bookingId must be specified", 400);
+        throw new ApiError("Either an order ID or a booking ID must be specified.", 400);
     }
 
     // Check for existing refund request
     if (orderId) {
         const existing = await db.refund.findUnique({ where: { orderId } });
         if (existing) {
-            throw new ApiError("A refund request already exists for this order", 400);
+            throw new ApiError("A refund request already exists for this order.", 400);
         }
 
         const order = await db.order.findUnique({ where: { id: orderId } });
         if (!order) {
-            throw new ApiError("Order not found", 404);
+            throw new ApiError("The specified order could not be found.", 404);
         }
 
         // Must be paid to request refund
         if (!order.isPaid) {
-            throw new ApiError("Only paid orders can be refunded", 400);
+            throw new ApiError("Refunds can only be requested for orders that have been paid.", 400);
         }
     }
 
     if (bookingId) {
         const existing = await db.refund.findUnique({ where: { bookingId } });
         if (existing) {
-            throw new ApiError("A refund request already exists for this booking", 400);
+            throw new ApiError("A refund request already exists for this booking.", 400);
         }
 
         const booking = await db.booking.findUnique({ where: { id: bookingId } });
         if (!booking) {
-            throw new ApiError("Booking not found", 404);
+            throw new ApiError("The specified booking could not be found.", 404);
         }
     }
 
@@ -65,7 +65,7 @@ export const createRefundRequest = async (req: Request) => {
 export const listRefunds = async () => {
     const session = await getAuthSession();
     if (!session?.user) {
-        throw new ApiError("Unauthorized", 401);
+        throw new ApiError("Please log in first to view refund requests.", 401);
     }
 
     const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "SUPPORT";
@@ -109,14 +109,17 @@ export const listRefunds = async () => {
 
 export const updateRefundStatus = async (req: Request, refundId: string) => {
     const session = await getAuthSession();
-    if (!session?.user || (session.user.role !== "SUPERADMIN" && session.user.role !== "SUPPORT")) {
-        throw new ApiError("Unauthorized. Only Superadmin or Support Admin can fulfill refunds", 403);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to process refunds.", 401);
+    }
+    if (session.user.role !== "SUPERADMIN" && session.user.role !== "SUPPORT") {
+        throw new ApiError("Access denied. Only Superadmin or Support Admin can fulfill refunds.", 403);
     }
 
     const { status, transactionId, adminNote } = await req.json();
 
     if (!["APPROVED", "REJECTED"].includes(status)) {
-        throw new ApiError("Invalid refund status. Must be APPROVED or REJECTED", 400);
+        throw new ApiError("Invalid refund status. Status must be either APPROVED or REJECTED.", 400);
     }
 
     const refund = await db.refund.findUnique({
@@ -124,11 +127,11 @@ export const updateRefundStatus = async (req: Request, refundId: string) => {
     });
 
     if (!refund) {
-        throw new ApiError("Refund request not found", 404);
+        throw new ApiError("The requested refund record could not be found.", 404);
     }
 
     if (refund.status !== "PENDING") {
-        throw new ApiError("Refund request has already been processed", 400);
+        throw new ApiError("This refund request has already been processed.", 400);
     }
 
     const updatedRefund = await db.refund.update({

@@ -20,9 +20,19 @@ export async function OPTIONS() {
 export async function GET(req: NextRequest) {
   try {
     const session = await getAuthSession();
-    if (!session || !session.user || (session.user.role !== "DELIVERY" && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
-      return new Response(JSON.stringify({ error: "Unauthorized. DELIVERY role required." }), {
+    if (!session?.user) {
+      return new Response(JSON.stringify({ success: false, message: "Please log in first to connect to the delivery stream.", error: "Please log in first to connect to the delivery stream." }), {
         status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": "true",
+        },
+      });
+    }
+    if (session.user.role !== "DELIVERY" && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
+      return new Response(JSON.stringify({ success: false, message: "Access denied. Delivery partner account required.", error: "Access denied. Delivery partner account required." }), {
+        status: 403,
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",

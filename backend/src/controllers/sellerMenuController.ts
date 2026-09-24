@@ -87,8 +87,11 @@ export const extractCategoryNames = (typeStr?: string | null, businessCategorySt
 
 export const getMenuItems = async () => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage your kitchen menu.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required to manage menu.", 403);
     }
 
     const sellerProfile = await checkFoodCategoryActive(session.user.id);
@@ -173,8 +176,11 @@ export const getMenuItems = async () => {
 
 export const createMenuItem = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to create a menu item.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required to create menu items.", 403);
     }
 
     const sellerProfile = await checkFoodCategoryActive(session.user.id);
@@ -317,8 +323,11 @@ export const createMenuItem = async (req: Request) => {
 
 export const updateMenuItem = async (req: Request, id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update this menu item.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     await checkFoodCategoryActive(session.user.id);
@@ -329,7 +338,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
     });
 
     if (!existingItem || existingItem.seller.userId !== session.user.id) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You do not have permission to modify this menu item.", 403);
     }
 
     const contentType = req.headers.get("content-type") || "";
@@ -454,8 +463,11 @@ export const updateMenuItem = async (req: Request, id: string) => {
 
 export const deleteMenuItem = async (id: string) => {
     const session = await getAuthSession();
-    if (!session || !session.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete this menu item.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     await checkFoodCategoryActive(session.user.id);
@@ -466,7 +478,7 @@ export const deleteMenuItem = async (id: string) => {
     });
 
     if (!existingItem || existingItem.seller.userId !== session.user.id) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You do not have permission to delete this menu item.", 403);
     }
 
     await db.foodItem.delete({
@@ -478,8 +490,11 @@ export const deleteMenuItem = async (id: string) => {
 
 export const addServedPincode = async (req: Request) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage delivery pincodes.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkFoodCategoryActive(session.user.id);
@@ -524,8 +539,11 @@ export const addServedPincode = async (req: Request) => {
 
 export const deleteServedPincode = async (id: string) => {
     const session = await getAuthSession();
-    if (!session?.user || session.user.role !== "SELLER") {
-        throw new ApiError("Unauthorized", 401);
+    if (!session?.user) {
+        throw new ApiError("Please log in first to delete delivery pincode.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
     }
 
     const sellerProfile = await checkFoodCategoryActive(session.user.id);
@@ -535,7 +553,7 @@ export const deleteServedPincode = async (id: string) => {
     });
 
     if (!existing || existing.sellerId !== sellerProfile.id) {
-        throw new ApiError("Forbidden", 403);
+        throw new ApiError("Access denied. You do not have permission to delete this pincode.", 403);
     }
 
     await db.servedPincode.delete({
