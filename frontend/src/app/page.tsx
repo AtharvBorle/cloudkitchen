@@ -72,15 +72,18 @@ export default function Home() {
 
   // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
-    if (!homeData.kitchens || homeData.kitchens.length === 0) {
+    const sourceKitchens = homeSearchQuery ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+
+    if (!sourceKitchens || sourceKitchens.length === 0) {
       return [];
     }
-    let list = homeData.kitchens;
+    let list = sourceKitchens;
 
-    // 0. Search query filter (matches kitchen name, category, or child dishes)
+    // 0. Search query filter (matches kitchen name, category, or child dishes globally)
     if (homeSearchQuery) {
       list = list.filter((k) =>
-        matchesKitchenOrDishSearch(homeSearchQuery, k, homeData.foodItems)
+        matchesKitchenOrDishSearch(homeSearchQuery, k, sourceFoodItems)
       );
     }
 
@@ -97,7 +100,7 @@ export default function Home() {
     // 2. Dietary Filter
     if (activeFilters.dietary && activeFilters.dietary !== "all") {
       list = list.filter((k) =>
-        isKitchenMatchingDiet(k, activeFilters.dietary, homeData.foodItems)
+        isKitchenMatchingDiet(k, activeFilters.dietary, sourceFoodItems)
       );
     }
 
@@ -137,15 +140,16 @@ export default function Home() {
       isOnline: k.isOnline !== false,
       foodType: k.foodType,
     }));
-  }, [homeData.kitchens, homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Offers for PopularOrders derived strictly from active coupons & real food items
   const dynamicOffers = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
+    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
       return [];
     }
 
-    let list = homeData.foodItems;
+    let list = sourceFoodItems;
 
     if (homeSearchQuery) {
       list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
@@ -196,12 +200,13 @@ export default function Home() {
     });
 
     return offersList.slice(0, 4);
-  }, [homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Dishes for BestPlaces
   const dynamicDishes = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return [];
-    let list = homeData.foodItems;
+    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
+    let list = sourceFoodItems;
 
     if (homeSearchQuery) {
       list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
@@ -244,12 +249,13 @@ export default function Home() {
       isAvailable: f.isAvailable !== false,
       distanceText: f.distanceText,
     }));
-  }, [homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Top Rated Items for DashboardBody
   const dynamicTopRated = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return [];
-    let list = homeData.foodItems;
+    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
+    let list = sourceFoodItems;
 
     if (homeSearchQuery) {
       list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
@@ -287,12 +293,13 @@ export default function Home() {
       isAvailable: f.isAvailable !== false,
       distanceText: f.distanceText,
     }));
-  }, [homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Recommended Dishes for RecommendedForYou
   const dynamicRecommended = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return [];
-    let list = homeData.foodItems;
+    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
+    let list = sourceFoodItems;
 
     if (homeSearchQuery) {
       list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
@@ -323,7 +330,7 @@ export default function Home() {
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
     }));
-  }, [homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Promo Banner from active coupons or DB promo banners
   const promoProps = useMemo(() => {
@@ -398,8 +405,8 @@ export default function Home() {
       >
         {/* 1. Hero Section (Dynamic Search Autocomplete + Map Picker) */}
         <HeroSection
-          availableItems={homeData.foodItems}
-          availableKitchens={homeData.kitchens}
+          availableItems={homeData.allFoodItems}
+          availableKitchens={homeData.allKitchens}
           onSearch={handleHomeSearch}
         />
 
@@ -461,8 +468,8 @@ export default function Home() {
           availableCuisines={availableCuisines}
         />
 
-        {/* Out of Service Area Alert Banner */}
-        {homeData.activePincode && !homeData.isLoading && homeData.kitchens.length === 0 && (
+        {/* Out of Service Area Alert Banner (only shown during location browsing, not during name search) */}
+        {!homeSearchQuery && homeData.activePincode && !homeData.isLoading && homeData.kitchens.length === 0 && (
           <div
             style={{
               width: "100%",
@@ -531,7 +538,11 @@ export default function Home() {
         )}
 
         {/* 4. Properties / Best Places Nearby */}
-        <Properties places={dynamicPlaces} foodItems={homeData.foodItems} allKitchens={homeData.kitchens} />
+        <Properties
+          places={dynamicPlaces}
+          foodItems={homeSearchQuery ? homeData.allFoodItems : homeData.foodItems}
+          allKitchens={homeData.allKitchens}
+        />
 
         {/* 6. Popular Orders / Today's Special Offers */}
         {dynamicOffers.length > 0 && <PopularOrders offers={dynamicOffers} />}

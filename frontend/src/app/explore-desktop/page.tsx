@@ -43,13 +43,15 @@ function ExploreDesktopContent() {
 
   // Dynamic Reels from approved kitchens
   const dynamicReels = useMemo(() => {
-    if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
-    let list = homeData.kitchens;
+    const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceKitchens || sourceKitchens.length === 0) return undefined;
+    let list = sourceKitchens;
     if (searchQuery) {
-      list = list.filter((k) => matchesKitchenOrDishSearch(searchQuery, k, homeData.foodItems));
+      list = list.filter((k) => matchesKitchenOrDishSearch(searchQuery, k, sourceFoodItems));
     }
     if (selectedDiet && selectedDiet !== "all") {
-      list = list.filter((k) => isKitchenMatchingDiet(k, selectedDiet, homeData.foodItems));
+      list = list.filter((k) => isKitchenMatchingDiet(k, selectedDiet, sourceFoodItems));
     }
     return list.map((k) => ({
       id: k.id,
@@ -58,12 +60,13 @@ function ExploreDesktopContent() {
       image: k.imageUrl || "/images/places/place-biryani.png",
       kitchenId: k.trackingId || k.id,
     }));
-  }, [homeData.kitchens, homeData.foodItems, selectedDiet, searchQuery]);
+  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
   // Dynamic Featured Collections from food items
   const dynamicCollections = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    let list = homeData.foodItems;
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0) return undefined;
+    let list = sourceFoodItems;
     if (selectedDiet && selectedDiet !== "all") {
       list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
     }
@@ -75,12 +78,13 @@ function ExploreDesktopContent() {
       image: f.imageUrl || "/images/places/place-biryani.png",
       kitchenId: f.sellerTrackingId || f.sellerId,
     }));
-  }, [homeData.foodItems, selectedDiet]);
+  }, [homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
   // Dynamic Curated Dining Collections (grouped by price/type)
   const dynamicDiningItems = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    let list = homeData.foodItems;
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0) return undefined;
+    let list = sourceFoodItems;
     if (selectedDiet && selectedDiet !== "all") {
       list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
     }
@@ -91,7 +95,7 @@ function ExploreDesktopContent() {
       image: f.imageUrl || "/images/places/place-pizza.png",
       kitchenId: f.sellerTrackingId || f.sellerId,
     }));
-  }, [homeData.foodItems, selectedDiet]);
+  }, [homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
   // Dynamic Meal Moments from DB Categories
   const dynamicMoments = useMemo(() => {
@@ -119,7 +123,8 @@ function ExploreDesktopContent() {
   // Filtered Food Items if user arrived via search, dietary, or category filter
   const filteredFoodItems = useMemo(() => {
     if (!categoryFilter && !searchQuery && selectedDiet === "all") return null;
-    let list = homeData.foodItems;
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    let list = sourceFoodItems;
     if (categoryFilter) {
       list = list.filter(
         (f) =>
@@ -135,7 +140,7 @@ function ExploreDesktopContent() {
       list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
     }
     return list;
-  }, [homeData.foodItems, categoryFilter, searchQuery, selectedDiet]);
+  }, [homeData.foodItems, homeData.allFoodItems, categoryFilter, searchQuery, selectedDiet]);
 
   return (
     <div className={styles.pageContainer}>
@@ -147,8 +152,8 @@ function ExploreDesktopContent() {
           onDietChange={(diet) => setSelectedDiet(diet)}
         />
         <main className={styles.desktopMain}>
-          {/* Out of Service Area Alert Banner */}
-          {(homeData.activePincode || defaultAddress?.latitude) && !homeData.isLoading && homeData.kitchens.length === 0 && (
+          {/* Out of Service Area Alert Banner (only shown when browsing by location, not when searching by name) */}
+          {!searchQuery && !categoryFilter && (homeData.activePincode || defaultAddress?.latitude) && !homeData.isLoading && homeData.kitchens.length === 0 && (
             <div
               style={{
                 width: "100%",
