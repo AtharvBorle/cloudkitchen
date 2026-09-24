@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { validateEmail } from "@/lib/email-validation";
 
 export default function SuperadminDashboard() {
     const router = useRouter();
@@ -54,9 +55,9 @@ export default function SuperadminDashboard() {
             alert("Name must be at least 2 characters long.");
             return;
         }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(newEmail)) {
-            alert("Please enter a valid email address.");
+        const emailValidation = validateEmail(newEmail);
+        if (!emailValidation.isValid) {
+            alert(emailValidation.error || "Please enter a valid email address.");
             return;
         }
         const phoneRegex = /^[0-9]{10}$/;
@@ -113,9 +114,9 @@ export default function SuperadminDashboard() {
             alert("Name must be at least 2 characters long.");
             return;
         }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(editEmail)) {
-            alert("Please enter a valid email address.");
+        const emailValidation = validateEmail(editEmail);
+        if (!emailValidation.isValid) {
+            alert(emailValidation.error || "Please enter a valid email address.");
             return;
         }
         const phoneRegex = /^[0-9]{10}$/;

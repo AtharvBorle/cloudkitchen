@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Eye, EyeOff, CheckCircle2, Loader2, Bell } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { validateEmail } from "@/lib/email-validation";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./ResponsiveAddAgent.module.css";
@@ -90,8 +91,9 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
       setErrorMessage("Please enter a valid phone number.");
       return;
     }
-    if (!formData.email.trim()) {
-      setErrorMessage("Please enter an email address.");
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      setErrorMessage(emailValidation.error || "Please enter a valid email address.");
       return;
     }
     if (!formData.password.trim() || formData.password.length < 6) {
@@ -112,7 +114,7 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
       const payload = {
         name: formData.fullName.trim(),
         phone: formData.phoneNumber.trim(),
-        email: formData.email.trim(),
+        email: emailValidation.normalizedEmail,
         password: formData.password,
       };
 

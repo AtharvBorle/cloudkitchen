@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { discardExistingSession } from "@/lib/logout";
+import { validateEmail } from "@/lib/email-validation";
 import styles from "./LoginForm.module.css";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
@@ -165,8 +166,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setSuccessNotice("");
 
     if (loginMode === "password") {
-      if (!email.trim() || !password) {
-        setError("Please provide both email and password.");
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.isValid) {
+        setError(emailValidation.error || "Please enter a valid email address.");
+        return;
+      }
+      if (!password) {
+        setError("Password is required.");
         return;
       }
 
@@ -175,7 +181,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         await discardExistingSession();
         const res = await signIn("credentials", {
           redirect: false,
-          email: email.trim().toLowerCase(),
+          email: emailValidation.normalizedEmail,
           password,
           loginType: "USER",
         });

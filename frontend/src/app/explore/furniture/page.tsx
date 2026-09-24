@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PhoneInput } from '@/components/common/PhoneInput/PhoneInput';
+import { validateEmail } from '@/lib/email-validation';
 
 export default function FurnitureQueryPage() {
     const [formData, setFormData] = useState({
@@ -46,6 +47,12 @@ export default function FurnitureQueryPage() {
         e.preventDefault();
         setStatus({ type: null, message: '' });
 
+        const emailValidation = validateEmail(formData.email);
+        if (!emailValidation.isValid) {
+            setStatus({ type: 'error', message: emailValidation.error || 'Please enter a valid email address.' });
+            return;
+        }
+
         if (formData.captchaInput.toUpperCase() !== captcha) {
             setStatus({ type: 'error', message: 'Invalid verification code. Please try again.' });
             generateCaptcha();
@@ -57,7 +64,10 @@ export default function FurnitureQueryPage() {
             const response = await fetch('/api/furniture/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    ...formData,
+                    email: emailValidation.normalizedEmail,
+                }),
             });
 
             if (response.ok) {

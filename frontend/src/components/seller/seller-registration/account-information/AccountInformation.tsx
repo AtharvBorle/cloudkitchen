@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { saveSellerDraft } from "@/lib/seller-registration-store";
+import { validateEmail } from "@/lib/email-validation";
 import styles from "./AccountInformation.module.css";
 
 export interface AccountStepData {
@@ -24,8 +25,6 @@ export interface AccountInformationProps {
   initialData?: Partial<AccountStepData>;
   onContinue?: (data: AccountStepData) => void;
 }
-
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export const AccountInformation: React.FC<AccountInformationProps> = ({
   initialData,
@@ -49,9 +48,10 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
   const isNameValid = formData.ownerName.trim().length >= 2;
   const isNameError = touched.ownerName && !isNameValid;
 
-  const isEmailValid = EMAIL_REGEX.test(formData.email.trim());
+  const emailCheck = validateEmail(formData.email);
+  const isEmailValid = emailCheck.isValid;
   const isEmailEmpty = formData.email.trim().length === 0;
-  const isEmailError = touched.email && (!isEmailValid || isEmailEmpty);
+  const isEmailError = touched.email && !isEmailValid;
 
   const phoneDigits = formData.phone;
   const phoneLength = phoneDigits.length;
@@ -218,15 +218,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
           ) : isEmailError ? (
             <div className={styles.helperTextError}>
               <AlertCircle size={13} />
-              <span>
-                {isEmailEmpty
-                  ? "Email is required"
-                  : !formData.email.includes("@")
-                  ? "Email must include '@' symbol"
-                  : !formData.email.includes(".")
-                  ? "Email must include a valid domain (e.g. .com, .in)"
-                  : "Please enter a valid email address (e.g. rahul@neocloud.com)"}
-              </span>
+              <span>{emailCheck.error || "Please enter a valid email address."}</span>
             </div>
           ) : (
             <span className={styles.helperText}>
