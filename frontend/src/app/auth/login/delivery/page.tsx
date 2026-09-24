@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { discardExistingSession } from "@/lib/logout";
+import { validateEmail } from "@/lib/email-validation";
 
 export default function DeliveryLoginPage() {
     const router = useRouter();
@@ -22,21 +23,21 @@ export default function DeliveryLoginPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setError("");
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            setError("Please enter a valid email address.");
-            setLoading(false);
+        const emailValidation = validateEmail(email);
+        if (!emailValidation.isValid) {
+            setError(emailValidation.error || "Please enter a valid email address.");
             return;
         }
+
+        setLoading(true);
 
         try {
             await discardExistingSession();
             const res = await signIn("credentials", {
                 redirect: false,
-                email,
+                email: emailValidation.normalizedEmail,
                 password,
                 loginType: "DELIVERY",
             });

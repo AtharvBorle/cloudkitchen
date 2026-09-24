@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./SmsNotifications.module.css";
 import { Phone, Tag } from "lucide-react";
+import {
+  getGenericNotificationPreferences,
+  saveGenericNotificationPreferences,
+  NOTIFICATION_PREFERENCES_EVENT,
+} from "@/lib/user-notification-preferences";
 
 export interface SmsOption {
   id: string;
@@ -29,17 +34,37 @@ const DEFAULT_SMS_OPTIONS: SmsOption[] = [
   },
 ];
 
+const INITIAL_SMS_MAP: Record<string, boolean> = {
+  "order-status": true,
+  "deals-discounts": false,
+};
+
 export const SmsNotifications: React.FC = () => {
-  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({
-    "order-status": true,
-    "deals-discounts": false,
-  });
+  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(INITIAL_SMS_MAP);
+
+  useEffect(() => {
+    setToggleStates(getGenericNotificationPreferences("sms", INITIAL_SMS_MAP));
+
+    const handlePrefChange = () => {
+      setToggleStates(getGenericNotificationPreferences("sms", INITIAL_SMS_MAP));
+    };
+
+    window.addEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+    window.addEventListener("storage", handlePrefChange);
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+      window.removeEventListener("storage", handlePrefChange);
+    };
+  }, []);
 
   const handleToggle = (id: string) => {
-    setToggleStates((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setToggleStates((prev) => {
+      const nextVal = !prev[id];
+      const updated = { ...prev, [id]: nextVal };
+      saveGenericNotificationPreferences("sms", { [id]: nextVal });
+      return updated;
+    });
   };
 
   const renderIcon = (type: SmsOption["iconType"]) => {

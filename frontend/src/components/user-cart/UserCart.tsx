@@ -115,7 +115,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     let isMounted = true;
     async function checkSellerStatus() {
       try {
-        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sellerId)}`);
+        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sellerId as string)}`);
         if (res.ok && isMounted) {
           const json = await res.json();
           const sellerObj = json.data || json;

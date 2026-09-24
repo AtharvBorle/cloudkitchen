@@ -30,6 +30,7 @@ import {
   ActiveLoginSessionsCard,
 } from "../security-settings/SellerSecuritySettings";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { validateEmail } from "@/lib/email-validation";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResponsiveSellerSettings.module.css";
 
@@ -568,6 +569,18 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (formData.businessEmail) {
+      const emailValidation = validateEmail(formData.businessEmail);
+      if (!emailValidation.isValid) {
+        setToastData({
+          title: emailValidation.error || "Please enter a valid email address.",
+          status: "OFF",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
 
     try {

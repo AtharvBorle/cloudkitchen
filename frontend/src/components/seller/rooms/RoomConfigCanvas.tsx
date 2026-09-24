@@ -17,8 +17,21 @@ import {
   FileText,
   ShieldAlert,
   Loader2,
+  MapPin,
+  Navigation,
+  Search,
+  Building,
+  CheckCircle2,
+  Map,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { HouseMapPicker } from "@/components/house-map-picker";
+import {
+  extractRoomPropertyLocation,
+  cleanRoomAboutText,
+  formatRoomLocationComment,
+} from "@/lib/room-location-helper";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 export interface AmenityItem {
   id: string;
@@ -37,6 +50,16 @@ export interface RoomConfigData {
   amenities: AmenityItem[];
   houseRules: string[];
   isInstantlyBookable: boolean;
+  // Property Location details
+  useSellerDefaultLocation: boolean;
+  houseNumber: string;
+  street: string;
+  locality: string;
+  landmark: string;
+  city: string;
+  pincode: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface RoomConfigCanvasProps {
@@ -68,6 +91,15 @@ const DEFAULT_ROOM_DATA: RoomConfigData = {
   amenities: DEFAULT_AMENITIES.map((a) => ({ ...a, selected: false })),
   houseRules: [],
   isInstantlyBookable: true,
+  useSellerDefaultLocation: false,
+  houseNumber: "",
+  street: "",
+  locality: "",
+  landmark: "",
+  city: "Pune",
+  pincode: "",
+  latitude: 18.5204,
+  longitude: 73.8567,
 };
 
 export default function RoomConfigCanvas({
@@ -84,6 +116,7 @@ export default function RoomConfigCanvas({
     ...DEFAULT_ROOM_DATA,
     ...initialData,
   });
+
   interface PhotoItem {
     id: string;
     url: string;
@@ -101,16 +134,42 @@ export default function RoomConfigCanvas({
     }
     return [];
   });
-  const [saving, setSaving] = useState(false);
 
+  const [saving, setSaving] = useState(false);
   const [isCapacityDropdownOpen, setIsCapacityDropdownOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [customAmenityName, setCustomAmenityName] = useState("");
   const [customRuleText, setCustomRuleText] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sellerProfile, setSellerProfile] = useState<any>(null);
 
+  // Map & location search states
+  const [locationSearchInput, setLocationSearchInput] = useState("");
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const capacityOptions = ["1 Guest", "2 Guests", "3 Guests", "4 Guests", "5+ Guests"];
 
+  // 1. Fetch Seller Profile on mount for default fallback address
+  useEffect(() => {
+    async function loadSellerProfile() {
+      try {
+        const res = await fetchApi("/api/seller/profile");
+        if (res.ok) {
+          const json = await res.json();
+          const profile = json.data?.profile || json.profile || json.data;
+          if (profile) {
+            setSellerProfile(profile);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load seller profile for default address:", e);
+      }
+    }
+    loadSellerProfile();
+  }, []);
+
+  // 2. Load existing room details in edit mode
   useEffect(() => {
     if (!roomId) return;
     async function loadRoom() {
@@ -205,7 +264,11 @@ export default function RoomConfigCanvas({
             if (typeof room.about === "string" && room.about.trim()) {
               loadedAbout = room.about.trim();
             } else if (typeof room.description === "string" && room.description.trim() && !room.description.startsWith("{")) {
-              loadedAbout = room.description.replace(/Amenities:[^\n]+/i, "").replace(/House Rules:[^\n]+/i, "").replace(/Floor(?:\s*No)?:[^\n]+/i, "").trim();
+              loadedAbout = room.description
+                .replace(/Amenities:[^\n]+/i, "")
+                .replace(/House Rules:[^\n]+/i, "")
+                .replace(/Floor(?:\s*No)?:[^\n]+/i, "")
+                .trim();
             }
             if (loadedAbout.startsWith("{")) {
               try {
@@ -216,16 +279,43 @@ export default function RoomConfigCanvas({
               }
             }
 
+            // Extract property-specific location metadata
+            const parsedLoc = extractRoomPropertyLocation(
+              room.description,
+              room.about,
+              {
+                locality: room.sellerLocality || room.seller?.addressLocality || "",
+                landmark: room.sellerLandmark || room.seller?.addressLandmark || "",
+                city: room.sellerCity || room.seller?.user?.city || "Pune",
+                pincode: room.sellerPincode || room.seller?.user?.pincode || "",
+                addressFlat: room.seller?.addressFlat || "",
+                latitude: room.sellerLatitude ?? room.latitude ?? null,
+                longitude: room.sellerLongitude ?? room.longitude ?? null,
+              }
+            );
+
+            // Strip metadata comments from about textarea
+            const cleanedAbout = cleanRoomAboutText(loadedAbout);
+
             setFormData({
               roomName: room.title || "",
               capacity: `${room.capacity || 2} Guest${(room.capacity || 2) > 1 ? "s" : ""}`,
               pricePerNight: String(room.price || ""),
               floorNo: loadedFloor,
-              about: loadedAbout,
+              about: cleanedAbout,
               mediaPhotos: photos,
               amenities: mappedAmenities,
               houseRules: loadedHouseRules,
               isInstantlyBookable: room.isAvailable ?? true,
+              useSellerDefaultLocation: parsedLoc.useSellerDefaultLocation || false,
+              houseNumber: parsedLoc.houseNumber || "",
+              street: parsedLoc.street || "",
+              locality: parsedLoc.locality || "",
+              landmark: parsedLoc.landmark || "",
+              city: parsedLoc.city || "Pune",
+              pincode: parsedLoc.pincode || "",
+              latitude: parsedLoc.latitude ?? 18.5204,
+              longitude: parsedLoc.longitude ?? 73.8567,
             });
           }
         }
@@ -236,8 +326,181 @@ export default function RoomConfigCanvas({
     loadRoom();
   }, [roomId]);
 
-  const handleTextChange = (field: keyof RoomConfigData, value: string) => {
+  const handleTextChange = (field: keyof RoomConfigData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Toggle between Default Registered Address and Custom Property Location
+  const handleLocationModeToggle = (useDefault: boolean) => {
+    if (useDefault && sellerProfile) {
+      const defaultPin = sellerProfile.user?.pincode || sellerProfile.pincode || "";
+      let defLat = sellerProfile.latitude ?? null;
+      let defLng = sellerProfile.longitude ?? null;
+      if ((defLat === null || defLng === null) && defaultPin) {
+        const pinCoords = getPincodeCoordinates(defaultPin);
+        if (pinCoords) {
+          defLat = pinCoords.lat;
+          defLng = pinCoords.lng;
+        }
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        useSellerDefaultLocation: true,
+        houseNumber: sellerProfile.addressFlat || "",
+        street: sellerProfile.addressStreet || "",
+        locality: sellerProfile.addressLocality || "",
+        landmark: sellerProfile.addressLandmark || "",
+        city: sellerProfile.user?.city || sellerProfile.city || "Pune",
+        pincode: defaultPin,
+        latitude: defLat ?? 18.5204,
+        longitude: defLng ?? 73.8567,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        useSellerDefaultLocation: false,
+      }));
+    }
+  };
+
+  // Live GPS Detector
+  const handleDetectGPS = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setIsDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setFormData((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+          useSellerDefaultLocation: false,
+        }));
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const pincode = addr.postcode || "";
+            const locality =
+              addr.suburb ||
+              addr.neighbourhood ||
+              addr.city_district ||
+              addr.quarter ||
+              addr.residential ||
+              "";
+            const street = addr.road || addr.street || "";
+            const landmark = addr.amenity || addr.shop || addr.building || "";
+            const city = addr.city || addr.town || addr.village || "Pune";
+            const houseNumber = addr.house_number || "";
+
+            setFormData((prev) => ({
+              ...prev,
+              houseNumber: houseNumber || prev.houseNumber,
+              street: street || prev.street,
+              locality: locality || prev.locality,
+              landmark: landmark || prev.landmark,
+              city: city || prev.city,
+              pincode: pincode || prev.pincode,
+            }));
+          }
+        } catch (e) {
+          console.error("Reverse geocoding error:", e);
+        } finally {
+          setIsDetectingGps(false);
+          setToastMessage("Location detected via GPS!");
+          setTimeout(() => setToastMessage(null), 2500);
+        }
+      },
+      (err) => {
+        console.error("GPS error:", err);
+        setIsDetectingGps(false);
+        alert("Unable to detect GPS position. Please check location permissions or select on map.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Map Area / Address Search
+  const handleSearchLocation = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = locationSearchInput.trim();
+    if (!query) return;
+
+    setIsSearchingLocation(true);
+    try {
+      const fullQuery = query.toLowerCase().includes("pune") ? query : `${query}, Pune, Maharashtra`;
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          fullQuery
+        )}&limit=1&addressdetails=1`
+      );
+      if (res.ok) {
+        const results = await res.json();
+        if (results && results.length > 0) {
+          const first = results[0];
+          const lat = parseFloat(first.lat);
+          const lng = parseFloat(first.lon);
+          const addr = first.address || {};
+          const pincode = addr.postcode || "";
+          const locality =
+            addr.suburb ||
+            addr.neighbourhood ||
+            addr.city_district ||
+            addr.quarter ||
+            query.split(",")[0].trim();
+          const street = addr.road || "";
+          const landmark = addr.amenity || addr.shop || "";
+          const city = addr.city || addr.town || addr.village || "Pune";
+
+          setFormData((prev) => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            locality: locality || prev.locality,
+            pincode: pincode || prev.pincode,
+            street: street || prev.street,
+            landmark: landmark || prev.landmark,
+            city: city || prev.city,
+            useSellerDefaultLocation: false,
+          }));
+          setToastMessage(`Pinned to ${locality || query}!`);
+          setTimeout(() => setToastMessage(null), 2500);
+        } else {
+          alert(`No map coordinates found for "${query}". Try adding specific landmark or area name.`);
+        }
+      }
+    } catch (err) {
+      console.error("Location search failed:", err);
+      alert("Failed to search location. Please try again or click directly on the map.");
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  // Map Pin change handler (from Leaflet OpenStreetMap)
+  const handleMapChange = (lat: number, lng: number, details?: any) => {
+    setFormData((prev) => {
+      const updatedPincode = details?.pincode || prev.pincode;
+      return {
+        ...prev,
+        latitude: lat,
+        longitude: lng,
+        locality: details?.street || details?.neighbourhood || prev.locality,
+        pincode: updatedPincode,
+        street: details?.street || prev.street,
+        landmark: details?.landmark || prev.landmark,
+        houseNumber: details?.houseNumber || prev.houseNumber,
+        useSellerDefaultLocation: false,
+      };
+    });
   };
 
   const handleToggleAmenity = (id: string) => {
@@ -261,12 +524,10 @@ export default function RoomConfigCanvas({
     const trimmed = customAmenityName.trim();
     if (!trimmed) return;
 
-    // Check if already exists
     const exists = formData.amenities.some(
       (a) => a.name.toLowerCase() === trimmed.toLowerCase()
     );
     if (exists) {
-      // Toggle select it
       setFormData((prev) => ({
         ...prev,
         amenities: prev.amenities.map((a) =>
@@ -401,6 +662,22 @@ export default function RoomConfigCanvas({
         .filter((a) => a.selected)
         .map((a) => a.name);
 
+      // Serialize location metadata into description / about
+      const locationComment = formatRoomLocationComment({
+        houseNumber: formData.houseNumber,
+        street: formData.street,
+        locality: formData.locality,
+        landmark: formData.landmark,
+        city: formData.city,
+        pincode: formData.pincode,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        useSellerDefaultLocation: formData.useSellerDefaultLocation,
+      });
+
+      const cleanAbout = cleanRoomAboutText(formData.about);
+      const combinedAbout = cleanAbout ? `${cleanAbout}\n\n${locationComment}` : locationComment;
+
       const bodyFormData = new FormData();
       if (roomId) {
         bodyFormData.append("roomId", roomId);
@@ -409,11 +686,24 @@ export default function RoomConfigCanvas({
       bodyFormData.append("price", parsedPrice);
       bodyFormData.append("capacity", capacityNum);
       bodyFormData.append("isAvailable", String(formData.isInstantlyBookable));
-      bodyFormData.append("about", formData.about || "");
+      bodyFormData.append("about", combinedAbout);
+      bodyFormData.append("description", combinedAbout);
       bodyFormData.append("floor", formData.floorNo || "");
       bodyFormData.append("amenities", JSON.stringify(selectedAmenities));
       bodyFormData.append("houseRules", JSON.stringify(formData.houseRules));
-      bodyFormData.append("description", formData.about || "");
+
+      // Append property location specific fields
+      bodyFormData.append("locality", formData.locality || "");
+      bodyFormData.append("city", formData.city || "Pune");
+      bodyFormData.append("pincode", formData.pincode || "");
+      bodyFormData.append("landmark", formData.landmark || "");
+      bodyFormData.append("houseNumber", formData.houseNumber || "");
+      if (formData.latitude !== null && formData.latitude !== undefined) {
+        bodyFormData.append("latitude", String(formData.latitude));
+      }
+      if (formData.longitude !== null && formData.longitude !== undefined) {
+        bodyFormData.append("longitude", String(formData.longitude));
+      }
 
       const existingUrls = photoItems
         .filter((p) => p.isExisting && !p.url.startsWith("blob:"))
@@ -508,12 +798,11 @@ export default function RoomConfigCanvas({
         </div>
       )}
 
-      {/* constrained-content (width: 1120, height: 725, gap: 24px) */}
+      {/* Constrained Content */}
       <div
         style={{
           width: "100%",
           maxWidth: "1120px",
-          minHeight: "725px",
           display: "flex",
           flexDirection: "column",
           gap: "24px",
@@ -522,16 +811,13 @@ export default function RoomConfigCanvas({
         }}
         className="constrained-content"
       >
-        {/* frame1 Header (width: 1120, height: 50, justify-content: space-between) */}
+        {/* Header */}
         <div
           style={{
             width: "100%",
-            maxWidth: "1120px",
-            minHeight: "50px",
             display: "flex",
             flexDirection: "column",
             gap: "4px",
-            justifyContent: "space-between",
             boxSizing: "border-box",
           }}
           className="frame1-header"
@@ -546,7 +832,7 @@ export default function RoomConfigCanvas({
               lineHeight: 1.25,
             }}
           >
-            Room Configurator
+            {isEditMode ? "Edit Room Details" : "Room Configurator"}
           </h1>
           <p
             style={{
@@ -556,16 +842,14 @@ export default function RoomConfigCanvas({
               margin: 0,
             }}
           >
-            Configure parameters, pricing models, and media elements for specific hotel rooms.
+            Configure room parameters, distinct property location, pricing models, and media elements.
           </p>
         </div>
 
-        {/* form-card (width: 1120, height: 651, gap: 24px, padding: 32px, radius: 12px, border: 1px solid #E2E8F0, bg: #FFFFFF) */}
+        {/* Form Card */}
         <div
           style={{
             width: "100%",
-            maxWidth: "1120px",
-            minHeight: "651px",
             backgroundColor: "#FFFFFF",
             borderRadius: "12px",
             border: "1px solid #E2E8F0",
@@ -573,7 +857,7 @@ export default function RoomConfigCanvas({
             padding: "32px",
             display: "flex",
             flexDirection: "column",
-            gap: "24px",
+            gap: "28px",
             boxSizing: "border-box",
           }}
           className="form-card"
@@ -587,7 +871,7 @@ export default function RoomConfigCanvas({
               margin: 0,
             }}
           >
-            Room Details
+            Basic Details
           </h2>
 
           {/* Field 1: Room Name / Identifier */}
@@ -781,7 +1065,7 @@ export default function RoomConfigCanvas({
             </div>
           </div>
 
-          {/* Field 4: Media / Photos */}
+          {/* Media / Photos */}
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <label
               style={{
@@ -801,7 +1085,6 @@ export default function RoomConfigCanvas({
                 flexWrap: "wrap",
               }}
             >
-              {/* Photo Thumbnails */}
               {photoItems.map((item, idx) => (
                 <div
                   key={item.id || idx}
@@ -827,7 +1110,6 @@ export default function RoomConfigCanvas({
                     }}
                     unoptimized
                   />
-                  {/* Delete button overlay */}
                   <button
                     type="button"
                     onClick={() => handleDeletePhoto(idx)}
@@ -854,7 +1136,6 @@ export default function RoomConfigCanvas({
                 </div>
               ))}
 
-              {/* Upload Dropzone */}
               <div
                 onClick={() => fileInputRef.current?.click()}
                 style={{
@@ -904,7 +1185,7 @@ export default function RoomConfigCanvas({
             </div>
           </div>
 
-          {/* Field: About Property / Description */}
+          {/* About Property / Description */}
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             <label
               style={{
@@ -936,7 +1217,445 @@ export default function RoomConfigCanvas({
             />
           </div>
 
-          {/* Field 5: Amenities Selection */}
+          {/* ========================================================================= */}
+          {/* PROPERTY LOCATION & ADDRESS SECTION (Multi-Property Location Support)   */}
+          {/* ========================================================================= */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              padding: "20px",
+              backgroundColor: "#F8FAFC",
+              borderRadius: "10px",
+              border: "1px solid #E2E8F0",
+            }}
+          >
+            {/* Section Header */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FFF1E8",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#FF5500",
+                  }}
+                >
+                  <MapPin size={20} />
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "14.5px",
+                      fontWeight: 700,
+                      color: "#0F172A",
+                      margin: 0,
+                    }}
+                  >
+                    Property Location & Address
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "#64748B",
+                      margin: 0,
+                      marginTop: "2px",
+                    }}
+                  >
+                    Specify the exact address for this room so guests searching for areas like Hinjawadi or Kothrud find this property.
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Coordinates Badge */}
+              {formData.latitude !== null && formData.longitude !== null && (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "4px 10px",
+                    backgroundColor: "#ECFDF5",
+                    border: "1px solid #A7F3D0",
+                    borderRadius: "6px",
+                    fontSize: "11.5px",
+                    color: "#065F46",
+                    fontWeight: 500,
+                  }}
+                >
+                  <CheckCircle2 size={13} color="#10B981" />
+                  <span>
+                    Pinned: {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Location Source Choice Mode */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+                width: "100%",
+              }}
+            >
+              {/* Option 1: Custom Property Address */}
+              <div
+                onClick={() => handleLocationModeToggle(false)}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: !formData.useSellerDefaultLocation ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
+                  backgroundColor: !formData.useSellerDefaultLocation ? "#FFF8F5" : "#FFFFFF",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "10px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <input
+                  type="radio"
+                  name="propertyLocationMode"
+                  checked={!formData.useSellerDefaultLocation}
+                  onChange={() => handleLocationModeToggle(false)}
+                  style={{ marginTop: "3px", accentColor: "#FF5500", cursor: "pointer" }}
+                />
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>
+                    Custom Property Address
+                  </div>
+                  <div style={{ fontSize: "11.5px", color: "#64748B", marginTop: "2px" }}>
+                    Independent address for this specific PG, flat, or building
+                  </div>
+                </div>
+              </div>
+
+              {/* Option 2: Use Seller Registered Address */}
+              <div
+                onClick={() => handleLocationModeToggle(true)}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  border: formData.useSellerDefaultLocation ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
+                  backgroundColor: formData.useSellerDefaultLocation ? "#FFF8F5" : "#FFFFFF",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "10px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <input
+                  type="radio"
+                  name="propertyLocationMode"
+                  checked={formData.useSellerDefaultLocation}
+                  onChange={() => handleLocationModeToggle(true)}
+                  style={{ marginTop: "3px", accentColor: "#FF5500", cursor: "pointer" }}
+                />
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>
+                    Use Registered Host Address
+                  </div>
+                  <div style={{ fontSize: "11.5px", color: "#64748B", marginTop: "2px" }}>
+                    {sellerProfile
+                      ? `${sellerProfile.addressLocality || ""}, ${sellerProfile.user?.city || "Pune"} (${sellerProfile.user?.pincode || ""})`
+                      : "Same address as your registered host profile"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Location Tools: Map Search & GPS */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                flexWrap: "wrap",
+                backgroundColor: "#FFFFFF",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                border: "1px solid #E2E8F0",
+              }}
+            >
+              {/* Search Bar on Map */}
+              <div style={{ display: "flex", flex: 1, minWidth: "260px", gap: "6px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    flex: 1,
+                    backgroundColor: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "6px",
+                    padding: "6px 12px",
+                  }}
+                >
+                  <Search size={15} color="#64748B" />
+                  <input
+                    type="text"
+                    value={locationSearchInput}
+                    onChange={(e) => setLocationSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearchLocation();
+                      }
+                    }}
+                    placeholder="Search area (e.g. Hinjawadi, Kothrud, Baner, Wakad)..."
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      backgroundColor: "transparent",
+                      fontSize: "12.5px",
+                      color: "#0F172A",
+                      width: "100%",
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSearchLocation}
+                  disabled={isSearchingLocation}
+                  style={{
+                    backgroundColor: "#0F172A",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "6px 14px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: isSearchingLocation ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {isSearchingLocation ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : null}
+                  <span>Find on Map</span>
+                </button>
+              </div>
+
+              {/* Use Live GPS Button */}
+              <button
+                type="button"
+                onClick={handleDetectGPS}
+                disabled={isDetectingGps}
+                style={{
+                  backgroundColor: "#FFF1E8",
+                  color: "#FF5500",
+                  border: "1px solid #FFD0B8",
+                  borderRadius: "6px",
+                  padding: "7px 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: isDetectingGps ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isDetectingGps ? (
+                  <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+                ) : (
+                  <Navigation size={14} />
+                )}
+                <span>Use Current GPS</span>
+              </button>
+            </div>
+
+            {/* Interactive OpenStreetMap Leaflet Map Picker */}
+            <div
+              style={{
+                borderRadius: "8px",
+                overflow: "hidden",
+                border: "1px solid #CBD5E1",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: "#F1F5F9",
+                  padding: "8px 14px",
+                  fontSize: "11.5px",
+                  color: "#475569",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderBottom: "1px solid #E2E8F0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Map size={14} color="#FF5500" />
+                  <span>
+                    <strong>OpenStreetMap Pin:</strong> Drag the marker or click on the map to pinpoint property location.
+                  </span>
+                </div>
+                <span style={{ color: "#64748B", fontSize: "11px" }}>
+                  Auto reverse-geocodes locality & pincode
+                </span>
+              </div>
+              <div style={{ width: "100%", height: "260px", position: "relative" }}>
+                <HouseMapPicker
+                  latitude={formData.latitude}
+                  longitude={formData.longitude}
+                  onChange={handleMapChange}
+                />
+              </div>
+            </div>
+
+            {/* Structured Address Form Fields */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "14px",
+                width: "100%",
+              }}
+            >
+              {/* Flat / Building / House No */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#0F172A" }}>
+                  House / Flat / Building No
+                </label>
+                <input
+                  type="text"
+                  value={formData.houseNumber}
+                  onChange={(e) => handleTextChange("houseNumber", e.target.value)}
+                  placeholder="e.g. Flat 302, Sai Residency"
+                  style={{
+                    borderRadius: "6px",
+                    border: "1px solid #E2E8F0",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    color: "#0F172A",
+                    backgroundColor: "#FFFFFF",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Area / Locality (PRIMARY SEARCH IDENTITY) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 700, color: "#FF5500" }}>
+                    Area / Locality *
+                  </label>
+                  <span style={{ fontSize: "11px", color: "#64748B" }}>Used for customer search</span>
+                </div>
+                <input
+                  type="text"
+                  value={formData.locality}
+                  onChange={(e) => handleTextChange("locality", e.target.value)}
+                  placeholder="e.g. Hinjawadi Phase 1, Kothrud, Baner"
+                  style={{
+                    borderRadius: "6px",
+                    border: "1.5px solid #FFD0B8",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    color: "#0F172A",
+                    backgroundColor: "#FFFFFF",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Landmark / Street */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#0F172A" }}>
+                  Landmark / Street (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.landmark}
+                  onChange={(e) => handleTextChange("landmark", e.target.value)}
+                  placeholder="e.g. Near Cognizant, Behind MIT College"
+                  style={{
+                    borderRadius: "6px",
+                    border: "1px solid #E2E8F0",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    color: "#0F172A",
+                    backgroundColor: "#FFFFFF",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* City & Pincode Row */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "#0F172A" }}>
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => handleTextChange("city", e.target.value)}
+                    placeholder="e.g. Pune"
+                    style={{
+                      borderRadius: "6px",
+                      border: "1px solid #E2E8F0",
+                      padding: "8px 12px",
+                      fontSize: "13px",
+                      color: "#0F172A",
+                      backgroundColor: "#FFFFFF",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "#0F172A" }}>
+                    6-Digit Pincode
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={formData.pincode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      handleTextChange("pincode", val);
+                      if (val.length === 6) {
+                        const coords = getPincodeCoordinates(val);
+                        if (coords) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            pincode: val,
+                            latitude: coords.lat,
+                            longitude: coords.lng,
+                            locality: prev.locality || coords.locality,
+                          }));
+                        }
+                      }
+                    }}
+                    placeholder="e.g. 411057"
+                    style={{
+                      borderRadius: "6px",
+                      border: "1px solid #E2E8F0",
+                      padding: "8px 12px",
+                      fontSize: "13px",
+                      color: "#0F172A",
+                      backgroundColor: "#FFFFFF",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Amenities Selection */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <label
@@ -1066,7 +1785,7 @@ export default function RoomConfigCanvas({
             </div>
           </div>
 
-          {/* Field: House Rules */}
+          {/* House Rules */}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <label
@@ -1164,7 +1883,7 @@ export default function RoomConfigCanvas({
             </div>
           </div>
 
-          {/* Field 6: Instantly Bookable Toggle */}
+          {/* Instantly Bookable Toggle */}
           <div
             style={{
               display: "flex",
@@ -1194,7 +1913,6 @@ export default function RoomConfigCanvas({
               </span>
             </div>
 
-            {/* Toggle Switch */}
             <div
               onClick={handleToggleBookable}
               style={{
@@ -1239,7 +1957,6 @@ export default function RoomConfigCanvas({
               gap: "12px",
             }}
           >
-            {/* Cancel Button */}
             <button
               type="button"
               onClick={handleCancel}
@@ -1267,7 +1984,6 @@ export default function RoomConfigCanvas({
               Cancel
             </button>
 
-            {/* Save Room Details Button */}
             <button
               type="button"
               onClick={handleSave}

@@ -20,6 +20,7 @@ import {
 import { useLocation } from "@/components/location-provider";
 import { useRecentSearches } from "@/lib/useRecentSearches";
 import { HouseMapPicker } from "@/components/house-map-picker";
+import { matchesSearchQuery } from "@/lib/dietary-filter";
 
 interface SuggestionItem {
   id: string;
@@ -110,16 +111,37 @@ export default function HeroSection({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Compute live match suggestions as user types across dishes, kitchens, and rooms
+  // Compute live match suggestions as user types (kitchens, dishes, rooms, and tags)
   const liveSuggestions = React.useMemo<SuggestionItem[]>(() => {
     if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase().trim();
     const suggestions: SuggestionItem[] = [];
+    const seen = new Set<string>();
 
-    // 1. Check available dishes / food items
+    // 1. Check available kitchen names (e.g. "Yash's Kitchen", "7/12 Cloud Kitchen", "Maa Ki Rasoi")
+    if (availableKitchens && availableKitchens.length > 0) {
+      availableKitchens.forEach((k) => {
+        if (k.name && matchesSearchQuery(k.name, searchQuery)) {
+          const key = `kitchen-${k.name.toLowerCase().trim()}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            suggestions.push({
+              id: `kitchen-${k.id}`,
+              title: k.name,
+              type: "kitchen",
+              subtitle: k.category || "Cloud Kitchen",
+              link: `/shop/${k.trackingId || k.id}`,
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Check available items / dishes
     availableItems.forEach((item) => {
-      if (item.name.toLowerCase().includes(q)) {
-        if (!suggestions.some((s) => s.title.toLowerCase() === item.name.toLowerCase())) {
+      if (item.name && matchesSearchQuery(item.name, searchQuery)) {
+        const key = `dish-${item.name.toLowerCase().trim()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
           suggestions.push({
             id: `food-${item.id}`,
             title: item.name,
@@ -131,40 +153,31 @@ export default function HeroSection({
       }
     });
 
-    // 2. Check available kitchens / restaurants
-    availableKitchens.forEach((k) => {
-      if (k.name.toLowerCase().includes(q) || k.category?.toLowerCase().includes(q)) {
-        if (!suggestions.some((s) => s.title.toLowerCase() === k.name.toLowerCase())) {
-          suggestions.push({
-            id: `kitchen-${k.id}`,
-            title: k.name,
-            type: "kitchen",
-            subtitle: k.category || "Restaurant",
-            link: `/shop/${k.trackingId || k.id}`,
-          });
-        }
-      }
-    });
-
     // 3. Check available rooms
-    availableRooms.forEach((r) => {
-      if (r.title.toLowerCase().includes(q) || r.sellerCity?.toLowerCase().includes(q)) {
-        if (!suggestions.some((s) => s.title.toLowerCase() === r.title.toLowerCase())) {
-          suggestions.push({
-            id: `room-${r.id}`,
-            title: r.title,
-            type: "room",
-            subtitle: r.sellerCity || "Room / Stay",
-            link: `/room-booking/${r.id}`,
-          });
+    if (availableRooms && availableRooms.length > 0) {
+      availableRooms.forEach((r) => {
+        if (r.title && matchesSearchQuery(r.title, searchQuery)) {
+          const key = `room-${r.title.toLowerCase().trim()}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            suggestions.push({
+              id: `room-${r.id}`,
+              title: r.title,
+              type: "room",
+              subtitle: r.sellerCity || "Room / Stay",
+              link: `/room-booking/${r.id}`,
+            });
+          }
         }
-      }
-    });
+      });
+    }
 
-    // 4. Check quick tags
+    // 4. Check quick tags & presets
     QUICK_TAGS.forEach((tag) => {
-      if (tag.label.toLowerCase().includes(q)) {
-        if (!suggestions.some((s) => s.title.toLowerCase() === tag.label.toLowerCase())) {
+      if (matchesSearchQuery(tag.label, searchQuery)) {
+        const key = `tag-${tag.label.toLowerCase().trim()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
           suggestions.push({
             id: `tag-${tag.id}`,
             title: tag.label,
@@ -185,8 +198,29 @@ export default function HeroSection({
     }
     setIsSearchFocused(false);
 
+    // 1. Check if user typed or searched a 6-digit pincode
+    const pinMatch = finalQuery.match(/\b\d{6}\b/);
+    if (pinMatch) {
+      const pin = pinMatch[0];
+      setGuestLocation(pin);
+      setSelectedLocation(`PIN: ${pin}`);
+      if (onSearch) {
+        onSearch(finalQuery, location || `PIN: ${pin}`);
+      }
+      if (typeof window !== "undefined") {
+        const el = document.getElementById("places-section");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }
+      return;
+    }
+
+    // 2. If onSearch handler is provided (e.g. Home Page), invoke it and scroll in-place
     if (onSearch) {
       onSearch(finalQuery, location || selectedLocation);
+      if (typeof window !== "undefined") {
+        const el = document.getElementById("places-section");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }
     } else {
       const params = new URLSearchParams();
       if (finalQuery) params.set("query", finalQuery);

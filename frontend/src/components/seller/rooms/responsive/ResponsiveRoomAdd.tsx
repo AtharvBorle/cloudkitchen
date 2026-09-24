@@ -1,8 +1,20 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, Bell, X, Plus, Loader2 } from "lucide-react";
+import {
+  ChevronLeft,
+  Camera,
+  Bell,
+  X,
+  Plus,
+  Loader2,
+  MapPin,
+  Navigation,
+  Search,
+  CheckCircle2,
+} from "lucide-react";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 import styles from "./ResponsiveRoomAdd.module.css";
 
 export interface ResponsiveAmenity {
@@ -21,6 +33,13 @@ export interface ResponsiveRoomAddProps {
   initialHouseRules?: string[];
   initialIsAvailable?: boolean;
   initialImageUrl?: string;
+  initialLocality?: string;
+  initialCity?: string;
+  initialPincode?: string;
+  initialLandmark?: string;
+  initialHouseNumber?: string;
+  initialLatitude?: number | null;
+  initialLongitude?: number | null;
   isEditMode?: boolean;
   isSaving?: boolean;
   onBack?: () => void;
@@ -35,6 +54,13 @@ export interface ResponsiveRoomAddProps {
     houseRules: string[];
     isAvailable: boolean;
     imageFile?: File | null;
+    locality?: string;
+    city?: string;
+    pincode?: string;
+    landmark?: string;
+    houseNumber?: string;
+    latitude?: number | null;
+    longitude?: number | null;
   }) => void;
 }
 
@@ -56,6 +82,13 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   initialHouseRules = [],
   initialIsAvailable = true,
   initialImageUrl,
+  initialLocality = "",
+  initialCity = "Pune",
+  initialPincode = "",
+  initialLandmark = "",
+  initialHouseNumber = "",
+  initialLatitude = 18.5204,
+  initialLongitude = 73.8567,
   isEditMode = false,
   isSaving,
   onBack,
@@ -81,43 +114,73 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [internalSaving, setInternalSaving] = useState(false);
 
+  // Property location states
+  const [locality, setLocality] = useState(initialLocality);
+  const [city, setCity] = useState(initialCity);
+  const [pincode, setPincode] = useState(initialPincode);
+  const [landmark, setLandmark] = useState(initialLandmark);
+  const [houseNumber, setHouseNumber] = useState(initialHouseNumber);
+  const [latitude, setLatitude] = useState<number | null>(initialLatitude);
+  const [longitude, setLongitude] = useState<number | null>(initialLongitude);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+
   const savingActive = isSaving !== undefined ? isSaving : internalSaving;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialRoomName !== undefined) setRoomName(initialRoomName);
   }, [initialRoomName]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialFloorNo !== undefined) setFloorNo(initialFloorNo);
   }, [initialFloorNo]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialAbout !== undefined) setAbout(initialAbout);
   }, [initialAbout]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialCapacity !== undefined) setCapacity(initialCapacity);
   }, [initialCapacity]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialPricePerNight !== undefined) setPricePerNight(initialPricePerNight);
   }, [initialPricePerNight]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialAmenities && initialAmenities.length > 0) setAmenities(initialAmenities);
   }, [initialAmenities]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialHouseRules && initialHouseRules.length > 0) setHouseRules(initialHouseRules);
   }, [initialHouseRules]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialIsAvailable !== undefined) setIsAvailable(initialIsAvailable);
   }, [initialIsAvailable]);
 
-  React.useEffect(() => {
-    if (initialImageUrl !== undefined) setImagePreview(initialImageUrl || null);
+  useEffect(() => {
+    if (initialImageUrl) setImagePreview(initialImageUrl);
   }, [initialImageUrl]);
+
+  useEffect(() => {
+    if (initialLocality !== undefined) setLocality(initialLocality);
+    if (initialCity !== undefined) setCity(initialCity);
+    if (initialPincode !== undefined) setPincode(initialPincode);
+    if (initialLandmark !== undefined) setLandmark(initialLandmark);
+    if (initialHouseNumber !== undefined) setHouseNumber(initialHouseNumber);
+    if (initialLatitude !== undefined) setLatitude(initialLatitude);
+    if (initialLongitude !== undefined) setLongitude(initialLongitude);
+  }, [
+    initialLocality,
+    initialCity,
+    initialPincode,
+    initialLandmark,
+    initialHouseNumber,
+    initialLatitude,
+    initialLongitude,
+  ]);
 
   const handleBackClick = () => {
     if (onBack) {
@@ -196,6 +259,83 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
     setHouseRules((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // GPS Detection
+  const handleDetectGPS = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your device.");
+      return;
+    }
+    setIsDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lng);
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            if (addr.postcode) setPincode(addr.postcode);
+            if (addr.suburb || addr.neighbourhood || addr.city_district) {
+              setLocality(addr.suburb || addr.neighbourhood || addr.city_district);
+            }
+            if (addr.road) setLandmark(addr.road);
+            if (addr.city || addr.town) setCity(addr.city || addr.town);
+            if (addr.house_number) setHouseNumber(addr.house_number);
+          }
+        } catch (e) {
+          console.error("GPS reverse geocode error:", e);
+        } finally {
+          setIsDetectingGps(false);
+        }
+      },
+      (err) => {
+        console.error("GPS error:", err);
+        setIsDetectingGps(false);
+        alert("Could not detect GPS location. Please enter area manually.");
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  // Quick area search
+  const handleSearchArea = async () => {
+    const q = locationSearch.trim();
+    if (!q) return;
+    setIsSearchingLoc(true);
+    try {
+      const fullQuery = q.toLowerCase().includes("pune") ? q : `${q}, Pune, Maharashtra`;
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          fullQuery
+        )}&limit=1&addressdetails=1`
+      );
+      if (res.ok) {
+        const results = await res.json();
+        if (results && results.length > 0) {
+          const first = results[0];
+          setLatitude(parseFloat(first.lat));
+          setLongitude(parseFloat(first.lon));
+          const addr = first.address || {};
+          if (addr.postcode) setPincode(addr.postcode);
+          const cleanLoc = addr.suburb || addr.neighbourhood || addr.city_district || q.split(",")[0].trim();
+          setLocality(cleanLoc);
+          if (addr.city || addr.town) setCity(addr.city || addr.town);
+        } else {
+          alert(`No area found for "${q}".`);
+        }
+      }
+    } catch (e) {
+      console.error("Area search error:", e);
+    } finally {
+      setIsSearchingLoc(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (savingActive) return;
@@ -212,6 +352,13 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
       houseRules,
       isAvailable,
       imageFile,
+      locality,
+      city,
+      pincode,
+      landmark,
+      houseNumber,
+      latitude,
+      longitude,
     };
 
     if (onSave) {
@@ -223,7 +370,6 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 390px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header */}
         <header className={styles.topBar}>
@@ -252,7 +398,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
 
         {/* Scrollable Form Content */}
         <form onSubmit={handleSubmit} className={styles.contentArea}>
-          {/* 1. Upload Room Photos Banner */}
+          {/* Upload Room Photos Banner */}
           <div
             className={styles.uploadDropzone}
             onClick={handleTriggerUpload}
@@ -292,7 +438,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
             )}
           </div>
 
-          {/* 2. Room Name */}
+          {/* Room Name */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel} htmlFor="roomNameInput">
               Room Name
@@ -308,7 +454,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
             />
           </div>
 
-          {/* 3. 2-Column Row: Capacity & Price */}
+          {/* 2-Column Row: Capacity & Price */}
           <div className={styles.twoColRow}>
             <div className={styles.formGroup}>
               <label className={styles.fieldLabel} htmlFor="capacityInput">
@@ -359,6 +505,160 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
             />
           </div>
 
+          {/* Property Location & Address Section */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              padding: "16px",
+              backgroundColor: "#F8FAFC",
+              borderRadius: "14px",
+              border: "1px solid #E2E8F0",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <MapPin size={18} color="#FF5500" />
+                <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#0F172A" }}>
+                  Property Location
+                </span>
+              </div>
+              {latitude !== null && longitude !== null && (
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#059669" }}>
+                  <CheckCircle2 size={12} />
+                  <span>Pinned</span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick GPS & Search Bar */}
+            <div style={{ display: "flex", gap: "6px" }}>
+              <input
+                type="text"
+                value={locationSearch}
+                onChange={(e) => setLocationSearch(e.target.value)}
+                placeholder="Search area (e.g. Hinjawadi, Kothrud)"
+                className={styles.textInput}
+                style={{ fontSize: "12px", padding: "7px 10px" }}
+              />
+              <button
+                type="button"
+                onClick={handleSearchArea}
+                disabled={isSearchingLoc}
+                style={{
+                  backgroundColor: "#0F172A",
+                  color: "#FFF",
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "0 12px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isSearchingLoc ? "..." : "Search"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDetectGPS}
+                disabled={isDetectingGps}
+                style={{
+                  backgroundColor: "#FFF1E8",
+                  color: "#FF5500",
+                  border: "1px solid #FFD0B8",
+                  borderRadius: "10px",
+                  padding: "0 10px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title="Use Current GPS"
+              >
+                {isDetectingGps ? (
+                  <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                ) : (
+                  <Navigation size={16} />
+                )}
+              </button>
+            </div>
+
+            {/* Area / Locality */}
+            <div>
+              <label style={{ fontSize: "11.5px", fontWeight: 700, color: "#FF5500", display: "block", marginBottom: "4px" }}>
+                Area / Locality * (e.g. Hinjawadi, Kothrud)
+              </label>
+              <input
+                type="text"
+                value={locality}
+                onChange={(e) => setLocality(e.target.value)}
+                placeholder="e.g. Hinjawadi Phase 1"
+                className={styles.textInput}
+                style={{ fontSize: "12.5px" }}
+                required
+              />
+            </div>
+
+            {/* Building / Flat No */}
+            <div>
+              <label style={{ fontSize: "11.5px", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
+                House / Flat / Building No
+              </label>
+              <input
+                type="text"
+                value={houseNumber}
+                onChange={(e) => setHouseNumber(e.target.value)}
+                placeholder="e.g. Flat 302, Sai Heights"
+                className={styles.textInput}
+                style={{ fontSize: "12.5px" }}
+              />
+            </div>
+
+            {/* City & Pincode */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <div>
+                <label style={{ fontSize: "11.5px", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Pune"
+                  className={styles.textInput}
+                  style={{ fontSize: "12.5px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "11.5px", fontWeight: 600, color: "#475569", display: "block", marginBottom: "4px" }}>
+                  Pincode
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={pincode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setPincode(val);
+                    if (val.length === 6) {
+                      const coords = getPincodeCoordinates(val);
+                      if (coords) {
+                        setLatitude(coords.lat);
+                        setLongitude(coords.lng);
+                        if (!locality) setLocality(coords.locality);
+                      }
+                    }
+                  }}
+                  placeholder="411057"
+                  className={styles.textInput}
+                  style={{ fontSize: "12.5px" }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* About / Description */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel} htmlFor="aboutInput">
@@ -369,13 +669,13 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
               className={styles.textInput}
               value={about}
               onChange={(e) => setAbout(e.target.value)}
-              placeholder="Describe the room, amenities, and location highlights..."
+              placeholder="Describe the room, amenities, and neighborhood highlights..."
               rows={3}
               style={{ resize: "vertical", fontFamily: "inherit" }}
             />
           </div>
 
-          {/* 4. Amenities Pills & Custom Add */}
+          {/* Amenities */}
           <div className={styles.formGroup}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
               <label className={styles.fieldLabel} style={{ margin: 0 }}>Amenities</label>
@@ -430,7 +730,6 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
               ))}
             </div>
 
-            {/* Custom Amenity Input */}
             <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
               <input
                 type="text"
@@ -546,7 +845,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
             </div>
           </div>
 
-          {/* 5. Mark as Available Card */}
+          {/* Mark as Available Card */}
           <div className={styles.availabilityCard}>
             <div className={styles.availInfo}>
               <span className={styles.availTitle}>Mark as Available</span>
@@ -569,7 +868,7 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
             </button>
           </div>
 
-          {/* 6. Save Room Button */}
+          {/* Save Room Button */}
           <button
             type="submit"
             className={styles.saveButton}
@@ -625,4 +924,3 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
 };
 
 export default ResponsiveRoomAdd;
-

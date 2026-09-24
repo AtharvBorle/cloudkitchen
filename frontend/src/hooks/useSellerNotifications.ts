@@ -116,10 +116,11 @@ export function clearAllSellerNotifications() {
 }
 
 export function addSellerNotification(
-  item: Omit<SellerNotificationItem, "id" | "timestamp" | "timeAgo"> & {
+  item: Omit<SellerNotificationItem, "id" | "timestamp" | "timeAgo" | "isRead"> & {
     id?: string;
     timestamp?: string;
     timeAgo?: string;
+    isRead?: boolean;
   }
 ) {
   if (typeof window !== "undefined") {

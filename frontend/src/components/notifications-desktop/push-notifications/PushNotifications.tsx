@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./PushNotifications.module.css";
 import { Package, Tag, Sparkles, Truck } from "lucide-react";
+import {
+  getGenericNotificationPreferences,
+  saveGenericNotificationPreferences,
+  NOTIFICATION_PREFERENCES_EVENT,
+} from "@/lib/user-notification-preferences";
 
 export interface NotificationOption {
   id: string;
@@ -43,19 +48,39 @@ const DEFAULT_PUSH_OPTIONS: NotificationOption[] = [
   },
 ];
 
+const INITIAL_PUSH_MAP: Record<string, boolean> = {
+  "order-updates": true,
+  "promotional-offers": false,
+  "new-arrivals": true,
+  "delivery-alerts": true,
+};
+
 export const PushNotifications: React.FC = () => {
-  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({
-    "order-updates": true,
-    "promotional-offers": false,
-    "new-arrivals": true,
-    "delivery-alerts": true,
-  });
+  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(INITIAL_PUSH_MAP);
+
+  useEffect(() => {
+    setToggleStates(getGenericNotificationPreferences("push", INITIAL_PUSH_MAP));
+
+    const handlePrefChange = () => {
+      setToggleStates(getGenericNotificationPreferences("push", INITIAL_PUSH_MAP));
+    };
+
+    window.addEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+    window.addEventListener("storage", handlePrefChange);
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+      window.removeEventListener("storage", handlePrefChange);
+    };
+  }, []);
 
   const handleToggle = (id: string) => {
-    setToggleStates((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setToggleStates((prev) => {
+      const nextVal = !prev[id];
+      const updated = { ...prev, [id]: nextVal };
+      saveGenericNotificationPreferences("push", { [id]: nextVal });
+      return updated;
+    });
   };
 
   const renderIcon = (type: NotificationOption["iconType"]) => {

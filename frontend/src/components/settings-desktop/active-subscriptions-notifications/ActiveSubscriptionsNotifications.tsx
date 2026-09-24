@@ -6,17 +6,38 @@ import Link from "next/link";
 import { Calendar, Bell, ArrowRight, UtensilsCrossed } from "lucide-react";
 import styles from "./ActiveSubscriptionsNotifications.module.css";
 import { fetchUserMealSubscriptions, UserActiveMealSubscription } from "@/lib/meal-subscriptions";
+import {
+  getNotificationsSummaryPreferences,
+  saveNotificationsSummaryPreferences,
+  NotificationsSummaryPreferences,
+  NOTIFICATION_PREFERENCES_EVENT,
+  DEFAULT_NOTIFICATIONS_SUMMARY,
+} from "@/lib/user-notification-preferences";
 
 export const ActiveSubscriptionsNotifications: React.FC = () => {
   const router = useRouter();
   const [subscriptions, setSubscriptions] = useState<UserActiveMealSubscription[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [notifStates, setNotifStates] = useState<{ [key: string]: boolean }>({
-    orderUpdates: true,
-    promoOffers: false,
-    newMenu: true,
-    deliveryAlerts: true,
-  });
+  const [notifStates, setNotifStates] = useState<NotificationsSummaryPreferences>(
+    DEFAULT_NOTIFICATIONS_SUMMARY
+  );
+
+  // Sync with persistent storage on client mount after initial hydration and listen for updates
+  useEffect(() => {
+    setNotifStates(getNotificationsSummaryPreferences());
+
+    const handlePrefChange = () => {
+      setNotifStates(getNotificationsSummaryPreferences());
+    };
+
+    window.addEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+    window.addEventListener("storage", handlePrefChange);
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+      window.removeEventListener("storage", handlePrefChange);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -48,8 +69,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
     };
   }, []);
 
-  const toggleNotif = (key: string) => {
-    setNotifStates((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleNotif = (key: keyof NotificationsSummaryPreferences) => {
+    setNotifStates((prev) => {
+      const nextVal = !prev[key];
+      const updated = { ...prev, [key]: nextVal };
+      saveNotificationsSummaryPreferences({ [key]: nextVal });
+      return updated;
+    });
   };
 
   return (
@@ -215,11 +241,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.orderUpdates}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.orderUpdates ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -238,11 +266,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.promoOffers}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.promoOffers ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -261,11 +291,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.newMenu}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.newMenu ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -284,11 +316,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.deliveryAlerts}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.deliveryAlerts ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>

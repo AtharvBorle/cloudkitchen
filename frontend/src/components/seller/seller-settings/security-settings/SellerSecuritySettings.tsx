@@ -17,6 +17,8 @@ export interface LoginSessionItem {
   deviceType?: "desktop" | "mobile";
 }
 
+export const DEFAULT_LOGIN_SESSIONS: LoginSessionItem[] = [];
+
 /**
  * Helpers to detect the user's real device, browser, and location
  */

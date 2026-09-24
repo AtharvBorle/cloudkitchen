@@ -56,6 +56,9 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
         const locStr = locality ? `${locality}, ${city}` : city;
 
         const tagsList: string[] = [];
+        if (r.distanceText) {
+          tagsList.push(r.distanceText);
+        }
         if (Array.isArray(r.amenities) && r.amenities.length > 0) {
           tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
         }

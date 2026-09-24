@@ -32,6 +32,7 @@ import {
 } from "./security-settings/SellerSecuritySettings";
 import { useSellerProfile, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
+import { validateEmail } from "@/lib/email-validation";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./SettingsCanvas.module.css";
@@ -564,6 +565,18 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     if (e && typeof e.preventDefault === "function") {
       e.preventDefault();
     }
+
+    if (formData.businessEmail) {
+      const emailValidation = validateEmail(formData.businessEmail);
+      if (!emailValidation.isValid) {
+        setToastData({
+          title: emailValidation.error || "Please enter a valid email address.",
+          status: "OFF",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
 
     try {

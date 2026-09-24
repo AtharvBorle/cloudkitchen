@@ -20,6 +20,7 @@ import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import { discardExistingSession } from "@/lib/logout";
+import { validateEmail } from "@/lib/email-validation";
 
 export interface SignUpRightComponentProps {
   signInUrl?: string;
@@ -36,6 +37,7 @@ export default function SignUpRightComponent({
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -245,10 +247,13 @@ export default function SignUpRightComponent({
       setError("Please verify your mobile number with the 6-digit verification code.");
       return;
     }
-    if (!email.trim() || !email.includes("@")) {
-      setError("Please enter a valid email address.");
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error || "Please enter a valid email address.");
+      setError(emailValidation.error || "Please enter a valid email address.");
       return;
     }
+    setEmailError("");
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
@@ -296,10 +301,27 @@ export default function SignUpRightComponent({
         }
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || "Registration failed. Please try again.");
+        let errMsg = data.message || data.error || "Registration failed. Please try again.";
+        const lower = errMsg.toLowerCase();
+        if (
+          res.status === 409 ||
+          lower.includes("already exist") ||
+          lower.includes("already registered") ||
+          lower.includes("user already exists") ||
+          lower.includes("account with this email") ||
+          lower.includes("email already in use")
+        ) {
+          errMsg = "This email address is already registered. Please sign in or use another email.";
+          setEmailError("This email address is already registered. Please sign in or use another email.");
+        }
+        setError(errMsg);
       }
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+      const msg = err.message || "Something went wrong. Please try again.";
+      if (msg.toLowerCase().includes("already exist") || msg.toLowerCase().includes("already registered")) {
+        setEmailError("This email address is already registered. Please sign in or use another email.");
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -830,14 +852,27 @@ export default function SignUpRightComponent({
                   type="email"
                   placeholder="yourname@gmail.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEmail(val);
+                    if (emailError) {
+                      const res = validateEmail(val);
+                      setEmailError(res.isValid ? "" : (res.error || ""));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (email.trim()) {
+                      const res = validateEmail(email);
+                      setEmailError(res.isValid ? "" : (res.error || ""));
+                    }
+                  }}
                   required
                   style={{
                     width: "100%",
                     height: "46px",
                     padding: "0 16px 0 44px",
                     borderRadius: "12px",
-                    border: "1px solid #E2E8F0",
+                    border: emailError ? "1.5px solid #EF4444" : "1px solid #E2E8F0",
                     fontSize: "14px",
                     color: "#0F172A",
                     outline: "none",
@@ -848,6 +883,18 @@ export default function SignUpRightComponent({
                   className="form-input"
                 />
               </div>
+              {emailError && (
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "#DC2626",
+                    fontWeight: 500,
+                    marginTop: "2px",
+                  }}
+                >
+                  {emailError}
+                </span>
+              )}
             </div>
 
             {/* 4. Password */}

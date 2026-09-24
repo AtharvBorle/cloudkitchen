@@ -9,6 +9,7 @@ import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import { updateCachedProfile } from "@/hooks/useSellerProfile";
 import { discardExistingSession } from "@/lib/logout";
+import { validateEmail } from "@/lib/email-validation";
 import styles from "./SellerLogin.module.css";
 
 export interface SellerLoginFormProps {
@@ -38,8 +39,13 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      setErrorMessage("Please enter both email and password.");
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setErrorMessage(emailValidation.error || "Please enter a valid email address.");
+      return;
+    }
+    if (!password) {
+      setErrorMessage("Password is required.");
       return;
     }
 
@@ -50,7 +56,7 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
       await discardExistingSession();
       const res = await signIn("credentials", {
         redirect: false,
-        email: email.trim().toLowerCase(),
+        email: emailValidation.normalizedEmail,
         password: password.trim(),
         loginType: "SELLER",
       });
