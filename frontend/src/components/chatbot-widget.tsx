@@ -60,6 +60,8 @@ const getOptionImage = (label: string) => {
     const l = label.toLowerCase();
     if (l.includes("order") && !l.includes("assigned")) return "/images/bot/icon-box.png";
     if (l.includes("courier") || l.includes("delivery") || l.includes("assigned order")) return "/images/bot/icon-scooter.png";
+    if (l.includes("room") || l.includes("stay") || l.includes("booking") || l.includes("hotel") || l.includes("bed")) return "/images/bot/icon-bed.png";
+    if (l.includes("seller") || l.includes("partner") || l.includes("merchant") || l.includes("shop")) return "/images/bot/icon-seller.png";
     if (l.includes("payment") || l.includes("refund") || l.includes("payout") || l.includes("wallet")) return "/images/bot/icon-card.png";
     if (l.includes("ticket")) return "/images/bot/icon-ticket.png";
     return null;
@@ -350,6 +352,8 @@ export default function ChatbotWidget() {
                     options: [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
+                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
                         { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ]
@@ -397,6 +401,8 @@ export default function ChatbotWidget() {
                     supportOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
+                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
                         { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ];
@@ -1046,6 +1052,8 @@ export default function ChatbotWidget() {
                     generatedOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
+                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
                         { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ];
@@ -1853,10 +1861,9 @@ Details: Category request submitted via chatbot assistant.`;
                                                                                 src={imgIcon}
                                                                                 alt={parsed.text}
                                                                                 style={{
-                                                                                    maxHeight: (imgIcon.includes("box") || imgIcon.includes("scooter")) ? "56px" : "44px",
-                                                                                    maxWidth: (imgIcon.includes("box") || imgIcon.includes("scooter")) ? "84px" : "76px",
+                                                                                    height: "48px",
+                                                                                    maxWidth: "76px",
                                                                                     width: "auto",
-                                                                                    height: "auto",
                                                                                     objectFit: "contain",
                                                                                     transition: "transform 0.2s ease"
                                                                                 }}
