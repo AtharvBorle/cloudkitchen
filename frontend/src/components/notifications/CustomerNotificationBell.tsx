@@ -273,6 +273,19 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     }
   };
 
+  // Delete individual notification
+  const handleDeleteNotification = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const updated = Array.from(new Set([...clearedIds, id]));
+    setClearedIds(updated);
+    try {
+      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(updated));
+    } catch (err) {
+      console.error("Failed to persist deleted notification ID:", err);
+    }
+  };
+
   // Click individual notification
   const handleItemClick = (item: CustomerNotificationItem) => {
     if (!readIds.includes(item.id)) {
@@ -509,7 +522,18 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                     <div className={styles.itemBody}>
                       <div className={styles.itemTopRow}>
                         <h4 className={styles.itemTitle}>{item.title}</h4>
-                        <span className={styles.itemTime}>{item.relativeTime}</span>
+                        <div className={styles.itemMetaRow}>
+                          <span className={styles.itemTime}>{item.relativeTime}</span>
+                          <button
+                            type="button"
+                            className={styles.deleteSingleBtn}
+                            onClick={(e) => handleDeleteNotification(e, item.id)}
+                            title="Delete notification"
+                            aria-label="Delete notification"
+                          >
+                            <Trash2 size={13} strokeWidth={2.2} />
+                          </button>
+                        </div>
                       </div>
 
                       <p className={styles.itemMessage}>{item.message}</p>
