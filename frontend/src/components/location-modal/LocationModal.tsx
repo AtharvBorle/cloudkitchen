@@ -235,6 +235,23 @@ export const LocationModal: React.FC = () => {
       return;
     }
 
+    const normHouse = houseNumber.trim().toLowerCase();
+    const normStreet = street.trim().toLowerCase();
+    const normPin = cleanPin;
+
+    const isDuplicate = savedAddresses?.some((addr) => {
+      return (
+        (addr.houseNumber || "").trim().toLowerCase() === normHouse &&
+        (addr.street || "").trim().toLowerCase() === normStreet &&
+        (addr.pincode || "").replace(/\D/g, "") === normPin
+      );
+    });
+
+    if (isDuplicate) {
+      showNotification("error", "This address already exists in your saved addresses.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const payload = {

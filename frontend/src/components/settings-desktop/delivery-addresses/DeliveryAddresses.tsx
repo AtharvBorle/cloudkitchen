@@ -190,6 +190,24 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
       return;
     }
 
+    const normHouse = houseNumber.trim().toLowerCase();
+    const normStreet = street.trim().toLowerCase();
+    const normPin = cleanPin;
+
+    const isDuplicate = addresses.some((addr) => {
+      if (editingAddressId && addr.id === editingAddressId) return false;
+      return (
+        addr.houseNumber.trim().toLowerCase() === normHouse &&
+        addr.street.trim().toLowerCase() === normStreet &&
+        addr.pincode.replace(/\D/g, "") === normPin
+      );
+    });
+
+    if (isDuplicate) {
+      alert("This address already exists in your saved addresses.");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
