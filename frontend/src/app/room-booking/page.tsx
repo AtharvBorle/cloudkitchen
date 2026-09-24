@@ -9,6 +9,13 @@ import { FeaturedColivings } from "@/components/room-booking-desktop/featured-co
 import { AllAvailableRooms } from "@/components/room-booking-desktop/all-available-rooms";
 import { RoomBookingMobileView } from "@/components/room-booking-desktop/room-booking-mobile";
 import { fetchApi } from "@/lib/fetch-api";
+import { useLocation } from "@/components/location-provider";
+import {
+  calculateDistanceKm,
+  formatDistance,
+  getPincodeCoordinates,
+} from "@/lib/geo-distance";
+import { extractRoomPropertyLocation } from "@/lib/room-location-helper";
 import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./page.module.css";
 
@@ -17,12 +24,31 @@ function RoomBookingContent() {
   const initialQuery = searchParams?.get("query") || searchParams?.get("q") || "";
   const initialCity = searchParams?.get("city") || searchParams?.get("location") || "all";
 
+  const { defaultAddress } = useLocation();
   const [allRooms, setAllRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>(initialCity);
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedBudget, setSelectedBudget] = useState<string>("all");
   const [selectedRoomType, setSelectedRoomType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
+
+  // Initialize selected location/coordinates from LocationProvider if not explicitly selected
+  useEffect(() => {
+    if (defaultAddress && (!selectedLocation || selectedLocation === "all") && !selectedCoords) {
+      if (defaultAddress.latitude && defaultAddress.longitude) {
+        setSelectedCoords({
+          lat: Number(defaultAddress.latitude),
+          lng: Number(defaultAddress.longitude),
+        });
+      } else if (defaultAddress.pincode) {
+        const pinCoords = getPincodeCoordinates(defaultAddress.pincode);
+        if (pinCoords) {
+          setSelectedCoords({ lat: pinCoords.lat, lng: pinCoords.lng });
+        }
+      }
+    }
+  }, [defaultAddress, selectedLocation, selectedCoords]);
 
   // Fetch all rooms from live database
   useEffect(() => {
@@ -34,7 +60,27 @@ function RoomBookingContent() {
           const json = await res.json();
           const list = json.data || json;
           if (Array.isArray(list)) {
-            setAllRooms(list);
+            const enriched = list.map((r: any) => {
+              const loc = extractRoomPropertyLocation(r.description, r.about, {
+                locality: r.sellerLocality,
+                city: r.sellerCity,
+                pincode: r.sellerPincode,
+                landmark: r.sellerLandmark,
+                latitude: r.sellerLatitude ?? r.latitude,
+                longitude: r.sellerLongitude ?? r.longitude,
+              });
+              return {
+                ...r,
+                sellerLocality: loc.locality || r.sellerLocality,
+                sellerCity: loc.city || r.sellerCity,
+                sellerPincode: loc.pincode || r.sellerPincode,
+                sellerLandmark: loc.landmark || r.sellerLandmark,
+                sellerLatitude: loc.latitude ?? r.sellerLatitude,
+                sellerLongitude: loc.longitude ?? r.sellerLongitude,
+                propertyLocation: loc,
+              };
+            });
+            setAllRooms(enriched);
           }
         }
       } catch (err) {
@@ -46,32 +92,89 @@ function RoomBookingContent() {
     loadRooms();
   }, []);
 
-  // Derive unique locations dynamically from DB rooms
+  // Derive unique locations dynamically from DB rooms with live room counts
   const availableLocations = useMemo(() => {
-    const locSet = new Set<string>();
+    const locMap = new Map<string, number>();
     allRooms.forEach((r) => {
+      const candidates: string[] = [];
       if (r.sellerLocality) {
-        // If locality is long, extract first part or main area name
         const clean = r.sellerLocality.split(",")[0].trim();
-        if (clean.length < 30) locSet.add(clean);
+        if (clean.length < 30) candidates.push(clean);
       }
-      if (r.sellerCity) locSet.add(r.sellerCity);
+      if (r.sellerCity) candidates.push(r.sellerCity);
+      if (r.sellerPincode) candidates.push(`PIN: ${r.sellerPincode}`);
+
+      candidates.forEach((name) => {
+        locMap.set(name, (locMap.get(name) || 0) + 1);
+      });
     });
-    return Array.from(locSet);
+
+    return Array.from(locMap.entries()).map(([name, count]) => ({
+      name,
+      count,
+      label: count > 1 ? `${name} (${count} stays)` : `${name} (1 stay)`,
+    }));
   }, [allRooms]);
 
-  // Dynamic multi-dimensional filtering
+  // Dynamic multi-dimensional filtering & nearest distance calculation
   const filteredRooms = useMemo(() => {
-    return allRooms.filter((room) => {
+    // 1. Resolve coordinates for distance calculation
+    let activeLat = selectedCoords?.lat ?? null;
+    let activeLng = selectedCoords?.lng ?? null;
+
+    if (activeLat === null || activeLng === null) {
+      if (selectedLocation && selectedLocation !== "all") {
+        const pinMatch = selectedLocation.match(/\b\d{6}\b/);
+        if (pinMatch) {
+          const pinCoords = getPincodeCoordinates(pinMatch[0]);
+          if (pinCoords) {
+            activeLat = pinCoords.lat;
+            activeLng = pinCoords.lng;
+          }
+        }
+      } else if (defaultAddress?.latitude && defaultAddress?.longitude) {
+        activeLat = Number(defaultAddress.latitude);
+        activeLng = Number(defaultAddress.longitude);
+      }
+    }
+
+    const hasCoords = activeLat !== null && activeLng !== null;
+
+    // 2. Enrich rooms with distance
+    const enriched = allRooms.map((room) => {
+      let roomLat = room.sellerLatitude ?? room.latitude ?? null;
+      let roomLng = room.sellerLongitude ?? room.longitude ?? null;
+      if ((roomLat === null || roomLng === null) && room.sellerPincode) {
+        const pinCoords = getPincodeCoordinates(room.sellerPincode);
+        if (pinCoords) {
+          roomLat = pinCoords.lat;
+          roomLng = pinCoords.lng;
+        }
+      }
+
+      if (hasCoords && roomLat !== null && roomLng !== null) {
+        const dist = calculateDistanceKm(activeLat!, activeLng!, Number(roomLat), Number(roomLng));
+        return {
+          ...room,
+          distanceKm: dist,
+          distanceText: `${formatDistance(dist)} away`,
+        };
+      }
+      return room;
+    });
+
+    // 3. Filter rooms by location, budget, roomType, and query
+    const results = enriched.filter((room) => {
       // 1. Location filter
       if (selectedLocation && selectedLocation !== "all") {
-        const locLower = selectedLocation.toLowerCase();
+        const locLower = selectedLocation.toLowerCase().trim();
         const matchesLoc =
           (room.sellerLocality && room.sellerLocality.toLowerCase().includes(locLower)) ||
           (room.sellerCity && room.sellerCity.toLowerCase().includes(locLower)) ||
           (room.sellerLandmark && room.sellerLandmark.toLowerCase().includes(locLower)) ||
           (room.sellerPincode && room.sellerPincode.includes(locLower)) ||
-          (room.title && room.title.toLowerCase().includes(locLower));
+          (room.title && room.title.toLowerCase().includes(locLower)) ||
+          (room.distanceKm !== undefined && room.distanceKm <= 35);
         if (!matchesLoc) return false;
       }
 
@@ -107,7 +210,21 @@ function RoomBookingContent() {
 
       return true;
     });
-  }, [allRooms, selectedLocation, selectedBudget, selectedRoomType, searchQuery]);
+
+    // 4. Sort results by nearest distance first when coords are available
+    if (hasCoords) {
+      results.sort((a, b) => {
+        if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
+          return a.distanceKm - b.distanceKm;
+        }
+        if (a.distanceKm !== undefined) return -1;
+        if (b.distanceKm !== undefined) return 1;
+        return 0;
+      });
+    }
+
+    return results;
+  }, [allRooms, selectedLocation, selectedCoords, defaultAddress, selectedBudget, selectedRoomType, searchQuery]);
 
   const handleSearchAction = () => {
     const el = document.getElementById("available-rooms-grid");
@@ -118,6 +235,7 @@ function RoomBookingContent() {
 
   const handleResetFilters = () => {
     setSelectedLocation("all");
+    setSelectedCoords(null);
     setSelectedBudget("all");
     setSelectedRoomType("all");
     setSearchQuery("");
@@ -131,13 +249,18 @@ function RoomBookingContent() {
         <main className={styles.desktopMain}>
           <RoomBookingHeroBanner />
 
-          {/* Interactive Dynamic Search & Filter Bar */}
+          {/* Interactive Dynamic Search & Filter Bar with OpenStreetMap Picker */}
           <RoomSearchFilter
             location={selectedLocation}
             budget={selectedBudget}
             roomType={selectedRoomType}
             availableLocations={availableLocations}
-            onLocationChange={(loc) => setSelectedLocation(loc)}
+            onLocationChange={(loc, coords) => {
+              setSelectedLocation(loc);
+              if (coords !== undefined) {
+                setSelectedCoords(coords);
+              }
+            }}
             onBudgetChange={(b) => setSelectedBudget(b)}
             onRoomTypeChange={(t) => setSelectedRoomType(t)}
             onSearch={handleSearchAction}
@@ -145,7 +268,7 @@ function RoomBookingContent() {
           />
 
           {/* Featured Top Colivings / Stays */}
-          <FeaturedColivings rooms={allRooms} />
+          <FeaturedColivings rooms={filteredRooms.length > 0 ? filteredRooms : allRooms} />
 
           {/* All Filtered Available Rooms Grid */}
           <AllAvailableRooms
@@ -195,4 +318,3 @@ export default function RoomBookingPage() {
     </Suspense>
   );
 }
-

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
+import { validateEmail } from "@/lib/email-validation";
 
 export default function SuperadminDashboard() {
     const router = useRouter();
@@ -54,9 +55,9 @@ export default function SuperadminDashboard() {
             alert("Name must be at least 2 characters long.");
             return;
         }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(newEmail)) {
-            alert("Please enter a valid email address.");
+        const emailValidation = validateEmail(newEmail);
+        if (!emailValidation.isValid) {
+            alert(emailValidation.error || "Please enter a valid email address.");
             return;
         }
         const phoneRegex = /^[0-9]{10}$/;
@@ -82,8 +83,13 @@ export default function SuperadminDashboard() {
                 setNewName(""); setNewEmail(""); setNewPhone(""); setNewPassword(""); setNewRole("AGENT");
                 fetchAdmins();
             } else {
-                const data = await res.json();
-                alert(data.message || "Failed to create admin");
+                const data = await res.json().catch(() => ({}));
+                let errMsg = data.message || data.error || "Failed to create admin";
+                const lower = errMsg.toLowerCase();
+                if (res.status === 409 || lower.includes("already exist") || lower.includes("already registered") || lower.includes("email already in use")) {
+                    errMsg = "A user with this email address already exists. Please use a different email.";
+                }
+                alert(errMsg);
             }
         } catch (error) {
             console.error("Error creating admin");
@@ -113,9 +119,9 @@ export default function SuperadminDashboard() {
             alert("Name must be at least 2 characters long.");
             return;
         }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(editEmail)) {
-            alert("Please enter a valid email address.");
+        const emailValidation = validateEmail(editEmail);
+        if (!emailValidation.isValid) {
+            alert(emailValidation.error || "Please enter a valid email address.");
             return;
         }
         const phoneRegex = /^[0-9]{10}$/;
@@ -150,7 +156,13 @@ export default function SuperadminDashboard() {
                 setEditingAdmin(null);
                 fetchAdmins();
             } else {
-                alert("Failed to update admin");
+                const data = await res.json().catch(() => ({}));
+                let errMsg = data.message || data.error || "Failed to update admin";
+                const lower = errMsg.toLowerCase();
+                if (res.status === 409 || lower.includes("already exist") || lower.includes("already registered") || lower.includes("email already in use")) {
+                    errMsg = "A user with this email address already exists. Please use a different email.";
+                }
+                alert(errMsg);
             }
         } catch (error) {
             console.error("Error updating admin");

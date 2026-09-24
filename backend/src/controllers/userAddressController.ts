@@ -32,15 +32,29 @@ export const createAddress = async (req: Request) => {
         throw new ApiError("Approximate location pin of the house is compulsory. Please pick a location on the map.", 400);
     }
 
-    const addressCount = await db.address.count({
+    const existingAddresses = await db.address.findMany({
         where: { userId: session.user.id }
     });
 
-    if (addressCount >= 5) {
+    if (existingAddresses.length >= 5) {
         throw new ApiError("You can add a maximum of 5 delivery addresses. Please edit or delete an existing address.", 400);
     }
 
-    const makeDefault = isDefault || addressCount === 0;
+    const normHouse = houseNumber.trim().toLowerCase();
+    const normStreet = street.trim().toLowerCase();
+    const normPincode = pincode.toString().replace(/\D/g, "");
+
+    const isDuplicate = existingAddresses.some(addr => 
+        addr.houseNumber.trim().toLowerCase() === normHouse &&
+        addr.street.trim().toLowerCase() === normStreet &&
+        addr.pincode.replace(/\D/g, "") === normPincode
+    );
+
+    if (isDuplicate) {
+        throw new ApiError("This address already exists in your saved addresses. Please enter a different address or edit the existing one.", 400);
+    }
+
+    const makeDefault = isDefault || existingAddresses.length === 0;
 
     if (makeDefault) {
         const [updatedOthers, newAddress] = await db.$transaction([
@@ -103,6 +117,27 @@ export const updateAddress = async (req: Request, id: string) => {
 
     if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
         throw new ApiError("Approximate location pin of the house is compulsory. Please pick a location on the map.", 400);
+    }
+
+    const otherAddresses = await db.address.findMany({
+        where: {
+            userId: session.user.id,
+            id: { not: id }
+        }
+    });
+
+    const normHouse = houseNumber.trim().toLowerCase();
+    const normStreet = street.trim().toLowerCase();
+    const normPincode = pincode.toString().replace(/\D/g, "");
+
+    const isDuplicate = otherAddresses.some(addr => 
+        addr.houseNumber.trim().toLowerCase() === normHouse &&
+        addr.street.trim().toLowerCase() === normStreet &&
+        addr.pincode.replace(/\D/g, "") === normPincode
+    );
+
+    if (isDuplicate) {
+        throw new ApiError("This address already exists in your saved addresses.", 400);
     }
 
     const updatedAddress = await db.address.update({

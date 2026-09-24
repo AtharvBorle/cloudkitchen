@@ -99,6 +99,9 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -165,6 +168,9 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
         setCurrentPassword("");
         setNewPassword("");
         setConfirmNewPassword("");
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmNewPassword(false);
         setFeedbackMsg("Profile updated successfully!");
         setTimeout(() => setFeedbackMsg(null), 3000);
       } else {
@@ -357,56 +363,125 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748B" }}>CURRENT PASSWORD</label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: "6px",
-                      border: "1.5px solid #CBD5E1",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                      backgroundColor: "#FFFFFF",
-                    }}
-                  />
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      style={{
+                        width: "100%",
+                        padding: "8px 36px 8px 10px",
+                        borderRadius: "6px",
+                        border: "1.5px solid #CBD5E1",
+                        fontSize: "0.85rem",
+                        outline: "none",
+                        backgroundColor: "#FFFFFF",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword((prev) => !prev)}
+                      style={{
+                        position: "absolute",
+                        right: "8px",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#94A3B8",
+                      }}
+                      aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+                    >
+                      {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748B" }}>NEW PASSWORD (MIN 6 CHARS)</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: "6px",
-                      border: "1.5px solid #CBD5E1",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                      backgroundColor: "#FFFFFF",
-                    }}
-                  />
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      style={{
+                        width: "100%",
+                        padding: "8px 36px 8px 10px",
+                        borderRadius: "6px",
+                        border: "1.5px solid #CBD5E1",
+                        fontSize: "0.85rem",
+                        outline: "none",
+                        backgroundColor: "#FFFFFF",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      style={{
+                        position: "absolute",
+                        right: "8px",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#94A3B8",
+                      }}
+                      aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                    >
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <label style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748B" }}>CONFIRM NEW PASSWORD</label>
-                  <input
-                    type="password"
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: "6px",
-                      border: "1.5px solid #CBD5E1",
-                      fontSize: "0.85rem",
-                      outline: "none",
-                      backgroundColor: "#FFFFFF",
-                    }}
-                  />
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <input
+                      type={showConfirmNewPassword ? "text" : "password"}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      style={{
+                        width: "100%",
+                        padding: "8px 36px 8px 10px",
+                        borderRadius: "6px",
+                        border: "1.5px solid #CBD5E1",
+                        fontSize: "0.85rem",
+                        outline: "none",
+                        backgroundColor: "#FFFFFF",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword((prev) => !prev)}
+                      style={{
+                        position: "absolute",
+                        right: "8px",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#94A3B8",
+                      }}
+                      aria-label={showConfirmNewPassword ? "Hide confirm password" : "Show confirm password"}
+                    >
+                      {showConfirmNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -418,6 +493,9 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               onClick={() => {
                 setIsEditing(false);
                 setChangePasswordOpen(false);
+                setShowCurrentPassword(false);
+                setShowNewPassword(false);
+                setShowConfirmNewPassword(false);
                 setErrorMessage(null);
               }}
               disabled={saving}

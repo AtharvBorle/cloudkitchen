@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { validateEmail } from "@/lib/email-validation";
 import styles from "./AgentCanvas.module.css";
 
 export interface AgentFormData {
@@ -112,8 +113,9 @@ export default function AgentCanvas({
       setErrorMessage("Please enter a valid 10-digit mobile number.");
       return;
     }
-    if (!formData.email.trim() || !formData.email.includes("@")) {
-      setErrorMessage("Please enter a valid email address.");
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      setErrorMessage(emailValidation.error || "Please enter a valid email address.");
       return;
     }
     if (!formData.password.trim() || formData.password.length < 6) {
@@ -134,7 +136,7 @@ export default function AgentCanvas({
       const payload = {
         name: formData.fullName.trim(),
         phone: formData.phoneNumber.trim(),
-        email: formData.email.trim().toLowerCase(),
+        email: emailValidation.normalizedEmail,
         password: formData.password,
         vehicleType: formData.vehicleType || "Motorcycle / Scooter",
         vehicleNumber: formData.vehicleNumber?.trim() || undefined,
@@ -158,11 +160,20 @@ export default function AgentCanvas({
           }
         }, 800);
       } else {
-        setErrorMessage(
+        let errMsg =
           resData?.message ||
-            resData?.error ||
-            "Failed to add delivery partner. Please verify details."
-        );
+          resData?.error ||
+          "Failed to add delivery partner. Please verify details.";
+        const lower = errMsg.toLowerCase();
+        if (
+          res.status === 409 ||
+          lower.includes("already in use") ||
+          lower.includes("already exist") ||
+          lower.includes("already registered")
+        ) {
+          errMsg = "This email address is already registered to an existing account. Please use a different email.";
+        }
+        setErrorMessage(errMsg);
       }
     } catch (err: any) {
       console.error("Error creating delivery agent:", err);

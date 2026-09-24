@@ -6,6 +6,11 @@ import ResponsiveRoomAdd, {
   ResponsiveAmenity,
 } from "@/components/seller/rooms/responsive/ResponsiveRoomAdd";
 import { fetchApi } from "@/lib/fetch-api";
+import {
+  extractRoomPropertyLocation,
+  cleanRoomAboutText,
+  formatRoomLocationComment,
+} from "@/lib/room-location-helper";
 
 const DEFAULT_AMENITIES: ResponsiveAmenity[] = [
   { id: "wifi", name: "WiFi", selected: false },
@@ -31,6 +36,13 @@ function RoomAddEditContent() {
     houseRules: string[];
     isAvailable: boolean;
     imageUrl?: string;
+    locality?: string;
+    city?: string;
+    pincode?: string;
+    landmark?: string;
+    houseNumber?: string;
+    latitude?: number | null;
+    longitude?: number | null;
   }>({
     roomName: "",
     capacity: "",
@@ -40,6 +52,13 @@ function RoomAddEditContent() {
     amenities: DEFAULT_AMENITIES,
     houseRules: [],
     isAvailable: true,
+    locality: "",
+    city: "Pune",
+    pincode: "",
+    landmark: "",
+    houseNumber: "",
+    latitude: 18.5204,
+    longitude: 73.8567,
   });
 
   const [loading, setLoading] = useState(isEditMode);
@@ -141,16 +160,39 @@ function RoomAddEditContent() {
               }
             }
 
+            const parsedLoc = extractRoomPropertyLocation(
+              room.description,
+              room.about,
+              {
+                locality: room.sellerLocality || room.seller?.addressLocality || "",
+                landmark: room.sellerLandmark || room.seller?.addressLandmark || "",
+                city: room.sellerCity || room.seller?.user?.city || "Pune",
+                pincode: room.sellerPincode || room.seller?.user?.pincode || "",
+                addressFlat: room.seller?.addressFlat || "",
+                latitude: room.sellerLatitude ?? room.latitude ?? null,
+                longitude: room.sellerLongitude ?? room.longitude ?? null,
+              }
+            );
+
+            const cleanedAbout = cleanRoomAboutText(loadedAbout);
+
             setInitialData({
               roomName: room.title || "",
               capacity: room.capacity ? String(room.capacity) : "2",
               pricePerNight: room.price ? String(room.price) : "2500",
               floorNo: loadedFloor,
-              about: loadedAbout,
+              about: cleanedAbout,
               amenities: mappedAmenities,
               houseRules: loadedHouseRules,
               isAvailable: room.isAvailable ?? true,
               imageUrl: imgUrl || undefined,
+              locality: parsedLoc.locality,
+              city: parsedLoc.city,
+              pincode: parsedLoc.pincode,
+              landmark: parsedLoc.landmark,
+              houseNumber: parsedLoc.houseNumber,
+              latitude: parsedLoc.latitude,
+              longitude: parsedLoc.longitude,
             });
           }
         }
@@ -167,6 +209,20 @@ function RoomAddEditContent() {
   const handleSave = async (data: any) => {
     setSaving(true);
     try {
+      const locationComment = formatRoomLocationComment({
+        houseNumber: data.houseNumber,
+        street: data.street,
+        locality: data.locality,
+        landmark: data.landmark,
+        city: data.city,
+        pincode: data.pincode,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      });
+
+      const cleanAbout = cleanRoomAboutText(data.about);
+      const combinedAbout = cleanAbout ? `${cleanAbout}\n\n${locationComment}` : locationComment;
+
       const formData = new FormData();
       if (roomId) {
         formData.append("roomId", roomId);
@@ -178,14 +234,26 @@ function RoomAddEditContent() {
       );
       formData.append("capacity", String(data.capacity || 2));
       formData.append("isAvailable", String(data.isAvailable));
-      formData.append("about", data.about || "");
+      formData.append("about", combinedAbout);
       formData.append("floor", data.floorNo || "");
       formData.append(
         "amenities",
         JSON.stringify(data.amenities.filter((a: any) => a.selected).map((a: any) => a.name))
       );
       formData.append("houseRules", JSON.stringify(data.houseRules || []));
-      formData.append("description", data.about || "");
+      formData.append("description", combinedAbout);
+
+      formData.append("locality", data.locality || "");
+      formData.append("city", data.city || "Pune");
+      formData.append("pincode", data.pincode || "");
+      formData.append("landmark", data.landmark || "");
+      formData.append("houseNumber", data.houseNumber || "");
+      if (data.latitude !== null && data.latitude !== undefined) {
+        formData.append("latitude", String(data.latitude));
+      }
+      if (data.longitude !== null && data.longitude !== undefined) {
+        formData.append("longitude", String(data.longitude));
+      }
 
       if (data.imageFile) {
         formData.append("image", data.imageFile);
@@ -254,6 +322,13 @@ function RoomAddEditContent() {
       initialHouseRules={initialData.houseRules}
       initialIsAvailable={initialData.isAvailable}
       initialImageUrl={initialData.imageUrl}
+      initialLocality={initialData.locality}
+      initialCity={initialData.city}
+      initialPincode={initialData.pincode}
+      initialLandmark={initialData.landmark}
+      initialHouseNumber={initialData.houseNumber}
+      initialLatitude={initialData.latitude}
+      initialLongitude={initialData.longitude}
       isEditMode={isEditMode}
       isSaving={saving}
       onSave={handleSave}
@@ -276,4 +351,3 @@ export default function ResponsiveRoomAddPage() {
     </Suspense>
   );
 }
-

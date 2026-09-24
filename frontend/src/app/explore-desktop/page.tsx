@@ -18,30 +18,60 @@ import momentStyles from "@/components/explore-desktop/whats-on-your-mind/WhatsO
 import Link from "next/link";
 import Image from "next/image";
 import { Star, MapPin } from "lucide-react";
+import {
+  isKitchenMatchingDiet,
+  isDishMatchingDiet,
+  matchesKitchenOrDishSearch,
+  matchesDishSearch,
+  matchesSearchQuery,
+} from "@/lib/dietary-filter";
 
 function ExploreDesktopContent() {
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get("category");
   const searchQuery = searchParams.get("query");
+  const dietaryParam = searchParams.get("dietary");
+  const [selectedDiet, setSelectedDiet] = React.useState<string>(dietaryParam || "all");
   const { defaultAddress, openLocationModal } = useLocation();
   const homeData = useHomeData();
 
+  // Sync with searchParams if dietary changes in URL
+  React.useEffect(() => {
+    if (dietaryParam) {
+      setSelectedDiet(dietaryParam);
+    }
+  }, [dietaryParam]);
+
   // Dynamic Reels from approved kitchens
   const dynamicReels = useMemo(() => {
-    if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
-    return homeData.kitchens.map((k) => ({
+    const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceKitchens || sourceKitchens.length === 0) return undefined;
+    let list = sourceKitchens;
+    if (searchQuery) {
+      list = list.filter((k) => matchesKitchenOrDishSearch(searchQuery, k, sourceFoodItems));
+    }
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((k) => isKitchenMatchingDiet(k, selectedDiet, sourceFoodItems));
+    }
+    return list.map((k) => ({
       id: k.id,
       name: k.name,
       subtitle: k.category || (k.foodType === "VEG" ? "Pure Veg" : "Cloud Kitchen"),
       image: k.imageUrl || "/images/places/place-biryani.png",
       kitchenId: k.trackingId || k.id,
     }));
-  }, [homeData.kitchens]);
+  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
   // Dynamic Featured Collections from food items
   const dynamicCollections = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    return homeData.foodItems.slice(0, 8).map((f, idx) => ({
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0) return undefined;
+    let list = sourceFoodItems;
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
+    }
+    return list.slice(0, 8).map((f, idx) => ({
       id: f.id,
       author: f.sellerName || "Verified Chef",
       title: `${f.name} ${f.itemType === "VEG" ? "🥦" : "🍗"}`,
@@ -49,19 +79,24 @@ function ExploreDesktopContent() {
       image: f.imageUrl || "/images/places/place-biryani.png",
       kitchenId: f.sellerTrackingId || f.sellerId,
     }));
-  }, [homeData.foodItems]);
+  }, [homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
   // Dynamic Curated Dining Collections (grouped by price/type)
   const dynamicDiningItems = useMemo(() => {
-    if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    return homeData.foodItems.slice(0, 8).map((f) => ({
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!sourceFoodItems || sourceFoodItems.length === 0) return undefined;
+    let list = sourceFoodItems;
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
+    }
+    return list.slice(0, 8).map((f) => ({
       id: f.id,
       badge: f.price ? `₹${f.price}` : "Popular",
       title: f.name,
       image: f.imageUrl || "/images/places/place-pizza.png",
       kitchenId: f.sellerTrackingId || f.sellerId,
     }));
-  }, [homeData.foodItems]);
+  }, [homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
   // Dynamic Meal Moments from DB Categories
   const dynamicMoments = useMemo(() => {
@@ -89,7 +124,9 @@ function ExploreDesktopContent() {
   // Filtered Kitchens if user arrived via search or category filter
   const filteredKitchens = useMemo(() => {
     if (!categoryFilter && !searchQuery) return [];
-    let list = homeData.kitchens || [];
+    const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    let list = sourceKitchens || [];
     if (categoryFilter) {
       const q = categoryFilter.toLowerCase();
       list = list.filter(
@@ -99,44 +136,35 @@ function ExploreDesktopContent() {
       );
     }
     if (searchQuery) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (k) =>
-          k.name.toLowerCase().includes(q) ||
-          k.category?.toLowerCase().includes(q) ||
-          k.locality?.toLowerCase().includes(q) ||
-          k.city?.toLowerCase().includes(q) ||
-          k.pincode?.includes(q)
-      );
+      list = list.filter((k) => matchesKitchenOrDishSearch(searchQuery, k, sourceFoodItems));
+    }
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((k) => isKitchenMatchingDiet(k, selectedDiet, sourceFoodItems));
     }
     return list;
-  }, [homeData.kitchens, categoryFilter, searchQuery]);
+  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, categoryFilter, searchQuery, selectedDiet]);
 
-  // Filtered Food Items if user arrived via search or category filter
+  // Filtered Food Items if user arrived via search, dietary, or category filter
   const filteredFoodItems = useMemo(() => {
-    if (!categoryFilter && !searchQuery) return [];
-    let list = homeData.foodItems || [];
+    if (!categoryFilter && !searchQuery && selectedDiet === "all") return [];
+    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    let list = sourceFoodItems;
     if (categoryFilter) {
-      const q = categoryFilter.toLowerCase();
       list = list.filter(
         (f) =>
-          f.categoryName?.toLowerCase().includes(q) ||
-          f.name.toLowerCase().includes(q) ||
-          f.description.toLowerCase().includes(q)
+          matchesSearchQuery(f.categoryName, categoryFilter) ||
+          matchesSearchQuery(f.name, categoryFilter) ||
+          matchesSearchQuery(f.description, categoryFilter)
       );
     }
     if (searchQuery) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(
-        (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.description.toLowerCase().includes(q) ||
-          f.sellerName.toLowerCase().includes(q) ||
-          f.categoryName?.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishSearch(searchQuery, f));
+    }
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
     }
     return list;
-  }, [homeData.foodItems, categoryFilter, searchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, categoryFilter, searchQuery, selectedDiet]);
 
   // Filtered Rooms if user arrived via search or category filter
   const filteredRooms = useMemo(() => {
@@ -172,10 +200,14 @@ function ExploreDesktopContent() {
     <div className={styles.pageContainer}>
       {/* 1. Desktop & Tablet View (>768px) */}
       <div className={styles.desktopOnly}>
-        <Navbar initialActiveItem="Explore" />
+        <Navbar
+          initialActiveItem="Explore"
+          selectedDiet={selectedDiet}
+          onDietChange={(diet) => setSelectedDiet(diet)}
+        />
         <main className={styles.desktopMain}>
-          {/* Out of Service Area Alert Banner */}
-          {(homeData.activePincode || defaultAddress?.latitude) && !homeData.isLoading && homeData.kitchens.length === 0 && (
+          {/* Out of Service Area Alert Banner (only shown when browsing by location, not when searching by name) */}
+          {!searchQuery && !categoryFilter && (homeData.activePincode || defaultAddress?.latitude) && !homeData.isLoading && homeData.kitchens.length === 0 && (
             <div
               style={{
                 width: "100%",

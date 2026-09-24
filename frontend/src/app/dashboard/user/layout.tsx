@@ -116,8 +116,10 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
                 const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
                 mapRef.current = map;
 
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: "abcd",
+                    maxZoom: 20,
                 }).addTo(map);
 
                 const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
@@ -515,6 +517,22 @@ export function UserHeader() {
             alert("Please fill in all required fields");
             return;
         }
+
+        const normHouse = addressForm.houseNumber.trim().toLowerCase();
+        const normStreet = addressForm.street.trim().toLowerCase();
+        const normPin = addressForm.pincode.replace(/\D/g, "");
+
+        const isDuplicate = addresses.some((addr) => (
+            (addr.houseNumber || "").trim().toLowerCase() === normHouse &&
+            (addr.street || "").trim().toLowerCase() === normStreet &&
+            (addr.pincode || "").replace(/\D/g, "") === normPin
+        ));
+
+        if (isDuplicate) {
+            alert("This address already exists in your saved addresses.");
+            return;
+        }
+
         if (addressForm.latitude === null || addressForm.longitude === null) {
             alert("Approximate location pin of the house is compulsory. Please select it on the map.");
             return;

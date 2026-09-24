@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { validateEmail } from "@/lib/email-validation";
 
 function ForgotPasswordForm() {
     const router = useRouter();
@@ -14,9 +15,9 @@ function ForgotPasswordForm() {
 
     const handleSendOTP = async (e: React.FormEvent) => {
         e.preventDefault();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            alert("Please enter a valid email address.");
+        const validation = validateEmail(email);
+        if (!validation.isValid) {
+            alert(validation.error || "Please enter a valid email address.");
             return;
         }
         setLoading(true);

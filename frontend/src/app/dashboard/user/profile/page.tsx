@@ -84,6 +84,25 @@ export default function UserProfilePage() {
             alert("Pincode must be exactly 6 digits.");
             return;
         }
+
+        const normHouse = addressForm.houseNumber.trim().toLowerCase();
+        const normStreet = addressForm.street.trim().toLowerCase();
+        const normPin = addressForm.pincode.replace(/\D/g, "");
+
+        const isDuplicate = profile?.addresses?.some((addr: any) => {
+            if (editingAddressId && addr.id === editingAddressId) return false;
+            return (
+                (addr.houseNumber || "").trim().toLowerCase() === normHouse &&
+                (addr.street || "").trim().toLowerCase() === normStreet &&
+                (addr.pincode || "").replace(/\D/g, "") === normPin
+            );
+        });
+
+        if (isDuplicate) {
+            alert("This address already exists in your saved addresses.");
+            return;
+        }
+
         if (addressForm.latitude === null || addressForm.longitude === null) {
             alert("Approximate location pin of the house is compulsory. Please select it on the map.");
             return;
