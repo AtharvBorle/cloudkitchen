@@ -15,6 +15,7 @@ import {
   formatDistance,
   getPincodeCoordinates,
 } from "@/lib/geo-distance";
+import { extractRoomPropertyLocation } from "@/lib/room-location-helper";
 import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./page.module.css";
 
@@ -59,7 +60,27 @@ function RoomBookingContent() {
           const json = await res.json();
           const list = json.data || json;
           if (Array.isArray(list)) {
-            setAllRooms(list);
+            const enriched = list.map((r: any) => {
+              const loc = extractRoomPropertyLocation(r.description, r.about, {
+                locality: r.sellerLocality,
+                city: r.sellerCity,
+                pincode: r.sellerPincode,
+                landmark: r.sellerLandmark,
+                latitude: r.sellerLatitude ?? r.latitude,
+                longitude: r.sellerLongitude ?? r.longitude,
+              });
+              return {
+                ...r,
+                sellerLocality: loc.locality || r.sellerLocality,
+                sellerCity: loc.city || r.sellerCity,
+                sellerPincode: loc.pincode || r.sellerPincode,
+                sellerLandmark: loc.landmark || r.sellerLandmark,
+                sellerLatitude: loc.latitude ?? r.sellerLatitude,
+                sellerLongitude: loc.longitude ?? r.sellerLongitude,
+                propertyLocation: loc,
+              };
+            });
+            setAllRooms(enriched);
           }
         }
       } catch (err) {

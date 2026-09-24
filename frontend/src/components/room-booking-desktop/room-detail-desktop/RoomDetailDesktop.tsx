@@ -27,10 +27,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Navbar, NavbarProps } from "@/components/navbar";
-import { MobileSidebar } from "@/components/mobile-sidebar";
-import { Menu, ArrowLeft } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { Footer } from "@/components/explore-desktop/footer";
+import {
+  extractRoomPropertyLocation,
+  cleanRoomAboutText,
+} from "@/lib/room-location-helper";
 import styles from "./RoomDetailDesktop.module.css";
 import roomGalleryBanner from "./room-gallery-banner.png";
 import roomImg1 from "../featured-colivings/neo-living-room.jpg";
@@ -449,8 +451,19 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
           if (r) {
             const cap = Number(r.capacity) || 1;
             const price = Number(r.price) || 2800;
-            const locality = r.sellerLocality || r.seller?.addressLocality || "";
-            const city = r.sellerCity || r.seller?.user?.city || "Pune";
+
+            const loc = extractRoomPropertyLocation(r.description, r.about, {
+              locality: r.sellerLocality || r.seller?.addressLocality,
+              city: r.sellerCity || r.seller?.user?.city,
+              pincode: r.sellerPincode || r.seller?.user?.pincode,
+              landmark: r.sellerLandmark || r.seller?.addressLandmark,
+              addressFlat: r.seller?.addressFlat,
+              latitude: r.sellerLatitude ?? r.latitude,
+              longitude: r.sellerLongitude ?? r.longitude,
+            });
+
+            const locality = loc.locality || r.sellerLocality || r.seller?.addressLocality || "";
+            const city = loc.city || r.sellerCity || r.seller?.user?.city || "Pune";
             const locationStr = locality ? `${locality}, ${city}` : city;
 
             let parsedAmenities: { name: string; icon: string }[] = [];
@@ -486,6 +499,7 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
                 cleanAbout = "";
               }
             }
+            cleanAbout = cleanRoomAboutText(cleanAbout);
 
             // Extract floor
             let cleanFloor = "";
@@ -501,6 +515,15 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
               } catch {}
             }
 
+            const fullAddress = [
+              loc.houseNumber,
+              loc.street,
+              loc.locality,
+              loc.landmark ? `Near ${loc.landmark}` : "",
+              loc.city,
+              loc.pincode,
+            ].filter(Boolean).join(", ") || (loc.landmark ? `${locality} (Near ${loc.landmark})` : locality);
+
             setFetchedRoomData({
               id: r.id,
               name: r.title || "Room Listing",
@@ -508,7 +531,7 @@ export const RoomDetailDesktop: React.FC<RoomDetailDesktopProps> = ({
               rating: numRating,
               reviewsCount: revCount > 0 ? `(${revCount} ${revCount === 1 ? "review" : "reviews"})` : "(0 reviews)",
               location: locationStr,
-              address: r.sellerLandmark ? `${locality} (Near ${r.sellerLandmark})` : locality,
+              address: fullAddress,
               city: city,
               pricePerMonth: `₹${price.toLocaleString("en-IN")}`,
               availableFrom: "Immediate / Today",

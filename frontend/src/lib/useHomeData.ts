@@ -7,6 +7,7 @@ import {
   MAX_DELIVERY_RADIUS_KM,
   getPincodeCoordinates,
 } from './geo-distance';
+import { extractRoomPropertyLocation, cleanRoomAboutText } from './room-location-helper';
 
 export interface DynamicCategory {
   id: string;
@@ -58,6 +59,7 @@ export interface DynamicRoom {
   sellerCity?: string;
   sellerPincode?: string;
   sellerLocality?: string;
+  sellerLandmark?: string;
   sellerTrackingId?: string;
   sellerLatitude?: number | null;
   sellerLongitude?: number | null;
@@ -339,23 +341,33 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               parsedImages = r.images;
             }
 
-            const defaultCoords = getPincodeCoordinates(r.sellerPincode);
-            const resolvedLat = r.sellerLatitude ?? defaultCoords?.lat ?? null;
-            const resolvedLng = r.sellerLongitude ?? defaultCoords?.lng ?? null;
+            const loc = extractRoomPropertyLocation(r.description, r.about, {
+              locality: r.sellerLocality,
+              city: r.sellerCity,
+              pincode: r.sellerPincode,
+              landmark: r.sellerLandmark,
+              latitude: r.sellerLatitude,
+              longitude: r.sellerLongitude,
+            });
+
+            const defaultCoords = getPincodeCoordinates(loc.pincode || r.sellerPincode);
+            const resolvedLat = loc.latitude ?? r.sellerLatitude ?? defaultCoords?.lat ?? null;
+            const resolvedLng = loc.longitude ?? r.sellerLongitude ?? defaultCoords?.lng ?? null;
 
             rawRooms.push({
               id: r.id,
               title: r.title || 'Room',
               price: r.price || 0,
-              description: r.description || '',
+              description: cleanRoomAboutText(r.description || r.about || ''),
               capacity: r.capacity || 1,
               images: parsedImages,
               isAvailable: r.isAvailable !== false,
               sellerId: r.sellerId,
               sellerName: r.sellerName || '',
-              sellerCity: r.sellerCity,
-              sellerPincode: r.sellerPincode,
-              sellerLocality: r.sellerLocality,
+              sellerCity: loc.city || r.sellerCity || 'Pune',
+              sellerPincode: loc.pincode || r.sellerPincode || '',
+              sellerLocality: loc.locality || r.sellerLocality || '',
+              sellerLandmark: loc.landmark || r.sellerLandmark || '',
               sellerTrackingId: r.sellerTrackingId,
               sellerLatitude: resolvedLat,
               sellerLongitude: resolvedLng,
