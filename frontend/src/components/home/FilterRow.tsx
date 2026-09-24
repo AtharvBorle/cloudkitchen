@@ -119,7 +119,7 @@ export default function FilterRow({
     updateFilters({ offersOnly: !internalFilters.offersOnly });
   };
 
-  const handleSelectDietary = (dietary: "all" | "veg" | "non_veg") => {
+  const handleSelectDietary = (dietary: "all" | "veg" | "non_veg" | "vegan" | "jain") => {
     updateFilters({ dietary });
     setOpenPopover(null);
   };

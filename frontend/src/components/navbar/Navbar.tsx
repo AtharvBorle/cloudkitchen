@@ -141,7 +141,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [internalActiveItem, setInternalActiveItem] = useState<string>(initialActiveItem);
   const [internalVegOnly, setInternalVegOnly] = useState<boolean>(false);
-  const [selectedDiet, setSelectedDiet] = useState<string>("veg");
+  const [selectedDiet, setSelectedDiet] = useState<string>(controlledDiet || "all");
   const [isDietDropdownOpen, setIsDietDropdownOpen] = useState<boolean>(false);
   const [selectedLang, setSelectedLang] = useState<string>("en");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState<boolean>(false);
@@ -500,17 +500,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getDietPillLabel = () => {
     const found = DIET_OPTIONS.find((d) => d.id === selectedDiet);
-    return found ? found.label : "Veg";
+    return found ? found.label : "All";
   };
 
   const getDietPillDotColor = () => {
     switch (selectedDiet) {
+      case "all":
+        return "#FF6B00";
       case "non-veg":
         return "#EF4444";
       case "vegan":
         return "#15803D";
       case "jain":
         return "#16A34A";
+      case "veg":
       default:
         return "#10B981";
     }

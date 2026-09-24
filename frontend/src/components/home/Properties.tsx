@@ -5,6 +5,8 @@ import Image from "next/image";
 import { Star, Check } from "lucide-react";
 import Link from "next/link";
 
+import { isKitchenMatchingDiet } from "@/lib/dietary-filter";
+
 export interface PlaceCardData {
   id: string;
   name: string;
@@ -17,6 +19,7 @@ export interface PlaceCardData {
   locality?: string;
   price?: number;
   isOnline?: boolean;
+  foodType?: string;
 }
 
 const CUISINES = [
@@ -75,14 +78,9 @@ export default function Properties({ places }: PropertiesProps) {
   // Compute dynamic dietary counts
   const dynamicDietary = React.useMemo(() => {
     return DIETARY.map((d) => {
-      const matchCount = basePlaces.filter((p) => {
-        const cat = (p.category || "").toLowerCase();
-        if (d.id === "veg") return cat.includes("veg") && !cat.includes("non-veg");
-        if (d.id === "non-veg") return cat.includes("non-veg") || cat.includes("biryani") || cat.includes("mughlai");
-        if (d.id === "vegan") return cat.includes("vegan") || cat.includes("organic");
-        if (d.id === "jain") return cat.includes("satvik") || cat.includes("jain") || cat.includes("pure veg");
-        return true;
-      }).length;
+      const matchCount = basePlaces.filter((p) =>
+        isKitchenMatchingDiet({ foodType: p.foodType, category: p.category, name: p.name, id: p.id, trackingId: p.trackingId }, d.id)
+      ).length;
       return {
         ...d,
         count: matchCount,
@@ -113,31 +111,14 @@ export default function Properties({ places }: PropertiesProps) {
     }
 
     if (selectedDietary.length > 0) {
-      if (selectedDietary.includes("veg")) {
-        list = list.filter((p) =>
-          p.category.toLowerCase().includes("veg") &&
-          !p.category.toLowerCase().includes("non-veg")
-        );
-      }
-      if (selectedDietary.includes("non-veg")) {
-        list = list.filter((p) =>
-          p.category.toLowerCase().includes("non-veg") ||
-          p.category.toLowerCase().includes("biryani")
-        );
-      }
-      if (selectedDietary.includes("vegan")) {
-        list = list.filter((p) =>
-          p.category.toLowerCase().includes("vegan") ||
-          p.category.toLowerCase().includes("healthy")
-        );
-      }
-      if (selectedDietary.includes("jain")) {
-        list = list.filter((p) =>
-          p.category.toLowerCase().includes("satvik") ||
-          p.category.toLowerCase().includes("jain") ||
-          p.category.toLowerCase().includes("pure veg")
-        );
-      }
+      list = list.filter((p) =>
+        selectedDietary.some((diet) =>
+          isKitchenMatchingDiet(
+            { foodType: p.foodType, category: p.category, name: p.name, id: p.id, trackingId: p.trackingId },
+            diet
+          )
+        )
+      );
     }
 
     // Filter by price range (0 to 1000+)

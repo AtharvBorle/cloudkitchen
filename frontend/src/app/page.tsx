@@ -19,10 +19,11 @@ import { useHomeData } from "@/lib/useHomeData";
 import { useLocation } from "@/components/location-provider";
 import { MapPin } from "lucide-react";
 import { Footer } from "@/components/explore-desktop/footer";
+import { isKitchenMatchingDiet, isDishMatchingDiet } from "@/lib/dietary-filter";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
-  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({});
+  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({ dietary: "all" });
   const { openLocationModal, defaultAddress } = useLocation();
   const homeData = useHomeData();
 
@@ -70,12 +71,10 @@ export default function Home() {
     }
 
     // 2. Dietary Filter
-    if (activeFilters.dietary === "veg") {
-      const filtered = list.filter((k) => k.foodType === "VEG" || k.category?.toLowerCase().includes("veg"));
-      if (filtered.length > 0) list = filtered;
-    } else if (activeFilters.dietary === "non_veg") {
-      const filtered = list.filter((k) => k.foodType !== "VEG");
-      if (filtered.length > 0) list = filtered;
+    if (activeFilters.dietary && activeFilters.dietary !== "all") {
+      list = list.filter((k) =>
+        isKitchenMatchingDiet(k, activeFilters.dietary, homeData.foodItems)
+      );
     }
 
     // 3. Rating Filter (4.5+)
@@ -112,8 +111,9 @@ export default function Home() {
       trackingId: k.trackingId,
       locality: k.locality,
       isOnline: k.isOnline !== false,
+      foodType: k.foodType,
     }));
-  }, [homeData.kitchens, selectedCategory, activeFilters]);
+  }, [homeData.kitchens, homeData.foodItems, selectedCategory, activeFilters]);
 
   // Dynamic Offers for PopularOrders derived strictly from active coupons & real food items
   const dynamicOffers = useMemo(() => {
@@ -132,10 +132,11 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
-    if (activeFilters.dietary === "veg") {
-      const filtered = list.filter((f) => f.itemType === "VEG");
-      if (filtered.length > 0) list = filtered;
+    if (activeFilters.dietary && activeFilters.dietary !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, activeFilters.dietary));
     }
+
+    if (list.length === 0) return [];
 
     // Pair active coupons with food items
     const offersList: any[] = [];
@@ -183,9 +184,8 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
-    if (activeFilters.dietary === "veg") {
-      const filtered = list.filter((f) => f.itemType === "VEG");
-      if (filtered.length > 0) list = filtered;
+    if (activeFilters.dietary && activeFilters.dietary !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, activeFilters.dietary));
     }
 
     // Price tier filter
@@ -228,9 +228,8 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
-    if (activeFilters.dietary === "veg") {
-      const filtered = list.filter((f) => f.itemType === "VEG");
-      if (filtered.length > 0) list = filtered;
+    if (activeFilters.dietary && activeFilters.dietary !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, activeFilters.dietary));
     }
 
     if (activeFilters.minRating) {
@@ -268,9 +267,8 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
-    if (activeFilters.dietary === "veg") {
-      const filtered = list.filter((f) => f.itemType === "VEG");
-      if (filtered.length > 0) list = filtered;
+    if (activeFilters.dietary && activeFilters.dietary !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, activeFilters.dietary));
     }
 
     const items = list.length > 4 ? [...list].reverse() : list;
@@ -320,19 +318,27 @@ export default function Home() {
         selectedDiet={
           activeFilters.dietary === "non_veg"
             ? "non-veg"
-            : activeFilters.dietary === "all"
-            ? "all"
-            : "veg"
+            : activeFilters.dietary === "vegan"
+            ? "vegan"
+            : activeFilters.dietary === "jain"
+            ? "jain"
+            : activeFilters.dietary === "veg"
+            ? "veg"
+            : "all"
         }
         onDietChange={(diet) => {
           setActiveFilters((prev) => ({
             ...prev,
             dietary:
-              diet === "all"
-                ? "all"
-                : diet === "non-veg"
+              diet === "non-veg" || diet === "non_veg"
                 ? "non_veg"
-                : "veg",
+                : diet === "vegan"
+                ? "vegan"
+                : diet === "jain"
+                ? "jain"
+                : diet === "veg"
+                ? "veg"
+                : "all",
           }));
         }}
       />

@@ -17,30 +17,48 @@ import momentStyles from "@/components/explore-desktop/whats-on-your-mind/WhatsO
 import Link from "next/link";
 import Image from "next/image";
 import { Star, MapPin } from "lucide-react";
+import { isKitchenMatchingDiet, isDishMatchingDiet } from "@/lib/dietary-filter";
 
 function ExploreDesktopContent() {
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get("category");
   const searchQuery = searchParams.get("query");
+  const dietaryParam = searchParams.get("dietary");
+  const [selectedDiet, setSelectedDiet] = React.useState<string>(dietaryParam || "all");
   const { defaultAddress, openLocationModal } = useLocation();
   const homeData = useHomeData();
+
+  // Sync with searchParams if dietary changes in URL
+  React.useEffect(() => {
+    if (dietaryParam) {
+      setSelectedDiet(dietaryParam);
+    }
+  }, [dietaryParam]);
 
   // Dynamic Reels from approved kitchens
   const dynamicReels = useMemo(() => {
     if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
-    return homeData.kitchens.map((k) => ({
+    let list = homeData.kitchens;
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((k) => isKitchenMatchingDiet(k, selectedDiet, homeData.foodItems));
+    }
+    return list.map((k) => ({
       id: k.id,
       name: k.name,
       subtitle: k.category || (k.foodType === "VEG" ? "Pure Veg" : "Cloud Kitchen"),
       image: k.imageUrl || "/images/places/place-biryani.png",
       kitchenId: k.trackingId || k.id,
     }));
-  }, [homeData.kitchens]);
+  }, [homeData.kitchens, homeData.foodItems, selectedDiet]);
 
   // Dynamic Featured Collections from food items
   const dynamicCollections = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    return homeData.foodItems.slice(0, 8).map((f, idx) => ({
+    let list = homeData.foodItems;
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
+    }
+    return list.slice(0, 8).map((f, idx) => ({
       id: f.id,
       author: f.sellerName || "Verified Chef",
       title: `${f.name} ${f.itemType === "VEG" ? "🥦" : "🍗"}`,
@@ -48,19 +66,23 @@ function ExploreDesktopContent() {
       image: f.imageUrl || "/images/places/place-biryani.png",
       kitchenId: f.sellerTrackingId || f.sellerId,
     }));
-  }, [homeData.foodItems]);
+  }, [homeData.foodItems, selectedDiet]);
 
   // Dynamic Curated Dining Collections (grouped by price/type)
   const dynamicDiningItems = useMemo(() => {
     if (!homeData.foodItems || homeData.foodItems.length === 0) return undefined;
-    return homeData.foodItems.slice(0, 8).map((f) => ({
+    let list = homeData.foodItems;
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
+    }
+    return list.slice(0, 8).map((f) => ({
       id: f.id,
       badge: f.price ? `₹${f.price}` : "Popular",
       title: f.name,
       image: f.imageUrl || "/images/places/place-pizza.png",
       kitchenId: f.sellerTrackingId || f.sellerId,
     }));
-  }, [homeData.foodItems]);
+  }, [homeData.foodItems, selectedDiet]);
 
   // Dynamic Meal Moments from DB Categories
   const dynamicMoments = useMemo(() => {
@@ -85,9 +107,9 @@ function ExploreDesktopContent() {
     }));
   }, [homeData.categories]);
 
-  // Filtered Food Items if user arrived via search or category filter
+  // Filtered Food Items if user arrived via search, dietary, or category filter
   const filteredFoodItems = useMemo(() => {
-    if (!categoryFilter && !searchQuery) return null;
+    if (!categoryFilter && !searchQuery && selectedDiet === "all") return null;
     let list = homeData.foodItems;
     if (categoryFilter) {
       const q = categoryFilter.toLowerCase();
@@ -107,14 +129,21 @@ function ExploreDesktopContent() {
           f.sellerName.toLowerCase().includes(q)
       );
     }
+    if (selectedDiet && selectedDiet !== "all") {
+      list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
+    }
     return list;
-  }, [homeData.foodItems, categoryFilter, searchQuery]);
+  }, [homeData.foodItems, categoryFilter, searchQuery, selectedDiet]);
 
   return (
     <div className={styles.pageContainer}>
       {/* 1. Desktop & Tablet View (>768px) */}
       <div className={styles.desktopOnly}>
-        <Navbar initialActiveItem="Explore" />
+        <Navbar
+          initialActiveItem="Explore"
+          selectedDiet={selectedDiet}
+          onDietChange={(diet) => setSelectedDiet(diet)}
+        />
         <main className={styles.desktopMain}>
           {/* Out of Service Area Alert Banner */}
           {(homeData.activePincode || defaultAddress?.latitude) && !homeData.isLoading && homeData.kitchens.length === 0 && (
