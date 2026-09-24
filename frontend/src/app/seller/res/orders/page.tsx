@@ -92,8 +92,8 @@ export default function ResponsiveSellerOrdersPage() {
     loadOrders(true);
   };
 
-  const mappedOrders: ResponsiveOrderItem[] | undefined = useMemo(() => {
-    if (!orders || orders.length === 0) return undefined;
+  const mappedOrders: ResponsiveOrderItem[] = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
     return orders.map((o: any) => {
       let itemsSummary = "";
       let itemCount = 1;
@@ -125,11 +125,11 @@ export default function ResponsiveSellerOrdersPage() {
         timeAgo: timeAgoStr,
         customerName: o.user?.name || "Customer",
         itemsText: `${itemCount} items • ₹${o.totalAmount || 0}`,
-        priorOrdersCount: 5,
+        priorOrdersCount: 0,
         totalAmount: `₹${o.totalAmount || 0}`,
-        rating: 4.8,
-        deliveredCount: 42,
-        cancelledCount: 1,
+        rating: 5.0,
+        deliveredCount: 0,
+        cancelledCount: 0,
         status: statusVal,
       };
     });

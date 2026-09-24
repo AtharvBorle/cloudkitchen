@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   Play,
@@ -14,7 +14,9 @@ import {
   Bell,
   Globe,
   Check,
+  X,
 } from "lucide-react";
+import { SearchResultsSection } from "@/components/explore-desktop/search-results";
 import styles from "./ExploreMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useLocation } from "@/components/location-provider";
@@ -163,14 +165,108 @@ import { useHomeData } from "@/lib/useHomeData";
 
 export const ExploreMobileView: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const categoryFilter = searchParams?.get("category") || "";
+  const queryParam = searchParams?.get("query") || "";
+
   const { defaultAddress, openLocationModal } = useLocation();
   const homeData = useHomeData();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(queryParam);
   const [selectedLang, setSelectedLang] = useState("en");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (queryParam) {
+      setSearchQuery(queryParam);
+    } else {
+      setSearchQuery("");
+    }
+  }, [queryParam]);
+
+  // Filtered Kitchens
+  const filteredKitchens = React.useMemo(() => {
+    if (!categoryFilter && !queryParam) return [];
+    let list = homeData.kitchens || [];
+    if (categoryFilter) {
+      const q = categoryFilter.toLowerCase();
+      list = list.filter(
+        (k) =>
+          k.category?.toLowerCase().includes(q) ||
+          k.name.toLowerCase().includes(q)
+      );
+    }
+    if (queryParam) {
+      const q = queryParam.toLowerCase().trim();
+      list = list.filter(
+        (k) =>
+          k.name.toLowerCase().includes(q) ||
+          k.category?.toLowerCase().includes(q) ||
+          k.locality?.toLowerCase().includes(q) ||
+          k.city?.toLowerCase().includes(q) ||
+          k.pincode?.includes(q)
+      );
+    }
+    return list;
+  }, [homeData.kitchens, categoryFilter, queryParam]);
+
+  // Filtered Food Items
+  const filteredFoodItems = React.useMemo(() => {
+    if (!categoryFilter && !queryParam) return [];
+    let list = homeData.foodItems || [];
+    if (categoryFilter) {
+      const q = categoryFilter.toLowerCase();
+      list = list.filter(
+        (f) =>
+          f.categoryName?.toLowerCase().includes(q) ||
+          f.name.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q)
+      );
+    }
+    if (queryParam) {
+      const q = queryParam.toLowerCase().trim();
+      list = list.filter(
+        (f) =>
+          f.name.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q) ||
+          f.sellerName.toLowerCase().includes(q) ||
+          f.categoryName?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [homeData.foodItems, categoryFilter, queryParam]);
+
+  // Filtered Rooms
+  const filteredRooms = React.useMemo(() => {
+    if (!categoryFilter && !queryParam) return [];
+    let list = homeData.rooms || [];
+    if (categoryFilter) {
+      const q = categoryFilter.toLowerCase();
+      if (q === "rooms" || q === "room") return list;
+      list = list.filter(
+        (r) =>
+          r.title.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q) ||
+          r.sellerLocality?.toLowerCase().includes(q) ||
+          r.sellerCity?.toLowerCase().includes(q)
+      );
+    }
+    if (queryParam) {
+      const q = queryParam.toLowerCase().trim();
+      list = list.filter(
+        (r) =>
+          r.title.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q) ||
+          r.sellerName.toLowerCase().includes(q) ||
+          r.sellerLocality?.toLowerCase().includes(q) ||
+          r.sellerCity?.toLowerCase().includes(q) ||
+          r.sellerPincode?.includes(q)
+      );
+    }
+    return list;
+  }, [homeData.rooms, categoryFilter, queryParam]);
 
   const stories = React.useMemo(() => {
     return (homeData.kitchens || []).map((k) => ({
@@ -235,6 +331,8 @@ export const ExploreMobileView: React.FC = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/explore-desktop?query=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push("/explore-desktop");
     }
   };
 
@@ -378,8 +476,99 @@ export const ExploreMobileView: React.FC = () => {
       {/* 2. Explore Title Section */}
       <div className={styles.exploreTitleSection}>
         <h1 className={styles.title}>Explore</h1>
-        <p className={styles.subtitle}>Find your next favorite meal</p>
+        <p className={styles.subtitle}>Find your next favorite meal, restaurant, or stay</p>
       </div>
+
+      {/* Interactive Mobile Search Bar */}
+      <div style={{ padding: "0 16px 14px 16px" }}>
+        <form
+          onSubmit={handleSearchSubmit}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "#FFFFFF",
+            borderRadius: "14px",
+            padding: "8px 14px",
+            border: "1.5px solid #FED7AA",
+            boxShadow: "0 2px 8px rgba(249, 115, 22, 0.08)",
+            gap: "10px",
+          }}
+        >
+          <Search size={18} color="#FF6B00" />
+          <input
+            type="text"
+            placeholder="Search restaurants, dishes, rooms..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              border: "none",
+              outline: "none",
+              width: "100%",
+              fontSize: "14px",
+              color: "#0F172A",
+              backgroundColor: "transparent",
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                router.push("/explore-desktop");
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#94A3B8",
+                cursor: "pointer",
+                padding: "2px",
+                display: "flex",
+                alignItems: "center",
+              }}
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+          <button
+            type="submit"
+            style={{
+              backgroundColor: "#FF6B00",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "8px",
+              padding: "5px 12px",
+              fontSize: "13px",
+              fontWeight: "700",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Go
+          </button>
+        </form>
+      </div>
+
+      {/* Search Results Section if Search or Category filter is active */}
+      {(Boolean(categoryFilter) || Boolean(queryParam)) && (
+        <div style={{ padding: "0 16px 24px 16px" }}>
+          <SearchResultsSection
+            searchQuery={queryParam}
+            categoryFilter={categoryFilter}
+            kitchens={filteredKitchens}
+            foodItems={filteredFoodItems}
+            rooms={filteredRooms}
+            onClearSearch={() => {
+              setSearchQuery("");
+              router.push("/explore-desktop");
+            }}
+            onTagClick={(tag) => {
+              setSearchQuery(tag);
+              router.push(`/explore-desktop?query=${encodeURIComponent(tag)}`);
+            }}
+          />
+        </div>
+      )}
 
       {/* 3. Cloud Kitchen Reels */}
       {reels.length > 0 && (

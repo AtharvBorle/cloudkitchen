@@ -27,64 +27,7 @@ export interface SellerNotificationItem {
 
 export const INITIAL_SELLER_NOTIFICATIONS: SellerNotificationItem[] = [];
 
-export const SAMPLE_PRESET_NOTIFICATIONS: SellerNotificationItem[] = [
-  {
-    id: "notif-init-1",
-    category: "orders",
-    settingKey: "orderAlerts",
-    title: "New Incoming Order #ORD-8492",
-    message: "2x Gourmet Paneer Pizza, 1x Garlic Bread Sticks. Total: ₹540. Paid via UPI.",
-    details: "Customer requested extra oregano and contactless doorstep drop.",
-    timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    timeAgo: "5 mins ago",
-    isRead: false,
-    severity: "success",
-    actionLabel: "View Order",
-    actionHref: "/seller/orders",
-  },
-  {
-    id: "notif-init-2",
-    category: "stock",
-    settingKey: "lowStockAlert",
-    title: "Low Inventory Alert: Margherita Pizza",
-    message: "Only 2 units remaining in stock. Update item quantity or pause before stockout.",
-    details: "Threshold alert triggered at 15% stock limit.",
-    timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    timeAgo: "25 mins ago",
-    isRead: false,
-    severity: "warning",
-    actionLabel: "Manage Menu",
-    actionHref: "/seller/menu",
-  },
-  {
-    id: "notif-init-3",
-    category: "delivery",
-    settingKey: "riderAssignedAlert",
-    title: "Rider Assigned: Order #ORD-8480",
-    message: "Delivery partner Rahul Verma has accepted dispatch pickup. ETA to outlet: 8 mins.",
-    details: "Rider contact: +91 98765 12345.",
-    timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    timeAgo: "45 mins ago",
-    isRead: false,
-    severity: "info",
-    actionLabel: "Track Dispatch",
-    actionHref: "/seller/delivery",
-  },
-  {
-    id: "notif-init-4",
-    category: "bookings",
-    settingKey: "bookingRequestAlert",
-    title: "New Room Reservation Confirmed",
-    message: "Deluxe Suite reservation for 2 Guests for upcoming weekend. Total: ₹3,400.",
-    details: "Guest: Rajesh Kumar • Check-in: 02:00 PM • Auto-confirmed.",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    timeAgo: "2 hours ago",
-    isRead: false,
-    severity: "info",
-    actionLabel: "View Bookings",
-    actionHref: "/seller/booking",
-  },
-];
+export const SAMPLE_PRESET_NOTIFICATIONS: SellerNotificationItem[] = [];
 
 export function createSampleAlert(category: NotificationCategory): SellerNotificationItem {
   const randomId = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;

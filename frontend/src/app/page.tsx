@@ -351,7 +351,11 @@ export default function Home() {
         className="home-page-canvas"
       >
         {/* 1. Hero Section (Dynamic Search Autocomplete + Map Picker) */}
-        <HeroSection availableItems={homeData.foodItems} />
+        <HeroSection
+          availableItems={homeData.foodItems}
+          availableKitchens={homeData.kitchens}
+          availableRooms={homeData.rooms}
+        />
 
         {/* 2. Category Bar */}
         {categoryItems.length > 0 && (

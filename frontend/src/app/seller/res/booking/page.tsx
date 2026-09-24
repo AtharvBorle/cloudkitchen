@@ -61,8 +61,8 @@ export default function ResponsiveBookingPage() {
     }
   };
 
-  const mappedBookings: ResponsiveBookingItem[] | undefined = useMemo(() => {
-    if (!bookings || bookings.length === 0) return undefined;
+  const mappedBookings: ResponsiveBookingItem[] = useMemo(() => {
+    if (!bookings || bookings.length === 0) return [];
     return bookings.map((b: any) => {
       const checkInRaw = b.startDate || b.checkInDate || b.checkIn;
       const checkOutRaw = b.endDate || b.checkOutDate || b.checkOut;

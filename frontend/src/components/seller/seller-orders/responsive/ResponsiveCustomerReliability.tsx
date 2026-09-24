@@ -30,25 +30,25 @@ export interface ResponsiveCustomerReliabilityProps {
 }
 
 const DEFAULT_METRICS: CustomerReliabilityMetrics = {
-  ordersPlaced: 32,
-  delivered: 30,
-  cancelled: 2,
+  ordersPlaced: 0,
+  delivered: 0,
+  cancelled: 0,
   noShows: 0,
-  completionRate: "94%",
-  avgOrderValue: "₹780",
-  rating: "4.8",
-  customerSince: "Sep 2024",
+  completionRate: "100%",
+  avgOrderValue: "₹0",
+  rating: "5.0",
+  customerSince: "Recently",
 };
 
 export const ResponsiveCustomerReliability: React.FC<
   ResponsiveCustomerReliabilityProps
 > = ({
-  orderId = "#1234",
-  timeAgo = "12 min ago",
-  customerName = "Priya Mehta",
-  paymentType = "Prepaid",
-  itemCount = 3,
-  orderTotal = "₹850",
+  orderId = "",
+  timeAgo = "Just now",
+  customerName = "Customer",
+  paymentType = "COD",
+  itemCount = 0,
+  orderTotal = "₹0",
   metrics = DEFAULT_METRICS,
   onAccept,
   onDecline,

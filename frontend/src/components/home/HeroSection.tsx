@@ -13,14 +13,27 @@ import {
   History,
   TrendingUp,
   Sparkles,
+  Store,
+  Utensils,
+  BedDouble,
 } from "lucide-react";
 import { useLocation } from "@/components/location-provider";
 import { useRecentSearches } from "@/lib/useRecentSearches";
 import { HouseMapPicker } from "@/components/house-map-picker";
 
+interface SuggestionItem {
+  id: string;
+  title: string;
+  type: "dish" | "kitchen" | "room" | "tag";
+  subtitle?: string;
+  link?: string;
+}
+
 interface HeroSectionProps {
   onSearch?: (query: string, location?: string) => void;
-  availableItems?: Array<{ id: string; name: string; categoryName?: string }>;
+  availableItems?: Array<{ id: string; name: string; categoryName?: string; sellerTrackingId?: string }>;
+  availableKitchens?: Array<{ id: string; name: string; category?: string; trackingId?: string }>;
+  availableRooms?: Array<{ id: string; title: string; sellerCity?: string }>;
 }
 
 const QUICK_TAGS = [
@@ -43,7 +56,12 @@ const PRESET_LOCATIONS = [
   { name: "Kalyani Nagar, Pune", pincode: "411006" },
 ];
 
-export default function HeroSection({ onSearch, availableItems = [] }: HeroSectionProps) {
+export default function HeroSection({
+  onSearch,
+  availableItems = [],
+  availableKitchens = [],
+  availableRooms = [],
+}: HeroSectionProps) {
   const router = useRouter();
   const { defaultAddress, setGuestLocation, openLocationModal } = useLocation();
   const { recentSearches, addSearch, removeSearch, clearSearches, trendingSearches } = useRecentSearches();
@@ -92,28 +110,73 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Compute live match suggestions as user types
-  const liveSuggestions = React.useMemo(() => {
+  // Compute live match suggestions as user types across dishes, kitchens, and rooms
+  const liveSuggestions = React.useMemo<SuggestionItem[]>(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase().trim();
-    const suggestions: string[] = [];
+    const suggestions: SuggestionItem[] = [];
 
-    // Check available items
+    // 1. Check available dishes / food items
     availableItems.forEach((item) => {
-      if (item.name.toLowerCase().includes(q) && !suggestions.includes(item.name)) {
-        suggestions.push(item.name);
+      if (item.name.toLowerCase().includes(q)) {
+        if (!suggestions.some((s) => s.title.toLowerCase() === item.name.toLowerCase())) {
+          suggestions.push({
+            id: `food-${item.id}`,
+            title: item.name,
+            type: "dish",
+            subtitle: item.categoryName || "Dish",
+            link: item.sellerTrackingId ? `/shop/${item.sellerTrackingId}` : undefined,
+          });
+        }
       }
     });
 
-    // Check quick tags & presets
+    // 2. Check available kitchens / restaurants
+    availableKitchens.forEach((k) => {
+      if (k.name.toLowerCase().includes(q) || k.category?.toLowerCase().includes(q)) {
+        if (!suggestions.some((s) => s.title.toLowerCase() === k.name.toLowerCase())) {
+          suggestions.push({
+            id: `kitchen-${k.id}`,
+            title: k.name,
+            type: "kitchen",
+            subtitle: k.category || "Restaurant",
+            link: `/shop/${k.trackingId || k.id}`,
+          });
+        }
+      }
+    });
+
+    // 3. Check available rooms
+    availableRooms.forEach((r) => {
+      if (r.title.toLowerCase().includes(q) || r.sellerCity?.toLowerCase().includes(q)) {
+        if (!suggestions.some((s) => s.title.toLowerCase() === r.title.toLowerCase())) {
+          suggestions.push({
+            id: `room-${r.id}`,
+            title: r.title,
+            type: "room",
+            subtitle: r.sellerCity || "Room / Stay",
+            link: `/room-booking/${r.id}`,
+          });
+        }
+      }
+    });
+
+    // 4. Check quick tags
     QUICK_TAGS.forEach((tag) => {
-      if (tag.label.toLowerCase().includes(q) && !suggestions.includes(tag.label)) {
-        suggestions.push(tag.label);
+      if (tag.label.toLowerCase().includes(q)) {
+        if (!suggestions.some((s) => s.title.toLowerCase() === tag.label.toLowerCase())) {
+          suggestions.push({
+            id: `tag-${tag.id}`,
+            title: tag.label,
+            type: "tag",
+            subtitle: "Popular Search",
+          });
+        }
       }
     });
 
-    return suggestions.slice(0, 5);
-  }, [searchQuery, availableItems]);
+    return suggestions.slice(0, 7);
+  }, [searchQuery, availableItems, availableKitchens, availableRooms]);
 
   const executeSearch = (query: string, location?: string) => {
     const finalQuery = query.trim();
@@ -605,15 +668,20 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: "700", color: "#64748B", marginBottom: "8px" }}>
                     <Sparkles size={13} color="#FF6B00" />
-                    <span>SUGGESTED DISHES &amp; KITCHENS</span>
+                    <span>SUGGESTED DISHES, RESTAURANTS &amp; ROOMS</span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     {liveSuggestions.map((item) => (
                       <div
-                        key={item}
+                        key={item.id}
                         onClick={() => {
-                          setSearchQuery(item);
-                          executeSearch(item);
+                          if (item.link) {
+                            setIsSearchFocused(false);
+                            router.push(item.link);
+                          } else {
+                            setSearchQuery(item.title);
+                            executeSearch(item.title);
+                          }
                         }}
                         style={{
                           padding: "8px 12px",
@@ -624,14 +692,48 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
-                          gap: "8px",
+                          justifyContent: "space-between",
                           transition: "background-color 0.15s",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#FFF5EE")}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                       >
-                        <Search size={14} color="#94A3B8" />
-                        <span>{item}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          {item.type === "kitchen" ? (
+                            <Store size={15} color="#FF6B00" />
+                          ) : item.type === "room" ? (
+                            <BedDouble size={15} color="#3B82F6" />
+                          ) : item.type === "dish" ? (
+                            <Utensils size={15} color="#10B981" />
+                          ) : (
+                            <Search size={14} color="#94A3B8" />
+                          )}
+                          <span>{item.title}</span>
+                        </div>
+                        {item.subtitle && (
+                          <span
+                            style={{
+                              fontSize: "11.5px",
+                              fontWeight: "600",
+                              color:
+                                item.type === "kitchen"
+                                  ? "#EA580C"
+                                  : item.type === "room"
+                                  ? "#2563EB"
+                                  : "#64748B",
+                              backgroundColor:
+                                item.type === "kitchen"
+                                  ? "#FFF7ED"
+                                  : item.type === "room"
+                                  ? "#EFF6FF"
+                                  : "#F1F5F9",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                            }}
+                          >
+                            {item.subtitle}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

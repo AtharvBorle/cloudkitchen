@@ -12,6 +12,7 @@ import { Footer } from "@/components/explore-desktop/footer";
 import { ExploreMobileView } from "@/components/explore-desktop/explore-mobile";
 import { useHomeData } from "@/lib/useHomeData";
 import { useLocation } from "@/components/location-provider";
+import { SearchResultsSection } from "@/components/explore-desktop/search-results";
 import styles from "./page.module.css";
 import momentStyles from "@/components/explore-desktop/whats-on-your-mind/WhatsOnYourMind.module.css";
 import Link from "next/link";
@@ -85,10 +86,36 @@ function ExploreDesktopContent() {
     }));
   }, [homeData.categories]);
 
+  // Filtered Kitchens if user arrived via search or category filter
+  const filteredKitchens = useMemo(() => {
+    if (!categoryFilter && !searchQuery) return [];
+    let list = homeData.kitchens || [];
+    if (categoryFilter) {
+      const q = categoryFilter.toLowerCase();
+      list = list.filter(
+        (k) =>
+          k.category?.toLowerCase().includes(q) ||
+          k.name.toLowerCase().includes(q)
+      );
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (k) =>
+          k.name.toLowerCase().includes(q) ||
+          k.category?.toLowerCase().includes(q) ||
+          k.locality?.toLowerCase().includes(q) ||
+          k.city?.toLowerCase().includes(q) ||
+          k.pincode?.includes(q)
+      );
+    }
+    return list;
+  }, [homeData.kitchens, categoryFilter, searchQuery]);
+
   // Filtered Food Items if user arrived via search or category filter
   const filteredFoodItems = useMemo(() => {
-    if (!categoryFilter && !searchQuery) return null;
-    let list = homeData.foodItems;
+    if (!categoryFilter && !searchQuery) return [];
+    let list = homeData.foodItems || [];
     if (categoryFilter) {
       const q = categoryFilter.toLowerCase();
       list = list.filter(
@@ -99,16 +126,47 @@ function ExploreDesktopContent() {
       );
     }
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       list = list.filter(
         (f) =>
           f.name.toLowerCase().includes(q) ||
           f.description.toLowerCase().includes(q) ||
-          f.sellerName.toLowerCase().includes(q)
+          f.sellerName.toLowerCase().includes(q) ||
+          f.categoryName?.toLowerCase().includes(q)
       );
     }
     return list;
   }, [homeData.foodItems, categoryFilter, searchQuery]);
+
+  // Filtered Rooms if user arrived via search or category filter
+  const filteredRooms = useMemo(() => {
+    if (!categoryFilter && !searchQuery) return [];
+    let list = homeData.rooms || [];
+    if (categoryFilter) {
+      const q = categoryFilter.toLowerCase();
+      if (q === "rooms" || q === "room") return list;
+      list = list.filter(
+        (r) =>
+          r.title.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q) ||
+          r.sellerLocality?.toLowerCase().includes(q) ||
+          r.sellerCity?.toLowerCase().includes(q)
+      );
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (r) =>
+          r.title.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q) ||
+          r.sellerName.toLowerCase().includes(q) ||
+          r.sellerLocality?.toLowerCase().includes(q) ||
+          r.sellerCity?.toLowerCase().includes(q) ||
+          r.sellerPincode?.includes(q)
+      );
+    }
+    return list;
+  }, [homeData.rooms, categoryFilter, searchQuery]);
 
   return (
     <div className={styles.pageContainer}>
@@ -181,178 +239,15 @@ function ExploreDesktopContent() {
             </div>
           )}
 
-          {/* Active Filter Banner if filtered */}
-          {(categoryFilter || searchQuery) && (
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderRadius: "16px",
-                padding: "20px 24px",
-                marginBottom: "28px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
-                border: "1px solid #FFE6D0",
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#0F172A", margin: "0 0 4px 0" }}>
-                  Results for &quot;{categoryFilter || searchQuery}&quot;
-                </h2>
-                <p style={{ fontSize: "0.88rem", color: "#64748B", margin: 0 }}>
-                  Found {filteredFoodItems ? filteredFoodItems.length : 0} matching items
-                </p>
-              </div>
-              <Link
-                href="/explore-desktop"
-                style={{
-                  fontSize: "0.88rem",
-                  fontWeight: "600",
-                  color: "#FF6B00",
-                  textDecoration: "none",
-                  padding: "6px 14px",
-                  borderRadius: "8px",
-                  backgroundColor: "#FFF3EB",
-                }}
-              >
-                Clear Filter
-              </Link>
-            </div>
-          )}
-
-          {/* Filtered Grid if active */}
-          {filteredFoodItems && filteredFoodItems.length > 0 && (
-            <section style={{ marginBottom: "48px" }}>
-              <h3 style={{ fontSize: "1.4rem", fontWeight: "800", color: "#0F172A", marginBottom: "16px" }}>
-                Matching Dishes &amp; Kitchens
-              </h3>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                  gap: "20px",
-                }}
-              >
-                {filteredFoodItems.map((item) => {
-                  const isSellerClosed = item.sellerIsOnline === false;
-                  const isItemUnavailable = item.isAvailable === false;
-                  const isClosed = isSellerClosed || isItemUnavailable;
-
-                  return (
-                  <Link
-                    key={item.id}
-                    href={item.sellerTrackingId ? `/shop/${item.sellerTrackingId}` : `/explore-desktop?item=${item.id}`}
-                    style={{
-                      backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
-                      borderRadius: "18px",
-                      overflow: "hidden",
-                      border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
-                      boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
-                      textDecoration: "none",
-                      color: "inherit",
-                      display: "flex",
-                      flexDirection: "column",
-                      transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                      opacity: isClosed ? 0.85 : 1,
-                    }}
-                    className="hover-lift"
-                  >
-                    <div style={{ position: "relative", width: "100%", height: "160px", backgroundColor: "#F8FAFC" }}>
-                      <Image
-                        src={item.imageUrl || "/images/places/place-biryani.png"}
-                        alt={item.name}
-                        fill
-                        style={{
-                          objectFit: "cover",
-                          filter: isClosed ? "grayscale(100%)" : "none",
-                        }}
-                      />
-                      {isClosed && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: "rgba(15, 23, 42, 0.4)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            zIndex: 2,
-                          }}
-                        >
-                          <span
-                            style={{
-                              backgroundColor: "#0F172A",
-                              color: "#FFFFFF",
-                              fontSize: "11px",
-                              fontWeight: "800",
-                              letterSpacing: "0.8px",
-                              padding: "5px 12px",
-                              borderRadius: "14px",
-                              textTransform: "uppercase",
-                              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                              border: "1px solid rgba(255,255,255,0.2)",
-                            }}
-                          >
-                            {isSellerClosed ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "1rem", fontWeight: "700", color: isClosed ? "#64748B" : "#0F172A" }}>{item.name}</span>
-                        <span style={{ fontSize: "0.95rem", fontWeight: "800", color: isClosed ? "#94A3B8" : "#FF6B00" }}>₹{item.price}</span>
-                      </div>
-                      <span style={{ fontSize: "0.82rem", color: "#64748B" }}>
-                        {item.sellerName} {isSellerClosed ? "• (Not accepting orders)" : isItemUnavailable ? "• (Currently unavailable)" : ""}
-                      </span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            backgroundColor: isClosed ? "#F1F5F9" : "#E8FBF2",
-                            color: isClosed ? "#64748B" : "#10B981",
-                            padding: "2px 6px",
-                            borderRadius: "6px",
-                            fontSize: "0.78rem",
-                            fontWeight: "700",
-                          }}
-                        >
-                          <Star size={11} fill={isClosed ? "#64748B" : "#10B981"} />
-                          <span>{item.rating || 4.8}</span>
-                        </div>
-                        {item.distanceText && (
-                          <div
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "3px",
-                              backgroundColor: "#FFF3EB",
-                              color: "#FF6B00",
-                              padding: "2px 6px",
-                              borderRadius: "6px",
-                              fontSize: "0.78rem",
-                              fontWeight: "700",
-                            }}
-                          >
-                            <MapPin size={10} />
-                            <span>{item.distanceText}</span>
-                          </div>
-                        )}
-                        <span style={{ fontSize: "0.78rem", color: "#94A3B8" }}>• {item.categoryName}</span>
-                      </div>
-                    </div>
-                  </Link>
-                  );
-                })}
-              </div>
-            </section>
+          {/* Search Results Section if Search or Category filter is active */}
+          {(Boolean(categoryFilter) || Boolean(searchQuery)) && (
+            <SearchResultsSection
+              searchQuery={searchQuery || ""}
+              categoryFilter={categoryFilter || ""}
+              kitchens={filteredKitchens}
+              foodItems={filteredFoodItems}
+              rooms={filteredRooms}
+            />
           )}
 
           {/* 2. Explore Hero Banner */}
