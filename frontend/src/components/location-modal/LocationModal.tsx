@@ -69,6 +69,12 @@ export const LocationModal: React.FC = () => {
   );
 
   const [pincodeInput, setPincodeInput] = useState("");
+  const [selectedAreaInfo, setSelectedAreaInfo] = useState<{
+    pincode: string;
+    name: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [isLocatingGps, setIsLocatingGps] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -85,7 +91,10 @@ export const LocationModal: React.FC = () => {
 
   useEffect(() => {
     if (isLocationModalOpen && !isStaffOrSeller && !isNonCustomerRoute) {
-      setPincodeInput(defaultAddress?.pincode || "");
+      const pin = defaultAddress?.pincode || "";
+      setPincodeInput(pin);
+      const matched = POPULAR_AREAS.find((a) => a.pincode === pin) || null;
+      setSelectedAreaInfo(matched);
       setShowAddForm(false);
       setFeedback(null);
     }
@@ -340,11 +349,22 @@ export const LocationModal: React.FC = () => {
                   maxLength={6}
                   placeholder="Enter 6-digit Pincode (e.g. 411038)"
                   value={pincodeInput}
-                  onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setPincodeInput(val);
+                    const matched = POPULAR_AREAS.find((a) => a.pincode === val) || null;
+                    setSelectedAreaInfo(matched);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      handleApplyPincode(pincodeInput);
+                      if (pincodeInput.length === 6) {
+                        if (selectedAreaInfo && selectedAreaInfo.pincode === pincodeInput) {
+                          handleApplyPincode(selectedAreaInfo.pincode, selectedAreaInfo.name, selectedAreaInfo.lat, selectedAreaInfo.lng);
+                        } else {
+                          handleApplyPincode(pincodeInput);
+                        }
+                      }
                     }
                   }}
                   className={styles.pincodeInput}
@@ -354,7 +374,13 @@ export const LocationModal: React.FC = () => {
                 type="button"
                 className={styles.applyBtn}
                 disabled={pincodeInput.length !== 6}
-                onClick={() => handleApplyPincode(pincodeInput)}
+                onClick={() => {
+                  if (selectedAreaInfo && selectedAreaInfo.pincode === pincodeInput) {
+                    handleApplyPincode(selectedAreaInfo.pincode, selectedAreaInfo.name, selectedAreaInfo.lat, selectedAreaInfo.lng);
+                  } else {
+                    handleApplyPincode(pincodeInput);
+                  }
+                }}
               >
                 Apply
               </button>
@@ -363,7 +389,7 @@ export const LocationModal: React.FC = () => {
             {/* Quick Area Chips */}
             <div className={styles.chipsRow}>
               {POPULAR_AREAS.map((area) => {
-                const isActive = defaultAddress?.pincode === area.pincode;
+                const isActive = (selectedAreaInfo?.pincode === area.pincode) || (pincodeInput === area.pincode);
                 return (
                   <button
                     key={area.pincode}
@@ -371,7 +397,7 @@ export const LocationModal: React.FC = () => {
                     className={`${styles.chipBtn} ${isActive ? styles.chipBtnActive : ""}`}
                     onClick={() => {
                       setPincodeInput(area.pincode);
-                      handleApplyPincode(area.pincode, area.name, area.lat, area.lng);
+                      setSelectedAreaInfo(area);
                     }}
                   >
                     <MapPin size={12} />
