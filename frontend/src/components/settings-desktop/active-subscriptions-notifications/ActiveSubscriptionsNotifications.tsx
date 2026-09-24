@@ -11,6 +11,7 @@ import {
   saveNotificationsSummaryPreferences,
   NotificationsSummaryPreferences,
   NOTIFICATION_PREFERENCES_EVENT,
+  DEFAULT_NOTIFICATIONS_SUMMARY,
 } from "@/lib/user-notification-preferences";
 
 export const ActiveSubscriptionsNotifications: React.FC = () => {
@@ -18,11 +19,11 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
   const [activeSub, setActiveSub] = useState<UserActiveMealSubscription | null>(null);
   const [masterSubEnabled, setMasterSubEnabled] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [notifStates, setNotifStates] = useState<NotificationsSummaryPreferences>(() => {
-    return getNotificationsSummaryPreferences();
-  });
+  const [notifStates, setNotifStates] = useState<NotificationsSummaryPreferences>(
+    DEFAULT_NOTIFICATIONS_SUMMARY
+  );
 
-  // Sync with persistent storage on client mount and listen for updates
+  // Sync with persistent storage on client mount after initial hydration and listen for updates
   useEffect(() => {
     setNotifStates(getNotificationsSummaryPreferences());
 
@@ -239,11 +240,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.orderUpdates}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.orderUpdates ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -262,11 +265,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.promoOffers}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.promoOffers ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -285,11 +290,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.newMenu}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.newMenu ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -308,11 +315,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
               role="switch"
               aria-checked={notifStates.deliveryAlerts}
               tabIndex={0}
+              suppressHydrationWarning
             >
               <div
                 className={`${styles.switchThumb} ${
                   notifStates.deliveryAlerts ? styles.switchThumbActive : ""
                 }`}
+                suppressHydrationWarning
               />
             </div>
           </div>

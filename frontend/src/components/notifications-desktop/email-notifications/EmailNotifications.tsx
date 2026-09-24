@@ -40,9 +40,7 @@ const INITIAL_EMAIL_MAP: Record<string, boolean> = {
 };
 
 export const EmailNotifications: React.FC = () => {
-  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(() => {
-    return getGenericNotificationPreferences("email", INITIAL_EMAIL_MAP);
-  });
+  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(INITIAL_EMAIL_MAP);
 
   useEffect(() => {
     setToggleStates(getGenericNotificationPreferences("email", INITIAL_EMAIL_MAP));

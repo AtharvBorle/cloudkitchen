@@ -40,9 +40,7 @@ const INITIAL_SMS_MAP: Record<string, boolean> = {
 };
 
 export const SmsNotifications: React.FC = () => {
-  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(() => {
-    return getGenericNotificationPreferences("sms", INITIAL_SMS_MAP);
-  });
+  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(INITIAL_SMS_MAP);
 
   useEffect(() => {
     setToggleStates(getGenericNotificationPreferences("sms", INITIAL_SMS_MAP));

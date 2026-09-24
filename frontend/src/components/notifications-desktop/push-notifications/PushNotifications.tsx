@@ -56,9 +56,7 @@ const INITIAL_PUSH_MAP: Record<string, boolean> = {
 };
 
 export const PushNotifications: React.FC = () => {
-  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(() => {
-    return getGenericNotificationPreferences("push", INITIAL_PUSH_MAP);
-  });
+  const [toggleStates, setToggleStates] = useState<Record<string, boolean>>(INITIAL_PUSH_MAP);
 
   useEffect(() => {
     setToggleStates(getGenericNotificationPreferences("push", INITIAL_PUSH_MAP));
