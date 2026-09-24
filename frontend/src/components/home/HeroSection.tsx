@@ -122,8 +122,29 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
     }
     setIsSearchFocused(false);
 
+    // 1. Check if user typed or searched a 6-digit pincode
+    const pinMatch = finalQuery.match(/\b\d{6}\b/);
+    if (pinMatch) {
+      const pin = pinMatch[0];
+      setGuestLocation(pin);
+      setSelectedLocation(`PIN: ${pin}`);
+      if (onSearch) {
+        onSearch(finalQuery, location || `PIN: ${pin}`);
+      }
+      if (typeof window !== "undefined") {
+        const el = document.getElementById("places-section");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }
+      return;
+    }
+
+    // 2. If onSearch handler is provided (e.g. Home Page), invoke it and scroll in-place
     if (onSearch) {
       onSearch(finalQuery, location || selectedLocation);
+      if (typeof window !== "undefined") {
+        const el = document.getElementById("places-section");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }
     } else {
       const params = new URLSearchParams();
       if (finalQuery) params.set("query", finalQuery);

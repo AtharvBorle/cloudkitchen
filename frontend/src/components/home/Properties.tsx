@@ -33,6 +33,61 @@ const CUISINES = [
   { id: "south-indian", label: "South Indian" },
 ];
 
+const CUISINE_KEYWORDS: Record<string, string[]> = {
+  biryani: ["biryani", "mughlai", "indian", "rice", "curry", "kebab", "tandoor", "tikka", "hyderabadi", "dum", "pulao"],
+  homemeals: ["mess", "homemeal", "thali", "maharashtrian", "roti", "chapati", "dal", "sabzi", "sabji", "lunch", "dinner", "tiffin", "bhaat", "pithla", "poli", "khichdi"],
+  italian: ["italian", "pizza", "pasta", "garlic bread", "lasagna", "calzone", "crust", "cheese", "margherita", "parmesan", "oregano"],
+  healthy: ["healthy", "salad", "organic", "bowl", "smoothie", "fruit", "diet", "sprouts", "oats", "greens", "juice", "avocado", "keto"],
+  bakery: ["bakery", "cake", "dessert", "pastry", "brownie", "bread", "sweet", "croissant", "ice cream", "mousse", "cupcake", "donut", "cookies", "biscuit", "pie"],
+  fastfood: ["burger", "snack", "fast food", "fries", "sandwich", "wrap", "roll", "shawarma", "nuggets", "hot dog", "pao", "chaat", "samosa", "frankie"],
+  chinese: ["chinese", "noodle", "wok", "manchurian", "fried rice", "momos", "asian", "chilli", "schezwan", "hakka", "spring roll", "chowmein"],
+  "south-indian": ["south", "dosa", "idli", "vada", "uttapam", "sambar", "chutney", "appam", "medu vada", "mysore"],
+};
+
+function kitchenMatchesCuisine(
+  kitchen: PlaceCardData,
+  cuisineId: string,
+  foodItems: Array<any> = []
+): boolean {
+  const keywords = CUISINE_KEYWORDS[cuisineId] || [cuisineId];
+  const kText = `${kitchen.name || ""} ${kitchen.category || ""}`.toLowerCase();
+
+  // 1. Direct kitchen category / name keyword match
+  if (keywords.some((kw) => kText.includes(kw))) {
+    return true;
+  }
+
+  // 2. Kitchen child dishes keyword match
+  const dishes = foodItems.filter(
+    (f) =>
+      (kitchen.id && (f.sellerId === kitchen.id || f.sellerTrackingId === kitchen.id)) ||
+      (kitchen.kitchenId && (f.sellerId === kitchen.kitchenId || f.sellerTrackingId === kitchen.kitchenId)) ||
+      (kitchen.trackingId && (f.sellerId === kitchen.trackingId || f.sellerTrackingId === kitchen.trackingId))
+  );
+
+  return dishes.some((dish) => {
+    const dText = `${dish.name || ""} ${dish.categoryName || ""} ${dish.description || ""}`.toLowerCase();
+    return keywords.some((kw) => dText.includes(kw));
+  });
+}
+
+function getKitchenPrice(kitchen: PlaceCardData, foodItems: Array<any> = []): number {
+  if (kitchen.price && kitchen.price > 0) return kitchen.price;
+  const dishes = foodItems.filter(
+    (f) =>
+      (kitchen.id && (f.sellerId === kitchen.id || f.sellerTrackingId === kitchen.id)) ||
+      (kitchen.kitchenId && (f.sellerId === kitchen.kitchenId || f.sellerTrackingId === kitchen.kitchenId)) ||
+      (kitchen.trackingId && (f.sellerId === kitchen.trackingId || f.sellerTrackingId === kitchen.trackingId))
+  );
+  if (dishes.length > 0) {
+    const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
+    if (prices.length > 0) {
+      return Math.min(...prices);
+    }
+  }
+  return 199;
+}
+
 const DIETARY = [
   { id: "veg", label: "Pure Veg 🥦" },
   { id: "non-veg", label: "Non-Veg 🍗" },
@@ -42,9 +97,20 @@ const DIETARY = [
 
 interface PropertiesProps {
   places?: PlaceCardData[];
+  foodItems?: Array<{
+    id: string;
+    name: string;
+    price?: number;
+    categoryName?: string;
+    description?: string;
+    sellerId?: string;
+    sellerTrackingId?: string;
+    itemType?: string;
+  }>;
+  allKitchens?: PlaceCardData[];
 }
 
-export default function Properties({ places }: PropertiesProps) {
+export default function Properties({ places, foodItems = [] }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number>(1000);
@@ -52,62 +118,44 @@ export default function Properties({ places }: PropertiesProps) {
 
   const basePlaces = places || [];
 
-  // Compute dynamic cuisine counts from available places
+  // Compute dynamic cuisine counts from available places & dishes
   const dynamicCuisines = React.useMemo(() => {
     return CUISINES.map((c) => {
-      const matchCount = basePlaces.filter((p) => {
-        const cat = (p.category || "").toLowerCase();
-        const name = (p.name || "").toLowerCase();
-        if (c.id === "biryani") return cat.includes("biryani") || cat.includes("mughlai") || cat.includes("indian") || name.includes("biryani");
-        if (c.id === "homemeals") return cat.includes("mess") || cat.includes("homemeal") || cat.includes("thali") || cat.includes("maharashtrian");
-        if (c.id === "italian") return cat.includes("italian") || cat.includes("pizza") || name.includes("pizza");
-        if (c.id === "healthy") return cat.includes("healthy") || cat.includes("salad") || cat.includes("organic") || cat.includes("bowl");
-        if (c.id === "bakery") return cat.includes("bakery") || cat.includes("cake") || cat.includes("dessert");
-        if (c.id === "fastfood") return cat.includes("burger") || cat.includes("snack") || cat.includes("fast food");
-        if (c.id === "chinese") return cat.includes("chinese") || cat.includes("noodle") || cat.includes("wok");
-        if (c.id === "south-indian") return cat.includes("south") || cat.includes("dosa");
-        return cat.includes(c.id);
-      }).length;
+      const matchCount = basePlaces.filter((p) =>
+        kitchenMatchesCuisine(p, c.id, foodItems)
+      ).length;
       return {
         ...c,
         count: matchCount,
       };
     });
-  }, [basePlaces]);
+  }, [basePlaces, foodItems]);
 
   // Compute dynamic dietary counts
   const dynamicDietary = React.useMemo(() => {
     return DIETARY.map((d) => {
       const matchCount = basePlaces.filter((p) =>
-        isKitchenMatchingDiet({ foodType: p.foodType, category: p.category, name: p.name, id: p.id, trackingId: p.trackingId }, d.id)
+        isKitchenMatchingDiet(
+          { foodType: p.foodType, category: p.category, name: p.name, id: p.id, trackingId: p.trackingId },
+          d.id,
+          foodItems
+        )
       ).length;
       return {
         ...d,
         count: matchCount,
       };
     });
-  }, [basePlaces]);
+  }, [basePlaces, foodItems]);
 
   // Dynamically filter places
   const filteredPlaces = React.useMemo(() => {
     let list = basePlaces;
 
     if (selectedCuisines.length > 0) {
-      list = list.filter((p) => {
-        const cat = p.category.toLowerCase();
-        const name = p.name.toLowerCase();
-        return selectedCuisines.some((c) => {
-          if (c === "biryani") return cat.includes("biryani") || cat.includes("mughlai") || cat.includes("indian") || name.includes("biryani");
-          if (c === "homemeals") return cat.includes("mess") || cat.includes("homemeal") || cat.includes("thali") || cat.includes("maharashtrian");
-          if (c === "italian") return cat.includes("italian") || cat.includes("pizza") || name.includes("pizza");
-          if (c === "healthy") return cat.includes("healthy") || cat.includes("salad") || cat.includes("organic") || cat.includes("bowl");
-          if (c === "bakery") return cat.includes("bakery") || cat.includes("cake") || cat.includes("dessert");
-          if (c === "fastfood") return cat.includes("burger") || cat.includes("snack") || cat.includes("fast food");
-          if (c === "chinese") return cat.includes("chinese") || cat.includes("noodle") || cat.includes("wok");
-          if (c === "south-indian") return cat.includes("south") || cat.includes("dosa");
-          return cat.includes(c);
-        });
-      });
+      list = list.filter((p) =>
+        selectedCuisines.some((cId) => kitchenMatchesCuisine(p, cId, foodItems))
+      );
     }
 
     if (selectedDietary.length > 0) {
@@ -115,7 +163,8 @@ export default function Properties({ places }: PropertiesProps) {
         selectedDietary.some((diet) =>
           isKitchenMatchingDiet(
             { foodType: p.foodType, category: p.category, name: p.name, id: p.id, trackingId: p.trackingId },
-            diet
+            diet,
+            foodItems
           )
         )
       );
@@ -123,17 +172,20 @@ export default function Properties({ places }: PropertiesProps) {
 
     // Filter by price range (0 to 1000+)
     if (activePricePreset === "under-150") {
-      list = list.filter((p) => (p.price || 199) <= 150);
+      list = list.filter((p) => getKitchenPrice(p, foodItems) <= 150);
     } else if (activePricePreset === "150-400") {
-      list = list.filter((p) => (p.price || 199) >= 150 && (p.price || 199) <= 400);
+      list = list.filter((p) => {
+        const pr = getKitchenPrice(p, foodItems);
+        return pr >= 150 && pr <= 400;
+      });
     } else if (activePricePreset === "400-plus") {
-      list = list.filter((p) => (p.price || 199) >= 400);
+      list = list.filter((p) => getKitchenPrice(p, foodItems) >= 400);
     } else if (maxPrice < 1000) {
-      list = list.filter((p) => (p.price || 199) <= maxPrice);
+      list = list.filter((p) => getKitchenPrice(p, foodItems) <= maxPrice);
     }
 
     return list;
-  }, [basePlaces, selectedCuisines, selectedDietary, maxPrice, activePricePreset]);
+  }, [basePlaces, selectedCuisines, selectedDietary, maxPrice, activePricePreset, foodItems]);
 
   const displayPlaces = filteredPlaces;
 
@@ -168,6 +220,7 @@ export default function Properties({ places }: PropertiesProps) {
 
   return (
     <section
+      id="places-section"
       style={{
         width: "100%",
         background: "transparent",
