@@ -42,7 +42,6 @@ export interface DynamicFoodItem {
   rating?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
-  distanceKm?: number;
   isWithin5km?: boolean;
 }
 
@@ -95,6 +94,7 @@ export interface DynamicKitchen {
   imageUrl: string;
   category: string;
   locality?: string;
+  landmark?: string;
   city?: string;
   pincode?: string;
   latitude?: number | null;
@@ -105,9 +105,6 @@ export interface DynamicKitchen {
   isOnline: boolean;
   foodType?: string;
   servedPincodes?: string[];
-  latitude?: number;
-  longitude?: number;
-  distanceKm?: number;
   isWithin5km?: boolean;
 }
 

@@ -19,6 +19,7 @@ import {
   Star,
   LayoutGrid,
 } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./SellerSettings.module.css";
 
 export interface SellerSettingsData {
