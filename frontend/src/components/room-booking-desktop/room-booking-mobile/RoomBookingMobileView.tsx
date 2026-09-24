@@ -114,6 +114,9 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
         const cat = cap === 1 ? "single" : cap === 2 ? "shared" : cap >= 4 ? "hostel" : "flat";
 
         const tagsList: string[] = [];
+        if (r.distanceText) {
+          tagsList.push(r.distanceText);
+        }
         if (Array.isArray(r.amenities) && r.amenities.length > 0) {
           tagsList.push(...r.amenities.slice(0, 2).map((a: any) => (typeof a === "string" ? a : a.name || "")));
         }

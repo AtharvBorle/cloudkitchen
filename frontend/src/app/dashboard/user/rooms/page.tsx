@@ -66,18 +66,6 @@ export default function UserRoomsPage() {
                     }
                 }
 
-                if (activePin) {
-                    const cleanPin = activePin.trim();
-                    availableRooms = availableRooms.filter((room: any) => {
-                        if (room.sellerPincode && room.sellerPincode.trim() === cleanPin) return true;
-                        if (room.sellerLocality) {
-                            const locPins = room.sellerLocality.match(/\b\d{6}\b/g);
-                            if (locPins && locPins.includes(cleanPin)) return true;
-                        }
-                        return false;
-                    });
-                }
-
                 if (isMounted) {
                     setRooms(availableRooms);
                 }
@@ -114,6 +102,7 @@ export default function UserRoomsPage() {
             window.addEventListener("seller-status-updated", handleSync);
             window.addEventListener("cloudkitchen-new-notification", handleSync);
             window.addEventListener("storage", handleSync);
+            window.addEventListener("location-changed", handleSync);
             document.addEventListener("visibilitychange", handleVisibility);
         }
 
@@ -136,6 +125,7 @@ export default function UserRoomsPage() {
                 window.removeEventListener("seller-status-updated", handleSync);
                 window.removeEventListener("cloudkitchen-new-notification", handleSync);
                 window.removeEventListener("storage", handleSync);
+                window.removeEventListener("location-changed", handleSync);
                 document.removeEventListener("visibilitychange", handleVisibility);
             }
             if (bcStatus) {
@@ -162,9 +152,18 @@ export default function UserRoomsPage() {
         .map(room => {
             let distanceKm: number | undefined;
             let distanceText: string | undefined;
-            if (hasUserCoords && room.sellerLatitude != null && room.sellerLongitude != null) {
-                distanceKm = calculateDistanceKm(finalUserLat!, finalUserLng!, Number(room.sellerLatitude), Number(room.sellerLongitude));
-                distanceText = formatDistance(distanceKm);
+            let rLat = room.sellerLatitude ?? room.latitude ?? null;
+            let rLng = room.sellerLongitude ?? room.longitude ?? null;
+            if ((rLat === null || rLng === null) && room.sellerPincode) {
+                const pinCoords = getPincodeCoordinates(room.sellerPincode);
+                if (pinCoords) {
+                    rLat = pinCoords.lat;
+                    rLng = pinCoords.lng;
+                }
+            }
+            if (hasUserCoords && rLat != null && rLng != null) {
+                distanceKm = calculateDistanceKm(finalUserLat!, finalUserLng!, Number(rLat), Number(rLng));
+                distanceText = `${formatDistance(distanceKm)} away`;
             }
             return {
                 ...room,
@@ -173,27 +172,24 @@ export default function UserRoomsPage() {
             };
         })
         .filter(room => {
-            if (hasUserCoords && room.distanceKm !== undefined) {
-                if (room.distanceKm > MAX_DELIVERY_RADIUS_KM) return false;
-            } else if (defaultAddress?.pincode) {
-                const guestPin = defaultAddress.pincode.trim();
-                if (room.sellerPincode !== guestPin) return false;
-            }
-
+            if (!searchQuery.trim()) return true;
+            const q = searchQuery.toLowerCase().trim();
             return (
-                room.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                room.sellerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                room.sellerCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                room.sellerLocality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                room.sellerLandmark?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                room.sellerPincode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                room.description?.toLowerCase().includes(searchQuery.toLowerCase())
+                room.title?.toLowerCase().includes(q) ||
+                room.sellerName?.toLowerCase().includes(q) ||
+                room.sellerCity?.toLowerCase().includes(q) ||
+                room.sellerLocality?.toLowerCase().includes(q) ||
+                room.sellerLandmark?.toLowerCase().includes(q) ||
+                room.sellerPincode?.toLowerCase().includes(q) ||
+                room.description?.toLowerCase().includes(q)
             );
         })
         .sort((a, b) => {
             if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
                 return a.distanceKm - b.distanceKm;
             }
+            if (a.distanceKm !== undefined) return -1;
+            if (b.distanceKm !== undefined) return 1;
             return 0;
         });
 
