@@ -6,18 +6,38 @@ import Link from "next/link";
 import { Calendar, Bell, ArrowRight, UtensilsCrossed } from "lucide-react";
 import styles from "./ActiveSubscriptionsNotifications.module.css";
 import { fetchUserMealSubscriptions, UserActiveMealSubscription } from "@/lib/meal-subscriptions";
+import {
+  getNotificationsSummaryPreferences,
+  saveNotificationsSummaryPreferences,
+  NotificationsSummaryPreferences,
+  NOTIFICATION_PREFERENCES_EVENT,
+} from "@/lib/user-notification-preferences";
 
 export const ActiveSubscriptionsNotifications: React.FC = () => {
   const router = useRouter();
   const [activeSub, setActiveSub] = useState<UserActiveMealSubscription | null>(null);
   const [masterSubEnabled, setMasterSubEnabled] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [notifStates, setNotifStates] = useState<{ [key: string]: boolean }>({
-    orderUpdates: true,
-    promoOffers: false,
-    newMenu: true,
-    deliveryAlerts: true,
+  const [notifStates, setNotifStates] = useState<NotificationsSummaryPreferences>(() => {
+    return getNotificationsSummaryPreferences();
   });
+
+  // Sync with persistent storage on client mount and listen for updates
+  useEffect(() => {
+    setNotifStates(getNotificationsSummaryPreferences());
+
+    const handlePrefChange = () => {
+      setNotifStates(getNotificationsSummaryPreferences());
+    };
+
+    window.addEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+    window.addEventListener("storage", handlePrefChange);
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
+      window.removeEventListener("storage", handlePrefChange);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,8 +73,13 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
     };
   }, []);
 
-  const toggleNotif = (key: string) => {
-    setNotifStates((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleNotif = (key: keyof NotificationsSummaryPreferences) => {
+    setNotifStates((prev) => {
+      const nextVal = !prev[key];
+      const updated = { ...prev, [key]: nextVal };
+      saveNotificationsSummaryPreferences({ [key]: nextVal });
+      return updated;
+    });
   };
 
   const planName = activeSub?.plan?.name || "Meal Plan";
