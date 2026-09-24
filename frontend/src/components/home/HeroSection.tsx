@@ -13,14 +13,18 @@ import {
   History,
   TrendingUp,
   Sparkles,
+  Store,
+  Utensils,
 } from "lucide-react";
 import { useLocation } from "@/components/location-provider";
 import { useRecentSearches } from "@/lib/useRecentSearches";
 import { HouseMapPicker } from "@/components/house-map-picker";
+import { matchesSearchQuery } from "@/lib/dietary-filter";
 
 interface HeroSectionProps {
   onSearch?: (query: string, location?: string) => void;
   availableItems?: Array<{ id: string; name: string; categoryName?: string }>;
+  availableKitchens?: Array<{ id: string; name: string; category?: string; trackingId?: string }>;
 }
 
 const QUICK_TAGS = [
@@ -43,7 +47,11 @@ const PRESET_LOCATIONS = [
   { name: "Kalyani Nagar, Pune", pincode: "411006" },
 ];
 
-export default function HeroSection({ onSearch, availableItems = [] }: HeroSectionProps) {
+export default function HeroSection({
+  onSearch,
+  availableItems = [],
+  availableKitchens = [],
+}: HeroSectionProps) {
   const router = useRouter();
   const { defaultAddress, setGuestLocation, openLocationModal } = useLocation();
   const { recentSearches, addSearch, removeSearch, clearSearches, trendingSearches } = useRecentSearches();
@@ -92,28 +100,49 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Compute live match suggestions as user types
+  // Compute live match suggestions as user types (kitchens, dishes, and tags)
   const liveSuggestions = React.useMemo(() => {
     if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase().trim();
-    const suggestions: string[] = [];
+    const suggestions: Array<{ text: string; type: "kitchen" | "dish" | "tag"; category?: string }> = [];
+    const seen = new Set<string>();
 
-    // Check available items
+    // 1. Check available kitchen names (e.g. "Yash's Kitchen", "7/12 Cloud Kitchen", "Maa Ki Rasoi")
+    if (availableKitchens && availableKitchens.length > 0) {
+      availableKitchens.forEach((k) => {
+        if (k.name && matchesSearchQuery(k.name, searchQuery)) {
+          const key = k.name.toLowerCase().trim();
+          if (!seen.has(key)) {
+            seen.add(key);
+            suggestions.push({ text: k.name, type: "kitchen", category: k.category || "Cloud Kitchen" });
+          }
+        }
+      });
+    }
+
+    // 2. Check available items / dishes
     availableItems.forEach((item) => {
-      if (item.name.toLowerCase().includes(q) && !suggestions.includes(item.name)) {
-        suggestions.push(item.name);
+      if (item.name && matchesSearchQuery(item.name, searchQuery)) {
+        const key = item.name.toLowerCase().trim();
+        if (!seen.has(key)) {
+          seen.add(key);
+          suggestions.push({ text: item.name, type: "dish", category: item.categoryName });
+        }
       }
     });
 
-    // Check quick tags & presets
+    // 3. Check quick tags & presets
     QUICK_TAGS.forEach((tag) => {
-      if (tag.label.toLowerCase().includes(q) && !suggestions.includes(tag.label)) {
-        suggestions.push(tag.label);
+      if (matchesSearchQuery(tag.label, searchQuery)) {
+        const key = tag.label.toLowerCase().trim();
+        if (!seen.has(key)) {
+          seen.add(key);
+          suggestions.push({ text: tag.label, type: "tag" });
+        }
       }
     });
 
-    return suggestions.slice(0, 5);
-  }, [searchQuery, availableItems]);
+    return suggestions.slice(0, 6);
+  }, [searchQuery, availableItems, availableKitchens]);
 
   const executeSearch = (query: string, location?: string) => {
     const finalQuery = query.trim();
@@ -631,10 +660,10 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     {liveSuggestions.map((item) => (
                       <div
-                        key={item}
+                        key={`${item.type}-${item.text}`}
                         onClick={() => {
-                          setSearchQuery(item);
-                          executeSearch(item);
+                          setSearchQuery(item.text);
+                          executeSearch(item.text);
                         }}
                         style={{
                           padding: "8px 12px",
@@ -645,14 +674,48 @@ export default function HeroSection({ onSearch, availableItems = [] }: HeroSecti
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
+                          justifyContent: "space-between",
                           gap: "8px",
                           transition: "background-color 0.15s",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#FFF5EE")}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                       >
-                        <Search size={14} color="#94A3B8" />
-                        <span>{item}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {item.type === "kitchen" ? (
+                            <Store size={15} color="#FF6B00" />
+                          ) : item.type === "dish" ? (
+                            <Utensils size={15} color="#64748B" />
+                          ) : (
+                            <Search size={14} color="#94A3B8" />
+                          )}
+                          <span>{item.text}</span>
+                        </div>
+                        {item.type === "kitchen" && (
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: "700",
+                              color: "#FF6B00",
+                              backgroundColor: "#FFF3EB",
+                              padding: "2px 8px",
+                              borderRadius: "12px",
+                            }}
+                          >
+                            Kitchen
+                          </span>
+                        )}
+                        {item.type === "dish" && item.category && (
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: "500",
+                              color: "#94A3B8",
+                            }}
+                          >
+                            {item.category}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

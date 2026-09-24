@@ -19,7 +19,12 @@ import { useHomeData } from "@/lib/useHomeData";
 import { useLocation } from "@/components/location-provider";
 import { MapPin } from "lucide-react";
 import { Footer } from "@/components/explore-desktop/footer";
-import { isKitchenMatchingDiet, isDishMatchingDiet } from "@/lib/dietary-filter";
+import {
+  isKitchenMatchingDiet,
+  isDishMatchingDiet,
+  matchesKitchenOrDishSearch,
+  matchesDishSearch,
+} from "@/lib/dietary-filter";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
@@ -72,17 +77,11 @@ export default function Home() {
     }
     let list = homeData.kitchens;
 
-    // 0. Search query filter
+    // 0. Search query filter (matches kitchen name, category, or child dishes)
     if (homeSearchQuery) {
-      const q = homeSearchQuery.toLowerCase().trim();
-      list = list.filter((k) => {
-        if (k.name.toLowerCase().includes(q) || k.category?.toLowerCase().includes(q)) return true;
-        return homeData.foodItems.some(
-          (f) =>
-            (f.sellerId === k.id || f.sellerTrackingId === k.trackingId) &&
-            (f.name.toLowerCase().includes(q) || f.categoryName?.toLowerCase().includes(q) || f.description?.toLowerCase().includes(q))
-        );
-      });
+      list = list.filter((k) =>
+        matchesKitchenOrDishSearch(homeSearchQuery, k, homeData.foodItems)
+      );
     }
 
     // 1. Category Bar Filter
@@ -149,14 +148,7 @@ export default function Home() {
     let list = homeData.foodItems;
 
     if (homeSearchQuery) {
-      const q = homeSearchQuery.toLowerCase().trim();
-      list = list.filter(
-        (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.categoryName?.toLowerCase().includes(q) ||
-          f.description?.toLowerCase().includes(q) ||
-          f.sellerName?.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -212,14 +204,7 @@ export default function Home() {
     let list = homeData.foodItems;
 
     if (homeSearchQuery) {
-      const q = homeSearchQuery.toLowerCase().trim();
-      list = list.filter(
-        (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.categoryName?.toLowerCase().includes(q) ||
-          f.description?.toLowerCase().includes(q) ||
-          f.sellerName?.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -267,14 +252,7 @@ export default function Home() {
     let list = homeData.foodItems;
 
     if (homeSearchQuery) {
-      const q = homeSearchQuery.toLowerCase().trim();
-      list = list.filter(
-        (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.categoryName?.toLowerCase().includes(q) ||
-          f.description?.toLowerCase().includes(q) ||
-          f.sellerName?.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -317,14 +295,7 @@ export default function Home() {
     let list = homeData.foodItems;
 
     if (homeSearchQuery) {
-      const q = homeSearchQuery.toLowerCase().trim();
-      list = list.filter(
-        (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.categoryName?.toLowerCase().includes(q) ||
-          f.description?.toLowerCase().includes(q) ||
-          f.sellerName?.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishSearch(homeSearchQuery, f));
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
@@ -426,7 +397,11 @@ export default function Home() {
         className="home-page-canvas"
       >
         {/* 1. Hero Section (Dynamic Search Autocomplete + Map Picker) */}
-        <HeroSection availableItems={homeData.foodItems} onSearch={handleHomeSearch} />
+        <HeroSection
+          availableItems={homeData.foodItems}
+          availableKitchens={homeData.kitchens}
+          onSearch={handleHomeSearch}
+        />
 
         {/* Home Search Query Active Status Banner */}
         {homeSearchQuery && (

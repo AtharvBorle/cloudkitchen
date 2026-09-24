@@ -284,3 +284,147 @@ export function isKitchenMatchingDiet(
 
   return true;
 }
+
+/**
+ * Normalizes text for search matching:
+ * - Converts to lower case
+ * - Strips apostrophes / smart quotes (Yash's -> Yashs)
+ * - Converts symbols / punctuation to spaces
+ * - Collapses repeated whitespace
+ */
+export function normalizeSearchString(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .replace(/['’`]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Checks whether a target string (e.g. Kitchen Name, Dish Name) matches a user query.
+ * Matches:
+ * - Direct substring matches (case-insensitive)
+ * - Normalized matches (ignoring apostrophes, symbols, casing)
+ * - Singular/plural / possessive variations (e.g. 'yash' matches 'yashs', 'yashs' matches 'yash', 'yash's' matches 'yash')
+ * - Digit-only matches (e.g. '712' matches '7/12')
+ * - Word token / multi-word prefix matching
+ */
+export function matchesSearchQuery(
+  targetText: string | null | undefined,
+  query: string | null | undefined
+): boolean {
+  if (!query || !query.trim()) return true;
+  if (!targetText || !targetText.trim()) return false;
+
+  const rawTarget = targetText.toLowerCase().trim();
+  const rawQuery = query.toLowerCase().trim();
+
+  // 1. Exact or direct raw substring match
+  if (rawTarget.includes(rawQuery)) return true;
+
+  // 2. Normalized match (punctuation & apostrophes stripped)
+  const normTarget = normalizeSearchString(targetText);
+  const normQuery = normalizeSearchString(query);
+
+  if (!normQuery) return true;
+  if (normTarget.includes(normQuery)) return true;
+
+  // 3. Compact match (all spaces and symbols stripped, e.g. "7/12" vs "712", "cloudkitchen" vs "cloud kitchen")
+  const compactTarget = normTarget.replace(/\s+/g, "");
+  const compactQuery = normQuery.replace(/\s+/g, "");
+  if (compactTarget.includes(compactQuery) || compactQuery.includes(compactTarget)) return true;
+
+  // 4. Stemmed / possessive match (strip trailing 's')
+  const stem = (str: string) => str.replace(/\bs\b/g, "").replace(/s\b/g, "");
+  const stemmedTarget = stem(normTarget);
+  const stemmedQuery = stem(normQuery);
+  if (stemmedTarget.includes(stemmedQuery) || normTarget.includes(stemmedQuery)) return true;
+
+  // 5. Multi-token word match (all query words must match a part of target words)
+  const queryTokens = normQuery.split(" ").filter(Boolean);
+  const targetTokens = normTarget.split(" ").filter(Boolean);
+
+  if (queryTokens.length > 0) {
+    const allTokensMatch = queryTokens.every((qToken) => {
+      const qTokenStem = qToken.endsWith("s") ? qToken.slice(0, -1) : qToken;
+      return targetTokens.some((tToken) => {
+        const tTokenStem = tToken.endsWith("s") ? tToken.slice(0, -1) : tToken;
+        return (
+          tToken.includes(qToken) ||
+          (qTokenStem && tToken.includes(qTokenStem)) ||
+          (tTokenStem && qToken.includes(tTokenStem))
+        );
+      });
+    });
+    if (allTokensMatch) return true;
+  }
+
+  return false;
+}
+
+export function matchesDishSearch(
+  query: string | null | undefined,
+  dish: {
+    name?: string | null;
+    categoryName?: string | null;
+    description?: string | null;
+    sellerName?: string | null;
+  }
+): boolean {
+  if (!query || !query.trim()) return true;
+  return (
+    matchesSearchQuery(dish.name, query) ||
+    matchesSearchQuery(dish.categoryName, query) ||
+    matchesSearchQuery(dish.description, query) ||
+    matchesSearchQuery(dish.sellerName, query)
+  );
+}
+
+export function matchesKitchenOrDishSearch(
+  query: string | null | undefined,
+  kitchen: {
+    id?: string | null;
+    trackingId?: string | null;
+    name?: string | null;
+    category?: string | null;
+    foodType?: string | null;
+    locality?: string | null;
+  },
+  foodItems?: Array<{
+    sellerId?: string | null;
+    sellerTrackingId?: string | null;
+    sellerName?: string | null;
+    name?: string | null;
+    categoryName?: string | null;
+    description?: string | null;
+  }>
+): boolean {
+  if (!query || !query.trim()) return true;
+
+  // 1. Check kitchen metadata
+  if (
+    matchesSearchQuery(kitchen.name, query) ||
+    matchesSearchQuery(kitchen.category, query) ||
+    matchesSearchQuery(kitchen.foodType, query) ||
+    matchesSearchQuery(kitchen.locality, query)
+  ) {
+    return true;
+  }
+
+  // 2. Check child dishes
+  if (foodItems && foodItems.length > 0) {
+    const kitchenDishes = foodItems.filter(
+      (f) =>
+        (kitchen.id && f.sellerId === kitchen.id) ||
+        (kitchen.trackingId && f.sellerTrackingId === kitchen.trackingId) ||
+        (kitchen.id && f.sellerTrackingId === kitchen.id)
+    );
+
+    return kitchenDishes.some((d) => matchesDishSearch(query, d));
+  }
+
+  return false;
+}
+

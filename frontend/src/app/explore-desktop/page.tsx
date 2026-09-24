@@ -17,7 +17,13 @@ import momentStyles from "@/components/explore-desktop/whats-on-your-mind/WhatsO
 import Link from "next/link";
 import Image from "next/image";
 import { Star, MapPin } from "lucide-react";
-import { isKitchenMatchingDiet, isDishMatchingDiet } from "@/lib/dietary-filter";
+import {
+  isKitchenMatchingDiet,
+  isDishMatchingDiet,
+  matchesKitchenOrDishSearch,
+  matchesDishSearch,
+  matchesSearchQuery,
+} from "@/lib/dietary-filter";
 
 function ExploreDesktopContent() {
   const searchParams = useSearchParams();
@@ -39,6 +45,9 @@ function ExploreDesktopContent() {
   const dynamicReels = useMemo(() => {
     if (!homeData.kitchens || homeData.kitchens.length === 0) return undefined;
     let list = homeData.kitchens;
+    if (searchQuery) {
+      list = list.filter((k) => matchesKitchenOrDishSearch(searchQuery, k, homeData.foodItems));
+    }
     if (selectedDiet && selectedDiet !== "all") {
       list = list.filter((k) => isKitchenMatchingDiet(k, selectedDiet, homeData.foodItems));
     }
@@ -49,7 +58,7 @@ function ExploreDesktopContent() {
       image: k.imageUrl || "/images/places/place-biryani.png",
       kitchenId: k.trackingId || k.id,
     }));
-  }, [homeData.kitchens, homeData.foodItems, selectedDiet]);
+  }, [homeData.kitchens, homeData.foodItems, selectedDiet, searchQuery]);
 
   // Dynamic Featured Collections from food items
   const dynamicCollections = useMemo(() => {
@@ -112,22 +121,15 @@ function ExploreDesktopContent() {
     if (!categoryFilter && !searchQuery && selectedDiet === "all") return null;
     let list = homeData.foodItems;
     if (categoryFilter) {
-      const q = categoryFilter.toLowerCase();
       list = list.filter(
         (f) =>
-          f.categoryName?.toLowerCase().includes(q) ||
-          f.name.toLowerCase().includes(q) ||
-          f.description.toLowerCase().includes(q)
+          matchesSearchQuery(f.categoryName, categoryFilter) ||
+          matchesSearchQuery(f.name, categoryFilter) ||
+          matchesSearchQuery(f.description, categoryFilter)
       );
     }
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.description.toLowerCase().includes(q) ||
-          f.sellerName.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishSearch(searchQuery, f));
     }
     if (selectedDiet && selectedDiet !== "all") {
       list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
