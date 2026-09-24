@@ -71,18 +71,28 @@ function RoomBookingContent() {
     loadRooms();
   }, []);
 
-  // Derive unique locations dynamically from DB rooms
+  // Derive unique locations dynamically from DB rooms with live room counts
   const availableLocations = useMemo(() => {
-    const locSet = new Set<string>();
+    const locMap = new Map<string, number>();
     allRooms.forEach((r) => {
+      const candidates: string[] = [];
       if (r.sellerLocality) {
         const clean = r.sellerLocality.split(",")[0].trim();
-        if (clean.length < 30) locSet.add(clean);
+        if (clean.length < 30) candidates.push(clean);
       }
-      if (r.sellerCity) locSet.add(r.sellerCity);
-      if (r.sellerPincode) locSet.add(`PIN: ${r.sellerPincode}`);
+      if (r.sellerCity) candidates.push(r.sellerCity);
+      if (r.sellerPincode) candidates.push(`PIN: ${r.sellerPincode}`);
+
+      candidates.forEach((name) => {
+        locMap.set(name, (locMap.get(name) || 0) + 1);
+      });
     });
-    return Array.from(locSet);
+
+    return Array.from(locMap.entries()).map(([name, count]) => ({
+      name,
+      count,
+      label: count > 1 ? `${name} (${count} stays)` : `${name} (1 stay)`,
+    }));
   }, [allRooms]);
 
   // Dynamic multi-dimensional filtering & nearest distance calculation

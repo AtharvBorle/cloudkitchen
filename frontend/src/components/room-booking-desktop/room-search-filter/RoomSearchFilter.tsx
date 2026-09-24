@@ -19,11 +19,17 @@ import { HouseMapPicker } from "@/components/house-map-picker";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
 import styles from "./RoomSearchFilter.module.css";
 
+export interface LocationStatItem {
+  name: string;
+  count?: number;
+  label?: string;
+}
+
 export interface RoomSearchFilterProps {
   location?: string;
   budget?: string;
   roomType?: string;
-  availableLocations?: string[];
+  availableLocations?: Array<string | LocationStatItem>;
   onLocationChange?: (location: string, coords?: { lat: number; lng: number } | null) => void;
   onBudgetChange?: (budget: string) => void;
   onRoomTypeChange?: (roomType: string) => void;
@@ -111,10 +117,31 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
   const isFiltered = location !== "all" || budget !== "all" || roomType !== "all";
 
   // Dynamic non-static locations derived strictly from actual live room listings
-  const dynamicLocations = Array.from(new Set(availableLocations.filter(Boolean)));
+  const normalizedLocations: LocationStatItem[] = React.useMemo(() => {
+    const seen = new Set<string>();
+    const list: LocationStatItem[] = [];
+    availableLocations.forEach((item) => {
+      if (!item) return;
+      if (typeof item === "string") {
+        const key = item.trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          list.push({ name: item, label: item });
+        }
+      } else if (item.name) {
+        const key = item.name.trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          list.push(item);
+        }
+      }
+    });
+    return list;
+  }, [availableLocations]);
 
-  const filteredDynamicLocations = dynamicLocations.filter((loc) =>
-    loc.toLowerCase().includes(searchLocationInput.toLowerCase().trim())
+  const filteredDynamicLocations = normalizedLocations.filter((item) =>
+    item.name.toLowerCase().includes(searchLocationInput.toLowerCase().trim()) ||
+    (item.label && item.label.toLowerCase().includes(searchLocationInput.toLowerCase().trim()))
   );
 
   // 1. Handle selection of custom typed area or pincode
@@ -509,14 +536,17 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
 
               {/* 4. Filtered Dynamic Listing Areas */}
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                {filteredDynamicLocations.map((loc) => {
-                  const isSelected = location && location.toLowerCase() === loc.toLowerCase();
+                {filteredDynamicLocations.map((item) => {
+                  const isSelected =
+                    location &&
+                    (location.toLowerCase() === item.name.toLowerCase() ||
+                      location.toLowerCase() === item.label?.toLowerCase());
                   return (
                     <button
-                      key={loc}
+                      key={item.name}
                       type="button"
                       onClick={() => {
-                        handleSelectCustomLocation(loc);
+                        handleSelectCustomLocation(item.name);
                       }}
                       style={{
                         width: "100%",
@@ -535,7 +565,10 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
                         transition: "background 0.15s ease",
                       }}
                     >
-                      <span>{loc}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <MapPin size={13} color={isSelected ? "#EA580C" : "#94A3B8"} />
+                        <span>{item.label || item.name}</span>
+                      </div>
                       {isSelected && <Check size={15} color="#EA580C" strokeWidth={2.5} />}
                     </button>
                   );
@@ -543,8 +576,10 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
 
                 {/* Custom Search Option if user typed arbitrary text */}
                 {searchLocationInput.trim() &&
-                  !dynamicLocations.some(
-                    (d) => d.toLowerCase() === searchLocationInput.toLowerCase().trim()
+                  !normalizedLocations.some(
+                    (d) =>
+                      d.name.toLowerCase() === searchLocationInput.toLowerCase().trim() ||
+                      (d.label && d.label.toLowerCase() === searchLocationInput.toLowerCase().trim())
                   ) && (
                     <button
                       type="button"
