@@ -202,8 +202,14 @@ export default function ConfirmRegistrationPage() {
           : "/seller/registration-submitted";
         router.push(nextUrl);
       } else {
-        if (res.status === 409) {
-          setErrorMessage("An account with this email address already exists. Please sign in to your existing account.");
+        const lowerMsg = (data?.message || data?.error || "").toLowerCase();
+        if (
+          res.status === 409 ||
+          lowerMsg.includes("already exist") ||
+          lowerMsg.includes("already registered") ||
+          lowerMsg.includes("account with this email")
+        ) {
+          setErrorMessage("An account with this email address already exists. Please sign in to your existing account or use a different email.");
         } else {
           setErrorMessage(data?.message || data?.error || "Registration could not be completed. Please check your details and try again.");
         }

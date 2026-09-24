@@ -301,10 +301,27 @@ export default function SignUpRightComponent({
         }
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || "Registration failed. Please try again.");
+        let errMsg = data.message || data.error || "Registration failed. Please try again.";
+        const lower = errMsg.toLowerCase();
+        if (
+          res.status === 409 ||
+          lower.includes("already exist") ||
+          lower.includes("already registered") ||
+          lower.includes("user already exists") ||
+          lower.includes("account with this email") ||
+          lower.includes("email already in use")
+        ) {
+          errMsg = "This email address is already registered. Please sign in or use another email.";
+          setEmailError("This email address is already registered. Please sign in or use another email.");
+        }
+        setError(errMsg);
       }
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+      const msg = err.message || "Something went wrong. Please try again.";
+      if (msg.toLowerCase().includes("already exist") || msg.toLowerCase().includes("already registered")) {
+        setEmailError("This email address is already registered. Please sign in or use another email.");
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

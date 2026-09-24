@@ -136,9 +136,17 @@ export const ResponsiveAddAgent: React.FC<ResponsiveAddAgentProps> = ({
         }, 800);
       } else {
         const errorData = await res.json().catch(() => null);
-        setErrorMessage(
-          errorData?.message || errorData?.error || "Failed to add delivery agent. Please try again."
-        );
+        let errMsg = errorData?.message || errorData?.error || "Failed to add delivery agent. Please try again.";
+        const lower = errMsg.toLowerCase();
+        if (
+          res.status === 409 ||
+          lower.includes("already in use") ||
+          lower.includes("already exist") ||
+          lower.includes("already registered")
+        ) {
+          errMsg = "This email address is already registered to an existing account. Please use a different email.";
+        }
+        setErrorMessage(errMsg);
       }
     } catch (err: any) {
       console.error("Error creating agent:", err);

@@ -160,11 +160,20 @@ export default function AgentCanvas({
           }
         }, 800);
       } else {
-        setErrorMessage(
+        let errMsg =
           resData?.message ||
-            resData?.error ||
-            "Failed to add delivery partner. Please verify details."
-        );
+          resData?.error ||
+          "Failed to add delivery partner. Please verify details.";
+        const lower = errMsg.toLowerCase();
+        if (
+          res.status === 409 ||
+          lower.includes("already in use") ||
+          lower.includes("already exist") ||
+          lower.includes("already registered")
+        ) {
+          errMsg = "This email address is already registered to an existing account. Please use a different email.";
+        }
+        setErrorMessage(errMsg);
       }
     } catch (err: any) {
       console.error("Error creating delivery agent:", err);

@@ -83,8 +83,13 @@ export default function SuperadminDashboard() {
                 setNewName(""); setNewEmail(""); setNewPhone(""); setNewPassword(""); setNewRole("AGENT");
                 fetchAdmins();
             } else {
-                const data = await res.json();
-                alert(data.message || "Failed to create admin");
+                const data = await res.json().catch(() => ({}));
+                let errMsg = data.message || data.error || "Failed to create admin";
+                const lower = errMsg.toLowerCase();
+                if (res.status === 409 || lower.includes("already exist") || lower.includes("already registered") || lower.includes("email already in use")) {
+                    errMsg = "A user with this email address already exists. Please use a different email.";
+                }
+                alert(errMsg);
             }
         } catch (error) {
             console.error("Error creating admin");
@@ -151,7 +156,13 @@ export default function SuperadminDashboard() {
                 setEditingAdmin(null);
                 fetchAdmins();
             } else {
-                alert("Failed to update admin");
+                const data = await res.json().catch(() => ({}));
+                let errMsg = data.message || data.error || "Failed to update admin";
+                const lower = errMsg.toLowerCase();
+                if (res.status === 409 || lower.includes("already exist") || lower.includes("already registered") || lower.includes("email already in use")) {
+                    errMsg = "A user with this email address already exists. Please use a different email.";
+                }
+                alert(errMsg);
             }
         } catch (error) {
             console.error("Error updating admin");
