@@ -241,14 +241,46 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
             </span>
             <span className={styles.filterValue}>{getLocationLabel()}</span>
           </div>
-          <ChevronDown
-            size={18}
-            className={styles.chevronIcon}
-            style={{
-              transform: openDropdown === "location" ? "rotate(180deg)" : "none",
-              color: openDropdown === "location" ? "#EA580C" : undefined,
-            }}
-          />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            {location && location !== "all" && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onLocationChange) onLocationChange("all", null);
+                  setSearchLocationInput("");
+                }}
+                style={{
+                  background: "#F1F5F9",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "22px",
+                  height: "22px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#64748B",
+                  padding: 0,
+                  transition: "all 0.2s ease",
+                }}
+                title="Clear location (reset to all)"
+                aria-label="Clear location"
+              >
+                <X size={13} />
+              </button>
+            )}
+
+            <ChevronDown
+              size={18}
+              className={styles.chevronIcon}
+              style={{
+                transform: openDropdown === "location" ? "rotate(180deg)" : "none",
+                color: openDropdown === "location" ? "#EA580C" : undefined,
+              }}
+            />
+          </div>
 
           {/* Location Dropdown Modal */}
           {openDropdown === "location" && (
@@ -274,6 +306,62 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
               <div style={{ padding: "6px 10px 4px 10px", fontSize: "11px", fontWeight: "700", color: "#94A3B8", textTransform: "uppercase" }}>
                 Select Location
               </div>
+
+              {/* Active Selection Banner with Clear Action */}
+              {location && location !== "all" && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "6px 10px",
+                    marginBottom: "6px",
+                    backgroundColor: "#FFF7ED",
+                    borderRadius: "8px",
+                    border: "1px solid #FFEDD5",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+                    <MapPin size={13} color="#EA580C" style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "#EA580C",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                      title={location}
+                    >
+                      {location}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onLocationChange) onLocationChange("all", null);
+                      setSearchLocationInput("");
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#EA580C",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "2px",
+                      padding: "2px 4px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <X size={12} />
+                    <span>Clear</span>
+                  </button>
+                </div>
+              )}
 
               {/* 1. All Locations Option */}
               <button
@@ -364,8 +452,8 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
                 </button>
               </div>
 
-              {/* 3. Live Search Input */}
-              <div style={{ padding: "4px 2px 8px 2px", position: "relative" }}>
+              {/* 3. Live Search Input with Erase / Clear Button */}
+              <div style={{ padding: "4px 2px 8px 2px", position: "relative", display: "flex", alignItems: "center" }}>
                 <Search size={14} style={{ position: "absolute", left: "12px", top: "13px", color: "#94A3B8" }} />
                 <input
                   type="text"
@@ -374,7 +462,7 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
                   placeholder="Search area, city or pincode..."
                   style={{
                     width: "100%",
-                    padding: "7px 10px 7px 30px",
+                    padding: "7px 28px 7px 30px",
                     fontSize: "12.5px",
                     borderRadius: "8px",
                     border: "1.5px solid #E2E8F0",
@@ -391,6 +479,32 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
                     }
                   }}
                 />
+                {searchLocationInput && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchLocationInput("");
+                    }}
+                    style={{
+                      position: "absolute",
+                      right: "8px",
+                      top: "10px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "2px",
+                      color: "#94A3B8",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    title="Clear search text"
+                    aria-label="Clear search text"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
 
               {/* 4. Filtered Dynamic Listing Areas */}
