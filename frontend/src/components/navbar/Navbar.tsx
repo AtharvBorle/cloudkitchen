@@ -33,6 +33,7 @@ import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
 import { MobileSidebar } from "@/components/mobile-sidebar";
+import { CustomerNotificationBell } from "@/components/notifications";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
 import profilePic from "./Rectangle.jpg";
@@ -748,6 +749,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className={styles.cartBadge}>{currentCartCount}</span>
               )}
             </button>
+
+            {/* Customer Notifications Center Bell */}
+            <CustomerNotificationBell />
 
             {/* Profile Avatar with Hover Dropdown (Desktop Only) */}
             <div
