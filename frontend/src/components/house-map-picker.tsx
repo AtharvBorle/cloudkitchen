@@ -71,9 +71,10 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
                 });
                 mapRef.current = map;
 
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                    maxZoom: 19,
+                L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 20,
                 }).addTo(map);
 
                 const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
@@ -89,22 +90,45 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
                 const updateCoords = async (newLat: number, newLng: number) => {
                     if (!isMountedRef.current) return;
                     try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            const address = data.address || {};
-                            
-                            // Extract address parts intelligently
-                            const pincode = address.postcode || "";
-                            const street = address.road || address.suburb || address.neighbourhood || address.city_district || "";
-                            const landmark = address.amenity || address.shop || address.commercial || address.retail || address.suburb || "";
-                            const houseNumber = address.house_number || address.building || "";
-                            
-                            if (isMountedRef.current) {
-                                onChange(newLat, newLng, { pincode, street, landmark, houseNumber });
+                        let pincode = "";
+                        let street = "";
+                        let landmark = "";
+                        let houseNumber = "";
+
+                        // Primary: Nominatim OpenStreetMap
+                        try {
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`, {
+                                headers: { "Accept-Language": "en" }
+                            });
+                            if (res.ok) {
+                                const data = await res.json();
+                                const address = data.address || {};
+                                pincode = address.postcode || "";
+                                street = address.road || address.suburb || address.neighbourhood || address.city_district || "";
+                                landmark = address.amenity || address.shop || address.commercial || address.retail || address.suburb || "";
+                                houseNumber = address.house_number || address.building || "";
                             }
-                        } else if (isMountedRef.current) {
-                            onChange(newLat, newLng);
+                        } catch (nomErr) {
+                            console.warn("Nominatim reverse geocode fallback:", nomErr);
+                        }
+
+                        // Secondary fallback: BigDataCloud Reverse Geocoding
+                        if (!pincode && !street) {
+                            try {
+                                const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${newLat}&longitude=${newLng}&localityLanguage=en`);
+                                if (bdcRes.ok) {
+                                    const bdcData = await bdcRes.json();
+                                    pincode = bdcData.postcode || "";
+                                    street = bdcData.locality || bdcData.city || "";
+                                    landmark = bdcData.principalSubdivision || "";
+                                }
+                            } catch (bdcErr) {
+                                console.warn("BigDataCloud reverse geocode fallback:", bdcErr);
+                            }
+                        }
+
+                        if (isMountedRef.current) {
+                            onChange(newLat, newLng, { pincode, street, landmark, houseNumber });
                         }
                     } catch (e) {
                         console.error("Reverse geocoding error in HouseMapPicker:", e);
