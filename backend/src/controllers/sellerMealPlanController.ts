@@ -381,11 +381,18 @@ export const updateSellerMealPlan = async (req: Request) => {
     };
 };
 
-export const deleteSellerMealPlan = async (req: Request) => {
+export const toggleSellerMealPlanStatus = async (req: Request, paramId?: string) => {
     const { sellerProfile } = await getAuthenticatedSellerProfile();
 
+    let body: any = {};
+    try {
+        body = await req.json();
+    } catch {
+        // empty body
+    }
+
     const url = new URL(req.url);
-    const planId = url.searchParams.get("id");
+    const planId = paramId || body.id || body.planId || url.searchParams.get("id");
 
     if (!planId) {
         throw new ApiError("Plan ID is required", 400);
@@ -397,6 +404,69 @@ export const deleteSellerMealPlan = async (req: Request) => {
 
     if (!existingPlan) {
         throw new ApiError("Meal subscription plan could not be found or you do not have permission to access it.", 404);
+    }
+
+    let newStatus = "Live";
+    if (body.status !== undefined) {
+        const s = String(body.status).toLowerCase();
+        newStatus = s === "live" || s === "active" || s === "true" ? "Live" : "Inactive";
+    } else if (body.isActive !== undefined) {
+        newStatus = body.isActive ? "Live" : "Inactive";
+    } else {
+        newStatus = existingPlan.status === "Live" ? "Inactive" : "Live";
+    }
+
+    const updated = await db.sellerMealPlan.update({
+        where: { id: planId },
+        data: { status: newStatus }
+    });
+
+    return {
+        id: updated.id,
+        name: updated.name,
+        status: updated.status,
+        isActive: updated.status === "Live",
+        message: updated.status === "Live"
+            ? "Meal subscription plan activated successfully. Users can now view and subscribe to it."
+            : "Meal subscription plan inactivated successfully. It is now hidden from users.",
+    };
+};
+
+export const deleteSellerMealPlan = async (req: Request, paramId?: string) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+
+    const url = new URL(req.url);
+    const planId = paramId || url.searchParams.get("id");
+
+    if (!planId) {
+        throw new ApiError("Plan ID is required", 400);
+    }
+
+    const existingPlan = await db.sellerMealPlan.findFirst({
+        where: { id: planId, sellerId: sellerProfile.id },
+        include: {
+            userSubscriptions: {
+                where: {
+                    status: "ACTIVE",
+                    OR: [
+                        { endDate: null },
+                        { endDate: { gte: new Date() } }
+                    ]
+                }
+            }
+        }
+    });
+
+    if (!existingPlan) {
+        throw new ApiError("Meal subscription plan could not be found or you do not have permission to access it.", 404);
+    }
+
+    const activeSubscribersCount = existingPlan.userSubscriptions.length;
+    if (activeSubscribersCount > 0) {
+        throw new ApiError(
+            `Cannot delete this meal subscription plan because it currently has ${activeSubscribersCount} active subscriber(s). Please set the plan status to 'Inactive' instead so no new users can subscribe, and you can delete it once all existing subscriptions have completed.`,
+            400
+        );
     }
 
     await db.sellerMealPlan.delete({

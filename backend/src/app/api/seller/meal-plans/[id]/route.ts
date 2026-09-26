@@ -29,7 +29,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const data = await deleteSellerMealPlan(req);
+        const { id } = await params;
+        const data = await deleteSellerMealPlan(req, id);
         return successResponse(data, "Meal subscription plan deleted successfully", 200);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

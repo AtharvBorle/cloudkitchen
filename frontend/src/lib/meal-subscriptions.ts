@@ -19,7 +19,7 @@ export interface MealSubscriptionPlan {
   mealTimings: string[];
   subscribersCount: number;
   monthlyRevenue: string;
-  status: "Live" | "Draft" | "Paused";
+  status: "Live" | "Draft" | "Paused" | "Inactive" | string;
   deployedDate: string;
   allowCancel?: boolean;
   pauseBillingPeriod?: string;
@@ -347,28 +347,87 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
   return null;
 }
 
-export async function deleteMealPlan(id: string): Promise<boolean> {
-  const existing = getStoredMealPlans();
-  const filtered = existing.filter((p) => p.id !== id && p.planId !== id);
-
+export async function deleteMealPlan(id: string): Promise<{ success: boolean; message?: string }> {
   try {
-    await fetchApi(`/api/seller/meal-plans?id=${encodeURIComponent(id)}`, {
+    const res = await fetchApi(`/api/seller/meal-plans/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
-  } catch (err) {
-    console.error("Error deleting meal plan from backend DB:", err);
-  }
-
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(filtered));
-      window.dispatchEvent(new Event("meal-plans-updated"));
-    } catch (e) {
-      console.error("Failed to delete meal plan cache:", e);
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        message: data.message || data.error || "Cannot delete this plan because active subscriptions exist.",
+      };
     }
-  }
 
-  return true;
+    const existing = getStoredMealPlans();
+    const filtered = existing.filter((p) => p.id !== id && p.planId !== id);
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(filtered));
+        window.dispatchEvent(new Event("meal-plans-updated"));
+      } catch (e) {
+        console.error("Failed to delete meal plan cache:", e);
+      }
+    }
+
+    return { success: true, message: data.message || "Meal subscription plan deleted successfully" };
+  } catch (err: any) {
+    console.error("Error deleting meal plan from backend DB:", err);
+    return { success: false, message: err.message || "Network error while deleting meal plan." };
+  }
+}
+
+export async function toggleMealPlanStatus(
+  id: string,
+  newStatus?: "Live" | "Inactive" | string
+): Promise<{ success: boolean; plan?: MealSubscriptionPlan; message?: string }> {
+  try {
+    const res = await fetchApi(`/api/seller/meal-plans/${encodeURIComponent(id)}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: newStatus }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        message: data.message || data.error || "Failed to update plan status.",
+      };
+    }
+
+    const updatedData = data.data || data;
+    const finalStatus = updatedData.status || newStatus || "Live";
+
+    const existing = getStoredMealPlans();
+    const targetIndex = existing.findIndex((p) => p.id === id || p.planId === id);
+    let updatedPlan: MealSubscriptionPlan | null = null;
+
+    if (targetIndex !== -1) {
+      existing[targetIndex] = {
+        ...existing[targetIndex],
+        status: finalStatus,
+      };
+      updatedPlan = existing[targetIndex];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(existing));
+          window.dispatchEvent(new Event("meal-plans-updated"));
+        } catch {}
+      }
+    }
+
+    return {
+      success: true,
+      plan: updatedPlan || undefined,
+      message: data.message || (finalStatus === "Live" ? "Plan activated" : "Plan inactivated"),
+    };
+  } catch (err: any) {
+    console.error("Error toggling meal plan status:", err);
+    return { success: false, message: err.message || "Network error while toggling plan status." };
+  }
 }
 
 export function getStoredMealSubscribers(): MealSubscriber[] {
