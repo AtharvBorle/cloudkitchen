@@ -650,24 +650,26 @@ export default function ManageSubscriptionCanvas() {
               >
                 <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
                   <span style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>
-                    {plan.monthlyPrice}
+                    {plan.weeklyPrice || plan.monthlyPrice}
                   </span>
                   <span style={{ fontSize: "12.5px", color: "#64748B", fontWeight: 500 }}>
-                    / month
+                    {plan.duration === "1 Week" ? "/ week" : plan.duration === "2 Weeks" ? "/ 2 weeks" : plan.duration === "1 Month" ? "/ month" : `/${plan.duration || "cycle"}`}
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginTop: "6px",
-                    fontSize: "11.5px",
-                    color: "#64748B",
-                  }}
-                >
-                  <span>Quarterly: {plan.quarterlyPrice}</span>
-                  <span>Yearly: {plan.yearlyPrice}</span>
-                </div>
+                {Boolean(plan.duration && !plan.duration.toLowerCase().includes("week") && plan.quarterlyPrice && plan.yearlyPrice) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: "6px",
+                      fontSize: "11.5px",
+                      color: "#64748B",
+                    }}
+                  >
+                    <span>Quarterly: {plan.quarterlyPrice}</span>
+                    <span>Yearly: {plan.yearlyPrice}</span>
+                  </div>
+                )}
               </div>
 
               {/* Inclusions List */}

@@ -249,9 +249,18 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             operatingHours: parsed.operatingHours || prev.operatingHours,
           }));
         }
+
+        const savedPrefs = localStorage.getItem("seller_settings_preferences");
+        if (savedPrefs) {
+          const parsed = JSON.parse(savedPrefs);
+          setFormData((prev) => ({
+            ...prev,
+            ...parsed,
+          }));
+        }
       }
     } catch (e) {
-      console.error("Error reading saved regional settings:", e);
+      console.error("Error reading saved settings from localStorage:", e);
     }
   }, []);
 
@@ -554,10 +563,16 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       if (title) {
         showNotificationToast(title, nextVal);
       }
-      return {
+      const updated = {
         ...prev,
         [field]: nextVal,
       };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("seller_settings_preferences", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
     });
   };
 
@@ -592,9 +607,13 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               operatingHours: formData.operatingHours,
             })
           );
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify(formData)
+          );
         }
       } catch (err) {
-        console.error("Failed to save regional settings to localStorage:", err);
+        console.error("Failed to save settings to localStorage:", err);
       }
 
       // 2. Persist Restaurant Information, Card Photo & Banner to backend database
@@ -1074,7 +1093,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   }}
                 >
                   <img
-                    src={bannerPreview || "/images/places/place-pizza.png"}
+                    src={bannerPreview || "/images/default-store-banner.jpg"}
                     alt="Storefront Banner Preview"
                     style={{
                       width: "100%",
@@ -1083,7 +1102,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                       display: "block",
                     }}
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "/images/places/place-pizza.png";
+                      (e.currentTarget as HTMLImageElement).src = "/images/default-store-banner.jpg";
                     }}
                   />
                   <div
@@ -1547,10 +1566,18 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   quietHoursEnd: formData.quietHoursEnd,
                 }}
                 onChange={(field, value) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    [field]: value,
-                  }));
+                  setFormData((prev) => {
+                    const updated = {
+                      ...prev,
+                      [field]: value,
+                    };
+                    if (typeof window !== "undefined") {
+                      try {
+                        localStorage.setItem("seller_settings_preferences", JSON.stringify(updated));
+                      } catch {}
+                    }
+                    return updated;
+                  });
                 }}
                 onToggle={(field) => {
                   setFormData((prev) => {
@@ -1559,10 +1586,16 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     if (title) {
                       showNotificationToast(title, nextVal);
                     }
-                    return {
+                    const updated = {
                       ...prev,
                       [field]: nextVal,
                     };
+                    if (typeof window !== "undefined") {
+                      try {
+                        localStorage.setItem("seller_settings_preferences", JSON.stringify(updated));
+                      } catch {}
+                    }
+                    return updated;
                   });
                 }}
               />

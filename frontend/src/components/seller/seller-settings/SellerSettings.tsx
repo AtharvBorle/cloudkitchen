@@ -576,7 +576,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
                 }}
               >
                 <img
-                  src={bannerPreview || "/images/places/place-pizza.png"}
+                  src={bannerPreview || "/images/default-store-banner.jpg"}
                   alt="Storefront Banner Preview"
                   style={{
                     width: "100%",
@@ -585,7 +585,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
                     display: "block",
                   }}
                   onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = "/images/places/place-pizza.png";
+                    (e.currentTarget as HTMLImageElement).src = "/images/default-store-banner.jpg";
                   }}
                 />
                 <div

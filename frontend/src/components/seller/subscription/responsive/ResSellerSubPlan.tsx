@@ -136,14 +136,21 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   };
 
   const handleDeploy = async () => {
+    const parsedPrice = parseFloat(price);
+    if (!price.trim() || isNaN(parsedPrice) || parsedPrice <= 0) {
+      alert(`Please enter a valid positive Price (₹) greater than 0 for ${duration}.`);
+      return;
+    }
+
     const validFeatures = features.map((f) => f.trim()).filter((f) => f.length > 0);
+    const isWeekly = duration.toLowerCase().includes("week");
     const payload = {
       name: planName.trim() || "Bronze Plan",
       tier: planTier.trim() || "Bronze",
       weeklyPrice: price.trim() || "0",
-      monthlyPrice: `₹${((parseFloat(price) || 0) * 4).toFixed(0)}`,
-      quarterlyPrice: `₹${((parseFloat(price) || 0) * 12 * 0.9).toFixed(0)}`,
-      yearlyPrice: `₹${((parseFloat(price) || 0) * 52 * 0.8).toFixed(0)}`,
+      monthlyPrice: `₹${((parsedPrice || 0) * 4).toFixed(0)}`,
+      quarterlyPrice: isWeekly ? "" : `₹${((parsedPrice || 0) * 12 * 0.9).toFixed(0)}`,
+      yearlyPrice: isWeekly ? "" : `₹${((parsedPrice || 0) * 52 * 0.8).toFixed(0)}`,
       duration,
       features: validFeatures,
       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
@@ -303,10 +310,21 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                   id="weeklyPrice"
                   type="number"
                   inputMode="decimal"
+                  min="0"
                   className={`${styles.input} ${styles.priceInput}`}
                   placeholder={`Price for ${duration}`}
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || (!isNaN(Number(val)) && Number(val) >= 0)) {
+                      setPrice(val);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </div>
               <p style={{ fontSize: "11px", color: "#64748B", margin: "4px 0 0 0" }}>

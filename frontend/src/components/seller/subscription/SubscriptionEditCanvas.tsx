@@ -272,13 +272,22 @@ export default function SubscriptionEditCanvas({
   const handleAddTimingItem = handleAddMealTiming;
 
   const handleSave = async () => {
+    const parsedPrice = parseFloat(formData.monthlyPrice.replace(/[^\d.]/g, ""));
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      setSaveStatus("Please enter a valid positive price greater than 0");
+      setTimeout(() => setSaveStatus(null), 3500);
+      return;
+    }
+
     if (targetPlanId) {
+      const isWeekly = formData.planDuration.toLowerCase().includes("week");
       await updateMealPlan(targetPlanId, {
         name: formData.planName,
         tier: formData.planTier,
+        weeklyPrice: String(parsedPrice),
         monthlyPrice: formData.monthlyPrice,
-        quarterlyPrice: formData.quarterlyPrice,
-        yearlyPrice: formData.yearlyPrice,
+        quarterlyPrice: isWeekly ? "" : formData.quarterlyPrice,
+        yearlyPrice: isWeekly ? "" : formData.yearlyPrice,
         duration: formData.planDuration,
         features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
         mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
@@ -736,7 +745,7 @@ export default function SubscriptionEditCanvas({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
+                gridTemplateColumns: formData.planDuration.toLowerCase().includes("week") ? "1fr" : "1fr 1fr 1fr",
                 gap: "16px",
                 width: "100%",
               }}
@@ -756,7 +765,17 @@ export default function SubscriptionEditCanvas({
                   type="text"
                   placeholder={`Price for ${formData.planDuration || "1 Week"}`}
                   value={formData.monthlyPrice}
-                  onChange={(e) => handleTextChange("monthlyPrice", e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val.includes("-")) {
+                      handleTextChange("monthlyPrice", val);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                      e.preventDefault();
+                    }
+                  }}
                   style={{
                     width: "100%",
                     borderRadius: "8px",
@@ -772,65 +791,89 @@ export default function SubscriptionEditCanvas({
                 />
               </div>
 
-              {/* Quarterly Price */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label
-                  style={{
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    color: "#0F172A",
-                  }}
-                >
-                  Quarterly Price
-                </label>
-                <input
-                  type="text"
-                  value={formData.quarterlyPrice}
-                  onChange={(e) => handleTextChange("quarterlyPrice", e.target.value)}
-                  style={{
-                    width: "100%",
-                    borderRadius: "8px",
-                    border: "1px solid #E2E8F0",
-                    padding: "10px 14px",
-                    fontSize: "13.5px",
-                    color: "#0F172A",
-                    backgroundColor: "#FFFFFF",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
-              </div>
+              {/* Quarterly Price - only for non-weekly */}
+              {!formData.planDuration.toLowerCase().includes("week") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label
+                    style={{
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      color: "#0F172A",
+                    }}
+                  >
+                    Quarterly Price
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.quarterlyPrice}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val.includes("-")) {
+                        handleTextChange("quarterlyPrice", val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                        e.preventDefault();
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      borderRadius: "8px",
+                      border: "1px solid #E2E8F0",
+                      padding: "10px 14px",
+                      fontSize: "13.5px",
+                      color: "#0F172A",
+                      backgroundColor: "#FFFFFF",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+              )}
 
-              {/* Yearly Price */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label
-                  style={{
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    color: "#0F172A",
-                  }}
-                >
-                  Yearly Price
-                </label>
-                <input
-                  type="text"
-                  value={formData.yearlyPrice}
-                  onChange={(e) => handleTextChange("yearlyPrice", e.target.value)}
-                  style={{
-                    width: "100%",
-                    borderRadius: "8px",
-                    border: "1px solid #E2E8F0",
-                    padding: "10px 14px",
-                    fontSize: "13.5px",
-                    color: "#0F172A",
-                    backgroundColor: "#FFFFFF",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
-              </div>
+              {/* Yearly Price - only for non-weekly */}
+              {!formData.planDuration.toLowerCase().includes("week") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label
+                    style={{
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      color: "#0F172A",
+                    }}
+                  >
+                    Yearly Price
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.yearlyPrice}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val.includes("-")) {
+                        handleTextChange("yearlyPrice", val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                        e.preventDefault();
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      borderRadius: "8px",
+                      border: "1px solid #E2E8F0",
+                      padding: "10px 14px",
+                      fontSize: "13.5px",
+                      color: "#0F172A",
+                      backgroundColor: "#FFFFFF",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

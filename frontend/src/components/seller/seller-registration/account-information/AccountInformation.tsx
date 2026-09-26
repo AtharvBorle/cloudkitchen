@@ -51,7 +51,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
   const emailCheck = validateEmail(formData.email);
   const isEmailValid = emailCheck.isValid;
   const isEmailEmpty = formData.email.trim().length === 0;
-  const isEmailError = touched.email && !isEmailValid;
+  const isEmailError = !isEmailEmpty ? !isEmailValid : Boolean(touched.email && !isEmailValid);
 
   const phoneDigits = formData.phone;
   const phoneLength = phoneDigits.length;
@@ -71,6 +71,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
       saveSellerDraft({ [name]: value });
       return next;
     });
+    setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
