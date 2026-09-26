@@ -46,6 +46,7 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
     { name: "Seller-Orders", description: "Live order processing, rider assignment, and customer review responses" },
     { name: "Seller-Delivery", description: "In-house delivery rider roster, cash collection (COD), and ledger" },
     { name: "Seller-Subscriptions", description: "Platform subscription tiers, Razorpay payment verification, and coupons" },
+    { name: "Seller-Notifications", description: "Real-time order alerts, inventory notifications, system messages, preferences, and counter badges" },
     { name: "Delivery-Rider", description: "Rider task dashboard, route details, COD collection, and transactions" },
     { name: "Coupons-Discounts", description: "Discount coupon validation and management" },
     { name: "Refunds-Disputes", description: "Order cancellation and refund tracking" },
@@ -2002,6 +2003,277 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
         },
         responses: {
           200: { description: "Coupon validation result", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+        }
+      }
+    },
+
+    // ==========================================
+    // 10B. SELLER NOTIFICATION APIS (MOBILE & WEB)
+    // ==========================================
+    "/api/seller/notifications": {
+      get: {
+        tags: ["Seller-Notifications"],
+        summary: "Get Seller Notifications",
+        description: "Fetch real-time notifications for the authenticated seller including new orders, low stock items, delivery updates, meal subscriptions, customer reviews, and KYC alerts.",
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: "category",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: ["all", "orders", "stock", "delivery", "bookings", "reviews", "settlements", "system"],
+              default: "all"
+            },
+            description: "Filter notifications by category"
+          },
+          {
+            name: "severity",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: ["all", "critical", "warning", "info", "success"]
+            },
+            description: "Filter notifications by severity level"
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: {
+              type: "integer",
+              default: 60
+            },
+            description: "Maximum number of notifications to return"
+          }
+        ],
+        responses: {
+          200: {
+            description: "Seller notifications payload",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    data: {
+                      type: "object",
+                      properties: {
+                        unreadCount: { type: "integer", example: 4 },
+                        totalCount: { type: "integer", example: 28 },
+                        filteredCount: { type: "integer", example: 12 },
+                        countsByCategory: {
+                          type: "object",
+                          properties: {
+                            all: { type: "integer", example: 28 },
+                            orders: { type: "integer", example: 12 },
+                            stock: { type: "integer", example: 3 },
+                            delivery: { type: "integer", example: 5 },
+                            bookings: { type: "integer", example: 2 },
+                            reviews: { type: "integer", example: 4 },
+                            settlements: { type: "integer", example: 1 },
+                            system: { type: "integer", example: 1 }
+                          }
+                        },
+                        notifications: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: { type: "string", example: "ord-new-cm8190xyz" },
+                              category: { type: "string", enum: ["orders", "stock", "delivery", "bookings", "reviews", "settlements", "system"], example: "orders" },
+                              title: { type: "string", example: "New Order Received #ORD-90XYZ" },
+                              message: { type: "string", example: "Order for ₹450 (3 items) received from Aman Sharma." },
+                              details: { type: "string", example: "Payment: ONLINE • Status: Paid" },
+                              timestamp: { type: "string", format: "date-time", example: "2026-09-26T10:15:00.000Z" },
+                              timeAgo: { type: "string", example: "5m ago" },
+                              isRead: { type: "boolean", example: false },
+                              severity: { type: "string", enum: ["critical", "warning", "info", "success"], example: "success" },
+                              actionLabel: { type: "string", example: "View Order" },
+                              actionHref: { type: "string", example: "/seller/orders?id=cm8190xyz" },
+                              metadata: { type: "object" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          401: { description: "Unauthorized / Missing Bearer token", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      patch: {
+        tags: ["Seller-Notifications"],
+        summary: "Mark Notification(s) as Read",
+        description: "Mark a single notification, multiple notifications, or all notifications as read.",
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  id: { type: "string", example: "ord-new-cm8190xyz", description: "Single notification ID to mark as read" },
+                  ids: { type: "array", items: { type: "string" }, example: ["ord-new-1", "stock-2"], description: "Multiple IDs to mark as read" },
+                  markAllRead: { type: "boolean", example: true, description: "Set true to mark all seller notifications as read" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: "Notifications marked as read", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+        }
+      }
+    },
+    "/api/seller/notifications/count": {
+      get: {
+        tags: ["Seller-Notifications"],
+        summary: "Get Notification & Badge Count",
+        description: "Lightweight endpoint optimized for mobile app badge counters, bell icons, and background polling.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Badge counters count summary",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    data: {
+                      type: "object",
+                      properties: {
+                        unreadCount: { type: "integer", example: 5 },
+                        pendingOrders: { type: "integer", example: 3 },
+                        lowStockItems: { type: "integer", example: 2 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/seller/notifications/preferences": {
+      get: {
+        tags: ["Seller-Notifications"],
+        summary: "Get Notification Preferences",
+        description: "Retrieve communication channels (Push, SMS, Email, WhatsApp, Sound) and alert subscription settings.",
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Current preferences",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    data: {
+                      type: "object",
+                      properties: {
+                        channels: {
+                          type: "object",
+                          properties: {
+                            push: { type: "boolean", example: true },
+                            sms: { type: "boolean", example: true },
+                            email: { type: "boolean", example: true },
+                            whatsapp: { type: "boolean", example: false },
+                            soundEnabled: { type: "boolean", example: true }
+                          }
+                        },
+                        alerts: {
+                          type: "object",
+                          properties: {
+                            orderAlerts: { type: "boolean", example: true },
+                            outForDeliveryAlert: { type: "boolean", example: true },
+                            lowStockAlert: { type: "boolean", example: true },
+                            bookingRequestAlert: { type: "boolean", example: true },
+                            negativeReviewAlert: { type: "boolean", example: true },
+                            closingReminder30Min: { type: "boolean", example: true }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          tags: ["Seller-Notifications"],
+          summary: "Update Notification Preferences",
+          description: "Update push notifications, sounds, SMS alerts, and specific category toggles.",
+          security: [{ BearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    channels: {
+                      type: "object",
+                      properties: {
+                        push: { type: "boolean", example: true },
+                        sms: { type: "boolean", example: true },
+                        email: { type: "boolean", example: true },
+                        whatsapp: { type: "boolean", example: true },
+                        soundEnabled: { type: "boolean", example: true }
+                      }
+                    },
+                    alerts: {
+                      type: "object",
+                      properties: {
+                        orderAlerts: { type: "boolean", example: true },
+                        outForDeliveryAlert: { type: "boolean", example: true },
+                        lowStockAlert: { type: "boolean", example: true },
+                        bookingRequestAlert: { type: "boolean", example: true },
+                        negativeReviewAlert: { type: "boolean", example: true },
+                        closingReminder30Min: { type: "boolean", example: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: { description: "Preferences updated successfully", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+          }
+        }
+      }
+    },
+    "/api/seller/notifications/{id}": {
+      patch: {
+        tags: ["Seller-Notifications"],
+        summary: "Mark Single Notification as Read",
+        description: "Marks a specific notification ID as read.",
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" }, example: "ord-new-cm8190xyz" }
+        ],
+        responses: {
+          200: { description: "Notification marked read", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+        }
+      },
+      delete: {
+        tags: ["Seller-Notifications"],
+        summary: "Dismiss / Delete Notification",
+        description: "Dismisses a notification from the seller's active view.",
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" }, example: "ord-new-cm8190xyz" }
+        ],
+        responses: {
+          200: { description: "Notification dismissed", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
         }
       }
     },
