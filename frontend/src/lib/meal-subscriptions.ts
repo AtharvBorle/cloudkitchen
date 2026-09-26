@@ -82,17 +82,20 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     ? rawPlan.weeklyPrice
     : `₹${weeklyNum.toFixed(0)}`;
 
+  const dur = (rawPlan.duration || "1 Week").toLowerCase();
+  const isWeekly = dur.includes("week");
+
   const monthlyStr = rawPlan.monthlyPrice
     ? (String(rawPlan.monthlyPrice).startsWith("₹") ? rawPlan.monthlyPrice : `₹${rawPlan.monthlyPrice}`)
-    : `₹${(weeklyNum * 4).toFixed(0)}`;
+    : (isWeekly ? `₹${weeklyNum.toFixed(0)}` : `₹${(weeklyNum * 4).toFixed(0)}`);
 
   const quarterlyStr = rawPlan.quarterlyPrice
     ? (String(rawPlan.quarterlyPrice).startsWith("₹") ? rawPlan.quarterlyPrice : `₹${rawPlan.quarterlyPrice}`)
-    : `₹${(weeklyNum * 12 * 0.9).toFixed(0)}`;
+    : "";
 
   const yearlyStr = rawPlan.yearlyPrice
     ? (String(rawPlan.yearlyPrice).startsWith("₹") ? rawPlan.yearlyPrice : `₹${rawPlan.yearlyPrice}`)
-    : `₹${(weeklyNum * 52 * 0.8).toFixed(0)}`;
+    : "";
 
   let features = rawPlan.features || [];
   if (typeof features === "string") {
@@ -255,8 +258,8 @@ export async function saveMealPlan(
         description: "",
         weeklyPrice: priceNum,
         monthlyPrice: planData.monthlyPrice ? parseFloat(String(planData.monthlyPrice).replace(/[^\d.]/g, "")) : priceNum * 4,
-        quarterlyPrice: planData.quarterlyPrice ? parseFloat(String(planData.quarterlyPrice).replace(/[^\d.]/g, "")) : priceNum * 12 * 0.9,
-        yearlyPrice: planData.yearlyPrice ? parseFloat(String(planData.yearlyPrice).replace(/[^\d.]/g, "")) : priceNum * 52 * 0.8,
+        quarterlyPrice: planData.quarterlyPrice ? parseFloat(String(planData.quarterlyPrice).replace(/[^\d.]/g, "")) : null,
+        yearlyPrice: planData.yearlyPrice ? parseFloat(String(planData.yearlyPrice).replace(/[^\d.]/g, "")) : null,
         duration: planData.duration || "1 Week",
         features: planData.features || [],
         mealTimings: planData.mealTimings || [],

@@ -250,20 +250,18 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
 
             {/* Header / Banner Area */}
             <div style={{ backgroundColor: '#555A5D', color: 'white', padding: '60px 20px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-                {seller.bannerImageUrl && (
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, opacity: 0.4 }}>
-                        <img
-                            src={seller.bannerImageUrl}
-                            alt="Banner"
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                filter: !seller.isOnline ? 'grayscale(100%)' : 'none',
-                            }}
-                        />
-                    </div>
-                )}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, opacity: 0.4 }}>
+                    <img
+                        src={seller.bannerImageUrl || "/images/default-store-banner.jpg"}
+                        alt="Banner"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            filter: !seller.isOnline ? 'grayscale(100%)' : 'none',
+                        }}
+                    />
+                </div>
 
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '10px' }}>{seller.businessName || seller.user.name}</h1>

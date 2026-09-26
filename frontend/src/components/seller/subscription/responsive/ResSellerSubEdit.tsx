@@ -221,16 +221,23 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   };
 
   const handleSave = async () => {
+    const numPrice = parseFloat(price.replace(/[^\d.]/g, ""));
+    if (isNaN(numPrice) || numPrice <= 0) {
+      setToastMessage("Please enter a valid positive price greater than 0");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
     const validFeatures = features.map((f) => f.trim()).filter((f) => f.length > 0);
+    const isWeekly = duration.toLowerCase().includes("week");
     if (targetPlanId) {
-      const numPrice = parseFloat(price.replace(/[^\d.]/g, "")) || 0;
       await updateMealPlan(targetPlanId, {
         name: planName.trim() || "Bronze Plan",
         tier: planTier.trim() || "Bronze",
-        weeklyPrice: price.trim().startsWith("₹") ? price.trim() : `₹${price.trim()}`,
+        weeklyPrice: `₹${numPrice.toFixed(0)}`,
         monthlyPrice: `₹${(numPrice * 4).toFixed(0)}`,
-        quarterlyPrice: `₹${(numPrice * 12 * 0.9).toFixed(0)}`,
-        yearlyPrice: `₹${(numPrice * 52 * 0.8).toFixed(0)}`,
+        quarterlyPrice: isWeekly ? "" : `₹${(numPrice * 12 * 0.9).toFixed(0)}`,
+        yearlyPrice: isWeekly ? "" : `₹${(numPrice * 52 * 0.8).toFixed(0)}`,
         duration,
         features: validFeatures,
         mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
@@ -434,7 +441,17 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                   className={`${styles.input} ${styles.priceInput}`}
                   placeholder={`Price for ${duration}`}
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val.includes("-")) {
+                      setPrice(val);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </div>
               <p style={{ fontSize: "11px", color: "#64748B", margin: "4px 0 0 0" }}>

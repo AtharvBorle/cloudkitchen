@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { uploadImage } from "@/lib/upload";
 import { ApiError } from "@/lib/api-error";
 import jwt from "jsonwebtoken";
+import { validateEmail } from "@/lib/email-validation";
 
 export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
@@ -224,7 +225,11 @@ export const registerUser = async (req: Request) => {
         finalPhone = phoneDigits;
     }
 
-    finalEmail = finalEmail.toLowerCase().trim();
+    const emailCheck = validateEmail(finalEmail);
+    if (!emailCheck.isValid) {
+        throw new ApiError(emailCheck.error || "Please enter a valid email address.", 400);
+    }
+    finalEmail = emailCheck.normalizedEmail;
 
     const existingUser = await db.user.findUnique({
         where: { email: finalEmail },
@@ -232,11 +237,18 @@ export const registerUser = async (req: Request) => {
     });
 
     if (existingUser) {
-        if (existingUser.sellerProfile) {
-            console.error("User and seller profile already exists:", finalEmail);
-            throw new ApiError("An account with this email already exists. Please login instead.", 409);
+        console.error("User account already exists with email:", finalEmail);
+        throw new ApiError("An account with this email address already exists. Please log in or use a different email.", 409);
+    }
+
+    if (finalPhone) {
+        const existingPhoneUser = await db.user.findFirst({
+            where: { phone: finalPhone }
+        });
+        if (existingPhoneUser) {
+            console.error("User account already exists with phone:", finalPhone);
+            throw new ApiError("An account with this phone number already exists. Please log in or use a different phone number.", 409);
         }
-        console.log("Incomplete prior registration found for:", finalEmail, "- updating user and completing registration...");
     }
 
     const passwordHash = await bcrypt.hash(finalPassword, 10);
@@ -257,34 +269,18 @@ export const registerUser = async (req: Request) => {
 
     try {
         const result = await db.$transaction(async (tx) => {
-            let user;
-            if (existingUser) {
-                user = await tx.user.update({
-                    where: { id: existingUser.id },
-                    data: {
-                        name: finalName,
-                        phone: finalPhone || existingUser.phone,
-                        city: finalCity || existingUser.city,
-                        pincode: finalPincode || existingUser.pincode,
-                        passwordHash,
-                        role: finalRole as any,
-                        isActive: true,
-                    },
-                });
-            } else {
-                user = await tx.user.create({
-                    data: {
-                        name: finalName,
-                        email: finalEmail,
-                        phone: finalPhone || "",
-                        city: finalCity || "",
-                        pincode: finalPincode || "",
-                        passwordHash,
-                        role: finalRole as any,
-                        isActive: true,
-                    },
-                });
-            }
+            const user = await tx.user.create({
+                data: {
+                    name: finalName,
+                    email: finalEmail,
+                    phone: finalPhone || "",
+                    city: finalCity || "",
+                    pincode: finalPincode || "",
+                    passwordHash,
+                    role: finalRole as any,
+                    isActive: true,
+                },
+            });
 
             console.log("User record ready:", user.id);
             let createdSellerProfile: any = null;

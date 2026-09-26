@@ -94,12 +94,14 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
   const enabledFeatures = features.filter((f) => f.checked && f.label.trim().length > 0);
 
-  const formattedPrice = weeklyPrice
-    ? parseFloat(weeklyPrice).toLocaleString('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
-    : '0.00';
+  const parsedPriceNum = parseFloat(weeklyPrice);
+  const formattedPrice =
+    weeklyPrice && !isNaN(parsedPriceNum) && parsedPriceNum >= 0
+      ? parsedPriceNum.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : '0.00';
 
   return (
     <div className={styles.planContainer}>
@@ -233,10 +235,21 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       className={styles.priceInput}
                       placeholder={`Enter price for ${planDuration}`}
                       value={weeklyPrice}
-                      onChange={(e) => setWeeklyPrice(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || (!isNaN(Number(val)) && Number(val) >= 0)) {
+                          setWeeklyPrice(val);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                          e.preventDefault();
+                        }
+                      }}
                     />
                   </div>
                   <p style={{ fontSize: "11.5px", color: "#64748B", margin: "4px 0 0 0" }}>
@@ -506,18 +519,19 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       setErrorMessage('Please enter a Plan Name before deploying.');
                       return;
                     }
-                    if (!weeklyPrice.trim() || isNaN(parseFloat(weeklyPrice))) {
-                      setErrorMessage(`Please enter a valid Price (₹) for ${planDuration}.`);
+                    const basePriceNum = parseFloat(weeklyPrice);
+                    if (!weeklyPrice.trim() || isNaN(basePriceNum) || basePriceNum <= 0) {
+                      setErrorMessage(`Please enter a valid positive Price (₹) greater than 0 for ${planDuration}.`);
                       return;
                     }
 
                     setErrorMessage(null);
 
-                    const basePriceNum = parseFloat(weeklyPrice) || 0;
+                    const durLower = planDuration.toLowerCase();
+                    const isWeekly = durLower.includes("week");
                     let weeklyCalculated = basePriceNum;
                     let monthlyCalculated = basePriceNum * 4;
 
-                    const durLower = planDuration.toLowerCase();
                     if (durLower.includes("2 week")) {
                       weeklyCalculated = basePriceNum / 2;
                       monthlyCalculated = basePriceNum * 2;
@@ -540,8 +554,8 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       tier: planTier,
                       weeklyPrice: String(basePriceNum),
                       monthlyPrice: `₹${monthlyCalculated.toFixed(0)}`,
-                      quarterlyPrice: `₹${(monthlyCalculated * 3 * 0.9).toFixed(0)}`,
-                      yearlyPrice: `₹${(monthlyCalculated * 12 * 0.8).toFixed(0)}`,
+                      quarterlyPrice: isWeekly ? "" : `₹${(monthlyCalculated * 3 * 0.9).toFixed(0)}`,
+                      yearlyPrice: isWeekly ? "" : `₹${(monthlyCalculated * 12 * 0.8).toFixed(0)}`,
                       duration: planDuration,
                       features: enabledFeatures.map((f) => f.label),
                       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),

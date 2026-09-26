@@ -84,6 +84,7 @@ export const getSellerMealPlans = async () => {
 
         const activeSubscribers = plan.userSubscriptions.filter((s) => s.status === "ACTIVE" || !s.isPaused).length;
 
+        const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
         return {
             id: plan.id,
             name: plan.name,
@@ -91,9 +92,9 @@ export const getSellerMealPlans = async () => {
             description: plan.description || "",
             weeklyPrice: `₹${plan.weeklyPrice.toFixed(0)}`,
             rawWeeklyPrice: plan.weeklyPrice,
-            monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 4).toFixed(0)}`,
-            quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 12 * 0.9).toFixed(0)}`,
-            yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 52 * 0.8).toFixed(0)}`,
+            monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : (isWeekly ? `₹${plan.weeklyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 4).toFixed(0)}`),
+            quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : "",
+            yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : "",
             duration: plan.duration,
             features: parsedFeatures,
             mealTimings: parsedTimings,
@@ -178,6 +179,7 @@ export const getSellerMealPlanById = async (planId: string) => {
         parsedTimings = [];
     }
 
+    const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
     return {
         id: plan.id,
         name: plan.name,
@@ -185,9 +187,9 @@ export const getSellerMealPlanById = async (planId: string) => {
         description: plan.description || "",
         weeklyPrice: `₹${plan.weeklyPrice.toFixed(0)}`,
         rawWeeklyPrice: plan.weeklyPrice,
-        monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 4).toFixed(0)}`,
-        quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 12 * 0.9).toFixed(0)}`,
-        yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 52 * 0.8).toFixed(0)}`,
+        monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : (isWeekly ? `₹${plan.weeklyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 4).toFixed(0)}`),
+        quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : "",
+        yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : "",
         duration: plan.duration,
         features: parsedFeatures,
         mealTimings: parsedTimings,
@@ -224,20 +226,27 @@ export const createSellerMealPlan = async (req: Request) => {
         throw new ApiError("Plan Name is required", 400);
     }
 
+    if (typeof weeklyPrice === "number" && weeklyPrice <= 0) {
+        throw new ApiError("A valid positive Price (₹) greater than 0 is required", 400);
+    }
+    if (typeof weeklyPrice === "string" && (weeklyPrice.includes("-") || !weeklyPrice.trim())) {
+        throw new ApiError("A valid positive Price (₹) greater than 0 is required", 400);
+    }
     const numericWeeklyPrice = parseFloat(String(weeklyPrice).replace(/[^0-9.]/g, ""));
-    if (isNaN(numericWeeklyPrice) || numericWeeklyPrice < 0) {
-        throw new ApiError("A valid Weekly Price (₹) is required", 400);
+    if (isNaN(numericWeeklyPrice) || numericWeeklyPrice <= 0) {
+        throw new ApiError("A valid positive Price (₹) greater than 0 is required", 400);
     }
 
+    const isWeekly = (duration || "1 Week").toLowerCase().includes("week");
     const numericMonthly = monthlyPrice
         ? parseFloat(String(monthlyPrice).replace(/[^0-9.]/g, ""))
-        : numericWeeklyPrice * 4;
+        : (isWeekly ? numericWeeklyPrice : numericWeeklyPrice * 4);
     const numericQuarterly = quarterlyPrice
         ? parseFloat(String(quarterlyPrice).replace(/[^0-9.]/g, ""))
-        : numericWeeklyPrice * 12 * 0.9;
+        : null;
     const numericYearly = yearlyPrice
         ? parseFloat(String(yearlyPrice).replace(/[^0-9.]/g, ""))
-        : numericWeeklyPrice * 52 * 0.8;
+        : null;
 
     const newPlan = await db.sellerMealPlan.create({
         data: {
@@ -265,9 +274,9 @@ export const createSellerMealPlan = async (req: Request) => {
         description: newPlan.description,
         weeklyPrice: `₹${newPlan.weeklyPrice.toFixed(0)}`,
         rawWeeklyPrice: newPlan.weeklyPrice,
-        monthlyPrice: `₹${(newPlan.monthlyPrice || newPlan.weeklyPrice * 4).toFixed(0)}`,
-        quarterlyPrice: `₹${(newPlan.quarterlyPrice || newPlan.weeklyPrice * 12 * 0.9).toFixed(0)}`,
-        yearlyPrice: `₹${(newPlan.yearlyPrice || newPlan.weeklyPrice * 52 * 0.8).toFixed(0)}`,
+        monthlyPrice: `₹${(newPlan.monthlyPrice || newPlan.weeklyPrice).toFixed(0)}`,
+        quarterlyPrice: newPlan.quarterlyPrice ? `₹${newPlan.quarterlyPrice.toFixed(0)}` : "",
+        yearlyPrice: newPlan.yearlyPrice ? `₹${newPlan.yearlyPrice.toFixed(0)}` : "",
         duration: newPlan.duration,
         features: Array.isArray(features) ? features : [],
         mealTimings: Array.isArray(mealTimings) ? mealTimings : [],
@@ -311,12 +320,23 @@ export const updateSellerMealPlan = async (req: Request) => {
         updateData.description = body.description;
     }
     if (body.weeklyPrice !== undefined) {
+        if (typeof body.weeklyPrice === "string" && body.weeklyPrice.includes("-")) {
+            throw new ApiError("Price cannot be negative", 400);
+        }
         const num = parseFloat(String(body.weeklyPrice).replace(/[^0-9.]/g, ""));
-        if (!isNaN(num) && num >= 0) {
-            updateData.weeklyPrice = num;
-            if (!body.monthlyPrice) updateData.monthlyPrice = num * 4;
-            if (!body.quarterlyPrice) updateData.quarterlyPrice = num * 12 * 0.9;
-            if (!body.yearlyPrice) updateData.yearlyPrice = num * 52 * 0.8;
+        if (isNaN(num) || num <= 0) {
+            throw new ApiError("A valid positive Price (₹) greater than 0 is required", 400);
+        }
+        updateData.weeklyPrice = num;
+        if (!body.monthlyPrice) {
+            const isWeekly = (body.duration || existingPlan.duration || "").toLowerCase().includes("week");
+            updateData.monthlyPrice = isWeekly ? num : num * 4;
+        }
+        if (body.quarterlyPrice !== undefined) {
+            updateData.quarterlyPrice = body.quarterlyPrice ? parseFloat(String(body.quarterlyPrice).replace(/[^0-9.]/g, "")) : null;
+        }
+        if (body.yearlyPrice !== undefined) {
+            updateData.yearlyPrice = body.yearlyPrice ? parseFloat(String(body.yearlyPrice).replace(/[^0-9.]/g, "")) : null;
         }
     }
     if (body.monthlyPrice !== undefined) {
