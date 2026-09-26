@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
 import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
+import { validateKitchenName } from "@/lib/kitchen-validation";
 
 export const getSellerProfile = async () => {
     const session = await getAuthSession();
@@ -180,8 +181,14 @@ export const updateSellerProfile = async (req: Request) => {
     }
 
     const profileUpdateData: any = {};
-    if (businessName !== undefined && typeof businessName === "string" && businessName.trim()) {
-        profileUpdateData.businessName = businessName.trim();
+    if (businessName !== undefined) {
+        if (typeof businessName === "string" && businessName.trim()) {
+            const kitchenCheck = validateKitchenName(businessName);
+            if (!kitchenCheck.isValid) {
+                throw new ApiError(kitchenCheck.error || "Please enter a valid kitchen / business name.", 400);
+            }
+            profileUpdateData.businessName = kitchenCheck.normalizedName;
+        }
     }
     if (infoAddress !== undefined && typeof infoAddress === "string") {
         profileUpdateData.addressLocality = infoAddress.trim();

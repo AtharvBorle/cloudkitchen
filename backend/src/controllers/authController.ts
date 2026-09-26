@@ -4,6 +4,7 @@ import { uploadImage } from "@/lib/upload";
 import { ApiError } from "@/lib/api-error";
 import jwt from "jsonwebtoken";
 import { validateEmail } from "@/lib/email-validation";
+import { validateKitchenName } from "@/lib/kitchen-validation";
 
 export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
@@ -230,6 +231,15 @@ export const registerUser = async (req: Request) => {
         throw new ApiError(emailCheck.error || "Please enter a valid email address.", 400);
     }
     finalEmail = emailCheck.normalizedEmail;
+
+    if (finalRole === "SELLER" || finalBusinessName) {
+        const candidateName = finalBusinessName || `${finalName}'s Kitchen`;
+        const kitchenCheck = validateKitchenName(candidateName);
+        if (!kitchenCheck.isValid) {
+            throw new ApiError(kitchenCheck.error || "Please enter a valid kitchen / business name.", 400);
+        }
+        finalBusinessName = kitchenCheck.normalizedName;
+    }
 
     const existingUser = await db.user.findUnique({
         where: { email: finalEmail },

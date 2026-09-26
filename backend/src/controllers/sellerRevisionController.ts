@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { validateKitchenName } from "@/lib/kitchen-validation";
 
 export const requestSellerRevision = async (req: Request) => {
     const session = await getAuthSession();
@@ -52,7 +53,11 @@ export const requestSellerRevision = async (req: Request) => {
     }
     const businessName = formData.get("businessName") as string | null;
     if (businessName && businessName.trim()) {
-        updateData.businessName = businessName.trim();
+        const kitchenCheck = validateKitchenName(businessName);
+        if (!kitchenCheck.isValid) {
+            throw new ApiError(kitchenCheck.error || "Please enter a valid kitchen / business name.", 400);
+        }
+        updateData.businessName = kitchenCheck.normalizedName;
     }
 
     const adhaarFile = (formData.get("adhaarFile") || formData.get("identityProofFile") || formData.get("panFile")) as File | null;

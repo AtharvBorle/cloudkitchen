@@ -33,6 +33,7 @@ import {
 import { useSellerProfile, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
+import { validateKitchenName } from "@/lib/kitchen-validation";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./SettingsCanvas.module.css";
@@ -579,6 +580,17 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e && typeof e.preventDefault === "function") {
       e.preventDefault();
+    }
+
+    if (formData.businessName) {
+      const nameValidation = validateKitchenName(formData.businessName);
+      if (!nameValidation.isValid) {
+        setToastData({
+          title: nameValidation.error || "Please enter a valid kitchen name.",
+          status: "OFF",
+        });
+        return;
+      }
     }
 
     if (formData.businessEmail) {
@@ -1244,16 +1256,17 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Restaurant Information</h2>
 
-                {/* Business Name */}
+                {/* Business / Kitchen Name */}
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Business Name</label>
+                  <label className={styles.label}>Kitchen / Business Name</label>
                   <input
                     type="text"
                     name="businessName"
+                    maxLength={50}
                     value={formData.businessName}
                     onChange={handleInputChange}
                     className={styles.input}
-                    placeholder="Enter business name"
+                    placeholder="e.g. Spice Symphony, Mama's Kitchen"
                   />
                 </div>
 

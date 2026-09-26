@@ -31,6 +31,7 @@ import {
 } from "../security-settings/SellerSecuritySettings";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { validateEmail } from "@/lib/email-validation";
+import { validateKitchenName } from "@/lib/kitchen-validation";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResponsiveSellerSettings.module.css";
 
@@ -584,6 +585,17 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (formData.businessName) {
+      const nameValidation = validateKitchenName(formData.businessName);
+      if (!nameValidation.isValid) {
+        setToastData({
+          title: nameValidation.error || "Please enter a valid kitchen name.",
+          status: "OFF",
+        });
+        return;
+      }
+    }
 
     if (formData.businessEmail) {
       const emailValidation = validateEmail(formData.businessEmail);
@@ -1252,13 +1264,14 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 <h2 className={styles.cardTitle}>Restaurant Information</h2>
 
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Business Name</label>
+                  <label className={styles.label}>Kitchen / Business Name</label>
                   <input
                     type="text"
+                    maxLength={50}
                     className={styles.input}
                     value={formData.businessName}
                     onChange={(e) => handleInputChange("businessName", e.target.value)}
-                    placeholder="e.g. Neo Cloud Kitchen & Rooms"
+                    placeholder="e.g. Spice Symphony, Mama's Kitchen"
                   />
                 </div>
 

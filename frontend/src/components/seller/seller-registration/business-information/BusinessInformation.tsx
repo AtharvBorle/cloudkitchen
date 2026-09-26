@@ -6,6 +6,7 @@ import styles from "./BusinessInformation.module.css";
 import { SellerMapPicker, AddressDetails } from "./SellerMapPicker";
 import { saveSellerDraft } from "@/lib/seller-registration-store";
 import { fetchApi } from "@/lib/fetch-api";
+import { validateKitchenName } from "@/lib/kitchen-validation";
 
 export interface BusinessInformationData {
   businessName: string;
@@ -77,6 +78,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(true);
   const [categorySearch, setCategorySearch] = useState<string>("");
   const [categoryError, setCategoryError] = useState<string>("");
+  const [businessNameError, setBusinessNameError] = useState<string>("");
 
   useEffect(() => {
     let isMounted = true;
@@ -212,6 +214,19 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
       saveSellerDraft({ [name]: value });
       return next;
     });
+
+    if (name === "businessName") {
+      if (!value.trim()) {
+        setBusinessNameError("Kitchen name is required.");
+      } else {
+        const validation = validateKitchenName(value);
+        if (!validation.isValid) {
+          setBusinessNameError(validation.error || "Invalid kitchen name.");
+        } else {
+          setBusinessNameError("");
+        }
+      }
+    }
   };
 
   const handleSellerTypeSelect = (type: string) => {
@@ -286,6 +301,13 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const nameValidation = validateKitchenName(formData.businessName);
+    if (!nameValidation.isValid) {
+      setBusinessNameError(nameValidation.error || "Please enter a valid kitchen name.");
+      return;
+    }
+
     if (formData.sellerType !== "PROPERTY" && selectedCount === 0) {
       setCategoryError("Please select at least one business category.");
       return;
@@ -300,7 +322,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     );
 
     saveSellerDraft({
-      businessName: formData.businessName,
+      businessName: nameValidation.normalizedName,
       sellerType: formData.sellerType as any,
       categories: validCategories,
       foodType: formData.foodType as any,
@@ -311,7 +333,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
       isLocationPinned: formData.isLocationPinned,
     });
     if (onContinue) {
-      onContinue({ ...formData, categories: validCategories });
+      onContinue({ ...formData, businessName: nameValidation.normalizedName, categories: validCategories });
     }
   };
 
@@ -337,23 +359,44 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* 1. Business Name */}
+        {/* 1. Kitchen / Business Name */}
         <div className={styles.fieldGroup}>
-          <label className={styles.label} htmlFor="businessName">
-            Business name <span className={styles.required}>*</span>
-          </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label className={styles.label} htmlFor="businessName">
+              Kitchen / Business name <span className={styles.required}>*</span>
+            </label>
+            <span className={styles.charCount}>
+              {formData.businessName.length}/50
+            </span>
+          </div>
           <div className={styles.inputWrapper}>
             <input
               id="businessName"
               name="businessName"
               type="text"
               required
-              placeholder="Neo Kitchens"
+              maxLength={50}
+              placeholder="e.g. Spice Symphony, Mama's Kitchen, 7/12 Cloud Kitchen"
               value={formData.businessName}
               onChange={handleChange}
-              className={styles.input}
+              onBlur={() => {
+                if (formData.businessName.trim()) {
+                  const validation = validateKitchenName(formData.businessName);
+                  if (!validation.isValid) {
+                    setBusinessNameError(validation.error || "Invalid kitchen name.");
+                  } else {
+                    setBusinessNameError("");
+                  }
+                }
+              }}
+              className={`${styles.input} ${businessNameError ? styles.inputError : ""}`}
             />
           </div>
+          {businessNameError && (
+            <div className={styles.errorMessage} role="alert">
+              <span>{businessNameError}</span>
+            </div>
+          )}
         </div>
 
         {/* 2. Seller Type (Segmented Tab Bar) */}
