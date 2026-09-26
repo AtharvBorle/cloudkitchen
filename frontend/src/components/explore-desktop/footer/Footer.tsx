@@ -93,7 +93,7 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/seller/login" className={styles.footerLink}>
+                <Link href="/seller-onboarding" className={styles.footerLink}>
                   Partner With Us (Seller)
                 </Link>
               </li>
