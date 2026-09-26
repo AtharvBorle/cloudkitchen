@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitOrderUpdated } from "@/lib/realtime-events";
+import { validateEmail } from "@/lib/email-validation";
 import bcrypt from "bcryptjs";
 
 export const getSellerDeliveryPersons = async () => {
@@ -23,7 +24,15 @@ export const getSellerDeliveryPersons = async () => {
 
     const deliveryPersons = await db.deliveryPerson.findMany({
         where: { sellerId: sellerProfile.id },
-        include: { user: true },
+        include: {
+            user: true,
+            orders: {
+                where: {
+                    status: { in: ["PENDING", "ACCEPTED", "PREPARING", "OUT_FOR_DELIVERY", "CONFIRMED"] }
+                },
+                select: { id: true }
+            }
+        },
         orderBy: { createdAt: 'desc' }
     });
 
@@ -33,10 +42,11 @@ export const getSellerDeliveryPersons = async () => {
         name: dp.name,
         phone: dp.phone,
         email: dp.user?.email || "",
-        vehicleType: dp.vehicleType || "",
+        vehicleType: dp.vehicleType || "Motorcycle / Scooter",
         vehicleNumber: dp.vehicleNumber || "",
         isActive: dp.isActive,
         outstandingBalance: dp.outstandingBalance,
+        pendingDeliveriesCount: dp.orders.length,
         createdAt: dp.createdAt,
         updatedAt: dp.updatedAt
     }));
@@ -70,12 +80,17 @@ export const createSellerDeliveryPerson = async (req: Request) => {
         throw new ApiError("Name, phone, email, and password are required", 400);
     }
 
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(phone)) {
+    const rawDigits = String(phone).replace(/\D/g, "");
+    const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+    if (phoneDigits.length !== 10) {
         throw new ApiError("Phone number must be exactly 10 digits", 400);
     }
 
-    const normalizedEmail = email.toLowerCase();
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+        throw new ApiError(emailValidation.error || "Please enter a valid email address.", 400);
+    }
+    const normalizedEmail = emailValidation.normalizedEmail;
 
     // Check if user already exists
     const existingUser = await db.user.findUnique({
@@ -84,7 +99,7 @@ export const createSellerDeliveryPerson = async (req: Request) => {
 
     if (existingUser) {
         console.error("Email already in use:", normalizedEmail);
-        throw new ApiError("Email already in use", 400);
+        throw new ApiError("An account with this email address already exists. Please use a different email.", 409);
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -100,8 +115,8 @@ export const createSellerDeliveryPerson = async (req: Request) => {
                 data: {
                     email: normalizedEmail,
                     passwordHash,
-                    name,
-                    phone,
+                    name: name.trim(),
+                    phone: phoneDigits,
                     role: "DELIVERY",
                     city: city || sellerUser?.city || "Default City",
                     pincode: pincode || sellerUser?.pincode || "000000",
@@ -113,8 +128,8 @@ export const createSellerDeliveryPerson = async (req: Request) => {
             const deliveryPerson = await tx.deliveryPerson.create({
                 data: {
                     userId: user.id,
-                    name,
-                    phone,
+                    name: name.trim(),
+                    phone: phoneDigits,
                     sellerId: sellerProfile.id,
                     vehicleType: vehicleType || "Motorcycle / Scooter",
                     vehicleNumber: vehicleNumber || null,
@@ -127,8 +142,18 @@ export const createSellerDeliveryPerson = async (req: Request) => {
 
         return {
             deliveryPerson: {
-                ...result.deliveryPerson,
-                email: result.user.email
+                id: result.deliveryPerson.id,
+                userId: result.deliveryPerson.userId,
+                name: result.deliveryPerson.name,
+                phone: result.deliveryPerson.phone,
+                email: result.user.email,
+                vehicleType: result.deliveryPerson.vehicleType || "Motorcycle / Scooter",
+                vehicleNumber: result.deliveryPerson.vehicleNumber || "",
+                isActive: result.deliveryPerson.isActive,
+                outstandingBalance: result.deliveryPerson.outstandingBalance,
+                pendingDeliveriesCount: 0,
+                createdAt: result.deliveryPerson.createdAt,
+                updatedAt: result.deliveryPerson.updatedAt
             }
         };
     } catch (error: any) {
@@ -154,30 +179,94 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
         throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
-    const { name, phone, isActive } = await req.json();
-
-    if (phone) {
-        const phoneRegex = /^[0-9]{10}$/;
-        if (!phoneRegex.test(phone)) {
-            throw new ApiError("Phone number must be exactly 10 digits", 400);
-        }
-    }
-
     const existing = await db.deliveryPerson.findFirst({
-        where: { id, sellerId: sellerProfile.id }
+        where: { id, sellerId: sellerProfile.id },
+        include: { user: true }
     });
 
     if (!existing) {
         throw new ApiError("Delivery person not found", 404);
     }
 
-    const updated = await db.deliveryPerson.update({
-        where: { id },
-        include: { user: true },
-        data: {
-            name: name || existing.name,
-            phone: phone || existing.phone,
-            isActive: typeof isActive === 'boolean' ? isActive : existing.isActive
+    const body = await req.json();
+    const { name, phone, email, password, vehicleType, vehicleNumber, isActive } = body;
+
+    let cleanPhone = existing.phone;
+    if (phone !== undefined && phone !== null && String(phone).trim() !== "") {
+        const rawPhone = String(phone).replace(/\D/g, "");
+        const phoneDigits = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
+        if (phoneDigits.length !== 10) {
+            throw new ApiError("Phone number must be exactly 10 digits", 400);
+        }
+        cleanPhone = phoneDigits;
+    }
+
+    let cleanEmail = existing.user?.email;
+    if (email !== undefined && email !== null && String(email).trim() !== "") {
+        const emailValidation = validateEmail(email);
+        if (!emailValidation.isValid) {
+            throw new ApiError(emailValidation.error || "Please enter a valid email address.", 400);
+        }
+        cleanEmail = emailValidation.normalizedEmail;
+
+        if (cleanEmail !== existing.user?.email) {
+            const emailInUse = await db.user.findFirst({
+                where: {
+                    email: cleanEmail,
+                    id: { not: existing.userId }
+                }
+            });
+            if (emailInUse) {
+                throw new ApiError("Email address is already in use by another account.", 409);
+            }
+        }
+    }
+
+    let newPasswordHash: string | undefined = undefined;
+    if (password !== undefined && password !== null && String(password).trim() !== "") {
+        if (String(password).length < 6) {
+            throw new ApiError("Password must be at least 6 characters long", 400);
+        }
+        newPasswordHash = await bcrypt.hash(String(password), 10);
+    }
+
+    const updated = await db.$transaction(async (tx) => {
+        // Update user record if needed
+        if (existing.userId) {
+            const userDataToUpdate: any = {};
+            if (name !== undefined && name !== null && String(name).trim() !== "") userDataToUpdate.name = String(name).trim();
+            if (cleanPhone) userDataToUpdate.phone = cleanPhone;
+            if (cleanEmail) userDataToUpdate.email = cleanEmail;
+            if (newPasswordHash) userDataToUpdate.passwordHash = newPasswordHash;
+            if (isActive !== undefined) userDataToUpdate.isActive = Boolean(isActive);
+
+            if (Object.keys(userDataToUpdate).length > 0) {
+                await tx.user.update({
+                    where: { id: existing.userId },
+                    data: userDataToUpdate
+                });
+            }
+        }
+
+        // Update delivery person profile
+        const dpDataToUpdate: any = {};
+        if (name !== undefined && name !== null && String(name).trim() !== "") dpDataToUpdate.name = String(name).trim();
+        if (cleanPhone !== undefined) dpDataToUpdate.phone = cleanPhone;
+        if (vehicleType !== undefined) dpDataToUpdate.vehicleType = vehicleType;
+        if (vehicleNumber !== undefined) dpDataToUpdate.vehicleNumber = vehicleNumber;
+        if (isActive !== undefined) dpDataToUpdate.isActive = Boolean(isActive);
+
+        return await tx.deliveryPerson.update({
+            where: { id },
+            include: { user: true },
+            data: dpDataToUpdate
+        });
+    });
+
+    const pendingCount = await db.order.count({
+        where: {
+            deliveryPersonId: id,
+            status: { in: ["PENDING", "ACCEPTED", "PREPARING", "OUT_FOR_DELIVERY", "CONFIRMED"] }
         }
     });
 
@@ -188,9 +277,11 @@ export const updateSellerDeliveryPerson = async (req: Request, id: string) => {
             name: updated.name,
             phone: updated.phone,
             email: updated.user?.email || "",
-            vehicleType: updated.vehicleType || "",
+            vehicleType: updated.vehicleType || "Motorcycle / Scooter",
             vehicleNumber: updated.vehicleNumber || "",
             isActive: updated.isActive,
+            outstandingBalance: updated.outstandingBalance,
+            pendingDeliveriesCount: pendingCount,
             createdAt: updated.createdAt,
             updatedAt: updated.updatedAt
         }
@@ -222,15 +313,48 @@ export const deleteSellerDeliveryPerson = async (id: string) => {
         throw new ApiError("Delivery person not found", 404);
     }
 
+    // 1. Check outstanding balance
     if (existing.outstandingBalance > 0) {
-        throw new ApiError("Cannot delete delivery person with an outstanding COD balance", 400);
+        throw new ApiError(`Cannot delete delivery agent: agent has an outstanding COD balance of ₹${existing.outstandingBalance.toLocaleString("en-IN")}. Please collect and settle cash balance first, or mark the agent as Inactive.`, 400);
     }
 
-    await db.deliveryPerson.delete({
-        where: { id }
+    // 2. Check pending deliveries
+    const pendingOrdersCount = await db.order.count({
+        where: {
+            deliveryPersonId: id,
+            status: { in: ["PENDING", "ACCEPTED", "PREPARING", "OUT_FOR_DELIVERY", "CONFIRMED"] }
+        }
     });
 
-    return { success: true };
+    if (pendingOrdersCount > 0) {
+        throw new ApiError(`Cannot delete delivery agent: agent currently has ${pendingOrdersCount} active pending deliver${pendingOrdersCount === 1 ? "y" : "ies"}. Please reassign or complete pending deliveries first, or mark the agent as Inactive.`, 400);
+    }
+
+    // 3. Perform clean deletion in transaction
+    await db.$transaction(async (tx) => {
+        // Unlink historical completed/cancelled orders to prevent foreign key errors
+        await tx.order.updateMany({
+            where: { deliveryPersonId: id },
+            data: { deliveryPersonId: null }
+        });
+
+        // Delete delivery person record
+        await tx.deliveryPerson.delete({
+            where: { id }
+        });
+
+        // Delete associated user login account if applicable
+        if (existing.userId) {
+            await tx.user.delete({
+                where: { id: existing.userId }
+            }).catch(() => {});
+        }
+    });
+
+    return {
+        success: true,
+        message: `Delivery agent ${existing.name} deleted successfully.`
+    };
 };
 
 export const assignDeliveryPersonToOrder = async (req: Request, orderId: string) => {

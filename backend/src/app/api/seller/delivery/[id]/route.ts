@@ -20,6 +20,18 @@ export async function PUT(req: Request, { params }: RouteParams) {
     }
 }
 
+export async function PATCH(req: Request, { params }: RouteParams) {
+    try {
+        const { id } = await params;
+        const data = await updateSellerDeliveryPerson(req, id);
+        return successResponse(data, "Delivery person updated successfully", 200);
+    } catch (error: any) {
+        if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
+        console.error("Patch delivery person error:", error);
+        return errorResponse("An error occurred while updating the delivery person", 500);
+    }
+}
+
 export async function DELETE(req: Request, { params }: RouteParams) {
     try {
         const { id } = await params;
