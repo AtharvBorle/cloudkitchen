@@ -146,6 +146,15 @@ export default function ChatbotWidget() {
         }
     };
 
+    const isDraggingRef = useRef(false);
+    const isMobileRef = useRef(isMobile);
+    const isOpenRef = useRef(isOpen);
+
+    useEffect(() => {
+        isMobileRef.current = isMobile;
+        isOpenRef.current = isOpen;
+    }, [isMobile, isOpen]);
+
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement | HTMLButtonElement>) => {
         if (isMobile && isOpen) return;
         const target = e.target as HTMLElement;
@@ -159,6 +168,7 @@ export default function ChatbotWidget() {
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
         
+        isDraggingRef.current = true;
         setIsDragging(true);
         dragRef.current = {
             startX: e.clientX,
@@ -167,38 +177,6 @@ export default function ChatbotWidget() {
             posY: rect.top,
             moved: false
         };
-        
-        document.addEventListener("mousemove", handleMouseMove);
-        document.addEventListener("mouseup", handleMouseUp);
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-        if (isMobile && isOpen) return;
-        const dx = e.clientX - dragRef.current.startX;
-        const dy = e.clientY - dragRef.current.startY;
-        
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            dragRef.current.moved = true;
-        }
-        
-        let newX = dragRef.current.posX + dx;
-        let newY = dragRef.current.posY + dy;
-        
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (rect) {
-            const maxX = window.innerWidth - rect.width;
-            const maxY = window.innerHeight - rect.height;
-            newX = Math.max(0, Math.min(newX, maxX));
-            newY = Math.max(0, Math.min(newY, maxY));
-        }
-        
-        setPosition({ x: newX, y: newY });
-    };
-
-    const handleMouseUp = () => {
-        setIsDragging(false);
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
     };
 
     const handleTouchStart = (e: React.TouchEvent<HTMLDivElement | HTMLButtonElement>) => {
@@ -215,6 +193,8 @@ export default function ChatbotWidget() {
         if (!rect) return;
         
         const touch = e.touches[0];
+        if (!touch) return;
+        isDraggingRef.current = true;
         setIsDragging(true);
         dragRef.current = {
             startX: touch.clientX,
@@ -223,46 +203,85 @@ export default function ChatbotWidget() {
             posY: rect.top,
             moved: false
         };
-        
-        document.addEventListener("touchmove", handleTouchMove, { passive: false });
-        document.addEventListener("touchend", handleTouchEnd);
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-        const touch = e.touches[0];
-        const dx = touch.clientX - dragRef.current.startX;
-        const dy = touch.clientY - dragRef.current.startY;
-        
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            dragRef.current.moved = true;
-        }
-        
-        let newX = dragRef.current.posX + dx;
-        let newY = dragRef.current.posY + dy;
-        
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (rect) {
-            const maxX = window.innerWidth - rect.width;
-            const maxY = window.innerHeight - rect.height;
-            newX = Math.max(0, Math.min(newX, maxX));
-            newY = Math.max(0, Math.min(newY, maxY));
-        }
-        
-        setPosition({ x: newX, y: newY });
-    };
-
-    const handleTouchEnd = () => {
-        setIsDragging(false);
-        document.removeEventListener("touchmove", handleTouchMove);
-        document.removeEventListener("touchend", handleTouchEnd);
     };
 
     useEffect(() => {
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (!isDraggingRef.current) return;
+            if (isMobileRef.current && isOpenRef.current) return;
+            const dx = e.clientX - dragRef.current.startX;
+            const dy = e.clientY - dragRef.current.startY;
+            
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+                dragRef.current.moved = true;
+            }
+            
+            let newX = dragRef.current.posX + dx;
+            let newY = dragRef.current.posY + dy;
+            
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (rect) {
+                const maxX = window.innerWidth - rect.width;
+                const maxY = window.innerHeight - rect.height;
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+            }
+            
+            setPosition({ x: newX, y: newY });
+        };
+
+        const handleGlobalMouseUp = () => {
+            if (isDraggingRef.current) {
+                isDraggingRef.current = false;
+                setIsDragging(false);
+            }
+        };
+
+        const handleGlobalTouchMove = (e: TouchEvent) => {
+            if (!isDraggingRef.current) return;
+            if (isMobileRef.current && isOpenRef.current) return;
+            const touch = e.touches[0];
+            if (!touch) return;
+            const dx = touch.clientX - dragRef.current.startX;
+            const dy = touch.clientY - dragRef.current.startY;
+            
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+                dragRef.current.moved = true;
+            }
+            
+            let newX = dragRef.current.posX + dx;
+            let newY = dragRef.current.posY + dy;
+            
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (rect) {
+                const maxX = window.innerWidth - rect.width;
+                const maxY = window.innerHeight - rect.height;
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+            }
+            
+            setPosition({ x: newX, y: newY });
+        };
+
+        const handleGlobalTouchEnd = () => {
+            if (isDraggingRef.current) {
+                isDraggingRef.current = false;
+                setIsDragging(false);
+            }
+        };
+
+        window.addEventListener("mousemove", handleGlobalMouseMove);
+        window.addEventListener("mouseup", handleGlobalMouseUp);
+        window.addEventListener("touchmove", handleGlobalTouchMove, { passive: false });
+        window.addEventListener("touchend", handleGlobalTouchEnd);
+        window.addEventListener("touchcancel", handleGlobalTouchEnd);
+
         return () => {
-            document.removeEventListener("mousemove", handleMouseMove);
-            document.removeEventListener("mouseup", handleMouseUp);
-            document.removeEventListener("touchmove", handleTouchMove);
-            document.removeEventListener("touchend", handleTouchEnd);
+            window.removeEventListener("mousemove", handleGlobalMouseMove);
+            window.removeEventListener("mouseup", handleGlobalMouseUp);
+            window.removeEventListener("touchmove", handleGlobalTouchMove);
+            window.removeEventListener("touchend", handleGlobalTouchEnd);
+            window.removeEventListener("touchcancel", handleGlobalTouchEnd);
         };
     }, []);
 

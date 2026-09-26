@@ -415,7 +415,7 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
 
     const order = await db.order.findUnique({
         where: { id: id },
-        select: { userId: true, status: true, isPaid: true, totalAmount: true, items: true }
+        select: { userId: true, status: true, isPaid: true, totalAmount: true, items: true, appliedCouponId: true }
     });
 
     if (!order) {
@@ -431,8 +431,8 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         throw new ApiError(`Cannot cancel order in ${order.status} state`, 400);
     }
 
-    if (order.status !== "PENDING" && !isAdmin) {
-        throw new ApiError("Only pending orders can be cancelled", 400);
+    if (order.status !== "PENDING" && order.status !== "PLACED" && !isAdmin) {
+        throw new ApiError("Order has already been confirmed or processed by the seller and cannot be cancelled", 400);
     }
 
 
@@ -462,6 +462,18 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
             }
         } catch (error) {
             console.error("Failed to restore inventory on cancelOrder:", error);
+        }
+    }
+
+    // Revert coupon usage count if coupon was applied
+    if (order.appliedCouponId) {
+        try {
+            await db.coupon.update({
+                where: { id: order.appliedCouponId },
+                data: { currentUsersCount: { decrement: 1 } }
+            });
+        } catch (err) {
+            console.error("Failed to decrement coupon usage on cancelOrder:", err);
         }
     }
 

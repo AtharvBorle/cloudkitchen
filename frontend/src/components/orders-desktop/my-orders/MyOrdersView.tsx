@@ -632,12 +632,59 @@ export default function MyOrdersView() {
   const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
   const [reviewError, setReviewError] = useState<string>("");
   const [existingReview, setExistingReview] = useState<any | null>(null);
-  const [isReviewSuccess, setIsReviewSuccess] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Order Cancellation States
+  const [cancelModalOrder, setCancelModalOrder] = useState<OrderItemData | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleCancelOrder = async (order: OrderItemData) => {
+    setCancellingOrderId(order.id);
+    setCancelError(null);
+    try {
+      const res = await fetchApi(`/api/user/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        setCancelError(json.message || json.error || "Failed to cancel order. Please try again.");
+        return;
+      }
+
+      // Update state locally
+      const updatedCancelledOrder: OrderItemData = {
+        ...order,
+        status: "CANCELLED",
+        rawStatus: "CANCELLED",
+        statusDisplay: "Cancelled",
+        deliveredLabel: "Order cancelled",
+        deliveredTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+        arrivingIn: "Cancelled",
+      };
+
+      setOrders((prev) =>
+        prev.map((o) => (o.id === order.id ? updatedCancelledOrder : o))
+      );
+
+      if (selectedOrder?.id === order.id) {
+        setSelectedOrder(updatedCancelledOrder);
+      }
+
+      setCancelModalOrder(null);
+      showToast("Your order has been cancelled successfully.");
+    } catch (err: any) {
+      console.error("Cancel order error:", err);
+      setCancelError(err?.message || "An error occurred while cancelling the order.");
+    } finally {
+      setCancellingOrderId(null);
+    }
   };
 
   const handleExploreSellerMenu = () => {
@@ -1111,17 +1158,34 @@ export default function MyOrdersView() {
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          className={styles.trackLiveBtn}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectOrder(order);
-                          }}
-                        >
-                          <Navigation size={14} strokeWidth={2.5} />
-                          <span>Track Live</span>
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                          {(order.rawStatus === "PENDING" || order.rawStatus === "PLACED") && (
+                            <button
+                              type="button"
+                              className={styles.cancelOrderBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCancelModalOrder(order);
+                                setCancelError(null);
+                              }}
+                            >
+                              <X size={14} strokeWidth={2.5} />
+                              <span>Cancel Order</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className={styles.trackLiveBtn}
+                            style={{ marginBottom: (order.rawStatus === "PENDING" || order.rawStatus === "PLACED") ? "14px" : undefined }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectOrder(order);
+                            }}
+                          >
+                            <Navigation size={14} strokeWidth={2.5} />
+                            <span>Track Live</span>
+                          </button>
+                        </div>
                       </div>
                     </article>
                   );
@@ -1611,40 +1675,56 @@ export default function MyOrdersView() {
                 </div>
 
                 {/* Bottom CTA Buttons */}
-                <div className={styles.sidebarActionsRow}>
-                  <button
-                    type="button"
-                    className={styles.sidebarReorderBtn}
-                    onClick={() => handleReorder(selectedOrder)}
-                  >
-                    <RotateCcw size={15} />
-                    <span>Reorder</span>
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {(selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED") && (
+                    <button
+                      type="button"
+                      className={styles.sidebarCancelBtn}
+                      onClick={() => {
+                        setCancelModalOrder(selectedOrder);
+                        setCancelError(null);
+                      }}
+                    >
+                      <X size={15} />
+                      <span>Cancel Order</span>
+                    </button>
+                  )}
 
-                  <button
-                    type="button"
-                    className={styles.sidebarRateBtn}
-                    onClick={() => handleRateOrder(selectedOrder)}
-                    style={
-                      selectedOrder.review
-                        ? {
-                            backgroundColor: "#ECFDF5",
-                            color: "#059669",
-                            borderColor: "#A7F3D0",
-                          }
-                        : undefined
-                    }
-                  >
-                    <Star
-                      size={15}
-                      fill={selectedOrder.review ? "#059669" : "none"}
-                    />
-                    <span>
-                      {selectedOrder.review
-                        ? `Rated ${selectedOrder.review.rating}★`
-                        : "Rate Order"}
-                    </span>
-                  </button>
+                  <div className={styles.sidebarActionsRow}>
+                    <button
+                      type="button"
+                      className={styles.sidebarReorderBtn}
+                      onClick={() => handleReorder(selectedOrder)}
+                    >
+                      <RotateCcw size={15} />
+                      <span>Reorder</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.sidebarRateBtn}
+                      onClick={() => handleRateOrder(selectedOrder)}
+                      style={
+                        selectedOrder.review
+                          ? {
+                              backgroundColor: "#ECFDF5",
+                              color: "#059669",
+                              borderColor: "#A7F3D0",
+                            }
+                          : undefined
+                      }
+                    >
+                      <Star
+                        size={15}
+                        fill={selectedOrder.review ? "#059669" : "none"}
+                      />
+                      <span>
+                        {selectedOrder.review
+                          ? `Rated ${selectedOrder.review.rating}★`
+                          : "Rate Order"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </aside>
             ) : mainCategory === "ROOMS" && selectedBooking ? (
@@ -2236,6 +2316,89 @@ export default function MyOrdersView() {
                 )}
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Confirmation Modal */}
+      {cancelModalOrder && (
+        <div
+          className={styles.cancelModalOverlay}
+          onClick={() => {
+            if (!cancellingOrderId) setCancelModalOrder(null);
+          }}
+        >
+          <div
+            className={styles.cancelModalBox}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className={styles.cancelModalHeader}>
+              <div className={styles.cancelModalTitleRow}>
+                <div className={styles.cancelIconBadge}>
+                  <X size={20} />
+                </div>
+                <h3 className={styles.cancelModalHeading}>Cancel Food Order?</h3>
+              </div>
+              <button
+                type="button"
+                className={styles.closeSidebarBtn}
+                onClick={() => {
+                  if (!cancellingOrderId) setCancelModalOrder(null);
+                }}
+                disabled={Boolean(cancellingOrderId)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className={styles.cancelModalOrderSummary}>
+              <div className={styles.cancelModalVendor}>{cancelModalOrder.vendorName}</div>
+              <div className={styles.cancelModalItems}>{cancelModalOrder.itemSummary}</div>
+              <div className={styles.cancelModalAmount}>
+                Order ID: #{cancelModalOrder.orderId} • Total: ₹{cancelModalOrder.price}
+              </div>
+            </div>
+
+            <p className={styles.cancelModalNote}>
+              Are you sure you want to cancel this order? Since the restaurant has not started preparing your food yet, your order can be cancelled and any amount paid will be refunded.
+            </p>
+
+            {cancelError && (
+              <div className={styles.cancelModalError}>
+                {cancelError}
+              </div>
+            )}
+
+            <div className={styles.cancelModalActions}>
+              <button
+                type="button"
+                className={styles.keepOrderBtn}
+                onClick={() => setCancelModalOrder(null)}
+                disabled={Boolean(cancellingOrderId)}
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                className={styles.confirmCancelBtn}
+                onClick={() => handleCancelOrder(cancelModalOrder)}
+                disabled={Boolean(cancellingOrderId)}
+              >
+                {cancellingOrderId ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} />
+                    <span>Cancelling...</span>
+                  </>
+                ) : (
+                  <>
+                    <X size={16} />
+                    <span>Yes, Cancel Order</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
