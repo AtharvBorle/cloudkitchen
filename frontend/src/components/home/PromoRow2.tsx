@@ -100,6 +100,7 @@ export default function PromoRow2({
           padding: "0",
           background: "transparent",
           position: "relative",
+          zIndex: 10,
         }}
         className="promo-banner-wrapper"
         onMouseEnter={() => setIsHovered(true)}

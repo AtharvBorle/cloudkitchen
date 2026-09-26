@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { useCart } from "@/context/CartContext";
 
 export interface TopRatedItem {
   id: string;
+  foodItemId?: string;
   name: string;
   rating: number;
   category: string;
@@ -16,6 +18,8 @@ export interface TopRatedItem {
   link?: string;
   itemType?: string;
   distanceText?: string;
+  sellerId?: string;
+  sellerName?: string;
   sellerIsOnline?: boolean;
   isAvailable?: boolean;
 }
@@ -28,12 +32,34 @@ interface DashboardBodyProps {
 
 export default function DashboardBody({
   title = "Top Rated",
-  seeAllLink = "/explore-desktop?sort=top_rated",
+  seeAllLink = "/food-explore?sort=rating",
   items,
 }: DashboardBodyProps) {
+  const { addToCart } = useCart();
+  const [addedId, setAddedId] = useState<string | null>(null);
+
   if (!items || items.length === 0) {
     return null;
   }
+
+  const handleOrder = (item: TopRatedItem) => {
+    if (item.sellerIsOnline === false || item.isAvailable === false) return;
+
+    addToCart({
+      id: item.id,
+      foodItemId: item.foodItemId || item.id,
+      name: item.name,
+      price: item.price || 0,
+      quantity: 1,
+      sellerId: item.sellerId || "k-1",
+      sellerName: item.sellerName || "Verified Cloud Kitchen",
+      image: item.imageUrl,
+      imageUrl: item.imageUrl,
+      stockQuantity: -1,
+    });
+    setAddedId(item.id);
+    setTimeout(() => setAddedId(null), 1800);
+  };
 
   const displayItems = items;
 
@@ -265,25 +291,27 @@ export default function DashboardBody({
                   {isSellerClosed ? "Closed" : "Unavailable"}
                 </span>
               ) : (
-                <Link
-                  href={item.link || "/explore-desktop"}
+                <button
+                  type="button"
+                  onClick={() => handleOrder(item)}
                   style={{
-                    backgroundColor: "#FF6B00",
+                    backgroundColor: addedId === item.id ? "#10B981" : "#FF6B00",
                     color: "#FFFFFF",
                     fontSize: "0.82rem",
                     fontWeight: "700",
                     padding: "6px 16px",
                     borderRadius: "9999px",
-                    textDecoration: "none",
-                    boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
+                    border: "none",
+                    cursor: "pointer",
+                    boxShadow: addedId === item.id ? "0 3px 10px rgba(16, 185, 129, 0.25)" : "0 3px 10px rgba(255, 107, 0, 0.25)",
                     transition: "all 0.2s ease",
                     whiteSpace: "nowrap",
                     flexShrink: 0,
                   }}
                   className="top-rated-order-btn"
                 >
-                  Order
-                </Link>
+                  {addedId === item.id ? "Added! ✓" : "Order"}
+                </button>
               )}
             </div>
             );
