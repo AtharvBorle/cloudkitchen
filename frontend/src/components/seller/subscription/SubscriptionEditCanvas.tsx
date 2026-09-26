@@ -307,12 +307,19 @@ export default function SubscriptionEditCanvas({
 
   const handleArchive = async () => {
     if (targetPlanId) {
-      await deleteMealPlan(targetPlanId);
+      const res = await deleteMealPlan(targetPlanId);
+      if (!res.success) {
+        setSaveStatus(res.message || "Cannot delete plan with active subscribers. Please inactivate it instead.");
+        setTimeout(() => {
+          setSaveStatus(null);
+        }, 5000);
+        return;
+      }
     }
     if (onArchive) {
       onArchive();
     } else {
-      setSaveStatus("Plan archived successfully");
+      setSaveStatus("Plan deleted successfully");
       setTimeout(() => {
         setSaveStatus(null);
         router.push("/seller/subscription");

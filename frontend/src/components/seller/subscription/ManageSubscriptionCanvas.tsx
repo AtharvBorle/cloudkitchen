@@ -22,9 +22,12 @@ import {
   getStoredMealPlans,
   getStoredMealSubscribers,
   updateMealPlan,
+  deleteMealPlan,
+  toggleMealPlanStatus,
   MealSubscriptionPlan,
   MealSubscriber,
 } from "@/lib/meal-subscriptions";
+import { Trash2, Power, Eye, EyeOff } from "lucide-react";
 
 export type PlanItem = MealSubscriptionPlan;
 export type RecentSubscriber = MealSubscriber;
@@ -34,6 +37,17 @@ export default function ManageSubscriptionCanvas() {
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "active" | "draft">("all");
   const [loading, setLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+  const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
+
+  const showToast = (msg: string, type: "success" | "error" = "success") => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
 
   const refreshData = async () => {
     const cachedPlans = getStoredMealPlans();
@@ -62,18 +76,63 @@ export default function ManageSubscriptionCanvas() {
     };
   }, []);
 
-  const togglePlanStatus = async (id: string) => {
+  const handleTogglePlanStatus = async (id: string) => {
     const target = plans.find((p) => p.id === id || p.planId === id);
-    if (target) {
-      const nextStatus = target.status === "Live" ? "Paused" : "Live";
-      await updateMealPlan(target.id, { status: nextStatus });
-      refreshData();
+    if (!target) return;
+    const isCurrentlyLive = target.status === "Live";
+    const nextStatus = isCurrentlyLive ? "Inactive" : "Live";
+
+    setProcessingPlanId(target.id);
+    try {
+      const result = await toggleMealPlanStatus(target.id, nextStatus);
+      if (result.success) {
+        showToast(
+          nextStatus === "Live"
+            ? `Plan '${target.name}' is now Active and visible to customers.`
+            : `Plan '${target.name}' is now Inactive (hidden from customers). Existing active subscribers will continue until their cycle ends.`,
+          "success"
+        );
+      } else {
+        showToast(result.message || "Failed to update plan status", "error");
+      }
+      await refreshData();
+    } finally {
+      setProcessingPlanId(null);
+    }
+  };
+
+  const handleDeletePlan = async (id: string) => {
+    const target = plans.find((p) => p.id === id || p.planId === id);
+    if (!target) return;
+
+    if (target.subscribersCount > 0) {
+      showToast(
+        `Cannot delete plan '${target.name}': It currently has ${target.subscribersCount} active subscriber(s). Please inactivate the plan instead so no new customers can subscribe. Once all subscriber periods finish, you can delete it.`,
+        "error"
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(`Are you sure you want to permanently delete '${target.name}'?`);
+    if (!confirmed) return;
+
+    setProcessingPlanId(target.id);
+    try {
+      const result = await deleteMealPlan(target.id);
+      if (result.success) {
+        showToast(`Plan '${target.name}' deleted successfully.`, "success");
+        await refreshData();
+      } else {
+        showToast(result.message || "Failed to delete plan", "error");
+      }
+    } finally {
+      setProcessingPlanId(null);
     }
   };
 
   const filteredPlans = plans.filter((plan) => {
     if (activeTab === "active") return plan.status === "Live";
-    if (activeTab === "draft") return plan.status === "Draft" || plan.status === "Paused";
+    if (activeTab === "draft") return plan.status === "Draft" || plan.status === "Paused" || plan.status === "Inactive";
     return true;
   });
 
@@ -751,22 +810,60 @@ export default function ManageSubscriptionCanvas() {
                   <span>Edit Plan</span>
                 </Link>
 
+                {/* Activate / Inactivate Toggle Button */}
                 <button
                   type="button"
-                  onClick={() => togglePlanStatus(plan.id)}
+                  disabled={processingPlanId === plan.id}
+                  onClick={() => handleTogglePlanStatus(plan.id)}
+                  title={plan.status === "Live" ? "Inactivate (Hide from users)" : "Activate (Make visible to users)"}
                   style={{
-                    backgroundColor: "#F8FAFC",
-                    color: plan.status === "Live" ? "#64748B" : "#16A34A",
-                    border: "1px solid #E2E8F0",
-                    padding: "9px 14px",
+                    backgroundColor: plan.status === "Live" ? "#FEF2F2" : "#F0FDF4",
+                    color: plan.status === "Live" ? "#DC2626" : "#16A34A",
+                    border: `1px solid ${plan.status === "Live" ? "#FECACA" : "#BBF7D0"}`,
+                    padding: "9px 12px",
                     borderRadius: "7px",
                     fontSize: "12.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
+                    fontWeight: 700,
+                    cursor: processingPlanId === plan.id ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
                     transition: "all 0.15s ease",
                   }}
                 >
-                  {plan.status === "Live" ? "Pause" : "Resume"}
+                  {plan.status === "Live" ? (
+                    <>
+                      <EyeOff size={13} />
+                      <span>Inactivate</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye size={13} />
+                      <span>Activate</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Safe Delete Button */}
+                <button
+                  type="button"
+                  disabled={processingPlanId === plan.id}
+                  onClick={() => handleDeletePlan(plan.id)}
+                  title={plan.subscribersCount > 0 ? "Cannot delete: has active subscribers (inactivate instead)" : "Permanently delete plan"}
+                  style={{
+                    backgroundColor: "#F8FAFC",
+                    color: plan.subscribersCount > 0 ? "#94A3B8" : "#EF4444",
+                    border: "1px solid #E2E8F0",
+                    padding: "9px 11px",
+                    borderRadius: "7px",
+                    cursor: processingPlanId === plan.id ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <Trash2 size={14} color={plan.subscribersCount > 0 ? "#94A3B8" : "#EF4444"} />
                 </button>
               </div>
             </div>
@@ -922,6 +1019,52 @@ export default function ManageSubscriptionCanvas() {
           </table>
         </div>
       </div>
+
+      {/* Toast Notification Alert */}
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "32px",
+            right: "32px",
+            zIndex: 9999,
+            backgroundColor: toastType === "error" ? "#7F1D1D" : "#0F172A",
+            color: "#FFFFFF",
+            padding: "14px 22px",
+            borderRadius: "10px",
+            fontSize: "13.5px",
+            fontWeight: 500,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            maxWidth: "460px",
+            boxShadow: "0 10px 25px rgba(0, 0, 0, 0.25)",
+            border: toastType === "error" ? "1px solid #DC2626" : "1px solid #334155",
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          {toastType === "error" ? (
+            <AlertCircle size={18} color="#FCA5A5" style={{ flexShrink: 0 }} />
+          ) : (
+            <CheckCircle2 size={18} color="#4ADE80" style={{ flexShrink: 0 }} />
+          )}
+          <span>{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#94A3B8",
+              cursor: "pointer",
+              marginLeft: "auto",
+              padding: "0 0 0 8px",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <style jsx>{`
         .add-plan-btn:hover {

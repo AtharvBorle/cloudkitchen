@@ -1458,10 +1458,65 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
       },
       delete: {
         tags: ["Seller-Meal-Plans"],
-        summary: "Delete Meal Plan",
+        summary: "Delete Meal Plan (Safe Active Subscriber Check)",
+        description: "Permanently deletes a meal plan. If there are active customer subscriptions on this plan, deletion is blocked and returns 400. Inactivate the plan instead so no new users subscribe.",
         security: [{ BearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: { 200: { description: "Meal plan deleted", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } } }
+        responses: {
+          200: { description: "Meal plan deleted successfully", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } },
+          400: { description: "Cannot delete plan because active subscribers exist (must inactivate first)", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          404: { description: "Meal plan not found", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/seller/meal-plans/{id}/status": {
+      patch: {
+        tags: ["Seller-Meal-Plans"],
+        summary: "Activate or Inactivate Meal Subscription Plan",
+        description: "Toggles or sets the meal subscription plan status between 'Live' (active and visible to customers) and 'Inactive' (hidden from customers so no new users can subscribe).",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: { type: "string", enum: ["Live", "Inactive"], example: "Inactive" },
+                  isActive: { type: "boolean", example: false }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: "Meal plan status updated successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Meal subscription plan inactivated successfully. It is now hidden from users." },
+                    data: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string" },
+                        name: { type: "string" },
+                        status: { type: "string", example: "Inactive" },
+                        isActive: { type: "boolean", example: false }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { description: "Invalid request or Plan ID missing", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          404: { description: "Meal plan not found", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        }
       }
     },
 
