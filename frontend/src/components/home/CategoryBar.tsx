@@ -161,10 +161,11 @@ export default function CategoryBar({
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: "98px",
-                  minWidth: "98px",
+                  width: "auto",
+                  minWidth: "96px",
+                  maxWidth: "128px",
                   minHeight: "108px",
-                  padding: "10px 12px",
+                  padding: "10px 8px",
                   borderRadius: "18px",
                   backgroundColor: isSelected ? "#F5C58B" : "transparent",
                   border: "none",
@@ -178,6 +179,7 @@ export default function CategoryBar({
                     : "none",
                 }}
                 className={`tab-home category-item-btn ${isSelected ? "selected" : ""}`}
+                title={cat.name}
               >
                 {/* 3D Graphic Icon (Width: 60px, Height: 60px, Shadow: 0px 4px 11.9px 0px #00000040) */}
                 <div
@@ -213,16 +215,25 @@ export default function CategoryBar({
                   />
                 </div>
 
-                {/* Category Label */}
+                {/* Category Label with clean 2-line wrap and dynamic font sizing */}
                 <span
                   style={{
-                    fontSize: "13.5px",
+                    fontSize: cat.name.length > 16 ? "11.5px" : cat.name.length > 11 ? "12.5px" : "13.5px",
                     fontWeight: isSelected ? "700" : "600",
                     color: isSelected ? "#FFFFFF" : "#2E3A59",
-                    whiteSpace: "nowrap",
-                    letterSpacing: "0.2px",
+                    textAlign: "center",
+                    letterSpacing: "0.1px",
                     fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                    lineHeight: "1.2",
+                    lineHeight: "1.25",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-word",
+                    overflowWrap: "break-word",
+                    width: "100%",
+                    maxHeight: "2.6em",
                   }}
                 >
                   {cat.name}
@@ -283,9 +294,10 @@ export default function CategoryBar({
             display: none !important;
           }
           .category-item-btn {
-            width: 72px !important;
-            min-width: 72px !important;
-            min-height: 90px !important;
+            width: auto !important;
+            min-width: 76px !important;
+            max-width: 96px !important;
+            min-height: 92px !important;
             padding: 8px 4px !important;
             border-radius: 16px !important;
             gap: 4px !important;
