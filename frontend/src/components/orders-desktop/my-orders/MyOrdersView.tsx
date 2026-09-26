@@ -632,6 +632,9 @@ export default function MyOrdersView() {
   const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
   const [reviewError, setReviewError] = useState<string>("");
   const [existingReview, setExistingReview] = useState<any | null>(null);
+  const [isReviewSuccess, setIsReviewSuccess] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   // Order Cancellation States
   const [cancelModalOrder, setCancelModalOrder] = useState<OrderItemData | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
