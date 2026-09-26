@@ -385,3 +385,100 @@ export const loginUser = async (req: Request) => {
         }
     };
 };
+
+export const forgotPasswordRequest = async (req: Request) => {
+    const { email, role, phone } = await req.json();
+
+    if (!email && !phone) {
+        throw new ApiError("Email or phone number is required.", 400);
+    }
+
+    let normalizedEmail = email ? email.toLowerCase().trim() : "";
+    let user = null;
+
+    if (normalizedEmail) {
+        const emailCheck = validateEmail(normalizedEmail);
+        if (!emailCheck.isValid) {
+            throw new ApiError(emailCheck.error || "Please enter a valid email address.", 400);
+        }
+        normalizedEmail = emailCheck.normalizedEmail;
+
+        user = await db.user.findUnique({
+            where: { email: normalizedEmail },
+            include: { sellerProfile: true }
+        });
+    } else if (phone) {
+        const rawDigits = String(phone).replace(/\D/g, "");
+        const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+        user = await db.user.findFirst({
+            where: { phone: phoneDigits },
+            include: { sellerProfile: true }
+        });
+    }
+
+    if (!user) {
+        throw new ApiError("No registered account found with these details. Please check your email or sign up.", 404);
+    }
+
+    if (role === "SELLER" && user.role !== "SELLER") {
+        throw new ApiError("This account is not registered as an Owner/Seller account.", 403);
+    }
+
+    return {
+        success: true,
+        message: "OTP sent successfully. Please enter OTP (use 123456) to reset your password.",
+        email: user.email,
+        phone: user.phone,
+        otp: "123456"
+    };
+};
+
+export const resetPasswordWithOtp = async (req: Request) => {
+    const { email, otp, newPassword, confirmPassword, role } = await req.json();
+
+    if (!email) {
+        throw new ApiError("Email is required.", 400);
+    }
+
+    if (!otp) {
+        throw new ApiError("OTP code is required.", 400);
+    }
+
+    const trimmedOtp = String(otp).trim();
+    if (trimmedOtp !== "123456") {
+        throw new ApiError("Invalid OTP. Please enter the valid 6-digit OTP (123456).", 400);
+    }
+
+    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+        throw new ApiError("Password must be at least 6 characters long.", 400);
+    }
+
+    if (confirmPassword && newPassword !== confirmPassword) {
+        throw new ApiError("Passwords do not match.", 400);
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await db.user.findUnique({
+        where: { email: normalizedEmail }
+    });
+
+    if (!user) {
+        throw new ApiError("User account not found.", 404);
+    }
+
+    if (role === "SELLER" && user.role !== "SELLER") {
+        throw new ApiError("This account is not registered as an Owner/Seller account.", 403);
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await db.user.update({
+        where: { email: normalizedEmail },
+        data: { passwordHash }
+    });
+
+    return {
+        success: true,
+        message: "Password has been reset successfully. You can now log in with your new password."
+    };
+};
