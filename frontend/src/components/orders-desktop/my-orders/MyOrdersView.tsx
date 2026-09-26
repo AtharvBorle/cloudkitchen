@@ -66,6 +66,18 @@ export interface OrderItemData {
     totalPaid: number;
   };
   rawItems: any[];
+  review?: {
+    id: string;
+    rating: number;
+    comment?: string | null;
+    createdAt?: string;
+    itemRatings?: Array<{
+      id?: string;
+      foodItemId: string;
+      rating: number;
+      comment?: string | null;
+    }>;
+  } | null;
 }
 
 export interface RoomBookingData {
@@ -244,6 +256,7 @@ function parseOrderFromDb(o: any): OrderItemData {
       totalPaid,
     },
     rawItems: parsedItems,
+    review: o.review || null,
   };
 }
 
@@ -608,6 +621,25 @@ export default function MyOrdersView() {
     router.push("/explore-desktop");
   };
 
+  // Rating / Review Modal State
+  const [ratingModalOrder, setRatingModalOrder] = useState<OrderItemData | null>(null);
+  const [overallRating, setOverallRating] = useState<number>(5);
+  const [hoverOverallRating, setHoverOverallRating] = useState<number>(0);
+  const [overallComment, setOverallComment] = useState<string>("");
+  const [itemRatings, setItemRatings] = useState<
+    Record<string, { name: string; rating: number; hoverRating?: number; comment: string; image?: string; qty?: number }>
+  >({});
+  const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
+  const [reviewError, setReviewError] = useState<string>("");
+  const [existingReview, setExistingReview] = useState<any | null>(null);
+  const [isReviewSuccess, setIsReviewSuccess] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const handleExploreSellerMenu = () => {
     setModalState((prev) => ({ ...prev, isOpen: false }));
     if (modalState.sellerId) {
@@ -617,8 +649,127 @@ export default function MyOrdersView() {
     }
   };
 
-  const handleRateOrder = (order: OrderItemData) => {
-    router.push(`/rate-app?orderId=${order.id}`);
+  const handleRateOrder = async (order: OrderItemData) => {
+    if (order.status !== "DELIVERED") {
+      showToast("You can rate your order once it has been delivered.");
+      return;
+    }
+
+    setRatingModalOrder(order);
+    setOverallRating(order.review?.rating || 5);
+    setHoverOverallRating(0);
+    setOverallComment(order.review?.comment || "");
+    setReviewError("");
+    setIsReviewSuccess(false);
+
+    // Populate item ratings
+    const initialItemRatings: Record<string, { name: string; rating: number; hoverRating?: number; comment: string; image?: string; qty?: number }> = {};
+    const rawItems = order.rawItems || [];
+    rawItems.forEach((item: any) => {
+      const itemId = item.foodItemId || item.id;
+      if (itemId) {
+        const existingItem = order.review?.itemRatings?.find((ir: any) => ir.foodItemId === itemId);
+        initialItemRatings[itemId] = {
+          name: item.name || "Food Item",
+          rating: existingItem?.rating || 5,
+          hoverRating: 0,
+          comment: existingItem?.comment || "",
+          image: item.imageUrl || item.image || "/images/places/place-pizza.png",
+          qty: item.quantity || item.qty || 1,
+        };
+      }
+    });
+    setItemRatings(initialItemRatings);
+
+    if (order.review) {
+      setExistingReview(order.review);
+    } else {
+      setExistingReview(null);
+      // Fetch latest review from backend if available
+      try {
+        const res = await fetchApi(`/api/user/orders/${order.id}/review`);
+        if (res.ok) {
+          const json = await res.json();
+          const found = json.data?.review || json.review;
+          if (found) {
+            setExistingReview(found);
+            setOverallRating(found.rating || 5);
+            setOverallComment(found.comment || "");
+            if (found.itemRatings && Array.isArray(found.itemRatings)) {
+              setItemRatings((prev) => {
+                const next = { ...prev };
+                found.itemRatings.forEach((ir: any) => {
+                  if (next[ir.foodItemId]) {
+                    next[ir.foodItemId].rating = ir.rating;
+                    next[ir.foodItemId].comment = ir.comment || "";
+                  }
+                });
+                return next;
+              });
+            }
+          }
+        }
+      } catch {
+        // Silently continue
+      }
+    }
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ratingModalOrder) return;
+
+    setIsSubmittingReview(true);
+    setReviewError("");
+
+    try {
+      const itemsPayload = Object.keys(itemRatings).map((foodItemId) => ({
+        foodItemId,
+        rating: itemRatings[foodItemId].rating,
+        comment: itemRatings[foodItemId].comment || null,
+      }));
+
+      const res = await fetchApi(`/api/user/orders/${ratingModalOrder.id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: overallRating,
+          comment: overallComment,
+          itemRatings: itemsPayload,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setReviewError(data.message || data.error || "Failed to submit review.");
+        setIsSubmittingReview(false);
+        return;
+      }
+
+      const savedReview = data.data?.review || data.review || data.data;
+
+      // Update local orders list state
+      setOrders((currentOrders) =>
+        currentOrders.map((o) =>
+          o.id === ratingModalOrder.id ? { ...o, review: savedReview } : o
+        )
+      );
+
+      if (selectedOrder && selectedOrder.id === ratingModalOrder.id) {
+        setSelectedOrder((prev) => (prev ? { ...prev, review: savedReview } : null));
+      }
+
+      setExistingReview(savedReview);
+      setIsReviewSuccess(true);
+      showToast(`Thank you! Review for order #${ratingModalOrder.orderId} submitted.`);
+      setTimeout(() => {
+        setRatingModalOrder(null);
+      }, 1600);
+    } catch (err: any) {
+      setReviewError(err?.message || "An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   return (
@@ -1012,6 +1163,38 @@ export default function MyOrdersView() {
                             <span className={styles.deliveredLabel}>{order.deliveredLabel || "Delivered"}</span>
                             <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
                           </div>
+                          <button
+                            type="button"
+                            className={styles.reorderBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRateOrder(order);
+                            }}
+                            style={
+                              order.review
+                                ? {
+                                    backgroundColor: "#ECFDF5",
+                                    color: "#059669",
+                                    borderColor: "#A7F3D0",
+                                  }
+                                : {
+                                    backgroundColor: "#FFF7ED",
+                                    color: "#EA580C",
+                                    borderColor: "#FFEDD5",
+                                  }
+                            }
+                          >
+                            <Star
+                              size={14}
+                              fill={order.review ? "#059669" : "none"}
+                              color={order.review ? "#059669" : "#EA580C"}
+                            />
+                            <span>
+                              {order.review
+                                ? `Rated ${order.review.rating}★`
+                                : "Rate Order"}
+                            </span>
+                          </button>
                           <button
                             type="button"
                             className={styles.reorderBtn}
@@ -1442,9 +1625,25 @@ export default function MyOrdersView() {
                     type="button"
                     className={styles.sidebarRateBtn}
                     onClick={() => handleRateOrder(selectedOrder)}
+                    style={
+                      selectedOrder.review
+                        ? {
+                            backgroundColor: "#ECFDF5",
+                            color: "#059669",
+                            borderColor: "#A7F3D0",
+                          }
+                        : undefined
+                    }
                   >
-                    <Star size={15} />
-                    <span>Rate Order</span>
+                    <Star
+                      size={15}
+                      fill={selectedOrder.review ? "#059669" : "none"}
+                    />
+                    <span>
+                      {selectedOrder.review
+                        ? `Rated ${selectedOrder.review.rating}★`
+                        : "Rate Order"}
+                    </span>
                   </button>
                 </div>
               </aside>
@@ -1646,6 +1845,425 @@ export default function MyOrdersView() {
         onExploreOtherKitchens={handleExploreOtherKitchens}
         onExploreSellerMenu={handleExploreSellerMenu}
       />
+
+      {/* Order Rating & Review Modal */}
+      {ratingModalOrder && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px",
+          }}
+          onClick={() => setRatingModalOrder(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "20px",
+              width: "100%",
+              maxWidth: "520px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              padding: "24px",
+              boxSizing: "border-box",
+              display: "flex",
+              flexDirection: "column",
+              gap: "18px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "12px",
+                    backgroundColor: "#FFF7ED",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#EA580C",
+                  }}
+                >
+                  <Star size={22} fill="#EA580C" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700, color: "#0F172A" }}>
+                    {existingReview ? "Order Rating & Feedback" : "Rate Your Order"}
+                  </h3>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "0.82rem", color: "#64748B" }}>
+                    Order #{ratingModalOrder.orderId} • {ratingModalOrder.vendorName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRatingModalOrder(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94A3B8",
+                  padding: "4px",
+                  borderRadius: "8px",
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {reviewError && (
+              <div
+                style={{
+                  backgroundColor: "#FEF2F2",
+                  border: "1px solid #FCA5A5",
+                  color: "#991B1B",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  fontSize: "0.82rem",
+                }}
+              >
+                {reviewError}
+              </div>
+            )}
+
+            {/* Success Banner */}
+            {isReviewSuccess && (
+              <div
+                style={{
+                  backgroundColor: "#ECFDF5",
+                  border: "1px solid #A7F3D0",
+                  color: "#065F46",
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  fontSize: "0.85rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <CheckCircle2 size={18} color="#059669" />
+                <span>Thank you! Your feedback has been submitted successfully.</span>
+              </div>
+            )}
+
+            {/* Already Reviewed Banner */}
+            {existingReview && !isReviewSuccess && (
+              <div
+                style={{
+                  backgroundColor: "#F0FDF4",
+                  border: "1px solid #BBF7D0",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <ShieldCheck size={18} color="#16A34A" />
+                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#166534" }}>
+                    You have already reviewed this order
+                  </span>
+                </div>
+                <span style={{ fontSize: "0.78rem", color: "#15803D", fontWeight: 700 }}>
+                  Rated {existingReview.rating}★
+                </span>
+              </div>
+            )}
+
+            <form onSubmit={handleReviewSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Overall Experience Section */}
+              <div
+                style={{
+                  backgroundColor: "#F8FAFC",
+                  borderRadius: "14px",
+                  padding: "16px",
+                  border: "1px solid #E2E8F0",
+                }}
+              >
+                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: 700, color: "#1E293B", marginBottom: "8px" }}>
+                  Overall Order Experience
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                  {[1, 2, 3, 4, 5].map((starVal) => {
+                    const activeRating = hoverOverallRating || overallRating;
+                    const isFilled = starVal <= activeRating;
+                    return (
+                      <button
+                        key={starVal}
+                        type="button"
+                        disabled={!!existingReview}
+                        onClick={() => setOverallRating(starVal)}
+                        onMouseEnter={() => !existingReview && setHoverOverallRating(starVal)}
+                        onMouseLeave={() => !existingReview && setHoverOverallRating(0)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: existingReview ? "default" : "pointer",
+                          padding: "2px",
+                          transition: "transform 0.15s ease",
+                          transform: !existingReview && (hoverOverallRating === starVal || overallRating === starVal) ? "scale(1.15)" : "none",
+                        }}
+                      >
+                        <Star
+                          size={32}
+                          fill={isFilled ? "#F59E0B" : "none"}
+                          color={isFilled ? "#F59E0B" : "#CBD5E1"}
+                          strokeWidth={2}
+                        />
+                      </button>
+                    );
+                  })}
+                  <span
+                    style={{
+                      marginLeft: "8px",
+                      fontSize: "0.88rem",
+                      fontWeight: 700,
+                      color:
+                        overallRating >= 4
+                          ? "#059669"
+                          : overallRating === 3
+                          ? "#D97706"
+                          : "#DC2626",
+                    }}
+                  >
+                    {overallRating === 5
+                      ? "Excellent! 🌟"
+                      : overallRating === 4
+                      ? "Very Good 😊"
+                      : overallRating === 3
+                      ? "Good 🙂"
+                      : overallRating === 2
+                      ? "Fair 😐"
+                      : "Poor 😞"}
+                  </span>
+                </div>
+
+                <textarea
+                  disabled={!!existingReview}
+                  value={overallComment}
+                  onChange={(e) => setOverallComment(e.target.value)}
+                  placeholder="Share your thoughts on the food taste, packaging quality, and delivery experience (optional)..."
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    border: "1px solid #CBD5E1",
+                    fontSize: "0.85rem",
+                    fontFamily: "inherit",
+                    resize: "none",
+                    boxSizing: "border-box",
+                    backgroundColor: existingReview ? "#F1F5F9" : "#FFFFFF",
+                    color: "#1E293B",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Individual Dishes Section */}
+              {Object.keys(itemRatings).length > 0 && (
+                <div>
+                  <h4 style={{ margin: "0 0 10px 0", fontSize: "0.88rem", fontWeight: 700, color: "#334155" }}>
+                    Rate Ordered Dishes
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "240px", overflowY: "auto", paddingRight: "4px" }}>
+                    {Object.keys(itemRatings).map((itemId) => {
+                      const item = itemRatings[itemId];
+                      return (
+                        <div
+                          key={itemId}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "6px",
+                            padding: "10px 12px",
+                            backgroundColor: "#FAFAFA",
+                            borderRadius: "10px",
+                            border: "1px solid #E2E8F0",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "#0F172A" }}>
+                              {item.name} {item.qty && item.qty > 1 ? `(x${item.qty})` : ""}
+                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                              {[1, 2, 3, 4, 5].map((s) => {
+                                const activeItemRating = item.hoverRating || item.rating;
+                                const isFilled = s <= activeItemRating;
+                                return (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    disabled={!!existingReview}
+                                    onClick={() =>
+                                      setItemRatings((prev) => ({
+                                        ...prev,
+                                        [itemId]: { ...prev[itemId], rating: s },
+                                      }))
+                                    }
+                                    onMouseEnter={() =>
+                                      !existingReview &&
+                                      setItemRatings((prev) => ({
+                                        ...prev,
+                                        [itemId]: { ...prev[itemId], hoverRating: s },
+                                      }))
+                                    }
+                                    onMouseLeave={() =>
+                                      !existingReview &&
+                                      setItemRatings((prev) => ({
+                                        ...prev,
+                                        [itemId]: { ...prev[itemId], hoverRating: 0 },
+                                      }))
+                                    }
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      cursor: existingReview ? "default" : "pointer",
+                                      padding: "1px",
+                                    }}
+                                  >
+                                    <Star
+                                      size={18}
+                                      fill={isFilled ? "#F59E0B" : "none"}
+                                      color={isFilled ? "#F59E0B" : "#CBD5E1"}
+                                    />
+                                  </button>
+                                );
+                              })}
+                              <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#F59E0B", marginLeft: "4px" }}>
+                                {item.rating}/5
+                              </span>
+                            </div>
+                          </div>
+
+                          <input
+                            type="text"
+                            disabled={!!existingReview}
+                            value={item.comment}
+                            onChange={(e) =>
+                              setItemRatings((prev) => ({
+                                ...prev,
+                                [itemId]: { ...prev[itemId], comment: e.target.value },
+                              }))
+                            }
+                            placeholder={`Comment for ${item.name} (optional)...`}
+                            style={{
+                              width: "100%",
+                              padding: "6px 10px",
+                              borderRadius: "6px",
+                              border: "1px solid #CBD5E1",
+                              fontSize: "0.8rem",
+                              fontFamily: "inherit",
+                              boxSizing: "border-box",
+                              backgroundColor: existingReview ? "#F1F5F9" : "#FFFFFF",
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => setRatingModalOrder(null)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #CBD5E1",
+                    color: "#475569",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  {existingReview ? "Close" : "Cancel"}
+                </button>
+
+                {!existingReview && (
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReview}
+                    style={{
+                      flex: 1.5,
+                      padding: "10px 16px",
+                      borderRadius: "10px",
+                      backgroundColor: "#FF6B00",
+                      border: "none",
+                      color: "#FFFFFF",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      cursor: isSubmittingReview ? "not-allowed" : "pointer",
+                      opacity: isSubmittingReview ? 0.7 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    {isSubmittingReview ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Star size={16} fill="#FFFFFF" />
+                        <span>Submit Rating</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Message */}
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            backgroundColor: "#0F172A",
+            color: "#FFFFFF",
+            padding: "12px 20px",
+            borderRadius: "12px",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+            zIndex: 10000,
+          }}
+        >
+          <CheckCircle2 size={18} color="#10B981" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -70,6 +70,31 @@ export default function Home() {
     return Array.from(set);
   }, [homeData.categories, homeData.foodItems]);
 
+  // Compute dynamic filter counts from available items
+  const filterCounts = useMemo(() => {
+    const items = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    if (!items || items.length === 0) return undefined;
+
+    const cuisineCounts: Record<string, number> = {};
+    items.forEach((item) => {
+      if (item.categoryName) {
+        cuisineCounts[item.categoryName] = (cuisineCounts[item.categoryName] || 0) + 1;
+      }
+    });
+
+    return {
+      all: items.length,
+      veg: items.filter((f) => f.itemType === "VEG" || f.itemType === "VEGAN" || f.itemType === "JAIN").length,
+      non_veg: items.filter((f) => f.itemType === "NON_VEG" || f.itemType?.includes("NON_VEG")).length,
+      vegan: items.filter((f) => f.itemType === "VEGAN").length,
+      jain: items.filter((f) => f.itemType === "JAIN").length,
+      under150: items.filter((f) => f.price <= 150).length,
+      price150to300: items.filter((f) => f.price > 150 && f.price <= 300).length,
+      price300plus: items.filter((f) => f.price > 300).length,
+      cuisineCounts,
+    };
+  }, [homeData.foodItems, homeData.allFoodItems, homeSearchQuery]);
+
   // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
     const sourceKitchens = homeSearchQuery ? homeData.allKitchens : homeData.kitchens;
@@ -142,7 +167,7 @@ export default function Home() {
     }));
   }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
-  // Dynamic Offers for PopularOrders derived strictly from active coupons & real food items
+  // Dynamic Offers for PopularOrders derived from active coupons & all eligible food items
   const dynamicOffers = useMemo(() => {
     const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
@@ -168,13 +193,38 @@ export default function Home() {
       list = list.filter((f) => isDishMatchingDiet(f, activeFilters.dietary));
     }
 
+    if (activeFilters.priceTier === "under-150") {
+      const filtered = list.filter((f) => f.price <= 150);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "150-300") {
+      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "300-plus") {
+      const filtered = list.filter((f) => f.price > 300);
+      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
+      const filtered = list.filter((f) =>
+        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+
     if (list.length === 0) return [];
 
-    // Pair active coupons with food items
+    // Pair all eligible food items with active coupons
     const offersList: any[] = [];
-    homeData.coupons.forEach((cp, idx) => {
-      const matchedItem = list[idx % list.length];
-      if (matchedItem) {
+    list.forEach((matchedItem, idx) => {
+      // Find applicable coupon matching seller or global
+      const sellerCoupons = homeData.coupons.filter(
+        (c: any) => !c.appliesToSellerId || c.appliesToSellerId === matchedItem.sellerId
+      );
+      const cp = sellerCoupons.length > 0
+        ? sellerCoupons[idx % sellerCoupons.length]
+        : homeData.coupons[idx % homeData.coupons.length];
+
+      if (cp) {
         const discountText = cp.discountPercentage
           ? `${cp.discountPercentage}% OFF`
           : cp.discountAmount
@@ -188,7 +238,7 @@ export default function Home() {
           title: matchedItem.name,
           code: `Use code: ${cp.code}`,
           imageUrl: matchedItem.imageUrl || "/images/places/place-biryani.png",
-          link: matchedItem.sellerTrackingId ? `/shop/${matchedItem.sellerTrackingId}` : `/explore-desktop?item=${matchedItem.id}`,
+          link: matchedItem.sellerTrackingId ? `/shop/${matchedItem.sellerTrackingId}` : `/food-explore?item=${matchedItem.id}`,
           price: matchedItem.price || 0,
           sellerId: matchedItem.sellerId || "",
           sellerName: matchedItem.sellerName || "Cloud Kitchen",
@@ -237,13 +287,25 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
+    if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
+      const filtered = list.filter((f) =>
+        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.minRating) {
+      const filtered = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
+      if (filtered.length > 0) list = filtered;
+    }
+
     return list.slice(0, 4).map((f) => ({
       id: f.id,
       name: f.name,
       rating: f.rating || 5.0,
       time: f.deliveryTime || "20-30 min",
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
-      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
@@ -274,6 +336,24 @@ export default function Home() {
       list = list.filter((f) => isDishMatchingDiet(f, activeFilters.dietary));
     }
 
+    if (activeFilters.priceTier === "under-150") {
+      const filtered = list.filter((f) => f.price <= 150);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "150-300") {
+      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "300-plus") {
+      const filtered = list.filter((f) => f.price > 300);
+      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
+      const filtered = list.filter((f) =>
+        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+
     if (activeFilters.minRating) {
       const filtered = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
       if (filtered.length > 0) list = filtered;
@@ -281,14 +361,17 @@ export default function Home() {
 
     return list.slice(0, 6).map((f) => ({
       id: f.id,
+      foodItemId: f.id,
       name: f.name,
       rating: f.rating || 5.0,
       category: f.categoryName || (f.itemType === "VEG" ? "Pure Veg" : "Non-Veg Special"),
       price: f.price || 0,
       time: f.deliveryTime || "20-30 min",
       imageUrl: f.imageUrl || "/images/places/place-pizza.png",
-      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop`,
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
       itemType: f.itemType || "VEG",
+      sellerId: f.sellerId,
+      sellerName: f.sellerName,
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
       distanceText: f.distanceText,
@@ -318,6 +401,24 @@ export default function Home() {
       list = list.filter((f) => isDishMatchingDiet(f, activeFilters.dietary));
     }
 
+    if (activeFilters.priceTier === "under-150") {
+      const filtered = list.filter((f) => f.price <= 150);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "150-300") {
+      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
+      if (filtered.length > 0) list = filtered;
+    } else if (activeFilters.priceTier === "300-plus") {
+      const filtered = list.filter((f) => f.price > 300);
+      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
+      const filtered = list.filter((f) =>
+        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      );
+      if (filtered.length > 0) list = filtered;
+    }
+
     const items = list.length > 4 ? [...list].reverse() : list;
     return items.slice(0, 4).map((f) => ({
       id: f.id,
@@ -325,7 +426,7 @@ export default function Home() {
       rating: f.rating || 5.0,
       time: `₹${f.price} • ${f.deliveryTime || "20-25 min"}`,
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
-      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/explore-desktop?item=${f.id}`,
+      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore?item=${f.id}`,
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
@@ -467,6 +568,7 @@ export default function Home() {
           activeFilters={activeFilters}
           onFilterChange={(newFilters) => setActiveFilters(newFilters)}
           availableCuisines={availableCuisines}
+          counts={filterCounts}
         />
 
         {/* Out of Service Area Alert Banner (only shown during location browsing, not during name search) */}
@@ -546,16 +648,36 @@ export default function Home() {
         />
 
         {/* 6. Popular Orders / Today's Special Offers */}
-        {dynamicOffers.length > 0 && <PopularOrders offers={dynamicOffers} />}
+        {dynamicOffers.length > 0 && (
+          <PopularOrders
+            offers={dynamicOffers}
+            seeAllLink="/food-explore?offers=true"
+          />
+        )}
 
         {/* 7. Best Places / Popular Dishes */}
-        {dynamicDishes.length > 0 && <BestPlaces dishes={dynamicDishes} />}
+        {dynamicDishes.length > 0 && (
+          <BestPlaces
+            dishes={dynamicDishes}
+            seeAllLink="/food-explore"
+          />
+        )}
 
         {/* 8. Dashboard Body / Top Rated */}
-        {dynamicTopRated.length > 0 && <DashboardBody items={dynamicTopRated} />}
+        {dynamicTopRated.length > 0 && (
+          <DashboardBody
+            items={dynamicTopRated}
+            seeAllLink="/food-explore?sort=rating"
+          />
+        )}
 
         {/* 9. Recommended For You */}
-        {dynamicRecommended.length > 0 && <RecommendedForYou items={dynamicRecommended} />}
+        {dynamicRecommended.length > 0 && (
+          <RecommendedForYou
+            items={dynamicRecommended}
+            seeAllLink="/food-explore"
+          />
+        )}
       </main>
 
       {/* Footer */}

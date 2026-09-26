@@ -27,6 +27,7 @@ import { useLocation } from "@/components/location-provider";
 import { Footer } from "@/components/explore-desktop/footer";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { broadcastOrderToSellerNotifications } from "@/hooks/useSellerNotifications";
+import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import styles from "./SecureCheckout.module.css";
 
 export interface CheckoutSummaryItem {
@@ -90,10 +91,14 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     postalCode?: string;
   }>({});
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
+  const [sellerDetails, setSellerDetails] = useState<any>(null);
 
   useEffect(() => {
     const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
-    if (!sellerId) return;
+    if (!sellerId) {
+      setSellerDetails(null);
+      return;
+    }
 
     let isMounted = true;
     async function checkSellerStatus() {
@@ -102,8 +107,11 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         if (res.ok && isMounted) {
           const json = await res.json();
           const sellerObj = json.data || json;
+          setSellerDetails(sellerObj);
           if (sellerObj && sellerObj.isOnline === false) {
             setIsSellerClosed(true);
+          } else {
+            setIsSellerClosed(false);
           }
         }
       } catch (e) {
@@ -116,6 +124,63 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       isMounted = false;
     };
   }, [cartItems]);
+
+  // Delivery coverage & distance validation
+  const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
+    if (!sellerDetails) {
+      return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM };
+    }
+
+    const sellerCoords = (sellerDetails.latitude && sellerDetails.longitude)
+      ? { lat: Number(sellerDetails.latitude), lng: Number(sellerDetails.longitude) }
+      : getPincodeCoordinates(sellerDetails.user?.pincode);
+    
+    const sellerLat = sellerCoords?.lat ?? null;
+    const sellerLng = sellerCoords?.lng ?? null;
+
+    let userLat: number | null = null;
+    let userLng: number | null = null;
+
+    if (defaultAddress?.latitude && defaultAddress?.longitude) {
+      userLat = Number(defaultAddress.latitude);
+      userLng = Number(defaultAddress.longitude);
+    } else {
+      const activePin = postalCode.trim() || defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
+      const userCoords = getPincodeCoordinates(activePin);
+      if (userCoords) {
+        userLat = userCoords.lat;
+        userLng = userCoords.lng;
+      }
+    }
+
+    const maxRadius = sellerDetails.deliveryRadiusKm || MAX_DELIVERY_RADIUS_KM; // 5.0 km
+
+    if (userLat !== null && userLng !== null && sellerLat !== null && sellerLng !== null) {
+      const distance = calculateDistanceKm(userLat, userLng, sellerLat, sellerLng);
+      return {
+        isOutsideCoverage: distance > maxRadius,
+        shopDistanceKm: distance,
+        maxDeliveryRadius: maxRadius,
+      };
+    }
+
+    // Pincode fallback
+    const userPin = postalCode.trim() || defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") : "");
+    if (userPin && sellerDetails.user?.pincode) {
+      const userPinCoords = getPincodeCoordinates(userPin);
+      const sellerPinCoords = getPincodeCoordinates(sellerDetails.user.pincode);
+      if (userPinCoords && sellerPinCoords) {
+        const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
+        return {
+          isOutsideCoverage: pinDistance > maxRadius,
+          shopDistanceKm: pinDistance,
+          maxDeliveryRadius: maxRadius,
+        };
+      }
+    }
+
+    return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: maxRadius };
+  }, [sellerDetails, defaultAddress, postalCode]);
 
   useEffect(() => {
     if (session?.user) {
@@ -325,6 +390,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const handlePlaceOrderClick = async () => {
     if (isSellerClosed) {
       showToast("This cloud kitchen is currently closed and not accepting orders.", "error");
+      return;
+    }
+
+    if (isOutsideCoverage) {
+      showToast(
+        `Your delivery address is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}outside this restaurant's ${maxDeliveryRadius} km coverage area. Please update your delivery address.`,
+        "error"
+      );
       return;
     }
 
@@ -1220,21 +1293,68 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   </div>
                 </div>
 
+                {/* Coverage Alert Banner if Outside Coverage */}
+                {isOutsideCoverage && (
+                  <div
+                    style={{
+                      backgroundColor: "#FEF2F2",
+                      border: "1.5px solid #FCA5A5",
+                      borderRadius: "12px",
+                      padding: "12px 14px",
+                      marginBottom: "16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                      <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0, marginTop: "2px" }} />
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#991B1B" }}>
+                          Outside Delivery Coverage
+                        </h4>
+                        <p style={{ margin: "3px 0 0 0", fontSize: "0.8rem", color: "#B91C1C", lineHeight: 1.4 }}>
+                          Your selected delivery address is <strong>{shopDistanceKm} km</strong> away from this restaurant. Maximum delivery distance is <strong>{maxDeliveryRadius} km</strong>.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openLocationModal}
+                      style={{
+                        alignSelf: "flex-start",
+                        padding: "5px 12px",
+                        borderRadius: "6px",
+                        backgroundColor: "#DC2626",
+                        color: "#FFFFFF",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Change Delivery Address
+                    </button>
+                  </div>
+                )}
+
                 {/* Place Order Button */}
                 <button
                   type="button"
-                  disabled={isSubmitting || isSellerClosed}
+                  disabled={isSubmitting || isSellerClosed || isOutsideCoverage}
                   className={styles.placeOrderButton}
                   onClick={handlePlaceOrderClick}
                   style={{
-                    backgroundColor: isSellerClosed ? "#94A3B8" : undefined,
-                    cursor: isSellerClosed ? "not-allowed" : "pointer",
-                    opacity: isSellerClosed ? 0.7 : 1,
+                    backgroundColor: isSellerClosed || isOutsideCoverage ? "#94A3B8" : undefined,
+                    cursor: isSellerClosed || isOutsideCoverage ? "not-allowed" : "pointer",
+                    opacity: isSellerClosed || isOutsideCoverage ? 0.7 : 1,
                   }}
                 >
                   <span>
                     {isSellerClosed
                       ? "Kitchen Closed • Cannot Place Order"
+                      : isOutsideCoverage
+                      ? `Outside 5 km Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
                       : isSubmitting
                       ? "Placing Order..."
                       : `Place Order • ₹${grandTotal.toLocaleString("en-IN")}`}

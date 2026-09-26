@@ -14,6 +14,7 @@ import {
   Minus,
   ShoppingBag,
 } from "lucide-react";
+import { useLocation } from "@/components/location-provider";
 import { Navbar } from "@/components/navbar";
 import styles from "./UserCheckout.module.css";
 
@@ -33,31 +34,14 @@ export interface UserCheckoutProps {
   onProceedToCheckout?: () => void;
 }
 
-const AVAILABLE_ADDRESSES = [
-  {
-    id: "addr-1",
-    label: "Home",
-    address: "Flat 402, Golden Crest Apartments, Kothrud, Pune - 411038",
-  },
-  {
-    id: "addr-2",
-    label: "Work / Office",
-    address: "Tech Center 5, Level 3, Hinjawadi Phase 2, Pune - 411057",
-  },
-  {
-    id: "addr-3",
-    label: "Parents' Home",
-    address: "Bungalow 12, Mayur Colony, Kothrud, Pune - 411038",
-  },
-];
-
 export const UserCheckout: React.FC<UserCheckoutProps> = ({
   initialItems = [],
   defaultLocation = "Kothrud, Pune",
-  defaultAddress = "Flat 402, Golden Crest Apartments, Kothrud",
+  defaultAddress: defaultAddressProp = "Flat 402, Golden Crest Apartments, Kothrud",
   onProceedToCheckout,
 }) => {
   const router = useRouter();
+  const { defaultAddress, savedAddresses, openLocationModal, selectAddress } = useLocation();
 
   // State Management
   const [cartItems, setCartItems] = useState<UserCartItem[]>(initialItems);
@@ -66,9 +50,23 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const [promoCode, setPromoCode] = useState<string>("");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [currentAddress, setCurrentAddress] = useState<string>(defaultAddress);
+
+  const formattedDefaultAddress = React.useMemo(() => {
+    if (!defaultAddress) return defaultAddressProp || "No address selected";
+    const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+    const line = parts.join(", ");
+    return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
+  }, [defaultAddress, defaultAddressProp]);
+
+  const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (defaultAddress) {
+      setCurrentAddress(formattedDefaultAddress);
+    }
+  }, [defaultAddress, formattedDefaultAddress]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -414,25 +412,99 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
             </div>
 
             <div className={styles.addressOptionList}>
-              {AVAILABLE_ADDRESSES.map((addr) => {
-                const isSelected = currentAddress.includes(addr.address.slice(0, 15));
-                return (
-                  <div
-                    key={addr.id}
-                    className={`${styles.addressOptionCard} ${
-                      isSelected ? styles.addressOptionActive : ""
-                    }`}
+              {savedAddresses && savedAddresses.length > 0 ? (
+                savedAddresses.map((addr) => {
+                  const parts = [addr.houseNumber, addr.street, addr.locality, addr.landmark].filter(Boolean);
+                  const fullAddr = `${parts.join(", ")} - ${addr.pincode}`;
+                  const isSelected = defaultAddress?.id === addr.id;
+                  return (
+                    <div
+                      key={addr.id}
+                      className={`${styles.addressOptionCard} ${
+                        isSelected ? styles.addressOptionActive : ""
+                      }`}
+                      onClick={() => {
+                        selectAddress(addr.id);
+                        setCurrentAddress(fullAddr);
+                        setIsAddressModalOpen(false);
+                        showToast(`Delivery address set to ${addr.type || "Saved Address"}`);
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <span className={styles.optLabel}>{addr.type || "Home"}</span>
+                        {addr.isDefault && (
+                          <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#E0F2FE", color: "#0369A1", padding: "2px 6px", borderRadius: "4px" }}>
+                            DEFAULT
+                          </span>
+                        )}
+                      </div>
+                      <span className={styles.optText}>{fullAddr}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: "24px 16px", textAlign: "center", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px dashed #CBD5E1" }}>
+                  <MapPin size={28} color="#94A3B8" style={{ margin: "0 auto 8px" }} />
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem", color: "#1E293B" }}>
+                    No saved addresses yet
+                  </p>
+                  <p style={{ margin: "4px 0 16px 0", fontSize: "0.82rem", color: "#64748B" }}>
+                    You have not added any delivery addresses to your account.
+                  </p>
+                  <button
+                    type="button"
                     onClick={() => {
-                      setCurrentAddress(addr.address);
                       setIsAddressModalOpen(false);
-                      showToast(`Delivery address updated to ${addr.label}`);
+                      openLocationModal();
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      backgroundColor: "#FF6B00",
+                      color: "#FFFFFF",
+                      fontWeight: 700,
+                      fontSize: "0.84rem",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
                     }}
                   >
-                    <span className={styles.optLabel}>{addr.label}</span>
-                    <span className={styles.optText}>{addr.address}</span>
-                  </div>
-                );
-              })}
+                    <Plus size={15} />
+                    <span>Add New Address</span>
+                  </button>
+                </div>
+              )}
+
+              {savedAddresses && savedAddresses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddressModalOpen(false);
+                    openLocationModal();
+                  }}
+                  style={{
+                    width: "100%",
+                    marginTop: "12px",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FFF7ED",
+                    color: "#EA580C",
+                    border: "1px dashed #FDBA74",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>Add Another Address</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

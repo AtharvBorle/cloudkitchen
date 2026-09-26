@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
+import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 
 export const initiateOrderPayment = async (req: Request) => {
     const session = await getAuthSession();
@@ -122,6 +123,8 @@ export const createOrder = async (req: Request) => {
             ]
         },
         include: {
+            user: true,
+            servedPincodes: true,
             subscriptions: {
                 where: { status: "ACTIVE" },
                 include: { plan: true }
@@ -133,6 +136,8 @@ export const createOrder = async (req: Request) => {
         sellerProfile = await db.sellerProfile.findFirst({
             where: { verificationStatus: "APPROVED" },
             include: {
+                user: true,
+                servedPincodes: true,
                 subscriptions: {
                     where: { status: "ACTIVE" },
                     include: { plan: true }
@@ -140,6 +145,8 @@ export const createOrder = async (req: Request) => {
             }
         }) || await db.sellerProfile.findFirst({
             include: {
+                user: true,
+                servedPincodes: true,
                 subscriptions: {
                     where: { status: "ACTIVE" },
                     include: { plan: true }
@@ -258,6 +265,48 @@ export const createOrder = async (req: Request) => {
 
     if (!userPincode) {
         userPincode = "411038";
+    }
+
+    // --- Delivery Coverage & Distance Validation ---
+    const sellerLat = sellerProfile.latitude ?? getPincodeCoordinates(sellerProfile.user?.pincode)?.lat ?? null;
+    const sellerLng = sellerProfile.longitude ?? getPincodeCoordinates(sellerProfile.user?.pincode)?.lng ?? null;
+
+    let customerLat: number | null = null;
+    let customerLng: number | null = null;
+
+    if (defaultAddress?.latitude && defaultAddress?.longitude) {
+        customerLat = Number(defaultAddress.latitude);
+        customerLng = Number(defaultAddress.longitude);
+    } else {
+        const pinCoords = getPincodeCoordinates(userPincode);
+        if (pinCoords) {
+            customerLat = pinCoords.lat;
+            customerLng = pinCoords.lng;
+        }
+    }
+
+    const maxRadiusKm = MAX_DELIVERY_RADIUS_KM; // 5.0 km default
+
+    if (customerLat !== null && customerLng !== null && sellerLat !== null && sellerLng !== null) {
+        const distanceKm = calculateDistanceKm(customerLat, customerLng, sellerLat, sellerLng);
+        if (distanceKm > maxRadiusKm) {
+            throw new ApiError(
+                `Your delivery location is ${distanceKm} km away, which is outside this restaurant's ${maxRadiusKm} km delivery coverage. Please select a valid delivery address within the coverage area.`,
+                400
+            );
+        }
+    } else if (userPincode && sellerProfile.user?.pincode) {
+        const userPinCoords = getPincodeCoordinates(userPincode);
+        const sellerPinCoords = getPincodeCoordinates(sellerProfile.user.pincode);
+        if (userPinCoords && sellerPinCoords) {
+            const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
+            if (pinDistance > maxRadiusKm) {
+                throw new ApiError(
+                    `Your delivery pincode (${userPincode}) is ${pinDistance} km away, which is outside the restaurant's ${maxRadiusKm} km delivery coverage. Please select a valid delivery address within the coverage area.`,
+                    400
+                );
+            }
+        }
     }
 
     const itemUpdates = [];

@@ -209,7 +209,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           name: "Food",
           image: "/images/categories/cat-food.png",
           emoji: "🍔",
-          route: "/explore-desktop",
+          route: "/food-explore",
         });
 
         if (exploreRes?.foodCategories && Array.isArray(exploreRes.foodCategories) && exploreRes.foodCategories.length > 0) {
@@ -222,7 +222,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
                 name: fc.name,
                 image: mappedImage,
                 emoji: "🍽️",
-                route: "/explore-desktop?category=" + encodeURIComponent(lower),
+                route: "/food-explore?category=" + encodeURIComponent(lower),
               });
             }
           });
@@ -236,7 +236,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
                 name: cat.name,
                 image: mappedImage,
                 emoji: "🍲",
-                route: "/explore-desktop?category=" + encodeURIComponent(lower),
+                route: "/food-explore?category=" + encodeURIComponent(lower),
               });
             }
           });

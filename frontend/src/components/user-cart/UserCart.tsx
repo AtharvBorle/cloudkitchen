@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,9 +13,12 @@ import {
   Plus,
   Minus,
   ShoppingBag,
+  AlertCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
+import { useLocation } from "@/components/location-provider";
+import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
@@ -47,32 +50,15 @@ export interface UserCartProps {
   onProceedToCheckout?: () => void;
 }
 
-const AVAILABLE_ADDRESSES = [
-  {
-    id: "addr-1",
-    label: "Home",
-    address: "Flat 402, Golden Crest Apartments, Kothrud, Pune - 411038",
-  },
-  {
-    id: "addr-2",
-    label: "Work / Office",
-    address: "Tech Center 5, Level 3, Hinjawadi Phase 2, Pune - 411057",
-  },
-  {
-    id: "addr-3",
-    label: "Parents' Home",
-    address: "Bungalow 12, Mayur Colony, Kothrud, Pune - 411038",
-  },
-];
-
 export const UserCart: React.FC<UserCartProps> = ({
   initialItems = [],
   defaultLocation = "Kothrud, Pune",
-  defaultAddress = "Flat 402, Golden Crest Apartments, Kothrud",
+  defaultAddress: defaultAddressProp = "Flat 402, Golden Crest Apartments, Kothrud",
   onProceedToCheckout,
 }) => {
   const router = useRouter();
   const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal } = useCart();
+  const { defaultAddress, savedAddresses, openLocationModal, selectAddress } = useLocation();
 
   // State Management
   const [localCartItems, setLocalCartItems] = useState<UserCartItem[]>(initialItems);
@@ -81,11 +67,27 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [promoCode, setPromoCode] = useState<string>("");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [currentAddress, setCurrentAddress] = useState<string>(defaultAddress);
+
+  // Sync formatted current address from LocationProvider's defaultAddress
+  const formattedDefaultAddress = React.useMemo(() => {
+    if (!defaultAddress) return defaultAddressProp || "No address selected";
+    const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+    const line = parts.join(", ");
+    return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
+  }, [defaultAddress, defaultAddressProp]);
+
+  const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [customizingItem, setCustomizingItem] = useState<UserCartItem | null>(null);
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
+  const [sellerDetails, setSellerDetails] = useState<any>(null);
+
+  useEffect(() => {
+    if (defaultAddress) {
+      setCurrentAddress(formattedDefaultAddress);
+    }
+  }, [defaultAddress, formattedDefaultAddress]);
 
   // Active items derived from context if present
   const cartItems: UserCartItem[] = contextCartItems.length > 0
@@ -110,7 +112,10 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   React.useEffect(() => {
     const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
-    if (!sellerId) return;
+    if (!sellerId) {
+      setSellerDetails(null);
+      return;
+    }
 
     let isMounted = true;
     async function checkSellerStatus() {
@@ -119,8 +124,11 @@ export const UserCart: React.FC<UserCartProps> = ({
         if (res.ok && isMounted) {
           const json = await res.json();
           const sellerObj = json.data || json;
+          setSellerDetails(sellerObj);
           if (sellerObj && sellerObj.isOnline === false) {
             setIsSellerClosed(true);
+          } else {
+            setIsSellerClosed(false);
           }
         }
       } catch (e) {
@@ -133,6 +141,63 @@ export const UserCart: React.FC<UserCartProps> = ({
       isMounted = false;
     };
   }, [cartItems]);
+
+  // Coverage calculation
+  const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
+    if (!sellerDetails || cartItems.length === 0) {
+      return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM };
+    }
+
+    const sellerCoords = (sellerDetails.latitude && sellerDetails.longitude)
+      ? { lat: Number(sellerDetails.latitude), lng: Number(sellerDetails.longitude) }
+      : getPincodeCoordinates(sellerDetails.user?.pincode);
+    
+    const sellerLat = sellerCoords?.lat ?? null;
+    const sellerLng = sellerCoords?.lng ?? null;
+
+    let userLat: number | null = null;
+    let userLng: number | null = null;
+
+    if (defaultAddress?.latitude && defaultAddress?.longitude) {
+      userLat = Number(defaultAddress.latitude);
+      userLng = Number(defaultAddress.longitude);
+    } else {
+      const activePin = defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
+      const userCoords = getPincodeCoordinates(activePin);
+      if (userCoords) {
+        userLat = userCoords.lat;
+        userLng = userCoords.lng;
+      }
+    }
+
+    const maxRadius = sellerDetails.deliveryRadiusKm || MAX_DELIVERY_RADIUS_KM; // 5.0 km
+
+    if (userLat !== null && userLng !== null && sellerLat !== null && sellerLng !== null) {
+      const distance = calculateDistanceKm(userLat, userLng, sellerLat, sellerLng);
+      return {
+        isOutsideCoverage: distance > maxRadius,
+        shopDistanceKm: distance,
+        maxDeliveryRadius: maxRadius,
+      };
+    }
+
+    // Pincode fallback
+    const userPin = defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") : "");
+    if (userPin && sellerDetails.user?.pincode) {
+      const userPinCoords = getPincodeCoordinates(userPin);
+      const sellerPinCoords = getPincodeCoordinates(sellerDetails.user.pincode);
+      if (userPinCoords && sellerPinCoords) {
+        const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
+        return {
+          isOutsideCoverage: pinDistance > maxRadius,
+          shopDistanceKm: pinDistance,
+          maxDeliveryRadius: maxRadius,
+        };
+      }
+    }
+
+    return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: maxRadius };
+  }, [sellerDetails, cartItems, defaultAddress]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -261,6 +326,11 @@ export const UserCart: React.FC<UserCartProps> = ({
   const handleCheckoutClick = () => {
     if (isSellerClosed) {
       showToast("This kitchen is currently closed and not accepting orders.");
+      return;
+    }
+    if (isOutsideCoverage) {
+      showToast(`Your delivery location is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}outside this kitchen's ${maxDeliveryRadius} km coverage area.`);
+      openLocationModal();
       return;
     }
     if (onProceedToCheckout) {
@@ -685,19 +755,70 @@ export const UserCart: React.FC<UserCartProps> = ({
                 </div>
               </div>
 
+              {/* Coverage Warning Banner in Cart Summary if outside delivery coverage */}
+              {isOutsideCoverage && (
+                <div
+                  style={{
+                    backgroundColor: "#FEF2F2",
+                    border: "1px solid #FCA5A5",
+                    borderRadius: "12px",
+                    padding: "12px 14px",
+                    marginBottom: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                    <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0, marginTop: "2px" }} />
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#991B1B" }}>
+                        Outside Delivery Coverage Area
+                      </h4>
+                      <p style={{ margin: "3px 0 0 0", fontSize: "0.8rem", color: "#B91C1C", lineHeight: 1.4 }}>
+                        Your current delivery location is <strong>{shopDistanceKm} km</strong> away from this restaurant. Maximum delivery coverage is <strong>{maxDeliveryRadius} km</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openLocationModal}
+                    style={{
+                      alignSelf: "flex-start",
+                      padding: "5px 12px",
+                      borderRadius: "6px",
+                      backgroundColor: "#DC2626",
+                      color: "#FFFFFF",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Change Delivery Location
+                  </button>
+                </div>
+              )}
+
               {/* Proceed to Checkout Button */}
               <button
                 type="button"
                 className={styles.checkoutButton}
                 onClick={handleCheckoutClick}
-                disabled={cartItems.length === 0 || isSellerClosed}
+                disabled={cartItems.length === 0 || isSellerClosed || isOutsideCoverage}
                 style={{
-                  backgroundColor: isSellerClosed ? "#94A3B8" : undefined,
-                  opacity: cartItems.length === 0 || isSellerClosed ? 0.6 : 1,
-                  cursor: cartItems.length === 0 || isSellerClosed ? "not-allowed" : "pointer",
+                  backgroundColor: isSellerClosed || isOutsideCoverage ? "#94A3B8" : undefined,
+                  opacity: cartItems.length === 0 || isSellerClosed || isOutsideCoverage ? 0.6 : 1,
+                  cursor: cartItems.length === 0 || isSellerClosed || isOutsideCoverage ? "not-allowed" : "pointer",
                 }}
               >
-                <span>{isSellerClosed ? "Kitchen Closed • Cannot Order" : "Proceed to Checkout"}</span>
+                <span>
+                  {isSellerClosed
+                    ? "Kitchen Closed • Cannot Order"
+                    : isOutsideCoverage
+                    ? `Outside Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
+                    : "Proceed to Checkout"}
+                </span>
                 <ArrowRight size={18} />
               </button>
 
@@ -733,25 +854,99 @@ export const UserCart: React.FC<UserCartProps> = ({
             </div>
 
             <div className={styles.addressOptionList}>
-              {AVAILABLE_ADDRESSES.map((addr) => {
-                const isSelected = currentAddress.includes(addr.address.slice(0, 15));
-                return (
-                  <div
-                    key={addr.id}
-                    className={`${styles.addressOptionCard} ${
-                      isSelected ? styles.addressOptionActive : ""
-                    }`}
+              {savedAddresses && savedAddresses.length > 0 ? (
+                savedAddresses.map((addr) => {
+                  const parts = [addr.houseNumber, addr.street, addr.locality, addr.landmark].filter(Boolean);
+                  const fullAddr = `${parts.join(", ")} - ${addr.pincode}`;
+                  const isSelected = defaultAddress?.id === addr.id;
+                  return (
+                    <div
+                      key={addr.id}
+                      className={`${styles.addressOptionCard} ${
+                        isSelected ? styles.addressOptionActive : ""
+                      }`}
+                      onClick={() => {
+                        selectAddress(addr.id);
+                        setCurrentAddress(fullAddr);
+                        setIsAddressModalOpen(false);
+                        showToast(`Delivery address set to ${addr.type || "Saved Address"}`);
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <span className={styles.optLabel}>{addr.type || "Home"}</span>
+                        {addr.isDefault && (
+                          <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#E0F2FE", color: "#0369A1", padding: "2px 6px", borderRadius: "4px" }}>
+                            DEFAULT
+                          </span>
+                        )}
+                      </div>
+                      <span className={styles.optText}>{fullAddr}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: "24px 16px", textAlign: "center", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px dashed #CBD5E1" }}>
+                  <MapPin size={28} color="#94A3B8" style={{ margin: "0 auto 8px" }} />
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem", color: "#1E293B" }}>
+                    No saved addresses yet
+                  </p>
+                  <p style={{ margin: "4px 0 16px 0", fontSize: "0.82rem", color: "#64748B" }}>
+                    You have not added any delivery addresses to your account.
+                  </p>
+                  <button
+                    type="button"
                     onClick={() => {
-                      setCurrentAddress(addr.address);
                       setIsAddressModalOpen(false);
-                      showToast(`Delivery address updated to ${addr.label}`);
+                      openLocationModal();
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      backgroundColor: "#FF6B00",
+                      color: "#FFFFFF",
+                      fontWeight: 700,
+                      fontSize: "0.84rem",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
                     }}
                   >
-                    <span className={styles.optLabel}>{addr.label}</span>
-                    <span className={styles.optText}>{addr.address}</span>
-                  </div>
-                );
-              })}
+                    <Plus size={15} />
+                    <span>Add New Address</span>
+                  </button>
+                </div>
+              )}
+
+              {savedAddresses && savedAddresses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddressModalOpen(false);
+                    openLocationModal();
+                  }}
+                  style={{
+                    width: "100%",
+                    marginTop: "12px",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FFF7ED",
+                    color: "#EA580C",
+                    border: "1px dashed #FDBA74",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>Add Another Address</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

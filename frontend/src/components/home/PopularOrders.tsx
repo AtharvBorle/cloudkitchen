@@ -32,7 +32,7 @@ interface PopularOrdersProps {
 
 export default function PopularOrders({
   title = "Today's Special Offers",
-  seeAllLink = "/explore-desktop?offers=true",
+  seeAllLink = "/food-explore?offers=true",
   offers,
 }: PopularOrdersProps) {
   const router = useRouter();

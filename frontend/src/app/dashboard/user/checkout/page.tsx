@@ -9,6 +9,7 @@ import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { broadcastBookingAlert } from "@/hooks/useSellerNotifications";
+import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 
 const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -483,7 +484,22 @@ function CheckoutContent() {
         if (isRoomBooking) return [];
         if (!selectedAddress || !sellerDetails || cartItems.length === 0) return [];
 
-        const userPincode = selectedAddress.pincode.trim();
+        const userPincode = selectedAddress.pincode ? selectedAddress.pincode.trim() : "";
+        const maxRadius = sellerDetails.deliveryRadiusKm || MAX_DELIVERY_RADIUS_KM;
+
+        // Check GPS / Pincode distance first
+        const sellerLat = sellerDetails.latitude ?? getPincodeCoordinates(sellerDetails.user?.pincode)?.lat ?? null;
+        const sellerLng = sellerDetails.longitude ?? getPincodeCoordinates(sellerDetails.user?.pincode)?.lng ?? null;
+        const userLat = selectedAddress.latitude ? Number(selectedAddress.latitude) : (getPincodeCoordinates(userPincode)?.lat ?? null);
+        const userLng = selectedAddress.longitude ? Number(selectedAddress.longitude) : (getPincodeCoordinates(userPincode)?.lng ?? null);
+
+        if (userLat !== null && userLng !== null && sellerLat !== null && sellerLng !== null) {
+            const distance = calculateDistanceKm(userLat, userLng, sellerLat, sellerLng);
+            if (distance > maxRadius) {
+                return cartItems.map((ci) => `${ci.name} (${distance} km away - outside ${maxRadius} km coverage)`);
+            }
+        }
+
         const outOfRange: string[] = [];
 
         for (const cartItem of cartItems) {
@@ -495,7 +511,7 @@ function CheckoutContent() {
                 const pins = itemDetail.deliveryPincodes.split(",").map((p: string) => p.trim());
                 deliverable = pins.includes(userPincode);
             } else {
-                deliverable = sellerDetails.user?.pincode === userPincode;
+                deliverable = sellerDetails.user?.pincode === userPincode || !sellerDetails.user?.pincode;
             }
 
             if (!deliverable) {

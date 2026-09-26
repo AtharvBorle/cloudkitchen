@@ -22,6 +22,18 @@ export interface ActiveHomeFilters {
   cuisines?: string[];
 }
 
+export interface FilterCounts {
+  all?: number;
+  veg?: number;
+  non_veg?: number;
+  vegan?: number;
+  jain?: number;
+  under150?: number;
+  price150to300?: number;
+  price300plus?: number;
+  cuisineCounts?: Record<string, number>;
+}
+
 export interface FilterOption {
   id: string;
   label: string;
@@ -35,6 +47,7 @@ interface FilterRowProps {
   activeFilterId?: string;
   onLegacyFilterClick?: (filterId: string) => void;
   availableCuisines?: string[];
+  counts?: FilterCounts;
 }
 
 const DEFAULT_CUISINES = [
@@ -53,6 +66,7 @@ export default function FilterRow({
   activeFilters = {},
   onFilterChange,
   availableCuisines = DEFAULT_CUISINES,
+  counts,
 }: FilterRowProps) {
   const [internalFilters, setInternalFilters] = useState<ActiveHomeFilters>(activeFilters);
   const [openPopover, setOpenPopover] = useState<"dietary" | "price" | "cuisines" | null>(null);
@@ -177,6 +191,8 @@ export default function FilterRow({
         width: "100%",
         padding: "0",
         background: "transparent",
+        position: "relative",
+        zIndex: 50,
       }}
       className="filter-row-section"
     >
@@ -189,14 +205,15 @@ export default function FilterRow({
           flexDirection: "row",
           alignItems: "center",
           gap: "10px",
-          overflowX: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
+          overflow: "visible",
+          flexWrap: "wrap",
           paddingBottom: "4px",
           boxSizing: "border-box",
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+          position: "relative",
+          zIndex: 55,
         }}
-        className="hide-scrollbar"
+        className="filter-row-container"
       >
         {/* Reset / All Filters Count Badge */}
         {activeCount > 0 && (
@@ -337,7 +354,7 @@ export default function FilterRow({
         </button>
 
         {/* 4. Dietary Preference Popover (Pure Veg / Non-Veg / All) */}
-        <div ref={dietaryRef} style={{ position: "relative", flexShrink: 0 }}>
+        <div ref={dietaryRef} style={{ position: "relative", flexShrink: 0, zIndex: openPopover === "dietary" ? 100 : 1 }}>
           <button
             type="button"
             onClick={() => setOpenPopover(openPopover === "dietary" ? null : "dietary")}
@@ -384,21 +401,21 @@ export default function FilterRow({
                 backgroundColor: "#FFFFFF",
                 borderRadius: "16px",
                 padding: "8px",
-                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
                 border: "1px solid #E2E8F0",
-                zIndex: 50,
-                minWidth: "165px",
+                zIndex: 1000,
+                minWidth: "185px",
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
               }}
             >
               {[
-                { id: "all", label: "All Items" },
-                { id: "veg", label: "Pure Veg 🥦" },
-                { id: "non_veg", label: "Non-Veg 🍗" },
-                { id: "vegan", label: "Vegan 🌱" },
-                { id: "jain", label: "Jain 🌿" },
+                { id: "all", label: "All Items", count: counts?.all },
+                { id: "veg", label: "Pure Veg 🥦", count: counts?.veg },
+                { id: "non_veg", label: "Non-Veg 🍗", count: counts?.non_veg },
+                { id: "vegan", label: "Vegan 🌱", count: counts?.vegan },
+                { id: "jain", label: "Jain 🌿", count: counts?.jain },
               ].map((opt) => {
                 const isSelected = (internalFilters.dietary || "all") === opt.id;
                 return (
@@ -419,10 +436,18 @@ export default function FilterRow({
                       fontSize: "13.5px",
                       cursor: "pointer",
                       textAlign: "left",
+                      gap: "8px",
                     }}
                   >
                     <span>{opt.label}</span>
-                    {isSelected && <Check size={14} color="#047857" />}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {opt.count !== undefined && (
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#047857" : "#94A3B8" }}>
+                          ({opt.count})
+                        </span>
+                      )}
+                      {isSelected && <Check size={14} color="#047857" />}
+                    </div>
                   </button>
                 );
               })}
@@ -431,7 +456,7 @@ export default function FilterRow({
         </div>
 
         {/* 5. Price Range Popover */}
-        <div ref={priceRef} style={{ position: "relative", flexShrink: 0 }}>
+        <div ref={priceRef} style={{ position: "relative", flexShrink: 0, zIndex: openPopover === "price" ? 100 : 1 }}>
           <button
             type="button"
             onClick={() => setOpenPopover(openPopover === "price" ? null : "price")}
@@ -475,20 +500,20 @@ export default function FilterRow({
                 backgroundColor: "#FFFFFF",
                 borderRadius: "16px",
                 padding: "8px",
-                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
                 border: "1px solid #E2E8F0",
-                zIndex: 50,
-                minWidth: "170px",
+                zIndex: 1000,
+                minWidth: "195px",
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
               }}
             >
               {[
-                { id: "all", label: "Any Price" },
-                { id: "under-150", label: "Under ₹150 (Budget)" },
-                { id: "150-300", label: "₹150 – ₹300 (Standard)" },
-                { id: "300-plus", label: "₹300+ (Premium)" },
+                { id: "all", label: "Any Price", count: counts?.all },
+                { id: "under-150", label: "Under ₹150 (Budget)", count: counts?.under150 },
+                { id: "150-300", label: "₹150 – ₹300 (Standard)", count: counts?.price150to300 },
+                { id: "300-plus", label: "₹300+ (Premium)", count: counts?.price300plus },
               ].map((opt) => {
                 const isSelected =
                   (internalFilters.priceTier || "all") === opt.id ||
@@ -511,10 +536,18 @@ export default function FilterRow({
                       fontSize: "13.5px",
                       cursor: "pointer",
                       textAlign: "left",
+                      gap: "8px",
                     }}
                   >
                     <span>{opt.label}</span>
-                    {isSelected && <Check size={14} color="#FF6B00" />}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {opt.count !== undefined && (
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
+                          ({opt.count})
+                        </span>
+                      )}
+                      {isSelected && <Check size={14} color="#FF6B00" />}
+                    </div>
                   </button>
                 );
               })}
@@ -523,7 +556,7 @@ export default function FilterRow({
         </div>
 
         {/* 6. Dynamic Cuisines Popover */}
-        <div ref={cuisinesRef} style={{ position: "relative", flexShrink: 0 }}>
+        <div ref={cuisinesRef} style={{ position: "relative", flexShrink: 0, zIndex: openPopover === "cuisines" ? 100 : 1 }}>
           <button
             type="button"
             onClick={() => setOpenPopover(openPopover === "cuisines" ? null : "cuisines")}
@@ -564,11 +597,11 @@ export default function FilterRow({
                 backgroundColor: "#FFFFFF",
                 borderRadius: "16px",
                 padding: "10px",
-                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.12)",
+                boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
                 border: "1px solid #E2E8F0",
-                zIndex: 50,
-                minWidth: "220px",
-                maxHeight: "260px",
+                zIndex: 1000,
+                minWidth: "230px",
+                maxHeight: "280px",
                 overflowY: "auto",
                 display: "flex",
                 flexDirection: "column",
@@ -588,6 +621,7 @@ export default function FilterRow({
               </div>
               {displayCuisinesList.map((c) => {
                 const isSelected = (internalFilters.cuisines || []).includes(c);
+                const cCount = counts?.cuisineCounts ? counts.cuisineCounts[c] : undefined;
                 return (
                   <button
                     key={c}
@@ -606,10 +640,18 @@ export default function FilterRow({
                       fontSize: "13.5px",
                       cursor: "pointer",
                       textAlign: "left",
+                      gap: "8px",
                     }}
                   >
                     <span>{c}</span>
-                    {isSelected && <Check size={14} color="#FF6B00" />}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {cCount !== undefined && (
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
+                          ({cCount})
+                        </span>
+                      )}
+                      {isSelected && <Check size={14} color="#FF6B00" />}
+                    </div>
                   </button>
                 );
               })}
@@ -619,9 +661,6 @@ export default function FilterRow({
       </div>
 
       <style jsx>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
         .filter-pill-btn:not(:active):hover {
           border-color: #CBD5E1;
           background-color: #F8FAFC;
