@@ -79,6 +79,22 @@ export async function GET(req: NextRequest) {
             orderBy: { price: 'asc' }
         });
 
+        const queryPlanId = url.searchParams.get("planId");
+        if (queryPlanId && !dbPlans.some(p => p.id === queryPlanId || p.name.toLowerCase() === queryPlanId.toLowerCase())) {
+            const specificPlan = await db.subscriptionPlan.findFirst({
+                where: {
+                    OR: [
+                        { id: queryPlanId },
+                        { name: { equals: queryPlanId, mode: "insensitive" } }
+                    ],
+                    isActive: true,
+                }
+            });
+            if (specificPlan) {
+                dbPlans.push(specificPlan);
+            }
+        }
+
         const plans = dbPlans.map(plan => ({
             id: plan.id,
             name: plan.name,

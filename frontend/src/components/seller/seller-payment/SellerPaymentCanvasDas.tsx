@@ -53,6 +53,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 export default function SellerPaymentCanvasDas() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryToken = searchParams?.get("token") || "";
   const queryPlanId = searchParams?.get("planId") || "";
   const queryCategory = searchParams?.get("category") || "";
 
@@ -74,6 +75,22 @@ export default function SellerPaymentCanvasDas() {
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Sync mobile token and initialize web session
+  useEffect(() => {
+    if (queryToken && queryToken.trim()) {
+      try {
+        localStorage.setItem("token", queryToken.trim());
+        fetchApi("/api/auth/token-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: queryToken.trim() }),
+        }).catch((err) => console.warn("Session token sync failed:", err));
+      } catch (e) {
+        console.error("Token storage error:", e);
+      }
+    }
+  }, [queryToken]);
 
   // Load Status and Plans
   const loadData = async () => {
@@ -113,8 +130,15 @@ export default function SellerPaymentCanvasDas() {
         const planList: SubscriptionPlanItem[] = pData.data || pData || [];
         setPlans(planList);
 
-        if (queryPlanId && planList.some((p) => p.id === queryPlanId)) {
-          setSelectedPlanId(queryPlanId);
+        const targetPlan = queryPlanId
+          ? planList.find((p) => p.id === queryPlanId || p.name.toLowerCase() === queryPlanId.toLowerCase())
+          : null;
+
+        if (targetPlan) {
+          setSelectedPlanId(targetPlan.id);
+          if (targetPlan.category && targetPlan.category !== "BOTH") {
+            setActiveCategoryFilter((prev) => (prev === "ALL" ? prev : targetPlan.category));
+          }
         } else if (planList.length > 0 && !selectedPlanId) {
           setSelectedPlanId(planList[0].id);
         }
@@ -128,7 +152,7 @@ export default function SellerPaymentCanvasDas() {
 
   useEffect(() => {
     loadData();
-  }, [queryPlanId, queryCategory]);
+  }, [queryPlanId, queryCategory, queryToken]);
 
   // Keep selected plan valid when plans change
   useEffect(() => {

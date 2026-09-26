@@ -14,6 +14,21 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
         headers.set("Pragma", "no-cache");
     }
 
+    if (typeof window !== "undefined" && !headers.has("Authorization")) {
+        const storedToken = localStorage.getItem("token");
+        if (storedToken && storedToken.trim() !== "") {
+            headers.set("Authorization", `Bearer ${storedToken.trim()}`);
+        } else {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryToken = urlParams.get("token");
+                if (queryToken && queryToken.trim() !== "") {
+                    headers.set("Authorization", `Bearer ${queryToken.trim()}`);
+                }
+            } catch {}
+        }
+    }
+
     const res = await fetch(target, {
         credentials: "include",
         cache: init?.cache || "no-store",

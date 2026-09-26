@@ -243,6 +243,10 @@ export async function middleware(request: NextRequest) {
   // 7. UNAUTHENTICATED ACCESS — redirect to login
   // ──────────────────────────────────────────
   if (!isAuthenticated) {
+    const hasTokenParam = Boolean(request.nextUrl.searchParams.get("token"));
+    if (isSellerRoute && hasTokenParam) {
+      return NextResponse.next();
+    }
     if (isSellerRoute) {
       const callbackUrl = encodeURIComponent(pathname + search);
       return NextResponse.redirect(

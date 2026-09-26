@@ -190,6 +190,9 @@ export function useSellerProfile() {
 
     const pathname = window.location.pathname;
     const isPublicSellerPath = isPublicSellerRoute(pathname);
+    const hasToken =
+      Boolean(new URLSearchParams(window.location.search).get("token")) ||
+      Boolean(localStorage.getItem("token"));
 
     const isSellerRoute =
       pathname === "/seller" ||
@@ -197,7 +200,12 @@ export function useSellerProfile() {
       pathname === "/dashboard/seller" ||
       pathname.startsWith("/dashboard/seller/");
 
-    if (isSellerRoute && !isPublicSellerPath && (status === "unauthenticated" || (status === "authenticated" && sessionRole !== "SELLER"))) {
+    if (
+      isSellerRoute &&
+      !isPublicSellerPath &&
+      !hasToken &&
+      (status === "unauthenticated" || (status === "authenticated" && sessionRole !== "SELLER"))
+    ) {
       const callbackUrl = encodeURIComponent(pathname + window.location.search);
       window.location.href = `/seller/login?callbackUrl=${callbackUrl}`;
     }
@@ -205,7 +213,7 @@ export function useSellerProfile() {
 
   useEffect(() => {
     const handleUpdate = () => {
-      if (cachedProfile && sessionRole === "SELLER") {
+      if (cachedProfile && (sessionRole === "SELLER" || cachedProfile.ownerName || cachedProfile.businessName)) {
         setProfileState((prev) => ({
           ...prev,
           ...cachedProfile,
@@ -224,8 +232,13 @@ export function useSellerProfile() {
     let isMounted = true;
 
     async function fetchProfile() {
-      // Only make authenticated profile request when the user has an active SELLER session
-      if (status !== "authenticated" || sessionRole !== "SELLER") {
+      const hasToken =
+        typeof window !== "undefined" &&
+        (Boolean(new URLSearchParams(window.location.search).get("token")) ||
+          Boolean(localStorage.getItem("token")));
+
+      // Only make authenticated profile request when the user has an active SELLER session or a valid mobile token
+      if ((status !== "authenticated" || sessionRole !== "SELLER") && !hasToken) {
         if (isMounted) {
           setProfileState((prev) => ({
             ...prev,
