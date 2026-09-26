@@ -309,19 +309,32 @@ export default function SignUpRightComponent({
           lower.includes("already registered") ||
           lower.includes("user already exists") ||
           lower.includes("account with this email") ||
-          lower.includes("email already in use")
+          lower.includes("email already in use") ||
+          lower.includes("mobile") ||
+          lower.includes("phone")
         ) {
-          errMsg = "This email address is already registered. Please sign in or use another email.";
-          setEmailError("This email address is already registered. Please sign in or use another email.");
+          if (lower.includes("phone") || lower.includes("mobile")) {
+            errMsg = "An account with this mobile number already exists. Please sign in.";
+          } else {
+            errMsg = "An account with this email address already exists. Please sign in.";
+            setEmailError("An account with this email address already exists. Please sign in.");
+          }
         }
         setError(errMsg);
       }
     } catch (err: any) {
       const msg = err.message || "Something went wrong. Please try again.";
-      if (msg.toLowerCase().includes("already exist") || msg.toLowerCase().includes("already registered")) {
-        setEmailError("This email address is already registered. Please sign in or use another email.");
+      const lower = msg.toLowerCase();
+      if (lower.includes("already exist") || lower.includes("already registered")) {
+        if (lower.includes("phone") || lower.includes("mobile")) {
+          setError("An account with this mobile number already exists. Please sign in.");
+        } else {
+          setError("An account with this email address already exists. Please sign in.");
+          setEmailError("An account with this email address already exists. Please sign in.");
+        }
+      } else {
+        setError(msg);
       }
-      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -458,9 +471,30 @@ export default function SignUpRightComponent({
                 borderRadius: "10px",
                 fontSize: "13px",
                 fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "8px",
               }}
             >
-              {error}
+              <span>{error}</span>
+              {(error.toLowerCase().includes("already exists") ||
+                error.toLowerCase().includes("sign in") ||
+                error.toLowerCase().includes("already registered")) && (
+                <Link
+                  href={signInUrl}
+                  style={{
+                    color: "#EA580C",
+                    fontWeight: 700,
+                    textDecoration: "underline",
+                    whiteSpace: "nowrap",
+                    fontSize: "13px",
+                    flexShrink: 0,
+                  }}
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
           )}
 

@@ -19,9 +19,9 @@ export const LoginHero: React.FC<LoginHeroProps> = ({
 }) => {
   return (
     <div className={styles.heroContainer}>
-      {/* Background Cover Image */}
+      {/* Background Cover Image (Optimized lightweight asset to prevent network stalls) */}
       <Image
-        src="/images/login-page-image3.png"
+        src="/images/login-page-image3.jpg"
         alt="Delicious meal spread"
         fill
         priority

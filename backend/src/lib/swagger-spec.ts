@@ -1734,14 +1734,54 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
       get: {
         tags: ["Seller-Delivery"],
         summary: "List In-House Delivery Riders",
+        description: "Retrieves all delivery agents registered under the authenticated seller, including active duty status, outstanding COD cash balance, vehicle details, and active pending delivery counts.",
         security: [{ BearerAuth: [] }],
         responses: {
-          200: { description: "Riders roster", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+          200: {
+            description: "Roster of delivery agents",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    data: {
+                      type: "object",
+                      properties: {
+                        deliveryPersons: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: { type: "string", example: "dp_101" },
+                              userId: { type: "string", example: "usr_202" },
+                              name: { type: "string", example: "Suresh Patil" },
+                              phone: { type: "string", example: "9812345678" },
+                              email: { type: "string", example: "suresh.rider@kitchen.com" },
+                              vehicleType: { type: "string", example: "Motorcycle / Scooter" },
+                              vehicleNumber: { type: "string", example: "MH-12-AB-1234" },
+                              isActive: { type: "boolean", example: true },
+                              outstandingBalance: { type: "number", example: 1250 },
+                              pendingDeliveriesCount: { type: "number", example: 2 },
+                              createdAt: { type: "string", format: "date-time" },
+                              updatedAt: { type: "string", format: "date-time" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          401: { description: "Unauthorized - SELLER role required" }
         }
       },
       post: {
         tags: ["Seller-Delivery"],
         summary: "Add In-House Delivery Rider",
+        description: "Registers a new in-house delivery rider account and creates their linked user credentials.",
         security: [{ BearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1755,14 +1795,19 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
                   phone: { type: "string", example: "9812345678" },
                   email: { type: "string", example: "suresh.rider@kitchen.com" },
                   password: { type: "string", example: "RiderPass123!" },
-                  vehicleNumber: { type: "string", example: "MH-12-AB-1234" }
+                  vehicleType: { type: "string", example: "Motorcycle / Scooter" },
+                  vehicleNumber: { type: "string", example: "MH-12-AB-1234" },
+                  city: { type: "string", example: "Pune" },
+                  pincode: { type: "string", example: "411038" }
                 }
               }
             }
           }
         },
         responses: {
-          201: { description: "Rider registered", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+          201: { description: "Delivery agent registered successfully", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } },
+          400: { description: "Validation error or invalid phone/email format", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          409: { description: "Email address already registered to another account", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -1776,17 +1821,104 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
       },
       put: {
         tags: ["Seller-Delivery"],
-        summary: "Update Rider Status",
+        summary: "Edit Delivery Rider Details / Toggle Active Status",
+        description: "Updates delivery agent information (name, phone, email, optional new password, vehicle type/number) or toggles their active/inactive duty status.",
         security: [{ BearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        requestBody: { required: true, content: { "application/json": { schema: { type: "object" } } } },
-        responses: { 200: { description: "Rider updated", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } } }
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string", example: "Suresh R. Patil" },
+                  phone: { type: "string", example: "9812345678" },
+                  email: { type: "string", example: "suresh.new@kitchen.com" },
+                  password: { type: "string", example: "NewSecret123!" },
+                  vehicleType: { type: "string", example: "Electric Scooter" },
+                  vehicleNumber: { type: "string", example: "MH-12-XY-9876" },
+                  isActive: { type: "boolean", example: true }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: "Delivery agent updated successfully", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } },
+          400: { description: "Invalid input or validation error", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          404: { description: "Delivery agent not found", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          409: { description: "Email already taken by another user", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      patch: {
+        tags: ["Seller-Delivery"],
+        summary: "Patch Delivery Rider / Toggle Active Status",
+        description: "Partially updates delivery agent attributes or toggles `isActive` status.",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  isActive: { type: "boolean", example: false }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: "Delivery agent updated successfully", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } },
+          404: { description: "Delivery agent not found" }
+        }
+      },
+      delete: {
+        tags: ["Seller-Delivery"],
+        summary: "Delete Delivery Rider Account",
+        description: "Permanently deletes the delivery agent account and linked user login. Deletion is strictly blocked if the agent has active pending deliveries or an outstanding COD cash balance.",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          200: {
+            description: "Delivery agent deleted successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Delivery agent Suresh Patil deleted successfully." }
+                  }
+                }
+              }
+            }
+          },
+          400: {
+            description: "Cannot delete delivery agent due to active pending deliveries or outstanding COD cash balance",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: false },
+                    message: { type: "string", example: "Cannot delete delivery agent: agent has active pending deliveries or an outstanding COD balance. Please reassign pending deliveries or settle balance first, or mark the agent as Inactive." }
+                  }
+                }
+              }
+            }
+          },
+          404: { description: "Delivery agent not found", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+        }
       }
     },
     "/api/seller/delivery/{id}/collect": {
       post: {
         tags: ["Seller-Delivery"],
-        summary: "Collect COD Cash from Rider",
+        summary: "Collect COD Cash from Delivery Rider",
+        description: "Records cash collected by the seller from the delivery agent, deducting from the agent's outstanding COD balance down to zero. Does not allow adding extra balance beyond platform tracking.",
         security: [{ BearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
@@ -1797,42 +1929,16 @@ Welcome to the **Neo Cloud Kitchen & Room Rental REST API Console**.
                 type: "object",
                 required: ["amount"],
                 properties: {
-                  amount: { type: "number", example: 1500 },
-                  notes: { type: "string", example: "End of shift cash settlement" }
+                  amount: { type: "number", example: 1250 },
+                  description: { type: "string", example: "Cash handover to owner console" }
                 }
               }
             }
           }
         },
         responses: {
-          200: { description: "Cash collected and balance adjusted", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
-        }
-      }
-    },
-    "/api/seller/delivery/{id}/adjust": {
-      post: {
-        tags: ["Seller-Delivery"],
-        summary: "Adjust Rider Balance (Incentive / Penalty)",
-        security: [{ BearerAuth: [] }],
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["amount", "type"],
-                properties: {
-                  amount: { type: "number", example: 200 },
-                  type: { type: "string", enum: ["CREDIT", "DEBIT"], example: "CREDIT" },
-                  reason: { type: "string", example: "Fuel allowance" }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          200: { description: "Balance adjusted", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } }
+          200: { description: "Cash collected and balance deducted successfully", content: { "application/json": { schema: { $ref: "#/components/schemas/StandardResponse" } } } },
+          400: { description: "Collection amount exceeds outstanding balance or is invalid" }
         }
       }
     },

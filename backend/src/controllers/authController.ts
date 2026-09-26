@@ -238,7 +238,7 @@ export const registerUser = async (req: Request) => {
 
     if (existingUser) {
         console.error("User account already exists with email:", finalEmail);
-        throw new ApiError("An account with this email address already exists. Please log in or use a different email.", 409);
+        throw new ApiError("An account with this email address already exists. Please sign in.", 409);
     }
 
     if (finalPhone) {
@@ -247,7 +247,7 @@ export const registerUser = async (req: Request) => {
         });
         if (existingPhoneUser) {
             console.error("User account already exists with phone:", finalPhone);
-            throw new ApiError("An account with this phone number already exists. Please log in or use a different phone number.", 409);
+            throw new ApiError("An account with this mobile number already exists. Please sign in.", 409);
         }
     }
 
