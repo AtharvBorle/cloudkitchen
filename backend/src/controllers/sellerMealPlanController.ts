@@ -82,7 +82,7 @@ export const getSellerMealPlans = async () => {
             parsedTimings = [];
         }
 
-        const activeSubscribers = plan.userSubscriptions.filter((s) => s.status === "ACTIVE" || !s.isPaused).length;
+        const activeSubscribers = plan.userSubscriptions.filter((s) => s.status === "ACTIVE" && !s.isPaused).length;
 
         const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
         return {
@@ -101,7 +101,7 @@ export const getSellerMealPlans = async () => {
             status: plan.status,
             allowCancel: plan.allowCancel,
             pauseBillingPeriod: plan.pauseBillingPeriod,
-            subscribersCount: activeSubscribers || plan.subscribersCount || 0,
+            subscribersCount: activeSubscribers,
             createdAt: plan.createdAt.toISOString(),
             updatedAt: plan.updatedAt.toISOString(),
         };
@@ -196,7 +196,7 @@ export const getSellerMealPlanById = async (planId: string) => {
         status: plan.status,
         allowCancel: plan.allowCancel,
         pauseBillingPeriod: plan.pauseBillingPeriod,
-        subscribersCount: plan.userSubscriptions?.length || plan.subscribersCount || 0,
+        subscribersCount: plan.userSubscriptions?.filter((s) => s.status === "ACTIVE" && !s.isPaused).length || 0,
         createdAt: plan.createdAt.toISOString(),
         updatedAt: plan.updatedAt.toISOString(),
     };
