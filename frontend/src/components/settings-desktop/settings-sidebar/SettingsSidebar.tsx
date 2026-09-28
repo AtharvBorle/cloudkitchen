@@ -40,8 +40,14 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
 
   const getActiveTab = (): string => {
     if (activeTabId) return activeTabId;
-    if (pathname === "/settings-desktop" || pathname === "/settings") return "general-overview";
-    if (pathname?.startsWith("/my-subscription") || pathname?.startsWith("/my-subscriptions-desktop")) return "my-subscriptions";
+    if (
+      pathname?.startsWith("/my-subscription") ||
+      pathname?.startsWith("/my-subscriptions") ||
+      pathname?.startsWith("/mysubscription") ||
+      pathname?.startsWith("/mysubscriptions") ||
+      pathname?.startsWith("/subscriptions") ||
+      pathname?.startsWith("/subscription")
+    ) return "my-subscriptions";
     if (pathname?.startsWith("/notifications-desktop") || pathname?.startsWith("/notifications")) return "notifications";
     if (pathname?.startsWith("/payment-methods-desktop") || pathname?.startsWith("/payment-methods")) return "payment-methods";
     if (pathname?.startsWith("/delivery-addresses-desktop") || pathname?.startsWith("/delivery-addresses")) return "delivery-addresses";
