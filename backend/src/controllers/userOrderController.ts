@@ -532,7 +532,7 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         }
     }
 
-    return null;
+    return cancelledOrder;
 };
 
 export const verifyOrderPayment = async (req: Request) => {

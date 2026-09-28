@@ -81,7 +81,7 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
                         if (prop === 'json') {
                             return async () => {
                                 if (json.success) {
-                                    return json.data !== undefined ? json.data : json;
+                                    return (json.data !== undefined && json.data !== null) ? json.data : json;
                                 } else {
                                     return { ...json, message: json.error || json.message };
                                 }
@@ -150,7 +150,7 @@ export function uploadWithProgress(
                         if (parsed && typeof parsed === 'object') {
                             if ('success' in parsed) {
                                 if (parsed.success) {
-                                    return parsed.data !== undefined ? parsed.data : parsed;
+                                    return (parsed.data !== undefined && parsed.data !== null) ? parsed.data : parsed;
                                 } else {
                                     return { ...parsed, message: parsed.error || parsed.message };
                                 }

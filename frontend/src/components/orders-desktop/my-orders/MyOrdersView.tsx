@@ -655,9 +655,9 @@ export default function MyOrdersView() {
         body: JSON.stringify({}),
       });
 
-      const json = await res.json();
-      if (!res.ok || json.success === false) {
-        setCancelError(json.message || json.error || "Failed to cancel order. Please try again.");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || (json && json.success === false)) {
+        setCancelError(json?.message || json?.error || "Failed to cancel order. Please try again.");
         return;
       }
 
@@ -681,6 +681,7 @@ export default function MyOrdersView() {
       }
 
       setCancelModalOrder(null);
+      setCancelError(null);
       showToast("Your order has been cancelled successfully.");
     } catch (err: any) {
       console.error("Cancel order error:", err);
