@@ -1508,7 +1508,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         Please add products to your cart before placing an order.
                       </p>
                       <Link
-                        href="/explore-desktop"
+                        href="/food-explore"
                         style={{
                           display: "inline-block",
                           padding: "8px 18px",

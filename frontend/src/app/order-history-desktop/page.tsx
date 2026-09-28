@@ -447,7 +447,7 @@ export default function OrderHistoryDesktopPage() {
 
   const handleExploreOtherKitchens = () => {
     setModalState((prev) => ({ ...prev, isOpen: false }));
-    router.push("/explore-desktop");
+    router.push("/food-explore");
   };
 
   const handleExploreSellerMenu = () => {

@@ -91,16 +91,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
 
+            if (stockLimit === 0) {
+                alert(`Sorry, ${item.name} is currently out of stock.`);
+                return prev;
+            }
+
             if (existing) {
                 const addQty = item.quantity !== undefined ? item.quantity : 1;
                 const newQty = existing.quantity + addQty;
 
-                if (stockLimit !== -1 && newQty > stockLimit) {
+                if (stockLimit !== -1 && (existing.quantity >= stockLimit || newQty > stockLimit)) {
                     alert(`Cannot add more. Only ${stockLimit} items available in stock for ${item.name}.`);
                     return prev.map(i => i.id === item.id ? {
                         ...i,
                         ...normalizedItem,
-                        quantity: Math.min(stockLimit, Math.max(existing.quantity, 1)),
+                        quantity: Math.min(stockLimit, existing.quantity),
                         maxStock: stockLimit,
                         stockQuantity: stockLimit,
                         image: itemImage,
@@ -124,7 +129,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 alert(`Cannot add more. Only ${stockLimit} items available in stock for ${item.name}.`);
                 return [...prev, {
                     ...normalizedItem,
-                    quantity: Math.max(1, stockLimit),
+                    quantity: stockLimit,
                     maxStock: stockLimit,
                     stockQuantity: stockLimit,
                     image: itemImage,
