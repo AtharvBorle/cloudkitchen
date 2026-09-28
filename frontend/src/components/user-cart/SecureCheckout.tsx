@@ -444,7 +444,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
     const handleOffline = () => {
       setIsOffline(true);
-      showToast("Network connection lost. Please check your internet connection and try again.", "error");
+      showToast("Unable to place your order. Please check your internet connection and try again.", "error");
     };
 
     window.addEventListener("online", handleOnline);
@@ -484,7 +484,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
   const autoFinalizePaidOrder = async (tx: PendingOrderTransaction) => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      showToast("Network connection lost. Please check your internet connection and try again.", "error");
+      showToast("Unable to place your order. Please check your internet connection and try again.", "error");
       setIsRecoveringTx(false);
       return;
     }
@@ -571,11 +571,13 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       const isNetErr =
         (typeof navigator !== "undefined" && !navigator.onLine) ||
         err?.name === "TypeError" ||
+        err?.name === "NetworkError" ||
         String(err?.message || "").toLowerCase().includes("network") ||
-        String(err?.message || "").toLowerCase().includes("failed to fetch");
+        String(err?.message || "").toLowerCase().includes("fetch") ||
+        String(err?.message || "").toLowerCase().includes("internet");
 
       if (isNetErr) {
-        showToast("Network connection lost. Please check your internet connection and try again.", "error");
+        showToast("Unable to place your order. Please check your internet connection and try again.", "error");
       } else {
         showToast(err?.message || "Failed to finalize order after payment.", "error");
       }
@@ -671,7 +673,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
   const handlePlaceOrderClick = async () => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      showToast("Network connection lost. Please check your internet connection and try again.", "error");
+      showToast("Unable to place your order. Please check your internet connection and try again.", "error");
       setIsSubmitting(false);
       return;
     }
@@ -801,7 +803,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
-          showToast("Failed to load Razorpay SDK. Please check your internet connection and try again.", "error");
+          showToast("Unable to place your order. Please check your internet connection and try again.", "error");
           setIsSubmitting(false);
           return;
         }
@@ -933,11 +935,13 @@ const loadRazorpayScript = (): Promise<boolean> => {
               const isNetErr =
                 (typeof navigator !== "undefined" && !navigator.onLine) ||
                 err?.name === "TypeError" ||
+                err?.name === "NetworkError" ||
                 String(err?.message || "").toLowerCase().includes("network") ||
-                String(err?.message || "").toLowerCase().includes("failed to fetch");
+                String(err?.message || "").toLowerCase().includes("fetch") ||
+                String(err?.message || "").toLowerCase().includes("internet");
 
               if (isNetErr) {
-                showToast("Network connection lost. Please check your internet connection and try again.", "error");
+                showToast("Unable to place your order. Please check your internet connection and try again.", "error");
               } else {
                 showToast(err?.message || "Failed to complete order after payment.", "error");
               }
@@ -1085,11 +1089,13 @@ const loadRazorpayScript = (): Promise<boolean> => {
       const isNetErr =
         (typeof navigator !== "undefined" && !navigator.onLine) ||
         err?.name === "TypeError" ||
+        err?.name === "NetworkError" ||
         String(err?.message || "").toLowerCase().includes("network") ||
-        String(err?.message || "").toLowerCase().includes("failed to fetch");
+        String(err?.message || "").toLowerCase().includes("fetch") ||
+        String(err?.message || "").toLowerCase().includes("internet");
 
       if (isNetErr) {
-        showToast("Network connection lost. Please check your internet connection and try again.", "error");
+        showToast("Unable to place your order. Please check your internet connection and try again.", "error");
       } else {
         showToast(err?.message || "Failed to place order. Please try again.", "error");
       }
@@ -1166,7 +1172,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           <div className={styles.offlineBanner}>
             <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
             <div>
-              <strong>Network connection lost.</strong> Please check your internet connection and try again.
+              <strong>Internet connection unavailable.</strong> Unable to place your order. Please check your internet connection and try again.
             </div>
           </div>
         )}

@@ -734,7 +734,7 @@ function CheckoutContent() {
         setError("");
 
         if (typeof navigator !== "undefined" && !navigator.onLine) {
-            setError("Network connection lost. Please check your internet connection and try again.");
+            setError("Unable to place your order. Please check your internet connection and try again.");
             return;
         }
 
@@ -859,7 +859,7 @@ function CheckoutContent() {
                     if (paymentMethod === "ONLINE" && data.razorpayOrder) {
                         const scriptLoaded = await loadRazorpayScript();
                         if (!scriptLoaded) {
-                            setError("Failed to load Razorpay SDK. Please check your internet connection.");
+                            setError("Unable to place your order. Please check your internet connection and try again.");
                             setIsSubmitting(false);
                             return;
                         }
@@ -896,11 +896,13 @@ function CheckoutContent() {
                                 } catch (e: any) {
                                     const isNetErr = (typeof navigator !== "undefined" && !navigator.onLine) ||
                                         e?.name === "TypeError" ||
+                                        e?.name === "NetworkError" ||
                                         String(e?.message || "").toLowerCase().includes("network") ||
-                                        String(e?.message || "").toLowerCase().includes("failed to fetch");
+                                        String(e?.message || "").toLowerCase().includes("fetch") ||
+                                        String(e?.message || "").toLowerCase().includes("internet");
 
                                     if (isNetErr) {
-                                        setError("Network connection lost. Please check your internet connection and try again.");
+                                        setError("Unable to place your order. Please check your internet connection and try again.");
                                     } else {
                                         setError("An error occurred during payment verification.");
                                     }
@@ -938,11 +940,13 @@ function CheckoutContent() {
         } catch (err: any) {
             const isNetErr = (typeof navigator !== "undefined" && !navigator.onLine) ||
                 err?.name === "TypeError" ||
+                err?.name === "NetworkError" ||
                 String(err?.message || "").toLowerCase().includes("network") ||
-                String(err?.message || "").toLowerCase().includes("failed to fetch");
+                String(err?.message || "").toLowerCase().includes("fetch") ||
+                String(err?.message || "").toLowerCase().includes("internet");
 
             if (isNetErr) {
-                setError("Network connection lost. Please check your internet connection and try again.");
+                setError("Unable to place your order. Please check your internet connection and try again.");
             } else {
                 setError("An unexpected error occurred.");
             }
