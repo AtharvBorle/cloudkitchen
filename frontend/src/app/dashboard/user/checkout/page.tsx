@@ -733,6 +733,11 @@ function CheckoutContent() {
         e.preventDefault();
         setError("");
 
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+            setError("Network connection lost. Please check your internet connection and try again.");
+            return;
+        }
+
         if (!phone) {
             setError("Please update your phone number in your profile to proceed.");
             return;
@@ -868,6 +873,7 @@ function CheckoutContent() {
                             order_id: data.razorpayOrder.id,
                             handler: async function (response: any) {
                                 try {
+                                    setIsSubmitting(true);
                                     const verifyRes = await fetchApi("/api/user/orders/verify", {
                                         method: "POST",
                                         headers: { "Content-Type": "application/json" },
@@ -887,8 +893,24 @@ function CheckoutContent() {
                                         const verifyData = await verifyRes.json();
                                         setError(verifyData.message || "Payment verification failed.");
                                     }
-                                } catch (e) {
-                                    setError("An error occurred during payment verification.");
+                                } catch (e: any) {
+                                    const isNetErr = (typeof navigator !== "undefined" && !navigator.onLine) ||
+                                        e?.name === "TypeError" ||
+                                        String(e?.message || "").toLowerCase().includes("network") ||
+                                        String(e?.message || "").toLowerCase().includes("failed to fetch");
+
+                                    if (isNetErr) {
+                                        setError("Network connection lost. Please check your internet connection and try again.");
+                                    } else {
+                                        setError("An error occurred during payment verification.");
+                                    }
+                                } finally {
+                                    setIsSubmitting(false);
+                                }
+                            },
+                            modal: {
+                                ondismiss: function () {
+                                    setIsSubmitting(false);
                                 }
                             },
                             prefill: {
@@ -899,6 +921,10 @@ function CheckoutContent() {
                             }
                         };
                         const rzp = new (window as any).Razorpay(options);
+                        rzp.on("payment.failed", function (response: any) {
+                            setIsSubmitting(false);
+                            setError("Payment failed: " + (response.error?.description || "Transaction declined"));
+                        });
                         rzp.open();
                     } else {
                         clearCart();
@@ -909,8 +935,17 @@ function CheckoutContent() {
                     setError(data.message || "Failed to place order.");
                 }
             }
-        } catch (err) {
-            setError("An unexpected error occurred.");
+        } catch (err: any) {
+            const isNetErr = (typeof navigator !== "undefined" && !navigator.onLine) ||
+                err?.name === "TypeError" ||
+                String(err?.message || "").toLowerCase().includes("network") ||
+                String(err?.message || "").toLowerCase().includes("failed to fetch");
+
+            if (isNetErr) {
+                setError("Network connection lost. Please check your internet connection and try again.");
+            } else {
+                setError("An unexpected error occurred.");
+            }
         } finally {
             setIsSubmitting(false);
         }

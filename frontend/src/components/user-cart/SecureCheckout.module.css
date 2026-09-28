@@ -1230,4 +1230,140 @@
   margin: 0;
 }
 
+/* =========================================================
+   OFFLINE & TRANSACTION RECOVERY BANNERS
+   ========================================================= */
+.offlineBanner {
+  background-color: #FEF2F2;
+  border: 1.5px solid #FCA5A5;
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #991B1B;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.recoveryBanner {
+  background: linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%);
+  border: 1.5px solid #86EFAC;
+  border-radius: 16px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  animation: fadeInRecovery 0.3s ease-in-out;
+}
+
+@keyframes fadeInRecovery {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.recoveryLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.recoveryIconBox {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: #DCFCE7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.recoveryTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #14532D;
+  margin: 0 0 3px 0;
+}
+
+.recoverySubtitle {
+  font-size: 13px;
+  color: #166534;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.recoveryActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.recoveryPrimaryBtn {
+  background-color: #16A34A;
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.recoveryPrimaryBtn:hover:not(:disabled) {
+  background-color: #15803D;
+  transform: translateY(-1px);
+}
+
+.recoveryPrimaryBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.recoverySecondaryBtn {
+  background-color: #FFFFFF;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.recoverySecondaryBtn:hover {
+  background-color: #F8FAFC;
+  color: #0F172A;
+}
+
+.paymentFailedBanner {
+  background-color: #FEF2F2;
+  border: 1.5px solid #FECACA;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
 

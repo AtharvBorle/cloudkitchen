@@ -61,6 +61,31 @@ export interface CheckoutSummaryItem {
   image: string;
 }
 
+export interface PendingOrderTransaction {
+  id: string;
+  status: "INITIATED" | "PAID_PENDING_CONFIRMATION" | "PAYMENT_FAILED" | "CONFIRMED";
+  razorpayOrderId?: string;
+  razorpay_payment_id?: string;
+  razorpay_order_id?: string;
+  razorpay_signature?: string;
+  amount: number;
+  sellerId: string;
+  orderItems: any[];
+  deliveryAddress: string;
+  customerPhone: string;
+  appliedCouponId?: string | null;
+  checkoutItems: CheckoutSummaryItem[];
+  fullName: string;
+  streetAddress: string;
+  city: string;
+  postalCode: string;
+  subtotal: number;
+  discountAmount: number;
+  grandTotal: number;
+  failureReason?: string;
+  timestamp: number;
+}
+
 export interface SecureCheckoutProps {
   defaultLocation?: string;
   initialName?: string;
@@ -402,6 +427,162 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [isOrderPlaced, setIsOrderPlaced] = useState<boolean>(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [pendingTx, setPendingTx] = useState<PendingOrderTransaction | null>(null);
+  const [isRecoveringTx, setIsRecoveringTx] = useState<boolean>(false);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+
+  // Network Offline / Online Detection
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    setIsOffline(!navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOffline(false);
+      showToast("Internet connection restored.", "info");
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      showToast("Network connection lost. Please check your internet connection and try again.", "error");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Check and reconcile pending transactions on mount (Browser Refresh Recovery)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const stored = localStorage.getItem("pending_order_transaction");
+      if (stored) {
+        const parsed: PendingOrderTransaction = JSON.parse(stored);
+        const ageMs = Date.now() - (parsed.timestamp || 0);
+        // If older than 2 hours, expire it
+        if (ageMs > 2 * 60 * 60 * 1000) {
+          localStorage.removeItem("pending_order_transaction");
+        } else {
+          setPendingTx(parsed);
+
+          // If payment was already verified on gateway side, auto reconcile
+          if (parsed.status === "PAID_PENDING_CONFIRMATION" && parsed.razorpay_payment_id) {
+            autoFinalizePaidOrder(parsed);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse pending transaction from storage:", e);
+    }
+  }, []);
+
+  const autoFinalizePaidOrder = async (tx: PendingOrderTransaction) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      showToast("Network connection lost. Please check your internet connection and try again.", "error");
+      setIsRecoveringTx(false);
+      return;
+    }
+
+    setIsRecoveringTx(true);
+    try {
+      const createRes = await fetchApi("/api/user/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sellerId: tx.sellerId || "seller",
+          items: tx.orderItems,
+          totalAmount: tx.grandTotal,
+          deliveryAddress: tx.deliveryAddress,
+          customerPhone: tx.customerPhone,
+          paymentMethod: "ONLINE",
+          appliedCouponId: tx.appliedCouponId || null,
+          razorpay_payment_id: tx.razorpay_payment_id,
+          razorpay_order_id: tx.razorpay_order_id,
+          razorpay_signature: tx.razorpay_signature,
+        }),
+      });
+
+      const createData = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) {
+        const errorMsg = createData.message || createData.error || "Failed to finalize order after payment.";
+        showToast(errorMsg, "error");
+        setIsRecoveringTx(false);
+        return;
+      }
+
+      const createdOrder = createData.data?.order || createData.order || createData.data;
+      const finalOrderId = createdOrder?.id || ("NCR-" + Math.floor(100000 + Math.random() * 900000));
+      setPlacedOrderNumber(finalOrderId);
+
+      const confirmedOrderPayload = {
+        orderId: finalOrderId,
+        orderTime: "Just now",
+        estimatedDelivery: "25-35 mins",
+        deliveryAddress: {
+          fullName: tx.fullName || fullName.trim(),
+          phoneNumber: tx.customerPhone || phoneNumber.trim(),
+          streetAddress: tx.streetAddress || streetAddress.trim(),
+          city: tx.city || city.trim() || "Kothrud, Pune",
+          pincode: tx.postalCode || postalCode.trim() || "411038",
+        },
+        paymentMethod: "Pay Online (Paid via Razorpay)",
+        items: (tx.checkoutItems || checkoutItems).map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          qty: item.qty,
+          image: item.image,
+          variant: item.variant,
+          itemType: "VEG",
+        })),
+        subtotal: tx.subtotal || subtotal,
+        discount: tx.discountAmount || discountAmount,
+        deliveryFee: 0,
+        taxes: 0,
+        grandTotal: tx.grandTotal || grandTotal,
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.removeItem("pending_order_transaction");
+        } catch (e) {
+          console.error("Failed to save confirmed order to storage:", e);
+        }
+      }
+
+      setPendingTx(null);
+      setIsOrderPlaced(true);
+      clearCart();
+      showToast("Payment Verified! Order Placed Successfully!");
+
+      setTimeout(() => {
+        router.push(`/order-confirmation?orderId=${encodeURIComponent(finalOrderId)}`);
+      }, 700);
+    } catch (err: any) {
+      console.error("Error finalizing recovered transaction:", err);
+      const isNetErr =
+        (typeof navigator !== "undefined" && !navigator.onLine) ||
+        err?.name === "TypeError" ||
+        String(err?.message || "").toLowerCase().includes("network") ||
+        String(err?.message || "").toLowerCase().includes("failed to fetch");
+
+      if (isNetErr) {
+        showToast("Network connection lost. Please check your internet connection and try again.", "error");
+      } else {
+        showToast(err?.message || "Failed to finalize order after payment.", "error");
+      }
+    } finally {
+      setIsRecoveringTx(false);
+    }
+  };
 
   // Toast Notification
   const [toast, setToast] = useState<{
@@ -489,6 +670,12 @@ const loadRazorpayScript = (): Promise<boolean> => {
   };
 
   const handlePlaceOrderClick = async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      showToast("Network connection lost. Please check your internet connection and try again.", "error");
+      setIsSubmitting(false);
+      return;
+    }
+
     if (checkoutItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
       showToast(
         "Your cart is empty. Please add a product to the cart before placing an order.",
@@ -563,6 +750,31 @@ const loadRazorpayScript = (): Promise<boolean> => {
       // Initiate Razorpay checkout first -> Validate -> Place Order
       // -------------------------------------------------------------
       if (paymentMethod === "UPI") {
+        const pendingData: PendingOrderTransaction = {
+          id: `TX-${Date.now()}`,
+          status: "INITIATED",
+          amount: grandTotal,
+          sellerId: sellerId || "seller",
+          orderItems,
+          deliveryAddress: fullDeliveryAddress,
+          customerPhone: phoneNumber,
+          appliedCouponId: isPromoApplied ? promoCode : null,
+          checkoutItems,
+          fullName: fullName.trim(),
+          streetAddress: streetAddress.trim(),
+          city: city.trim(),
+          postalCode: postalCode.trim(),
+          subtotal,
+          discountAmount,
+          grandTotal,
+          timestamp: Date.now(),
+        };
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pending_order_transaction", JSON.stringify(pendingData));
+        }
+        setPendingTx(pendingData);
+
         const initRes = await fetchApi("/api/user/orders/initiate-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -589,12 +801,16 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
-          showToast("Failed to load Razorpay SDK. Please check your internet connection.", "error");
+          showToast("Failed to load Razorpay SDK. Please check your internet connection and try again.", "error");
           setIsSubmitting(false);
           return;
         }
 
         const rzpData = initData.data || initData;
+        pendingData.razorpayOrderId = rzpData.razorpayOrderId;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pending_order_transaction", JSON.stringify(pendingData));
+        }
 
         const options = {
           key: rzpData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TX4MPQgJuetMFP",
@@ -606,6 +822,20 @@ const loadRazorpayScript = (): Promise<boolean> => {
           handler: async function (response: any) {
             try {
               setIsSubmitting(true);
+              const paidPendingData: PendingOrderTransaction = {
+                ...pendingData,
+                status: "PAID_PENDING_CONFIRMATION",
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                timestamp: Date.now(),
+              };
+
+              if (typeof window !== "undefined") {
+                localStorage.setItem("pending_order_transaction", JSON.stringify(paidPendingData));
+              }
+              setPendingTx(paidPendingData);
+
               const createRes = await fetchApi("/api/user/orders", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -666,10 +896,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
               if (typeof window !== "undefined") {
                 try {
                   sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+                  localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+                  localStorage.removeItem("pending_order_transaction");
                 } catch (e) {
                   console.error("Failed to save confirmed order to session storage:", e);
                 }
               }
+
+              setPendingTx(null);
 
               // Real-time broadcast to Seller Operations Console & Bell Notification Counter
               try {
@@ -696,13 +930,27 @@ const loadRazorpayScript = (): Promise<boolean> => {
               }, 700);
             } catch (err: any) {
               console.error("Error finalizing online order:", err);
-              showToast(err?.message || "Failed to complete order after payment.", "error");
+              const isNetErr =
+                (typeof navigator !== "undefined" && !navigator.onLine) ||
+                err?.name === "TypeError" ||
+                String(err?.message || "").toLowerCase().includes("network") ||
+                String(err?.message || "").toLowerCase().includes("failed to fetch");
+
+              if (isNetErr) {
+                showToast("Network connection lost. Please check your internet connection and try again.", "error");
+              } else {
+                showToast(err?.message || "Failed to complete order after payment.", "error");
+              }
               setIsSubmitting(false);
             }
           },
           modal: {
             ondismiss: function () {
               setIsSubmitting(false);
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("pending_order_transaction");
+              }
+              setPendingTx(null);
               showToast("Payment cancelled. Order was not placed.", "info");
             },
           },
@@ -718,6 +966,16 @@ const loadRazorpayScript = (): Promise<boolean> => {
         const rzp = new (window as any).Razorpay(options);
         rzp.on("payment.failed", function (response: any) {
           setIsSubmitting(false);
+          const failedTx: PendingOrderTransaction = {
+            ...pendingData,
+            status: "PAYMENT_FAILED",
+            failureReason: response.error?.description || "Transaction declined",
+            timestamp: Date.now(),
+          };
+          if (typeof window !== "undefined") {
+            localStorage.setItem("pending_order_transaction", JSON.stringify(failedTx));
+          }
+          setPendingTx(failedTx);
           showToast("Payment failed: " + (response.error?.description || "Transaction declined"), "error");
         });
         rzp.open();
@@ -792,6 +1050,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
       if (typeof window !== "undefined") {
         try {
           sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.removeItem("pending_order_transaction");
         } catch (e) {
           console.error("Failed to save confirmed order to session storage:", e);
         }
@@ -822,11 +1082,19 @@ const loadRazorpayScript = (): Promise<boolean> => {
       }, 700);
     } catch (err: any) {
       console.error("Error placing order:", err);
-      showToast(err?.message || "Failed to place order. Please try again.");
-    } finally {
-      if (paymentMethod !== "UPI") {
-        setIsSubmitting(false);
+      const isNetErr =
+        (typeof navigator !== "undefined" && !navigator.onLine) ||
+        err?.name === "TypeError" ||
+        String(err?.message || "").toLowerCase().includes("network") ||
+        String(err?.message || "").toLowerCase().includes("failed to fetch");
+
+      if (isNetErr) {
+        showToast("Network connection lost. Please check your internet connection and try again.", "error");
+      } else {
+        showToast(err?.message || "Failed to place order. Please try again.", "error");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -892,6 +1160,90 @@ const loadRazorpayScript = (): Promise<boolean> => {
               : "Complete your gourmet order in just a few simple steps."}
           </p>
         </section>
+
+        {/* Offline Banner */}
+        {isOffline && (
+          <div className={styles.offlineBanner}>
+            <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Network connection lost.</strong> Please check your internet connection and try again.
+            </div>
+          </div>
+        )}
+
+        {/* Transaction Recovery Banner for PAID_PENDING_CONFIRMATION */}
+        {pendingTx && pendingTx.status === "PAID_PENDING_CONFIRMATION" && !isOrderPlaced && (
+          <div className={styles.recoveryBanner}>
+            <div className={styles.recoveryLeft}>
+              <div className={styles.recoveryIconBox}>
+                <CheckCircle2 size={24} color="#16A34A" />
+              </div>
+              <div>
+                <h4 className={styles.recoveryTitle}>
+                  Payment of ₹{pendingTx.grandTotal} Confirmed on Gateway — Order Finalization Pending
+                </h4>
+                <p className={styles.recoverySubtitle}>
+                  We detected your recent payment (ID: <code>{pendingTx.razorpay_payment_id}</code>). Click below to complete your order confirmation without paying again.
+                </p>
+              </div>
+            </div>
+            <div className={styles.recoveryActions}>
+              <button
+                type="button"
+                className={styles.recoveryPrimaryBtn}
+                disabled={isRecoveringTx}
+                onClick={() => autoFinalizePaidOrder(pendingTx)}
+              >
+                {isRecoveringTx ? "Finalizing Order..." : "Complete & Confirm Order"}
+              </button>
+              <button
+                type="button"
+                className={styles.recoverySecondaryBtn}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.removeItem("pending_order_transaction");
+                  }
+                  setPendingTx(null);
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Failed Alert Banner */}
+        {pendingTx && pendingTx.status === "PAYMENT_FAILED" && !isOrderPlaced && (
+          <div className={styles.paymentFailedBanner}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: "0.88rem", color: "#991B1B", fontWeight: 600 }}>
+                Previous Payment Failed: {pendingTx.failureReason || "Transaction was declined."} Your cart items and address are preserved so you can retry below.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("pending_order_transaction");
+                }
+                setPendingTx(null);
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#DC2626",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontSize: "0.82rem",
+                textDecoration: "underline",
+                flexShrink: 0,
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {isOrderPlaced ? (
           /* Step 3: Order Confirmation Card */
