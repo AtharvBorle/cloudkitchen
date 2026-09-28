@@ -109,6 +109,27 @@ export const createOrder = async (req: Request) => {
         if (expectedSignature !== razorpay_signature) {
             throw new ApiError("Payment verification failed: Invalid transaction signature", 400);
         }
+
+        // Idempotency / transaction recovery check if order was already created before a browser refresh
+        const existingOrder = await db.order.findFirst({
+            where: {
+                OR: [
+                    { razorpayPaymentId: razorpay_payment_id },
+                    { razorpayOrderId: razorpay_order_id }
+                ]
+            },
+            include: {
+                seller: true
+            }
+        });
+
+        if (existingOrder) {
+            return {
+                order: existingOrder,
+                alreadyCreated: true,
+                recovered: true
+            };
+        }
     }
 
     const dbUser = await db.user.findUnique({ where: { id: session.user.id } });
@@ -553,6 +574,10 @@ export const verifyOrderPayment = async (req: Request) => {
 
     if (expectedSignature !== razorpay_signature) {
         throw new ApiError("Invalid payment signature", 400);
+    }
+
+    if (order.isPaid) {
+        return { order, alreadyVerified: true };
     }
 
     const updatedOrder = await db.order.update({
