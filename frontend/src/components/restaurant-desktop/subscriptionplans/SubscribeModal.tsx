@@ -105,7 +105,27 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           const data = await res.json();
           const list = data.data?.addresses || data.addresses || data.data || [];
           if (Array.isArray(list)) {
-            setSavedAddresses(list);
+            const uniqueAddresses: any[] = [];
+            const seenTypes = new Set<string>();
+            const seenKeys = new Set<string>();
+
+            const sorted = [...list].sort((a, b) => {
+              if (a.isDefault && !b.isDefault) return -1;
+              if (!a.isDefault && b.isDefault) return 1;
+              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            });
+
+            for (const addr of sorted) {
+              const type = (addr.type || "Home").trim().toLowerCase();
+              const key = `${(addr.houseNumber || "").trim().toLowerCase()}-${(addr.street || "").trim().toLowerCase()}-${(addr.pincode || "").toString().replace(/\D/g, "")}`;
+              if (!seenTypes.has(type) && !seenKeys.has(key)) {
+                seenTypes.add(type);
+                seenKeys.add(key);
+                uniqueAddresses.push(addr);
+              }
+            }
+
+            setSavedAddresses(uniqueAddresses);
           }
         }
       } catch (err) {

@@ -344,20 +344,6 @@ function MySubscriptionContent() {
     }
   };
 
-  const getPerMealEstimate = (plan: PublicMealPlan, cycle: BillingCycle) => {
-    const price = getCyclePrice(plan, cycle);
-    let totalMeals = 7;
-    if (cycle === "weekly") totalMeals = 7;
-    else if (cycle === "monthly") totalMeals = 30;
-    else if (cycle === "quarterly") totalMeals = 90;
-    else if (cycle === "yearly") totalMeals = 365;
-
-    const timingsCount = plan.mealTimings && plan.mealTimings.length > 0 ? plan.mealTimings.length : 1;
-    const estMeals = totalMeals * Math.max(1, timingsCount <= 2 ? timingsCount : 2);
-    const perMeal = Math.round(price / estMeals);
-    return perMeal > 0 ? perMeal : 65;
-  };
-
   const handleTogglePause = async (nextPaused: boolean) => {
     if (!subscription) return;
     try {
@@ -443,7 +429,37 @@ function MySubscriptionContent() {
         if (data) {
           const list = data.data?.addresses || data.addresses || data.data || [];
           if (Array.isArray(list)) {
-            setUserSavedAddresses(list);
+            // Deduplicate addresses so each type (e.g. Home, Work) is only displayed once
+            const uniqueAddresses: any[] = [];
+            const seenTypes = new Set<string>();
+            const seenKeys = new Set<string>();
+
+            // Prioritize default address first, then newest
+            const sorted = [...list].sort((a, b) => {
+              if (a.isDefault && !b.isDefault) return -1;
+              if (!a.isDefault && b.isDefault) return 1;
+              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            });
+
+            for (const addr of sorted) {
+              const type = (addr.type || "Home").trim().toLowerCase();
+              const key = `${(addr.houseNumber || "").trim().toLowerCase()}-${(addr.street || "").trim().toLowerCase()}-${(addr.pincode || "").toString().replace(/\D/g, "")}`;
+              if (!seenTypes.has(type) && !seenKeys.has(key)) {
+                seenTypes.add(type);
+                seenKeys.add(key);
+                uniqueAddresses.push(addr);
+              }
+            }
+
+            setUserSavedAddresses(uniqueAddresses);
+
+            // Pre-fill with correct saved home/default address if available
+            const defaultSaved = uniqueAddresses.find((a) => a.isDefault) || uniqueAddresses.find((a) => (a.type || "").toLowerCase() === "home") || uniqueAddresses[0];
+            if (defaultSaved) {
+              const parts = [defaultSaved.houseNumber, defaultSaved.street, defaultSaved.landmark, defaultSaved.city || "Pune", defaultSaved.pincode].filter(Boolean);
+              const line = parts.join(", ");
+              setDeliveryAddressInput(line || defaultSaved.address || defaultSaved.label || initialAddr);
+            }
           }
         }
       })
@@ -1153,7 +1169,6 @@ function MySubscriptionContent() {
                     {filteredPlans.map((plan, idx) => {
                       const tierColors = getTierColors(plan.tier);
                       const price = getCyclePrice(plan, billingCycle);
-                      const perMeal = getPerMealEstimate(plan, billingCycle);
                       const isPopular = idx === 0 || plan.tier?.toLowerCase() === "gold";
 
                       return (
@@ -1199,10 +1214,6 @@ function MySubscriptionContent() {
                                 <span className={styles.priceAmount}>{price.toLocaleString("en-IN")}</span>
                                 <span className={styles.priceCycle}>{getCycleLabel(billingCycle)}</span>
                               </div>
-                            </div>
-                            <div className={styles.pricePerMeal}>
-                              <span className={styles.perMealTag}>≈ ₹{perMeal} / meal</span>
-                              <div className={styles.perMealSub}>Zero Delivery Fee</div>
                             </div>
                           </div>
 
