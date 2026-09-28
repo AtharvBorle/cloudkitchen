@@ -156,11 +156,19 @@ export const SupportTickets: React.FC = () => {
     }
   };
 
+  const [isResolving, setIsResolving] = useState<boolean>(false);
+  const [isReopening, setIsReopening] = useState<boolean>(false);
+
   const handleMarkResolved = async (ticketId: string) => {
-    if (!confirm("Are you sure your issue is resolved and you want to close this ticket?")) {
+    if (!confirm("Are you sure your issue is resolved and you want to mark this ticket as resolved?")) {
       return;
     }
     try {
+      setIsResolving(true);
+      // Optimistic update
+      setSelectedTicket((prev) => prev ? { ...prev, status: "RESOLVED", updatedAt: new Date().toISOString() } : null);
+      setTickets((prev) => prev.map((t) => t.id === ticketId ? { ...t, status: "RESOLVED", updatedAt: new Date().toISOString() } : t));
+
       const res = await fetchApi(`/api/tickets/${ticketId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -171,9 +179,38 @@ export const SupportTickets: React.FC = () => {
         await fetchTicketDetails(ticketId);
       } else {
         alert("Failed to resolve ticket.");
+        await fetchTicketDetails(ticketId);
       }
     } catch (err) {
       console.error("Error resolving ticket:", err);
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  const handleReopenTicket = async (ticketId: string) => {
+    try {
+      setIsReopening(true);
+      // Optimistic update
+      setSelectedTicket((prev) => prev ? { ...prev, status: "OPEN", updatedAt: new Date().toISOString() } : null);
+      setTickets((prev) => prev.map((t) => t.id === ticketId ? { ...t, status: "OPEN", updatedAt: new Date().toISOString() } : t));
+
+      const res = await fetchApi(`/api/tickets/${ticketId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "OPEN" }),
+      });
+      if (res.ok) {
+        await fetchTickets(ticketId);
+        await fetchTicketDetails(ticketId);
+      } else {
+        alert("Failed to reopen ticket.");
+        await fetchTicketDetails(ticketId);
+      }
+    } catch (err) {
+      console.error("Error reopening ticket:", err);
+    } finally {
+      setIsReopening(false);
     }
   };
 
@@ -516,14 +553,34 @@ export const SupportTickets: React.FC = () => {
 
                 <div className={styles.detailActions}>
                   {getStatusBadge(selectedTicket.status)}
-                  {selectedTicket.status !== "RESOLVED" && selectedTicket.status !== "CLOSED" && (
+                  {selectedTicket.status !== "RESOLVED" && selectedTicket.status !== "CLOSED" ? (
                     <button
                       type="button"
                       className={styles.resolveBtn}
                       onClick={() => handleMarkResolved(selectedTicket.id)}
+                      disabled={isResolving}
                     >
-                      <CheckCircle2 size={15} />
+                      {isResolving ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <CheckCircle2 size={14} />
+                      )}
                       <span>Mark Resolved</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.reopenBtn}
+                      onClick={() => handleReopenTicket(selectedTicket.id)}
+                      disabled={isReopening}
+                      title="Reopen ticket if issue persists"
+                    >
+                      {isReopening ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <RefreshCw size={14} />
+                      )}
+                      <span>Reopen Ticket</span>
                     </button>
                   )}
                 </div>
@@ -569,10 +626,23 @@ export const SupportTickets: React.FC = () => {
                   })
                 ) : null}
 
+                {/* Resolution Milestone Indicator in Chat Stream */}
+                {(selectedTicket.status === "RESOLVED" || selectedTicket.status === "CLOSED") && (
+                  <div className={styles.resolutionMilestone}>
+                    <div className={styles.resolutionMilestoneBadge}>
+                      <CheckCircle2 size={15} color="#059669" />
+                      <span>Issue Marked as {selectedTicket.status === "RESOLVED" ? "Resolved" : "Closed"}</span>
+                    </div>
+                    <p className={styles.resolutionMilestoneText}>
+                      This ticket was marked as resolved on {formatDate(selectedTicket.updatedAt || selectedTicket.createdAt)}.
+                    </p>
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Bottom Reply Box */}
+              {/* Bottom Reply Box / Resolved State Card */}
               {selectedTicket.status === "OPEN" || selectedTicket.status === "IN_PROGRESS" ? (
                 <form onSubmit={handleSendReply} className={styles.replyBar}>
                   <textarea
@@ -602,8 +672,43 @@ export const SupportTickets: React.FC = () => {
                   </button>
                 </form>
               ) : (
-                <div className={styles.resolvedNotice}>
-                  ✨ This ticket has been marked as <strong>{selectedTicket.status}</strong>. If you need assistance with another matter, please raise a new ticket.
+                <div className={styles.resolvedCardFooter}>
+                  <div className={styles.resolvedCardTop}>
+                    <div className={styles.resolvedCardIcon}>
+                      <CheckCircle2 size={20} color="#059669" />
+                    </div>
+                    <div className={styles.resolvedCardInfo}>
+                      <div className={styles.resolvedCardTitle}>
+                        This support ticket is marked as {selectedTicket.status === "RESOLVED" ? "Resolved" : "Closed"}
+                      </div>
+                      <div className={styles.resolvedCardDesc}>
+                        The conversation has been concluded. If you still need help with this specific request, you can reopen it anytime.
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.resolvedCardActions}>
+                    <button
+                      type="button"
+                      className={styles.reopenActionBtn}
+                      onClick={() => handleReopenTicket(selectedTicket.id)}
+                      disabled={isReopening}
+                    >
+                      {isReopening ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <RefreshCw size={14} />
+                      )}
+                      <span>Reopen Ticket</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.newTicketActionBtn}
+                      onClick={handleOpenRaiseModal}
+                    >
+                      <Plus size={14} />
+                      <span>Raise New Ticket</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </>

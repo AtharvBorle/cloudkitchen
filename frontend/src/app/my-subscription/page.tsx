@@ -26,6 +26,7 @@ import {
   getTierColors,
   UserActiveMealSubscription,
 } from "@/lib/meal-subscriptions";
+import { fetchApi } from "@/lib/fetch-api";
 import {
   Utensils,
   CheckCircle2,
@@ -45,8 +46,30 @@ import {
   Loader2,
   Award,
   Layers,
+  Navigation,
+  Home,
+  Briefcase,
 } from "lucide-react";
 import styles from "./MySubscriptionPage.module.css";
+
+const PUNE_LOCALITY_SUGGESTIONS = [
+  { name: "Kothrud, Pune", pincode: "411038" },
+  { name: "Baner, Pune", pincode: "411045" },
+  { name: "Aundh, Pune", pincode: "411007" },
+  { name: "Hinjawadi, Pune", pincode: "411057" },
+  { name: "Deccan Gymkhana, Pune", pincode: "411004" },
+  { name: "Viman Nagar, Pune", pincode: "411014" },
+  { name: "Kalyani Nagar, Pune", pincode: "411006" },
+  { name: "Shivajinagar, Pune", pincode: "411005" },
+  { name: "Wakad, Pune", pincode: "411057" },
+  { name: "Koregaon Park, Pune", pincode: "411001" },
+  { name: "Magarpatta City, Hadapsar, Pune", pincode: "411028" },
+  { name: "Pimple Saudagar, Pune", pincode: "411027" },
+  { name: "Senapati Bapat Road, Pune", pincode: "411016" },
+  { name: "Swargate / Dattawadi, Pune", pincode: "411030" },
+  { name: "Karve Nagar, Pune", pincode: "411052" },
+  { name: "Bavdhan, Pune", pincode: "411021" },
+];
 
 interface PublicMealPlan {
   id: string;
@@ -117,6 +140,23 @@ function MySubscriptionContent() {
   const [isSubmittingSub, setIsSubmittingSub] = useState<boolean>(false);
   const [subSuccessMsg, setSubSuccessMsg] = useState<string | null>(null);
   const [subErrorMsg, setSubErrorMsg] = useState<string | null>(null);
+
+  // Address intelligence & selection states
+  const [userSavedAddresses, setUserSavedAddresses] = useState<any[]>([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState<boolean>(false);
+  const [isDetectingGps, setIsDetectingGps] = useState<boolean>(false);
+  const addressSuggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (addressSuggestionsRef.current && !addressSuggestionsRef.current.contains(e.target as Node)) {
+        setShowAddressSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Sync tab with URL
   useEffect(() => {
@@ -389,11 +429,79 @@ function MySubscriptionContent() {
       return;
     }
     setSelectedPlanForSub(plan);
-    setDeliveryAddressInput(defaultAddress?.address || defaultAddress?.label || "");
+    const initialAddr = defaultAddress?.address || defaultAddress?.label || (typeof window !== "undefined" ? localStorage.getItem("active-selected-address") || "" : "");
+    setDeliveryAddressInput(initialAddr);
     setContactPhoneInput((session.user as any)?.phone || "");
     setSubErrorMsg(null);
     setSubSuccessMsg(null);
+    setShowAddressSuggestions(false);
+
+    // Fetch user saved addresses
+    fetchApi("/api/user/addresses")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          const list = data.data?.addresses || data.addresses || data.data || [];
+          if (Array.isArray(list)) {
+            setUserSavedAddresses(list);
+          }
+        }
+      })
+      .catch(() => {});
   };
+
+  // Handle GPS Location Detection
+  const handleDetectGpsLocation = () => {
+    if (!navigator.geolocation) {
+      setSubErrorMsg("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setIsDetectingGps(true);
+    setSubErrorMsg(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setIsDetectingGps(false);
+        const { latitude, longitude } = position.coords;
+        const formatted = `Current Location (Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}), Pune`;
+        setDeliveryAddressInput(formatted);
+        setShowAddressSuggestions(false);
+      },
+      () => {
+        setIsDetectingGps(false);
+        const fallback = defaultAddress?.address || "Kothrud, Pune - 411038";
+        setDeliveryAddressInput(fallback);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
+
+  const handleSelectSavedAddress = (addr: any) => {
+    const parts = [addr.houseNumber, addr.street, addr.landmark, addr.city || "Pune", addr.pincode].filter(Boolean);
+    const line = parts.join(", ");
+    setDeliveryAddressInput(line || addr.address || addr.label || "");
+    if (addr.recipientPhone && !contactPhoneInput) {
+      setContactPhoneInput(addr.recipientPhone);
+    }
+    setShowAddressSuggestions(false);
+  };
+
+  const handleSelectLocality = (loc: { name: string; pincode: string }) => {
+    const trimmed = deliveryAddressInput.trim();
+    if (trimmed && !trimmed.toLowerCase().includes(loc.name.toLowerCase().split(",")[0])) {
+      setDeliveryAddressInput(`${trimmed}, ${loc.name} - ${loc.pincode}`);
+    } else {
+      setDeliveryAddressInput(`${loc.name} - ${loc.pincode}`);
+    }
+    setShowAddressSuggestions(false);
+  };
+
+  const filteredLocalities = PUNE_LOCALITY_SUGGESTIONS.filter((loc) => {
+    if (!deliveryAddressInput.trim()) return true;
+    const q = deliveryAddressInput.toLowerCase();
+    return loc.name.toLowerCase().includes(q) || loc.pincode.includes(q);
+  });
 
   // Submit Subscription with Online Payment Flow
   const handleConfirmSubscription = async () => {
@@ -1239,18 +1347,92 @@ function MySubscriptionContent() {
               </div>
 
               {/* Delivery Address */}
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>
-                  <MapPin size={13} color="#FF5500" />
-                  <span>Delivery Address / Room Number *</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Room 204, Dattawadi near PMC School, Pune"
-                  value={deliveryAddressInput}
-                  onChange={(e) => setDeliveryAddressInput(e.target.value)}
-                  className={styles.formInput}
-                />
+              <div className={styles.formGroup} ref={addressSuggestionsRef}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+                  <label className={styles.formLabel}>
+                    <MapPin size={13} color="#FF5500" />
+                    <span>Delivery Address / Room Number *</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDetectGpsLocation}
+                    disabled={isDetectingGps}
+                    className={styles.gpsDetectBtn}
+                    title="Detect current location via GPS"
+                  >
+                    {isDetectingGps ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Navigation size={12} />
+                    )}
+                    <span>{isDetectingGps ? "Locating..." : "Use Current GPS"}</span>
+                  </button>
+                </div>
+
+                {/* Saved address quick chips */}
+                {userSavedAddresses.length > 0 && (
+                  <div className={styles.addressChipsContainer}>
+                    <span className={styles.chipLabel}>Saved:</span>
+                    {userSavedAddresses.slice(0, 3).map((addr) => (
+                      <button
+                        key={addr.id}
+                        type="button"
+                        className={styles.addressChip}
+                        onClick={() => handleSelectSavedAddress(addr)}
+                      >
+                        {addr.type?.toLowerCase() === "work" ? (
+                          <Briefcase size={12} />
+                        ) : (
+                          <Home size={12} />
+                        )}
+                        <span>{addr.type || "Home"}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    placeholder="Type street, room number, or select area suggestion below..."
+                    value={deliveryAddressInput}
+                    onChange={(e) => {
+                      setDeliveryAddressInput(e.target.value);
+                      setShowAddressSuggestions(true);
+                    }}
+                    onFocus={() => setShowAddressSuggestions(true)}
+                    className={styles.formInput}
+                  />
+                  <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }}>
+                    <MapPin size={16} />
+                  </div>
+
+                  {/* Suggestions dropdown */}
+                  {showAddressSuggestions && filteredLocalities.length > 0 && (
+                    <div className={styles.suggestionsDropdown}>
+                      <div className={styles.suggestionsHeader}>
+                        <Search size={12} />
+                        <span>Suggested Delivery Hubs &amp; Localities in Pune</span>
+                      </div>
+                      <div className={styles.suggestionsList}>
+                        {filteredLocalities.slice(0, 6).map((loc, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className={styles.suggestionItem}
+                            onClick={() => handleSelectLocality(loc)}
+                          >
+                            <MapPin size={14} className={styles.suggestionPin} />
+                            <div className={styles.suggestionText}>
+                              <span className={styles.suggestionName}>{loc.name}</span>
+                              <span className={styles.suggestionPinCode}>PIN: {loc.pincode}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Contact Phone */}

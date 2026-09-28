@@ -332,3 +332,140 @@
   cursor: not-allowed;
   transform: none;
 }
+
+.gpsDetectBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FFD8A8;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gpsDetectBtn:hover {
+  background: #FFEDD5;
+  color: #C2410C;
+}
+
+.addressChipsContainer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.chipLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+}
+
+.addressChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addressChip:hover {
+  background: #FFF7ED;
+  border-color: #FDBA74;
+  color: #EA580C;
+}
+
+.suggestionsDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border: 1.5px solid #FED7AA;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  z-index: 1050;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease;
+}
+
+.suggestionsHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #FFF7ED;
+  border-bottom: 1px solid #FED7AA;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #C2410C;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.suggestionsList {
+  display: flex;
+  flex-direction: column;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #F1F5F9;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.12s ease;
+}
+
+.suggestionItem:last-child {
+  border-bottom: none;
+}
+
+.suggestionItem:hover {
+  background: #FFF9F5;
+}
+
+.suggestionPin {
+  color: #EA580C;
+  flex-shrink: 0;
+}
+
+.suggestionText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.suggestionName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.suggestionPinCode {
+  font-size: 0.7rem;
+  color: #64748B;
+  font-weight: 500;
+}
+
