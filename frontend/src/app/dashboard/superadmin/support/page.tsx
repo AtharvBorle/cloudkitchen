@@ -3828,7 +3828,44 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                    <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
+                                    {(() => {
+                                        const isOrderOrBookingRelated = Boolean(
+                                            selectedTicket && (
+                                                selectedTicket.category === "FOOD" ||
+                                                selectedTicket.category === "PAYMENT" ||
+                                                selectedTicket.category === "ORDER" ||
+                                                selectedTicket.category === "REFUND" ||
+                                                selectedTicket.category === "ROOM" ||
+                                                /order|refund|delivery|booking|payment|food|dish/i.test(selectedTicket.title || "") ||
+                                                /order|refund|delivery|booking|payment|food|dish/i.test(selectedTicket.description || "")
+                                            )
+                                        );
+
+                                        if (!isOrderOrBookingRelated) {
+                                            return (
+                                                <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                                    <div style={{
+                                                        backgroundColor: "#F8FAFC",
+                                                        border: "1px solid #E2E8F0",
+                                                        borderRadius: "8px",
+                                                        padding: "12px",
+                                                        fontSize: "0.75rem",
+                                                        color: "#64748B",
+                                                        lineHeight: "1.5"
+                                                    }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                                            <AlertCircle size={14} color="#64748B" />
+                                                            <span>Non-Order Support Inquiry</span>
+                                                        </div>
+                                                        This ticket is filed under <strong>{selectedTicket.category || "General"}</strong>. Order actions and refund controls are automatically hidden for non-order inquiries.
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <>
+<h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
 
 
 
@@ -4765,6 +4802,9 @@ export default function SuperAdminSupportPage() {
 
 
                                     )}
+                                            </>
+                                        );
+                                    })()}
 
 
 

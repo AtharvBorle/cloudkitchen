@@ -366,6 +366,26 @@
   color: #047857;
 }
 
+.reopenBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FED7AA;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reopenBtn:hover {
+  background-color: #FFEDD5;
+  color: #C2410C;
+}
+
 .messagesStream {
   flex: 1;
   overflow-y: auto;
@@ -525,14 +545,131 @@
   box-shadow: none;
 }
 
-.resolvedNotice {
-  padding: 14px 20px;
-  background-color: #F8FAFC;
-  border-top: 1px solid #E2E8F0;
+.resolutionMilestone {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background-color: #ECFDF5;
+  border: 1.5px solid #A7F3D0;
+  padding: 10px 18px;
+  border-radius: 12px;
+  margin: 12px 0;
   text-align: center;
-  font-size: 0.82rem;
-  color: #64748B;
+}
+
+.resolutionMilestoneBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.resolutionMilestoneText {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #065F46;
   font-weight: 500;
+}
+
+.resolvedCardFooter {
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+  border-top: 1.5px solid #BBF7D0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resolvedCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.resolvedCardIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  border: 1.5px solid #86EFAC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.1);
+}
+
+.resolvedCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resolvedCardTitle {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #065F46;
+}
+
+.resolvedCardDesc {
+  font-size: 0.78rem;
+  color: #047857;
+  line-height: 1.4;
+}
+
+.resolvedCardActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 48px;
+}
+
+.reopenActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  background: #FFFFFF;
+  border: 1.5px solid #86EFAC;
+  color: #065F46;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reopenActionBtn:hover {
+  background: #ECFDF5;
+  border-color: #059669;
+  color: #047857;
+}
+
+.newTicketActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  background: #059669;
+  border: 1.5px solid #059669;
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+}
+
+.newTicketActionBtn:hover {
+  background: #047857;
+  border-color: #047857;
 }
 
 /* Empty State */
