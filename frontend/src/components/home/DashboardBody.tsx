@@ -37,7 +37,7 @@ export default function DashboardBody({
   seeAllLink = "/food-explore?sort=rating",
   items,
 }: DashboardBodyProps) {
-  const { addToCart, cartItems } = useCart();
+  const { addToCart, cartItems, showToast } = useCart();
   const [addedId, setAddedId] = useState<string | null>(null);
 
   if (!items || items.length === 0) {
@@ -51,13 +51,13 @@ export default function DashboardBody({
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
 
     if (stockLimit === 0) {
-      alert(`Sorry, ${item.name} is currently out of stock.`);
+      showToast(`Sorry, "${item.name}" is currently out of stock.`, "warning");
       return;
     }
 
     const existingInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
     if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
-      alert(`Cannot add more. Only ${stockLimit} items available in stock for ${item.name}.`);
+      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
       return;
     }
 

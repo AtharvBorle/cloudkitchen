@@ -66,12 +66,28 @@ export const SupportTickets: React.FC = () => {
   const [submittingReply, setSubmittingReply] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Modal State
+  // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [newCategory, setNewCategory] = useState<string>("FOOD");
   const [newTitle, setNewTitle] = useState<string>("");
   const [newDescription, setNewDescription] = useState<string>("");
   const [submittingTicket, setSubmittingTicket] = useState<boolean>(false);
+
+  // Resolve Confirmation Modal State
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState<boolean>(false);
+  const [ticketToResolve, setTicketToResolve] = useState<SupportTicket | null>(null);
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" | "warning" } | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" | "warning" = "info") => {
+    setToast({ message, type });
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
 
   const fetchTickets = async (autoSelectId?: string) => {
     try {
@@ -129,7 +145,7 @@ export const SupportTickets: React.FC = () => {
     if (!replyText.trim() || !selectedTicket) return;
 
     if (replyText.trim().length < 2) {
-      alert("Reply message must be at least 2 characters long.");
+      showToast("Reply message must be at least 2 characters long.", "warning");
       return;
     }
 
@@ -145,12 +161,12 @@ export const SupportTickets: React.FC = () => {
         await fetchTicketDetails(selectedTicket.id);
         await fetchTickets(selectedTicket.id);
       } else {
-        const data = await res.json();
-        alert(data.message || "Failed to send message.");
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to send message.", "error");
       }
     } catch (err) {
       console.error("Failed to send reply:", err);
-      alert("An error occurred. Please try again.");
+      showToast("An error occurred. Please try again.", "error");
     } finally {
       setSubmittingReply(false);
     }
@@ -159,10 +175,12 @@ export const SupportTickets: React.FC = () => {
   const [isResolving, setIsResolving] = useState<boolean>(false);
   const [isReopening, setIsReopening] = useState<boolean>(false);
 
-  const handleMarkResolved = async (ticketId: string) => {
-    if (!confirm("Are you sure your issue is resolved and you want to mark this ticket as resolved?")) {
-      return;
-    }
+  const handleOpenResolveModal = (ticket: SupportTicket) => {
+    setTicketToResolve(ticket);
+    setIsResolveModalOpen(true);
+  };
+
+  const executeMarkResolved = async (ticketId: string) => {
     try {
       setIsResolving(true);
       // Optimistic update
@@ -175,14 +193,19 @@ export const SupportTickets: React.FC = () => {
         body: JSON.stringify({ status: "RESOLVED" }),
       });
       if (res.ok) {
+        setIsResolveModalOpen(false);
+        setTicketToResolve(null);
+        showToast("Support ticket marked as resolved successfully.", "success");
         await fetchTickets(ticketId);
         await fetchTicketDetails(ticketId);
       } else {
-        alert("Failed to resolve ticket.");
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to resolve ticket.", "error");
         await fetchTicketDetails(ticketId);
       }
     } catch (err) {
       console.error("Error resolving ticket:", err);
+      showToast("An error occurred while resolving ticket.", "error");
     } finally {
       setIsResolving(false);
     }
@@ -201,14 +224,17 @@ export const SupportTickets: React.FC = () => {
         body: JSON.stringify({ status: "OPEN" }),
       });
       if (res.ok) {
+        showToast("Ticket reopened successfully.", "info");
         await fetchTickets(ticketId);
         await fetchTicketDetails(ticketId);
       } else {
-        alert("Failed to reopen ticket.");
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to reopen ticket.", "error");
         await fetchTicketDetails(ticketId);
       }
     } catch (err) {
       console.error("Error reopening ticket:", err);
+      showToast("An error occurred while reopening ticket.", "error");
     } finally {
       setIsReopening(false);
     }
@@ -230,13 +256,13 @@ export const SupportTickets: React.FC = () => {
 
   const handleOpenRaiseModal = async () => {
     if (status !== "authenticated") {
-      alert("Please log in to raise a support ticket.");
+      showToast("Please log in to raise a support ticket.", "warning");
       return;
     }
 
     const hasOrders = await checkUserHasOrders();
     if (!hasOrders) {
-      alert("Support tickets are restricted to users who have placed an order. Please place an order first before raising a support ticket.");
+      showToast("Support tickets are restricted to users who have placed an order. Please place an order first before raising a ticket.", "warning");
       return;
     }
 
@@ -246,11 +272,11 @@ export const SupportTickets: React.FC = () => {
   const handleCreateTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newDescription.trim()) {
-      alert("Please provide both a title and description.");
+      showToast("Please provide both a title and description.", "warning");
       return;
     }
     if (newTitle.trim().length < 5) {
-      alert("Title must be at least 5 characters long.");
+      showToast("Title must be at least 5 characters long.", "warning");
       return;
     }
 
@@ -270,14 +296,15 @@ export const SupportTickets: React.FC = () => {
         setNewTitle("");
         setNewDescription("");
         setIsCreateModalOpen(false);
+        showToast("Support ticket raised successfully!", "success");
         const createdId = data.id || data.data?.id;
         await fetchTickets(createdId);
       } else {
-        alert(data.message || "Failed to raise support ticket.");
+        showToast(data.message || "Failed to raise support ticket.", "error");
       }
     } catch (err) {
       console.error("Failed to submit ticket:", err);
-      alert("An error occurred. Please try again.");
+      showToast("An error occurred. Please try again.", "error");
     } finally {
       setSubmittingTicket(false);
     }
@@ -557,7 +584,7 @@ export const SupportTickets: React.FC = () => {
                     <button
                       type="button"
                       className={styles.resolveBtn}
-                      onClick={() => handleMarkResolved(selectedTicket.id)}
+                      onClick={() => handleOpenResolveModal(selectedTicket)}
                       disabled={isResolving}
                     >
                       {isResolving ? (
@@ -796,6 +823,148 @@ export const SupportTickets: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* 4. Resolve Ticket Confirmation Modal */}
+      {isResolveModalOpen && ticketToResolve && (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => !isResolving && setIsResolveModalOpen(false)}
+        >
+          <div
+            className={styles.modalCard}
+            style={{ maxWidth: "460px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    backgroundColor: "#ECFDF5",
+                    color: "#10B981",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <CheckCircle2 size={20} />
+                </div>
+                <h3 className={styles.modalTitle}>Mark Ticket as Resolved?</h3>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => !isResolving && setIsResolveModalOpen(false)}
+                disabled={isResolving}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
+              <p style={{ margin: 0, fontSize: "0.88rem", color: "#475569", lineHeight: 1.5 }}>
+                Are you sure your issue has been resolved? This will update the ticket status to <strong>Resolved</strong>.
+              </p>
+
+              <div
+                style={{
+                  backgroundColor: "#F8FAFC",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "12px",
+                  padding: "12px 14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "#64748B" }}>
+                  <span>Ticket Ref: #{ticketToResolve.id.slice(0, 8)}</span>
+                  <span className={`${styles.categoryPill} ${getCategoryClass(ticketToResolve.category)}`}>
+                    {ticketToResolve.category}
+                  </span>
+                </div>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1E293B" }}>
+                  {ticketToResolve.title}
+                </span>
+              </div>
+
+              <p style={{ margin: 0, fontSize: "0.8rem", color: "#94A3B8" }}>
+                Tip: You can reopen this ticket at any time if you ever require further assistance.
+              </p>
+            </div>
+
+            <div className={styles.modalActions} style={{ marginTop: "12px" }}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setIsResolveModalOpen(false)}
+                disabled={isResolving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.resolveConfirmBtn}
+                onClick={() => executeMarkResolved(ticketToResolve.id)}
+                disabled={isResolving}
+              >
+                {isResolving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} />
+                    <span>Resolving...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    <span>Yes, Mark Resolved</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Support Toast Feedback */}
+      {toast && (
+        <div
+          className={`${styles.toastWrapper} ${
+            toast.type === "success"
+              ? styles.toastSuccess
+              : toast.type === "error"
+              ? styles.toastError
+              : toast.type === "warning"
+              ? styles.toastWarning
+              : styles.toastInfo
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.type === "success" && <CheckCircle2 size={18} color="#10B981" />}
+          {toast.type === "error" && <AlertCircle size={18} color="#EF4444" />}
+          {toast.type === "warning" && <AlertCircle size={18} color="#F59E0B" />}
+          {toast.type === "info" && <Headphones size={18} color="#3B82F6" />}
+          <span>{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "inherit",
+              opacity: 0.7,
+              display: "flex",
+              alignItems: "center",
+              marginLeft: "4px",
+            }}
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
     </div>

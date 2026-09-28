@@ -8,7 +8,7 @@ import { useState } from "react";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 
 export function AddToCartButton({ item, fullWidth = true, disabled = false }: { item: any, fullWidth?: boolean, disabled?: boolean }) {
-    const { addToCart, cartItems, decreaseQuantity } = useCart();
+    const { addToCart, cartItems, decreaseQuantity, showToast } = useCart();
     const { data: session } = useSession();
     const router = useRouter();
     const pathname = usePathname();
@@ -51,7 +51,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
         if (stockLimit !== -1) {
             const currentQty = cartItem ? cartItem.quantity : 0;
             if (currentQty >= stockLimit) {
-                alert(`Cannot add more. Only ${stockLimit} items available in stock for ${item.name}.`);
+                showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
                 return;
             }
         }
