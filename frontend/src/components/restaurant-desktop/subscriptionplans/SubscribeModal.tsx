@@ -10,7 +10,11 @@ import {
   Phone, 
   Calendar 
 } from "lucide-react";
-import { subscribeToMealPlan } from "@/lib/meal-subscriptions";
+import { 
+  loadRazorpayScript,
+  initiateMealSubscriptionPayment,
+  verifyAndActivateMealSubscription,
+} from "@/lib/meal-subscriptions";
 import styles from "./SubscribeModal.module.css";
 
 export interface SubscribeModalPlan {
@@ -56,23 +60,79 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     : parseFloat(String(plan.price || plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 499;
 
   const handleConfirm = async () => {
+    if (!deliveryAddress.trim()) {
+      setErrorMsg("Please enter your delivery address or room number.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg(null);
 
     try {
-      const res = await subscribeToMealPlan(plan.id, {
-        cycle: planDuration,
-        deliveryAddress,
-        contactPhone,
-      });
+      // 1. Initiate online payment order on the backend
+      const initData = await initiateMealSubscriptionPayment(plan.id, planDuration);
 
-      if (onSubscribed) {
-        onSubscribed(res.subscription);
+      // 2. Load Razorpay Checkout SDK
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setErrorMsg("Failed to load Razorpay payment SDK. Please check your internet connection.");
+        setIsSubmitting(false);
+        return;
       }
-      onClose();
+
+      // 3. Open Razorpay Checkout Modal
+      const options = {
+        key: initData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TX4MPQgJuetMFP",
+        amount: initData.amount,
+        currency: initData.currency || "INR",
+        name: "Neo Cloud Kitchen",
+        description: `Meal Plan: ${plan.name} (${initData.subscriptionCycle || planDuration})`,
+        order_id: initData.razorpayOrderId,
+        handler: async function (response: any) {
+          try {
+            setIsSubmitting(true);
+            const verified = await verifyAndActivateMealSubscription({
+              planId: plan.id,
+              cycle: initData.subscriptionCycle || planDuration,
+              deliveryAddress: deliveryAddress.trim(),
+              contactPhone: contactPhone.trim(),
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            if (onSubscribed) {
+              onSubscribed(verified.subscription);
+            }
+            onClose();
+          } catch (vErr: any) {
+            console.error("Verification error:", vErr);
+            setErrorMsg(vErr.message || "Payment verification failed. Please contact support.");
+            setIsSubmitting(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsSubmitting(false);
+            setErrorMsg("Payment was cancelled. Subscription was not activated.");
+          },
+        },
+        prefill: {
+          contact: contactPhone.trim(),
+        },
+        theme: {
+          color: "#FF6B00",
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", function (response: any) {
+        setIsSubmitting(false);
+        setErrorMsg("Payment failed: " + (response.error?.description || "Transaction declined. Subscription was not activated."));
+      });
+      rzp.open();
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to create subscription. Please try again.");
-    } finally {
+      setErrorMsg(err.message || "Failed to initiate subscription payment. Please try again.");
       setIsSubmitting(false);
     }
   };

@@ -570,9 +570,102 @@ export async function togglePauseUserSubscription(subscriptionId: string, isPaus
   }
 }
 
+export const loadRazorpayScript = (): Promise<boolean> => {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if ((window as any).Razorpay) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const existing = document.getElementById("razorpay-checkout-script");
+    if (existing) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.id = "razorpay-checkout-script";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+export async function initiateMealSubscriptionPayment(
+  planId: string,
+  cycle: string = "WEEKLY"
+): Promise<{
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  calculatedPrice: number;
+  subscriptionCycle: string;
+  durationDays: number;
+}> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions/initiate-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId, cycle }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || json.error || "Failed to initiate online payment for subscription");
+    }
+    return json.data || json;
+  } catch (err: any) {
+    console.error("Error initiating subscription payment:", err);
+    throw err;
+  }
+}
+
+export async function verifyAndActivateMealSubscription(params: {
+  planId: string;
+  cycle?: string;
+  deliveryAddress: string;
+  contactPhone?: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}): Promise<{ success: boolean; message: string; subscription?: any }> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        planId: params.planId,
+        cycle: params.cycle || "WEEKLY",
+        deliveryAddress: params.deliveryAddress,
+        contactPhone: params.contactPhone || "",
+        razorpay_order_id: params.razorpay_order_id,
+        razorpay_payment_id: params.razorpay_payment_id,
+        razorpay_signature: params.razorpay_signature,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || json.error || "Payment verification failed. Please try again.");
+    }
+    return {
+      success: true,
+      message: json.message || "Subscribed to meal plan successfully!",
+      subscription: json.data?.subscription || json.data,
+    };
+  } catch (err: any) {
+    console.error("Error activating subscription after payment:", err);
+    throw err;
+  }
+}
+
 export async function subscribeToMealPlan(
   planId: string,
-  options?: { deliveryAddress?: string; contactPhone?: string; cycle?: string }
+  options?: {
+    deliveryAddress?: string;
+    contactPhone?: string;
+    cycle?: string;
+    razorpay_order_id?: string;
+    razorpay_payment_id?: string;
+    razorpay_signature?: string;
+  }
 ): Promise<{ success: boolean; message: string; subscription?: any }> {
   try {
     const res = await fetchApi("/api/user/meal-subscriptions", {
@@ -583,6 +676,9 @@ export async function subscribeToMealPlan(
         deliveryAddress: options?.deliveryAddress || "",
         contactPhone: options?.contactPhone || "",
         cycle: options?.cycle || "WEEKLY",
+        razorpay_order_id: options?.razorpay_order_id,
+        razorpay_payment_id: options?.razorpay_payment_id,
+        razorpay_signature: options?.razorpay_signature,
       }),
     });
     const json = await res.json();
@@ -599,5 +695,6 @@ export async function subscribeToMealPlan(
     throw err;
   }
 }
+
 
 

@@ -4,6 +4,7 @@ import {
     cancelUserMealSubscription,
     changeUserMealPlan,
     togglePauseUserMealSubscription,
+    initiateMealSubscriptionPayment,
 } from "@/controllers/userMealSubscriptionController";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
@@ -22,6 +23,13 @@ export async function POST(req: Request) {
     try {
         const body = await req.json().catch(() => ({}));
         const { action } = body;
+
+        if (action === "INITIATE_PAYMENT") {
+            const data = await initiateMealSubscriptionPayment(
+                new Request(req.url, { method: "POST", body: JSON.stringify(body) })
+            );
+            return successResponse(data, "Payment initiated successfully", 200);
+        }
 
         if (action === "CANCEL") {
             const data = await cancelUserMealSubscription(body.id, body.reason);
