@@ -263,13 +263,38 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         {/* Title & Rating */}
         <div className={styles.titleRow}>
           <h1 className={styles.restaurantName} style={{ color: kitchenData.isOnline === false ? "#475569" : undefined }}>{kitchenData.restaurantName}</h1>
-          <div className={styles.ratingBadge}>
-            <Star size={13} fill="#F59E0B" color="#F59E0B" />
-            <span className={styles.ratingScore}>{kitchenData.rating}</span>
-            {kitchenData.reviewsCount && (
-              <span className={styles.ratingReviews}>{kitchenData.reviewsCount}</span>
-            )}
-          </div>
+          {(() => {
+            const ratingNum = typeof kitchenData.rating === "number" ? kitchenData.rating : parseFloat(String(kitchenData.rating || "0")) || 0;
+            const hasRating = ratingNum > 0;
+            return (
+              <div
+                className={styles.ratingBadge}
+                style={{
+                  backgroundColor: hasRating ? "#DCFCE7" : "#F1F5F9",
+                  borderColor: hasRating ? "#BBF7D0" : "#E2E8F0",
+                  color: hasRating ? "#15803D" : "#64748B",
+                  padding: "3px 8px",
+                  borderRadius: "8px",
+                  borderWidth: "1px",
+                  borderStyle: "solid",
+                }}
+              >
+                <Star
+                  size={13}
+                  fill={hasRating ? "#16a34a" : "#94A3B8"}
+                  color={hasRating ? "#16a34a" : "#94A3B8"}
+                />
+                <span className={styles.ratingScore} style={{ color: hasRating ? "#15803D" : "#64748B", fontWeight: 700 }}>
+                  {hasRating ? ratingNum.toFixed(1) : "New"}
+                </span>
+                {kitchenData.reviewsCount && (
+                  <span className={styles.ratingReviews} style={{ color: hasRating ? "#15803D" : "#94A3B8" }}>
+                    {kitchenData.reviewsCount}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Location Subtitle */}

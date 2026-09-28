@@ -1,4 +1,5 @@
-.container {
+.container,
+.pageContainer {
   min-height: 100vh;
   background-color: #FFF4E6;
   font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
@@ -26,8 +27,126 @@
   box-sizing: border-box;
 }
 
+/* Shimmer Animation & Skeleton styles */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeletonPulse {
+  background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+}
+
+.skeletonBanner {
+  width: 100%;
+  height: 340px;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 24px;
+  border: 1px solid #FED7AA;
+}
+
+.skeletonBannerCard {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  padding: 20px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #F1F5F9;
+}
+
+.skeletonTabsRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.skeletonTab {
+  width: 90px;
+  height: 38px;
+  border-radius: 9999px;
+}
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.skeletonFoodCard {
+  background: #FFFFFF;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  border: 1px solid #FED7AA;
+  box-shadow: 0 4px 16px rgba(254, 154, 0, 0.04);
+}
+
+.skeletonFoodImg {
+  width: 110px;
+  height: 110px;
+  min-width: 110px;
+  border-radius: 14px;
+}
+
+.skeletonFoodInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Mobile Skeleton */
+.skeletonMobileHero {
+  width: 100%;
+  height: 240px;
+  position: relative;
+}
+
+.skeletonMobileCard {
+  margin: -32px 16px 20px 16px;
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #FED7AA;
+}
+
+.skeletonMobileTabs {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px 16px 16px;
+  overflow-x: auto;
+}
+
+.skeletonMobileList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 16px 32px 16px;
+}
+
 @media (max-width: 768px) {
-  .container {
+  .container,
+  .pageContainer {
     background-color: #ffffff;
   }
 
@@ -37,6 +156,10 @@
 
   .mobileOnly {
     display: block !important;
+  }
+
+  .skeletonGrid {
+    grid-template-columns: 1fr;
   }
 }
 

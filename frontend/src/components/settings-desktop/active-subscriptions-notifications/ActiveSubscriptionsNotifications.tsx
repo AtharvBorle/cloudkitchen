@@ -207,7 +207,7 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
             <p className={styles.emptySubText}>
               You do not have any meal subscription plans yet.
             </p>
-            <Link href="/explore-desktop" className={styles.exploreLink}>
+            <Link href="/my-subscriptions-desktop?tab=plans" className={styles.exploreLink}>
               <span>Explore Meal Plans</span>
               <ArrowRight size={14} />
             </Link>

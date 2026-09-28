@@ -16,6 +16,7 @@ export interface FoodHeroBannerProps {
   dietType?: string;
   offerText?: string;
   initialVegOnly?: boolean;
+  isVegOnly?: boolean;
   onVegToggle?: (vegOnly: boolean) => void;
   isOnline?: boolean;
   bannerImageUrl?: string;
@@ -24,22 +25,36 @@ export interface FoodHeroBannerProps {
 export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
   restaurantName = "Cloud Kitchen",
   location = "",
-  rating = 4.5,
+  rating = 0,
   reviewsCount,
   deliveryTime = "20-30 min",
   deliveryFeeText,
   dietType = "Pure Veg",
   offerText,
-  initialVegOnly = false,
+  initialVegOnly,
+  isVegOnly: controlledVegOnly,
   onVegToggle,
   isOnline = true,
   bannerImageUrl,
 }) => {
-  const [isVegOnly, setIsVegOnly] = useState<boolean>(initialVegOnly);
+  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(
+    controlledVegOnly !== undefined
+      ? controlledVegOnly
+      : initialVegOnly !== undefined
+      ? initialVegOnly
+      : false
+  );
+
+  const isVegOnly =
+    controlledVegOnly !== undefined
+      ? controlledVegOnly
+      : initialVegOnly !== undefined
+      ? initialVegOnly
+      : internalVegOnly;
 
   const handleToggleVeg = () => {
     const nextState = !isVegOnly;
-    setIsVegOnly(nextState);
+    setInternalVegOnly(nextState);
     if (onVegToggle) {
       onVegToggle(nextState);
     }
@@ -154,10 +169,28 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
           </div>
 
           <div className={styles.ratingContainer}>
-            <div className={styles.ratingBadge}>
-              <Star size={13} fill="#16a34a" color="#16a34a" />
-              <span>{rating}</span>
-            </div>
+            {(() => {
+              const ratingNum = typeof rating === "number" ? rating : parseFloat(String(rating || "0")) || 0;
+              const hasRating = ratingNum > 0;
+
+              return (
+                <div
+                  className={styles.ratingBadge}
+                  style={{
+                    backgroundColor: hasRating ? "#DCFCE7" : "#F1F5F9",
+                    borderColor: hasRating ? "#BBF7D0" : "#E2E8F0",
+                    color: hasRating ? "#15803D" : "#64748B",
+                  }}
+                >
+                  <Star
+                    size={13}
+                    fill={hasRating ? "#16a34a" : "#94A3B8"}
+                    color={hasRating ? "#16a34a" : "#94A3B8"}
+                  />
+                  <span>{hasRating ? ratingNum.toFixed(1) : "New"}</span>
+                </div>
+              );
+            })()}
             {reviewsCount && <span className={styles.reviewsCount}>{reviewsCount}</span>}
           </div>
         </div>

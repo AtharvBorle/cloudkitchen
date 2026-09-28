@@ -21,6 +21,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { findDuplicateAddress } from "@/lib/address-validation";
 import styles from "./LocationModal.module.css";
 
 const POPULAR_AREAS = [
@@ -295,20 +296,22 @@ export const LocationModal: React.FC = () => {
       return;
     }
 
-    const normHouse = houseNumber.trim().toLowerCase();
-    const normStreet = street.trim().toLowerCase();
-    const normPin = cleanPin;
+    // Check for duplicate address in savedAddresses
+    const dupCheck = findDuplicateAddress(
+      {
+        houseNumber: houseNumber.trim(),
+        street: street.trim(),
+        pincode: cleanPin,
+        landmark: landmark.trim(),
+      },
+      savedAddresses
+    );
 
-    const isDuplicate = savedAddresses?.some((addr) => {
-      return (
-        (addr.houseNumber || "").trim().toLowerCase() === normHouse &&
-        (addr.street || "").trim().toLowerCase() === normStreet &&
-        (addr.pincode || "").replace(/\D/g, "") === normPin
+    if (dupCheck.isDuplicate && dupCheck.matchedItem) {
+      showNotification(
+        "error",
+        `This address already exists in your saved list (${dupCheck.matchedItem.houseNumber}, ${dupCheck.matchedItem.street} - ${dupCheck.matchedItem.pincode})`
       );
-    });
-
-    if (isDuplicate) {
-      showNotification("error", "This address already exists in your saved addresses.");
       return;
     }
 
