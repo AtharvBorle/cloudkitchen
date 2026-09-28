@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import {
@@ -10,8 +10,16 @@ import {
   Menu,
   Plus,
   ArrowLeft,
+  X,
+  Loader2,
+  Headphones,
+  MessageSquare,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import styles from "./SellerSupport.module.css";
+import { fetchApi } from "@/lib/fetch-api";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface TicketMessage {
   id: string;
@@ -25,7 +33,7 @@ export interface TicketMessage {
 export interface Ticket {
   id: string;
   ticketNumber: string;
-  category: "Technical" | "Billing" | "Feature Request" | "Operations";
+  category: "Technical" | "Billing" | "Feature Request" | "Operations" | string;
   title: string;
   preview: string;
   customerName: string;
@@ -36,10 +44,6 @@ export interface Ticket {
   messages: TicketMessage[];
 }
 
-const INITIAL_TICKETS: Ticket[] = [];
-
-import { useSellerProfile } from "@/hooks/useSellerProfile";
-
 export interface SellerSupportProps {
   ownerName?: string;
   partnerRole?: string;
@@ -49,6 +53,105 @@ export interface SellerSupportProps {
 }
 
 const FILTER_PILLS = ["All", "Open", "In Progress", "Closed"];
+
+const TICKET_CATEGORIES = [
+  "Operations",
+  "Billing & Payouts",
+  "Technical",
+  "Meal Subscriptions",
+  "Feature Request",
+  "General",
+];
+
+function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return "Recently";
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+    if (diffSec < 60) return "Just now";
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    if (diffSec < 172800) return "Yesterday";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  } catch {
+    return "Recently";
+  }
+}
+
+function formatMessageTime(dateStr?: string): string {
+  if (!dateStr) return "Just now";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  } catch {
+    return "Just now";
+  }
+}
+
+function mapRawMessage(m: any): TicketMessage {
+  const isMe = m.sender?.role === "SELLER" || m.sender?.role === "OWNER" || m.sender?.role === "USER";
+  const senderName = m.sender?.name || (isMe ? "You (Seller)" : "Support Team");
+  const role: "customer" | "support" = isMe ? "customer" : "support";
+  const initials = isMe ? "ME" : "SP";
+
+  return {
+    id: m.id || `m_${Date.now()}`,
+    sender: senderName,
+    role,
+    initials,
+    timestamp: formatMessageTime(m.createdAt),
+    text: m.message || "",
+  };
+}
+
+function mapRawTicket(t: any): Ticket {
+  const rawStatus = (t.status || "OPEN").toUpperCase();
+  const status: Ticket["status"] =
+    rawStatus === "OPEN"
+      ? "Open"
+      : rawStatus === "IN_PROGRESS"
+      ? "In Progress"
+      : rawStatus === "RESOLVED"
+      ? "Resolved"
+      : "Closed";
+
+  const rawMessages = Array.isArray(t.messages) && t.messages.length > 0 ? t.messages : [];
+  const messages: TicketMessage[] = rawMessages.map(mapRawMessage);
+
+  if (messages.length === 0 && t.description) {
+    messages.push({
+      id: `init_${t.id}`,
+      sender: t.user?.name || "You (Seller)",
+      role: "customer",
+      initials: "ME",
+      timestamp: formatMessageTime(t.createdAt),
+      text: t.description,
+    });
+  }
+
+  const name = t.user?.name || "You (Seller)";
+  const initials = name
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "SE";
+
+  return {
+    id: t.id,
+    ticketNumber: `#TKT-${t.id.slice(-4).toUpperCase()}`,
+    category: t.category || "Operations",
+    title: t.title || "Support Request",
+    preview: t.description || "",
+    customerName: name,
+    customerInitials: initials,
+    time: formatRelativeTime(t.createdAt),
+    status,
+    priority: (t.priority as any) || "Medium",
+    messages,
+  };
+}
 
 export const SellerSupport: React.FC<SellerSupportProps> = ({
   ownerName,
@@ -73,12 +176,81 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
       : seller.avatarInitials;
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string>("");
   const [activeMobileView, setActiveMobileView] = useState<"list" | "chat">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [inputMessage, setInputMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // Raise Ticket Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newCategory, setNewCategory] = useState("Operations");
+  const [newPriority, setNewPriority] = useState<"High" | "Medium" | "Low">("Medium");
+  const [newDescription, setNewDescription] = useState("");
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  // Toast Notification State
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  const showToast = (msg: string, type: "success" | "error" = "success") => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
+
+  const fetchTickets = async (selectId?: string) => {
+    try {
+      setLoading(true);
+      const res = await fetchApi("/api/tickets");
+      if (res.ok) {
+        const rawData = await res.json();
+        const list = Array.isArray(rawData) ? rawData : Array.isArray(rawData?.data) ? rawData.data : [];
+        const mapped = list.map(mapRawTicket);
+        setTickets(mapped);
+
+        if (selectId) {
+          setSelectedTicketId(selectId);
+          loadTicketDetails(selectId);
+        } else if (mapped.length > 0 && !selectedTicketId) {
+          setSelectedTicketId(mapped[0].id);
+          loadTicketDetails(mapped[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load seller tickets:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTicketDetails = async (id: string) => {
+    try {
+      const res = await fetchApi(`/api/tickets/${id}`);
+      if (res.ok) {
+        const rawData = await res.json();
+        const data = rawData.data || rawData;
+        if (data && data.id) {
+          const updated = mapRawTicket(data);
+          setTickets((prev) =>
+            prev.map((t) => (t.id === id ? updated : t))
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load ticket details:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0] || null;
 
@@ -86,7 +258,8 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase());
+      ticket.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.category.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
       statusFilter === "All" || ticket.status.toLowerCase() === statusFilter.toLowerCase();
@@ -97,30 +270,100 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const handleSelectTicket = (id: string) => {
     setSelectedTicketId(id);
     setActiveMobileView("chat");
+    loadTicketDetails(id);
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleCreateTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) {
+      showToast("Please enter a ticket subject / title", "error");
+      return;
+    }
+    if (!newDescription.trim()) {
+      showToast("Please enter a description for your ticket", "error");
+      return;
+    }
+
+    setIsSubmittingTicket(true);
+    try {
+      const res = await fetchApi("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          category: newCategory,
+          description: newDescription.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Support ticket raised successfully!", "success");
+        setIsCreateModalOpen(false);
+        setNewTitle("");
+        setNewDescription("");
+        setNewCategory("Operations");
+        setNewPriority("Medium");
+        const createdId = data.id || data.data?.id;
+        await fetchTickets(createdId);
+        if (createdId) {
+          setSelectedTicketId(createdId);
+          setActiveMobileView("chat");
+        }
+      } else {
+        showToast(data.message || "Failed to raise support ticket", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "An unexpected error occurred", "error");
+    } finally {
+      setIsSubmittingTicket(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || !selectedTicket) return;
 
-    const newMessage: TicketMessage = {
-      id: `m_${Date.now()}`,
-      sender: "You (Support)",
-      role: "support",
+    const msgText = inputMessage.trim();
+    setInputMessage("");
+    setIsSendingMessage(true);
+
+    // Optimistic message update
+    const optimisticMsg: TicketMessage = {
+      id: `opt_${Date.now()}`,
+      sender: "You (Seller)",
+      role: "customer",
       initials: "ME",
       timestamp: "Just now",
-      text: inputMessage.trim(),
+      text: msgText,
     };
 
     setTickets((prev) =>
       prev.map((t) =>
         t.id === selectedTicket.id
-          ? { ...t, messages: [...t.messages, newMessage] }
+          ? { ...t, messages: [...t.messages, optimisticMsg] }
           : t
       )
     );
 
-    setInputMessage("");
+    try {
+      const res = await fetchApi(`/api/tickets/${selectedTicket.id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msgText }),
+      });
+
+      if (res.ok) {
+        await loadTicketDetails(selectedTicket.id);
+      } else {
+        const data = await res.json();
+        showToast(data.message || "Failed to send message", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to send message", "error");
+    } finally {
+      setIsSendingMessage(false);
+    }
   };
 
   const getStatusBadgeStyle = (status: Ticket["status"]) => {
@@ -234,8 +477,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
               <button
                 type="button"
                 className={styles.mobileAddBtn}
-                aria-label="Create new ticket"
-                onClick={() => alert("Raise ticket dialog")}
+                aria-label="Raise new ticket"
+                onClick={() => setIsCreateModalOpen(true)}
+                title="Raise New Ticket"
               >
                 <Plus size={18} />
               </button>
@@ -246,12 +490,25 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
         {/* Main Content Area */}
         <main className={styles.mainCanvas}>
           <div className={styles.ticketLayout}>
-            {/* Left Column: Filter & Tickets List */}
+            {/* Left Column: Header, Filter & Tickets List */}
             <section
               className={`${styles.leftPane} ${
                 activeMobileView === "chat" ? styles.leftPaneHideMobile : ""
               }`}
             >
+              {/* Desktop Left Pane Header with Raise Ticket CTA */}
+              <div className={styles.leftPaneHeader}>
+                <h2 className={styles.leftPaneTitle}>Support Tickets</h2>
+                <button
+                  type="button"
+                  className={styles.raiseTicketBtn}
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  <Plus size={15} strokeWidth={2.5} />
+                  <span>Raise Ticket</span>
+                </button>
+              </div>
+
               {/* Search Bar */}
               <div className={styles.searchBox}>
                 <Search size={16} className={styles.searchIcon} />
@@ -285,49 +542,63 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
               {/* Tickets List */}
               <div className={styles.ticketList}>
-                {filteredTickets.map((ticket) => {
-                  const isSelected = ticket.id === selectedTicket?.id;
-                  return (
-                    <div
-                      key={ticket.id}
-                      onClick={() => handleSelectTicket(ticket.id)}
-                      className={`${styles.ticketCard} ${
-                        isSelected ? styles.ticketCardSelected : ""
-                      }`}
-                    >
-                      <div className={styles.ticketCardHeader}>
-                        <span className={styles.ticketCategory}>{ticket.category}</span>
-                        <span className={styles.ticketTime}>{ticket.time}</span>
-                      </div>
+                {loading ? (
+                  <div className={styles.emptyListState}>
+                    <Loader2 size={24} className="animate-spin" color="#FF5500" />
+                    <p className={styles.emptyListText}>Loading tickets...</p>
+                  </div>
+                ) : filteredTickets.length > 0 ? (
+                  filteredTickets.map((ticket) => {
+                    const isSelected = ticket.id === selectedTicket?.id;
+                    return (
+                      <div
+                        key={ticket.id}
+                        onClick={() => handleSelectTicket(ticket.id)}
+                        className={`${styles.ticketCard} ${
+                          isSelected ? styles.ticketCardSelected : ""
+                        }`}
+                      >
+                        <div className={styles.ticketCardHeader}>
+                          <span className={styles.ticketCategory}>{ticket.category}</span>
+                          <span className={styles.ticketTime}>{ticket.time}</span>
+                        </div>
 
-                      <h4 className={styles.ticketTitle}>{ticket.title}</h4>
+                        <h4 className={styles.ticketTitle}>{ticket.title}</h4>
 
-                      <div className={styles.ticketCardFooter}>
-                        <div className={styles.customerInfo}>
-                          <span className={styles.customerDot} />
-                          <span className={styles.customerName}>
-                            {ticket.customerName}
+                        <div className={styles.ticketCardFooter}>
+                          <div className={styles.customerInfo}>
+                            <span className={styles.customerDot} />
+                            <span className={styles.customerName}>
+                              {ticket.ticketNumber}
+                            </span>
+                          </div>
+                          <span
+                            className={`${styles.statusBadge} ${getStatusBadgeStyle(
+                              ticket.status
+                            )}`}
+                          >
+                            {ticket.status}
                           </span>
                         </div>
-                        <span
-                          className={`${styles.statusBadge} ${getStatusBadgeStyle(
-                            ticket.status
-                          )}`}
-                        >
-                          {ticket.status}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-
-                {filteredTickets.length === 0 && (
+                    );
+                  })
+                ) : (
                   <div className={styles.emptyListState}>
-                    <p>
+                    <Headphones size={32} color="#94A3B8" />
+                    <p className={styles.emptyListText}>
                       {tickets.length === 0
-                        ? "No support tickets yet. Click '+' to raise a new ticket."
+                        ? "No support tickets yet. Click '+ Raise Ticket' to submit your request."
                         : `No tickets found under "${statusFilter}"`}
                     </p>
+                    <button
+                      type="button"
+                      className={styles.raiseTicketEmptyBtn}
+                      onClick={() => setIsCreateModalOpen(true)}
+                    >
+                      <Plus size={15} />
+                      <span>Raise New Ticket</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -404,7 +675,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                           </div>
 
                           <span className={styles.messageTimestamp}>
-                            {msg.timestamp.split(" ").slice(-2).join(" ") || msg.timestamp}
+                            {msg.timestamp}
                           </span>
                         </div>
 
@@ -423,41 +694,175 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                   <div className={styles.inputWrapper}>
                     <input
                       type="text"
-                      placeholder="Type a message..."
+                      placeholder="Type a reply to support..."
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       className={styles.messageTextInput}
+                      disabled={selectedTicket.status === "Closed"}
                     />
                     <button
-                      type="button"
-                      className={styles.attachmentBtn}
-                      title="Attach file"
-                    >
-                      <Paperclip size={18} />
-                    </button>
-                    <button
                       type="submit"
-                      disabled={!inputMessage.trim()}
+                      disabled={!inputMessage.trim() || isSendingMessage || selectedTicket.status === "Closed"}
                       className={styles.sendBtn}
-                      title="Send message"
+                      title="Send reply"
                     >
-                      <Send size={16} />
+                      {isSendingMessage ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Send size={16} />
+                      )}
                     </button>
                   </div>
                 </form>
               </section>
             ) : (
               <div className={styles.emptyPane}>
-                <p>
-                  {tickets.length === 0
-                    ? "No support tickets found. Raise a ticket whenever you need assistance."
-                    : "Select a ticket to view conversation"}
-                </p>
+                <div className={styles.emptyPaneContent}>
+                  <MessageSquare size={44} color="#CBD5E1" />
+                  <h3>{tickets.length === 0 ? "No Active Support Tickets" : "Select a Ticket"}</h3>
+                  <p>
+                    {tickets.length === 0
+                      ? "Have questions about subscriptions, payouts, or menu operations? Our support team is here to assist you."
+                      : "Choose a ticket from the left panel to inspect details and send responses."}
+                  </p>
+                  {tickets.length === 0 && (
+                    <button
+                      type="button"
+                      className={styles.raiseTicketBtnLarge}
+                      onClick={() => setIsCreateModalOpen(true)}
+                    >
+                      <Plus size={18} />
+                      <span>Raise a Support Ticket</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </main>
       </div>
+
+      {/* 3. Raise Ticket Modal Dialog */}
+      {isCreateModalOpen && (
+        <div className={styles.modalBackdrop} onClick={() => setIsCreateModalOpen(false)}>
+          <div
+            className={styles.modalContainer}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitleGroup}>
+                <h3 className={styles.modalTitle}>Raise Support Ticket</h3>
+                <p className={styles.modalSubtitle}>
+                  Submit an inquiry or issue to our operations and technical team.
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setIsCreateModalOpen(false)}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTicket}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Category <span className={styles.formLabelRequired}>*</span>
+                  </label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className={styles.formSelect}
+                  >
+                    {TICKET_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Subject / Title <span className={styles.formLabelRequired}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Question regarding weekly payout deduction"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className={styles.formInput}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Description / Details <span className={styles.formLabelRequired}>*</span>
+                  </label>
+                  <textarea
+                    placeholder="Explain the issue or question in detail. Mention order IDs, subscriber names, or error messages if applicable..."
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    className={styles.formTextarea}
+                    rows={4}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className={styles.modalFooter}>
+                <button
+                  type="button"
+                  className={styles.btnCancel}
+                  onClick={() => setIsCreateModalOpen(false)}
+                  disabled={isSubmittingTicket}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={styles.btnSubmit}
+                  disabled={isSubmittingTicket}
+                >
+                  {isSubmittingTicket ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      <span>Submit Ticket</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Toast Notification */}
+      {toastMessage && (
+        <div
+          className={`${styles.toast} ${
+            toastType === "error" ? styles.toastError : styles.toastSuccess
+          }`}
+        >
+          {toastType === "error" ? (
+            <AlertCircle size={18} />
+          ) : (
+            <CheckCircle2 size={18} />
+          )}
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

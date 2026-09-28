@@ -132,14 +132,25 @@ export const getSellerMealPlans = async () => {
 
     const activeSubscribersCount = allSubscribers.filter((s) => s.status === "ACTIVE" && !s.isPaused).length;
     const activePlansCount = plans.filter((p) => p.status === "Live").length;
-    const mrrTotal = plans.reduce((acc, p) => acc + (p.rawWeeklyPrice * 4 * (p.subscribersCount || 0)), 0);
+    const mrrTotal = allSubscribers
+        .filter((s) => s.status === "ACTIVE" && !s.isPaused)
+        .reduce((sum, s) => {
+            const c = (s.cycle || "1 Week").toLowerCase();
+            if (c.includes("2 week") || c === "biweekly") return sum + ((s.pricePaid || 0) * 2);
+            if (c.includes("week") || c === "weekly" || c.includes("1 week")) return sum + ((s.pricePaid || 0) * 4);
+            if (c.includes("quarter") || c.includes("3 month")) return sum + Math.round((s.pricePaid || 0) / 3);
+            if (c.includes("6 month") || c === "half_yearly") return sum + Math.round((s.pricePaid || 0) / 6);
+            if (c.includes("year") || c === "yearly") return sum + Math.round((s.pricePaid || 0) / 12);
+            return sum + (s.pricePaid || 0);
+        }, 0) ||
+        plans.reduce((acc, p) => acc + (p.rawWeeklyPrice * 4 * (p.subscribersCount || 0)), 0);
 
     return {
         plans,
         subscribers: allSubscribers,
         metrics: {
             activeSubscribers: activeSubscribersCount,
-            monthlyRecurringRevenue: mrrTotal > 0 ? `₹${(mrrTotal / 1000).toFixed(1)}k` : "₹0",
+            monthlyRecurringRevenue: mrrTotal > 0 ? `₹${mrrTotal.toLocaleString("en-IN")}` : "₹0",
             rawMRR: mrrTotal,
             activePlansCount,
             fulfillmentRate: "99.2%",
