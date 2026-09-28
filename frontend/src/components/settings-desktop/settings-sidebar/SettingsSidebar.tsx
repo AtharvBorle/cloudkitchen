@@ -12,6 +12,7 @@ import {
   MapPin,
   History,
   HelpCircle,
+  MessageSquare,
   FileText,
   Shield,
   Star,
@@ -45,6 +46,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
     if (pathname?.startsWith("/payment-methods-desktop") || pathname?.startsWith("/payment-methods")) return "payment-methods";
     if (pathname?.startsWith("/delivery-addresses-desktop") || pathname?.startsWith("/delivery-addresses")) return "delivery-addresses";
     if (pathname?.startsWith("/order-history-desktop") || pathname?.startsWith("/order-history")) return "order-history";
+    if (pathname?.startsWith("/support/tickets") || pathname === "/dashboard/user/support") return "support-tickets";
     if (pathname?.startsWith("/support") || pathname?.startsWith("/faq")) return "help-faq";
     if (pathname?.startsWith("/terms") || pathname?.startsWith("/tc") || pathname?.startsWith("/terms-and-conditions")) return "terms";
     if (pathname?.startsWith("/privacy")) return "privacy";
@@ -70,6 +72,8 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         router.push("/delivery-addresses-desktop");
       } else if (tabId === "order-history") {
         router.push("/order-history-desktop");
+      } else if (tabId === "support-tickets") {
+        router.push("/support/tickets");
       } else if (tabId === "help-faq") {
         router.push("/support");
       } else if (tabId === "terms") {
@@ -208,6 +212,20 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           {/* Group 2: Support & Legal */}
           <div className={styles.navGroup}>
             <span className={styles.groupLabel}>{session?.user ? "SUPPORT & LEGAL" : "LEGAL & POLICIES"}</span>
+
+            <button
+              type="button"
+              className={`${styles.navItem} ${
+                currentTab === "support-tickets" ? styles.navItemActive : ""
+              }`}
+              onClick={() => handleTabClick("support-tickets")}
+            >
+              <div className={styles.navItemLeft}>
+                <MessageSquare size={18} className={styles.navIcon} />
+                <span>My Support Tickets</span>
+              </div>
+              <ChevronRight size={16} className={styles.chevronIcon} />
+            </button>
 
             <button
               type="button"

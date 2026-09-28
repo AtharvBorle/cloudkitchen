@@ -470,6 +470,15 @@ export const KITCHENS_REGISTRY: Record<string, KitchenData> = {
   },
 };
 
+export function isStaticKitchen(id: string): boolean {
+  if (!id) return false;
+  const normalized = id.toLowerCase().trim();
+  if (KITCHENS_REGISTRY[normalized]) return true;
+  return Object.values(KITCHENS_REGISTRY).some(
+    (k) => (k.trackingId || "").toLowerCase() === normalized
+  );
+}
+
 export function formatTitleFromSlug(slug: string): string {
   if (!slug) return "Kitchen";
   return slug
@@ -495,21 +504,20 @@ export function getKitchenById(id: string): KitchenData {
   );
   if (byTracking) return byTracking;
 
-  // 3. Dynamic seller template with empty items (will be populated from live database)
-  const displayName = formatTitleFromSlug(id) + " Kitchen";
+  // 3. Clean dynamic seller template (real data fetched from database)
   return {
     id: id,
-    trackingId: `NCK-${id.toUpperCase()}`,
-    restaurantName: displayName,
-    location: "Pune, Maharashtra",
-    rating: 4.5,
-    reviewsCount: "",
+    trackingId: id,
+    restaurantName: "",
+    location: "",
+    rating: 0,
+    reviewsCount: "(No ratings yet)",
     deliveryTime: "25-35 min",
     deliveryFeeText: "Free Delivery",
-    dietType: "Multi-Cuisine",
+    dietType: "Veg & Non-Veg",
     offerText: "",
-    chefName: "Head Chef " + formatTitleFromSlug(id),
-    chefDetails: "Gourmet cloud kitchen",
+    chefName: "",
+    chefDetails: "",
     categories: [],
     defaultActiveCategory: "All",
     items: [],

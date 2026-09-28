@@ -579,3 +579,235 @@
   }
 }
 
+/* Validation & Duplicate Alert Styles with Rich Animations */
+@keyframes slideDownFade {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes shakeSoft {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+@keyframes borderGlowRed {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.25);
+  }
+}
+
+@keyframes pulseTag {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+
+.inputFieldError {
+  border-color: #ef4444 !important;
+  background-color: #fffbfb !important;
+  animation: shakeSoft 0.3s ease-in-out;
+}
+
+.inputFieldError:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+.inputFieldDuplicate {
+  border-color: #e11d48 !important;
+  background-color: #fff1f2 !important;
+  animation: borderGlowRed 2s infinite ease-in-out;
+}
+
+.fieldErrorText {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  animation: slideDownFade 0.2s ease-out;
+}
+
+.duplicateBanner {
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1.5px solid #fecdd3;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #9f1239;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.06);
+  animation: slideDownFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.duplicateBannerHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.duplicateBannerIcon {
+  color: #e11d48;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.duplicateBannerTitle {
+  font-weight: 800;
+  margin-bottom: 2px;
+  color: #881337;
+  font-size: 0.88rem;
+  letter-spacing: -0.01em;
+}
+
+.duplicateBannerDesc {
+  color: #9f1239;
+  font-size: 0.8rem;
+}
+
+.duplicatePreviewCard {
+  background: #ffffff;
+  border: 1px dashed #f43f5e;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.duplicatePreviewTag {
+  background-color: #ffe4e6;
+  color: #e11d48;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.duplicatePreviewText {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duplicateAdvice {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #be123c;
+  font-weight: 500;
+}
+
+/* Duplicate list card highlight & badge */
+.addressBoxDuplicate {
+  border: 1.5px solid #fecaca !important;
+  background: linear-gradient(180deg, #fffafa 0%, #ffffff 100%);
+  position: relative;
+}
+
+.duplicateTag {
+  background-color: #fee2e2;
+  color: #dc2626;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: pulseTag 2.5s infinite ease-in-out;
+}
+
+/* Top Deduplication Cleanup Banner */
+.cleanupBanner {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1.5px solid #fed7aa;
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.08);
+  animation: slideDownFade 0.3s ease-out;
+}
+
+.cleanupLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cleanupIcon {
+  color: #ea580c;
+  flex-shrink: 0;
+}
+
+.cleanupTitle {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #9a3412;
+  margin: 0 0 2px 0;
+}
+
+.cleanupSubtitle {
+  font-size: 0.78rem;
+  color: #c2410c;
+  margin: 0;
+}
+
+.cleanupBtn {
+  background-color: #ea580c;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 8px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+  font-family: inherit;
+}
+
+.cleanupBtn:hover {
+  background-color: #c2410c;
+  transform: translateY(-1px);
+}
+
+.saveModalBtnDuplicate {
+  background-color: #cbd5e1 !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+}
+
