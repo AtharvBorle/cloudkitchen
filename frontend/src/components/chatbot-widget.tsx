@@ -100,188 +100,125 @@ export default function ChatbotWidget() {
     // Hidden file input ref for attachment
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Draggable chatbot widget states
+    // Draggable chatbot widget states (for open modal header on desktop)
     const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const dragRef = useRef<{ startX: number; startY: number; posX: number; posY: number; moved: boolean }>({
+    const dragRef = useRef<{
+        active: boolean;
+        startX: number;
+        startY: number;
+        initialLeft: number;
+        initialTop: number;
+        pointerId: number | null;
+    }>({
+        active: false,
         startX: 0,
         startY: 0,
-        posX: 0,
-        posY: 0,
-        moved: false
+        initialLeft: 0,
+        initialTop: 0,
+        pointerId: null
     });
 
     const toggleOpen = (open: boolean) => {
-        if (open) {
-            if (!isMobile) {
-                setPosition(prev => {
-                    if (!prev) return null;
-                    const openWidth = Math.min(420, window.innerWidth * 0.92);
-                    const openHeight = Math.min(640, window.innerHeight - 80);
-                    const dx = openWidth - 62;
-                    const dy = openHeight - 62;
-                    return {
-                        x: Math.max(0, prev.x - dx),
-                        y: Math.max(0, prev.y - dy)
-                    };
-                });
-            }
-            setIsOpen(true);
-        } else {
-            if (!isMobile) {
-                setPosition(prev => {
-                    if (!prev) return null;
-                    const openWidth = containerRef.current ? containerRef.current.getBoundingClientRect().width : Math.min(420, window.innerWidth * 0.92);
-                    const openHeight = containerRef.current ? containerRef.current.getBoundingClientRect().height : Math.min(640, window.innerHeight - 80);
-                    const dx = openWidth - 62;
-                    const dy = openHeight - 62;
-                    return {
-                        x: prev.x + dx,
-                        y: prev.y + dy
-                    };
-                });
-            }
-            setIsOpen(false);
+        if (!open) {
+            setPosition(null);
+            setIsDragging(false);
+            dragRef.current.active = false;
         }
+        setIsOpen(open);
     };
 
-    const isDraggingRef = useRef(false);
-    const isMobileRef = useRef(isMobile);
-    const isOpenRef = useRef(isOpen);
-
-    useEffect(() => {
-        isMobileRef.current = isMobile;
-        isOpenRef.current = isOpen;
-    }, [isMobile, isOpen]);
-
-    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement | HTMLButtonElement>) => {
-        if (isMobile && isOpen) return;
+    const handleHeaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (isMobile) return;
+        if (e.button !== 0) return; // Left-click only
         const target = e.target as HTMLElement;
-        if (target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
+        if (target.closest('button') || target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
             return;
         }
-        if (target.closest('button') && !target.closest('.drag-handle-btn') && !target.closest('.drag-handle-header')) {
-            return;
-        }
-        
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        
-        isDraggingRef.current = true;
-        setIsDragging(true);
+
+        const container = containerRef.current;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+
         dragRef.current = {
+            active: true,
             startX: e.clientX,
             startY: e.clientY,
-            posX: rect.left,
-            posY: rect.top,
-            moved: false
+            initialLeft: rect.left,
+            initialTop: rect.top,
+            pointerId: e.pointerId
         };
+
+        try {
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {
+            // fallback
+        }
     };
 
-    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement | HTMLButtonElement>) => {
-        if (isMobile && isOpen) return;
-        const target = e.target as HTMLElement;
-        if (target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
-            return;
+    const handleHeaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!dragRef.current.active) return;
+        if (dragRef.current.pointerId !== null && e.pointerId !== dragRef.current.pointerId) return;
+
+        const dx = e.clientX - dragRef.current.startX;
+        const dy = e.clientY - dragRef.current.startY;
+
+        if (Math.hypot(dx, dy) > 3) {
+            setIsDragging(true);
         }
-        if (target.closest('button') && !target.closest('.drag-handle-btn') && !target.closest('.drag-handle-header')) {
-            return;
+
+        const container = containerRef.current;
+        const width = container ? container.getBoundingClientRect().width : 420;
+        const height = container ? container.getBoundingClientRect().height : 600;
+
+        const maxX = window.innerWidth - width;
+        const maxY = window.innerHeight - height;
+
+        const newX = Math.max(0, Math.min(dragRef.current.initialLeft + dx, maxX));
+        const newY = Math.max(0, Math.min(dragRef.current.initialTop + dy, maxY));
+
+        setPosition({ x: newX, y: newY });
+    };
+
+    const endDrag = (e?: React.PointerEvent<HTMLDivElement>) => {
+        if (dragRef.current.active) {
+            if (e && dragRef.current.pointerId !== null) {
+                try {
+                    (e.currentTarget as HTMLElement).releasePointerCapture(dragRef.current.pointerId);
+                } catch {}
+            }
+            dragRef.current.active = false;
+            dragRef.current.pointerId = null;
+            setIsDragging(false);
         }
-        
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        
-        const touch = e.touches[0];
-        if (!touch) return;
-        isDraggingRef.current = true;
-        setIsDragging(true);
-        dragRef.current = {
-            startX: touch.clientX,
-            startY: touch.clientY,
-            posX: rect.left,
-            posY: rect.top,
-            moved: false
-        };
     };
 
     useEffect(() => {
-        const handleGlobalMouseMove = (e: MouseEvent) => {
-            if (!isDraggingRef.current) return;
-            if (isMobileRef.current && isOpenRef.current) return;
-            const dx = e.clientX - dragRef.current.startX;
-            const dy = e.clientY - dragRef.current.startY;
-            
-            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-                dragRef.current.moved = true;
-            }
-            
-            let newX = dragRef.current.posX + dx;
-            let newY = dragRef.current.posY + dy;
-            
-            const rect = containerRef.current?.getBoundingClientRect();
-            if (rect) {
-                const maxX = window.innerWidth - rect.width;
-                const maxY = window.innerHeight - rect.height;
-                newX = Math.max(0, Math.min(newX, maxX));
-                newY = Math.max(0, Math.min(newY, maxY));
-            }
-            
-            setPosition({ x: newX, y: newY });
-        };
-
-        const handleGlobalMouseUp = () => {
-            if (isDraggingRef.current) {
-                isDraggingRef.current = false;
+        const handleGlobalEnd = () => {
+            if (dragRef.current.active) {
+                dragRef.current.active = false;
+                dragRef.current.pointerId = null;
                 setIsDragging(false);
             }
         };
 
-        const handleGlobalTouchMove = (e: TouchEvent) => {
-            if (!isDraggingRef.current) return;
-            if (isMobileRef.current && isOpenRef.current) return;
-            const touch = e.touches[0];
-            if (!touch) return;
-            const dx = touch.clientX - dragRef.current.startX;
-            const dy = touch.clientY - dragRef.current.startY;
-            
-            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-                dragRef.current.moved = true;
-            }
-            
-            let newX = dragRef.current.posX + dx;
-            let newY = dragRef.current.posY + dy;
-            
-            const rect = containerRef.current?.getBoundingClientRect();
-            if (rect) {
-                const maxX = window.innerWidth - rect.width;
-                const maxY = window.innerHeight - rect.height;
-                newX = Math.max(0, Math.min(newX, maxX));
-                newY = Math.max(0, Math.min(newY, maxY));
-            }
-            
-            setPosition({ x: newX, y: newY });
-        };
-
-        const handleGlobalTouchEnd = () => {
-            if (isDraggingRef.current) {
-                isDraggingRef.current = false;
-                setIsDragging(false);
-            }
-        };
-
-        window.addEventListener("mousemove", handleGlobalMouseMove);
-        window.addEventListener("mouseup", handleGlobalMouseUp);
-        window.addEventListener("touchmove", handleGlobalTouchMove, { passive: false });
-        window.addEventListener("touchend", handleGlobalTouchEnd);
-        window.addEventListener("touchcancel", handleGlobalTouchEnd);
+        window.addEventListener("pointerup", handleGlobalEnd);
+        window.addEventListener("pointercancel", handleGlobalEnd);
+        window.addEventListener("mouseup", handleGlobalEnd);
+        window.addEventListener("touchend", handleGlobalEnd);
+        window.addEventListener("touchcancel", handleGlobalEnd);
+        window.addEventListener("blur", handleGlobalEnd);
+        window.addEventListener("dragend", handleGlobalEnd);
 
         return () => {
-            window.removeEventListener("mousemove", handleGlobalMouseMove);
-            window.removeEventListener("mouseup", handleGlobalMouseUp);
-            window.removeEventListener("touchmove", handleGlobalTouchMove);
-            window.removeEventListener("touchend", handleGlobalTouchEnd);
-            window.removeEventListener("touchcancel", handleGlobalTouchEnd);
+            window.removeEventListener("pointerup", handleGlobalEnd);
+            window.removeEventListener("pointercancel", handleGlobalEnd);
+            window.removeEventListener("mouseup", handleGlobalEnd);
+            window.removeEventListener("touchend", handleGlobalEnd);
+            window.removeEventListener("touchcancel", handleGlobalEnd);
+            window.removeEventListener("blur", handleGlobalEnd);
+            window.removeEventListener("dragend", handleGlobalEnd);
         };
     }, []);
 
@@ -1279,7 +1216,7 @@ Details: Category request submitted via chatbot assistant.`;
             margin: 0,
             padding: 0
           }
-        : position 
+        : (position && isOpen)
             ? {
                 position: "fixed",
                 left: `${position.x}px`,
@@ -1288,8 +1225,8 @@ Details: Category request submitted via chatbot assistant.`;
               }
             : {
                 position: "fixed",
-                bottom: "30px",
-                right: "30px",
+                bottom: isMobile ? "20px" : "30px",
+                right: isMobile ? "20px" : "30px",
                 zIndex: 9999,
               };
 
@@ -1299,16 +1236,7 @@ Details: Category request submitted via chatbot assistant.`;
             {/* Chatbot Toggle Button (When Closed) */}
             {!isOpen && (
                 <button
-                    className="drag-handle-btn"
-                    onMouseDown={handleMouseDown}
-                    onTouchStart={handleTouchStart}
-                    onClick={(e) => {
-                        if (dragRef.current.moved) {
-                            e.preventDefault();
-                            return;
-                        }
-                        toggleOpen(true);
-                    }}
+                    onClick={() => toggleOpen(true)}
                     style={{
                         width: "62px",
                         height: "62px",
@@ -1319,17 +1247,18 @@ Details: Category request submitted via chatbot assistant.`;
                         justifyContent: "center",
                         boxShadow: "0 10px 30px rgba(238, 53, 36, 0.35), 0 4px 12px rgba(0,0,0,0.1)",
                         border: "2.5px solid #FFFFFF",
-                        cursor: isDragging ? "grabbing" : "grab",
-                        transition: isDragging ? "none" : "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        cursor: "pointer",
+                        transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
                         position: "relative",
                         overflow: "visible",
-                        padding: 0
+                        padding: 0,
+                        userSelect: "none"
                     }}
                     onMouseEnter={(e) => {
-                        if (!isDragging) e.currentTarget.style.transform = "scale(1.1) translateY(-2px)";
+                        e.currentTarget.style.transform = "scale(1.1) translateY(-2px)";
                     }}
                     onMouseLeave={(e) => {
-                        if (!isDragging) e.currentTarget.style.transform = "scale(1) translateY(0)";
+                        e.currentTarget.style.transform = "scale(1) translateY(0)";
                     }}
                     title="Chat with Bitey"
                 >
@@ -1338,12 +1267,15 @@ Details: Category request submitted via chatbot assistant.`;
                         height: "100%",
                         borderRadius: "50%",
                         overflow: "hidden",
-                        backgroundColor: "#EE3524"
+                        backgroundColor: "#EE3524",
+                        pointerEvents: "none",
+                        userSelect: "none"
                     }}>
                         <img
                             src="/images/bitey-mascot.png"
                             alt="Bitey Mascot"
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            draggable={false}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none", userSelect: "none" }}
                         />
                     </div>
                     <span style={{
@@ -1355,7 +1287,8 @@ Details: Category request submitted via chatbot assistant.`;
                         height: "15px",
                         borderRadius: "50%",
                         border: "2.5px solid white",
-                        boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
+                        boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+                        pointerEvents: "none"
                     }} />
                 </button>
             )}
@@ -1379,8 +1312,11 @@ Details: Category request submitted via chatbot assistant.`;
                     {/* Header */}
                     <div 
                         className="drag-handle-header"
-                        onMouseDown={handleMouseDown}
-                        onTouchStart={handleTouchStart}
+                        onPointerDown={handleHeaderPointerDown}
+                        onPointerMove={handleHeaderPointerMove}
+                        onPointerUp={endDrag}
+                        onPointerCancel={endDrag}
+                        onDragStart={(e) => e.preventDefault()}
                         style={{
                             backgroundColor: "#FFF9F6",
                             padding: isMobile ? "14px 16px" : "16px 20px",
@@ -1390,11 +1326,12 @@ Details: Category request submitted via chatbot assistant.`;
                             alignItems: "center",
                             cursor: isMobile ? "default" : isDragging ? "grabbing" : "grab",
                             userSelect: "none",
+                            touchAction: "none",
                             borderBottom: "1.5px solid #FDE8E1",
                             flexShrink: 0
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", pointerEvents: "none" }}>
                             <div style={{
                                 width: "46px",
                                 height: "46px",
@@ -1408,7 +1345,8 @@ Details: Category request submitted via chatbot assistant.`;
                                 <img
                                     src="/images/bitey-mascot.png"
                                     alt="Bitey Mascot"
-                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                    draggable={false}
+                                    style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none", userSelect: "none" }}
                                 />
                             </div>
                             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -1438,7 +1376,7 @@ Details: Category request submitted via chatbot assistant.`;
                             </div>
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", pointerEvents: "auto" }}>
                             {history.length > 0 && (
                                 <button
                                     onClick={handleGoBack}
