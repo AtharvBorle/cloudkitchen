@@ -8,7 +8,7 @@ import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
 import { PopularFood } from "@/components/restaurant-desktop/popularfood";
 import { SubscriptionPlans, PlanItem, SubscribeModal, SubscribeModalPlan } from "@/components/restaurant-desktop/subscriptionplans";
 import { RestaurantMobileView } from "@/components/restaurant-desktop/restaurant-mobile";
-import { getKitchenById, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
+import { getKitchenById, isStaticKitchen, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
 import { useCart } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { Footer } from "@/components/explore-desktop/footer";
@@ -23,24 +23,87 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const { addToCart, decreaseQuantity } = useCart();
+  const isStatic = isStaticKitchen(kitchenId);
+  const [isLoaded, setIsLoaded] = useState<boolean>(() => isStatic);
+  const [isNotFound, setIsNotFound] = useState<boolean>(false);
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
-  const [isVegOnly, setIsVegOnly] = useState<boolean>(false);
+  const [isVegOnly, setIsVegOnly] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("cloudkitchen_veg_preference");
+        if (stored !== null) {
+          return stored === "true";
+        }
+      } catch {}
+    }
+    return false;
+  });
   const [addonModalItem, setAddonModalItem] = useState<FoodCardItem | null>(null);
   const [subscriptionPlans, setSubscriptionPlans] = useState<PlanItem[]>([]);
   const [rawMealPlans, setRawMealPlans] = useState<any[]>([]);
   const [selectedModalPlan, setSelectedModalPlan] = useState<SubscribeModalPlan | null>(null);
   const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
 
+  // Sync veg filter preference with localStorage and across tabs/components
+  useEffect(() => {
+    const syncVeg = (e: any) => {
+      if (e?.detail !== undefined) {
+        setIsVegOnly(Boolean(e.detail));
+      } else if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("cloudkitchen_veg_preference");
+          if (stored !== null) {
+            setIsVegOnly(stored === "true");
+          }
+        } catch {}
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+      window.addEventListener("storage", syncVeg);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+        window.removeEventListener("storage", syncVeg);
+      }
+    };
+  }, []);
+
+  const handleVegToggle = (veg: boolean) => {
+    setIsVegOnly(veg);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("cloudkitchen_veg_preference", String(veg));
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_veg_preference_changed", { detail: veg })
+        );
+      } catch {}
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
+    const isCurrentStatic = isStaticKitchen(kitchenId);
 
-    async function loadLiveSeller() {
+    if (!isCurrentStatic) {
+      setIsLoaded(false);
+      setIsNotFound(false);
+    } else {
+      setIsLoaded(true);
+      setIsNotFound(false);
+      setKitchenData(getKitchenById(kitchenId));
+    }
+
+    async function loadLiveSeller(isSilent: boolean = false) {
       try {
         const res = await fetchApi(`/api/public/shop/${encodeURIComponent(kitchenId)}`);
         if (res.ok) {
           const resData = await res.json();
           const liveData = resData?.data || resData;
-          if (liveData && isMounted) {
+          if (liveData && (liveData.id || liveData.trackingId || liveData.businessName) && isMounted) {
             let mealPlansData: any[] = liveData.mealPlans || [];
             if ((!mealPlansData || mealPlansData.length === 0) && (liveData.id || liveData.trackingId || kitchenId)) {
               try {
@@ -127,18 +190,26 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                 } catch {}
               }
 
+              const itemRatingsList = Array.isArray(item.itemRatings) ? item.itemRatings : [];
+              const rawItemRating =
+                typeof item.averageRating === "number" && item.averageRating > 0
+                  ? item.averageRating
+                  : typeof item.rating === "number" && item.rating > 0
+                  ? item.rating
+                  : itemRatingsList.length > 0
+                  ? itemRatingsList.reduce((sum: number, r: any) => sum + (Number(r?.rating) || 0), 0) / itemRatingsList.length
+                  : (item.rating && !isNaN(parseFloat(String(item.rating))) && parseFloat(String(item.rating)) > 0 ? parseFloat(String(item.rating)) : 0);
+
+              const itemRatingDisplay = rawItemRating > 0 ? Number(rawItemRating).toFixed(1) : "New";
+
               return {
                 id: item.id,
                 foodItemId: item.id,
                 title: item.name,
                 description: item.description || "Freshly cooked gourmet preparation.",
-                rating: item.averageRating
-                  ? Number(item.averageRating).toFixed(1)
-                  : item.rating
-                  ? Number(item.rating).toFixed(1)
-                  : "4.8",
+                rating: itemRatingDisplay,
                 price: `₹${item.price}`,
-                image: item.imageUrl || kitchenData.items[0]?.image || "/images/places/place-pizza.png",
+                image: item.imageUrl || "/images/places/place-pizza.png",
                 isVeg: item.itemType ? !item.itemType.toUpperCase().includes("NON_VEG") : item.isVeg !== false,
                 category: item.foodCategory?.name || "Popular",
                 addons: parsedAddons,
@@ -159,21 +230,42 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               )
             ) as string[];
 
+            const reviewsList = Array.isArray(liveData.reviews) ? liveData.reviews : [];
+            const computedReviewsCount = typeof liveData.totalReviews === "number"
+              ? liveData.totalReviews
+              : (typeof liveData.reviewsCount === "number" ? liveData.reviewsCount : reviewsList.length);
+
+            let computedSellerRating = 0;
+            if (typeof liveData.averageRating === "number" && liveData.averageRating > 0) {
+              computedSellerRating = liveData.averageRating;
+            } else if (typeof liveData.rating === "number" && liveData.rating > 0) {
+              computedSellerRating = liveData.rating;
+            } else if (reviewsList.length > 0) {
+              const sum = reviewsList.reduce((acc: number, r: any) => acc + (Number(r?.rating) || 0), 0);
+              computedSellerRating = parseFloat((sum / reviewsList.length).toFixed(1));
+            } else if (liveData.rating && !isNaN(parseFloat(String(liveData.rating))) && parseFloat(String(liveData.rating)) > 0) {
+              computedSellerRating = parseFloat(String(liveData.rating));
+            }
+
+            const computedReviewsText = computedReviewsCount > 0
+              ? `(${computedReviewsCount} review${computedReviewsCount > 1 ? "s" : ""})`
+              : "(No ratings yet)";
+
             setKitchenData((prev: any) => ({
               ...prev,
+              id: liveData.id || liveData.trackingId || prev.id || kitchenId,
               sellerId: liveData.id || liveData.trackingId || prev.sellerId,
-              trackingId: liveData.trackingId || prev.trackingId,
+              trackingId: liveData.trackingId || prev.trackingId || kitchenId,
               restaurantName:
-                liveData.businessName || liveData.user?.name || prev.restaurantName,
+                liveData.businessName || liveData.user?.name || prev.restaurantName || "Cloud Kitchen",
               location:
                 liveData.addressLocality ||
                 liveData.addressCity ||
-                prev.location,
-              rating: liveData.rating
-                ? Number(liveData.rating).toFixed(1)
-                : prev.rating,
-              deliveryTime: liveData.deliveryTime || prev.deliveryTime,
-              deliveryFeeText: liveData.deliveryFeeText || prev.deliveryFeeText,
+                (liveData.user?.addressLocality ? `${liveData.user.addressLocality}, ${liveData.user.addressCity || "Pune"}` : prev.location || "Pune, Maharashtra"),
+              rating: computedSellerRating,
+              reviewsCount: computedReviewsText,
+              deliveryTime: liveData.deliveryTime || prev.deliveryTime || "25-35 min",
+              deliveryFeeText: liveData.deliveryFeeText || prev.deliveryFeeText || "Free Delivery",
               dietType:
                 liveData.foodType === "VEG"
                   ? "Pure Veg 🥦"
@@ -181,35 +273,50 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   ? "Non-Veg 🍗"
                   : "Veg & Non-Veg 🍱",
               offerText: liveData.offerText || "",
+              chefName: liveData.chefName || liveData.businessName || prev.chefName || "Executive Chef",
+              chefDetails: liveData.chefDetails || prev.chefDetails || "Specialty cloud kitchen dishes",
               isOnline: liveData.isOnline !== false,
               bannerImageUrl: liveData.bannerImageUrl || (Array.isArray(liveData.kitchenImages) ? liveData.kitchenImages[0] : "") || prev.bannerImageUrl || "",
               categories:
-                uniqueCats.length > 0 ? ["All", ...uniqueCats] : [],
+                uniqueCats.length > 0 ? ["All", ...uniqueCats] : (prev.categories?.length ? prev.categories : ["Popular"]),
+              defaultActiveCategory: "All",
               items: liveItems,
             }));
+            setIsLoaded(true);
+            setIsNotFound(false);
+          } else if (isMounted && !isCurrentStatic && !isSilent) {
+            setIsNotFound(true);
+            setIsLoaded(true);
           }
+        } else if (isMounted && !isCurrentStatic && !isSilent) {
+          setIsNotFound(true);
+          setIsLoaded(true);
         }
       } catch (err) {
         console.error("Failed to load live seller data:", err);
+        if (isMounted && !isCurrentStatic && !isSilent) {
+          setIsNotFound(true);
+          setIsLoaded(true);
+        }
       }
     }
 
-    loadLiveSeller();
+    loadLiveSeller(false);
 
     // Periodic live sync (every 4 seconds)
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
-        loadLiveSeller();
+        loadLiveSeller(true);
       }
     }, 4000);
 
     const handleSync = () => {
-      loadLiveSeller();
+      loadLiveSeller(true);
     };
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        loadLiveSeller();
+        loadLiveSeller(true);
       }
     };
 
@@ -324,6 +431,141 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     ? kitchenData.items.filter((item) => item.isVeg)
     : kitchenData.items;
 
+  if (isNotFound) {
+    return (
+      <div className={styles.pageContainer}>
+        <Navbar
+          initialActiveItem="Food"
+          isVegOnly={isVegOnly}
+          onVegToggle={handleVegToggle}
+        />
+        <main className={styles.mainContent} style={{ textAlign: "center", padding: "80px 20px" }}>
+          <div style={{ maxWidth: "480px", margin: "0 auto", backgroundColor: "#FFFFFF", padding: "40px 24px", borderRadius: "24px", border: "1px solid #FED7AA", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
+            <div style={{ fontSize: "50px", marginBottom: "16px" }}>🏪</div>
+            <h2 style={{ fontSize: "1.45rem", fontWeight: "800", color: "#0F172A", marginBottom: "10px" }}>
+              Kitchen Not Found
+            </h2>
+            <p style={{ fontSize: "0.92rem", color: "#64748B", lineHeight: "1.6", marginBottom: "24px" }}>
+              This cloud kitchen is currently unavailable or may not be active yet.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/explore-desktop")}
+              style={{
+                backgroundColor: "#FE5000",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "12px",
+                padding: "12px 28px",
+                fontWeight: "700",
+                fontSize: "0.95rem",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(254, 80, 0, 0.25)",
+              }}
+            >
+              Explore Other Kitchens
+            </button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className={styles.pageContainer}>
+        {/* 1. DESKTOP SKELETON (>768px) */}
+        <div className={styles.desktopOnly}>
+          <Navbar
+            initialActiveItem="Food"
+            isVegOnly={isVegOnly}
+            onVegToggle={handleVegToggle}
+          />
+          <main className={styles.mainContent}>
+            <div className={`${styles.skeletonBanner} ${styles.skeletonPulse}`}>
+              <div className={styles.skeletonBannerCard}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div className={styles.skeletonPulse} style={{ width: "280px", height: "32px", borderRadius: "8px" }} />
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "70px", height: "24px", borderRadius: "8px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "180px", height: "20px", borderRadius: "6px" }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <div className={styles.skeletonPulse} style={{ width: "110px", height: "36px", borderRadius: "10px" }} />
+                  <div className={styles.skeletonPulse} style={{ width: "120px", height: "36px", borderRadius: "10px" }} />
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.skeletonTabsRow}>
+              {[90, 110, 85, 120, 95].map((w, i) => (
+                <div key={i} className={`${styles.skeletonTab} ${styles.skeletonPulse}`} style={{ width: `${w}px` }} />
+              ))}
+            </div>
+
+            <div className={styles.skeletonGrid}>
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className={styles.skeletonFoodCard}>
+                  <div className={`${styles.skeletonFoodImg} ${styles.skeletonPulse}`} />
+                  <div className={styles.skeletonFoodInfo}>
+                    <div>
+                      <div className={styles.skeletonPulse} style={{ width: "65%", height: "20px", borderRadius: "6px", marginBottom: "8px" }} />
+                      <div className={styles.skeletonPulse} style={{ width: "90%", height: "14px", borderRadius: "4px", marginBottom: "6px" }} />
+                      <div className={styles.skeletonPulse} style={{ width: "50%", height: "14px", borderRadius: "4px" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "14px" }}>
+                      <div className={styles.skeletonPulse} style={{ width: "70px", height: "22px", borderRadius: "6px" }} />
+                      <div className={styles.skeletonPulse} style={{ width: "84px", height: "34px", borderRadius: "10px" }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </main>
+          <Footer />
+        </div>
+
+        {/* 2. MOBILE SKELETON (<=768px) */}
+        <div className={styles.mobileOnly}>
+          <div className={`${styles.skeletonMobileHero} ${styles.skeletonPulse}`} />
+          <div className={styles.skeletonMobileCard}>
+            <div className={styles.skeletonPulse} style={{ width: "60%", height: "24px", borderRadius: "8px" }} />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <div className={styles.skeletonPulse} style={{ width: "55px", height: "20px", borderRadius: "6px" }} />
+              <div className={styles.skeletonPulse} style={{ width: "120px", height: "20px", borderRadius: "6px" }} />
+            </div>
+            <div className={styles.skeletonPulse} style={{ width: "85%", height: "16px", borderRadius: "4px" }} />
+          </div>
+          <div className={styles.skeletonMobileTabs}>
+            {[75, 95, 80, 110].map((w, i) => (
+              <div key={i} className={`${styles.skeletonTab} ${styles.skeletonPulse}`} style={{ width: `${w}px`, height: "34px", flexShrink: 0 }} />
+            ))}
+          </div>
+          <div className={styles.skeletonMobileList}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className={styles.skeletonFoodCard}>
+                <div className={`${styles.skeletonFoodImg} ${styles.skeletonPulse}`} />
+                <div className={styles.skeletonFoodInfo}>
+                  <div>
+                    <div className={styles.skeletonPulse} style={{ width: "70%", height: "18px", borderRadius: "6px", marginBottom: "6px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "95%", height: "12px", borderRadius: "4px", marginBottom: "4px" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "60px", height: "18px", borderRadius: "4px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "70px", height: "28px", borderRadius: "8px" }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Footer />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.pageContainer}>
       {/* 1. DESKTOP & TABLET VIEW (>768px) */}
@@ -331,7 +573,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         <Navbar
           initialActiveItem="Food"
           isVegOnly={isVegOnly}
-          onVegToggle={(veg) => setIsVegOnly(veg)}
+          onVegToggle={handleVegToggle}
         />
 
         <main className={styles.mainContent}>
@@ -344,8 +586,9 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             deliveryFeeText={kitchenData.deliveryFeeText}
             dietType={kitchenData.dietType}
             offerText={kitchenData.offerText}
+            isVegOnly={isVegOnly}
             initialVegOnly={isVegOnly}
-            onVegToggle={(veg) => setIsVegOnly(veg)}
+            onVegToggle={handleVegToggle}
             isOnline={kitchenData.isOnline !== false}
             bannerImageUrl={kitchenData.bannerImageUrl}
           />
@@ -375,7 +618,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         <RestaurantMobileView
           kitchenData={kitchenData}
           isVegOnly={isVegOnly}
-          onVegToggle={(veg) => setIsVegOnly(veg)}
+          onVegToggle={handleVegToggle}
           onAddItem={handleAddItem}
           onDecreaseItem={handleDecreaseItem}
           subscriptionPlans={subscriptionPlans}

@@ -364,6 +364,17 @@ export function matchesSearchQuery(
   return false;
 }
 
+export const FOOD_TAG_KEYWORDS: Record<string, string[]> = {
+  pizza: ["pizza", "pizzas", "margherita", "italian", "calzone", "crust", "cheese pizza", "pan pizza", "pasta"],
+  "lemon-rice": ["lemon rice", "lemon", "rice", "bhaat", "chawal", "pulao", "curd rice", "south indian", "fried rice", "jeera rice", "dal khichdi", "khichdi"],
+  "lemon rice": ["lemon rice", "lemon", "rice", "bhaat", "chawal", "pulao", "curd rice", "south indian", "fried rice", "jeera rice", "dal khichdi", "khichdi"],
+  burger: ["burger", "burgers", "hamburger", "cheeseburger", "veg burger", "crispy burger", "patty", "sandwich", "sandwiches", "fries", "fast food", "wrap", "roll", "snack"],
+  thali: ["thali", "thalis", "meal", "meals", "homemeal", "mess", "lunch", "dinner", "tiffin", "roti", "chapati", "dal", "sabzi", "sabji", "poli", "bhaat", "maharashtrian", "gujarati", "punjabi thali", "deluxe thali", "special thali", "veg thali", "non veg thali"],
+  biryani: ["biryani", "biryanis", "dum biryani", "hyderabadi", "chicken biryani", "veg biryani", "pulao", "rice", "mughlai"],
+  cake: ["cake", "cakes", "pastry", "pastries", "dessert", "desserts", "bakery", "sweet", "brownie", "mousse", "cupcake", "chocolate cake", "biscuit", "pie"],
+  healthy: ["healthy", "salad", "salads", "bowl", "bowls", "organic", "diet", "sprouts", "fruit", "fruits", "juice", "juices", "smoothie", "vegan", "keto", "oats", "greens", "avocado"],
+};
+
 export function matchesDishSearch(
   query: string | null | undefined,
   dish: {
@@ -374,12 +385,31 @@ export function matchesDishSearch(
   }
 ): boolean {
   if (!query || !query.trim()) return true;
-  return (
-    matchesSearchQuery(dish.name, query) ||
-    matchesSearchQuery(dish.categoryName, query) ||
-    matchesSearchQuery(dish.description, query) ||
-    matchesSearchQuery(dish.sellerName, query)
-  );
+  const q = query.toLowerCase().trim();
+
+  // 1. Direct standard search query matches
+  if (
+    matchesSearchQuery(dish.name, q) ||
+    matchesSearchQuery(dish.categoryName, q) ||
+    matchesSearchQuery(dish.description, q) ||
+    matchesSearchQuery(dish.sellerName, q)
+  ) {
+    return true;
+  }
+
+  // 2. Tag / category semantic alias expansion
+  const normKey = q.replace(/[^a-z0-9]/g, "");
+  for (const [tagKey, keywords] of Object.entries(FOOD_TAG_KEYWORDS)) {
+    const cleanTagKey = tagKey.replace(/[^a-z0-9]/g, "");
+    if (cleanTagKey === normKey || keywords.some((kw) => kw.replace(/[^a-z0-9]/g, "") === normKey)) {
+      const dishText = `${dish.name || ""} ${dish.categoryName || ""} ${dish.description || ""}`.toLowerCase();
+      if (keywords.some((kw) => dishText.includes(kw) || matchesSearchQuery(dishText, kw))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 export function matchesKitchenOrDishSearch(
@@ -402,27 +432,45 @@ export function matchesKitchenOrDishSearch(
   }>
 ): boolean {
   if (!query || !query.trim()) return true;
+  const q = query.toLowerCase().trim();
 
-  // 1. Check kitchen metadata
+  // 1. Check direct kitchen metadata
   if (
-    matchesSearchQuery(kitchen.name, query) ||
-    matchesSearchQuery(kitchen.category, query) ||
-    matchesSearchQuery(kitchen.foodType, query) ||
-    matchesSearchQuery(kitchen.locality, query)
+    matchesSearchQuery(kitchen.name, q) ||
+    matchesSearchQuery(kitchen.category, q) ||
+    matchesSearchQuery(kitchen.foodType, q) ||
+    matchesSearchQuery(kitchen.locality, q)
   ) {
     return true;
   }
 
-  // 2. Check child dishes
-  if (foodItems && foodItems.length > 0) {
-    const kitchenDishes = foodItems.filter(
-      (f) =>
-        (kitchen.id && f.sellerId === kitchen.id) ||
-        (kitchen.trackingId && f.sellerTrackingId === kitchen.trackingId) ||
-        (kitchen.id && f.sellerTrackingId === kitchen.id)
-    );
+  // 2. Semantic aliases against kitchen metadata
+  const normKey = q.replace(/[^a-z0-9]/g, "");
+  for (const [tagKey, keywords] of Object.entries(FOOD_TAG_KEYWORDS)) {
+    const cleanTagKey = tagKey.replace(/[^a-z0-9]/g, "");
+    if (cleanTagKey === normKey || keywords.some((kw) => kw.replace(/[^a-z0-9]/g, "") === normKey)) {
+      const kText = `${kitchen.name || ""} ${kitchen.category || ""} ${kitchen.foodType || ""}`.toLowerCase();
+      if (keywords.some((kw) => kText.includes(kw) || matchesSearchQuery(kText, kw))) {
+        return true;
+      }
+    }
+  }
 
-    return kitchenDishes.some((d) => matchesDishSearch(query, d));
+  // 3. Check child dishes (matching by sellerId, trackingId, cross-ID, or sellerName)
+  if (foodItems && foodItems.length > 0) {
+    const kitchenDishes = foodItems.filter((f) => {
+      const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
+      const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
+      const matchCrossId =
+        (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
+        (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
+      const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
+      return matchId || matchTracking || matchCrossId || matchName;
+    });
+
+    if (kitchenDishes.length > 0) {
+      return kitchenDishes.some((d) => matchesDishSearch(q, d));
+    }
   }
 
   return false;

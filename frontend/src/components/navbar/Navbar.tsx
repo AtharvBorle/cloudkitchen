@@ -92,7 +92,8 @@ export const NAV_ITEM_ROUTES: Record<string, string> = {
   Rooms: "/room-booking",
   Settings: "/settings-desktop",
   Furniture: "/explore/furniture",
-  "Mess/Tiffin": "/explore-desktop",
+  "Mess/Tiffin": "/my-subscriptions-desktop?tab=plans",
+  "Meal Plans": "/my-subscriptions-desktop?tab=plans",
 };
 
 export interface NavbarProps {
@@ -140,7 +141,46 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [internalActiveItem, setInternalActiveItem] = useState<string>(initialActiveItem);
-  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(false);
+  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("cloudkitchen_veg_preference");
+        if (stored !== null) {
+          return stored === "true";
+        }
+      } catch {}
+    }
+    return false;
+  });
+
+  // Sync veg filter preference with localStorage and across tabs/components
+  useEffect(() => {
+    const syncVeg = (e: any) => {
+      if (e?.detail !== undefined) {
+        setInternalVegOnly(Boolean(e.detail));
+      } else if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("cloudkitchen_veg_preference");
+          if (stored !== null) {
+            setInternalVegOnly(stored === "true");
+          }
+        } catch {}
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+      window.addEventListener("storage", syncVeg);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+        window.removeEventListener("storage", syncVeg);
+      }
+    };
+  }, []);
+
   const [selectedDiet, setSelectedDiet] = useState<string>(controlledDiet || "all");
   const [isDietDropdownOpen, setIsDietDropdownOpen] = useState<boolean>(false);
   const [selectedLang, setSelectedLang] = useState<string>("en");
@@ -150,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const getActiveItemFromPath = (): string => {
     if (controlledActiveItem !== undefined) return controlledActiveItem;
     if (pathname === "/") return "Home";
-    if (pathname.startsWith("/explore-desktop")) {
+    if (pathname.startsWith("/explore-desktop") || pathname.startsWith("/explore-meal-plans") || pathname.startsWith("/meal-plans")) {
       return navItems.includes("Food") ? "Food" : "Explore";
     }
     if (pathname.startsWith("/room-booking")) {
@@ -257,6 +297,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const toggleVegOnly = () => {
     const nextState = !currentVegOnly;
     setInternalVegOnly(nextState);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("cloudkitchen_veg_preference", String(nextState));
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_veg_preference_changed", { detail: nextState })
+        );
+      } catch {}
+    }
     if (onVegToggle) {
       onVegToggle(nextState);
     }
@@ -450,6 +498,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsDietDropdownOpen(false);
     const isVeg = id === "veg" || id === "vegan" || id === "jain";
     setInternalVegOnly(isVeg);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg })
+        );
+      } catch {}
+    }
     if (onVegToggle) {
       onVegToggle(isVeg);
     }
@@ -841,6 +897,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </Link>
 
                         <Link
+                          href="/my-subscriptions-desktop?tab=plans"
+                          className={styles.profileNavItem}
+                          onClick={closeProfileMenu}
+                          role="menuitem"
+                        >
+                          <Utensils size={16} className={styles.profileNavIcon} />
+                          <span>Meal Subscription Plans</span>
+                        </Link>
+
+                        <Link
                           href="/seller/login"
                           className={styles.profileNavItem}
                           onClick={closeProfileMenu}
@@ -1048,13 +1114,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 </Link>
 
                                 <Link
-                                  href="/my-subscription"
+                                  href="/my-subscriptions-desktop"
                                   className={styles.profileNavItem}
                                   onClick={closeProfileMenu}
                                   role="menuitem"
                                 >
                                   <Calendar size={16} className={styles.profileNavIcon} />
                                   <span>My Subscriptions</span>
+                                </Link>
+
+                                <Link
+                                  href="/my-subscriptions-desktop?tab=plans"
+                                  className={styles.profileNavItem}
+                                  onClick={closeProfileMenu}
+                                  role="menuitem"
+                                >
+                                  <Utensils size={16} className={styles.profileNavIcon} />
+                                  <span>Explore Meal Plans</span>
                                 </Link>
 
                                 <Link

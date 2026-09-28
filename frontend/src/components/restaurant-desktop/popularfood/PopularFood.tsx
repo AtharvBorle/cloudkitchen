@@ -138,7 +138,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
           (it) => it.category?.toLowerCase() === activeCategory.toLowerCase()
         );
 
-  const displayedList = items.length === 0 ? [] : (filteredItems.length > 0 ? filteredItems : items);
+  const displayedList = filteredItems;
 
   return (
     <section
@@ -180,7 +180,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
           </h3>
           <p style={{ margin: 0, fontSize: "0.92rem", color: "#64748B" }}>
             {items.length === 0
-              ? "This restaurant currently has no food items listed or published."
+              ? "No vegetarian dishes found matching this filter."
               : "No food items currently available in this category."}
           </p>
         </div>
@@ -259,10 +259,30 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                     <h3 className={styles.foodTitle} title={item.title} style={{ color: isGrey ? "#64748B" : undefined }}>
                       {item.title}
                     </h3>
-                    <span className={styles.ratingBadge}>
-                      <Star size={11} fill={isGrey ? "#94A3B8" : "#16a34a"} color={isGrey ? "#94A3B8" : "#16a34a"} />
-                      <span>{item.rating}</span>
-                    </span>
+                    {(() => {
+                      const isNew = !item.rating || item.rating === "New" || item.rating === "0" || item.rating === "0.0";
+                      const itemRatingNum = parseFloat(String(item.rating || "0")) || 0;
+                      const hasRating = !isNew && itemRatingNum > 0;
+                      const displayRating = hasRating ? itemRatingNum.toFixed(1) : "New";
+
+                      return (
+                        <span
+                          className={styles.ratingBadge}
+                          style={{
+                            backgroundColor: isGrey ? "#F1F5F9" : (hasRating ? "#DCFCE7" : "#F1F5F9"),
+                            color: isGrey ? "#94A3B8" : (hasRating ? "#15803D" : "#64748B"),
+                            borderColor: isGrey ? "#E2E8F0" : (hasRating ? "#BBF7D0" : "#E2E8F0"),
+                          }}
+                        >
+                          <Star
+                            size={11}
+                            fill={isGrey ? "#94A3B8" : (hasRating ? "#16a34a" : "#94A3B8")}
+                            color={isGrey ? "#94A3B8" : (hasRating ? "#16a34a" : "#94A3B8")}
+                          />
+                          <span>{displayRating}</span>
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <p className={styles.foodDescription} title={item.description}>

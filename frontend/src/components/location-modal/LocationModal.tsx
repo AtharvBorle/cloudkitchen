@@ -21,6 +21,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { findDuplicateAddress } from "@/lib/address-validation";
 import styles from "./LocationModal.module.css";
 
 const POPULAR_AREAS = [
@@ -288,6 +289,25 @@ export const LocationModal: React.FC = () => {
     const cleanPin = formPincode.replace(/\D/g, "").slice(0, 6);
     if (cleanPin.length !== 6) {
       showNotification("error", "Please enter a valid 6-digit Pincode");
+      return;
+    }
+
+    // Check for duplicate address in savedAddresses
+    const dupCheck = findDuplicateAddress(
+      {
+        houseNumber: houseNumber.trim(),
+        street: street.trim(),
+        pincode: cleanPin,
+        landmark: landmark.trim(),
+      },
+      savedAddresses
+    );
+
+    if (dupCheck.isDuplicate && dupCheck.matchedItem) {
+      showNotification(
+        "error",
+        `This address already exists in your saved list (${dupCheck.matchedItem.houseNumber}, ${dupCheck.matchedItem.street} - ${dupCheck.matchedItem.pincode})`
+      );
       return;
     }
 

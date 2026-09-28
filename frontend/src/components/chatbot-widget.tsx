@@ -112,6 +112,27 @@ export default function ChatbotWidget() {
         moved: false
     });
 
+    const checkUserHasOrders = async (): Promise<boolean> => {
+        if (status !== "authenticated" || !session?.user) {
+            return false;
+        }
+        if (session.user.role === "SELLER" || session.user.role === "DELIVERY" || session.user.role === "SUPERADMIN" || session.user.role === "ADMIN") {
+            return true;
+        }
+        try {
+            const res = await fetchApi("/api/user/orders");
+            if (res.ok) {
+                const data = await res.json();
+                const orders = data?.data || data || [];
+                return Array.isArray(orders) && orders.length > 0;
+            }
+            return false;
+        } catch (err) {
+            console.error("Failed to verify user orders:", err);
+            return false;
+        }
+    };
+
     const toggleOpen = (open: boolean) => {
         if (open) {
             if (!isMobile) {
@@ -626,6 +647,7 @@ export default function ChatbotWidget() {
                         text: "To view your orders and get order-specific support, you need to be logged in first.",
                         timestamp: new Date(),
                         options: [
+                            { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
                             { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                         ]
                     }]);
@@ -641,10 +663,10 @@ export default function ChatbotWidget() {
                         setMessages(prev => [...prev, {
                             id: `b_${Date.now()}`,
                             sender: "bot",
-                            text: "I couldn't find any recent orders associated with your account. Would you like to raise a general support ticket?",
+                            text: "You don't have any previous or active orders on your account. Support tickets and issue reporting are restricted to accounts with placed orders.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🎟️ Yes, raise custom ticket", action: () => handleSelectOption("custom_ticket") },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -664,10 +686,9 @@ export default function ChatbotWidget() {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
                         sender: "bot",
-                        text: "An error occurred while fetching your orders. Please raise a general support ticket.",
+                        text: "An error occurred while fetching your orders. Please try again or return to the main menu.",
                         timestamp: new Date(),
                         options: [
-                            { label: "🎟️ Raise ticket", action: () => handleSelectOption("custom_ticket") },
                             { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                         ]
                     }]);
@@ -764,6 +785,7 @@ export default function ChatbotWidget() {
                         text: "To view your room bookings, please log in first.",
                         timestamp: new Date(),
                         options: [
+                            { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
                             { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                         ]
                     }]);
@@ -779,10 +801,10 @@ export default function ChatbotWidget() {
                         setMessages(prev => [...prev, {
                             id: `b_${Date.now()}`,
                             sender: "bot",
-                            text: "I couldn't find any recent bookings under your account. Would you like to raise a general support ticket?",
+                            text: "I couldn't find any recent stay bookings under your account. To discover available stays, explore our Room Booking section.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🎟️ Yes, raise custom ticket", action: () => handleSelectOption("custom_ticket") },
+                                { label: "🛌 Explore Room Stays", action: () => { toggleOpen(false); router.push("/room-booking"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -802,10 +824,9 @@ export default function ChatbotWidget() {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
                         sender: "bot",
-                        text: "An error occurred while fetching your bookings. Please raise a general support ticket.",
+                        text: "An error occurred while fetching your bookings. Please try again or return to the main menu.",
                         timestamp: new Date(),
                         options: [
-                            { label: "🎟️ Raise ticket", action: () => handleSelectOption("custom_ticket") },
                             { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                         ]
                     }]);
@@ -872,11 +893,11 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "To partner with us as a Seller, prepare your Aadhaar front/back and FSSAI certificate, then complete our easy registration form!\n\nClick below to open the registration portal:",
+                    text: `📋 **Steps to Register as a Cloud Kitchen Seller:**\n\n1️⃣ **Step 1: Account Information**\n• Owner Name, Mobile Number, Email Address & Password\n\n2️⃣ **Step 2: Business & Outlet Details**\n• Kitchen / Brand Name, Full Outlet Address, Location Pin & Operating Hours\n\n3️⃣ **Step 3: Required Legal Documents**\n• Aadhaar Card (Clear Front & Back photos / PDF)\n• FSSAI Food License / Registration Certificate (Mandatory)\n• GSTIN Certificate (if registered) & Bank Details for Payouts\n\n4️⃣ **Step 4: Kitchen Photos & Branding**\n• Kitchen Setup / Outlet Photos, Logo & Dish Images\n\n5️⃣ **Step 5: Verification & Go Live**\n• Submit application for Superadmin review (verified within 24-48 hours)\n\nClick below to start your onboarding or submit a seller registration inquiry:`,
                     timestamp: new Date(),
                     options: [
-                        { label: "🚀 Register as a Seller", action: () => { window.open("/seller/registration", "_blank"); } },
-                        { label: "🎟️ Seller Registration Inquiry", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Question", desc: "I have questions regarding registering as a Cloud Kitchen seller." }) },
+                        { label: "🚀 Register as a Seller", action: () => { toggleOpen(false); router.push("/seller/registration"); } },
+                        { label: "🎟️ Seller Registration Inquiry", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have questions regarding registering as a Cloud Kitchen seller on the platform." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
                 }]);
@@ -896,6 +917,54 @@ export default function ChatbotWidget() {
             }
 
             else if (optionType === "custom_ticket_prefilled") {
+                const isCustomer = !session?.user || session.user.role === "USER";
+                const isSellerInquiry = payload?.title?.toLowerCase().includes("seller") || payload?.desc?.toLowerCase().includes("seller");
+                if (isCustomer && !isSellerInquiry) {
+                    if (status !== "authenticated") {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "To raise a support ticket, please log in first. Support tickets can only be created for accounts with placed orders.",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                        return;
+                    }
+
+                    const hasOrders = await checkUserHasOrders();
+                    if (!hasOrders) {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "You do not have any previous or active orders. The support ticket system is only available for users who have placed an order. Please place an order first before raising a ticket.",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                        return;
+                    }
+                } else if (isCustomer && isSellerInquiry) {
+                    if (status !== "authenticated") {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "To submit a Seller Registration Inquiry ticket, please log in first so our support team can follow up with your inquiry.",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                        return;
+                    }
+                }
+
                 const category = payload?.category || "FOOD";
                 const title = payload?.title || "Support Request";
                 const desc = payload?.desc || "";
@@ -923,6 +992,39 @@ export default function ChatbotWidget() {
             }
 
             else if (optionType === "custom_ticket") {
+                const isCustomer = !session?.user || session.user.role === "USER";
+                if (isCustomer) {
+                    if (status !== "authenticated") {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "To raise a support ticket, please log in first. Support tickets can only be created for accounts with placed orders.",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                        return;
+                    }
+
+                    const hasOrders = await checkUserHasOrders();
+                    if (!hasOrders) {
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: "You do not have any previous or active orders. The support ticket system is only available for users who have placed an order. Please place an order first before raising a ticket.",
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                        return;
+                    }
+                }
+
                 setTicketCategory("FOOD");
                 setTicketTitle("");
                 setTicketDesc("");
@@ -1091,10 +1193,10 @@ export default function ChatbotWidget() {
                     ];
                 }
                 else if (normalizedText.includes("seller") || normalizedText.includes("partner") || normalizedText.includes("register") || normalizedText.includes("shop") || normalizedText.includes("business")) {
-                    replyText = "Want to partner with us as a Seller? You can register directly by clicking the button below. Please prepare your business details, Aadhaar card front/back, and FSSAI certificate. If you have registration issues, raise a ticket below:";
+                    replyText = `📋 **Steps to Register as a Cloud Kitchen Seller:**\n\n1️⃣ **Step 1: Account Information**\n• Owner Name, Mobile Number, Email Address & Password\n\n2️⃣ **Step 2: Business & Outlet Details**\n• Kitchen / Brand Name, Full Outlet Address, Location Pin & Operating Hours\n\n3️⃣ **Step 3: Required Legal Documents**\n• Aadhaar Card (Clear Front & Back photos / PDF)\n• FSSAI Food License / Registration Certificate (Mandatory)\n• GSTIN Certificate (if registered) & Bank Details for Payouts\n\n4️⃣ **Step 4: Kitchen Photos & Branding**\n• Kitchen Setup / Outlet Photos, Logo & Dish Images\n\n5️⃣ **Step 5: Verification & Go Live**\n• Submit application for Superadmin review (verified within 24-48 hours)\n\nClick below to start your onboarding or submit a seller registration inquiry:`;
                     generatedOptions = [
-                        { label: "🚀 Register as a Seller", action: () => { window.open("/seller/registration", "_blank"); } },
-                        { label: "🎟️ Raise ticket for Seller support", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have inquiries about registering as a seller on the platform." }) },
+                        { label: "🚀 Register as a Seller", action: () => { toggleOpen(false); router.push("/seller/registration"); } },
+                        { label: "🎟️ Seller Registration Inquiry", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Registration Inquiry", desc: "I have questions regarding registering as a Cloud Kitchen seller on the platform." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
@@ -1129,6 +1231,16 @@ export default function ChatbotWidget() {
         if (status !== "authenticated") {
             alert("Please log in to raise a support ticket.");
             return;
+        }
+
+        const isCustomer = !session?.user?.role || session.user.role === "USER";
+        const isSellerInquiry = ticketTitle.toLowerCase().includes("seller") || ticketDesc.toLowerCase().includes("seller") || ticketCategory === "NEW_CATEGORY_REQUEST";
+        if (isCustomer && !isSellerInquiry) {
+            const hasOrders = await checkUserHasOrders();
+            if (!hasOrders) {
+                alert("Support tickets are restricted to users who have placed an order. Please place an order first before submitting a ticket.");
+                return;
+            }
         }
 
         let finalTitle = ticketTitle.trim();
@@ -1198,24 +1310,46 @@ Details: Category request submitted via chatbot assistant.`;
     };
 
     const renderMessageText = (text: string) => {
-        const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        const parseBold = (str: string, keyPrefix: string) => {
+            const boldRegex = /\*\*([^*]+)\*\*/g;
+            const segments: (string | React.ReactNode)[] = [];
+            let lastIdx = 0;
+            let bMatch;
+            while ((bMatch = boldRegex.exec(str)) !== null) {
+                if (bMatch.index > lastIdx) {
+                    segments.push(str.substring(lastIdx, bMatch.index));
+                }
+                segments.push(
+                    <strong key={`${keyPrefix}-b-${bMatch.index}`} style={{ fontWeight: "750", color: "inherit" }}>
+                        {bMatch[1]}
+                    </strong>
+                );
+                lastIdx = boldRegex.lastIndex;
+            }
+            if (lastIdx < str.length) {
+                segments.push(str.substring(lastIdx));
+            }
+            return segments;
+        };
+
         const parts: (string | React.ReactNode)[] = [];
         let lastIndex = 0;
         let match;
 
-        while ((match = regex.exec(text)) !== null) {
+        while ((match = linkRegex.exec(text)) !== null) {
             const [fullMatch, linkText, linkUrl] = match;
             const index = match.index;
 
             if (index > lastIndex) {
-                parts.push(text.substring(lastIndex, index));
+                parts.push(...parseBold(text.substring(lastIndex, index), `txt-${index}`));
             }
 
             const isExternal = linkUrl.startsWith("http");
             if (isExternal) {
                 parts.push(
                     <a
-                        key={index}
+                        key={`link-${index}`}
                         href={linkUrl}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -1227,7 +1361,7 @@ Details: Category request submitted via chatbot assistant.`;
             } else {
                 parts.push(
                     <Link
-                        key={index}
+                        key={`link-${index}`}
                         href={linkUrl}
                         style={{ color: "#EF4444", fontWeight: "700", textDecoration: "underline" }}
                         onClick={() => toggleOpen(false)}
@@ -1237,11 +1371,11 @@ Details: Category request submitted via chatbot assistant.`;
                 );
             }
 
-            lastIndex = regex.lastIndex;
+            lastIndex = linkRegex.lastIndex;
         }
 
         if (lastIndex < text.length) {
-            parts.push(text.substring(lastIndex));
+            parts.push(...parseBold(text.substring(lastIndex), `txt-end`));
         }
 
         return parts.length > 0 ? parts : text;
@@ -1701,8 +1835,20 @@ Details: Category request submitted via chatbot assistant.`;
                                         {msg.isTicketSuccess && msg.ticketId && (
                                             <div style={{ marginTop: "10px", borderTop: "1.5px solid #FDE8E1", paddingTop: "8px" }}>
                                                 <Link
-                                                    href={session?.user?.role === "SELLER" ? "/seller/support" : session?.user?.role === "DELIVERY" ? "/dashboard/delivery" : "/dashboard/user/support"}
-                                                    style={{ color: "#EF4444", fontWeight: "700", textDecoration: "underline", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "2px" }}
+                                                    href={session?.user?.role === "SELLER" ? "/seller/support" : session?.user?.role === "DELIVERY" ? "/dashboard/delivery" : `/support/tickets?id=${encodeURIComponent(msg.ticketId)}`}
+                                                    style={{
+                                                        color: "#FFFFFF",
+                                                        backgroundColor: "#FF5500",
+                                                        padding: "7px 14px",
+                                                        borderRadius: "8px",
+                                                        fontWeight: "700",
+                                                        textDecoration: "none",
+                                                        fontSize: "0.8rem",
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "4px",
+                                                        boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)"
+                                                    }}
                                                     onClick={() => toggleOpen(false)}
                                                 >
                                                     View Ticket Status <ChevronRight size={14} />

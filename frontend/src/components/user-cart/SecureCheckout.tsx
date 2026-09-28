@@ -19,6 +19,11 @@ import {
   Sparkles,
   ShoppingBag,
   Clock,
+  Home,
+  Briefcase,
+  Navigation,
+  Check,
+  Plus,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
@@ -28,6 +33,19 @@ import { Footer } from "@/components/explore-desktop/footer";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { broadcastOrderToSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./SecureCheckout.module.css";
+
+export interface SavedAddressItem {
+  id: string;
+  type: string;
+  houseNumber: string;
+  street: string;
+  landmark?: string | null;
+  pincode: string;
+  city?: string | null;
+  isDefault: boolean;
+  recipientName?: string;
+  recipientPhone?: string;
+}
 
 export interface CheckoutSummaryItem {
   id: string;
@@ -75,6 +93,12 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
   }, [status, router]);
 
+  // Saved Addresses State
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddressItem[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
+  const [loadingAddresses, setLoadingAddresses] = useState<boolean>(true);
+  const [addressMode, setAddressMode] = useState<"saved" | "manual">("saved");
+
   // Form States
   const [fullName, setFullName] = useState<string>(initialName || session?.user?.name || "");
   const [phoneNumber, setPhoneNumber] = useState<string>(initialPhone);
@@ -90,6 +114,83 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     postalCode?: string;
   }>({});
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
+
+  // Fetch Saved Addresses from User Settings
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchUserAddresses() {
+      if (status !== "authenticated") {
+        setLoadingAddresses(false);
+        return;
+      }
+      try {
+        setLoadingAddresses(true);
+        const res = await fetchApi("/api/user/addresses");
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const list = data.data?.addresses || data.addresses || data.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped: SavedAddressItem[] = list.map((a: any) => ({
+              id: a.id,
+              type: a.type || "Home",
+              houseNumber: a.houseNumber || "",
+              street: a.street || "",
+              landmark: a.landmark || "",
+              pincode: a.pincode || "",
+              city: a.city || "Pune",
+              isDefault: Boolean(a.isDefault),
+              recipientName: a.recipientName || session?.user?.name || "Registered User",
+              recipientPhone: a.recipientPhone || (session?.user as any)?.phone || "",
+            }));
+            setSavedAddresses(mapped);
+            setAddressMode("saved");
+
+            // Auto-select default or first address
+            const defaultItem = mapped.find((m) => m.isDefault) || mapped[0];
+            if (defaultItem) {
+              setSelectedSavedAddressId(defaultItem.id);
+              const formatted = `${defaultItem.houseNumber ? defaultItem.houseNumber + ", " : ""}${defaultItem.street}${defaultItem.landmark ? ", Near " + defaultItem.landmark : ""}`;
+              setStreetAddress((prev) => prev || formatted);
+              setCity((prev) => prev || defaultItem.city || "Pune");
+              setPostalCode((prev) => prev || defaultItem.pincode);
+              if (defaultItem.recipientName) setFullName((prev) => prev || defaultItem.recipientName || "");
+              if (defaultItem.recipientPhone) setPhoneNumber((prev) => prev || defaultItem.recipientPhone || "");
+            }
+          } else {
+            setAddressMode("manual");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load user saved addresses for checkout:", err);
+      } finally {
+        if (isMounted) setLoadingAddresses(false);
+      }
+    }
+
+    fetchUserAddresses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [status, session]);
+
+  const selectSavedAddress = (addr: SavedAddressItem) => {
+    setSelectedSavedAddressId(addr.id);
+    const formatted = `${addr.houseNumber ? addr.houseNumber + ", " : ""}${addr.street}${addr.landmark ? ", Near " + addr.landmark : ""}`;
+    setStreetAddress(formatted);
+    setCity(addr.city || "Pune");
+    setPostalCode(addr.pincode);
+    if (addr.recipientName) setFullName(addr.recipientName);
+    if (addr.recipientPhone) setPhoneNumber(addr.recipientPhone);
+
+    setErrors((prev) => ({
+      ...prev,
+      streetAddress: undefined,
+      city: undefined,
+      postalCode: undefined,
+    }));
+  };
 
   useEffect(() => {
     const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
@@ -323,6 +424,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
   };
 
   const handlePlaceOrderClick = async () => {
+    if (checkoutItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
+      showToast(
+        "Your cart is empty. Please add a product to the cart before placing an order.",
+        "error"
+      );
+      return;
+    }
+
     if (isSellerClosed) {
       showToast("This cloud kitchen is currently closed and not accepting orders.", "error");
       return;
@@ -392,7 +501,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
         const initData = await initRes.json().catch(() => ({}));
         if (!initRes.ok) {
-          const errMsg = initData.message || initData.error || "Failed to initialize online payment";
+          let errMsg = initData.message || initData.error || "Failed to initialize online payment";
+          if (
+            errMsg.toLowerCase().includes("invalid total") ||
+            errMsg.toLowerCase().includes("invalid amount") ||
+            grandTotal <= 0
+          ) {
+            errMsg = "Your cart is empty. Please add a product to the cart before placing an order.";
+          }
           showToast(errMsg, "error");
           setIsSubmitting(false);
           return;
@@ -554,7 +670,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
       const resData = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        const errorMsg = resData.message || resData.error || "Failed to place order. Please try again.";
+        let errorMsg = resData.message || resData.error || "Failed to place order. Please try again.";
+        if (
+          errorMsg.toLowerCase().includes("invalid total") ||
+          errorMsg.toLowerCase().includes("invalid amount") ||
+          grandTotal <= 0
+        ) {
+          errorMsg = "Your cart is empty. Please add a product to the cart before placing an order.";
+        }
         showToast(errorMsg, "error");
         setIsSubmitting(false);
         return;
@@ -872,12 +995,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
               {/* Card 1: Delivery Address */}
               <section className={styles.formCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "14px" }}>
                   <div className={styles.cardHeaderRow} style={{ margin: 0 }}>
                     <div className={styles.headerIconBox}>
                       <MapPin size={20} />
                     </div>
-                    <h2 className={styles.cardTitle}>Delivery Address</h2>
+                    <div>
+                      <h2 className={styles.cardTitle}>Delivery Address</h2>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -901,146 +1026,330 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   </button>
                 </div>
 
-                <div className={styles.formFieldsStack}>
-                  {/* Row 1: Full Name & Phone Number */}
-                  <div className={styles.formRowTwoCol}>
+                {/* Option Selector: Choose Saved Address OR Write New Address */}
+                {savedAddresses.length > 0 && (
+                  <div className={styles.addressModeTabs}>
+                    <button
+                      type="button"
+                      className={`${styles.modeTabBtn} ${addressMode === "saved" ? styles.modeTabBtnActive : ""}`}
+                      onClick={() => {
+                        setAddressMode("saved");
+                        const target = savedAddresses.find((a) => a.id === selectedSavedAddressId) || savedAddresses[0];
+                        if (target) {
+                          selectSavedAddress(target);
+                        }
+                      }}
+                    >
+                      <MapPin size={15} />
+                      <span>Choose from Saved Addresses ({savedAddresses.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${styles.modeTabBtn} ${addressMode === "manual" ? styles.modeTabBtnActive : ""}`}
+                      onClick={() => {
+                        setAddressMode("manual");
+                      }}
+                    >
+                      <Plus size={14} />
+                      <span>Enter New / Custom Address</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* MODE 1: CHOOSE FROM SAVED ADDRESSES */}
+                {addressMode === "saved" && savedAddresses.length > 0 ? (
+                  <div className={styles.savedAddressesSection}>
+                    <div className={styles.savedAddressesGrid}>
+                      {savedAddresses.map((addr) => {
+                        const isSelected = selectedSavedAddressId === addr.id;
+                        const isHome = (addr.type || "").toUpperCase().includes("HOME");
+                        const isWork =
+                          (addr.type || "").toUpperCase().includes("WORK") ||
+                          (addr.type || "").toUpperCase().includes("OFFICE");
+
+                        return (
+                          <div
+                            key={addr.id}
+                            className={`${styles.savedAddressCard} ${
+                              isSelected ? styles.savedAddressCardSelected : ""
+                            }`}
+                            onClick={() => selectSavedAddress(addr)}
+                            role="button"
+                            tabIndex={0}
+                            title="Click to select this delivery address"
+                          >
+                            <div className={styles.cardTopRow}>
+                              <div className={styles.tagsGroup}>
+                                <span
+                                  className={
+                                    isHome
+                                      ? styles.typeBadgeHome
+                                      : isWork
+                                      ? styles.typeBadgeWork
+                                      : styles.typeBadgeOther
+                                  }
+                                >
+                                  {isHome ? (
+                                    <Home size={12} />
+                                  ) : isWork ? (
+                                    <Briefcase size={12} />
+                                  ) : (
+                                    <Navigation size={12} />
+                                  )}
+                                  <span>{(addr.type || "Home").toUpperCase()}</span>
+                                </span>
+                                {addr.isDefault && (
+                                  <span className={styles.defaultBadge}>DEFAULT</span>
+                                )}
+                              </div>
+
+                              <div
+                                className={`${styles.cardRadioCircle} ${
+                                  isSelected ? styles.cardRadioCircleSelected : ""
+                                }`}
+                              >
+                                {isSelected && (
+                                  <Check size={12} color="#FFFFFF" strokeWidth={3} />
+                                )}
+                              </div>
+                            </div>
+
+                            <h4 className={styles.cardRecipient}>
+                              {addr.recipientName || fullName || "Registered User"}
+                            </h4>
+
+                            <p className={styles.cardAddressText}>
+                              {addr.houseNumber ? `${addr.houseNumber}, ` : ""}
+                              {addr.street}
+                              {addr.landmark ? `, Near ${addr.landmark}` : ""} - {addr.pincode}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Selected Address Confirmation Banner */}
+                    <div className={styles.selectedAddressSummary}>
+                      <div className={styles.selectedSummaryLeft}>
+                        <CheckCircle2 size={20} color="#EA580C" />
+                        <div>
+                          <div className={styles.selectedSummaryTitle}>
+                            Delivering to Selected Address
+                          </div>
+                          <div className={styles.selectedSummaryText}>
+                            {streetAddress}, {city} - {postalCode}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact & Instructions fields for Saved Mode */}
+                    <div className={styles.formFieldsStack}>
+                      <div className={styles.formRowTwoCol}>
+                        <div className={styles.fieldGroup}>
+                          <label className={styles.fieldLabel} htmlFor="fullNameInput">
+                            Recipient Name <span className={styles.requiredStar}>*</span>
+                          </label>
+                          <div
+                            className={`${styles.inputWrapper} ${
+                              errors.fullName ? styles.inputWrapperError : ""
+                            }`}
+                          >
+                            <User size={18} className={styles.fieldIcon} />
+                            <input
+                              id="fullNameInput"
+                              type="text"
+                              value={fullName}
+                              onChange={(e) =>
+                                handleFieldChange("fullName", e.target.value, setFullName)
+                              }
+                              placeholder="e.g. Rahul Sharma"
+                              className={`${styles.fieldInput} ${
+                                errors.fullName ? styles.fieldInputError : ""
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className={styles.fieldGroup}>
+                          <PhoneInput
+                            id="phoneNumberInput"
+                            label="Contact Number"
+                            required
+                            placeholder="98765 43210"
+                            value={phoneNumber}
+                            onChange={(val) => {
+                              setPhoneNumber(val);
+                              if (errors.phoneNumber) {
+                                setErrors((prev) => ({ ...prev, phoneNumber: undefined }));
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.fieldLabel} htmlFor="instructionsInput">
+                          Delivery Instructions (Optional)
+                        </label>
+                        <div className={styles.inputWrapper}>
+                          <MessageSquare size={18} className={styles.fieldIcon} />
+                          <input
+                            id="instructionsInput"
+                            type="text"
+                            value={deliveryInstructions}
+                            onChange={(e) => setDeliveryInstructions(e.target.value)}
+                            placeholder="Leave at door, ring bell, gate passcode..."
+                            className={styles.fieldInput}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* MODE 2: WRITE NEW / MANUAL ADDRESS ENTRY */
+                  <div className={styles.formFieldsStack}>
+                    {/* Row 1: Full Name & Phone Number */}
+                    <div className={styles.formRowTwoCol}>
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.fieldLabel} htmlFor="fullNameInput">
+                          Full Name <span className={styles.requiredStar}>*</span>
+                        </label>
+                        <div
+                          className={`${styles.inputWrapper} ${
+                            errors.fullName ? styles.inputWrapperError : ""
+                          }`}
+                        >
+                          <User size={18} className={styles.fieldIcon} />
+                          <input
+                            id="fullNameInput"
+                            type="text"
+                            value={fullName}
+                            onChange={(e) =>
+                              handleFieldChange("fullName", e.target.value, setFullName)
+                            }
+                            placeholder={
+                              errors.fullName
+                                ? "Please enter your full name"
+                                : "e.g. Rahul Sharma"
+                            }
+                            className={`${styles.fieldInput} ${
+                              errors.fullName ? styles.fieldInputError : ""
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.fieldGroup}>
+                        <PhoneInput
+                          id="phoneNumberInput"
+                          label="Phone Number"
+                          required
+                          placeholder="98765 43210"
+                          value={phoneNumber}
+                          onChange={(val) => {
+                            setPhoneNumber(val);
+                            if (errors.phoneNumber) {
+                              setErrors((prev) => ({ ...prev, phoneNumber: undefined }));
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 2: Complete Street Address */}
                     <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel} htmlFor="fullNameInput">
-                        Full Name <span className={styles.requiredStar}>*</span>
+                      <label className={styles.fieldLabel} htmlFor="streetAddressInput">
+                        Complete Street Address <span className={styles.requiredStar}>*</span>
                       </label>
                       <div
                         className={`${styles.inputWrapper} ${
-                          errors.fullName ? styles.inputWrapperError : ""
+                          errors.streetAddress ? styles.inputWrapperError : ""
                         }`}
                       >
-                        <User size={18} className={styles.fieldIcon} />
+                        <MapPin size={18} className={styles.fieldIcon} />
                         <input
-                          id="fullNameInput"
+                          id="streetAddressInput"
                           type="text"
-                          value={fullName}
+                          value={streetAddress}
                           onChange={(e) =>
-                            handleFieldChange("fullName", e.target.value, setFullName)
+                            handleFieldChange("streetAddress", e.target.value, setStreetAddress)
                           }
                           placeholder={
-                            errors.fullName
-                              ? "Please enter your full name"
-                              : "e.g. Rahul Sharma"
+                            errors.streetAddress
+                              ? "Please enter complete street address"
+                              : "Flat / House No., Building Name, Street / Locality"
                           }
                           className={`${styles.fieldInput} ${
-                            errors.fullName ? styles.fieldInputError : ""
+                            errors.streetAddress ? styles.fieldInputError : ""
                           }`}
                         />
                       </div>
                     </div>
 
-                    <div className={styles.fieldGroup}>
-                      <PhoneInput
-                        id="phoneNumberInput"
-                        label="Phone Number"
-                        required
-                        placeholder="98765 43210"
-                        value={phoneNumber}
-                        onChange={(val) => {
-                          setPhoneNumber(val);
-                          if (errors.phoneNumber) {
-                            setErrors((prev) => ({ ...prev, phoneNumber: undefined }));
+                    {/* Row 3: City & Postal Code */}
+                    <div className={styles.formRowTwoCol}>
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.fieldLabel} htmlFor="cityInput">
+                          City <span className={styles.requiredStar}>*</span>
+                        </label>
+                        <input
+                          id="cityInput"
+                          type="text"
+                          value={city}
+                          onChange={(e) =>
+                            handleFieldChange("city", e.target.value, setCity)
                           }
-                        }}
-                      />
-                    </div>
-                  </div>
+                          placeholder={
+                            errors.city ? "Please enter your city" : "e.g. Pune"
+                          }
+                          className={`${styles.fieldInputNoIcon} ${
+                            errors.city ? styles.fieldInputNoIconError : ""
+                          }`}
+                        />
+                      </div>
 
-                  {/* Row 2: Complete Street Address */}
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel} htmlFor="streetAddressInput">
-                      Complete Street Address <span className={styles.requiredStar}>*</span>
-                    </label>
-                    <div
-                      className={`${styles.inputWrapper} ${
-                        errors.streetAddress ? styles.inputWrapperError : ""
-                      }`}
-                    >
-                      <MapPin size={18} className={styles.fieldIcon} />
-                      <input
-                        id="streetAddressInput"
-                        type="text"
-                        value={streetAddress}
-                        onChange={(e) =>
-                          handleFieldChange("streetAddress", e.target.value, setStreetAddress)
-                        }
-                        placeholder={
-                          errors.streetAddress
-                            ? "Please enter complete street address"
-                            : "Flat / House No., Building Name, Street / Locality"
-                        }
-                        className={`${styles.fieldInput} ${
-                          errors.streetAddress ? styles.fieldInputError : ""
-                        }`}
-                      />
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.fieldLabel} htmlFor="postalCodeInput">
+                          Postal Code <span className={styles.requiredStar}>*</span>
+                        </label>
+                        <input
+                          id="postalCodeInput"
+                          type="text"
+                          value={postalCode}
+                          onChange={(e) =>
+                            handleFieldChange("postalCode", e.target.value, setPostalCode)
+                          }
+                          placeholder={
+                            errors.postalCode ? "Please enter 6-digit PIN" : "6-digit PIN"
+                          }
+                          className={`${styles.fieldInputNoIcon} ${
+                            errors.postalCode ? styles.fieldInputNoIconError : ""
+                          }`}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Row 3: City & Postal Code */}
-                  <div className={styles.formRowTwoCol}>
+                    {/* Row 4: Delivery Instructions */}
                     <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel} htmlFor="cityInput">
-                        City <span className={styles.requiredStar}>*</span>
+                      <label className={styles.fieldLabel} htmlFor="instructionsInput">
+                        Delivery Instructions (Optional)
                       </label>
-                      <input
-                        id="cityInput"
-                        type="text"
-                        value={city}
-                        onChange={(e) =>
-                          handleFieldChange("city", e.target.value, setCity)
-                        }
-                        placeholder={
-                          errors.city ? "Please enter your city" : "e.g. Pune"
-                        }
-                        className={`${styles.fieldInputNoIcon} ${
-                          errors.city ? styles.fieldInputNoIconError : ""
-                        }`}
-                      />
-                    </div>
-
-                    <div className={styles.fieldGroup}>
-                      <label className={styles.fieldLabel} htmlFor="postalCodeInput">
-                        Postal Code <span className={styles.requiredStar}>*</span>
-                      </label>
-                      <input
-                        id="postalCodeInput"
-                        type="text"
-                        value={postalCode}
-                        onChange={(e) =>
-                          handleFieldChange("postalCode", e.target.value, setPostalCode)
-                        }
-                        placeholder={
-                          errors.postalCode ? "Please enter 6-digit PIN" : "6-digit PIN"
-                        }
-                        className={`${styles.fieldInputNoIcon} ${
-                          errors.postalCode ? styles.fieldInputNoIconError : ""
-                        }`}
-                      />
+                      <div className={styles.inputWrapper}>
+                        <MessageSquare size={18} className={styles.fieldIcon} />
+                        <input
+                          id="instructionsInput"
+                          type="text"
+                          value={deliveryInstructions}
+                          onChange={(e) => setDeliveryInstructions(e.target.value)}
+                          placeholder="Leave at door, ring bell, gate passcode..."
+                          className={styles.fieldInput}
+                        />
+                      </div>
                     </div>
                   </div>
-
-                  {/* Row 4: Delivery Instructions */}
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.fieldLabel} htmlFor="instructionsInput">
-                      Delivery Instructions (Optional)
-                    </label>
-                    <div className={styles.inputWrapper}>
-                      <MessageSquare size={18} className={styles.fieldIcon} />
-                      <input
-                        id="instructionsInput"
-                        type="text"
-                        value={deliveryInstructions}
-                        onChange={(e) => setDeliveryInstructions(e.target.value)}
-                        placeholder="Leave at door, ring bell, gate passcode..."
-                        className={styles.fieldInput}
-                      />
-                    </div>
-                  </div>
-                </div>
+                )}
               </section>
 
               {/* Card 2: Payment Method */}
@@ -1116,53 +1425,80 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
                 {/* Items List */}
                 <div className={styles.itemsList}>
-                  {checkoutItems.map((item) => (
-                    <div key={item.id} className={styles.summaryItemRow}>
-                      <div className={styles.itemImageWrapper}>
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          fill
-                          sizes="60px"
-                          className={styles.itemImg}
-                        />
-                      </div>
-                      <div className={styles.itemInfoCol}>
-                        <span className={styles.itemName}>{item.name}</span>
-                        {item.selectedAddons && item.selectedAddons.length > 0 ? (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "3px 0" }}>
-                            {item.selectedAddons.map((a, idx) => (
-                              <span
-                                key={idx}
-                                style={{
-                                  fontSize: "0.72rem",
-                                  color: "#C2410C",
-                                  backgroundColor: "#FFF7ED",
-                                  border: "1px solid #FFEDD5",
-                                  padding: "1px 6px",
-                                  borderRadius: "4px",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                + {a.name} (₹{a.price})
-                              </span>
-                            ))}
-                          </div>
-                        ) : item.variant ? (
-                          <span className={styles.itemVariant}>{item.variant}</span>
-                        ) : null}
-                        <span className={styles.itemQtyPrice}>
-                          Qty: {item.qty} × ₹
-                          {Math.round(item.price / (item.qty || 1)).toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                      <div className={styles.itemPriceCol}>
-                        <span className={styles.itemTotalPrice}>
-                          ₹{item.price.toLocaleString("en-IN")}
-                        </span>
-                      </div>
+                  {checkoutItems.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "28px 16px", backgroundColor: "#F8FAFC", borderRadius: "14px", border: "1px dashed #E2E8F0", margin: "8px 0 14px 0" }}>
+                      <ShoppingBag size={32} color="#94A3B8" style={{ margin: "0 auto 8px", display: "block" }} />
+                      <p style={{ margin: "0 0 4px", fontSize: "0.92rem", color: "#334155", fontWeight: "700" }}>
+                        Your cart is empty
+                      </p>
+                      <p style={{ margin: "0 0 12px", fontSize: "0.82rem", color: "#64748B" }}>
+                        Please add products to your cart before placing an order.
+                      </p>
+                      <Link
+                        href="/explore-desktop"
+                        style={{
+                          display: "inline-block",
+                          padding: "8px 18px",
+                          backgroundColor: "#FE5000",
+                          color: "#FFFFFF",
+                          borderRadius: "8px",
+                          fontSize: "0.82rem",
+                          fontWeight: "700",
+                          textDecoration: "none",
+                        }}
+                      >
+                        Explore Food Menu
+                      </Link>
                     </div>
-                  ))}
+                  ) : (
+                    checkoutItems.map((item) => (
+                      <div key={item.id} className={styles.summaryItemRow}>
+                        <div className={styles.itemImageWrapper}>
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            fill
+                            sizes="60px"
+                            className={styles.itemImg}
+                          />
+                        </div>
+                        <div className={styles.itemInfoCol}>
+                          <span className={styles.itemName}>{item.name}</span>
+                          {item.selectedAddons && item.selectedAddons.length > 0 ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "3px 0" }}>
+                              {item.selectedAddons.map((a, idx) => (
+                                <span
+                                  key={idx}
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    color: "#C2410C",
+                                    backgroundColor: "#FFF7ED",
+                                    border: "1px solid #FFEDD5",
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                    fontWeight: "600",
+                                  }}
+                                >
+                                  + {a.name} (₹{a.price})
+                                </span>
+                              ))}
+                            </div>
+                          ) : item.variant ? (
+                            <span className={styles.itemVariant}>{item.variant}</span>
+                          ) : null}
+                          <span className={styles.itemQtyPrice}>
+                            Qty: {item.qty} × ₹
+                            {Math.round(item.price / (item.qty || 1)).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <div className={styles.itemPriceCol}>
+                          <span className={styles.itemTotalPrice}>
+                            ₹{item.price.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <div className={styles.divider} />
@@ -1175,6 +1511,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                     placeholder="Enter Coupon Code"
                     className={styles.promoInput}
+                    disabled={checkoutItems.length === 0}
                   />
                   <button
                     type="button"
@@ -1184,6 +1521,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         : styles.promoBtnApply
                     }
                     onClick={handleApplyToggle}
+                    disabled={checkoutItems.length === 0}
                   >
                     {isPromoApplied ? "Remove" : "Apply"}
                   </button>
@@ -1221,26 +1559,35 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 </div>
 
                 {/* Place Order Button */}
-                <button
-                  type="button"
-                  disabled={isSubmitting || isSellerClosed}
-                  className={styles.placeOrderButton}
-                  onClick={handlePlaceOrderClick}
-                  style={{
-                    backgroundColor: isSellerClosed ? "#94A3B8" : undefined,
-                    cursor: isSellerClosed ? "not-allowed" : "pointer",
-                    opacity: isSellerClosed ? 0.7 : 1,
-                  }}
-                >
-                  <span>
-                    {isSellerClosed
-                      ? "Kitchen Closed • Cannot Place Order"
-                      : isSubmitting
-                      ? "Placing Order..."
-                      : `Place Order • ₹${grandTotal.toLocaleString("en-IN")}`}
-                  </span>
-                  <ArrowRight size={18} />
-                </button>
+                {(() => {
+                  const isCartEmpty = checkoutItems.length === 0 || grandTotal <= 0;
+                  const isButtonDisabled = isSubmitting || isSellerClosed || isCartEmpty;
+
+                  return (
+                    <button
+                      type="button"
+                      disabled={isButtonDisabled}
+                      className={styles.placeOrderButton}
+                      onClick={handlePlaceOrderClick}
+                      style={{
+                        backgroundColor: isSellerClosed || isCartEmpty ? "#94A3B8" : undefined,
+                        cursor: isButtonDisabled ? "not-allowed" : "pointer",
+                        opacity: isButtonDisabled ? 0.65 : 1,
+                      }}
+                    >
+                      <span>
+                        {isSellerClosed
+                          ? "Kitchen Closed • Cannot Place Order"
+                          : isCartEmpty
+                          ? "Your Cart is Empty • Add Products"
+                          : isSubmitting
+                          ? "Placing Order..."
+                          : `Place Order • ₹${grandTotal.toLocaleString("en-IN")}`}
+                      </span>
+                      <ArrowRight size={18} />
+                    </button>
+                  );
+                })()}
               </div>
             </aside>
           </div>

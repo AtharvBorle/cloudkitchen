@@ -1,11 +1,32 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { MapPin, Plus, Check, Pencil, Trash2, X, Home, Briefcase, Navigation, Loader2 } from "lucide-react";
+import {
+  MapPin,
+  Plus,
+  Check,
+  Pencil,
+  Trash2,
+  X,
+  Home,
+  Briefcase,
+  Navigation,
+  Loader2,
+  AlertCircle,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { HouseMapPicker } from "@/components/house-map-picker";
+import {
+  isSameAddress,
+  findDuplicateAddress,
+  findDuplicateAddressIds,
+  normalizeAddressText,
+  calculateStringSimilarity,
+} from "@/lib/address-validation";
 import styles from "./DeliveryAddresses.module.css";
 
 export interface AddressItem {
@@ -29,6 +50,16 @@ export interface DeliveryAddressesProps {
   onDeleteAddress?: (id: string) => void;
 }
 
+interface FormErrors {
+  houseNumber?: string;
+  street?: string;
+  pincode?: string;
+  duplicate?: string;
+  general?: string;
+}
+
+export { isSameAddress, normalizeAddressText };
+
 export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
   onAddNewAddress,
   onSetLocationMap,
@@ -43,6 +74,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Address Form State
@@ -55,11 +87,16 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isDefault, setIsDefault] = useState(false);
 
+  // Validation State
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [duplicateMatchedItem, setDuplicateMatchedItem] = useState<AddressItem | null>(null);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 3000);
+    }, 3500);
   };
 
   const fetchAddresses = useCallback(async () => {
@@ -91,7 +128,6 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
           );
         }
       } else {
-        // Fallback check on user profile
         const profRes = await fetchApi("/api/user/profile");
         if (profRes.ok) {
           const profData = await profRes.json();
@@ -126,13 +162,133 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
     fetchAddresses();
   }, [fetchAddresses]);
 
+  // Identify duplicate addresses in the existing list using fuzzy algorithm
+  const duplicateIds = useMemo(() => {
+    return findDuplicateAddressIds(addresses);
+  }, [addresses]);
+
+  // Validation function with fuzzy duplicate matching
+  const validateForm = (
+    hNum: string,
+    str: string,
+    pin: string,
+    land: string,
+    ignoreId: string | null = null
+  ): { isValid: boolean; newErrors: FormErrors; duplicateMatch: AddressItem | null } => {
+    const newErrors: FormErrors = {};
+
+    // 1. House Number / Flat Validation
+    const trimmedHouse = hNum.trim();
+    if (!trimmedHouse) {
+      newErrors.houseNumber = "Flat / House / Floor number is required.";
+    } else if (trimmedHouse.length < 2) {
+      newErrors.houseNumber = "Please enter at least 2 characters for flat or house name.";
+    } else if (/^[^a-zA-Z0-9]+$/.test(trimmedHouse)) {
+      newErrors.houseNumber = "Please enter a valid flat or building identifier.";
+    }
+
+    // 2. Street / Locality Validation
+    const trimmedStreet = str.trim();
+    if (!trimmedStreet) {
+      newErrors.street = "Street / Area / Locality is required.";
+    } else if (trimmedStreet.length < 3) {
+      newErrors.street = "Please enter at least 3 characters for street or locality.";
+    }
+
+    // 3. Pincode Validation (Indian 6-Digit Format)
+    const cleanPin = pin.replace(/\D/g, "");
+    if (!cleanPin) {
+      newErrors.pincode = "6-digit Pincode is required.";
+    } else if (cleanPin.length !== 6) {
+      newErrors.pincode = "Pincode must be exactly 6 numeric digits.";
+    } else if (!/^[1-9][0-9]{5}$/.test(cleanPin)) {
+      newErrors.pincode = "Please enter a valid Indian pincode (e.g. 411038).";
+    }
+
+    // 4. Intelligent Fuzzy Duplicate Address Check
+    let duplicateMatch: AddressItem | null = null;
+    if (trimmedHouse && trimmedStreet && cleanPin.length === 6) {
+      const dupCheck = findDuplicateAddress(
+        {
+          houseNumber: trimmedHouse,
+          street: trimmedStreet,
+          pincode: cleanPin,
+          landmark: land.trim(),
+        },
+        addresses,
+        ignoreId
+      );
+
+      if (dupCheck.isDuplicate && dupCheck.matchedItem) {
+        duplicateMatch = dupCheck.matchedItem;
+        newErrors.duplicate = dupCheck.message || "This delivery address matches an existing saved address.";
+      }
+    }
+
+    const isValid = Object.keys(newErrors).length === 0;
+    return { isValid, newErrors, duplicateMatch };
+  };
+
+  const handleFieldChange = (field: "houseNumber" | "street" | "landmark" | "pincode", value: string) => {
+    let nextHouse = houseNumber;
+    let nextStreet = street;
+    let nextLandmark = landmark;
+    let nextPincode = pincode;
+
+    if (field === "houseNumber") {
+      setHouseNumber(value);
+      nextHouse = value;
+    } else if (field === "street") {
+      setStreet(value);
+      nextStreet = value;
+    } else if (field === "landmark") {
+      setLandmark(value);
+      nextLandmark = value;
+    } else if (field === "pincode") {
+      const clean = value.replace(/\D/g, "").slice(0, 6);
+      setPincode(clean);
+      nextPincode = clean;
+    }
+
+    // Run real-time validation & fuzzy duplicate check
+    const { newErrors, duplicateMatch } = validateForm(nextHouse, nextStreet, nextPincode, nextLandmark, editingAddressId);
+    setErrors(newErrors);
+    setDuplicateMatchedItem(duplicateMatch);
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const handleCleanDuplicates = async () => {
+    if (duplicateIds.size === 0) return;
+    if (!confirm(`Are you sure you want to remove ${duplicateIds.size} duplicate address entries? One clean primary copy of each address will be kept.`)) {
+      return;
+    }
+
+    setCleaningDuplicates(true);
+    try {
+      const idArray = Array.from(duplicateIds);
+      await Promise.all(
+        idArray.map((id) => fetchApi(`/api/user/addresses/${id}`, { method: "DELETE" }))
+      );
+      await fetchAddresses();
+      showToast(`${idArray.length} duplicate address(es) removed successfully!`);
+    } catch (err) {
+      console.error("Failed to clean duplicate addresses:", err);
+      showToast("Failed to clean up some duplicates. Please try again.");
+    } finally {
+      setCleaningDuplicates(false);
+    }
+  };
+
   const openAddModal = () => {
     if (onAddNewAddress) {
       onAddNewAddress();
       return;
     }
     if (!session?.user) {
-      router.push("/login?callbackUrl=/profile");
+      router.push("/login?callbackUrl=/delivery-addresses-desktop");
       return;
     }
     setEditingAddressId(null);
@@ -144,6 +300,8 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
     setLatitude(18.5204);
     setLongitude(73.8567);
     setIsDefault(addresses.length === 0);
+    setErrors({});
+    setTouched({});
     setIsModalOpen(true);
   };
 
@@ -161,25 +319,29 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
     setLatitude(addr.latitude ?? 18.5204);
     setLongitude(addr.longitude ?? 73.8567);
     setIsDefault(addr.isDefault);
+    setErrors({});
+    setTouched({});
     setIsModalOpen(true);
   };
 
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!houseNumber.trim()) {
-      alert("Please enter Flat / House / Floor number.");
+    // Mark all fields touched
+    setTouched({
+      houseNumber: true,
+      street: true,
+      pincode: true,
+    });
+
+    const { isValid, newErrors } = validateForm(houseNumber, street, pincode, landmark, editingAddressId);
+    setErrors(newErrors);
+
+    if (!isValid) {
       return;
     }
-    if (!street.trim()) {
-      alert("Please enter Street / Area / Locality.");
-      return;
-    }
+
     const cleanPin = pincode.replace(/\D/g, "");
-    if (cleanPin.length !== 6) {
-      alert("Please enter a valid 6-digit Pincode.");
-      return;
-    }
 
     setSaving(true);
     try {
@@ -211,10 +373,16 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
         showToast(editingAddressId ? "Address updated successfully!" : "New address added successfully!");
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.message || "Failed to save address.");
+        setErrors((prev) => ({
+          ...prev,
+          general: errData.message || "Failed to save delivery address. Please try again.",
+        }));
       }
     } catch (err: any) {
-      alert(err.message || "An error occurred while saving the address.");
+      setErrors((prev) => ({
+        ...prev,
+        general: err.message || "An unexpected error occurred while saving the address.",
+      }));
     } finally {
       setSaving(false);
     }
@@ -226,13 +394,13 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
       onDeleteAddress(id);
       return;
     }
-    if (!confirm("Are you sure you want to delete this address?")) return;
+    if (!confirm("Are you sure you want to delete this delivery address?")) return;
 
     try {
       const res = await fetchApi(`/api/user/addresses/${id}`, { method: "DELETE" });
       if (res.ok) {
         await fetchAddresses();
-        showToast("Address deleted");
+        showToast("Address deleted successfully");
       } else {
         alert("Failed to delete address.");
       }
@@ -267,7 +435,9 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
           <div className={styles.iconBox}>
             <MapPin size={18} strokeWidth={2.4} />
           </div>
-          <h2 className={styles.cardTitle}>Delivery Addresses</h2>
+          <div>
+            <h2 className={styles.cardTitle}>Delivery Addresses</h2>
+          </div>
         </div>
 
         <button
@@ -280,6 +450,37 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
           <span>Add New Address</span>
         </button>
       </div>
+
+      {/* Top Duplicate Cleanup Banner if duplicates exist in account */}
+      {duplicateIds.size > 0 && !loading && (
+        <div className={styles.cleanupBanner}>
+          <div className={styles.cleanupLeft}>
+            <ShieldAlert size={24} className={styles.cleanupIcon} />
+            <div>
+              <h4 className={styles.cleanupTitle}>
+                Duplicate Addresses Detected ({duplicateIds.size} redundant {duplicateIds.size === 1 ? "entry" : "entries"})
+              </h4>
+              <p className={styles.cleanupSubtitle}>
+                You have duplicate saved addresses with identical or near-identical locations. Clean them up with one click to keep your account organized.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleCleanDuplicates}
+            disabled={cleaningDuplicates}
+            className={styles.cleanupBtn}
+            title="Remove all duplicate address copies and keep one clean primary copy"
+          >
+            {cleaningDuplicates ? (
+              <Loader2 className="animate-spin" size={14} />
+            ) : (
+              <Sparkles size={14} />
+            )}
+            <span>{cleaningDuplicates ? "Cleaning Duplicates..." : "Remove All Duplicates"}</span>
+          </button>
+        </div>
+      )}
 
       {/* Addresses Grid */}
       <div className={styles.addressesGrid}>
@@ -300,13 +501,14 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
           addresses.map((addr) => {
             const isHome = (addr.type || "").toUpperCase().includes("HOME");
             const isWork = (addr.type || "").toUpperCase().includes("WORK") || (addr.type || "").toUpperCase().includes("OFFICE");
+            const isDuplicate = duplicateIds.has(addr.id);
 
             return (
               <div
                 key={addr.id}
-                className={styles.addressBox}
+                className={`${styles.addressBox} ${isDuplicate ? styles.addressBoxDuplicate : ""}`}
                 style={{
-                  borderColor: addr.isDefault ? "#F97316" : "#F1F5F9",
+                  borderColor: addr.isDefault ? "#F97316" : isDuplicate ? "#FCA5A5" : "#F1F5F9",
                   boxShadow: addr.isDefault ? "0 4px 16px rgba(249, 115, 22, 0.08)" : undefined,
                 }}
               >
@@ -318,6 +520,12 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                       </span>
                       {addr.isDefault && (
                         <span className={styles.defaultTag}>DEFAULT</span>
+                      )}
+                      {isDuplicate && (
+                        <span className={styles.duplicateTag} title="This is a duplicate of another saved address">
+                          <AlertCircle size={11} />
+                          <span>DUPLICATE</span>
+                        </span>
                       )}
                     </div>
 
@@ -392,7 +600,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                       className={styles.deleteBtn}
                       onClick={(e) => handleDelete(addr.id, e)}
                       aria-label="Delete Address"
-                      title="Delete Address"
+                      title={isDuplicate ? "Delete Duplicate Address" : "Delete Address"}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -404,7 +612,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
         )}
       </div>
 
-      {/* Add / Edit Address Modal */}
+      {/* Add / Edit Address Modal with Validations */}
       {isModalOpen && (
         <div className={styles.modalOverlay} onClick={() => setIsModalOpen(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -422,7 +630,55 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveAddress} className={styles.addressForm}>
+            <form onSubmit={handleSaveAddress} className={styles.addressForm} noValidate>
+              {/* Rich Duplicate Warning Banner with Matched Address Preview */}
+              {errors.duplicate && (
+                <div className={styles.duplicateBanner}>
+                  <div className={styles.duplicateBannerHeader}>
+                    <ShieldAlert size={20} className={styles.duplicateBannerIcon} />
+                    <div>
+                      <div className={styles.duplicateBannerTitle}>Address Already Exists in Your Saved List</div>
+                      <div className={styles.duplicateBannerDesc}>
+                        You already have a saved delivery address matching this location:
+                      </div>
+                    </div>
+                  </div>
+
+                  {duplicateMatchedItem && (
+                    <div className={styles.duplicatePreviewCard}>
+                      <span className={styles.duplicatePreviewTag}>
+                        {(duplicateMatchedItem.type || "HOME").toUpperCase()}
+                      </span>
+                      <span className={styles.duplicatePreviewText} title={`${duplicateMatchedItem.houseNumber}, ${duplicateMatchedItem.street} - ${duplicateMatchedItem.pincode}`}>
+                        {duplicateMatchedItem.houseNumber}, {duplicateMatchedItem.street}
+                        {duplicateMatchedItem.landmark ? `, Near ${duplicateMatchedItem.landmark}` : ""} - {duplicateMatchedItem.pincode}
+                      </span>
+                    </div>
+                  )}
+
+                  <p className={styles.duplicateAdvice}>
+                    To prevent duplicate entries, please modify your flat/house or street name, or choose your existing saved address.
+                  </p>
+                </div>
+              )}
+
+              {/* General Error Banner */}
+              {errors.general && (
+                <div
+                  style={{
+                    backgroundColor: "#FEF2F2",
+                    border: "1px solid #FECACA",
+                    color: "#991B1B",
+                    padding: "10px 14px",
+                    borderRadius: "10px",
+                    fontSize: "0.84rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {errors.general}
+                </div>
+              )}
+
               {/* Type Selector */}
               <div className={styles.typeSelectorRow}>
                 <label className={styles.typeLabel}>Address Type</label>
@@ -448,12 +704,24 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                 <label className={styles.inputLabel}>House / Flat / Floor / Building *</label>
                 <input
                   type="text"
-                  required
                   placeholder="e.g. Flat 402, Golden Crest Apartments"
                   value={houseNumber}
-                  onChange={(e) => setHouseNumber(e.target.value)}
-                  className={styles.inputField}
+                  onChange={(e) => handleFieldChange("houseNumber", e.target.value)}
+                  onBlur={() => handleBlur("houseNumber")}
+                  className={`${styles.inputField} ${
+                    errors.duplicate
+                      ? styles.inputFieldDuplicate
+                      : touched.houseNumber && errors.houseNumber
+                      ? styles.inputFieldError
+                      : ""
+                  }`}
                 />
+                {touched.houseNumber && errors.houseNumber && (
+                  <span className={styles.fieldErrorText}>
+                    <AlertCircle size={13} />
+                    <span>{errors.houseNumber}</span>
+                  </span>
+                )}
               </div>
 
               {/* Street / Locality */}
@@ -461,12 +729,24 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                 <label className={styles.inputLabel}>Street / Area / Locality *</label>
                 <input
                   type="text"
-                  required
                   placeholder="e.g. Paud Road, Kothrud"
                   value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  className={styles.inputField}
+                  onChange={(e) => handleFieldChange("street", e.target.value)}
+                  onBlur={() => handleBlur("street")}
+                  className={`${styles.inputField} ${
+                    errors.duplicate
+                      ? styles.inputFieldDuplicate
+                      : touched.street && errors.street
+                      ? styles.inputFieldError
+                      : ""
+                  }`}
                 />
+                {touched.street && errors.street && (
+                  <span className={styles.fieldErrorText}>
+                    <AlertCircle size={13} />
+                    <span>{errors.street}</span>
+                  </span>
+                )}
               </div>
 
               {/* Landmark & Pincode */}
@@ -475,9 +755,9 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                   <label className={styles.inputLabel}>Landmark (Optional)</label>
                   <input
                     type="text"
-                    placeholder="e.g. Opp. City Pride Theatre"
+                    placeholder="e.g. Near City Pride Kothrud"
                     value={landmark}
-                    onChange={(e) => setLandmark(e.target.value)}
+                    onChange={(e) => handleFieldChange("landmark", e.target.value)}
                     className={styles.inputField}
                   />
                 </div>
@@ -486,13 +766,25 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                   <label className={styles.inputLabel}>6-Digit Pincode *</label>
                   <input
                     type="text"
-                    required
                     maxLength={6}
                     placeholder="e.g. 411038"
                     value={pincode}
-                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className={styles.inputField}
+                    onChange={(e) => handleFieldChange("pincode", e.target.value)}
+                    onBlur={() => handleBlur("pincode")}
+                    className={`${styles.inputField} ${
+                      errors.duplicate
+                        ? styles.inputFieldDuplicate
+                        : touched.pincode && errors.pincode
+                        ? styles.inputFieldError
+                        : ""
+                    }`}
                   />
+                  {touched.pincode && errors.pincode && (
+                    <span className={styles.fieldErrorText}>
+                      <AlertCircle size={13} />
+                      <span>{errors.pincode}</span>
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -509,16 +801,16 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                       setLatitude(newLat);
                       setLongitude(newLng);
                       if (details?.pincode && !pincode) {
-                        setPincode(details.pincode.replace(/\D/g, "").slice(0, 6));
+                        handleFieldChange("pincode", details.pincode);
                       }
                       if (details?.street && !street) {
-                        setStreet(details.street);
+                        handleFieldChange("street", details.street);
                       }
                       if (details?.landmark && !landmark) {
-                        setLandmark(details.landmark);
+                        handleFieldChange("landmark", details.landmark);
                       }
                       if (details?.houseNumber && !houseNumber) {
-                        setHouseNumber(details.houseNumber);
+                        handleFieldChange("houseNumber", details.houseNumber);
                       }
                     }}
                   />
@@ -547,11 +839,25 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className={styles.saveModalBtn}
+                  disabled={saving || Boolean(errors.duplicate)}
+                  className={`${styles.saveModalBtn} ${
+                    errors.duplicate ? styles.saveModalBtnDuplicate : ""
+                  }`}
+                  title={errors.duplicate ? "Cannot save duplicate address" : "Save delivery address"}
                 >
-                  {saving && <Loader2 className="animate-spin" size={16} />}
-                  <span>{saving ? "Saving..." : editingAddressId ? "Update Address" : "Save Address"}</span>
+                  {saving ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      <span>Saving...</span>
+                    </>
+                  ) : errors.duplicate ? (
+                    <>
+                      <ShieldAlert size={16} />
+                      <span>Duplicate Address Detected</span>
+                    </>
+                  ) : (
+                    <span>{editingAddressId ? "Update Address" : "Save Address"}</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -571,3 +877,4 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
 };
 
 export default DeliveryAddresses;
+

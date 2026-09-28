@@ -58,12 +58,19 @@ function kitchenMatchesCuisine(
   }
 
   // 2. Kitchen child dishes keyword match
-  const dishes = foodItems.filter(
-    (f) =>
-      (kitchen.id && (f.sellerId === kitchen.id || f.sellerTrackingId === kitchen.id)) ||
-      (kitchen.kitchenId && (f.sellerId === kitchen.kitchenId || f.sellerTrackingId === kitchen.kitchenId)) ||
-      (kitchen.trackingId && (f.sellerId === kitchen.trackingId || f.sellerTrackingId === kitchen.trackingId))
-  );
+  const dishes = foodItems.filter((f) => {
+    const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
+    const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
+    const matchKitchenId = kitchen.kitchenId && (
+      (f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.kitchenId).toLowerCase()) ||
+      (f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.kitchenId).toLowerCase())
+    );
+    const matchCrossId =
+      (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
+      (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
+    const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
+    return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
+  });
 
   return dishes.some((dish) => {
     const dText = `${dish.name || ""} ${dish.categoryName || ""} ${dish.description || ""}`.toLowerCase();
@@ -73,12 +80,19 @@ function kitchenMatchesCuisine(
 
 function getKitchenPrice(kitchen: PlaceCardData, foodItems: Array<any> = []): number {
   if (kitchen.price && kitchen.price > 0) return kitchen.price;
-  const dishes = foodItems.filter(
-    (f) =>
-      (kitchen.id && (f.sellerId === kitchen.id || f.sellerTrackingId === kitchen.id)) ||
-      (kitchen.kitchenId && (f.sellerId === kitchen.kitchenId || f.sellerTrackingId === kitchen.kitchenId)) ||
-      (kitchen.trackingId && (f.sellerId === kitchen.trackingId || f.sellerTrackingId === kitchen.trackingId))
-  );
+  const dishes = foodItems.filter((f) => {
+    const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
+    const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
+    const matchKitchenId = kitchen.kitchenId && (
+      (f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.kitchenId).toLowerCase()) ||
+      (f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.kitchenId).toLowerCase())
+    );
+    const matchCrossId =
+      (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
+      (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
+    const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
+    return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
+  });
   if (dishes.length > 0) {
     const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
     if (prices.length > 0) {
@@ -584,18 +598,33 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
         >
           {/* Header Title: Best Places Nearby */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-            <h2
-              style={{
-                fontSize: "24px",
-                fontWeight: "700",
-                color: "#0F172A",
-                margin: 0,
-                letterSpacing: "-0.3px",
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-              }}
-            >
-              Best Places Nearby
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <h2
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  color: "#0F172A",
+                  margin: 0,
+                  letterSpacing: "-0.3px",
+                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                }}
+              >
+                Best Places Nearby
+              </h2>
+              <span
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: "700",
+                  color: "#FF6B00",
+                  backgroundColor: "#FFF3EB",
+                  padding: "3px 10px",
+                  borderRadius: "12px",
+                  border: "1px solid #FFD8C2",
+                }}
+              >
+                {displayPlaces.length} {displayPlaces.length === 1 ? "Kitchen" : "Kitchens"}
+              </span>
+            </div>
           </div>
 
           {/* PlacesGrid: 4 columns grid with 24px gap, ~250px hug cards */}
@@ -806,9 +835,9 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "4px",
-                        backgroundColor: isClosed ? "#E2E8F0" : "#E8FBF2",
-                        color: isClosed ? "#64748B" : "#10B981",
-                        border: isClosed ? "1px solid #CBD5E1" : "1px solid rgba(16, 185, 129, 0.2)",
+                        backgroundColor: isClosed ? "#E2E8F0" : (place.rating > 0 ? "#E8FBF2" : "#F1F5F9"),
+                        color: isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#64748B"),
+                        border: isClosed ? "1px solid #CBD5E1" : (place.rating > 0 ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid #E2E8F0"),
                         padding: "2px 7px",
                         borderRadius: "6px",
                         fontSize: "12.5px",
@@ -816,8 +845,8 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                       }}
                     >
-                      <Star size={12} fill={isClosed ? "#64748B" : "#10B981"} color={isClosed ? "#64748B" : "#10B981"} />
-                      <span>{place.rating.toFixed(1)}</span>
+                      <Star size={12} fill={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} color={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} />
+                      <span>{place.rating > 0 ? place.rating.toFixed(1) : "New"}</span>
                     </div>
 
                     {/* Delivery Time / Closed Text */}

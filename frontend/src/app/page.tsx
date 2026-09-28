@@ -408,6 +408,7 @@ export default function Home() {
           availableItems={homeData.allFoodItems}
           availableKitchens={homeData.allKitchens}
           onSearch={handleHomeSearch}
+          currentSearchQuery={homeSearchQuery}
         />
 
         {/* Home Search Query Active Status Banner */}
@@ -426,10 +427,23 @@ export default function Home() {
               boxSizing: "border-box",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "14px", color: "#64748B" }}>Showing results for:</span>
               <span style={{ fontSize: "15px", fontWeight: "700", color: "#FF6B00" }}>
                 &quot;{homeSearchQuery}&quot;
+              </span>
+              <span
+                style={{
+                  fontSize: "12.5px",
+                  fontWeight: "700",
+                  backgroundColor: "#FFF3EB",
+                  color: "#FF6B00",
+                  padding: "3px 10px",
+                  borderRadius: "12px",
+                  border: "1px solid #FFD8C2",
+                }}
+              >
+                {dynamicPlaces.length} {dynamicPlaces.length === 1 ? "Kitchen" : "Kitchens"} Available
               </span>
             </div>
             <button
@@ -447,7 +461,7 @@ export default function Home() {
                 transition: "all 0.15s ease",
               }}
             >
-              Clear Search
+              Clear Filter
             </button>
           </div>
         )}

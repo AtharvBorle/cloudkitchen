@@ -259,6 +259,10 @@ export const UserCart: React.FC<UserCartProps> = ({
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   const handleCheckoutClick = () => {
+    if (cartItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
+      showToast("Your cart is empty. Please add a product to the cart before placing an order.");
+      return;
+    }
     if (isSellerClosed) {
       showToast("This kitchen is currently closed and not accepting orders.");
       return;
@@ -690,14 +694,20 @@ export const UserCart: React.FC<UserCartProps> = ({
                 type="button"
                 className={styles.checkoutButton}
                 onClick={handleCheckoutClick}
-                disabled={cartItems.length === 0 || isSellerClosed}
+                disabled={cartItems.length === 0 || grandTotal <= 0 || isSellerClosed}
                 style={{
-                  backgroundColor: isSellerClosed ? "#94A3B8" : undefined,
-                  opacity: cartItems.length === 0 || isSellerClosed ? 0.6 : 1,
-                  cursor: cartItems.length === 0 || isSellerClosed ? "not-allowed" : "pointer",
+                  backgroundColor: isSellerClosed || cartItems.length === 0 || grandTotal <= 0 ? "#94A3B8" : undefined,
+                  opacity: cartItems.length === 0 || grandTotal <= 0 || isSellerClosed ? 0.6 : 1,
+                  cursor: cartItems.length === 0 || grandTotal <= 0 || isSellerClosed ? "not-allowed" : "pointer",
                 }}
               >
-                <span>{isSellerClosed ? "Kitchen Closed • Cannot Order" : "Proceed to Checkout"}</span>
+                <span>
+                  {isSellerClosed
+                    ? "Kitchen Closed • Cannot Order"
+                    : cartItems.length === 0 || grandTotal <= 0
+                    ? "Cart is Empty • Add Products"
+                    : "Proceed to Checkout"}
+                </span>
                 <ArrowRight size={18} />
               </button>
 

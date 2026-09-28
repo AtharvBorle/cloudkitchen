@@ -130,6 +130,10 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   const handleCheckoutClick = () => {
+    if (cartItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
+      showToast("Your cart is empty. Please add a product to the cart before placing an order.");
+      return;
+    }
     if (onProceedToCheckout) {
       onProceedToCheckout();
     } else {
@@ -372,13 +376,18 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 type="button"
                 className={styles.checkoutButton}
                 onClick={handleCheckoutClick}
-                disabled={cartItems.length === 0}
+                disabled={cartItems.length === 0 || grandTotal <= 0}
                 style={{
-                  opacity: cartItems.length === 0 ? 0.6 : 1,
-                  cursor: cartItems.length === 0 ? "not-allowed" : "pointer",
+                  opacity: cartItems.length === 0 || grandTotal <= 0 ? 0.6 : 1,
+                  cursor: cartItems.length === 0 || grandTotal <= 0 ? "not-allowed" : "pointer",
+                  backgroundColor: cartItems.length === 0 || grandTotal <= 0 ? "#94A3B8" : undefined,
                 }}
               >
-                <span>Proceed to Checkout</span>
+                <span>
+                  {cartItems.length === 0 || grandTotal <= 0
+                    ? "Cart is Empty • Add Products"
+                    : "Proceed to Checkout"}
+                </span>
                 <ArrowRight size={18} />
               </button>
 

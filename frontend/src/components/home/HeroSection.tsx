@@ -25,6 +25,7 @@ interface HeroSectionProps {
   onSearch?: (query: string, location?: string) => void;
   availableItems?: Array<{ id: string; name: string; categoryName?: string }>;
   availableKitchens?: Array<{ id: string; name: string; category?: string; trackingId?: string }>;
+  currentSearchQuery?: string;
 }
 
 const QUICK_TAGS = [
@@ -51,14 +52,21 @@ export default function HeroSection({
   onSearch,
   availableItems = [],
   availableKitchens = [],
+  currentSearchQuery = "",
 }: HeroSectionProps) {
   const router = useRouter();
   const { defaultAddress, setGuestLocation, openLocationModal } = useLocation();
   const { recentSearches, addSearch, removeSearch, clearSearches, trendingSearches } = useRecentSearches();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(currentSearchQuery || "");
   const [selectedLocation, setSelectedLocation] = useState("Select Location");
-  const [activeTag, setActiveTag] = useState("pizza");
+  const [activeTag, setActiveTag] = useState(() => {
+    if (!currentSearchQuery) return "";
+    const match = QUICK_TAGS.find(
+      (t) => t.label.toLowerCase() === currentSearchQuery.toLowerCase() || t.id.toLowerCase() === currentSearchQuery.toLowerCase()
+    );
+    return match ? match.id : "";
+  });
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -71,6 +79,21 @@ export default function HeroSection({
 
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const locationBoxRef = useRef<HTMLDivElement>(null);
+
+  // Sync external search query (e.g. cleared from outside banner)
+  useEffect(() => {
+    if (currentSearchQuery !== undefined) {
+      setSearchQuery(currentSearchQuery);
+      if (!currentSearchQuery) {
+        setActiveTag("");
+      } else {
+        const match = QUICK_TAGS.find(
+          (t) => t.label.toLowerCase() === currentSearchQuery.toLowerCase() || t.id.toLowerCase() === currentSearchQuery.toLowerCase()
+        );
+        setActiveTag(match ? match.id : "");
+      }
+    }
+  }, [currentSearchQuery]);
 
   // Sync selected location with LocationProvider
   useEffect(() => {
@@ -188,6 +211,12 @@ export default function HeroSection({
   };
 
   const handleTagClick = (tag: typeof QUICK_TAGS[0]) => {
+    if (activeTag === tag.id && searchQuery.toLowerCase() === tag.label.toLowerCase()) {
+      setActiveTag("");
+      setSearchQuery("");
+      executeSearch("");
+      return;
+    }
     setActiveTag(tag.id);
     setSearchQuery(tag.label);
     executeSearch(tag.label);
@@ -430,7 +459,11 @@ export default function HeroSection({
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setActiveTag("");
+                    executeSearch("");
+                  }}
                   style={{
                     background: "none",
                     border: "none",
