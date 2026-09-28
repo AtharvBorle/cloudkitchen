@@ -1,1 +1,1 @@
-export { default } from "../../my-subscription/page";
+export { default } from "@/app/my-subscription/page";

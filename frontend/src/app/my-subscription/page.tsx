@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -203,19 +203,19 @@ function MySubscriptionContent() {
       try {
         setIsLoadingPlans(true);
         const [plansRes, exploreRes] = await Promise.all([
-          fetch("http://localhost:5000/api/public/meal-plans").catch(() => fetch("/api/public/meal-plans")),
-          fetch("http://localhost:5000/api/public/explore").catch(() => fetch("/api/public/explore")),
+          fetchApi("/api/public/meal-plans").catch(() => null),
+          fetchApi("/api/public/explore").catch(() => null),
         ]);
 
         let plansData: PublicMealPlan[] = [];
         let kitchensData: any[] = [];
 
-        if (plansRes.ok) {
+        if (plansRes && plansRes.ok) {
           const plansJson = await plansRes.json();
           plansData = plansJson.data || plansJson || [];
         }
 
-        if (exploreRes.ok) {
+        if (exploreRes && exploreRes.ok) {
           const exploreJson = await exploreRes.json();
           kitchensData = exploreJson.data?.kitchens || exploreJson.kitchens || [];
         }
