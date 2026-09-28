@@ -137,9 +137,17 @@ export default function ManageSubscriptionCanvas() {
   });
 
   const activePlansCount = plans.filter((p) => p.status === "Live").length;
-  const totalSubscribers = subscribers.filter((s) => s.status === "Active").length + plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0);
-  const totalMonthlyRevNum = subscribers.reduce((sum, s) => sum + (parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0), 0) +
-    plans.reduce((sum, p) => sum + (parseFloat((p.monthlyPrice || "").replace(/[^\d.]/g, "")) || 0) * (p.subscribersCount || 0), 0);
+  // Calculate active subscribers accurately without double counting
+  const totalSubscribers = subscribers.length > 0
+    ? subscribers.filter((s) => s.status === "Active" || s.status === "ACTIVE").length
+    : plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0);
+
+  const totalMonthlyRevNum = subscribers.length > 0
+    ? subscribers
+        .filter((s) => s.status === "Active" || s.status === "ACTIVE")
+        .reduce((sum, s) => sum + (s.pricePaid || parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0), 0)
+    : plans.reduce((sum, p) => sum + (parseFloat((p.monthlyPrice || "").replace(/[^\d.]/g, "")) || (p.rawWeeklyPrice || 0) * 4 || 0) * (p.subscribersCount || 0), 0);
+
   const totalMonthlyRev = totalMonthlyRevNum > 0 ? `₹${totalMonthlyRevNum.toLocaleString("en-IN")}` : "₹0";
 
   return (
