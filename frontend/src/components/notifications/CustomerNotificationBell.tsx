@@ -58,7 +58,7 @@ const DEFAULT_NOTIFICATIONS: CustomerNotificationItem[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     relativeTime: "45m ago",
     isRead: false,
-    link: "/explore-desktop",
+    link: "/food-explore",
     tag: "NEW",
     tagColor: "purple",
     actionText: "Explore Menu",

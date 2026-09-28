@@ -22,6 +22,8 @@ export interface TopRatedItem {
   sellerName?: string;
   sellerIsOnline?: boolean;
   isAvailable?: boolean;
+  stockQuantity?: number;
+  maxStock?: number;
 }
 
 interface DashboardBodyProps {
@@ -35,7 +37,7 @@ export default function DashboardBody({
   seeAllLink = "/food-explore?sort=rating",
   items,
 }: DashboardBodyProps) {
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   const [addedId, setAddedId] = useState<string | null>(null);
 
   if (!items || items.length === 0) {
@@ -44,6 +46,20 @@ export default function DashboardBody({
 
   const handleOrder = (item: TopRatedItem) => {
     if (item.sellerIsOnline === false || item.isAvailable === false) return;
+
+    const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
+    if (stockLimit === 0) {
+      alert(`Sorry, ${item.name} is currently out of stock.`);
+      return;
+    }
+
+    const existingInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
+    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
+      alert(`Cannot add more. Only ${stockLimit} items available in stock for ${item.name}.`);
+      return;
+    }
 
     addToCart({
       id: item.id,
@@ -55,7 +71,8 @@ export default function DashboardBody({
       sellerName: item.sellerName || "Verified Cloud Kitchen",
       image: item.imageUrl,
       imageUrl: item.imageUrl,
-      stockQuantity: -1,
+      stockQuantity: stockLimit,
+      maxStock: stockLimit,
     });
     setAddedId(item.id);
     setTimeout(() => setAddedId(null), 1800);
@@ -138,7 +155,8 @@ export default function DashboardBody({
           {displayItems.slice(0, 6).map((item) => {
             const isSellerClosed = item.sellerIsOnline === false;
             const isItemUnavailable = item.isAvailable === false;
-            const isClosed = isSellerClosed || isItemUnavailable;
+            const isOutOfStock = item.stockQuantity === 0;
+            const isClosed = isSellerClosed || isItemUnavailable || isOutOfStock;
 
             return (
             <div
@@ -268,6 +286,11 @@ export default function DashboardBody({
                     }}
                   >
                     {item.category} • ₹{item.price} {item.distanceText ? `• 📍 ${item.distanceText}` : ""} • {item.time}
+                    {item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
+                      <span style={{ color: "#EA580C", fontWeight: "700", marginLeft: "4px" }}>
+                        • Only {item.stockQuantity} left!
+                      </span>
+                    ) : null}
                   </span>
                 </div>
               </div>
@@ -288,7 +311,7 @@ export default function DashboardBody({
                     flexShrink: 0,
                   }}
                 >
-                  {isSellerClosed ? "Closed" : "Unavailable"}
+                  {isSellerClosed ? "Closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
                 </span>
               ) : (
                 <button

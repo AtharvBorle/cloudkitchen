@@ -277,7 +277,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 <p className={styles.emptySubtitle}>
                   Looks like you haven&apos;t added any delicious dishes yet.
                 </p>
-                <Link href="/explore-desktop" className={styles.exploreMenuBtn}>
+                <Link href="/food-explore" className={styles.exploreMenuBtn}>
                   Explore Menu
                 </Link>
               </div>

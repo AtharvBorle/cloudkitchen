@@ -975,7 +975,7 @@ export default function MyOrdersView() {
                 <p className={styles.emptyStateSub}>
                   Hungry? Explore top chef kitchens and delicious fresh gourmet preparations!
                 </p>
-                <Link href="/explore-desktop" className={styles.exploreBtn}>
+                <Link href="/food-explore" className={styles.exploreBtn}>
                   Explore Food Menu
                 </Link>
               </div>
