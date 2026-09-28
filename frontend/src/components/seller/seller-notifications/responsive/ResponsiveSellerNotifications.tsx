@@ -75,8 +75,6 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
     deleteNotification,
     markAllAsRead,
     clearAllNotifications,
-    generateSampleAlert,
-    resetToDefaults,
   } = useSellerNotifications();
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);

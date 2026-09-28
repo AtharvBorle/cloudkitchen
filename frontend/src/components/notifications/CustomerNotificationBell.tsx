@@ -36,63 +36,25 @@ export interface CustomerNotificationItem {
   actionText?: string;
 }
 
-const DEFAULT_NOTIFICATIONS: CustomerNotificationItem[] = [
-  {
-    id: "notif-offer-1",
-    type: "offer",
-    title: "50% OFF Weekend Gourmet Combos",
-    message: "Use promo code NEO50 at checkout on chef-curated combo boxes above ₹249.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    relativeTime: "15m ago",
-    isRead: false,
-    link: "/explore-desktop",
-    tag: "OFFER",
-    tagColor: "green",
-    actionText: "Claim Offer",
-  },
-  {
-    id: "notif-menu-1",
-    type: "menu",
-    title: "New Menu Arrival: Artisanal Bakery",
-    message: "Fresh Sourdough Bread, Butter Croissants & Belgian Brownies just arrived!",
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    relativeTime: "45m ago",
-    isRead: false,
-    link: "/food-explore",
-    tag: "NEW",
-    tagColor: "purple",
-    actionText: "Explore Menu",
-  },
-  {
-    id: "notif-sub-1",
-    type: "subscription",
-    title: "Meal Subscription Active",
-    message: "Tomorrow's Executive Homestyle Lunch Thali is scheduled for delivery by 1:00 PM.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    relativeTime: "2h ago",
-    isRead: false,
-    link: "/settings-desktop",
-    tag: "SUB",
-    tagColor: "orange",
-    actionText: "View Plan",
-  },
-  {
-    id: "notif-room-1",
-    type: "room",
-    title: "Room Booking Verified",
-    message: "Your stay reservation at Neo Stay Inn is confirmed. Free cancellation available.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-    relativeTime: "6h ago",
-    isRead: true,
-    link: "/room-booking",
-    tag: "ROOM",
-    tagColor: "blue",
-    actionText: "View Booking",
-  },
-];
-
 const STORAGE_READ_IDS = "customer_read_notification_ids";
 const STORAGE_CLEARED_IDS = "customer_cleared_notification_ids";
+
+const getRelativeTime = (dateStr: string): string => {
+  try {
+    const d = new Date(dateStr);
+    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  } catch {
+    return "Recent";
+  }
+};
 
 export interface CustomerNotificationBellProps {
   className?: string;
@@ -108,6 +70,8 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
   const [readIds, setReadIds] = useState<string[]>([]);
   const [clearedIds, setClearedIds] = useState<string[]>([]);
   const [dynamicOrders, setDynamicOrders] = useState<any[]>([]);
+  const [dynamicBookings, setDynamicBookings] = useState<any[]>([]);
+  const [dynamicSubscriptions, setDynamicSubscriptions] = useState<any[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load persistent read and cleared IDs from localStorage after mount
@@ -123,13 +87,23 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     }
   }, []);
 
-  // Fetch recent user orders dynamically if logged in
+  // Fetch recent user orders, bookings, and subscriptions dynamically if logged in
   useEffect(() => {
     let isMounted = true;
-    async function loadRecentOrders() {
-      if (!session?.user) return;
+
+    async function loadUserData() {
+      if (!session?.user) {
+        if (isMounted) {
+          setDynamicOrders([]);
+          setDynamicBookings([]);
+          setDynamicSubscriptions([]);
+        }
+        return;
+      }
+
+      // 1. Fetch Orders
       try {
-        const res = await fetchApi("/api/user/orders?limit=4");
+        const res = await fetchApi("/api/user/orders?limit=10");
         if (res.ok && isMounted) {
           const data = await res.json();
           const list = Array.isArray(data) ? data : data?.orders || data?.data || [];
@@ -138,14 +112,42 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
           }
         }
       } catch {
-        // Silently fallback to built-in realistic notifications
+        // Ignore network errors
+      }
+
+      // 2. Fetch Bookings
+      try {
+        const res = await fetchApi("/api/user/bookings");
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : data?.bookings || data?.data || [];
+          if (Array.isArray(list)) {
+            setDynamicBookings(list);
+          }
+        }
+      } catch {
+        // Ignore
+      }
+
+      // 3. Fetch Meal Subscriptions
+      try {
+        const res = await fetchApi("/api/user/meal-subscriptions");
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : data?.subscriptions || data?.data || [];
+          if (Array.isArray(list)) {
+            setDynamicSubscriptions(list);
+          }
+        }
+      } catch {
+        // Ignore
       }
     }
 
-    loadRecentOrders();
+    loadUserData();
 
     const handleOrderEvent = () => {
-      loadRecentOrders();
+      loadUserData();
     };
 
     window.addEventListener("order-placed", handleOrderEvent);
@@ -158,7 +160,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     };
   }, [session]);
 
-  // Merge static & real dynamic orders into notification items
+  // Merge real dynamic orders, bookings, and subscriptions into notification items
   const allNotifications = useMemo<CustomerNotificationItem[]>(() => {
     const list: CustomerNotificationItem[] = [];
 
@@ -207,7 +209,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
           title,
           message,
           timestamp: createdDate.toISOString(),
-          relativeTime: "Recent",
+          relativeTime: getRelativeTime(createdDate.toISOString()),
           isRead: readIds.includes(`order-notif-${orderId}`),
           link: "/orders-desktop",
           tag,
@@ -217,17 +219,59 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
       });
     }
 
-    // Add static/platform updates
-    DEFAULT_NOTIFICATIONS.forEach((n) => {
-      list.push({
-        ...n,
-        isRead: readIds.includes(n.id) || n.isRead,
+    // Map actual user bookings if present
+    if (dynamicBookings && dynamicBookings.length > 0) {
+      dynamicBookings.forEach((b: any) => {
+        const roomTitle = b.room?.title || b.roomName || "Room Stay";
+        const checkInStr = b.checkIn ? new Date(b.checkIn).toLocaleDateString() : "";
+        const checkOutStr = b.checkOut ? new Date(b.checkOut).toLocaleDateString() : "";
+        const createdDate = b.createdAt ? new Date(b.createdAt) : new Date();
+
+        list.push({
+          id: `booking-notif-${b.id}`,
+          type: "room",
+          title: `Room Reservation: ${roomTitle}`,
+          message: `Your booking for ${roomTitle} (${checkInStr} to ${checkOutStr}) is confirmed.`,
+          timestamp: createdDate.toISOString(),
+          relativeTime: getRelativeTime(createdDate.toISOString()),
+          isRead: readIds.includes(`booking-notif-${b.id}`),
+          link: "/room-booking-desktop",
+          tag: "STAY",
+          tagColor: "blue",
+          actionText: "View Stay",
+        });
       });
-    });
+    }
+
+    // Map actual user meal subscriptions if present
+    if (dynamicSubscriptions && dynamicSubscriptions.length > 0) {
+      dynamicSubscriptions.forEach((sub: any) => {
+        const planName = sub.plan?.name || sub.planName || "Meal Subscription";
+        const sellerName = sub.seller?.businessName || sub.sellerName || "Kitchen Partner";
+        const createdDate = sub.createdAt ? new Date(sub.createdAt) : new Date();
+
+        list.push({
+          id: `sub-notif-${sub.id}`,
+          type: "subscription",
+          title: `Meal Plan: ${planName}`,
+          message: `Your meal subscription from ${sellerName} is active.`,
+          timestamp: createdDate.toISOString(),
+          relativeTime: getRelativeTime(createdDate.toISOString()),
+          isRead: readIds.includes(`sub-notif-${sub.id}`),
+          link: "/my-subscriptions-desktop",
+          tag: "SUB",
+          tagColor: "orange",
+          actionText: "Manage Plan",
+        });
+      });
+    }
+
+    // Sort newest first
+    list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Filter out cleared notifications
     return list.filter((n) => !clearedIds.includes(n.id));
-  }, [dynamicOrders, readIds, clearedIds]);
+  }, [dynamicOrders, dynamicBookings, dynamicSubscriptions, readIds, clearedIds]);
 
   // Filter based on active tab
   const filteredNotifications = useMemo(() => {
