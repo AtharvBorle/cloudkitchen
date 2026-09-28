@@ -506,8 +506,31 @@ function MySubscriptionContent() {
   // Submit Subscription with Online Payment Flow
   const handleConfirmSubscription = async () => {
     if (!selectedPlanForSub) return;
-    if (!deliveryAddressInput.trim()) {
+    const trimmedAddress = deliveryAddressInput.trim();
+    if (!trimmedAddress) {
       setSubErrorMsg("Please provide your delivery address or room number.");
+      return;
+    }
+    if (trimmedAddress.length < 5) {
+      setSubErrorMsg("Delivery address must be at least 5 characters long.");
+      return;
+    }
+    if (trimmedAddress.length > 120) {
+      setSubErrorMsg("Delivery address cannot exceed 120 characters.");
+      return;
+    }
+
+    const cleanPhone = contactPhoneInput.replace(/\D/g, "");
+    if (!cleanPhone) {
+      setSubErrorMsg("Please enter your 10-digit contact phone number.");
+      return;
+    }
+    if (cleanPhone.length !== 10) {
+      setSubErrorMsg("Contact phone number must be exactly 10 digits.");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setSubErrorMsg("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.");
       return;
     }
 
@@ -1394,10 +1417,11 @@ function MySubscriptionContent() {
                 <div style={{ position: "relative" }}>
                   <input
                     type="text"
-                    placeholder="Type street, room number, or select area suggestion below..."
+                    maxLength={120}
+                    placeholder="Type street, room number, or select area suggestion below (max 120 chars)..."
                     value={deliveryAddressInput}
                     onChange={(e) => {
-                      setDeliveryAddressInput(e.target.value);
+                      setDeliveryAddressInput(e.target.value.slice(0, 120));
                       setShowAddressSuggestions(true);
                     }}
                     onFocus={() => setShowAddressSuggestions(true)}
@@ -1439,13 +1463,16 @@ function MySubscriptionContent() {
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>
                   <Phone size={13} color="#FF5500" />
-                  <span>Contact Phone Number</span>
+                  <span>Contact Phone Number (10 digits)</span>
                 </label>
                 <input
                   type="tel"
-                  placeholder="e.g. +91 9876543210"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  placeholder="e.g. 9876543210"
                   value={contactPhoneInput}
-                  onChange={(e) => setContactPhoneInput(e.target.value)}
+                  onChange={(e) => setContactPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   className={styles.formInput}
                 />
               </div>

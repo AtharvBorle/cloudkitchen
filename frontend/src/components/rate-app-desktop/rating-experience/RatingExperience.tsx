@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Star, CheckCircle2, Send, ThumbsUp, Heart, MessageSquare, Utensils, Clock } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
-import { broadcastReviewAlert } from "@/hooks/useSellerNotifications";
 import styles from "./RatingExperience.module.css";
 
 const SENTIMENT_LABELS: Record<number, string> = {
@@ -134,14 +133,6 @@ export const RatingExperience: React.FC = () => {
         throw new Error(errData.message || errData.error || "Failed to submit review. Please try again.");
       }
 
-      try {
-        broadcastReviewAlert({
-          customerName: "Customer",
-          rating,
-          comment: feedbackText,
-        });
-      } catch {}
-
       setIsSubmitted(true);
       loadHistory();
     } catch (err: any) {
@@ -171,7 +162,7 @@ export const RatingExperience: React.FC = () => {
             </div>
             <h2 className={styles.thankYouTitle}>Thank You for Your Feedback!</h2>
             <p className={styles.thankYouText}>
-              Your rating and suggestions have been recorded. Every review helps our chefs cook better meals, speed up deliveries, and improve our services!
+              Your rating and suggestions for our app have been submitted. Every review helps us make the app faster, smoother, and better on Google Play and App Store!
             </p>
             <button
               type="button"

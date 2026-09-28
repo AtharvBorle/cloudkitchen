@@ -221,8 +221,19 @@ export const createUserMealSubscription = async (req: Request) => {
         throw new ApiError("Plan ID is required", 400);
     }
 
-    if (!deliveryAddress || !String(deliveryAddress).trim()) {
+    const cleanAddress = String(deliveryAddress || "").trim();
+    if (!cleanAddress) {
         throw new ApiError("Delivery address is required for meal delivery", 400);
+    }
+    if (cleanAddress.length < 5 || cleanAddress.length > 150) {
+        throw new ApiError("Delivery address must be between 5 and 150 characters", 400);
+    }
+
+    if (contactPhone) {
+        const cleanPhone = String(contactPhone).replace(/\D/g, "");
+        if (cleanPhone.length !== 10) {
+            throw new ApiError("Contact phone number must be exactly 10 digits", 400);
+        }
     }
 
     // Enforce Online Payment Verification via Razorpay
