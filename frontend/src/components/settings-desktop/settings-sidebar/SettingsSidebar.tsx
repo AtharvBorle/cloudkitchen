@@ -46,7 +46,8 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
       pathname?.startsWith("/mysubscription") ||
       pathname?.startsWith("/mysubscriptions") ||
       pathname?.startsWith("/subscriptions") ||
-      pathname?.startsWith("/subscription")
+      pathname?.startsWith("/subscription") ||
+      pathname?.includes("/subscriptions")
     ) return "my-subscriptions";
     if (pathname?.startsWith("/notifications-desktop") || pathname?.startsWith("/notifications")) return "notifications";
     if (pathname?.startsWith("/payment-methods-desktop") || pathname?.startsWith("/payment-methods")) return "payment-methods";

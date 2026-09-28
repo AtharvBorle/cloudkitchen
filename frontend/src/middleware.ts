@@ -118,15 +118,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/user/user-cart" ||
     pathname === "/settings-desktop" ||
     pathname.startsWith("/settings") ||
-    pathname.startsWith("/shop/") ||
-    pathname.startsWith("/my-subscription") ||
-    pathname.startsWith("/my-subscriptions") ||
-    pathname.startsWith("/mysubscription") ||
-    pathname.startsWith("/mysubscriptions") ||
-    pathname.startsWith("/subscriptions") ||
-    pathname.startsWith("/subscription") ||
-    pathname.startsWith("/meal-plans") ||
-    pathname.startsWith("/explore-meal-plans");
+    pathname.startsWith("/shop/");
 
   // If authenticated non-USER role tries to access user-facing consumer pages → redirect
   if (isAuthenticated && userRole && !isLegalPage && isUserFacingPage) {
@@ -233,14 +225,18 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/dashboard/user") ||
     (pathname.startsWith("/user/") &&
       pathname !== "/user/cart" &&
-      pathname !== "/user/user-cart" &&
-      !pathname.startsWith("/user/my-sub") &&
-      !pathname.startsWith("/user/mysub") &&
-      !pathname.startsWith("/user/sub")) ||
+      pathname !== "/user/user-cart") ||
     pathname === "/my-orders" ||
     pathname === "/orders-desktop" ||
     pathname === "/order-history-desktop" ||
     pathname === "/order-confirmation" ||
+    pathname === "/my-subscription" ||
+    pathname === "/my-subscriptions" ||
+    pathname === "/my-subscriptions-desktop" ||
+    pathname === "/mysubscription" ||
+    pathname === "/mysubscriptions" ||
+    pathname === "/subscription" ||
+    pathname === "/subscriptions" ||
     pathname === "/payment-methods-desktop" ||
     pathname === "/delivery-addresses-desktop" ||
     pathname === "/notifications-desktop" ||
