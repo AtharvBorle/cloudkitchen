@@ -87,7 +87,7 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
 
   const monthlyStr = rawPlan.monthlyPrice
     ? (String(rawPlan.monthlyPrice).startsWith("₹") ? rawPlan.monthlyPrice : `₹${rawPlan.monthlyPrice}`)
-    : (isWeekly ? `₹${weeklyNum.toFixed(0)}` : `₹${(weeklyNum * 4).toFixed(0)}`);
+    : (isWeekly ? "" : `₹${weeklyNum.toFixed(0)}`);
 
   const quarterlyStr = rawPlan.quarterlyPrice
     ? (String(rawPlan.quarterlyPrice).startsWith("₹") ? rawPlan.quarterlyPrice : `₹${rawPlan.quarterlyPrice}`)
@@ -249,6 +249,10 @@ export async function saveMealPlan(
   let createdPlan: MealSubscriptionPlan;
 
   try {
+    const isWeekly = (planData.duration || "1 Week").toLowerCase().includes("week");
+    const parsedWeekly = planData.weeklyPrice ? parseFloat(String(planData.weeklyPrice).replace(/[^\d.]/g, "")) : (isWeekly ? priceNum : null);
+    const parsedMonthly = planData.monthlyPrice ? parseFloat(String(planData.monthlyPrice).replace(/[^\d.]/g, "")) : (!isWeekly ? priceNum : null);
+
     const res = await fetchApi("/api/seller/meal-plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -256,8 +260,8 @@ export async function saveMealPlan(
         name: planData.name,
         tier: planData.tier || "Bronze",
         description: "",
-        weeklyPrice: priceNum,
-        monthlyPrice: planData.monthlyPrice ? parseFloat(String(planData.monthlyPrice).replace(/[^\d.]/g, "")) : priceNum * 4,
+        weeklyPrice: parsedWeekly || priceNum,
+        monthlyPrice: parsedMonthly,
         quarterlyPrice: planData.quarterlyPrice ? parseFloat(String(planData.quarterlyPrice).replace(/[^\d.]/g, "")) : null,
         yearlyPrice: planData.yearlyPrice ? parseFloat(String(planData.yearlyPrice).replace(/[^\d.]/g, "")) : null,
         duration: planData.duration || "1 Week",
@@ -306,10 +310,16 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.tier !== undefined) payload.tier = updates.tier;
     if (updates.weeklyPrice !== undefined) {
-      payload.weeklyPrice = parseFloat(String(updates.weeklyPrice).replace(/[^\d.]/g, ""));
+      payload.weeklyPrice = updates.weeklyPrice ? parseFloat(String(updates.weeklyPrice).replace(/[^\d.]/g, "")) : null;
     }
     if (updates.monthlyPrice !== undefined) {
-      payload.monthlyPrice = parseFloat(String(updates.monthlyPrice).replace(/[^\d.]/g, ""));
+      payload.monthlyPrice = updates.monthlyPrice ? parseFloat(String(updates.monthlyPrice).replace(/[^\d.]/g, "")) : null;
+    }
+    if (updates.quarterlyPrice !== undefined) {
+      payload.quarterlyPrice = updates.quarterlyPrice ? parseFloat(String(updates.quarterlyPrice).replace(/[^\d.]/g, "")) : null;
+    }
+    if (updates.yearlyPrice !== undefined) {
+      payload.yearlyPrice = updates.yearlyPrice ? parseFloat(String(updates.yearlyPrice).replace(/[^\d.]/g, "")) : null;
     }
     if (updates.duration !== undefined) payload.duration = updates.duration;
     if (updates.features !== undefined) payload.features = updates.features;
