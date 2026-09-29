@@ -281,13 +281,13 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                                 {discountLabel}
                                             </td>
                                             <td style={{ padding: "14px 16px", color: "#64748B" }}>
-                                                ₹{offer.minOrderAmount || 0}
+                                                ₹{offer.minOrderAmount ?? offer.minimumCartValue ?? 0}
                                             </td>
                                             <td style={{ padding: "14px 16px", color: "#0F172A", fontWeight: 600 }}>
-                                                {offer.currentUsage || offer.usedCount || 0} / {offer.usageLimit || offer.maxUsage || "∞"}
+                                                {offer.currentUsage ?? offer.usedCount ?? offer.currentUsersCount ?? 0} / {offer.usageLimit || offer.maxUsage || offer.maxUsers || "∞"}
                                             </td>
                                             <td style={{ padding: "14px 16px", color: "#64748B" }}>
-                                                {offer.noExpiry ? "No Expiry" : offer.endDate ? new Date(offer.endDate).toLocaleDateString() : "Active"}
+                                                {offer.noExpiry ? "No Expiry" : offer.validUntil ? new Date(offer.validUntil).toLocaleDateString() : offer.endDate ? new Date(offer.endDate).toLocaleDateString() : "Active"}
                                             </td>
                                             <td style={{ padding: "14px 16px" }}>
                                                 <button

@@ -35,13 +35,11 @@ export default function CreateOfferCanvasDas({
   const [submitting, setSubmitting] = useState(false);
 
   // Form State
-  const [couponCode, setCouponCode] = useState("SUMMER20");
-  const [internalDescription, setInternalDescription] = useState(
-    "Summer sale - 20% off orders above ₹500"
-  );
+  const [couponCode, setCouponCode] = useState("");
+  const [internalDescription, setInternalDescription] = useState("");
   const [discountType, setDiscountType] = useState<"PERCENTAGE" | "FLAT">("PERCENTAGE");
-  const [discountValue, setDiscountValue] = useState("20");
-  const [minOrderValue, setMinOrderValue] = useState("500");
+  const [discountValue, setDiscountValue] = useState("");
+  const [minOrderValue, setMinOrderValue] = useState("");
   const [maxDiscountCap, setMaxDiscountCap] = useState("");
 
   const [appliesTo, setAppliesTo] = useState<"ALL" | "CATEGORY" | "ITEMS">("ALL");

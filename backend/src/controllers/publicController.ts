@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { ApiError } from "@/lib/api-error";
 
 const prisma = new PrismaClient();
 
@@ -280,3 +281,114 @@ export const getPublicPopupBanners = (sellerId: string | null) => unstable_cache
     [`public-popup-banners-${sellerId || 'global'}`],
     { revalidate: 60, tags: ["popup-banners"] }
 )();
+
+export const validateCouponForCart = async (req: Request) => {
+    const body = await req.json();
+    const { code, sellerId, subtotal = 0, items = [], userId } = body;
+
+    if (!code || typeof code !== "string" || !code.trim()) {
+        throw new ApiError("Please enter a valid coupon code.", 400);
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const now = new Date();
+
+    const coupon = await prisma.coupon.findFirst({
+        where: {
+            code: { equals: cleanCode, mode: "insensitive" },
+            isActive: true,
+            approvalStatus: "APPROVED"
+        }
+    });
+
+    if (!coupon) {
+        throw new ApiError(`Coupon "${cleanCode}" is invalid or does not exist.`, 404);
+    }
+
+    // Check validity dates
+    if (coupon.validFrom && new Date(coupon.validFrom) > now) {
+        throw new ApiError(`Coupon "${coupon.code}" is not active yet.`, 400);
+    }
+    if (!coupon.noExpiry && coupon.validUntil && new Date(coupon.validUntil) < now) {
+        throw new ApiError(`Coupon "${coupon.code}" has expired.`, 400);
+    }
+
+    // Check usage limits
+    const totalLimit = coupon.usageLimit || coupon.maxUsers;
+    if (totalLimit && coupon.currentUsersCount >= totalLimit) {
+        throw new ApiError(`Coupon "${coupon.code}" has reached its maximum usage limit.`, 400);
+    }
+
+    // Check seller store restriction
+    if (coupon.appliesToSellerId && sellerId && coupon.appliesToSellerId !== sellerId) {
+        const seller = await prisma.sellerProfile.findUnique({
+            where: { id: coupon.appliesToSellerId },
+            select: { businessName: true }
+        });
+        const storeName = seller?.businessName ? ` from "${seller.businessName}"` : " from its specific store";
+        throw new ApiError(`Coupon "${coupon.code}" is only valid for items${storeName}.`, 400);
+    }
+
+    // Check minimum cart value
+    const minCart = coupon.minimumCartValue ?? 0;
+    const numSubtotal = Number(subtotal) || 0;
+    if (minCart > 0 && numSubtotal < minCart) {
+        throw new ApiError(`Coupon "${coupon.code}" requires a minimum order of ₹${minCart}. (Your cart is ₹${numSubtotal})`, 400);
+    }
+
+    // Check specific product appliesToProductId
+    if (coupon.appliesToProductId && Array.isArray(items) && items.length > 0) {
+        const hasMatchingProduct = items.some((it: any) => 
+            it.id === coupon.appliesToProductId || 
+            it.foodItemId === coupon.appliesToProductId
+        );
+        if (!hasMatchingProduct) {
+            throw new ApiError(`Coupon "${coupon.code}" is only valid on specific items not present in your cart.`, 400);
+        }
+    }
+
+    // Check customer eligibility
+    if (coupon.customerEligibility === "NEW_ONLY" && userId) {
+        const previousOrdersCount = await prisma.order.count({
+            where: {
+                userId: userId,
+                status: { not: "CANCELLED" }
+            }
+        });
+        if (previousOrdersCount > 0) {
+            throw new ApiError(`Coupon "${coupon.code}" is exclusively for first-time customers.`, 400);
+        }
+    }
+
+    // Calculate discount
+    const isPercentage = coupon.discountType === "PERCENTAGE" || (coupon.discountPercentage && !coupon.discountAmount);
+    let calculatedDiscount = 0;
+    let discountLabel = "";
+
+    if (isPercentage) {
+        const pct = coupon.discountPercentage || 0;
+        calculatedDiscount = Math.round((numSubtotal * pct) / 100);
+        if (coupon.maxDiscountAmount && calculatedDiscount > coupon.maxDiscountAmount) {
+            calculatedDiscount = coupon.maxDiscountAmount;
+        }
+        discountLabel = `${pct}% OFF`;
+    } else {
+        const flatAmt = coupon.discountAmount || 0;
+        calculatedDiscount = Math.min(flatAmt, numSubtotal);
+        discountLabel = `₹${flatAmt} OFF`;
+    }
+
+    return {
+        id: coupon.id,
+        code: coupon.code,
+        description: coupon.description,
+        discountType: isPercentage ? "PERCENTAGE" : "FLAT",
+        discountPercentage: isPercentage ? (coupon.discountPercentage || 0) : null,
+        discountAmount: !isPercentage ? (coupon.discountAmount || 0) : null,
+        maxDiscountAmount: coupon.maxDiscountAmount,
+        minimumCartValue: coupon.minimumCartValue || 0,
+        calculatedDiscount,
+        discountLabel,
+        message: `Coupon "${coupon.code}" applied! (${discountLabel})`
+    };
+};
