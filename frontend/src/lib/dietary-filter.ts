@@ -52,21 +52,16 @@ const VEGAN_POSITIVE_WORDS = [
   "vegan",
   "plant-based",
   "plant based",
+  "dairy-free",
+  "dairy free",
   "tofu",
-  "salad",
-  "smoothie",
-  "organic",
-  "grain",
-  "fruit",
-  "fruits",
-  "oats",
-  "greens",
-  "juice",
-  "juices",
-  "avocado",
-  "almond",
-  "soy",
-  "coconut milk",
+  "soy milk",
+  "almond milk",
+  "oat milk",
+  "vegan cheese",
+  "mock meat",
+  "soya chaap",
+  "smoothie bowl",
 ];
 
 const NON_VEGAN_WORDS = [
@@ -87,6 +82,17 @@ const NON_VEGAN_WORDS = [
   "meat",
   "fish",
   "prawn",
+  "prawns",
+  "honey",
+  "mayonnaise",
+  "mayo",
+  "buttermilk",
+  "whey",
+  "makkhan",
+  "makhan",
+  "beef",
+  "pork",
+  "seafood",
 ];
 
 const JAIN_POSITIVE_WORDS = [
@@ -98,13 +104,10 @@ const JAIN_POSITIVE_WORDS = [
   "no garlic",
   "jain thali",
   "jain special",
-  "dal khichdi",
-  "jeera rice",
-  "plain rice",
-  "roti",
-  "chapati",
-  "phulka",
-  "pure veg",
+  "jain dal",
+  "jain paneer",
+  "jain sabji",
+  "jain meal",
 ];
 
 const NON_JAIN_ROOTS = [
@@ -124,8 +127,26 @@ const NON_JAIN_ROOTS = [
   "chicken",
   "mutton",
   "egg",
+  "eggs",
   "fish",
   "meat",
+  "prawn",
+  "prawns",
+  "seafood",
+  "pork",
+  "beef",
+  "kanda",
+  "lasun",
+  "pyaz",
+  "lahsun",
+  "batata",
+  "scallion",
+  "scallions",
+  "chives",
+  "leek",
+  "leeks",
+  "shallot",
+  "shallots",
 ];
 
 export function isDishMatchingDiet(
@@ -172,7 +193,7 @@ export function isDishMatchingDiet(
     if (hasDairy) return false;
     return (
       VEGAN_POSITIVE_WORDS.some((w) => text.includes(w)) ||
-      (rawType === "VEG" && (text.includes("salad") || text.includes("juice") || text.includes("fruit") || text.includes("rice") || text.includes("dal")))
+      rawType === "VEGAN"
     );
   }
 
@@ -187,7 +208,8 @@ export function isDishMatchingDiet(
     return (
       JAIN_POSITIVE_WORDS.some((w) => text.includes(w)) ||
       text.includes("jain") ||
-      text.includes("satvik")
+      text.includes("satvik") ||
+      text.includes("swaminarayan")
     );
   }
 
@@ -240,7 +262,7 @@ export function isKitchenMatchingDiet(
   }
 
   if (norm === "non_veg") {
-    if (rawFoodType === "PURE_VEG") return false;
+    if (rawFoodType === "PURE_VEG" || rawFoodType === "VEGAN" || rawFoodType === "JAIN") return false;
     if (rawFoodType === "NON_VEG" || rawFoodType === "NON-VEG" || rawFoodType === "BOTH") return true;
     if (
       text.includes("non-veg") ||
@@ -256,30 +278,36 @@ export function isKitchenMatchingDiet(
   }
 
   if (norm === "vegan") {
+    if (rawFoodType === "NON_VEG" || rawFoodType === "NON-VEG") {
+      return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
+    }
     if (rawFoodType === "VEGAN") return true;
     if (
       text.includes("vegan") ||
-      text.includes("plant") ||
-      text.includes("healthy") ||
-      text.includes("salad") ||
-      text.includes("organic")
+      text.includes("plant-based") ||
+      text.includes("plant based") ||
+      text.includes("dairy-free") ||
+      text.includes("dairy free")
     ) {
       return true;
     }
-    return kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
+    return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
   }
 
   if (norm === "jain") {
+    if (rawFoodType === "NON_VEG" || rawFoodType === "NON-VEG") {
+      return false;
+    }
     if (rawFoodType === "JAIN") return true;
     if (
       text.includes("jain") ||
       text.includes("satvik") ||
       text.includes("swaminarayan") ||
-      text.includes("pure veg")
+      text.includes("no onion no garlic")
     ) {
       return true;
     }
-    return kitchenDishes.some((d) => isDishMatchingDiet(d, "jain"));
+    return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "jain"));
   }
 
   return true;

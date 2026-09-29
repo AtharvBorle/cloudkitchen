@@ -9,6 +9,8 @@ import {
   Tag,
   ArrowRight,
   CheckCircle2,
+  Check,
+  Sparkles,
   X,
   Plus,
   Minus,
@@ -35,6 +37,44 @@ export interface UserCheckoutProps {
   onProceedToCheckout?: () => void;
 }
 
+const DEFAULT_BEST_OFFERS = [
+  {
+    id: "neo50-offer",
+    code: "NEO50",
+    description: "50% Instant Discount on orders above ₹149",
+    discountPercentage: 50,
+    maxDiscountAmount: 120,
+    minimumCartValue: 149,
+    discountType: "PERCENTAGE",
+  },
+  {
+    id: "welcome50-offer",
+    code: "WELCOME50",
+    description: "Get 50% OFF on your first order",
+    discountPercentage: 50,
+    maxDiscountAmount: 150,
+    minimumCartValue: 199,
+    discountType: "PERCENTAGE",
+  },
+  {
+    id: "flat100-offer",
+    code: "FLAT100",
+    description: "Flat ₹100 OFF on orders above ₹399",
+    discountAmount: 100,
+    minimumCartValue: 399,
+    discountType: "FLAT",
+  },
+  {
+    id: "neobite20-offer",
+    code: "NEOBITE20",
+    description: "Flat 20% OFF on all cloud kitchen specials",
+    discountPercentage: 20,
+    maxDiscountAmount: 80,
+    minimumCartValue: 99,
+    discountType: "PERCENTAGE",
+  },
+];
+
 export const UserCheckout: React.FC<UserCheckoutProps> = ({
   initialItems = [],
   defaultLocation = "Kothrud, Pune",
@@ -52,6 +92,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [appliedCouponData, setAppliedCouponData] = useState<any | null>(null);
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
+  const [availableOffers, setAvailableOffers] = useState<any[]>(DEFAULT_BEST_OFFERS);
+  const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
 
   const formattedDefaultAddress = React.useMemo(() => {
     if (!defaultAddress) return defaultAddressProp || "No address selected";
@@ -98,6 +140,41 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     showToast(`Removed "${name}" from cart`);
   };
 
+  // Fetch available public coupons
+  React.useEffect(() => {
+    let isMounted = true;
+    async function fetchOffers() {
+      try {
+        setIsLoadingOffers(true);
+        const res = await fetchApi("/api/public/coupons");
+        if (res.ok && isMounted) {
+          const json = await res.json();
+          const serverCoupons = json.data || [];
+          if (Array.isArray(serverCoupons) && serverCoupons.length > 0) {
+            const map = new Map();
+            serverCoupons.forEach((c: any) => map.set(c.code.toUpperCase(), c));
+            DEFAULT_BEST_OFFERS.forEach((c) => {
+              if (!map.has(c.code.toUpperCase())) {
+                map.set(c.code.toUpperCase(), c);
+              }
+            });
+            setAvailableOffers(Array.from(map.values()));
+          } else {
+            setAvailableOffers(DEFAULT_BEST_OFFERS);
+          }
+        }
+      } catch {
+        if (isMounted) setAvailableOffers(DEFAULT_BEST_OFFERS);
+      } finally {
+        if (isMounted) setIsLoadingOffers(false);
+      }
+    }
+    fetchOffers();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleRemovePromo = () => {
     setAppliedPromo(null);
     setAppliedCouponData(null);
@@ -106,18 +183,21 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     showToast("Promo code removed");
   };
 
-  // Promo Code Apply
-  const handleApplyPromo = async () => {
-    if (appliedPromo) {
+  // Promo Code Apply (supports typing or clicking from Best Offers)
+  const handleApplyPromo = async (codeOverride?: string) => {
+    const targetCode = (codeOverride || promoCode).trim().toUpperCase();
+
+    if (appliedPromo && appliedPromo === targetCode) {
       handleRemovePromo();
       return;
     }
 
-    if (!promoCode.trim()) {
-      showToast("Please enter a promo code");
+    if (!targetCode) {
+      showToast("Please enter or select a promo code");
       return;
     }
-    const cleanCode = promoCode.trim().toUpperCase();
+
+    setPromoCode(targetCode);
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
     setIsValidatingPromo(true);
@@ -126,7 +206,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code: cleanCode,
+          code: targetCode,
           subtotal: currentSubtotal,
         }),
       });
@@ -138,26 +218,55 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         setAppliedPromo(coupon.code);
         const pct = coupon.discountPercentage || 0;
         setDiscountPercent(pct);
-        const savedAmt = coupon.calculatedDiscount || Math.round((currentSubtotal * pct) / 100);
-        showToast(`Promo code "${coupon.code}" applied! Saved ₹${savedAmt}`);
+        const savedAmt = coupon.calculatedDiscount || (pct > 0 ? Math.round((currentSubtotal * pct) / 100) : (coupon.discountAmount || 0));
+        showToast(`Coupon "${coupon.code}" applied! Saved ₹${savedAmt}`);
       } else {
-        if (cleanCode === "NEO50" && currentSubtotal >= 100) {
-          const discount = Math.round((currentSubtotal * 50) / 100);
-          setAppliedCouponData({ code: cleanCode, calculatedDiscount: discount, discountPercentage: 50 });
-          setAppliedPromo(cleanCode);
+        const matchedOffer = availableOffers.find((c) => c.code.toUpperCase() === targetCode) ||
+          DEFAULT_BEST_OFFERS.find((c) => c.code.toUpperCase() === targetCode);
+
+        if (matchedOffer) {
+          const minCart = matchedOffer.minimumCartValue || 0;
+          if (currentSubtotal < minCart) {
+            showToast(`Add ₹${minCart - currentSubtotal} more to apply "${targetCode}" (Min cart: ₹${minCart})`);
+            return;
+          }
+
+          let discount = 0;
+          if (matchedOffer.discountType === "PERCENTAGE" || matchedOffer.discountPercentage) {
+            const pct = matchedOffer.discountPercentage || 0;
+            discount = Math.round((currentSubtotal * pct) / 100);
+            if (matchedOffer.maxDiscountAmount && discount > matchedOffer.maxDiscountAmount) {
+              discount = matchedOffer.maxDiscountAmount;
+            }
+            setDiscountPercent(pct);
+          } else {
+            discount = Math.min(matchedOffer.discountAmount || 0, currentSubtotal);
+            setDiscountPercent(0);
+          }
+
+          setAppliedCouponData({
+            ...matchedOffer,
+            calculatedDiscount: discount,
+          });
+          setAppliedPromo(matchedOffer.code);
+          showToast(`Offer "${matchedOffer.code}" applied! Saved ₹${discount}`);
+        } else if (targetCode === "NEO50" && currentSubtotal >= 100) {
+          const discount = Math.min(Math.round((currentSubtotal * 50) / 100), 120);
+          setAppliedCouponData({ code: targetCode, calculatedDiscount: discount, discountPercentage: 50 });
+          setAppliedPromo(targetCode);
           setDiscountPercent(50);
-          showToast(`Super offer "${cleanCode}" applied! 50% discount`);
-        } else if ((cleanCode === "WELCOME20" || cleanCode === "NEO20" || cleanCode === "DISCOUNT20" || cleanCode === "NEOBITE20") && currentSubtotal >= 100) {
+          showToast(`Offer "${targetCode}" applied! 50% discount`);
+        } else if ((targetCode === "WELCOME20" || targetCode === "WELCOME50" || targetCode === "NEO20" || targetCode === "DISCOUNT20" || targetCode === "NEOBITE20") && currentSubtotal >= 99) {
           const discount = Math.round((currentSubtotal * 20) / 100);
-          setAppliedCouponData({ code: cleanCode, calculatedDiscount: discount, discountPercentage: 20 });
-          setAppliedPromo(cleanCode);
+          setAppliedCouponData({ code: targetCode, calculatedDiscount: discount, discountPercentage: 20 });
+          setAppliedPromo(targetCode);
           setDiscountPercent(20);
-          showToast(`Promo code "${cleanCode}" applied! 20% discount`);
+          showToast(`Coupon "${targetCode}" applied! Saved ₹${discount}`);
         } else {
           setAppliedPromo(null);
           setAppliedCouponData(null);
           setDiscountPercent(0);
-          showToast(data.message || `Invalid promo code "${cleanCode}".`);
+          showToast(data.message || `Invalid promo code "${targetCode}".`);
         }
       }
     } catch (err: any) {
@@ -340,100 +449,174 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
           {/* Right Column: Promo Code & Order Summary */}
           <aside className={styles.sidebarRight}>
-            {/* 1. Promo Code Box (NC-BUG-117) */}
-            {appliedPromo ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  backgroundColor: "#F0FDF4",
-                  border: "1px solid #86EFAC",
-                  borderRadius: "14px",
-                  padding: "12px 16px",
-                  gap: "10px",
-                  marginBottom: "16px",
-                  boxShadow: "0 2px 8px rgba(22, 163, 74, 0.08)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "8px",
-                      backgroundColor: "#DCFCE7",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#16A34A",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Tag size={16} />
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
-                      {appliedCouponData?.code || appliedPromo}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
-                      -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleRemovePromo}
+            {/* 1. Promo Code & Best Offers Section */}
+            <div className={styles.promoSectionWrapper}>
+              {appliedPromo ? (
+                <div
                   style={{
-                    display: "inline-flex",
+                    display: "flex",
                     alignItems: "center",
-                    gap: "4px",
-                    backgroundColor: "#DC2626",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "6px",
-                    padding: "6px 10px",
-                    fontSize: "0.75rem",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    transition: "all 0.15s ease",
+                    justifyContent: "space-between",
+                    backgroundColor: "#F0FDF4",
+                    border: "1.5px solid #86EFAC",
+                    borderRadius: "14px",
+                    padding: "12px 16px",
+                    gap: "10px",
+                    boxShadow: "0 2px 8px rgba(22, 163, 74, 0.08)",
                   }}
-                  title="Remove applied coupon"
                 >
-                  <X size={13} strokeWidth={2.5} />
-                  <span>Remove</span>
-                </button>
-              </div>
-            ) : (
-              <div className={styles.promoCard}>
-                <div className={styles.promoInputBox}>
-                  <Tag size={18} className={styles.promoTagIcon} />
-                  <input
-                    type="text"
-                    placeholder="Enter promo code"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleApplyPromo();
-                      }
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "8px",
+                        backgroundColor: "#DCFCE7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#16A34A",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Check size={16} strokeWidth={3} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
+                        {appliedCouponData?.code || appliedPromo}
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
+                        -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      backgroundColor: "#DC2626",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "6px 10px",
+                      fontSize: "0.75rem",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      transition: "all 0.15s ease",
                     }}
-                    disabled={isValidatingPromo}
-                    className={styles.promoInput}
-                  />
+                    title="Remove applied coupon"
+                  >
+                    <X size={13} strokeWidth={2.5} />
+                    <span>Remove</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className={styles.applyButton}
-                  onClick={handleApplyPromo}
-                  disabled={!promoCode.trim() || isValidatingPromo}
-                >
-                  {isValidatingPromo ? "..." : "Apply"}
-                </button>
+              ) : (
+                <div className={styles.promoCard}>
+                  <div className={styles.promoInputBox}>
+                    <Tag size={18} className={styles.promoTagIcon} />
+                    <input
+                      type="text"
+                      placeholder="Enter promo code"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleApplyPromo();
+                        }
+                      }}
+                      disabled={isValidatingPromo}
+                      className={styles.promoInput}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.applyButton}
+                    onClick={() => handleApplyPromo()}
+                    disabled={!promoCode.trim() || isValidatingPromo}
+                  >
+                    {isValidatingPromo ? "..." : "Apply"}
+                  </button>
+                </div>
+              )}
+
+              {/* Best Offers & Available Coupons Section */}
+              <div className={styles.bestOffersContainer}>
+                <div className={styles.bestOffersHeader}>
+                  <Sparkles size={16} className={styles.bestOffersIcon} />
+                  <span className={styles.bestOffersTitle}>Best Offers & Available Coupons</span>
+                </div>
+                <div className={styles.bestOffersList}>
+                  {availableOffers.map((offer) => {
+                    const isCurrentApplied = (appliedCouponData?.code || appliedPromo) === offer.code;
+                    const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
+
+                    return (
+                      <div
+                        key={offer.id || offer.code}
+                        className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
+                        onClick={() => {
+                          if (!isCurrentApplied) {
+                            handleApplyPromo(offer.code);
+                          }
+                        }}
+                      >
+                        <div className={styles.offerCardLeft}>
+                          <div className={styles.offerCodeRow}>
+                            <span className={styles.offerCodeBadge}>{offer.code}</span>
+                            {offer.discountPercentage ? (
+                              <span className={styles.offerSaveBadge}>{offer.discountPercentage}% OFF</span>
+                            ) : offer.discountAmount ? (
+                              <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
+                            ) : null}
+                          </div>
+                          <p className={styles.offerDescription}>
+                            {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off` : `Get ₹${offer.discountAmount} flat off`)}
+                          </p>
+                          {offer.minimumCartValue > 0 && (
+                            <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
+                              {minMet ? `Min cart ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more to unlock`}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className={styles.offerCardRight}>
+                          {isCurrentApplied ? (
+                            <button
+                              type="button"
+                              className={styles.offerAppliedBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemovePromo();
+                              }}
+                            >
+                              <Check size={13} strokeWidth={3} />
+                              <span>Applied</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.offerApplyBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApplyPromo(offer.code);
+                              }}
+                              disabled={isValidatingPromo}
+                            >
+                              Apply
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            )}
+            </div>
 
             {/* 2. Order Summary Card */}
             <div className={styles.summaryCard}>
