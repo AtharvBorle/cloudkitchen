@@ -73,7 +73,7 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
       parsedAddons = list
         .filter((a: any) => a && (a.name || "").trim())
         .map((a: any, idx: number) => ({
-          id: String(a.id || `addon_${idx + 1}`),
+          id: String(a.id || a.name || `addon_${idx + 1}`),
           name: String(a.name || "").trim(),
           price: Math.max(0, parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0),
         }));
@@ -82,28 +82,36 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     console.error("Failed to parse addons in AddonCustomizationModal:", err);
   }
 
+  const matchInitialIds = (initialList: any[], availableList: AddonItem[]): string[] => {
+    if (!initialList || !Array.isArray(initialList)) return [];
+    return initialList
+      .map((initItem: any) => {
+        if (typeof initItem === "object" && initItem !== null) {
+          const idStr = initItem.id ? String(initItem.id) : null;
+          const nameStr = initItem.name ? String(initItem.name).trim().toLowerCase() : null;
+          const match = availableList.find(
+            (p) => (idStr && String(p.id) === idStr) || (nameStr && p.name.trim().toLowerCase() === nameStr)
+          );
+          return match ? String(match.id) : (idStr || null);
+        }
+        const strVal = String(initItem);
+        const match = availableList.find(
+          (p) => String(p.id) === strVal || p.name.trim().toLowerCase() === strVal.trim().toLowerCase()
+        );
+        return match ? String(match.id) : strVal;
+      })
+      .filter((id): id is string => Boolean(id));
+  };
+
   // 3. Track selected add-on IDs
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(() => {
-    if (initialSelectedAddons && Array.isArray(initialSelectedAddons)) {
-      return initialSelectedAddons
-        .map((a: any) => (typeof a === "object" && a !== null ? String(a.id || "") : String(a)))
-        .filter(Boolean);
-    }
-    return [];
+    return matchInitialIds(initialSelectedAddons || [], parsedAddons);
   });
 
   // Re-sync when modal opens or item/initialSelectedAddons change
   useEffect(() => {
     if (isOpen) {
-      if (initialSelectedAddons && Array.isArray(initialSelectedAddons)) {
-        setSelectedAddonIds(
-          initialSelectedAddons
-            .map((a: any) => (typeof a === "object" && a !== null ? String(a.id || "") : String(a)))
-            .filter(Boolean)
-        );
-      } else {
-        setSelectedAddonIds([]);
-      }
+      setSelectedAddonIds(matchInitialIds(initialSelectedAddons || [], parsedAddons));
     }
   }, [isOpen, initialSelectedAddons, item?.id, resolvedDishName]);
 
@@ -218,7 +226,11 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
             onClick={handleAdd}
           >
             <ShoppingBag size={18} />
-            <span>Add Item • ₹{totalUnitPrice}</span>
+            <span>
+              {Boolean(onConfirm)
+                ? `Update Add-ons • ₹${totalUnitPrice}`
+                : `Add Item • ₹${totalUnitPrice}`}
+            </span>
           </button>
         </div>
       </div>

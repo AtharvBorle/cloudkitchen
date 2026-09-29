@@ -1026,25 +1026,6 @@ function MySubscriptionContent() {
                         <span>Select Kitchen Partner</span>
                         <span className={styles.sellerTabsCount}>{sellersList.length} Kitchens</span>
                       </h3>
-
-                      {selectedSellerId !== "all" && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedSellerId("all")}
-                          style={{
-                            padding: "6px 14px",
-                            borderRadius: "8px",
-                            backgroundColor: "#FFFFFF",
-                            border: "1px solid #CBD5E1",
-                            color: "#475569",
-                            fontSize: "0.78rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                        >
-                          View All Kitchen Plans
-                        </button>
-                      )}
                     </div>
 
                     <div className={styles.sellerScrollContainer}>

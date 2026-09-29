@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { PrismaClient } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
+import { revalidateTag } from "next/cache";
 
 const prisma = new PrismaClient();
 
@@ -212,6 +213,13 @@ export const createCoupon = async (req: Request) => {
             data: couponData
         });
 
+        try {
+            revalidateTag("coupons", {});
+            revalidateTag("public-coupons", {});
+        } catch (e) {
+            console.error("Revalidate coupons tag error:", e);
+        }
+
         return newCoupon;
     } catch (error: any) {
         if (error.code === 'P2002') {
@@ -398,6 +406,13 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         data: updateData
     });
 
+    try {
+        revalidateTag("coupons", {});
+        revalidateTag("public-coupons", {});
+    } catch (e) {
+        console.error("Revalidate coupons tag error:", e);
+    }
+
     return updatedCoupon;
 };
 
@@ -439,6 +454,13 @@ export const deleteCoupon = async (couponId: string) => {
     await prisma.coupon.delete({
         where: { id: couponId }
     });
+
+    try {
+        revalidateTag("coupons", {});
+        revalidateTag("public-coupons", {});
+    } catch (e) {
+        console.error("Revalidate coupons tag error:", e);
+    }
 
     return null;
 };

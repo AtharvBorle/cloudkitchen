@@ -1288,24 +1288,22 @@ export const UserCart: React.FC<UserCartProps> = ({
             id: customizingItem.id,
             name: customizingItem.name,
             price: customizingItem.basePrice || customizingItem.price,
+            basePrice: customizingItem.basePrice || customizingItem.price,
             description: customizingItem.description,
             imageUrl: customizingItem.image,
             itemType: customizingItem.itemType,
-            addons: (customizingItem.addons || []).map((a, idx) => ({
-              id: a.id || `${idx + 1}`,
-              name: a.name,
-              price: a.price,
-            })),
+            addons: customizingItem.addons || [],
           }}
-          initialSelectedAddons={(customizingItem.selectedAddons || []).map((a, idx) => ({
-            id: a.id || `${idx + 1}`,
-            name: a.name,
-            price: a.price,
-          }))}
+          initialSelectedAddons={customizingItem.selectedAddons || []}
+          onConfirm={(selectedAddons) => {
+            updateItemAddons(customizingItem.id, selectedAddons);
+            setCustomizingItem(null);
+            showToast(`Updated add-ons for "${customizingItem.name}"`, "success");
+          }}
           onAddToCart={(selectedAddons) => {
             updateItemAddons(customizingItem.id, selectedAddons);
             setCustomizingItem(null);
-            showToast(`Updated add-ons for "${customizingItem.name}"`);
+            showToast(`Updated add-ons for "${customizingItem.name}"`, "success");
           }}
         />
       )}
