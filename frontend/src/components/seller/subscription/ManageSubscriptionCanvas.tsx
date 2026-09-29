@@ -29,6 +29,22 @@ import {
 } from "@/lib/meal-subscriptions";
 import { Trash2, Power, Eye, EyeOff } from "lucide-react";
 
+export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: string): string {
+  if (!rawAddress || rawAddress.trim() === "") {
+    return roomNo && roomNo !== "Delivery" ? roomNo : "Doorstep Delivery";
+  }
+  const trimmed = rawAddress.trim();
+  if (trimmed.includes("Lat:") || trimmed.includes("Lng:")) {
+    const cleaned = trimmed
+      .replace(/Current Location\s*\([^)]+\),?\s*/gi, "")
+      .replace(/\(Lat:[^)]+\),?\s*/gi, "")
+      .replace(/Lat:\s*[\d.]+,?\s*Lng:\s*[\d.]+,?\s*/gi, "")
+      .trim();
+    return cleaned || "Pune City, Maharashtra - 411038";
+  }
+  return trimmed;
+}
+
 export type PlanItem = MealSubscriptionPlan;
 export type RecentSubscriber = MealSubscriber;
 
@@ -999,7 +1015,7 @@ export default function ManageSubscriptionCanvas() {
                       {sub.customerName || sub.name || "Subscriber"}
                     </td>
                     <td style={{ padding: "14px 16px", color: "#475569" }}>
-                      {sub.deliveryAddress || (sub.roomNo && sub.roomNo !== "Delivery" ? sub.roomNo : "Doorstep Delivery")}
+                      {formatDeliveryAddressDisplay(sub.deliveryAddress, sub.roomNo)}
                     </td>
                     <td style={{ padding: "14px 16px", color: "#334155", fontWeight: 500 }}>
                       {sub.planName}

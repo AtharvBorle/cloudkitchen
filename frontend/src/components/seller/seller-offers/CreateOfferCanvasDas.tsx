@@ -35,18 +35,16 @@ export default function CreateOfferCanvasDas({
   const [submitting, setSubmitting] = useState(false);
 
   // Form State
-  const [couponCode, setCouponCode] = useState("SUMMER20");
-  const [internalDescription, setInternalDescription] = useState(
-    "Summer sale - 20% off orders above ₹500"
-  );
+  const [couponCode, setCouponCode] = useState("");
+  const [internalDescription, setInternalDescription] = useState("");
   const [discountType, setDiscountType] = useState<"PERCENTAGE" | "FLAT">("PERCENTAGE");
-  const [discountValue, setDiscountValue] = useState("20");
-  const [minOrderValue, setMinOrderValue] = useState("500");
+  const [discountValue, setDiscountValue] = useState("");
+  const [minOrderValue, setMinOrderValue] = useState("");
   const [maxDiscountCap, setMaxDiscountCap] = useState("");
 
   const [appliesTo, setAppliesTo] = useState<"ALL" | "CATEGORY" | "ITEMS">("ALL");
   const [customerEligibility, setCustomerEligibility] = useState<"ALL" | "NEW_ONLY">("ALL");
-  const [usageLimit, setUsageLimit] = useState("500");
+  const [usageLimit, setUsageLimit] = useState("");
 
   const [startDate, setStartDate] = useState("Today (Immediately)");
   const [noExpiry, setNoExpiry] = useState(true);
@@ -75,7 +73,8 @@ export default function CreateOfferCanvasDas({
         usageLimit: usageLimit ? Number(usageLimit) : null,
         perUserLimit: Number(perUserLimit) || 1,
         noExpiry: noExpiry,
-        status: isDraft ? "Pending" : "Active",
+        status: isDraft ? "Draft" : "Active",
+        isActive: !isDraft,
       };
 
       const res = await fetchApi("/api/seller/dashboard/offers", {
@@ -226,7 +225,7 @@ export default function CreateOfferCanvasDas({
                       onChange={(e) =>
                         setCouponCode(e.target.value.toUpperCase().replace(/\s+/g, ""))
                       }
-                      placeholder="SUMMER20"
+                      placeholder="e.g. SUMMER20"
                     />
                     <div className={styles.helpText}>
                       <Info size={12} color="#94A3B8" />
@@ -328,7 +327,7 @@ export default function CreateOfferCanvasDas({
                         className={styles.prefixInputField}
                         value={discountValue}
                         onChange={(e) => setDiscountValue(e.target.value)}
-                        placeholder="20"
+                        placeholder="e.g. 20"
                       />
                     </div>
                     <div className={styles.helpText}>
@@ -350,7 +349,7 @@ export default function CreateOfferCanvasDas({
                         className={styles.prefixInputField}
                         value={minOrderValue}
                         onChange={(e) => setMinOrderValue(e.target.value)}
-                        placeholder="500"
+                        placeholder="e.g. 500"
                       />
                     </div>
                     <div className={styles.helpText}>
@@ -368,7 +367,7 @@ export default function CreateOfferCanvasDas({
                         className={styles.prefixInputField}
                         value={maxDiscountCap}
                         onChange={(e) => setMaxDiscountCap(e.target.value)}
-                        placeholder="Optional"
+                        placeholder="Optional (e.g. 200)"
                       />
                     </div>
                     <div className={styles.helpText}>
@@ -547,7 +546,7 @@ export default function CreateOfferCanvasDas({
                       className={styles.inputField}
                       value={usageLimit}
                       onChange={(e) => setUsageLimit(e.target.value)}
-                      placeholder="500"
+                      placeholder="Optional (e.g. 500)"
                     />
                     <div className={styles.helpText}>
                       <span>Total redemptions allowed. Leave blank for unlimited.</span>

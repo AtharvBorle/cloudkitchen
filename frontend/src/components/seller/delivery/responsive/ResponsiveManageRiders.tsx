@@ -17,6 +17,8 @@ import {
   Phone,
   Mail,
   Key,
+  Eye,
+  EyeOff,
   User,
 } from "lucide-react";
 import styles from "./ResponsiveManageRiders.module.css";
@@ -66,6 +68,7 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
 
   // Edit Modal State
   const [editingRider, setEditingRider] = useState<ManagedRiderItem | null>(null);
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: "",
     phone: "",
@@ -166,6 +169,7 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
   const handleOpenEdit = (rider: ManagedRiderItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingRider(rider);
+    setShowEditPassword(false);
     setEditFormData({
       name: rider.name,
       phone: rider.phone,
@@ -654,6 +658,47 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
                       marginTop: "3px",
                     }}
                   />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>Change Password (optional)</label>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center", marginTop: "3px" }}>
+                    <Key size={14} color="#94A3B8" style={{ position: "absolute", left: "10px", pointerEvents: "none" }} />
+                    <input
+                      type={showEditPassword ? "text" : "password"}
+                      value={editFormData.password}
+                      onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                      placeholder="Leave empty to keep unchanged"
+                      style={{
+                        width: "100%",
+                        height: "36px",
+                        borderRadius: "8px",
+                        border: "1px solid #CBD5E1",
+                        padding: "0 34px 0 32px",
+                        fontSize: "13px",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPassword((prev) => !prev)}
+                      style={{
+                        position: "absolute",
+                        right: "10px",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        color: "#64748B",
+                      }}
+                      title={showEditPassword ? "Hide password" : "Show password"}
+                      aria-label={showEditPassword ? "Hide password" : "Show password"}
+                    >
+                      {showEditPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
 
                 <label style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>

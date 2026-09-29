@@ -140,6 +140,10 @@ function MySubscriptionContent() {
 
   // Address intelligence & selection states
   const [userSavedAddresses, setUserSavedAddresses] = useState<any[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
+  const [isChangingAddress, setIsChangingAddress] = useState<boolean>(false);
+  const [isEditingPhone, setIsEditingPhone] = useState<boolean>(false);
+  const [showManualAddressInput, setShowManualAddressInput] = useState<boolean>(false);
   const [showAddressSuggestions, setShowAddressSuggestions] = useState<boolean>(false);
   const [isDetectingGps, setIsDetectingGps] = useState<boolean>(false);
   const addressSuggestionsRef = useRef<HTMLDivElement>(null);
@@ -408,6 +412,9 @@ function MySubscriptionContent() {
     setContactPhoneInput((session.user as any)?.phone || "");
     setSubErrorMsg(null);
     setSubSuccessMsg(null);
+    setIsChangingAddress(false);
+    setIsEditingPhone(false);
+    setShowManualAddressInput(false);
     setShowAddressSuggestions(false);
 
     // Fetch user saved addresses
@@ -416,37 +423,25 @@ function MySubscriptionContent() {
       .then((data) => {
         if (data) {
           const list = data.data?.addresses || data.addresses || data.data || [];
-          if (Array.isArray(list)) {
-            // Deduplicate addresses so each type (e.g. Home, Work) is only displayed once
-            const uniqueAddresses: any[] = [];
-            const seenTypes = new Set<string>();
-            const seenKeys = new Set<string>();
+          if (Array.isArray(list) && list.length > 0) {
+            setUserSavedAddresses(list);
 
-            // Prioritize default address first, then newest
-            const sorted = [...list].sort((a, b) => {
-              if (a.isDefault && !b.isDefault) return -1;
-              if (!a.isDefault && b.isDefault) return 1;
-              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-            });
-
-            for (const addr of sorted) {
-              const type = (addr.type || "Home").trim().toLowerCase();
-              const key = `${(addr.houseNumber || "").trim().toLowerCase()}-${(addr.street || "").trim().toLowerCase()}-${(addr.pincode || "").toString().replace(/\D/g, "")}`;
-              if (!seenTypes.has(type) && !seenKeys.has(key)) {
-                seenTypes.add(type);
-                seenKeys.add(key);
-                uniqueAddresses.push(addr);
-              }
-            }
-
-            setUserSavedAddresses(uniqueAddresses);
-
-            // Pre-fill with correct saved home/default address if available
-            const defaultSaved = uniqueAddresses.find((a) => a.isDefault) || uniqueAddresses.find((a) => (a.type || "").toLowerCase() === "home") || uniqueAddresses[0];
+            // Pre-fill with default address or first saved address
+            const defaultSaved = list.find((a: any) => a.isDefault) || list.find((a: any) => (a.type || "").toLowerCase() === "home") || list[0];
             if (defaultSaved) {
-              const parts = [defaultSaved.houseNumber, defaultSaved.street, defaultSaved.landmark, defaultSaved.city || "Pune", defaultSaved.pincode].filter(Boolean);
+              setSelectedSavedAddressId(defaultSaved.id);
+              const parts = [
+                defaultSaved.houseNumber,
+                defaultSaved.street,
+                defaultSaved.landmark ? `Near ${defaultSaved.landmark}` : null,
+                defaultSaved.city || "Pune",
+                defaultSaved.pincode,
+              ].filter(Boolean);
               const line = parts.join(", ");
               setDeliveryAddressInput(line || defaultSaved.address || defaultSaved.label || initialAddr);
+              if (defaultSaved.recipientPhone && !(session.user as any)?.phone) {
+                setContactPhoneInput(defaultSaved.recipientPhone);
+              }
             }
           }
         }
@@ -454,7 +449,7 @@ function MySubscriptionContent() {
       .catch(() => {});
   };
 
-  // Handle GPS Location Detection
+  // Handle GPS Location Detection with Nominatim Reverse Geocoding
   const handleDetectGpsLocation = () => {
     if (!navigator.geolocation) {
       setSubErrorMsg("Geolocation is not supported by your browser.");
@@ -465,26 +460,59 @@ function MySubscriptionContent() {
     setSubErrorMsg(null);
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setIsDetectingGps(false);
-        const { latitude, longitude } = position.coords;
-        const formatted = `Current Location (Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}), Pune`;
-        setDeliveryAddressInput(formatted);
-        setShowAddressSuggestions(false);
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const road = addr.road || addr.street || addr.neighbourhood || addr.suburb || addr.residential || "";
+            const suburb = addr.suburb || addr.neighbourhood || addr.city_district || "";
+            const city = addr.city || addr.town || addr.municipality || "Pune";
+            const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6) || "411038";
+
+            const parts = [road, suburb && suburb !== road ? suburb : "", city, `Maharashtra - ${pincode}`].filter(Boolean);
+            const fullAddr = parts.join(", ") || data.display_name?.split(",").slice(0, 3).join(",") || "Kothrud, Pune - 411038";
+            setDeliveryAddressInput(fullAddr);
+            setSelectedSavedAddressId(null);
+            setIsChangingAddress(false);
+            setShowAddressSuggestions(false);
+          } else {
+            setDeliveryAddressInput(defaultAddress?.address || "Kothrud, Pune - 411038");
+            setIsChangingAddress(false);
+          }
+        } catch (e) {
+          setDeliveryAddressInput(defaultAddress?.address || "Kothrud, Pune - 411038");
+          setIsChangingAddress(false);
+        } finally {
+          setIsDetectingGps(false);
+        }
       },
       () => {
         setIsDetectingGps(false);
         const fallback = defaultAddress?.address || "Kothrud, Pune - 411038";
         setDeliveryAddressInput(fallback);
+        setIsChangingAddress(false);
       },
       { timeout: 8000, enableHighAccuracy: true }
     );
   };
 
   const handleSelectSavedAddress = (addr: any) => {
-    const parts = [addr.houseNumber, addr.street, addr.landmark, addr.city || "Pune", addr.pincode].filter(Boolean);
+    const parts = [
+      addr.houseNumber,
+      addr.street,
+      addr.landmark ? `Near ${addr.landmark}` : null,
+      addr.city || "Pune",
+      addr.pincode,
+    ].filter(Boolean);
     const line = parts.join(", ");
     setDeliveryAddressInput(line || addr.address || addr.label || "");
+    setSelectedSavedAddressId(addr.id);
+    setIsChangingAddress(false);
     if (addr.recipientPhone && !contactPhoneInput) {
       setContactPhoneInput(addr.recipientPhone);
     }
@@ -1340,107 +1368,219 @@ function MySubscriptionContent() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
                   <label className={styles.formLabel}>
                     <MapPin size={13} color="#FF5500" />
-                    <span>Delivery Address / Room Number *</span>
+                    <span>Delivery Address *</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleDetectGpsLocation}
-                    disabled={isDetectingGps}
-                    className={styles.gpsDetectBtn}
-                    title="Detect current location via GPS"
-                  >
-                    {isDetectingGps ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Navigation size={12} />
-                    )}
-                    <span>{isDetectingGps ? "Locating..." : "Use Current GPS"}</span>
-                  </button>
                 </div>
 
-                {/* Saved address quick chips */}
-                {userSavedAddresses.length > 0 && (
-                  <div className={styles.addressChipsContainer}>
-                    <span className={styles.chipLabel}>Saved:</span>
-                    {userSavedAddresses.slice(0, 3).map((addr) => (
-                      <button
-                        key={addr.id}
-                        type="button"
-                        className={styles.addressChip}
-                        onClick={() => handleSelectSavedAddress(addr)}
-                      >
-                        {addr.type?.toLowerCase() === "work" ? (
-                          <Briefcase size={12} />
-                        ) : (
-                          <Home size={12} />
+                {!isChangingAddress && deliveryAddressInput ? (
+                  /* Selected Address Display Card */
+                  <div className={styles.selectedAddressCard}>
+                    <div className={styles.addressCardHeader}>
+                      <div className={styles.addressCardType}>
+                        {(() => {
+                          const selected = userSavedAddresses.find((a) => a.id === selectedSavedAddressId);
+                          const type = (selected?.type || "Home").toLowerCase();
+                          return type === "work" ? <Briefcase size={14} color="#FF5500" /> : <Home size={14} color="#FF5500" />;
+                        })()}
+                        <span>
+                          {(() => {
+                            const selected = userSavedAddresses.find((a) => a.id === selectedSavedAddressId);
+                            return selected?.type || "Delivery Address";
+                          })()}
+                        </span>
+                        {userSavedAddresses.find((a) => a.id === selectedSavedAddressId)?.isDefault && (
+                          <span className={styles.defaultBadge}>Default</span>
                         )}
-                        <span>{addr.type || "Home"}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsChangingAddress(true)}
+                        className={styles.changeAddressBtn}
+                      >
+                        Change Address
                       </button>
-                    ))}
+                    </div>
+                    <div className={styles.addressCardDetails}>
+                      {deliveryAddressInput}
+                    </div>
+                  </div>
+                ) : (
+                  /* Address Picker / Selection Mode */
+                  <div className={styles.addressPickerContainer}>
+                    <div className={styles.addressPickerHeader}>
+                      <span className={styles.addressPickerTitle}>Choose Saved Delivery Address</span>
+                      {deliveryAddressInput && (
+                        <button
+                          type="button"
+                          onClick={() => setIsChangingAddress(false)}
+                          className={styles.addressPickerCloseBtn}
+                        >
+                          Keep Current
+                        </button>
+                      )}
+                    </div>
+
+                    {userSavedAddresses.length > 0 && (
+                      <div className={styles.savedAddressesList}>
+                        {userSavedAddresses.map((addr) => {
+                          const isSelected = selectedSavedAddressId === addr.id;
+                          return (
+                            <button
+                              key={addr.id}
+                              type="button"
+                              className={`${styles.savedAddressItem} ${isSelected ? styles.savedAddressItemSelected : ""}`}
+                              onClick={() => handleSelectSavedAddress(addr)}
+                            >
+                              <div className={styles.savedAddressRadio}>
+                                {isSelected ? (
+                                  <CheckCircle2 size={16} color="#FF5500" />
+                                ) : (
+                                  <div style={{ width: 14, height: 14, borderRadius: "50%", border: "1.5px solid #CBD5E1" }} />
+                                )}
+                              </div>
+                              <div className={styles.savedAddressInfo}>
+                                <div className={styles.savedAddressTypeRow}>
+                                  {addr.type?.toLowerCase() === "work" ? <Briefcase size={12} /> : <Home size={12} />}
+                                  <span>{addr.type || "Home"}</span>
+                                  {addr.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                                </div>
+                                <div className={styles.savedAddressLines}>
+                                  <div style={{ fontWeight: 600, color: "#1E293B" }}>
+                                    {addr.houseNumber ? `${addr.houseNumber}, ` : ""}{addr.street}
+                                  </div>
+                                  <div>
+                                    {addr.landmark ? `Landmark: ${addr.landmark}, ` : ""}{addr.city || "Pune"} - {addr.pincode}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Picker Action Buttons */}
+                    <div className={styles.addressPickerActions}>
+                      <button
+                        type="button"
+                        onClick={handleDetectGpsLocation}
+                        disabled={isDetectingGps}
+                        className={styles.gpsDetectBtn}
+                        title="Detect current location via GPS"
+                      >
+                        {isDetectingGps ? <Loader2 size={12} className="animate-spin" /> : <Navigation size={12} />}
+                        <span>{isDetectingGps ? "Detecting GPS..." : "Use Current GPS"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowManualAddressInput((prev) => !prev)}
+                        className={styles.customAddrBtn}
+                      >
+                        {showManualAddressInput ? "Hide Custom Input" : "Type Custom Address"}
+                      </button>
+                    </div>
+
+                    {/* Manual Input / Suggestions */}
+                    {(showManualAddressInput || userSavedAddresses.length === 0) && (
+                      <div style={{ position: "relative", marginTop: "4px" }}>
+                        <input
+                          type="text"
+                          maxLength={120}
+                          placeholder="Type flat/room number, building, street (max 120 chars)..."
+                          value={deliveryAddressInput}
+                          onChange={(e) => {
+                            setDeliveryAddressInput(e.target.value.slice(0, 120));
+                            setSelectedSavedAddressId(null);
+                            setShowAddressSuggestions(true);
+                          }}
+                          onFocus={() => setShowAddressSuggestions(true)}
+                          className={styles.formInput}
+                          style={{ width: "100%", boxSizing: "border-box" }}
+                        />
+                        <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }}>
+                          <MapPin size={16} />
+                        </div>
+
+                        {showAddressSuggestions && filteredLocalities.length > 0 && (
+                          <div className={styles.suggestionsDropdown}>
+                            <div className={styles.suggestionsHeader}>
+                              <Search size={12} />
+                              <span>Suggested Localities in Pune</span>
+                            </div>
+                            <div className={styles.suggestionsList}>
+                              {filteredLocalities.slice(0, 6).map((loc, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  className={styles.suggestionItem}
+                                  onClick={() => handleSelectLocality(loc)}
+                                >
+                                  <MapPin size={14} className={styles.suggestionPin} />
+                                  <div className={styles.suggestionText}>
+                                    <span className={styles.suggestionName}>{loc.name}</span>
+                                    <span className={styles.suggestionPinCode}>PIN: {loc.pincode}</span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
-
-                <div style={{ position: "relative" }}>
-                  <input
-                    type="text"
-                    maxLength={120}
-                    placeholder="Type street, room number, or select area suggestion below (max 120 chars)..."
-                    value={deliveryAddressInput}
-                    onChange={(e) => {
-                      setDeliveryAddressInput(e.target.value.slice(0, 120));
-                      setShowAddressSuggestions(true);
-                    }}
-                    onFocus={() => setShowAddressSuggestions(true)}
-                    className={styles.formInput}
-                  />
-                  <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }}>
-                    <MapPin size={16} />
-                  </div>
-
-                  {/* Suggestions dropdown */}
-                  {showAddressSuggestions && filteredLocalities.length > 0 && (
-                    <div className={styles.suggestionsDropdown}>
-                      <div className={styles.suggestionsHeader}>
-                        <Search size={12} />
-                        <span>Suggested Delivery Hubs &amp; Localities in Pune</span>
-                      </div>
-                      <div className={styles.suggestionsList}>
-                        {filteredLocalities.slice(0, 6).map((loc, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            className={styles.suggestionItem}
-                            onClick={() => handleSelectLocality(loc)}
-                          >
-                            <MapPin size={14} className={styles.suggestionPin} />
-                            <div className={styles.suggestionText}>
-                              <span className={styles.suggestionName}>{loc.name}</span>
-                              <span className={styles.suggestionPinCode}>PIN: {loc.pincode}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* Contact Phone */}
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>
                   <Phone size={13} color="#FF5500" />
-                  <span>Contact Phone Number (10 digits)</span>
+                  <span>Contact Phone Number</span>
                 </label>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]{10}"
-                  maxLength={10}
-                  placeholder="e.g. 9876543210"
-                  value={contactPhoneInput}
-                  onChange={(e) => setContactPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  className={styles.formInput}
-                />
+
+                {!isEditingPhone && contactPhoneInput ? (
+                  <div className={styles.phoneCard}>
+                    <div className={styles.phoneCardLeft}>
+                      <div className={styles.phoneCardIcon}>
+                        <Phone size={14} />
+                      </div>
+                      <div>
+                        <div className={styles.phoneCardNumber}>+91 {contactPhoneInput}</div>
+                        <div className={styles.phoneCardLabel}>Account Registered Phone (Used for delivery &amp; OTP)</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPhone(true)}
+                      className={styles.editPhoneBtn}
+                    >
+                      Edit Number
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.phoneEditRow}>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      maxLength={10}
+                      placeholder="e.g. 9876543210"
+                      value={contactPhoneInput}
+                      onChange={(e) => setContactPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      className={styles.formInput}
+                      style={{ flex: 1 }}
+                    />
+                    {contactPhoneInput.length === 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPhone(false)}
+                        className={styles.phoneDoneBtn}
+                      >
+                        Done
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Start Date Preference */}
