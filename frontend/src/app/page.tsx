@@ -152,6 +152,35 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
+    // 6. Price Tier Filter
+    if (activeFilters.priceTier && activeFilters.priceTier !== "all") {
+      const tier = activeFilters.priceTier;
+      list = list.filter((k) => {
+        const kId = (k.id || "").toLowerCase().trim();
+        const kTracking = (k.trackingId || "").toLowerCase().trim();
+        const kName = (k.name || "").toLowerCase().trim();
+
+        const dishes = sourceFoodItems.filter((f) => {
+          const fSellerId = (f.sellerId || "").toLowerCase().trim();
+          const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+          const fSellerName = (f.sellerName || "").toLowerCase().trim();
+          return (
+            (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+            (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+            (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+          );
+        });
+
+        const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
+        if (prices.length === 0) return true;
+
+        if (tier === "under-150") return prices.some((p) => p <= 150);
+        if (tier === "150-300") return prices.some((p) => p >= 150 && p <= 300);
+        if (tier === "300-plus") return prices.some((p) => p >= 300);
+        return true;
+      });
+    }
+
     return list.map((k) => ({
       id: k.id,
       name: k.name,

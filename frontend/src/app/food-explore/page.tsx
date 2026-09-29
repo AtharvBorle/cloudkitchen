@@ -236,6 +236,33 @@ function FoodExploreContent() {
       list = list.filter((k) => k.isOnline !== false);
     }
 
+    if (selectedPrice && selectedPrice !== "all") {
+      list = list.filter((k) => {
+        const kId = (k.id || "").toLowerCase().trim();
+        const kTracking = (k.trackingId || "").toLowerCase().trim();
+        const kName = (k.name || "").toLowerCase().trim();
+
+        const dishes = sourceFoodItems.filter((f) => {
+          const fSellerId = (f.sellerId || "").toLowerCase().trim();
+          const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+          const fSellerName = (f.sellerName || "").toLowerCase().trim();
+          return (
+            (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+            (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+            (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+          );
+        });
+
+        const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
+        if (prices.length === 0) return true;
+
+        if (selectedPrice === "under-150") return prices.some((p) => p <= 150);
+        if (selectedPrice === "150-300") return prices.some((p) => p >= 150 && p <= 300);
+        if (selectedPrice === "300-plus") return prices.some((p) => p >= 300);
+        return true;
+      });
+    }
+
     if (sortBy === "rating") {
       list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else if (sortBy === "fastest") {
@@ -252,6 +279,7 @@ function FoodExploreContent() {
     selectedCategory,
     selectedDiet,
     selectedCuisines,
+    selectedPrice,
     openOnly,
     sortBy,
   ]);

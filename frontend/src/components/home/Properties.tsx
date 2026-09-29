@@ -78,28 +78,62 @@ function kitchenMatchesCuisine(
   });
 }
 
-function getKitchenPrice(kitchen: PlaceCardData, foodItems: Array<any> = []): number {
-  if (kitchen.price && kitchen.price > 0) return kitchen.price;
-  const dishes = foodItems.filter((f) => {
-    const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
-    const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
-    const matchKitchenId = kitchen.kitchenId && (
-      (f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.kitchenId).toLowerCase()) ||
-      (f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.kitchenId).toLowerCase())
+function getKitchenDishes(kitchen: PlaceCardData, foodItems: Array<any> = []): Array<any> {
+  const kId = (kitchen.id || "").toLowerCase().trim();
+  const kTracking = (kitchen.trackingId || "").toLowerCase().trim();
+  const kKitchenId = (kitchen.kitchenId || "").toLowerCase().trim();
+  const kName = (kitchen.name || "").toLowerCase().trim();
+
+  return foodItems.filter((f) => {
+    const fSellerId = (f.sellerId || "").toLowerCase().trim();
+    const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+    const fSellerName = (f.sellerName || "").toLowerCase().trim();
+
+    const matchId = kId && fSellerId && (fSellerId === kId || fTracking === kId);
+    const matchTracking = kTracking && (fTracking === kTracking || fSellerId === kTracking);
+    const matchKitchenId = kKitchenId && (fSellerId === kKitchenId || fTracking === kKitchenId);
+    const matchName = kName && fSellerName && (
+      kName === fSellerName ||
+      kName.includes(fSellerName) ||
+      fSellerName.includes(kName)
     );
-    const matchCrossId =
-      (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
-      (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
-    const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
-    return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
+
+    return matchId || matchTracking || matchKitchenId || matchName;
   });
-  if (dishes.length > 0) {
-    const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
-    if (prices.length > 0) {
-      return Math.min(...prices);
+}
+
+function isKitchenMatchingPrice(
+  kitchen: PlaceCardData,
+  pricePreset: string,
+  maxPrice: number,
+  foodItems: Array<any> = []
+): boolean {
+  if (pricePreset === "all" && maxPrice >= 1000) {
+    return true;
+  }
+
+  const dishes = getKitchenDishes(kitchen, foodItems);
+  const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
+
+  if (prices.length === 0) {
+    if (kitchen.price && kitchen.price > 0) {
+      prices.push(kitchen.price);
+    } else {
+      prices.push(100);
     }
   }
-  return 199;
+
+  if (pricePreset === "under-150") {
+    return prices.some((p) => p <= 150);
+  } else if (pricePreset === "150-400") {
+    return prices.some((p) => p >= 150 && p <= 400);
+  } else if (pricePreset === "400-plus") {
+    return prices.some((p) => p >= 400);
+  } else if (maxPrice < 1000) {
+    return prices.some((p) => p <= maxPrice);
+  }
+
+  return true;
 }
 
 const DIETARY = [
@@ -184,19 +218,10 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
       );
     }
 
-    // Filter by price range (0 to 1000+)
-    if (activePricePreset === "under-150") {
-      list = list.filter((p) => getKitchenPrice(p, foodItems) <= 150);
-    } else if (activePricePreset === "150-400") {
-      list = list.filter((p) => {
-        const pr = getKitchenPrice(p, foodItems);
-        return pr >= 150 && pr <= 400;
-      });
-    } else if (activePricePreset === "400-plus") {
-      list = list.filter((p) => getKitchenPrice(p, foodItems) >= 400);
-    } else if (maxPrice < 1000) {
-      list = list.filter((p) => getKitchenPrice(p, foodItems) <= maxPrice);
-    }
+    // Filter by price range (0 to 1000+ and presets)
+    list = list.filter((p) =>
+      isKitchenMatchingPrice(p, activePricePreset, maxPrice, foodItems)
+    );
 
     return list;
   }, [basePlaces, selectedCuisines, selectedDietary, maxPrice, activePricePreset, foodItems]);
