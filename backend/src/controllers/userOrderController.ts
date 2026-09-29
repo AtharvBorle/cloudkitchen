@@ -515,8 +515,8 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         });
         if (!existingRefund) {
             let baseReason = isAdmin 
-                ? "Order cancelled by Admin/Superadmin prior to preparation." 
-                : "Order cancelled by customer prior to preparation.";
+                ? `Order #${id} was cancelled by Admin/Superadmin prior to preparation. Auto-submitted for refund processing.` 
+                : `Order #${id} was cancelled by customer prior to preparation. Auto-submitted for refund processing.`;
             if (ticketId) {
                 baseReason = `[Ticket Ref: #${ticketId}] ${baseReason}`;
             }
@@ -632,6 +632,12 @@ export const getOrderDetails = async (id: string) => {
                     phone: true,
                     vehicleType: true,
                     vehicleNumber: true
+                }
+            },
+            refund: true,
+            review: {
+                include: {
+                    itemRatings: true
                 }
             }
         }
