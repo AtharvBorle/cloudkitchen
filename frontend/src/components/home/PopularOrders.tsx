@@ -179,9 +179,8 @@ export default function PopularOrders({
         >
           {displayOffers.map((offer) => {
             const isSellerClosed = offer.sellerIsOnline === false;
-            const isOutOfStock = (offer as any).stockQuantity === 0 || (offer as any).maxStock === 0;
-            const isItemUnavailable = offer.isAvailable === false || isOutOfStock;
-            const isClosed = isSellerClosed || isItemUnavailable;
+            const isOutOfStock = (offer as any).stockQuantity === 0 || (offer as any).maxStock === 0 || offer.isAvailable === false;
+            const isClosed = isSellerClosed || isOutOfStock;
             const rawStock = (offer as any).maxStock !== undefined ? (offer as any).maxStock : (offer as any).stockQuantity;
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const currentInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
@@ -301,7 +300,7 @@ export default function PopularOrders({
                         border: "1px solid rgba(255,255,255,0.25)",
                       }}
                     >
-                      {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
+                      {isSellerClosed ? "Closed" : "Out of Stock"}
                     </span>
                   </div>
                 )}
@@ -361,7 +360,7 @@ export default function PopularOrders({
                     cursor: "not-allowed",
                   }}
                 >
-                  {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
+                  {isSellerClosed ? "Closed" : "Out of Stock"}
                 </span>
               ) : isMaxStockInCart ? (
                 <span

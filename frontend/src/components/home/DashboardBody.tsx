@@ -158,9 +158,8 @@ export default function DashboardBody({
         >
           {displayItems.slice(0, 6).map((item) => {
             const isSellerClosed = item.sellerIsOnline === false;
-            const isOutOfStock = item.stockQuantity === 0 || item.maxStock === 0;
-            const isItemUnavailable = item.isAvailable === false || isOutOfStock;
-            const isClosed = isSellerClosed || isItemUnavailable;
+            const isOutOfStock = item.stockQuantity === 0 || item.maxStock === 0 || item.isAvailable === false;
+            const isClosed = isSellerClosed || isOutOfStock;
             const currentInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
             const isMaxStockInCart = !isClosed && item.stockQuantity !== undefined && item.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= item.stockQuantity : false);
 
@@ -327,7 +326,7 @@ export default function DashboardBody({
                     flexShrink: 0,
                   }}
                 >
-                  {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
+                  {isSellerClosed ? "Closed" : "Out of Stock"}
                 </span>
               ) : isMaxStockInCart ? (
                 <span

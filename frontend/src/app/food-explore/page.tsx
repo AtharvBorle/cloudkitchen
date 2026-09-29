@@ -1073,9 +1073,8 @@ function FoodExploreContent() {
               >
                 {filteredFoodItems.map((dish) => {
                   const isSellerClosed = dish.sellerIsOnline === false;
-                  const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0;
-                  const isItemUnavailable = dish.isAvailable === false || isOutOfStock;
-                  const isClosed = isSellerClosed || isItemUnavailable;
+                  const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0 || dish.isAvailable === false;
+                  const isClosed = isSellerClosed || isOutOfStock;
                   const isAdded = addedIds[dish.id];
                   const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
                   const isMaxStockInCart = !isClosed && dish.stockQuantity !== undefined && dish.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= dish.stockQuantity : false);
@@ -1193,7 +1192,7 @@ function FoodExploreContent() {
                                 border: "1px solid rgba(255,255,255,0.25)",
                               }}
                             >
-                              {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
+                              {isSellerClosed ? "Closed" : "Out of Stock"}
                             </span>
                           </div>
                         )}
@@ -1313,7 +1312,7 @@ function FoodExploreContent() {
                                 cursor: "not-allowed",
                               }}
                             >
-                              {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
+                              {isSellerClosed ? "Closed" : "Out of Stock"}
                             </span>
                           ) : isMaxStockInCart ? (
                             <span
