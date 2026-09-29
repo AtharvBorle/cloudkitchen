@@ -22,6 +22,8 @@ export interface TopRatedItem {
   sellerName?: string;
   sellerIsOnline?: boolean;
   isAvailable?: boolean;
+  stockQuantity?: number;
+  maxStock?: number;
 }
 
 interface DashboardBodyProps {
@@ -35,7 +37,7 @@ export default function DashboardBody({
   seeAllLink = "/food-explore?sort=rating",
   items,
 }: DashboardBodyProps) {
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   const [addedId, setAddedId] = useState<string | null>(null);
 
   if (!items || items.length === 0) {
@@ -43,7 +45,24 @@ export default function DashboardBody({
   }
 
   const handleOrder = (item: TopRatedItem) => {
-    if (item.sellerIsOnline === false || item.isAvailable === false) return;
+    if (item.sellerIsOnline === false || item.isAvailable === false) {
+      alert("This item is currently unavailable.");
+      return;
+    }
+
+    const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
+    if (stockLimit === 0) {
+      alert(`Sorry, "${item.name}" is currently out of stock.`);
+      return;
+    }
+
+    const currentInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
+    if (currentInCart && stockLimit !== -1 && currentInCart.quantity >= stockLimit) {
+      alert(`Cannot add more. Only ${stockLimit} item(s) available in stock for "${item.name}".`);
+      return;
+    }
 
     addToCart({
       id: item.id,
@@ -55,7 +74,9 @@ export default function DashboardBody({
       sellerName: item.sellerName || "Verified Cloud Kitchen",
       image: item.imageUrl,
       imageUrl: item.imageUrl,
-      stockQuantity: -1,
+      stockQuantity: stockLimit,
+      maxStock: stockLimit,
+      itemType: item.itemType,
     });
     setAddedId(item.id);
     setTimeout(() => setAddedId(null), 1800);
@@ -137,8 +158,11 @@ export default function DashboardBody({
         >
           {displayItems.slice(0, 6).map((item) => {
             const isSellerClosed = item.sellerIsOnline === false;
-            const isItemUnavailable = item.isAvailable === false;
+            const isOutOfStock = item.stockQuantity === 0 || item.maxStock === 0;
+            const isItemUnavailable = item.isAvailable === false || isOutOfStock;
             const isClosed = isSellerClosed || isItemUnavailable;
+            const currentInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
+            const isMaxStockInCart = !isClosed && item.stockQuantity !== undefined && item.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= item.stockQuantity : false);
 
             return (
             <div
@@ -150,12 +174,12 @@ export default function DashboardBody({
                 backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                 borderRadius: "16px",
                 padding: "12px 16px",
-                border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                border: isClosed ? "1.5px solid #E2E8F0" : "1px solid #F1F5F9",
+                boxShadow: isClosed ? "0 2px 6px rgba(0, 0, 0, 0.02)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                 boxSizing: "border-box",
                 transition: "all 0.2s ease",
                 gap: "12px",
-                opacity: isClosed ? 0.85 : 1,
+                opacity: isClosed ? 0.75 : 1,
               }}
               className="top-rated-card"
             >
@@ -189,7 +213,7 @@ export default function DashboardBody({
                       width: "100%",
                       height: "100%",
                       objectFit: "cover",
-                      filter: isClosed ? "grayscale(100%)" : "none",
+                      filter: isClosed ? "grayscale(80%)" : "none",
                     }}
                   />
                 </div>
@@ -269,6 +293,21 @@ export default function DashboardBody({
                   >
                     {item.category} • ₹{item.price} {item.distanceText ? `• 📍 ${item.distanceText}` : ""} • {item.time}
                   </span>
+
+                  {/* Stock Notice */}
+                  {isOutOfStock ? (
+                    <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: "700" }}>
+                      Out of stock
+                    </span>
+                  ) : isMaxStockInCart ? (
+                    <span style={{ fontSize: "0.74rem", color: "#D97706", fontWeight: "700" }}>
+                      Max in cart ({item.stockQuantity})
+                    </span>
+                  ) : item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
+                    <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
+                      Only {item.stockQuantity} left
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -288,7 +327,23 @@ export default function DashboardBody({
                     flexShrink: 0,
                   }}
                 >
-                  {isSellerClosed ? "Closed" : "Unavailable"}
+                  {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
+                </span>
+              ) : isMaxStockInCart ? (
+                <span
+                  style={{
+                    backgroundColor: "#FFFBEB",
+                    color: "#D97706",
+                    fontSize: "0.78rem",
+                    fontWeight: "700",
+                    padding: "6px 12px",
+                    borderRadius: "9999px",
+                    border: "1px solid #FDE68A",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  Max In Cart
                 </span>
               ) : (
                 <button

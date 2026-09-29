@@ -46,7 +46,7 @@ function FoodExploreContent() {
   const sortParam = searchParams.get("sort") || "popular";
 
   const { defaultAddress, openLocationModal } = useLocation();
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   const homeData = useHomeData();
 
   // Local Filter States
@@ -358,7 +358,24 @@ function FoodExploreContent() {
   };
 
   const handleAddToCart = (dish: DynamicFoodItem) => {
-    if (dish.sellerIsOnline === false || dish.isAvailable === false) return;
+    if (dish.sellerIsOnline === false || dish.isAvailable === false) {
+      alert("This item is currently unavailable.");
+      return;
+    }
+
+    const rawStock = dish.maxStock !== undefined ? dish.maxStock : dish.stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
+    if (stockLimit === 0) {
+      alert(`Sorry, "${dish.name}" is currently out of stock.`);
+      return;
+    }
+
+    const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+    if (currentInCart && stockLimit !== -1 && currentInCart.quantity >= stockLimit) {
+      alert(`Cannot add more. Only ${stockLimit} item(s) available in stock for "${dish.name}".`);
+      return;
+    }
 
     addToCart({
       id: dish.id,
@@ -370,7 +387,9 @@ function FoodExploreContent() {
       sellerName: dish.sellerName || "Verified Cloud Kitchen",
       image: dish.imageUrl || "/images/places/place-biryani.png",
       imageUrl: dish.imageUrl || "/images/places/place-biryani.png",
-      stockQuantity: -1,
+      stockQuantity: stockLimit,
+      maxStock: stockLimit,
+      itemType: dish.itemType,
     });
 
     setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
@@ -1054,9 +1073,12 @@ function FoodExploreContent() {
               >
                 {filteredFoodItems.map((dish) => {
                   const isSellerClosed = dish.sellerIsOnline === false;
-                  const isItemUnavailable = dish.isAvailable === false;
+                  const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0;
+                  const isItemUnavailable = dish.isAvailable === false || isOutOfStock;
                   const isClosed = isSellerClosed || isItemUnavailable;
                   const isAdded = addedIds[dish.id];
+                  const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+                  const isMaxStockInCart = !isClosed && dish.stockQuantity !== undefined && dish.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= dish.stockQuantity : false);
 
                   // Check if dish has an applicable coupon
                   const matchedCoupon = homeData.coupons.find(
@@ -1070,12 +1092,12 @@ function FoodExploreContent() {
                         backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                         borderRadius: "20px",
                         overflow: "hidden",
-                        border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
-                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
+                        border: isClosed ? "1.5px solid #E2E8F0" : "1px solid #F1F5F9",
+                        boxShadow: isClosed ? "0 2px 8px rgba(0, 0, 0, 0.02)" : "0 4px 16px rgba(0, 0, 0, 0.04)",
                         display: "flex",
                         flexDirection: "column",
                         transition: "all 0.25s ease",
-                        opacity: isClosed ? 0.85 : 1,
+                        opacity: isClosed ? 0.75 : 1,
                       }}
                       className="food-explore-card"
                     >
@@ -1135,13 +1157,13 @@ function FoodExploreContent() {
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
-                            filter: isClosed ? "grayscale(100%)" : "none",
+                            filter: isClosed ? "grayscale(80%)" : "none",
                             transition: "transform 0.3s ease",
                           }}
                           className="food-card-img"
                         />
 
-                        {/* Closed Overlay */}
+                        {/* Out of Stock / Closed Cross Band Overlay */}
                         {isClosed && (
                           <div
                             style={{
@@ -1150,7 +1172,7 @@ function FoodExploreContent() {
                               left: 0,
                               right: 0,
                               bottom: 0,
-                              backgroundColor: "rgba(15, 23, 42, 0.4)",
+                              backgroundColor: "rgba(15, 23, 42, 0.45)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -1159,17 +1181,19 @@ function FoodExploreContent() {
                           >
                             <span
                               style={{
-                                backgroundColor: "#0F172A",
+                                backgroundColor: isOutOfStock ? "#DC2626" : "#0F172A",
                                 color: "#FFFFFF",
-                                fontSize: "10px",
+                                fontSize: "11px",
                                 fontWeight: "800",
-                                letterSpacing: "0.6px",
-                                padding: "4px 10px",
-                                borderRadius: "10px",
+                                letterSpacing: "0.8px",
+                                padding: "5px 12px",
+                                borderRadius: "12px",
                                 textTransform: "uppercase",
+                                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                                border: "1px solid rgba(255,255,255,0.25)",
                               }}
                             >
-                              {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
+                              {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
                             </span>
                           </div>
                         )}
@@ -1236,6 +1260,21 @@ function FoodExploreContent() {
                           </Link>
                         </div>
 
+                        {/* Stock Quantity / Status Text */}
+                        {isOutOfStock ? (
+                          <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: "700" }}>
+                            Out of stock
+                          </div>
+                        ) : isMaxStockInCart ? (
+                          <div style={{ fontSize: "0.76rem", color: "#D97706", fontWeight: "700" }}>
+                            Max in cart ({dish.stockQuantity})
+                          </div>
+                        ) : dish.stockQuantity !== undefined && dish.stockQuantity > 0 && dish.stockQuantity <= 5 ? (
+                          <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
+                            Only {dish.stockQuantity} left in stock
+                          </div>
+                        ) : null}
+
                         {/* Distance Badge */}
                         {dish.distanceText && (
                           <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", color: "#FF6B00", fontWeight: "700" }}>
@@ -1274,7 +1313,21 @@ function FoodExploreContent() {
                                 cursor: "not-allowed",
                               }}
                             >
-                              {isSellerClosed ? "Closed" : "Unavailable"}
+                              {isOutOfStock ? "Out of Stock" : isSellerClosed ? "Closed" : "Unavailable"}
+                            </span>
+                          ) : isMaxStockInCart ? (
+                            <span
+                              style={{
+                                backgroundColor: "#FFFBEB",
+                                color: "#D97706",
+                                fontSize: "0.8rem",
+                                fontWeight: "700",
+                                padding: "6px 12px",
+                                borderRadius: "10px",
+                                border: "1px solid #FDE68A",
+                              }}
+                            >
+                              Max In Cart
                             </span>
                           ) : (
                             <button

@@ -40,6 +40,8 @@ export interface DynamicFoodItem {
   distanceKm?: number;
   distanceText?: string;
   categoryName?: string;
+  stockQuantity?: number;
+  maxStock?: number;
   rating?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
@@ -284,6 +286,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             const resolvedLat = item.sellerLatitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = item.sellerLongitude ?? defaultCoords?.lng ?? null;
 
+            const rawStock = item.stockQuantity !== undefined && item.stockQuantity !== null
+              ? Number(item.stockQuantity)
+              : (item.maxStock !== undefined && item.maxStock !== null ? Number(item.maxStock) : -1);
+
             const foodItem: DynamicFoodItem = {
               id: item.id,
               name: item.name,
@@ -291,7 +297,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               price: item.price || 0,
               imageUrl: item.imageUrl || null,
               itemType: item.itemType || 'VEG',
-              isAvailable: item.isAvailable !== false,
+              isAvailable: item.isAvailable !== false && rawStock !== 0,
+              stockQuantity: rawStock,
+              maxStock: rawStock,
               sellerId: item.sellerId,
               sellerName: item.sellerName || 'Cloud Kitchen',
               sellerCity: item.sellerCity,

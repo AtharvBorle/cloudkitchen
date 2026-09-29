@@ -204,21 +204,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
 
+            // Out-of-stock validation
+            if (stockLimit === 0) {
+                alert(`Sorry, "${item.name}" is currently out of stock.`);
+                return prev;
+            }
+
             if (existing) {
                 const addQty = item.quantity !== undefined ? item.quantity : 1;
                 const newQty = existing.quantity + addQty;
 
-                if (stockLimit !== -1 && newQty > stockLimit) {
-                    alert(`Cannot add more. Only ${stockLimit} items available in stock for ${item.name}.`);
-                    return prev.map(i => i.id === item.id ? {
-                        ...i,
-                        ...normalizedItem,
-                        quantity: Math.min(stockLimit, Math.max(existing.quantity, 1)),
-                        maxStock: stockLimit,
-                        stockQuantity: stockLimit,
-                        image: itemImage,
-                        imageUrl: itemImage,
-                    } : i);
+                if (stockLimit !== -1 && (newQty > stockLimit || existing.quantity >= stockLimit)) {
+                    alert(`Cannot add more. Only ${stockLimit} item(s) available in stock for "${item.name}".`);
+                    return prev;
                 }
 
                 return prev.map(i => i.id === item.id ? {
@@ -234,15 +232,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             const initialQty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
             if (stockLimit !== -1 && initialQty > stockLimit) {
-                alert(`Cannot add more. Only ${stockLimit} items available in stock for ${item.name}.`);
-                return [...prev, {
-                    ...normalizedItem,
-                    quantity: Math.max(1, stockLimit),
-                    maxStock: stockLimit,
-                    stockQuantity: stockLimit,
-                    image: itemImage,
-                    imageUrl: itemImage,
-                }];
+                alert(`Cannot add ${initialQty}. Only ${stockLimit} item(s) available in stock for "${item.name}".`);
+                return prev;
             }
 
             return [...prev, {
