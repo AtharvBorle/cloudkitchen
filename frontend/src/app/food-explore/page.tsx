@@ -254,7 +254,7 @@ function FoodExploreContent() {
         });
 
         const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
-        if (prices.length === 0) return true;
+        if (prices.length === 0) return false;
 
         if (selectedPrice === "under-150") return prices.some((p) => p <= 150);
         if (selectedPrice === "150-300") return prices.some((p) => p >= 150 && p <= 300);

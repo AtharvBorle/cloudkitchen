@@ -119,7 +119,7 @@ function isKitchenMatchingPrice(
     if (kitchen.price && kitchen.price > 0) {
       prices.push(kitchen.price);
     } else {
-      prices.push(100);
+      return false;
     }
   }
 

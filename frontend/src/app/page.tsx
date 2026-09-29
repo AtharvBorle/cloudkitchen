@@ -172,7 +172,7 @@ export default function Home() {
         });
 
         const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
-        if (prices.length === 0) return true;
+        if (prices.length === 0) return false;
 
         if (tier === "under-150") return prices.some((p) => p <= 150);
         if (tier === "150-300") return prices.some((p) => p >= 150 && p <= 300);
