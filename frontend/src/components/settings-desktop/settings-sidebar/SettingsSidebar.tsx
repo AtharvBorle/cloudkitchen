@@ -142,8 +142,8 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             <h3 className={styles.userName} title={session?.user?.name || "Guest User"}>
               {session?.user?.name || (session ? "User" : "Guest User")}
             </h3>
-            <p className={styles.userPhone} title={session?.user?.email || "Sign in to manage account"}>
-              {session?.user?.email || (session ? "" : "Sign in to manage account")}
+            <p className={styles.userPhone} title={session?.user?.email || (session ? "" : "Sign in to manage account")}>
+              {session?.user?.email || (session ? (session.user as any)?.phone || "" : "Sign in to manage account")}
             </p>
           </div>
         </div>

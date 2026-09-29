@@ -207,9 +207,16 @@ export const registerUser = async (req: Request) => {
 
     console.log("Registering user:", { finalName, finalEmail, finalRole });
 
-    if (!finalName || !finalEmail || !finalPassword || !finalRole) {
+    // Clean email if provided
+    finalEmail = finalEmail && typeof finalEmail === "string" && finalEmail.trim() !== "" ? finalEmail.trim() : null;
+
+    if (!finalName || !finalPassword || !finalRole) {
         console.error("Missing required fields for registration");
-        throw new ApiError("Missing required fields: Name, email and password are required", 400);
+        throw new ApiError("Missing required fields: Name and password are required", 400);
+    }
+
+    if (finalRole !== "USER" && !finalEmail) {
+        throw new ApiError("Email is required for business and seller registrations.", 400);
     }
 
     if (typeof finalPassword !== "string" || finalPassword.length < 6) {
@@ -224,13 +231,27 @@ export const registerUser = async (req: Request) => {
             throw new ApiError("Please provide a valid 10-digit phone number", 400);
         }
         finalPhone = phoneDigits;
+    } else if (finalRole === "USER") {
+        throw new ApiError("Please provide a valid 10-digit mobile number", 400);
     }
 
-    const emailCheck = validateEmail(finalEmail);
-    if (!emailCheck.isValid) {
-        throw new ApiError(emailCheck.error || "Please enter a valid email address.", 400);
+    if (finalEmail) {
+        const emailCheck = validateEmail(finalEmail);
+        if (!emailCheck.isValid) {
+            throw new ApiError(emailCheck.error || "Please enter a valid email address.", 400);
+        }
+        finalEmail = emailCheck.normalizedEmail;
+
+        const existingUser = await db.user.findUnique({
+            where: { email: finalEmail },
+            include: { sellerProfile: true },
+        });
+
+        if (existingUser) {
+            console.error("User account already exists with email:", finalEmail);
+            throw new ApiError("An account with this email address already exists. Please sign in.", 409);
+        }
     }
-    finalEmail = emailCheck.normalizedEmail;
 
     if (finalRole === "SELLER" || finalBusinessName) {
         const candidateName = finalBusinessName || `${finalName}'s Kitchen`;
@@ -241,19 +262,16 @@ export const registerUser = async (req: Request) => {
         finalBusinessName = kitchenCheck.normalizedName;
     }
 
-    const existingUser = await db.user.findUnique({
-        where: { email: finalEmail },
-        include: { sellerProfile: true },
-    });
-
-    if (existingUser) {
-        console.error("User account already exists with email:", finalEmail);
-        throw new ApiError("An account with this email address already exists. Please sign in.", 409);
-    }
-
     if (finalPhone) {
         const existingPhoneUser = await db.user.findFirst({
-            where: { phone: finalPhone }
+            where: {
+                OR: [
+                    { phone: finalPhone },
+                    { phone: `+91${finalPhone}` },
+                    { phone: `+91 ${finalPhone}` },
+                    { phone: { contains: finalPhone } }
+                ]
+            }
         });
         if (existingPhoneUser) {
             console.error("User account already exists with phone:", finalPhone);
@@ -282,7 +300,7 @@ export const registerUser = async (req: Request) => {
             const user = await tx.user.create({
                 data: {
                     name: finalName,
-                    email: finalEmail,
+                    email: finalEmail || null,
                     phone: finalPhone || "",
                     city: finalCity || "",
                     pincode: finalPincode || "",
@@ -348,17 +366,88 @@ export const registerUser = async (req: Request) => {
 };
 
 export const loginUser = async (req: Request) => {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const { email, password, phone, otp, loginType } = body;
 
-    if (!email || !password) {
-        throw new ApiError("Email and password are required. Please enter your credentials.", 400);
+    // Handle OTP Login (default OTP 123456)
+    if (loginType === "OTP_USER" || (phone && (otp || !password))) {
+        const rawPhone = String(phone || "").replace(/\D/g, "");
+        const phoneDigits = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
+        const trimmedOtp = String(otp || "").trim();
+
+        if (phoneDigits.length !== 10) {
+            throw new ApiError("Please provide a valid 10-digit mobile number.", 400);
+        }
+        if (trimmedOtp !== "123456") {
+            throw new ApiError("Invalid OTP. Please enter the valid OTP (123456).", 400);
+        }
+
+        const user = await db.user.findFirst({
+            where: {
+                OR: [
+                    { phone: phoneDigits },
+                    { phone: `+91${phoneDigits}` },
+                    { phone: `+91 ${phoneDigits}` },
+                    { phone: { contains: phoneDigits } }
+                ],
+                role: "USER"
+            }
+        });
+
+        if (!user) {
+            throw new ApiError("No registered user account found with this phone number.", 404);
+        }
+
+        const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
+        const token = jwt.sign(
+            {
+                id: user.id,
+                email: user.email || "",
+                role: user.role,
+                name: user.name
+            },
+            secret,
+            { expiresIn: "30d" }
+        );
+
+        return {
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email || "",
+                role: user.role
+            }
+        };
     }
 
-    const normalizedEmail = email.toLowerCase();
+    // Password login
+    const identifier = String(email || phone || "").trim();
+    if (!identifier || !password) {
+        throw new ApiError("Email/phone and password are required. Please enter your credentials.", 400);
+    }
 
-    const user = await db.user.findUnique({
-        where: { email: normalizedEmail }
-    });
+    const rawDigits = identifier.replace(/\D/g, "");
+    const isPhone = rawDigits.length >= 10 && !identifier.includes("@");
+    let user = null;
+
+    if (isPhone) {
+        const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+        user = await db.user.findFirst({
+            where: {
+                OR: [
+                    { phone: phoneDigits },
+                    { phone: `+91${phoneDigits}` },
+                    { phone: `+91 ${phoneDigits}` },
+                    { phone: { contains: phoneDigits } }
+                ]
+            }
+        });
+    } else {
+        user = await db.user.findUnique({
+            where: { email: identifier.toLowerCase() }
+        });
+    }
 
     if (!user) {
         throw new ApiError("Invalid email or password. Please check your credentials and try again.", 401);
@@ -377,7 +466,7 @@ export const loginUser = async (req: Request) => {
     const token = jwt.sign(
         {
             id: user.id,
-            email: user.email,
+            email: user.email || "",
             role: user.role,
             name: user.name
         },
@@ -390,7 +479,7 @@ export const loginUser = async (req: Request) => {
         user: {
             id: user.id,
             name: user.name,
-            email: user.email,
+            email: user.email || "",
             role: user.role
         }
     };

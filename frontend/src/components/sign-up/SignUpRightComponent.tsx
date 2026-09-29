@@ -247,13 +247,18 @@ export default function SignUpRightComponent({
       setError("Please verify your mobile number with the 6-digit verification code.");
       return;
     }
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      setEmailError(emailValidation.error || "Please enter a valid email address.");
-      setError(emailValidation.error || "Please enter a valid email address.");
-      return;
+    let cleanEmail: string | undefined = undefined;
+    if (email.trim()) {
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.isValid) {
+        setEmailError(emailValidation.error || "Please enter a valid email address.");
+        setError(emailValidation.error || "Please enter a valid email address.");
+        return;
+      }
+      cleanEmail = emailValidation.normalizedEmail;
     }
     setEmailError("");
+
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
@@ -269,13 +274,12 @@ export default function SignUpRightComponent({
 
     setLoading(true);
     try {
-      const cleanEmail = email.trim().toLowerCase();
       const res = await fetchApi("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: fullName.trim(),
-          email: cleanEmail,
+          ...(cleanEmail ? { email: cleanEmail } : {}),
           phone: phoneDigits,
           password,
           role: "USER",
@@ -287,7 +291,8 @@ export default function SignUpRightComponent({
         await discardExistingSession();
         const signInRes = await signIn("credentials", {
           redirect: false,
-          email: cleanEmail,
+          email: cleanEmail || phoneDigits,
+          phone: phoneDigits,
           password,
           loginType: "USER",
         });
@@ -852,7 +857,7 @@ export default function SignUpRightComponent({
               </div>
             )}
 
-            {/* 3. Email Address */}
+            {/* 3. Email Address (Optional) */}
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               <label
                 style={{
@@ -860,9 +865,13 @@ export default function SignUpRightComponent({
                   fontWeight: 600,
                   color: "#0F172A",
                   fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
                 }}
               >
-                Email Address
+                <span>Email Address</span>
+                <span style={{ fontSize: "11.5px", color: "#94A3B8", fontWeight: 400 }}>(Optional)</span>
               </label>
               <div
                 style={{
@@ -884,12 +893,14 @@ export default function SignUpRightComponent({
                 </span>
                 <input
                   type="email"
-                  placeholder="yourname@gmail.com"
+                  placeholder="yourname@gmail.com (optional)"
                   value={email}
                   onChange={(e) => {
                     const val = e.target.value;
                     setEmail(val);
-                    if (emailError) {
+                    if (!val.trim()) {
+                      setEmailError("");
+                    } else if (emailError) {
                       const res = validateEmail(val);
                       setEmailError(res.isValid ? "" : (res.error || ""));
                     }
@@ -898,9 +909,10 @@ export default function SignUpRightComponent({
                     if (email.trim()) {
                       const res = validateEmail(email);
                       setEmailError(res.isValid ? "" : (res.error || ""));
+                    } else {
+                      setEmailError("");
                     }
                   }}
-                  required
                   style={{
                     width: "100%",
                     height: "46px",
