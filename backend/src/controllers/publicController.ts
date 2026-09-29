@@ -42,7 +42,6 @@ export const getPublicExploreData = unstable_cache(
                     select: { rating: true, comment: true }
                 },
                 foodItems: {
-                    where: { isAvailable: true },
                     include: {
                         category: true,
                         foodCategory: true,

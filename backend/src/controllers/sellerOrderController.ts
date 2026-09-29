@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
+import { revalidateTag } from "next/cache";
 
 export const getSellerOrders = async () => {
     const session = await getAuthSession();
@@ -248,6 +249,11 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
     } catch (e) {
         console.error("Realtime event emission error in seller update:", e);
     }
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return { order: updatedOrder };
 };

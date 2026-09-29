@@ -145,7 +145,6 @@ export const getUserDashboard = async () => {
             user: { select: { name: true, city: true, pincode: true, phone: true } },
             servedPincodes: true,
             foodItems: {
-                where: { isAvailable: true },
                 include: {
                     category: true,
                     foodCategory: true

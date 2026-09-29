@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
 import { getCategoryExpiries } from "@/lib/subscription";
+import { revalidateTag } from "next/cache";
 
 const checkFoodCategoryActive = async (userId: string) => {
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -318,6 +319,11 @@ export const createMenuItem = async (req: Request) => {
         }
     });
 
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
+
     return { foodItem };
 };
 
@@ -458,6 +464,11 @@ export const updateMenuItem = async (req: Request, id: string) => {
         data: dataToUpdate
     });
 
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
+
     return { item: updatedItem };
 };
 
@@ -484,6 +495,11 @@ export const deleteMenuItem = async (id: string) => {
     await db.foodItem.delete({
         where: { id }
     });
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return null;
 };

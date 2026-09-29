@@ -16,6 +16,8 @@ export interface DishItem {
   sellerIsOnline?: boolean;
   isOnline?: boolean;
   isAvailable?: boolean;
+  stockQuantity?: number;
+  maxStock?: number;
   distanceText?: string;
 }
 
@@ -109,8 +111,9 @@ export default function BestPlaces({
         >
           {displayDishes.slice(0, 4).map((dish) => {
             const isSellerClosed = dish.sellerIsOnline === false || dish.isOnline === false;
+            const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0;
             const isItemUnavailable = dish.isAvailable === false;
-            const isClosed = isSellerClosed || isItemUnavailable;
+            const isClosed = isSellerClosed || isItemUnavailable || isOutOfStock;
 
             return (
             <Link
@@ -205,7 +208,7 @@ export default function BestPlaces({
                           border: "1px solid rgba(255,255,255,0.2)",
                         }}
                       >
-                        {isSellerClosed ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
+                        {isSellerClosed ? "🔴 CLOSED" : isOutOfStock ? "🔴 OUT OF STOCK" : "🔴 UNAVAILABLE"}
                       </span>
                     </div>
                   )}

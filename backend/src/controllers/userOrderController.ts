@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { revalidateTag } from "next/cache";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
@@ -399,6 +400,13 @@ export const createOrder = async (req: Request) => {
         console.error("Realtime event emission error:", e);
     }
 
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {
+        // Fallback
+    }
+
     return {
         order
     };
@@ -510,6 +518,11 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
             });
         }
     }
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return null;
 };

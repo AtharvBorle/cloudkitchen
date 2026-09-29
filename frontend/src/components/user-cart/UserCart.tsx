@@ -561,29 +561,40 @@ export const UserCart: React.FC<UserCartProps> = ({
 
                   {/* Right: Quantity Stepper & Remove */}
                   <div className={styles.itemRightActions}>
-                    <div className={styles.qtyStepper}>
-                      <button
-                        type="button"
-                        className={styles.qtyBtn}
-                        onClick={() => handleQtyChange(item.id, -1)}
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus size={14} strokeWidth={3} />
-                      </button>
-                      <span className={styles.qtyNumber}>{item.qty}</span>
-                      <button
-                        type="button"
-                        className={styles.qtyBtn}
-                        onClick={() => handleQtyChange(item.id, 1)}
-                        aria-label="Increase quantity"
-                        disabled={item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock}
-                        style={{
-                          opacity: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? 0.4 : 1,
-                          cursor: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? "not-allowed" : "pointer",
-                        }}
-                      >
-                        <Plus size={14} strokeWidth={3} />
-                      </button>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                      <div className={styles.qtyStepper}>
+                        <button
+                          type="button"
+                          className={styles.qtyBtn}
+                          onClick={() => handleQtyChange(item.id, -1)}
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus size={14} strokeWidth={3} />
+                        </button>
+                        <span className={styles.qtyNumber}>{item.qty}</span>
+                        <button
+                          type="button"
+                          className={styles.qtyBtn}
+                          onClick={() => handleQtyChange(item.id, 1)}
+                          aria-label="Increase quantity"
+                          disabled={item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock}
+                          style={{
+                            opacity: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? 0.35 : 1,
+                            cursor: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          <Plus size={14} strokeWidth={3} />
+                        </button>
+                      </div>
+                      {(item.maxStock === 0) ? (
+                        <span style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: "700", textAlign: "center", whiteSpace: "nowrap" }}>
+                          Out of stock
+                        </span>
+                      ) : (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) ? (
+                        <span style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: "700", textAlign: "center", whiteSpace: "nowrap" }}>
+                          Out of stock
+                        </span>
+                      ) : null}
                     </div>
 
                     <button

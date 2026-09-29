@@ -327,8 +327,9 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
           <div className={styles.dishesGrid}>
             {foodItems.map((item) => {
               const isSellerClosed = item.sellerIsOnline === false;
+              const isOutOfStock = item.stockQuantity === 0 || item.maxStock === 0;
               const isItemUnavailable = item.isAvailable === false;
-              const isClosed = isSellerClosed || isItemUnavailable;
+              const isClosed = isSellerClosed || isItemUnavailable || isOutOfStock;
               const linkHref = item.sellerTrackingId ? `/shop/${item.sellerTrackingId}` : `/restaurant/${item.sellerId}`;
 
               return (
@@ -348,7 +349,7 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
                     {isClosed && (
                       <div className={styles.closedOverlay}>
                         <span className={styles.closedBadge}>
-                          {isSellerClosed ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
+                          {isSellerClosed ? "🔴 CLOSED" : isOutOfStock ? "🔴 OUT OF STOCK" : "🔴 UNAVAILABLE"}
                         </span>
                       </div>
                     )}

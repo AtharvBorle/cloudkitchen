@@ -13,6 +13,8 @@ export interface RecommendedDish {
   itemType?: string;
   sellerIsOnline?: boolean;
   isAvailable?: boolean;
+  stockQuantity?: number;
+  maxStock?: number;
 }
 
 interface RecommendedForYouProps {
@@ -101,8 +103,9 @@ export default function RecommendedForYou({
         >
           {items.slice(0, 4).map((dish) => {
             const isSellerClosed = dish.sellerIsOnline === false;
+            const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0;
             const isItemUnavailable = dish.isAvailable === false;
-            const isClosed = isSellerClosed || isItemUnavailable;
+            const isClosed = isSellerClosed || isItemUnavailable || isOutOfStock;
 
             return (
             <Link
@@ -194,7 +197,7 @@ export default function RecommendedForYou({
                           textTransform: "uppercase",
                         }}
                       >
-                        {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
+                        {isSellerClosed ? "CLOSED" : isOutOfStock ? "OUT OF STOCK" : "UNAVAILABLE"}
                       </span>
                     </div>
                   )}

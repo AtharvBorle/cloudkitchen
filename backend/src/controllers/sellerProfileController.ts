@@ -329,14 +329,15 @@ export const getSellerById = async (id: string) => {
                 }
             },
             foodItems: {
-                where: { isAvailable: true },
                 select: {
                     id: true,
                     name: true,
                     deliveryPincodes: true,
                     openTime: true,
                     closeTime: true,
-                    operationalHours: true
+                    operationalHours: true,
+                    isAvailable: true,
+                    stockQuantity: true
                 }
             }
         }
