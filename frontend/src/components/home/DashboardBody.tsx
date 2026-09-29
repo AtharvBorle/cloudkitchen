@@ -37,7 +37,7 @@ export default function DashboardBody({
   seeAllLink = "/food-explore?sort=rating",
   items,
 }: DashboardBodyProps) {
-  const { addToCart, cartItems } = useCart();
+  const { addToCart, cartItems, showToast } = useCart();
   const [addedId, setAddedId] = useState<string | null>(null);
 
   if (!items || items.length === 0) {
@@ -45,8 +45,12 @@ export default function DashboardBody({
   }
 
   const handleOrder = (item: TopRatedItem) => {
-    if (item.sellerIsOnline === false || item.isAvailable === false) {
-      alert("This item is currently unavailable.");
+    if (item.sellerIsOnline === false) {
+      showToast(`Sorry, "${item.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
+      return;
+    }
+    if (item.isAvailable === false) {
+      showToast(`Sorry, "${item.name}" is currently unavailable.`, "warning");
       return;
     }
 
@@ -54,13 +58,13 @@ export default function DashboardBody({
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
 
     if (stockLimit === 0) {
-      alert(`Sorry, "${item.name}" is currently out of stock.`);
+      showToast(`Sorry, "${item.name}" is currently out of stock.`, "warning");
       return;
     }
 
-    const currentInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
-    if (currentInCart && stockLimit !== -1 && currentInCart.quantity >= stockLimit) {
-      alert(`Cannot add more. Only ${stockLimit} item(s) available in stock for "${item.name}".`);
+    const existingInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
+    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
+      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
       return;
     }
 
@@ -291,6 +295,11 @@ export default function DashboardBody({
                     }}
                   >
                     {item.category} • ₹{item.price} {item.distanceText ? `• 📍 ${item.distanceText}` : ""} • {item.time}
+                    {item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
+                      <span style={{ color: "#EA580C", fontWeight: "700", marginLeft: "4px" }}>
+                        • Only {item.stockQuantity} left!
+                      </span>
+                    ) : null}
                   </span>
 
                   {/* Stock Notice */}
@@ -312,38 +321,27 @@ export default function DashboardBody({
 
               {/* Right Column: Order Button */}
               {isClosed ? (
-                <span
+                <button
+                  type="button"
+                  onClick={() => handleOrder(item)}
                   style={{
                     backgroundColor: "#F1F5F9",
-                    color: "#94A3B8",
+                    color: "#64748B",
                     fontSize: "0.82rem",
                     fontWeight: "700",
                     padding: "6px 14px",
                     borderRadius: "9999px",
-                    border: "1px solid #E2E8F0",
-                    cursor: "not-allowed",
+                    border: "1px solid #CBD5E1",
+                    cursor: "pointer",
                     whiteSpace: "nowrap",
                     flexShrink: 0,
+                    transition: "all 0.2s ease",
                   }}
+                  className="top-rated-order-btn-closed"
+                  title={isSellerClosed ? "Kitchen closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
                 >
-                  {isSellerClosed ? "Closed" : "Out of Stock"}
-                </span>
-              ) : isMaxStockInCart ? (
-                <span
-                  style={{
-                    backgroundColor: "#FFFBEB",
-                    color: "#D97706",
-                    fontSize: "0.78rem",
-                    fontWeight: "700",
-                    padding: "6px 12px",
-                    borderRadius: "9999px",
-                    border: "1px solid #FDE68A",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}
-                >
-                  Max In Cart
-                </span>
+                  {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
+                </button>
               ) : (
                 <button
                   type="button"

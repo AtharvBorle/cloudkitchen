@@ -30,7 +30,6 @@ export interface ResSellerSubPlanProps {
   initialFeatures?: string[];
   initialDuration?: string;
   initialMealTimings?: MealTimingSlot[];
-  initialAllowCancellation?: boolean;
   initialAllowPauseBilling?: boolean;
   onBack?: () => void;
   onDeployPlan?: (planData: any) => void;
@@ -59,7 +58,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   initialFeatures = DEFAULT_FEATURES,
   initialDuration = "1 Week",
   initialMealTimings = DEFAULT_MEAL_TIMINGS,
-  initialAllowCancellation = true,
   initialAllowPauseBilling = false,
   onBack,
   onDeployPlan,
@@ -75,7 +73,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   const [duration, setDuration] = useState(initialDuration);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
   const [mealTimings, setMealTimings] = useState<MealTimingSlot[]>(initialMealTimings);
-  const [allowCancellation, setAllowCancellation] = useState(initialAllowCancellation);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
 
@@ -147,14 +144,14 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     const payload = {
       name: planName.trim() || "Bronze Plan",
       tier: planTier.trim() || "Bronze",
-      weeklyPrice: price.trim() || "0",
-      monthlyPrice: `₹${((parsedPrice || 0) * 4).toFixed(0)}`,
-      quarterlyPrice: isWeekly ? "" : `₹${((parsedPrice || 0) * 12 * 0.9).toFixed(0)}`,
-      yearlyPrice: isWeekly ? "" : `₹${((parsedPrice || 0) * 52 * 0.8).toFixed(0)}`,
+      weeklyPrice: isWeekly ? price.trim() || "0" : "",
+      monthlyPrice: isWeekly ? "" : `₹${parsedPrice.toFixed(0)}`,
+      quarterlyPrice: "",
+      yearlyPrice: "",
       duration,
       features: validFeatures,
       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
-      allowCancel: allowCancellation,
+      allowCancel: false,
       pauseBillingPeriod: pauseBillingPeriod || "30 Days",
       status: "Live" as const,
     };
@@ -427,25 +424,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             <h2 className={styles.cardTitle}>Subscription Policies</h2>
 
             <div className={styles.policyList}>
-              {/* Allow User to Cancel Subscription */}
-              <div className={styles.policyRow}>
-                <div className={styles.policyInfo}>
-                  <h3 className={styles.policyTitle}>Allow User to Cancel Subscription</h3>
-                  <p className={styles.policyDesc}>Partners can cancel anytime directly from their cloud merchant dashboard.</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={allowCancellation}
-                  className={`${styles.toggleSwitch} ${
-                    allowCancellation ? styles.toggleSwitchActive : ""
-                  }`}
-                  onClick={() => setAllowCancellation((prev) => !prev)}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
-              </div>
-
               {/* Allow User to Pause Billing */}
               <div className={styles.policyRow}>
                 <div className={styles.policyInfo}>

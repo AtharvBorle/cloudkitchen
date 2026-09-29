@@ -28,8 +28,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             // Body might be empty or invalid JSON, ignore
         }
 
-        await cancelOrder(id, ticketId);
-        return successResponse(null, "Order cancelled successfully", 200);
+        const cancelledOrder = await cancelOrder(id, ticketId);
+        return successResponse(cancelledOrder, "Order cancelled successfully", 200);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         return errorResponse("An error occurred while cancelling the order.", 500);

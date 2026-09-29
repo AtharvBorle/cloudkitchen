@@ -698,12 +698,7 @@ export default function MyOrdersView() {
         body: JSON.stringify({ reason, comment: customComment }),
       });
 
-      let json: any = null;
-      try {
-        json = await res.json();
-      } catch (e) {
-        // Non-JSON or empty response
-      }
+      const json = await res.json().catch(() => null);
 
       if (!res.ok || (json && json.success === false)) {
         const errorMsg = json?.message || json?.error || "Failed to cancel order. Please try again.";
@@ -732,10 +727,12 @@ export default function MyOrdersView() {
           }
 
           setCancelModalOrder(null);
+          setCancelError(null);
           showToast("Your order is already cancelled.");
           return;
         }
 
+        setCancelError(errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -759,6 +756,7 @@ export default function MyOrdersView() {
       }
 
       setCancelModalOrder(null);
+      setCancelError(null);
       showToast("Your order has been cancelled successfully.");
     } catch (err: any) {
       console.error("Cancel order error:", err);

@@ -68,6 +68,8 @@ function DetailsContent() {
         return "Delivered" as const;
       case "PREPARING":
         return "Preparing" as const;
+      case "CANCELLED":
+        return "Cancelled" as const;
       default:
         return "Order Placed" as const;
     }

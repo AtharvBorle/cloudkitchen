@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
 import { fetchApi } from "@/lib/fetch-api";
 
@@ -31,6 +32,13 @@ export type CartItem = {
     itemType?: string;
 };
 
+export type ToastType = "warning" | "error" | "info" | "success";
+
+export type ToastState = {
+    message: string;
+    type: ToastType;
+};
+
 type CartContextType = {
     cartItems: CartItem[];
     addToCart: (item: CartItem) => void;
@@ -43,13 +51,44 @@ type CartContextType = {
     syncCartWithLiveMenu: (customList?: CartItem[]) => Promise<void>;
     cartTotal: number;
     initiateRoomBooking: (room: any) => void; // Dedicated flow for rooms
+    showToast: (message: string, type?: ToastType) => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [toast, setToast] = useState<ToastState | null>(null);
+    const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const router = useRouter();
+
+    const showToast = (message: string, type: ToastType = "warning") => {
+        setToast({ message, type });
+        if (toastTimeoutRef.current) {
+            clearTimeout(toastTimeoutRef.current);
+        }
+        toastTimeoutRef.current = setTimeout(() => {
+            setToast(null);
+        }, 4000);
+    };
+
+    // Listen for custom toast events anywhere across the app
+    useEffect(() => {
+        const handleCustomToast = (e: any) => {
+            if (e.detail && e.detail.message) {
+                showToast(e.detail.message, e.detail.type || "warning");
+            }
+        };
+        window.addEventListener("show-cart-toast", handleCustomToast);
+        window.addEventListener("app-toast", handleCustomToast);
+        return () => {
+            window.removeEventListener("show-cart-toast", handleCustomToast);
+            window.removeEventListener("app-toast", handleCustomToast);
+            if (toastTimeoutRef.current) {
+                clearTimeout(toastTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const syncCartWithLiveMenu = async (customList?: CartItem[]) => {
         const targetList = customList || cartItems;
@@ -182,7 +221,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCartItems(prev => {
             // Prevent mixing items from different sellers in one order
             if (prev.length > 0 && prev[0].sellerId && item.sellerId && prev[0].sellerId !== item.sellerId) {
-                alert("You can only order from one kitchen at a time. Please clear your cart first.");
+                showToast("You can only order from one kitchen at a time. Please clear your cart first.", "warning");
                 return prev;
             }
 
@@ -206,7 +245,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             // Out-of-stock validation
             if (stockLimit === 0) {
-                alert(`Sorry, "${item.name}" is currently out of stock.`);
+                showToast(`Sorry, "${item.name}" is currently out of stock.`, "warning");
                 return prev;
             }
 
@@ -214,9 +253,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 const addQty = item.quantity !== undefined ? item.quantity : 1;
                 const newQty = existing.quantity + addQty;
 
-                if (stockLimit !== -1 && (newQty > stockLimit || existing.quantity >= stockLimit)) {
-                    alert(`Cannot add more. Only ${stockLimit} item(s) available in stock for "${item.name}".`);
-                    return prev;
+                if (stockLimit !== -1 && (existing.quantity >= stockLimit || newQty > stockLimit)) {
+                    showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+                    return prev.map(i => i.id === item.id ? {
+                        ...i,
+                        ...normalizedItem,
+                        quantity: Math.min(stockLimit, existing.quantity),
+                        maxStock: stockLimit,
+                        stockQuantity: stockLimit,
+                        image: itemImage,
+                        imageUrl: itemImage,
+                    } : i);
                 }
 
                 return prev.map(i => i.id === item.id ? {
@@ -232,8 +279,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             const initialQty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
             if (stockLimit !== -1 && initialQty > stockLimit) {
-                alert(`Cannot add ${initialQty}. Only ${stockLimit} item(s) available in stock for "${item.name}".`);
-                return prev;
+                showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+                return [...prev, {
+                    ...normalizedItem,
+                    quantity: stockLimit,
+                    maxStock: stockLimit,
+                    stockQuantity: stockLimit,
+                    image: itemImage,
+                    imageUrl: itemImage,
+                }];
             }
 
             return [...prev, {
@@ -256,7 +310,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             if (baseList.length > 0 && baseList[0].sellerId && targetSellerId && baseList[0].sellerId !== targetSellerId) {
                 if (!clearExisting) {
-                    alert("You can only order from one kitchen at a time. Please clear your cart first.");
+                    showToast("You can only order from one kitchen at a time. Please clear your cart first.", "warning");
                     return prev;
                 }
                 baseList = [];
@@ -329,7 +383,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
 
             if (stockLimit !== -1 && newQuantity > stockLimit) {
-                alert(`Cannot add more. Only ${stockLimit} items available in stock for ${existing.name}.`);
+                showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${existing.name}.`, "warning");
                 return prev.map(i => i.id === itemId ? { ...i, quantity: stockLimit } : i);
             }
 
@@ -390,8 +444,59 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, addMultipleToCart, updateQuantity, updateItemAddons, decreaseQuantity, removeFromCart, clearCart, syncCartWithLiveMenu, cartTotal, initiateRoomBooking }}>
+        <CartContext.Provider value={{ cartItems, addToCart, addMultipleToCart, updateQuantity, updateItemAddons, decreaseQuantity, removeFromCart, clearCart, syncCartWithLiveMenu, cartTotal, initiateRoomBooking, showToast }}>
             {children}
+            {/* Global Application Toast Notification */}
+            {toast && (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    style={{
+                        position: "fixed",
+                        bottom: "32px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 99999,
+                        backgroundColor: toast.type === "error" ? "#FEF2F2" : toast.type === "warning" ? "#FFFBEB" : toast.type === "success" ? "#ECFDF5" : "#EFF6FF",
+                        border: `1.5px solid ${toast.type === "error" ? "#FCA5A5" : toast.type === "warning" ? "#FCD34D" : toast.type === "success" ? "#6EE7B7" : "#93C5FD"}`,
+                        color: toast.type === "error" ? "#991B1B" : toast.type === "warning" ? "#92400E" : toast.type === "success" ? "#065F46" : "#1E40AF",
+                        padding: "12px 20px",
+                        borderRadius: "14px",
+                        boxShadow: "0 10px 28px rgba(0,0,0,0.14), 0 4px 10px rgba(0,0,0,0.06)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        maxWidth: "92vw",
+                        fontSize: "0.88rem",
+                        fontWeight: 600,
+                        fontFamily: "Poppins, sans-serif",
+                    }}
+                >
+                    {toast.type === "error" && <AlertCircle size={18} color="#EF4444" style={{ flexShrink: 0 }} />}
+                    {toast.type === "warning" && <AlertTriangle size={18} color="#F59E0B" style={{ flexShrink: 0 }} />}
+                    {toast.type === "success" && <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />}
+                    {toast.type === "info" && <Info size={18} color="#3B82F6" style={{ flexShrink: 0 }} />}
+                    <span>{toast.message}</span>
+                    <button
+                        type="button"
+                        onClick={() => setToast(null)}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            padding: "2px",
+                            cursor: "pointer",
+                            color: "inherit",
+                            opacity: 0.7,
+                            marginLeft: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                        }}
+                        aria-label="Close notification"
+                    >
+                        <X size={15} />
+                    </button>
+                </div>
+            )}
         </CartContext.Provider>
     );
 }
@@ -401,3 +506,4 @@ export function useCart() {
     if (!context) throw new Error("useCart must be used within a CartProvider");
     return context;
 }
+

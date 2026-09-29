@@ -77,7 +77,9 @@ export const UserCart: React.FC<UserCartProps> = ({
     maxDiscountAmount?: number | null;
     minimumCartValue?: number;
     discountLabel?: string;
+    calculatedDiscount?: number;
   } | null>(null);
+  const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
 
   // Sync formatted current address from LocationProvider's defaultAddress or savedAddresses
@@ -318,15 +320,27 @@ export const UserCart: React.FC<UserCartProps> = ({
     showToast(`Removed "${name}" from cart`);
   };
 
+  const handleRemovePromo = () => {
+    setAppliedCoupon(null);
+    setAppliedPromo(null);
+    setDiscountPercent(0);
+    setPromoCode("");
+    showToast("Coupon removed");
+  };
+
   // Promo Code Apply
   const handleApplyPromo = async () => {
+    if (appliedCoupon || appliedPromo) {
+      handleRemovePromo();
+      return;
+    }
     if (!promoCode.trim()) {
       showToast("Please enter a promo code");
       return;
     }
     const cleanCode = promoCode.trim().toUpperCase();
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-    const cartSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
+    const cartSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || cartItems[0]?.sellerId;
 
     if (currentSubtotal <= 0) {
       showToast("Please add items to cart before applying coupon");
@@ -353,7 +367,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       });
 
       const json = await res.json();
-      const cData = (json && typeof json === "object" && ("id" in json || "code" in json)) ? json : (json?.data || json);
+      const cData = json.data?.coupon || json.data || json;
       if (res.ok && cData && (cData.code || cData.id)) {
         setAppliedCoupon(cData);
         setAppliedPromo(cData.code);
@@ -415,19 +429,14 @@ export const UserCart: React.FC<UserCartProps> = ({
         setDiscountPercent(20);
         showToast(`Promo code "${cleanCode}" applied! 20% discount`);
       } else {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
         showToast(`Failed to validate coupon "${cleanCode}".`);
       }
     } finally {
       setIsValidatingPromo(false);
     }
-  };
-
-  const handleRemovePromo = () => {
-    setAppliedCoupon(null);
-    setAppliedPromo(null);
-    setDiscountPercent(0);
-    setPromoCode("");
-    showToast("Coupon removed");
   };
 
   // Price Calculations
@@ -444,7 +453,6 @@ export const UserCart: React.FC<UserCartProps> = ({
     const flat = appliedCoupon.discountAmount || 0;
     return Math.min(flat, subtotal);
   }, [appliedCoupon, subtotal]);
-
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -813,7 +821,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      if (appliedCoupon) {
+                      if (appliedCoupon || appliedPromo) {
                         handleRemovePromo();
                       } else {
                         handleApplyPromo();
@@ -821,10 +829,10 @@ export const UserCart: React.FC<UserCartProps> = ({
                     }
                   }}
                   className={styles.promoInput}
-                  disabled={appliedCoupon !== null}
+                  disabled={appliedCoupon !== null || appliedPromo !== null}
                 />
               </div>
-              {appliedCoupon ? (
+              {appliedCoupon || appliedPromo ? (
                 <button
                   type="button"
                   className={styles.applyButton}

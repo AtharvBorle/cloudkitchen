@@ -36,7 +36,7 @@ export default function PopularOrders({
   offers,
 }: PopularOrdersProps) {
   const router = useRouter();
-  const { addToCart, cartItems } = useCart();
+  const { addToCart, showToast, cartItems } = useCart();
   const [activeSeller, setActiveSeller] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -73,8 +73,12 @@ export default function PopularOrders({
   const [addedId, setAddedId] = useState<string | null>(null);
 
   const handleOrderNow = (offer: OfferCardData) => {
-    if (offer.sellerIsOnline === false || offer.isAvailable === false) {
-      alert("This offer item is currently unavailable.");
+    if (offer.sellerIsOnline === false) {
+      showToast(`Sorry, "${offer.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
+      return;
+    }
+    if (offer.isAvailable === false) {
+      showToast(`Sorry, "${offer.title}" is currently unavailable.`, "warning");
       return;
     }
 
@@ -82,13 +86,13 @@ export default function PopularOrders({
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
 
     if (stockLimit === 0) {
-      alert(`Sorry, "${offer.title}" is currently out of stock.`);
+      showToast(`Sorry, "${offer.title}" is currently out of stock.`, "warning");
       return;
     }
 
-    const currentInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
-    if (currentInCart && stockLimit !== -1 && currentInCart.quantity >= stockLimit) {
-      alert(`Cannot add more. Only ${stockLimit} item(s) available in stock for "${offer.title}".`);
+    const existingInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
+    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
+      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${offer.title}.`, "warning");
       return;
     }
 
@@ -345,60 +349,30 @@ export default function PopularOrders({
               </div>
 
               {/* Action Button: Order Now */}
-              {isClosed ? (
-                <span
-                  style={{
-                    marginTop: "auto",
-                    backgroundColor: "#F1F5F9",
-                    color: "#94A3B8",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "12px",
-                    padding: "10px",
-                    fontSize: "0.88rem",
-                    fontWeight: "700",
-                    textAlign: "center",
-                    cursor: "not-allowed",
-                  }}
-                >
-                  {isSellerClosed ? "Closed" : "Out of Stock"}
-                </span>
-              ) : isMaxStockInCart ? (
-                <span
-                  style={{
-                    marginTop: "auto",
-                    backgroundColor: "#FFFBEB",
-                    color: "#D97706",
-                    border: "1px solid #FDE68A",
-                    borderRadius: "12px",
-                    padding: "10px",
-                    fontSize: "0.88rem",
-                    fontWeight: "700",
-                    textAlign: "center",
-                  }}
-                >
-                  Max In Cart
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleOrderNow(offer)}
-                  style={{
-                    marginTop: "auto",
-                    backgroundColor: addedId === offer.id ? "#10B981" : "#FF6B00",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "12px",
-                    padding: "10px",
-                    fontSize: "0.92rem",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
-                  }}
-                >
-                  {addedId === offer.id ? "Added to Cart! ✓" : "Order Now"}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleOrderNow(offer)}
+                style={{
+                  marginTop: "auto",
+                  backgroundColor: isClosed
+                    ? "#F1F5F9"
+                    : addedId === offer.id
+                    ? "#10B981"
+                    : "#FF6B00",
+                  color: isClosed ? "#64748B" : "#FFFFFF",
+                  border: isClosed ? "1px solid #CBD5E1" : "none",
+                  borderRadius: "12px",
+                  padding: "10px",
+                  fontSize: "0.92rem",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: isClosed ? "none" : "0 4px 12px rgba(255, 107, 0, 0.25)",
+                }}
+                title={isClosed ? (isSellerClosed ? "Seller is closed" : "Unavailable") : "Order Now"}
+              >
+                {isClosed ? (isSellerClosed ? "Closed" : "Unavailable") : addedId === offer.id ? "Added to Cart! ✓" : "Order Now"}
+              </button>
             </div>
             );
           })}

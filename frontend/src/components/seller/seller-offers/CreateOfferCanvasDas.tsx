@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SellerSidebar from "../sidebar/Sidebar";
@@ -44,12 +44,16 @@ export default function CreateOfferCanvasDas({
 
   const [appliesTo, setAppliesTo] = useState<"ALL" | "CATEGORY" | "ITEMS">("ALL");
   const [customerEligibility, setCustomerEligibility] = useState<"ALL" | "NEW_ONLY">("ALL");
-  const [usageLimit, setUsageLimit] = useState("500");
+  const [usageLimit, setUsageLimit] = useState("");
 
   const [startDate, setStartDate] = useState("Today (Immediately)");
   const [noExpiry, setNoExpiry] = useState(true);
   const [expiryDate, setExpiryDate] = useState("Runs indefinitely");
   const [perUserLimit, setPerUserLimit] = useState("1");
+
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const expiryDateRef = useRef<HTMLInputElement>(null);
+  const todayStr = new Date().toISOString().split("T")[0];
 
   const isFormValid = couponCode.trim().length > 0 && discountValue.trim().length > 0;
 
@@ -73,7 +77,8 @@ export default function CreateOfferCanvasDas({
         usageLimit: usageLimit ? Number(usageLimit) : null,
         perUserLimit: Number(perUserLimit) || 1,
         noExpiry: noExpiry,
-        status: isDraft ? "Pending" : "Active",
+        status: isDraft ? "Draft" : "Active",
+        isActive: !isDraft,
       };
 
       const res = await fetchApi("/api/seller/dashboard/offers", {
@@ -224,7 +229,7 @@ export default function CreateOfferCanvasDas({
                       onChange={(e) =>
                         setCouponCode(e.target.value.toUpperCase().replace(/\s+/g, ""))
                       }
-                      placeholder="SUMMER20"
+                      placeholder="e.g. SUMMER20"
                     />
                     <div className={styles.helpText}>
                       <Info size={12} color="#94A3B8" />
@@ -326,7 +331,7 @@ export default function CreateOfferCanvasDas({
                         className={styles.prefixInputField}
                         value={discountValue}
                         onChange={(e) => setDiscountValue(e.target.value)}
-                        placeholder="20"
+                        placeholder="e.g. 20"
                       />
                     </div>
                     <div className={styles.helpText}>
@@ -348,7 +353,7 @@ export default function CreateOfferCanvasDas({
                         className={styles.prefixInputField}
                         value={minOrderValue}
                         onChange={(e) => setMinOrderValue(e.target.value)}
-                        placeholder="500"
+                        placeholder="e.g. 500"
                       />
                     </div>
                     <div className={styles.helpText}>
@@ -366,7 +371,7 @@ export default function CreateOfferCanvasDas({
                         className={styles.prefixInputField}
                         value={maxDiscountCap}
                         onChange={(e) => setMaxDiscountCap(e.target.value)}
-                        placeholder="Optional"
+                        placeholder="Optional (e.g. 200)"
                       />
                     </div>
                     <div className={styles.helpText}>
@@ -545,7 +550,7 @@ export default function CreateOfferCanvasDas({
                       className={styles.inputField}
                       value={usageLimit}
                       onChange={(e) => setUsageLimit(e.target.value)}
-                      placeholder="500"
+                      placeholder="Optional (e.g. 500)"
                     />
                     <div className={styles.helpText}>
                       <span>Total redemptions allowed. Leave blank for unlimited.</span>
@@ -558,15 +563,35 @@ export default function CreateOfferCanvasDas({
                   {/* Start Date */}
                   <div>
                     <label className={styles.fieldLabel}>Start Date</label>
-                    <div className={styles.suffixInputWrapper}>
+                    <div
+                      className={styles.suffixInputWrapper}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        try {
+                          startDateRef.current?.showPicker?.();
+                        } catch {}
+                      }}
+                    >
                       <input
-                        type="text"
+                        ref={startDateRef}
+                        type="date"
+                        min={todayStr}
                         className={styles.suffixInputField}
-                        value={startDate}
+                        value={startDate === "Today (Immediately)" ? "" : startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        placeholder="Today (Immediately)"
+                        placeholder="Select start date"
+                        style={{ cursor: "pointer" }}
                       />
-                      <span className={styles.suffixIconBox}>
+                      <span
+                        className={styles.suffixIconBox}
+                        style={{ cursor: "pointer", pointerEvents: "auto" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          try {
+                            startDateRef.current?.showPicker?.();
+                          } catch {}
+                        }}
+                      >
                         <Calendar size={16} />
                       </span>
                     </div>
@@ -602,16 +627,43 @@ export default function CreateOfferCanvasDas({
                       </div>
                     </div>
 
-                    <div className={styles.suffixInputWrapper}>
+                    <div
+                      className={styles.suffixInputWrapper}
+                      style={{ cursor: noExpiry ? "not-allowed" : "pointer" }}
+                      onClick={() => {
+                        if (!noExpiry) {
+                          try {
+                            expiryDateRef.current?.showPicker?.();
+                          } catch {}
+                        }
+                      }}
+                    >
                       <input
-                        type="text"
+                        ref={expiryDateRef}
+                        type={noExpiry ? "text" : "date"}
                         disabled={noExpiry}
+                        min={startDate && startDate !== "Today (Immediately)" ? startDate : todayStr}
                         className={styles.suffixInputField}
                         value={noExpiry ? "Runs indefinitely" : expiryDate}
                         onChange={(e) => setExpiryDate(e.target.value)}
-                        placeholder="DD/MM/YYYY"
+                        placeholder="Select expiry date"
+                        style={{ cursor: noExpiry ? "not-allowed" : "pointer" }}
                       />
-                      <span className={styles.suffixIconBox}>
+                      <span
+                        className={styles.suffixIconBox}
+                        style={{
+                          cursor: noExpiry ? "not-allowed" : "pointer",
+                          pointerEvents: noExpiry ? "none" : "auto",
+                        }}
+                        onClick={(e) => {
+                          if (!noExpiry) {
+                            e.stopPropagation();
+                            try {
+                              expiryDateRef.current?.showPicker?.();
+                            } catch {}
+                          }
+                        }}
+                      >
                         <Calendar size={16} />
                       </span>
                     </div>

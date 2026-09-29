@@ -23,6 +23,7 @@ import {
     ArrowLeft
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
 
 interface Message {
     id: string;
@@ -100,11 +101,16 @@ export default function ChatbotWidget() {
     // Hidden file input ref for attachment
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Draggable chatbot widget states (for open modal header on desktop)
-    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
+    // Draggable chatbot widget states (for both floating launcher button & modal window)
+    const [buttonPos, setButtonPos] = useState<{ x: number; y: number } | null>(null);
+    const [windowPos, setWindowPos] = useState<{ x: number; y: number } | null>(null);
+    const [isDraggingWindow, setIsDraggingWindow] = useState(false);
+    const [isDraggingButton, setIsDraggingButton] = useState(false);
+
     const containerRef = useRef<HTMLDivElement>(null);
-    const dragRef = useRef<{
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    const windowDragRef = useRef<{
         active: boolean;
         startX: number;
         startY: number;
@@ -117,6 +123,24 @@ export default function ChatbotWidget() {
         startY: 0,
         initialLeft: 0,
         initialTop: 0,
+        pointerId: null
+    });
+
+    const buttonDragRef = useRef<{
+        active: boolean;
+        startX: number;
+        startY: number;
+        initialLeft: number;
+        initialTop: number;
+        hasMoved: boolean;
+        pointerId: number | null;
+    }>({
+        active: false,
+        startX: 0,
+        startY: 0,
+        initialLeft: 0,
+        initialTop: 0,
+        hasMoved: false,
         pointerId: null
     });
 
@@ -141,15 +165,125 @@ export default function ChatbotWidget() {
         }
     };
 
-    const toggleOpen = (open: boolean) => {
-        if (!open) {
-            setPosition(null);
-            setIsDragging(false);
-            dragRef.current.active = false;
+    const openChatbot = () => {
+        if (!isMobile) {
+            const chatWidth = Math.min(420, window.innerWidth * 0.92);
+            const chatHeight = Math.min(640, window.innerHeight - 80);
+
+            if (windowPos) {
+                const clampedX = Math.max(10, Math.min(windowPos.x, window.innerWidth - chatWidth - 10));
+                const clampedY = Math.max(10, Math.min(windowPos.y, window.innerHeight - chatHeight - 10));
+                setWindowPos({ x: clampedX, y: clampedY });
+            } else if (buttonPos) {
+                const targetX = buttonPos.x > window.innerWidth / 2
+                    ? buttonPos.x + 62 - chatWidth
+                    : buttonPos.x;
+                const targetY = buttonPos.y > window.innerHeight / 2
+                    ? buttonPos.y + 62 - chatHeight
+                    : buttonPos.y;
+                const clampedX = Math.max(10, Math.min(targetX, window.innerWidth - chatWidth - 10));
+                const clampedY = Math.max(10, Math.min(targetY, window.innerHeight - chatHeight - 10));
+                setWindowPos({ x: clampedX, y: clampedY });
+            } else {
+                const defaultX = Math.max(10, window.innerWidth - chatWidth - 30);
+                const defaultY = Math.max(10, window.innerHeight - chatHeight - 30);
+                setWindowPos({ x: defaultX, y: defaultY });
+            }
         }
-        setIsOpen(open);
+        setIsOpen(true);
     };
 
+    const toggleOpen = (open: boolean) => {
+        if (open) {
+            openChatbot();
+        } else {
+            setIsDraggingWindow(false);
+            windowDragRef.current.active = false;
+            setIsOpen(false);
+        }
+    };
+
+    // Button Drag Handlers (when closed)
+    const handleButtonPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+        if (e.button !== 0) return;
+        const btn = buttonRef.current || e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+
+        buttonDragRef.current = {
+            active: true,
+            startX: e.clientX,
+            startY: e.clientY,
+            initialLeft: rect.left,
+            initialTop: rect.top,
+            hasMoved: false,
+            pointerId: e.pointerId
+        };
+
+        try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+            // fallback
+        }
+    };
+
+    const handleButtonPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+        if (!buttonDragRef.current.active) return;
+        if (buttonDragRef.current.pointerId !== null && e.pointerId !== buttonDragRef.current.pointerId) return;
+
+        const dx = e.clientX - buttonDragRef.current.startX;
+        const dy = e.clientY - buttonDragRef.current.startY;
+
+        if (!buttonDragRef.current.hasMoved && Math.hypot(dx, dy) > 4) {
+            buttonDragRef.current.hasMoved = true;
+            setIsDraggingButton(true);
+        }
+
+        if (buttonDragRef.current.hasMoved) {
+            const btnSize = 62;
+            const minX = 10;
+            const maxX = window.innerWidth - btnSize - 10;
+            const minY = 10;
+            const maxY = window.innerHeight - btnSize - 10;
+
+            const newX = Math.max(minX, Math.min(maxX, buttonDragRef.current.initialLeft + dx));
+            const newY = Math.max(minY, Math.min(maxY, buttonDragRef.current.initialTop + dy));
+
+            setButtonPos({ x: newX, y: newY });
+        }
+    };
+
+    const handleButtonPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+        if (buttonDragRef.current.active) {
+            if (buttonDragRef.current.pointerId !== null) {
+                try {
+                    e.currentTarget.releasePointerCapture(buttonDragRef.current.pointerId);
+                } catch {}
+            }
+            const moved = buttonDragRef.current.hasMoved;
+            buttonDragRef.current.active = false;
+            buttonDragRef.current.pointerId = null;
+            setIsDraggingButton(false);
+
+            if (!moved) {
+                toggleOpen(true);
+            }
+        }
+    };
+
+    const handleButtonPointerCancel = (e: React.PointerEvent<HTMLButtonElement>) => {
+        if (buttonDragRef.current.active) {
+            if (buttonDragRef.current.pointerId !== null) {
+                try {
+                    e.currentTarget.releasePointerCapture(buttonDragRef.current.pointerId);
+                } catch {}
+            }
+            buttonDragRef.current.active = false;
+            buttonDragRef.current.pointerId = null;
+            setIsDraggingButton(false);
+        }
+    };
+
+    // Window Header Drag Handlers (when open on desktop)
     const handleHeaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if (isMobile) return;
         if (e.button !== 0) return; // Left-click only
@@ -162,7 +296,7 @@ export default function ChatbotWidget() {
         if (!container) return;
         const rect = container.getBoundingClientRect();
 
-        dragRef.current = {
+        windowDragRef.current = {
             active: true,
             startX: e.clientX,
             startY: e.clientY,
@@ -176,18 +310,15 @@ export default function ChatbotWidget() {
         } catch {
             // fallback
         }
+        setIsDraggingWindow(true);
     };
 
     const handleHeaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!dragRef.current.active) return;
-        if (dragRef.current.pointerId !== null && e.pointerId !== dragRef.current.pointerId) return;
+        if (!windowDragRef.current.active) return;
+        if (windowDragRef.current.pointerId !== null && e.pointerId !== windowDragRef.current.pointerId) return;
 
-        const dx = e.clientX - dragRef.current.startX;
-        const dy = e.clientY - dragRef.current.startY;
-
-        if (Math.hypot(dx, dy) > 3) {
-            setIsDragging(true);
-        }
+        const dx = e.clientX - windowDragRef.current.startX;
+        const dy = e.clientY - windowDragRef.current.startY;
 
         const container = containerRef.current;
         const width = container ? container.getBoundingClientRect().width : 420;
@@ -196,31 +327,36 @@ export default function ChatbotWidget() {
         const maxX = window.innerWidth - width;
         const maxY = window.innerHeight - height;
 
-        const newX = Math.max(0, Math.min(dragRef.current.initialLeft + dx, maxX));
-        const newY = Math.max(0, Math.min(dragRef.current.initialTop + dy, maxY));
+        const newX = Math.max(0, Math.min(windowDragRef.current.initialLeft + dx, maxX));
+        const newY = Math.max(0, Math.min(windowDragRef.current.initialTop + dy, maxY));
 
-        setPosition({ x: newX, y: newY });
+        setWindowPos({ x: newX, y: newY });
     };
 
-    const endDrag = (e?: React.PointerEvent<HTMLDivElement>) => {
-        if (dragRef.current.active) {
-            if (e && dragRef.current.pointerId !== null) {
+    const endWindowDrag = (e?: React.PointerEvent<HTMLDivElement>) => {
+        if (windowDragRef.current.active) {
+            if (e && windowDragRef.current.pointerId !== null) {
                 try {
-                    (e.currentTarget as HTMLElement).releasePointerCapture(dragRef.current.pointerId);
+                    (e.currentTarget as HTMLElement).releasePointerCapture(windowDragRef.current.pointerId);
                 } catch {}
             }
-            dragRef.current.active = false;
-            dragRef.current.pointerId = null;
-            setIsDragging(false);
+            windowDragRef.current.active = false;
+            windowDragRef.current.pointerId = null;
+            setIsDraggingWindow(false);
         }
     };
 
     useEffect(() => {
         const handleGlobalEnd = () => {
-            if (dragRef.current.active) {
-                dragRef.current.active = false;
-                dragRef.current.pointerId = null;
-                setIsDragging(false);
+            if (windowDragRef.current.active) {
+                windowDragRef.current.active = false;
+                windowDragRef.current.pointerId = null;
+                setIsDraggingWindow(false);
+            }
+            if (buttonDragRef.current.active) {
+                buttonDragRef.current.active = false;
+                buttonDragRef.current.pointerId = null;
+                setIsDraggingButton(false);
             }
         };
 
@@ -255,34 +391,41 @@ export default function ChatbotWidget() {
         }
     }, [messages, isOpen, isTyping]);
 
-    // Keep chatbot window within viewport boundaries when opened or resized
+    // Keep chatbot elements within viewport boundaries when resized
     useEffect(() => {
-        if (!isOpen) return;
+        const adjustPositions = () => {
+            if (buttonPos) {
+                const btnSize = 62;
+                const maxX = window.innerWidth - btnSize - 10;
+                const maxY = window.innerHeight - btnSize - 10;
+                const newX = Math.max(10, Math.min(buttonPos.x, maxX));
+                const newY = Math.max(10, Math.min(buttonPos.y, maxY));
+                if (newX !== buttonPos.x || newY !== buttonPos.y) {
+                    setButtonPos({ x: newX, y: newY });
+                }
+            }
 
-        const adjustPosition = () => {
-            const container = containerRef.current;
-            if (!container) return;
-            
-            const rect = container.getBoundingClientRect();
-            if (position) {
-                const maxX = window.innerWidth - rect.width;
-                const maxY = window.innerHeight - rect.height;
-                const newX = Math.max(0, Math.min(position.x, maxX));
-                const newY = Math.max(0, Math.min(position.y, maxY));
-                if (newX !== position.x || newY !== position.y) {
-                    setPosition({ x: newX, y: newY });
+            if (isOpen && windowPos) {
+                const container = containerRef.current;
+                const width = container ? container.getBoundingClientRect().width : 420;
+                const height = container ? container.getBoundingClientRect().height : 600;
+                const maxX = window.innerWidth - width;
+                const maxY = window.innerHeight - height;
+                const newX = Math.max(0, Math.min(windowPos.x, maxX));
+                const newY = Math.max(0, Math.min(windowPos.y, maxY));
+                if (newX !== windowPos.x || newY !== windowPos.y) {
+                    setWindowPos({ x: newX, y: newY });
                 }
             }
         };
 
-        const handle = requestAnimationFrame(adjustPosition);
-        window.addEventListener("resize", adjustPosition);
-        
+        const handle = requestAnimationFrame(adjustPositions);
+        window.addEventListener("resize", adjustPositions);
         return () => {
             cancelAnimationFrame(handle);
-            window.removeEventListener("resize", adjustPosition);
+            window.removeEventListener("resize", adjustPositions);
         };
-    }, [isOpen, position]);
+    }, [isOpen, buttonPos, windowPos]);
 
     // Initial greeting on mount / reset
     const loadGreeting = () => {
@@ -483,7 +626,7 @@ export default function ChatbotWidget() {
                             text: "You don't have any active delivery orders right now. Once you place an order, live tracking details will appear here!",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -622,7 +765,7 @@ export default function ChatbotWidget() {
                             text: "You don't have any previous or active orders on your account. Support tickets and issue reporting are restricted to accounts with placed orders.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -790,18 +933,72 @@ export default function ChatbotWidget() {
             }
 
             else if (optionType === "show_order_options") {
-                setMessages(prev => [...prev, {
-                    id: `b_${Date.now()}`,
-                    sender: "bot",
-                    text: `Support for Order #${payload.id.slice(0, 8)} (Status: ${payload.status}):\nWhat issue are you experiencing?`,
-                    timestamp: new Date(),
-                    options: [
-                        { label: "🛵 Delivery Delay / Not Received", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Delivery Delay / Not Received", defaultDesc: `Order #${payload.id} is delayed or has not been delivered on time.` }) },
-                        { label: "🍲 Missing / Wrong Food Item", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Missing / Wrong Food Item", defaultDesc: `Items were missing or incorrect in Order #${payload.id}.` }) },
-                        { label: "💸 Refund / Cancellation Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Refund / Cancellation Request", defaultDesc: `I would like to request a cancellation/refund for Order #${payload.id}.` }) },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ]
-                }]);
+                const isCancelled = payload.status === "CANCELLED";
+                const isRejected = payload.status === "REJECTED";
+                const isCancelledOrRejected = isCancelled || isRejected;
+                const isCod = payload.paymentMethod === "COD" || payload.paymentMethod === "CASH" || (!payload.isPaid && payload.paymentMethod !== "ONLINE");
+                const isDelivered = payload.status === "DELIVERED";
+
+                if (isCancelledOrRejected) {
+                    if (isCod && !payload.isPaid) {
+                        // NC-BUG-105 & NC-BUG-106: Cancelled COD order -> No payment collected, no refund applicable, no delivery tracking
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: `❌ Order #${payload.id.slice(0, 8)} was ${payload.status === "REJECTED" ? "rejected by the seller" : "cancelled"}.\n\nSince this was a Cash on Delivery (COD) order cancelled prior to payment collection, **no amount was charged and no refund is applicable**. Delivery is no longer active.`,
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
+                                { label: "🎟️ General Order Query", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: `Order Query (#${payload.id.slice(0, 8)})`, desc: `General inquiry regarding ${payload.status.toLowerCase()} COD order #${payload.id}.` }) },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    } else {
+                        // Cancelled/Rejected online order -> Refund is automatically processed, no delivery tracking (NC-BUG-106)
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: `❌ Order #${payload.id.slice(0, 8)} was ${payload.status === "REJECTED" ? "rejected by the seller" : "cancelled"}.\n\nDelivery is not in progress. Your online payment of ₹${payload.totalAmount} is being processed back to your original payment method (typically 24-48 business hours).`,
+                            timestamp: new Date(),
+                            options: [
+                                { label: "💸 Check Refund Status", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Refund Status Inquiry", defaultDesc: `Inquiry regarding refund status for ${payload.status.toLowerCase()} online order #${payload.id} (Amount: ₹${payload.totalAmount}).` }) },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    }
+                } else if (isDelivered) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: `Support for delivered Order #${payload.id.slice(0, 8)}:\nWhat issue are you experiencing?`,
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🍲 Missing / Wrong Food Item", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Missing / Wrong Food Item", defaultDesc: `Items were missing or incorrect in Order #${payload.id}.` }) },
+                            ...(payload.isPaid ? [
+                                { label: "💸 Food Quality / Refund Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Food Quality / Refund Request", defaultDesc: `I am requesting a refund or compensation for delivered Order #${payload.id} due to food quality or missing items.` }) }
+                            ] : []),
+                            { label: "🍕 Reorder / Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                } else {
+                    // Active order (PENDING, ACCEPTED, PREPARING, OUT_FOR_DELIVERY)
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: `Support for active Order #${payload.id.slice(0, 8)} (Status: ${payload.status}):\nWhat issue are you experiencing?`,
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🛵 Delivery Delay / Not Received", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Delivery Delay / Not Received", defaultDesc: `Order #${payload.id} is delayed or has not been delivered on time.` }) },
+                            { label: "🍲 Missing / Wrong Food Item", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Missing / Wrong Food Item", defaultDesc: `Items were missing or incorrect in Order #${payload.id}.` }) },
+                            (isCod && !payload.isPaid)
+                                ? { label: "❌ Cancel Order Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Cancel Order Request", defaultDesc: `I would like to cancel active COD Order #${payload.id}.` }) }
+                                : { label: "💸 Refund / Cancellation Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Refund / Cancellation Request", defaultDesc: `I would like to request a cancellation/refund for Order #${payload.id}.` }) },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                }
             }
 
             else if (optionType === "show_booking_options") {
@@ -884,7 +1081,7 @@ export default function ChatbotWidget() {
                             timestamp: new Date(),
                             options: [
                                 { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -899,7 +1096,7 @@ export default function ChatbotWidget() {
                             text: "You do not have any previous or active orders. The support ticket system is only available for users who have placed an order. Please place an order first before raising a ticket.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -958,7 +1155,7 @@ export default function ChatbotWidget() {
                             timestamp: new Date(),
                             options: [
                                 { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -973,7 +1170,7 @@ export default function ChatbotWidget() {
                             text: "You do not have any previous or active orders. The support ticket system is only available for users who have placed an order. Please place an order first before raising a ticket.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -1125,7 +1322,7 @@ export default function ChatbotWidget() {
                     ];
                 }
                 else if (normalizedText.includes("food") || normalizedText.includes("order") || normalizedText.includes("item") || normalizedText.includes("dish") || normalizedText.includes("delivery") || normalizedText.includes("menu") || normalizedText.includes("buy")) {
-                    replyText = "To order delicious food, browse our active cloud kitchens at our [Explore Food](/explore-desktop) page. You can add items to your cart, set your delivery address, and proceed to checkout.\n\nIf you want to track a recent order or report missing/incorrect food items, select below:";
+                    replyText = "To order delicious food, browse our active cloud kitchens at our [Explore Food](/food-explore) page. You can add items to your cart, set your delivery address, and proceed to checkout.\n\nIf you want to track a recent order or report missing/incorrect food items, select below:";
                     generatedOptions = [
                         { label: "📦 Select recent order", action: () => handleSelectOption("orders") },
                         { label: "🎟️ Raise order support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: "Food order assistance request", desc: "I need help with my food order delivery or quality." }) },
@@ -1337,7 +1534,7 @@ Details: Category request submitted via chatbot assistant.`;
         return parts.length > 0 ? parts : text;
     };
 
-    const currentStyle: React.CSSProperties = (isOpen && isMobile)
+    const rootStyle: React.CSSProperties = (isOpen && isMobile)
         ? {
             position: "fixed",
             top: 0,
@@ -1350,27 +1547,48 @@ Details: Category request submitted via chatbot assistant.`;
             margin: 0,
             padding: 0
           }
-        : (position && isOpen)
-            ? {
-                position: "fixed",
-                left: `${position.x}px`,
-                top: `${position.y}px`,
-                zIndex: 9999,
-              }
-            : {
-                position: "fixed",
-                bottom: isMobile ? "20px" : "30px",
-                right: isMobile ? "20px" : "30px",
-                zIndex: 9999,
-              };
+        : isOpen
+            ? (windowPos
+                ? {
+                    position: "fixed",
+                    left: `${windowPos.x}px`,
+                    top: `${windowPos.y}px`,
+                    zIndex: 9999,
+                  }
+                : {
+                    position: "fixed",
+                    bottom: "30px",
+                    right: "30px",
+                    zIndex: 9999,
+                  })
+            : (buttonPos
+                ? {
+                    position: "fixed",
+                    left: `${buttonPos.x}px`,
+                    top: `${buttonPos.y}px`,
+                    zIndex: 9999,
+                    touchAction: "none"
+                  }
+                : {
+                    position: "fixed",
+                    bottom: isMobile ? "20px" : "30px",
+                    right: isMobile ? "20px" : "30px",
+                    zIndex: 9999,
+                    touchAction: "none"
+                  });
 
     return (
-        <div ref={containerRef} style={currentStyle}>
+        <div ref={containerRef} style={rootStyle}>
             
-            {/* Chatbot Toggle Button (When Closed) */}
+            {/* Chatbot Toggle Button (When Closed - Draggable) */}
             {!isOpen && (
                 <button
-                    onClick={() => toggleOpen(true)}
+                    ref={buttonRef}
+                    onPointerDown={handleButtonPointerDown}
+                    onPointerMove={handleButtonPointerMove}
+                    onPointerUp={handleButtonPointerUp}
+                    onPointerCancel={handleButtonPointerCancel}
+                    onDragStart={(e) => e.preventDefault()}
                     style={{
                         width: "62px",
                         height: "62px",
@@ -1379,22 +1597,30 @@ Details: Category request submitted via chatbot assistant.`;
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: "0 10px 30px rgba(238, 53, 36, 0.35), 0 4px 12px rgba(0,0,0,0.1)",
+                        boxShadow: isDraggingButton
+                            ? "0 14px 36px rgba(238, 53, 36, 0.5), 0 6px 16px rgba(0,0,0,0.2)"
+                            : "0 10px 30px rgba(238, 53, 36, 0.35), 0 4px 12px rgba(0,0,0,0.1)",
                         border: "2.5px solid #FFFFFF",
-                        cursor: "pointer",
-                        transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        cursor: isDraggingButton ? "grabbing" : "grab",
+                        transition: isDraggingButton ? "none" : "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        transform: isDraggingButton ? "scale(1.08)" : undefined,
                         position: "relative",
                         overflow: "visible",
                         padding: 0,
-                        userSelect: "none"
+                        userSelect: "none",
+                        touchAction: "none"
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "scale(1.1) translateY(-2px)";
+                        if (!isDraggingButton) {
+                            e.currentTarget.style.transform = "scale(1.1) translateY(-2px)";
+                        }
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "scale(1) translateY(0)";
+                        if (!isDraggingButton) {
+                            e.currentTarget.style.transform = "scale(1) translateY(0)";
+                        }
                     }}
-                    title="Chat with Bitey"
+                    title="Chat with Bitey (Drag anywhere to move)"
                 >
                     <div style={{
                         width: "100%",
@@ -1435,12 +1661,12 @@ Details: Category request submitted via chatbot assistant.`;
                     maxHeight: isMobile ? "100dvh" : undefined,
                     backgroundColor: "#FFFDFB",
                     borderRadius: isMobile ? "0px" : "24px",
-                    boxShadow: isMobile ? "none" : "0 20px 50px rgba(15, 23, 42, 0.18), 0 6px 20px rgba(239, 68, 68, 0.08)",
+                    boxShadow: isMobile ? "none" : isDraggingWindow ? "0 24px 60px rgba(15, 23, 42, 0.28), 0 8px 24px rgba(239, 68, 68, 0.15)" : "0 20px 50px rgba(15, 23, 42, 0.18), 0 6px 20px rgba(239, 68, 68, 0.08)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
                     border: isMobile ? "none" : "1.5px solid #FDE8E1",
-                    transition: isDragging ? "none" : "all 0.3s ease"
+                    transition: isDraggingWindow ? "none" : "box-shadow 0.2s ease"
                 }}>
                     
                     {/* Header */}
@@ -1448,23 +1674,28 @@ Details: Category request submitted via chatbot assistant.`;
                         className="drag-handle-header"
                         onPointerDown={handleHeaderPointerDown}
                         onPointerMove={handleHeaderPointerMove}
-                        onPointerUp={endDrag}
-                        onPointerCancel={endDrag}
+                        onPointerUp={endWindowDrag}
+                        onPointerCancel={endWindowDrag}
                         onDragStart={(e) => e.preventDefault()}
                         style={{
                             backgroundColor: "#FFF9F6",
-                            padding: isMobile ? "14px 16px" : "16px 20px",
-                            paddingTop: isMobile ? "max(14px, env(safe-area-inset-top, 14px))" : "16px",
+                            padding: isMobile ? "14px 16px" : "12px 20px 14px 20px",
+                            paddingTop: isMobile ? "max(14px, env(safe-area-inset-top, 14px))" : "12px",
                             display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            cursor: isMobile ? "default" : isDragging ? "grabbing" : "grab",
+                            flexDirection: "column",
+                            cursor: isMobile ? "default" : isDraggingWindow ? "grabbing" : "grab",
                             userSelect: "none",
                             touchAction: "none",
                             borderBottom: "1.5px solid #FDE8E1",
                             flexShrink: 0
                         }}
                     >
+                        {!isMobile && (
+                            <div style={{ display: "flex", justifyContent: "center", width: "100%", paddingBottom: "6px", pointerEvents: "none" }}>
+                                <div style={{ width: "36px", height: "4px", borderRadius: "2px", backgroundColor: "#E2E8F0" }} title="Drag header to move" />
+                            </div>
+                        )}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", pointerEvents: "none" }}>
                             <div style={{
                                 width: "46px",
@@ -1612,6 +1843,7 @@ Details: Category request submitted via chatbot assistant.`;
                             </button>
                         </div>
                     </div>
+                </div>
 
                     {/* Chat Messages Body */}
                     <div style={{
@@ -1788,7 +2020,7 @@ Details: Category request submitted via chatbot assistant.`;
                                         border: msg.sender === "bot" ? "1.5px solid #FDE8E1" : "none",
                                         whiteSpace: "pre-line"
                                     }}>
-                                        {renderMessageText(msg.text)}
+                                        <TicketAttachmentRenderer content={msg.text} isCurrentUser={msg.sender === "user"} />
                                         {msg.isTicketSuccess && msg.ticketId && (
                                             <div style={{ marginTop: "10px", borderTop: "1.5px solid #FDE8E1", paddingTop: "8px" }}>
                                                 <Link
@@ -2181,7 +2413,7 @@ Details: Category request submitted via chatbot assistant.`;
                         <button
                             onClick={() => {
                                 toggleOpen(false);
-                                router.push("/explore-desktop");
+                                router.push("/food-explore");
                             }}
                             style={{
                                 padding: "5px 12px",
@@ -2225,28 +2457,50 @@ Details: Category request submitted via chatbot assistant.`;
                         <input
                             type="file"
                             ref={fileInputRef}
+                            accept="image/*,.pdf,.doc,.docx"
                             style={{ display: "none" }}
                             onChange={(e) => {
                                 if (e.target.files && e.target.files[0]) {
                                     const file = e.target.files[0];
-                                    setMessages(prev => [...prev, {
-                                        id: `u_${Date.now()}`,
-                                        sender: "user",
-                                        text: `📎 Attached file: ${file.name}`,
-                                        timestamp: new Date()
-                                    }]);
-                                    showTypingIndicator(() => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                        const dataUrl = reader.result as string;
+                                        const isImg = file.type.startsWith("image/");
+                                        const attachmentPayload = isImg 
+                                            ? `![${file.name}](${dataUrl})\n📎 Attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`
+                                            : `📎 Attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                                        
+                                        const ticketDescPayload = isImg
+                                            ? `User attached image file: ${file.name}\n\n![${file.name}](${dataUrl})`
+                                            : `User attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+
                                         setMessages(prev => [...prev, {
-                                            id: `b_${Date.now()}`,
-                                            sender: "bot",
-                                            text: `Received file "${file.name}". Would you like to log this file with a support ticket?`,
-                                            timestamp: new Date(),
-                                            options: [
-                                                { label: "🎟️ Submit Ticket with Attachment", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: `Attachment Query: ${file.name}`, desc: `User attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)` }) },
-                                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                                            ]
+                                            id: `u_${Date.now()}`,
+                                            sender: "user",
+                                            text: attachmentPayload,
+                                            timestamp: new Date()
                                         }]);
-                                    });
+                                        showTypingIndicator(() => {
+                                            setMessages(prev => [...prev, {
+                                                id: `b_${Date.now()}`,
+                                                sender: "bot",
+                                                text: `Received attachment "${file.name}". Would you like to submit a support ticket with this attachment?`,
+                                                timestamp: new Date(),
+                                                options: [
+                                                    { 
+                                                        label: "🎟️ Submit Ticket with Attachment", 
+                                                        action: () => handleSelectOption("custom_ticket_prefilled", { 
+                                                            category: "OTHER", 
+                                                            title: `Attachment Query: ${file.name}`, 
+                                                            desc: ticketDescPayload 
+                                                        }) 
+                                                    },
+                                                    { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                                                ]
+                                            }]);
+                                        });
+                                    };
+                                    reader.readAsDataURL(file);
                                 }
                             }}
                         />

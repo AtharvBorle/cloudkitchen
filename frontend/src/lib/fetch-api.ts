@@ -29,12 +29,46 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
         }
     }
 
-    const res = await fetch(target, {
-        credentials: "include",
-        cache: init?.cache || "no-store",
-        ...init,
-        headers,
-    });
+    let res: Response;
+    try {
+        res = await fetch(target, {
+            credentials: "include",
+            cache: init?.cache || "no-store",
+            ...init,
+            headers,
+        });
+    } catch (err: any) {
+        const errMsg = String(err?.message || "").toLowerCase();
+        const errName = String(err?.name || "").toLowerCase();
+        const isNetworkErr =
+            (typeof navigator !== "undefined" && !navigator.onLine) ||
+            errName === "typeerror" ||
+            errName === "networkerror" ||
+            errMsg.includes("networkerror") ||
+            errMsg.includes("failed to fetch") ||
+            errMsg.includes("network request failed") ||
+            errMsg.includes("load failed") ||
+            errMsg.includes("fetch failed");
+
+        if (isNetworkErr) {
+            const isOrderPlacement =
+                typeof target === "string" &&
+                (target.includes("/orders") ||
+                 target.includes("/checkout") ||
+                 target.includes("/bookings") ||
+                 target.includes("/meal-plans") ||
+                 target.includes("/subscriptions"));
+
+            const friendlyMsg = isOrderPlacement
+                ? "Unable to place your order. Please check your internet connection and try again."
+                : "Unable to complete your request. Please check your internet connection and try again.";
+
+            const friendlyErr = new Error(friendlyMsg);
+            friendlyErr.name = "NetworkError";
+            throw friendlyErr;
+        }
+        throw err;
+    }
     const contentType = res.headers.get("content-type");
 
     if (contentType && contentType.includes("application/json")) {
@@ -47,7 +81,7 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
                         if (prop === 'json') {
                             return async () => {
                                 if (json.success) {
-                                    return json.data !== undefined ? json.data : json;
+                                    return (json.data !== undefined && json.data !== null) ? json.data : json;
                                 } else {
                                     return { ...json, message: json.error || json.message };
                                 }
@@ -116,7 +150,7 @@ export function uploadWithProgress(
                         if (parsed && typeof parsed === 'object') {
                             if ('success' in parsed) {
                                 if (parsed.success) {
-                                    return parsed.data !== undefined ? parsed.data : parsed;
+                                    return (parsed.data !== undefined && parsed.data !== null) ? parsed.data : parsed;
                                 } else {
                                     return { ...parsed, message: parsed.error || parsed.message };
                                 }

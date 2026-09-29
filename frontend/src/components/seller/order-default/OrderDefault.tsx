@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package } from "lucide-react";
+import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package, XCircle, X } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -25,6 +25,7 @@ export interface OrderDetailsData {
   id?: string;
   orderId: string;
   placedTime: string;
+  cancelledTime?: string;
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
   rawStatus: string;
   customerName: string;
@@ -158,6 +159,10 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               ? new Date(target.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
               : "Just now";
 
+            const cancelledTimeStr = target.updatedAt
+              ? new Date(target.updatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+              : timeStr;
+
             const calculatedSubtotal = Array.isArray(parsedItems)
               ? parsedItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty) || 1), 0)
               : 0;
@@ -172,6 +177,9 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               placedTime: target.createdAt
                 ? `Today at ${timeStr}`
                 : "Today at 02:45 PM",
+              cancelledTime: target.updatedAt
+                ? `Today at ${cancelledTimeStr}`
+                : `Today at ${timeStr}`,
               status: statusVal,
               rawStatus: s,
               customerName: target.user?.name || "Customer",
@@ -261,7 +269,13 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
         body: JSON.stringify({ status: "CANCELLED" }),
       });
       if (res.ok) {
-        setOrder((prev) => (prev ? { ...prev, status: "Cancelled", rawStatus: "CANCELLED" } : null));
+        const nowTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+        setOrder((prev) => (prev ? {
+          ...prev,
+          status: "Cancelled",
+          rawStatus: "CANCELLED",
+          cancelledTime: `Today at ${nowTime}`,
+        } : null));
         setToast({
           type: "success",
           text: `Order ${activeOrderData.orderId} rejected successfully.`,
@@ -531,7 +545,17 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
             <div className={styles.rightCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 className={styles.cardTitle} style={{ margin: 0 }}>Order Delivery Lifecycle</h3>
-                <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "700" }}>• Live</span>
+                {isCancelled ? (
+                  <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: "700", backgroundColor: "#FEF2F2", padding: "3px 9px", borderRadius: "6px", border: "1px solid #FECACA" }}>
+                    • Cancelled
+                  </span>
+                ) : isDelivered ? (
+                  <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "700", backgroundColor: "#ECFDF5", padding: "3px 9px", borderRadius: "6px", border: "1px solid #A7F3D0" }}>
+                    • Completed
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "700" }}>• Live</span>
+                )}
               </div>
 
               {/* Timeline list */}
@@ -542,7 +566,15 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     <div className={`${styles.nodeCircle} ${styles.nodeCompleted}`}>
                       <Check size={14} strokeWidth={3} />
                     </div>
-                    <div className={`${styles.connectingLine} ${!isPending ? styles.lineCompleted : ""}`} />
+                    <div
+                      className={`${styles.connectingLine} ${
+                        isCancelled
+                          ? styles.lineCancelled
+                          : !isPending
+                          ? styles.lineCompleted
+                          : ""
+                      }`}
+                    />
                   </div>
                   <div className={styles.timelineText}>
                     <h4 className={styles.stepTitle}>Order Placed</h4>
@@ -550,114 +582,175 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                   </div>
                 </div>
 
-                {/* Step 2: Preparing Food */}
-                <div className={styles.timelineItem}>
-                  <div className={styles.timelineNode}>
-                    <div
-                      className={`${styles.nodeCircle} ${
-                        isDelivered || isOut
-                          ? styles.nodeCompleted
-                          : isPreparing
-                          ? styles.nodeActive
-                          : styles.nodeUpcoming
-                      }`}
-                    >
-                      {isDelivered || isOut ? (
-                        <Check size={14} strokeWidth={3} />
-                      ) : isPreparing ? (
-                        <Clock size={13} strokeWidth={2.5} />
-                      ) : (
-                        "2"
-                      )}
+                {isCancelled ? (
+                  /* Final Stage: Order Rejected / Cancelled */
+                  <div className={styles.timelineItem}>
+                    <div className={styles.timelineNode}>
+                      <div className={`${styles.nodeCircle} ${styles.nodeCancelled}`}>
+                        <X size={14} strokeWidth={3} />
+                      </div>
                     </div>
-                    <div className={`${styles.connectingLine} ${isDelivered || isOut ? styles.lineCompleted : ""}`} />
+                    <div className={styles.timelineText}>
+                      <h4 className={`${styles.stepTitle} ${styles.stepTitleCancelled}`}>
+                        Order Rejected / Cancelled
+                      </h4>
+                      <span className={`${styles.stepSubtitle} ${styles.stepSubtitleCancelled}`}>
+                        {activeOrderData.cancelledTime || "Order Terminated"} • Rejected by kitchen partner. Lifecycle closed.
+                      </span>
+                    </div>
                   </div>
-                  <div className={styles.timelineText}>
-                    <h4
-                      className={`${styles.stepTitle} ${
-                        isPreparing ? styles.stepTitleActive : !isPending ? "" : styles.stepTitleUpcoming
-                      }`}
-                    >
-                      Preparing Food
-                    </h4>
-                    <span
-                      className={`${styles.stepSubtitle} ${
-                        isPreparing ? styles.stepSubtitleActive : styles.stepSubtitleUpcoming
-                      }`}
-                    >
-                      {isPreparing ? "In Kitchen (Active)" : isDelivered || isOut ? "Completed ✓" : "Pending Acceptance"}
-                    </span>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Step 2: Preparing Food */}
+                    <div className={styles.timelineItem}>
+                      <div className={styles.timelineNode}>
+                        <div
+                          className={`${styles.nodeCircle} ${
+                            isDelivered || isOut
+                              ? styles.nodeCompleted
+                              : isPreparing
+                              ? styles.nodeActive
+                              : styles.nodeUpcoming
+                          }`}
+                        >
+                          {isDelivered || isOut ? (
+                            <Check size={14} strokeWidth={3} />
+                          ) : isPreparing ? (
+                            <Clock size={13} strokeWidth={2.5} />
+                          ) : (
+                            "2"
+                          )}
+                        </div>
+                        <div className={`${styles.connectingLine} ${isDelivered || isOut ? styles.lineCompleted : ""}`} />
+                      </div>
+                      <div className={styles.timelineText}>
+                        <h4
+                          className={`${styles.stepTitle} ${
+                            isPreparing ? styles.stepTitleActive : !isPending ? "" : styles.stepTitleUpcoming
+                          }`}
+                        >
+                          Preparing Food
+                        </h4>
+                        <span
+                          className={`${styles.stepSubtitle} ${
+                            isPreparing ? styles.stepSubtitleActive : styles.stepSubtitleUpcoming
+                          }`}
+                        >
+                          {isPreparing ? "In Kitchen (Active)" : isDelivered || isOut ? "Completed ✓" : "Pending Acceptance"}
+                        </span>
+                      </div>
+                    </div>
 
-                {/* Step 3: Out for Delivery */}
-                <div className={styles.timelineItem}>
-                  <div className={styles.timelineNode}>
-                    <div
-                      className={`${styles.nodeCircle} ${
-                        isDelivered
-                          ? styles.nodeCompleted
-                          : isOut
-                          ? styles.nodeActive
-                          : styles.nodeUpcoming
-                      }`}
-                    >
-                      {isDelivered ? (
-                        <Check size={14} strokeWidth={3} />
-                      ) : isOut ? (
-                        <Bike size={13} strokeWidth={2.5} />
-                      ) : (
-                        "3"
-                      )}
+                    {/* Step 3: Out for Delivery */}
+                    <div className={styles.timelineItem}>
+                      <div className={styles.timelineNode}>
+                        <div
+                          className={`${styles.nodeCircle} ${
+                            isDelivered
+                              ? styles.nodeCompleted
+                              : isOut
+                              ? styles.nodeActive
+                              : styles.nodeUpcoming
+                          }`}
+                        >
+                          {isDelivered ? (
+                            <Check size={14} strokeWidth={3} />
+                          ) : isOut ? (
+                            <Bike size={13} strokeWidth={2.5} />
+                          ) : (
+                            "3"
+                          )}
+                        </div>
+                        <div className={`${styles.connectingLine} ${isDelivered ? styles.lineCompleted : ""}`} />
+                      </div>
+                      <div className={styles.timelineText}>
+                        <h4
+                          className={`${styles.stepTitle} ${
+                            isOut ? styles.stepTitleActive : isDelivered ? "" : styles.stepTitleUpcoming
+                          }`}
+                        >
+                          Out for Delivery
+                        </h4>
+                        <span
+                          className={`${styles.stepSubtitle} ${
+                            isOut ? styles.stepSubtitleActive : styles.stepSubtitleUpcoming
+                          }`}
+                        >
+                          {isOut
+                            ? activeOrderData.deliveryPersonName
+                              ? `Assigned: ${activeOrderData.deliveryPersonName}`
+                              : "Dispatched with Valet"
+                            : isDelivered
+                            ? "Delivered ✓"
+                            : "Awaiting preparation"}
+                        </span>
+                      </div>
                     </div>
-                    <div className={`${styles.connectingLine} ${isDelivered ? styles.lineCompleted : ""}`} />
-                  </div>
-                  <div className={styles.timelineText}>
-                    <h4
-                      className={`${styles.stepTitle} ${
-                        isOut ? styles.stepTitleActive : isDelivered ? "" : styles.stepTitleUpcoming
-                      }`}
-                    >
-                      Out for Delivery
-                    </h4>
-                    <span
-                      className={`${styles.stepSubtitle} ${
-                        isOut ? styles.stepSubtitleActive : styles.stepSubtitleUpcoming
-                      }`}
-                    >
-                      {isOut
-                        ? activeOrderData.deliveryPersonName
-                          ? `Assigned: ${activeOrderData.deliveryPersonName}`
-                          : "Dispatched with Valet"
-                        : isDelivered
-                        ? "Delivered ✓"
-                        : "Awaiting preparation"}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Step 4: Delivered */}
-                <div className={styles.timelineItem}>
-                  <div className={styles.timelineNode}>
-                    <div className={`${styles.nodeCircle} ${isDelivered ? styles.nodeCompleted : styles.nodeUpcoming}`}>
-                      {isDelivered ? <Check size={14} strokeWidth={3} /> : "4"}
+                    {/* Step 4: Delivered */}
+                    <div className={styles.timelineItem}>
+                      <div className={styles.timelineNode}>
+                        <div className={`${styles.nodeCircle} ${isDelivered ? styles.nodeCompleted : styles.nodeUpcoming}`}>
+                          {isDelivered ? <Check size={14} strokeWidth={3} /> : "4"}
+                        </div>
+                      </div>
+                      <div className={styles.timelineText}>
+                        <h4 className={`${styles.stepTitle} ${isDelivered ? styles.stepTitleActive : styles.stepTitleUpcoming}`}>
+                          Delivered &amp; Closed
+                        </h4>
+                        <span className={`${styles.stepSubtitle} ${isDelivered ? styles.stepSubtitleActive : styles.stepSubtitleUpcoming}`}>
+                          {isDelivered ? "Successfully handed over to customer" : "Final Step"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className={styles.timelineText}>
-                    <h4 className={`${styles.stepTitle} ${isDelivered ? styles.stepTitleActive : styles.stepTitleUpcoming}`}>
-                      Delivered &amp; Closed
-                    </h4>
-                    <span className={`${styles.stepSubtitle} ${isDelivered ? styles.stepSubtitleActive : styles.stepSubtitleUpcoming}`}>
-                      {isDelivered ? "Successfully handed over to customer" : "Final Step"}
-                    </span>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
 
               <div className={styles.actionDivider} />
 
               {/* Action Buttons based on current lifecycle status */}
               <div className={styles.actionButtonGroup}>
+                {isCancelled && (
+                  <div style={{
+                    backgroundColor: "#FEF2F2",
+                    border: "1px solid #FECACA",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    alignItems: "center",
+                    textAlign: "center"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#DC2626", fontWeight: "700", fontSize: "0.92rem" }}>
+                      <XCircle size={18} />
+                      <span>Order Cancelled &amp; Closed</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.82rem", color: "#7F1D1D", lineHeight: 1.45 }}>
+                      This order has been rejected/cancelled. All preparation, rider assignment, and delivery stages have concluded.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/seller/orders")}
+                      style={{
+                        marginTop: "4px",
+                        padding: "8px 16px",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #DC2626",
+                        color: "#DC2626",
+                        borderRadius: "8px",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      ← Back to All Orders
+                    </button>
+                  </div>
+                )}
+
                 {isPending && !isCancelled && (
                   <>
                     <button

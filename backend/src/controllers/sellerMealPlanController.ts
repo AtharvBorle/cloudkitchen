@@ -82,7 +82,7 @@ export const getSellerMealPlans = async () => {
             parsedTimings = [];
         }
 
-        const activeSubscribers = plan.userSubscriptions.filter((s) => s.status === "ACTIVE" || !s.isPaused).length;
+        const activeSubscribers = plan.userSubscriptions.filter((s) => s.status === "ACTIVE" && !s.isPaused).length;
 
         const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
         return {
@@ -92,7 +92,7 @@ export const getSellerMealPlans = async () => {
             description: plan.description || "",
             weeklyPrice: `₹${plan.weeklyPrice.toFixed(0)}`,
             rawWeeklyPrice: plan.weeklyPrice,
-            monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : (isWeekly ? `₹${plan.weeklyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 4).toFixed(0)}`),
+            monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : "",
             quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : "",
             yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : "",
             duration: plan.duration,
@@ -101,7 +101,7 @@ export const getSellerMealPlans = async () => {
             status: plan.status,
             allowCancel: plan.allowCancel,
             pauseBillingPeriod: plan.pauseBillingPeriod,
-            subscribersCount: activeSubscribers || plan.subscribersCount || 0,
+            subscribersCount: activeSubscribers,
             createdAt: plan.createdAt.toISOString(),
             updatedAt: plan.updatedAt.toISOString(),
         };
@@ -132,14 +132,25 @@ export const getSellerMealPlans = async () => {
 
     const activeSubscribersCount = allSubscribers.filter((s) => s.status === "ACTIVE" && !s.isPaused).length;
     const activePlansCount = plans.filter((p) => p.status === "Live").length;
-    const mrrTotal = plans.reduce((acc, p) => acc + (p.rawWeeklyPrice * 4 * (p.subscribersCount || 0)), 0);
+    const mrrTotal = allSubscribers
+        .filter((s) => s.status === "ACTIVE" && !s.isPaused)
+        .reduce((sum, s) => {
+            const c = (s.cycle || "1 Week").toLowerCase();
+            if (c.includes("2 week") || c === "biweekly") return sum + ((s.pricePaid || 0) * 2);
+            if (c.includes("week") || c === "weekly" || c.includes("1 week")) return sum + ((s.pricePaid || 0) * 4);
+            if (c.includes("quarter") || c.includes("3 month")) return sum + Math.round((s.pricePaid || 0) / 3);
+            if (c.includes("6 month") || c === "half_yearly") return sum + Math.round((s.pricePaid || 0) / 6);
+            if (c.includes("year") || c === "yearly") return sum + Math.round((s.pricePaid || 0) / 12);
+            return sum + (s.pricePaid || 0);
+        }, 0) ||
+        plans.reduce((acc, p) => acc + (p.rawWeeklyPrice * 4 * (p.subscribersCount || 0)), 0);
 
     return {
         plans,
         subscribers: allSubscribers,
         metrics: {
             activeSubscribers: activeSubscribersCount,
-            monthlyRecurringRevenue: mrrTotal > 0 ? `₹${(mrrTotal / 1000).toFixed(1)}k` : "₹0",
+            monthlyRecurringRevenue: mrrTotal > 0 ? `₹${mrrTotal.toLocaleString("en-IN")}` : "₹0",
             rawMRR: mrrTotal,
             activePlansCount,
             fulfillmentRate: "99.2%",
@@ -187,7 +198,7 @@ export const getSellerMealPlanById = async (planId: string) => {
         description: plan.description || "",
         weeklyPrice: `₹${plan.weeklyPrice.toFixed(0)}`,
         rawWeeklyPrice: plan.weeklyPrice,
-        monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : (isWeekly ? `₹${plan.weeklyPrice.toFixed(0)}` : `₹${(plan.weeklyPrice * 4).toFixed(0)}`),
+        monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : "",
         quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : "",
         yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : "",
         duration: plan.duration,
@@ -196,7 +207,7 @@ export const getSellerMealPlanById = async (planId: string) => {
         status: plan.status,
         allowCancel: plan.allowCancel,
         pauseBillingPeriod: plan.pauseBillingPeriod,
-        subscribersCount: plan.userSubscriptions?.length || plan.subscribersCount || 0,
+        subscribersCount: plan.userSubscriptions?.filter((s) => s.status === "ACTIVE" && !s.isPaused).length || 0,
         createdAt: plan.createdAt.toISOString(),
         updatedAt: plan.updatedAt.toISOString(),
     };
@@ -218,7 +229,7 @@ export const createSellerMealPlan = async (req: Request) => {
         features = [],
         mealTimings = [],
         status = "Live",
-        allowCancel = true,
+        allowCancel = false,
         pauseBillingPeriod = "Monthly",
     } = body;
 
@@ -240,7 +251,7 @@ export const createSellerMealPlan = async (req: Request) => {
     const isWeekly = (duration || "1 Week").toLowerCase().includes("week");
     const numericMonthly = monthlyPrice
         ? parseFloat(String(monthlyPrice).replace(/[^0-9.]/g, ""))
-        : (isWeekly ? numericWeeklyPrice : numericWeeklyPrice * 4);
+        : (isWeekly ? null : numericWeeklyPrice);
     const numericQuarterly = quarterlyPrice
         ? parseFloat(String(quarterlyPrice).replace(/[^0-9.]/g, ""))
         : null;
@@ -262,7 +273,7 @@ export const createSellerMealPlan = async (req: Request) => {
             features: JSON.stringify(Array.isArray(features) ? features : []),
             mealTimings: JSON.stringify(Array.isArray(mealTimings) ? mealTimings : []),
             status: status || "Live",
-            allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : true,
+            allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : false,
             pauseBillingPeriod: pauseBillingPeriod || "Monthly",
         }
     });
@@ -274,7 +285,7 @@ export const createSellerMealPlan = async (req: Request) => {
         description: newPlan.description,
         weeklyPrice: `₹${newPlan.weeklyPrice.toFixed(0)}`,
         rawWeeklyPrice: newPlan.weeklyPrice,
-        monthlyPrice: `₹${(newPlan.monthlyPrice || newPlan.weeklyPrice).toFixed(0)}`,
+        monthlyPrice: newPlan.monthlyPrice ? `₹${newPlan.monthlyPrice.toFixed(0)}` : "",
         quarterlyPrice: newPlan.quarterlyPrice ? `₹${newPlan.quarterlyPrice.toFixed(0)}` : "",
         yearlyPrice: newPlan.yearlyPrice ? `₹${newPlan.yearlyPrice.toFixed(0)}` : "",
         duration: newPlan.duration,
@@ -559,6 +570,7 @@ export const getPublicMealPlans = async (req: Request) => {
             parsedTimings = [];
         }
 
+        const isWeekly = (p.duration || "1 Week").toLowerCase().includes("week");
         return {
             id: p.id,
             sellerId: p.sellerId,
@@ -569,9 +581,9 @@ export const getPublicMealPlans = async (req: Request) => {
             tier: p.tier,
             description: p.description,
             weeklyPrice: p.weeklyPrice,
-            monthlyPrice: p.monthlyPrice || p.weeklyPrice * 4,
-            quarterlyPrice: p.quarterlyPrice || p.weeklyPrice * 12 * 0.9,
-            yearlyPrice: p.yearlyPrice || p.weeklyPrice * 52 * 0.8,
+            monthlyPrice: p.monthlyPrice || (isWeekly ? null : p.weeklyPrice),
+            quarterlyPrice: p.quarterlyPrice || null,
+            yearlyPrice: p.yearlyPrice || null,
             duration: p.duration,
             features: parsedFeatures,
             mealTimings: parsedTimings,

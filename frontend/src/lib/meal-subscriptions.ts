@@ -87,7 +87,7 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
 
   const monthlyStr = rawPlan.monthlyPrice
     ? (String(rawPlan.monthlyPrice).startsWith("₹") ? rawPlan.monthlyPrice : `₹${rawPlan.monthlyPrice}`)
-    : (isWeekly ? `₹${weeklyNum.toFixed(0)}` : `₹${(weeklyNum * 4).toFixed(0)}`);
+    : (isWeekly ? "" : `₹${weeklyNum.toFixed(0)}`);
 
   const quarterlyStr = rawPlan.quarterlyPrice
     ? (String(rawPlan.quarterlyPrice).startsWith("₹") ? rawPlan.quarterlyPrice : `₹${rawPlan.quarterlyPrice}`)
@@ -145,7 +145,7 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     monthlyRevenue,
     status: rawPlan.status || "Live",
     deployedDate,
-    allowCancel: rawPlan.allowCancel ?? true,
+    allowCancel: rawPlan.allowCancel ?? false,
     pauseBillingPeriod: rawPlan.pauseBillingPeriod || "30 Days",
   };
 }
@@ -249,6 +249,10 @@ export async function saveMealPlan(
   let createdPlan: MealSubscriptionPlan;
 
   try {
+    const isWeekly = (planData.duration || "1 Week").toLowerCase().includes("week");
+    const parsedWeekly = planData.weeklyPrice ? parseFloat(String(planData.weeklyPrice).replace(/[^\d.]/g, "")) : (isWeekly ? priceNum : null);
+    const parsedMonthly = planData.monthlyPrice ? parseFloat(String(planData.monthlyPrice).replace(/[^\d.]/g, "")) : (!isWeekly ? priceNum : null);
+
     const res = await fetchApi("/api/seller/meal-plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -256,15 +260,15 @@ export async function saveMealPlan(
         name: planData.name,
         tier: planData.tier || "Bronze",
         description: "",
-        weeklyPrice: priceNum,
-        monthlyPrice: planData.monthlyPrice ? parseFloat(String(planData.monthlyPrice).replace(/[^\d.]/g, "")) : priceNum * 4,
+        weeklyPrice: parsedWeekly || priceNum,
+        monthlyPrice: parsedMonthly,
         quarterlyPrice: planData.quarterlyPrice ? parseFloat(String(planData.quarterlyPrice).replace(/[^\d.]/g, "")) : null,
         yearlyPrice: planData.yearlyPrice ? parseFloat(String(planData.yearlyPrice).replace(/[^\d.]/g, "")) : null,
         duration: planData.duration || "1 Week",
         features: planData.features || [],
         mealTimings: planData.mealTimings || [],
         status: planData.status || "Live",
-        allowCancel: planData.allowCancel ?? true,
+        allowCancel: planData.allowCancel ?? false,
         pauseBillingPeriod: planData.pauseBillingPeriod || "30 Days",
       }),
     });
@@ -306,10 +310,16 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.tier !== undefined) payload.tier = updates.tier;
     if (updates.weeklyPrice !== undefined) {
-      payload.weeklyPrice = parseFloat(String(updates.weeklyPrice).replace(/[^\d.]/g, ""));
+      payload.weeklyPrice = updates.weeklyPrice ? parseFloat(String(updates.weeklyPrice).replace(/[^\d.]/g, "")) : null;
     }
     if (updates.monthlyPrice !== undefined) {
-      payload.monthlyPrice = parseFloat(String(updates.monthlyPrice).replace(/[^\d.]/g, ""));
+      payload.monthlyPrice = updates.monthlyPrice ? parseFloat(String(updates.monthlyPrice).replace(/[^\d.]/g, "")) : null;
+    }
+    if (updates.quarterlyPrice !== undefined) {
+      payload.quarterlyPrice = updates.quarterlyPrice ? parseFloat(String(updates.quarterlyPrice).replace(/[^\d.]/g, "")) : null;
+    }
+    if (updates.yearlyPrice !== undefined) {
+      payload.yearlyPrice = updates.yearlyPrice ? parseFloat(String(updates.yearlyPrice).replace(/[^\d.]/g, "")) : null;
     }
     if (updates.duration !== undefined) payload.duration = updates.duration;
     if (updates.features !== undefined) payload.features = updates.features;
@@ -570,9 +580,102 @@ export async function togglePauseUserSubscription(subscriptionId: string, isPaus
   }
 }
 
+export const loadRazorpayScript = (): Promise<boolean> => {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if ((window as any).Razorpay) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const existing = document.getElementById("razorpay-checkout-script");
+    if (existing) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.id = "razorpay-checkout-script";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+export async function initiateMealSubscriptionPayment(
+  planId: string,
+  cycle: string = "WEEKLY"
+): Promise<{
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  calculatedPrice: number;
+  subscriptionCycle: string;
+  durationDays: number;
+}> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions/initiate-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId, cycle }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || json.error || "Failed to initiate online payment for subscription");
+    }
+    return json.data || json;
+  } catch (err: any) {
+    console.error("Error initiating subscription payment:", err);
+    throw err;
+  }
+}
+
+export async function verifyAndActivateMealSubscription(params: {
+  planId: string;
+  cycle?: string;
+  deliveryAddress: string;
+  contactPhone?: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}): Promise<{ success: boolean; message: string; subscription?: any }> {
+  try {
+    const res = await fetchApi("/api/user/meal-subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        planId: params.planId,
+        cycle: params.cycle || "WEEKLY",
+        deliveryAddress: params.deliveryAddress,
+        contactPhone: params.contactPhone || "",
+        razorpay_order_id: params.razorpay_order_id,
+        razorpay_payment_id: params.razorpay_payment_id,
+        razorpay_signature: params.razorpay_signature,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || json.error || "Payment verification failed. Please try again.");
+    }
+    return {
+      success: true,
+      message: json.message || "Subscribed to meal plan successfully!",
+      subscription: json.data?.subscription || json.data,
+    };
+  } catch (err: any) {
+    console.error("Error activating subscription after payment:", err);
+    throw err;
+  }
+}
+
 export async function subscribeToMealPlan(
   planId: string,
-  options?: { deliveryAddress?: string; contactPhone?: string; cycle?: string }
+  options?: {
+    deliveryAddress?: string;
+    contactPhone?: string;
+    cycle?: string;
+    razorpay_order_id?: string;
+    razorpay_payment_id?: string;
+    razorpay_signature?: string;
+  }
 ): Promise<{ success: boolean; message: string; subscription?: any }> {
   try {
     const res = await fetchApi("/api/user/meal-subscriptions", {
@@ -583,6 +686,9 @@ export async function subscribeToMealPlan(
         deliveryAddress: options?.deliveryAddress || "",
         contactPhone: options?.contactPhone || "",
         cycle: options?.cycle || "WEEKLY",
+        razorpay_order_id: options?.razorpay_order_id,
+        razorpay_payment_id: options?.razorpay_payment_id,
+        razorpay_signature: options?.razorpay_signature,
       }),
     });
     const json = await res.json();
@@ -599,5 +705,6 @@ export async function subscribeToMealPlan(
     throw err;
   }
 }
+
 
 

@@ -733,6 +733,11 @@ function CheckoutContent() {
         e.preventDefault();
         setError("");
 
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+            setError("Unable to place your order. Please check your internet connection and try again.");
+            return;
+        }
+
         if (!phone) {
             setError("Please update your phone number in your profile to proceed.");
             return;
@@ -854,7 +859,7 @@ function CheckoutContent() {
                     if (paymentMethod === "ONLINE" && data.razorpayOrder) {
                         const scriptLoaded = await loadRazorpayScript();
                         if (!scriptLoaded) {
-                            setError("Failed to load Razorpay SDK. Please check your internet connection.");
+                            setError("Unable to place your order. Please check your internet connection and try again.");
                             setIsSubmitting(false);
                             return;
                         }
@@ -868,6 +873,7 @@ function CheckoutContent() {
                             order_id: data.razorpayOrder.id,
                             handler: async function (response: any) {
                                 try {
+                                    setIsSubmitting(true);
                                     const verifyRes = await fetchApi("/api/user/orders/verify", {
                                         method: "POST",
                                         headers: { "Content-Type": "application/json" },
@@ -887,8 +893,26 @@ function CheckoutContent() {
                                         const verifyData = await verifyRes.json();
                                         setError(verifyData.message || "Payment verification failed.");
                                     }
-                                } catch (e) {
-                                    setError("An error occurred during payment verification.");
+                                } catch (e: any) {
+                                    const isNetErr = (typeof navigator !== "undefined" && !navigator.onLine) ||
+                                        e?.name === "TypeError" ||
+                                        e?.name === "NetworkError" ||
+                                        String(e?.message || "").toLowerCase().includes("network") ||
+                                        String(e?.message || "").toLowerCase().includes("fetch") ||
+                                        String(e?.message || "").toLowerCase().includes("internet");
+
+                                    if (isNetErr) {
+                                        setError("Unable to place your order. Please check your internet connection and try again.");
+                                    } else {
+                                        setError("An error occurred during payment verification.");
+                                    }
+                                } finally {
+                                    setIsSubmitting(false);
+                                }
+                            },
+                            modal: {
+                                ondismiss: function () {
+                                    setIsSubmitting(false);
                                 }
                             },
                             prefill: {
@@ -899,6 +923,10 @@ function CheckoutContent() {
                             }
                         };
                         const rzp = new (window as any).Razorpay(options);
+                        rzp.on("payment.failed", function (response: any) {
+                            setIsSubmitting(false);
+                            setError("Payment failed: " + (response.error?.description || "Transaction declined"));
+                        });
                         rzp.open();
                     } else {
                         clearCart();
@@ -909,8 +937,19 @@ function CheckoutContent() {
                     setError(data.message || "Failed to place order.");
                 }
             }
-        } catch (err) {
-            setError("An unexpected error occurred.");
+        } catch (err: any) {
+            const isNetErr = (typeof navigator !== "undefined" && !navigator.onLine) ||
+                err?.name === "TypeError" ||
+                err?.name === "NetworkError" ||
+                String(err?.message || "").toLowerCase().includes("network") ||
+                String(err?.message || "").toLowerCase().includes("fetch") ||
+                String(err?.message || "").toLowerCase().includes("internet");
+
+            if (isNetErr) {
+                setError("Unable to place your order. Please check your internet connection and try again.");
+            } else {
+                setError("An unexpected error occurred.");
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -921,7 +960,7 @@ function CheckoutContent() {
             <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px' }}>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '15px' }}>Your Cart is Empty</h2>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Looks like you haven't added any delicious food yet!</p>
-                <button onClick={() => router.push(session ? "/dashboard/user/food" : "/explore-desktop")} className="btn btn-primary">Browse Menus</button>
+                <button onClick={() => router.push(session ? "/dashboard/user/food" : "/food-explore")} className="btn btn-primary">Browse Menus</button>
             </div>
         );
     }

@@ -103,17 +103,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   };
 
   const handleSendOtp = () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
+    const rawDigits = phoneNumber.replace(/\D/g, "").slice(-10);
+    if (rawDigits.length !== 10) {
       setError("Please enter a valid 10-digit mobile number.");
       return;
     }
     setError("");
+    setSuccessNotice("Verification code sent! Default OTP is 123456.");
     setOtpSent(true);
     setResendTimer(60);
     // Focus first OTP box automatically
     setTimeout(() => {
       otpInputRefs.current[0]?.focus();
     }, 100);
+  };
+
+  const handleQuickFillOtp = () => {
+    setOtp(["1", "2", "3", "4", "5", "6"]);
+    setError("");
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -216,13 +223,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       }
     } else {
       // OTP mode submission
-      if (!phoneNumber || phoneNumber.length < 10) {
+      const rawDigits = phoneNumber.replace(/\D/g, "").slice(-10);
+      if (rawDigits.length !== 10) {
         setError("Please enter a valid 10-digit mobile number.");
         return;
       }
+
+      if (!otpSent) {
+        handleSendOtp();
+        setError("Verification code sent! Please enter OTP (123456) and sign in.");
+        return;
+      }
+
       const fullOtp = otp.join("");
       if (fullOtp.length !== 6) {
-        setError("Please enter the complete 6-digit verification code.");
+        setError("Please enter the complete 6-digit verification code (123456).");
         return;
       }
 
@@ -231,7 +246,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         await discardExistingSession();
         const res = await signIn("credentials", {
           redirect: false,
-          phone: phoneNumber.replace(/\D/g, ""),
+          phone: rawDigits,
           otp: fullOtp,
           loginType: "OTP_USER",
         });
@@ -241,19 +256,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             res.error === "USER_NOT_FOUND" ||
             res.error.includes("USER_NOT_FOUND")
           ) {
-            setError("No account found with this mobile number.");
+            setError("No account found with this mobile number. Please create an account first.");
           } else if (
             res.error === "INVALID_OTP" ||
             res.error.includes("INVALID_OTP")
           ) {
-            setError("Invalid OTP. Please try again.");
+            setError("Invalid OTP. Please use default OTP: 123456.");
           } else if (
             res.error === "INVALID_PHONE" ||
             res.error.includes("INVALID_PHONE")
           ) {
             setError("Please enter a valid 10-digit mobile number.");
           } else {
-            setError("Login failed. Please try again.");
+            setError("Login failed. Please check your mobile number and OTP.");
           }
         } else {
           const params = new URLSearchParams(window.location.search);
@@ -417,9 +432,36 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   {/* 6-box OTP Input */}
                   {otpSent && (
                     <div className={`${styles.inputGroup} ${styles.slideLeft}`}>
-                      <label className={styles.inputLabel}>
-                        Enter 6-Digit OTP
-                      </label>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        <label className={styles.inputLabel} style={{ margin: 0 }}>
+                          Enter 6-Digit OTP
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleQuickFillOtp}
+                          style={{
+                            background: "#FFF1E8",
+                            border: "1px solid #FFD0B8",
+                            color: "#FF5500",
+                            fontSize: "11.5px",
+                            fontWeight: 600,
+                            borderRadius: "6px",
+                            padding: "3px 8px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          title="Click to fill default OTP: 123456"
+                        >
+                          Use Default OTP (123456)
+                        </button>
+                      </div>
                       <div
                         className={styles.otpContainer}
                         onPaste={handleOtpPaste}

@@ -11,6 +11,7 @@ import {
   Package,
   CheckCircle2,
   Bell,
+  XCircle,
 } from "lucide-react";
 import styles from "./ResponsiveSellerOrdersDetails.module.css";
 
@@ -21,7 +22,7 @@ export interface ResponsiveOrderItemLine {
   price: string;
 }
 
-export type OrderTimelineStep = "Order Placed" | "Preparing" | "On the way" | "Delivered";
+export type OrderTimelineStep = "Order Placed" | "Preparing" | "On the way" | "Delivered" | "Cancelled";
 
 export interface ResponsiveSellerOrdersDetailsProps {
   orderId?: string;
@@ -179,14 +180,14 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 <path d="M345 37 L348 28 L345 31 L342 28 Z" fill="#64748B" />
 
                 {/* Delivery Pin Ripple Pulse */}
-                <circle cx="190" cy="85" r="22" fill="#F97316" fillOpacity="0.15" />
-                <circle cx="190" cy="85" r="16" fill="#F97316" fillOpacity="0.25" />
+                <circle cx="190" cy="85" r="22" fill={currentStatus === "Cancelled" ? "#DC2626" : "#F97316"} fillOpacity="0.15" />
+                <circle cx="190" cy="85" r="16" fill={currentStatus === "Cancelled" ? "#DC2626" : "#F97316"} fillOpacity="0.25" />
 
                 {/* Delivery Pin Circle & Icon */}
-                <circle cx="190" cy="85" r="14" fill="#FFFFFF" stroke="#F97316" strokeWidth="2.5" />
+                <circle cx="190" cy="85" r="14" fill="#FFFFFF" stroke={currentStatus === "Cancelled" ? "#DC2626" : "#F97316"} strokeWidth="2.5" />
                 <path
                   d="M190 78 C186.7 78 184 80.7 184 84 C184 88.5 190 94 190 94 C190 94 196 88.5 196 84 C196 80.7 193.3 78 190 78 Z M190 86 C188.9 86 188 85.1 188 84 C188 82.9 188.9 82 190 82 C191.1 82 192 82.9 192 84 C192 85.1 191.1 86 190 86 Z"
-                  fill="#EA580C"
+                  fill={currentStatus === "Cancelled" ? "#DC2626" : "#EA580C"}
                 />
               </svg>
             </div>
@@ -205,123 +206,164 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 </span>
               </div>
 
-              {/* Dotted Line 1-2 */}
-              <div className={`${styles.dottedLine} ${styles.dottedLineActive}`} />
+              {currentStatus === "Cancelled" ? (
+                <>
+                  {/* Dotted Line Cancelled */}
+                  <div className={`${styles.dottedLine} ${styles.dottedLineCancelled}`} />
 
-              {/* Step 2: Preparing */}
-              <div className={styles.stepCol}>
-                <div
-                  className={`${styles.stepCircle} ${
-                    currentStatus === "Preparing" ||
-                    currentStatus === "On the way" ||
-                    currentStatus === "Delivered"
-                      ? styles.stepCircleActive
-                      : styles.stepCircleInactive
-                  }`}
-                >
-                  <CookingPot size={16} />
-                </div>
-                <span
-                  className={`${styles.stepLabel} ${
-                    currentStatus === "Preparing" ||
-                    currentStatus === "On the way" ||
-                    currentStatus === "Delivered"
-                      ? styles.stepLabelActive
-                      : styles.stepLabelInactive
-                  }`}
-                >
-                  Preparing
-                </span>
-              </div>
+                  {/* Step 2: Cancelled */}
+                  <div className={styles.stepCol}>
+                    <div className={`${styles.stepCircle} ${styles.stepCircleCancelled}`}>
+                      <XCircle size={16} />
+                    </div>
+                    <span className={`${styles.stepLabel} ${styles.stepLabelCancelled}`}>
+                      Cancelled
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Dotted Line 1-2 */}
+                  <div
+                    className={`${styles.dottedLine} ${
+                      currentStatus === "Preparing" ||
+                      currentStatus === "On the way" ||
+                      currentStatus === "Delivered"
+                        ? styles.dottedLineActive
+                        : styles.dottedLineInactive
+                    }`}
+                  />
 
-              {/* Dotted Line 2-3 */}
-              <div
-                className={`${styles.dottedLine} ${
-                  currentStatus === "On the way" || currentStatus === "Delivered"
-                    ? styles.dottedLineActive
-                    : styles.dottedLineInactive
-                }`}
-              />
+                  {/* Step 2: Preparing */}
+                  <div className={styles.stepCol}>
+                    <div
+                      className={`${styles.stepCircle} ${
+                        currentStatus === "Preparing" ||
+                        currentStatus === "On the way" ||
+                        currentStatus === "Delivered"
+                          ? styles.stepCircleActive
+                          : styles.stepCircleInactive
+                      }`}
+                    >
+                      <CookingPot size={16} />
+                    </div>
+                    <span
+                      className={`${styles.stepLabel} ${
+                        currentStatus === "Preparing" ||
+                        currentStatus === "On the way" ||
+                        currentStatus === "Delivered"
+                          ? styles.stepLabelActive
+                          : styles.stepLabelInactive
+                      }`}
+                    >
+                      Preparing
+                    </span>
+                  </div>
 
-              {/* Step 3: On the way */}
-              <div className={styles.stepCol}>
-                <div
-                  className={`${styles.stepCircle} ${
-                    currentStatus === "On the way" || currentStatus === "Delivered"
-                      ? styles.stepCircleActive
-                      : styles.stepCircleInactive
-                  }`}
-                >
-                  <Bike size={16} />
-                </div>
-                <span
-                  className={`${styles.stepLabel} ${
-                    currentStatus === "On the way" || currentStatus === "Delivered"
-                      ? styles.stepLabelActive
-                      : styles.stepLabelInactive
-                  }`}
-                >
-                  On the way
-                </span>
-              </div>
+                  {/* Dotted Line 2-3 */}
+                  <div
+                    className={`${styles.dottedLine} ${
+                      currentStatus === "On the way" || currentStatus === "Delivered"
+                        ? styles.dottedLineActive
+                        : styles.dottedLineInactive
+                    }`}
+                  />
 
-              {/* Dotted Line 3-4 */}
-              <div
-                className={`${styles.dottedLine} ${
-                  currentStatus === "Delivered"
-                    ? styles.dottedLineActive
-                    : styles.dottedLineInactive
-                }`}
-              />
+                  {/* Step 3: On the way */}
+                  <div className={styles.stepCol}>
+                    <div
+                      className={`${styles.stepCircle} ${
+                        currentStatus === "On the way" || currentStatus === "Delivered"
+                          ? styles.stepCircleActive
+                          : styles.stepCircleInactive
+                      }`}
+                    >
+                      <Bike size={16} />
+                    </div>
+                    <span
+                      className={`${styles.stepLabel} ${
+                        currentStatus === "On the way" || currentStatus === "Delivered"
+                          ? styles.stepLabelActive
+                          : styles.stepLabelInactive
+                      }`}
+                    >
+                      On the way
+                    </span>
+                  </div>
 
-              {/* Step 4: Delivered */}
-              <div className={styles.stepCol}>
-                <div
-                  className={`${styles.stepCircle} ${
-                    currentStatus === "Delivered"
-                      ? styles.stepCircleActive
-                      : styles.stepCircleInactive
-                  }`}
-                >
-                  <Package size={16} />
-                </div>
-                <span
-                  className={`${styles.stepLabel} ${
-                    currentStatus === "Delivered"
-                      ? styles.stepLabelActive
-                      : styles.stepLabelInactive
-                  }`}
-                >
-                  Delivered
-                </span>
-              </div>
+                  {/* Dotted Line 3-4 */}
+                  <div
+                    className={`${styles.dottedLine} ${
+                      currentStatus === "Delivered"
+                        ? styles.dottedLineActive
+                        : styles.dottedLineInactive
+                    }`}
+                  />
+
+                  {/* Step 4: Delivered */}
+                  <div className={styles.stepCol}>
+                    <div
+                      className={`${styles.stepCircle} ${
+                        currentStatus === "Delivered"
+                          ? styles.stepCircleActive
+                          : styles.stepCircleInactive
+                      }`}
+                    >
+                      <Package size={16} />
+                    </div>
+                    <span
+                      className={`${styles.stepLabel} ${
+                        currentStatus === "Delivered"
+                          ? styles.stepLabelActive
+                          : styles.stepLabelInactive
+                      }`}
+                    >
+                      Delivered
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
-          {/* 3. Rider Quick Status Card */}
-          <section className={styles.riderCard}>
-            <div className={styles.riderLeft}>
-              <div className={styles.avatarCircle}>{riderInitials}</div>
-              <div className={styles.riderInfo}>
-                <h3 className={styles.riderName}>{riderName}</h3>
-                <p className={styles.riderEta}>{riderEta}</p>
+          {/* 3. Rider Quick Status Card or Cancelled Notice */}
+          {currentStatus === "Cancelled" ? (
+            <section className={styles.cancelledNoticeCard}>
+              <div className={styles.cancelledNoticeHeader}>
+                <XCircle size={18} />
+                <span>Order Rejected / Cancelled</span>
               </div>
-            </div>
+              <p className={styles.cancelledNoticeText}>
+                This order was rejected/cancelled. All preparation, rider assignment, and delivery stages have concluded.
+              </p>
+            </section>
+          ) : (
+            <section className={styles.riderCard}>
+              <div className={styles.riderLeft}>
+                <div className={styles.avatarCircle}>{riderInitials || "DP"}</div>
+                <div className={styles.riderInfo}>
+                  <h3 className={styles.riderName}>{riderName || "Delivery Partner"}</h3>
+                  <p className={styles.riderEta}>{riderEta || (riderName ? "Assigned" : "Assigning shortly")}</p>
+                </div>
+              </div>
 
-            <a
-              href={`tel:${riderPhone}`}
-              className={styles.riderCallBtn}
-              onClick={(e) => {
-                if (onCallRider) {
-                  e.preventDefault();
-                  onCallRider();
-                }
-              }}
-              aria-label={`Call ${riderName}`}
-            >
-              <Phone size={18} />
-            </a>
-          </section>
+              {riderPhone && (
+                <a
+                  href={`tel:${riderPhone}`}
+                  className={styles.riderCallBtn}
+                  onClick={(e) => {
+                    if (onCallRider) {
+                      e.preventDefault();
+                      onCallRider();
+                    }
+                  }}
+                  aria-label={`Call ${riderName}`}
+                >
+                  <Phone size={18} />
+                </a>
+              )}
+            </section>
+          )}
 
           {/* 4. Delivery To & Item Details Card */}
           <section className={styles.detailsCard}>

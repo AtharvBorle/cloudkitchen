@@ -29,7 +29,7 @@ interface BestPlacesProps {
 
 export default function BestPlaces({
   title = "Popular Dishes",
-  seeAllLink = "/explore-desktop",
+  seeAllLink = "/food-explore",
   dishes,
 }: BestPlacesProps) {
   if (!dishes || dishes.length === 0) {

@@ -24,6 +24,9 @@ import {
   Navigation,
   Check,
   Plus,
+  X,
+  Tag,
+  Loader2,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
@@ -61,6 +64,31 @@ export interface CheckoutSummaryItem {
   image: string;
 }
 
+export interface PendingOrderTransaction {
+  id: string;
+  status: "INITIATED" | "PAID_PENDING_CONFIRMATION" | "PAYMENT_FAILED" | "CONFIRMED";
+  razorpayOrderId?: string;
+  razorpay_payment_id?: string;
+  razorpay_order_id?: string;
+  razorpay_signature?: string;
+  amount: number;
+  sellerId: string;
+  orderItems: any[];
+  deliveryAddress: string;
+  customerPhone: string;
+  appliedCouponId?: string | null;
+  checkoutItems: CheckoutSummaryItem[];
+  fullName: string;
+  streetAddress: string;
+  city: string;
+  postalCode: string;
+  subtotal: number;
+  discountAmount: number;
+  grandTotal: number;
+  failureReason?: string;
+  timestamp: number;
+}
+
 export interface SecureCheckoutProps {
   defaultLocation?: string;
   initialName?: string;
@@ -85,7 +113,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const router = useRouter();
   const { data: session, status } = useSession();
   const { cartItems, cartTotal, clearCart, syncCartWithLiveMenu } = useCart();
-  const { defaultAddress, openLocationModal } = useLocation();
+  const { defaultAddress, openLocationModal, detectGpsLocation } = useLocation();
 
   // Sync with live seller prices on mount
   useEffect(() => {
@@ -159,11 +187,11 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
             if (defaultItem) {
               setSelectedSavedAddressId(defaultItem.id);
               const formatted = `${defaultItem.houseNumber ? defaultItem.houseNumber + ", " : ""}${defaultItem.street}${defaultItem.landmark ? ", Near " + defaultItem.landmark : ""}`;
-              setStreetAddress((prev) => prev || formatted);
-              setCity((prev) => prev || defaultItem.city || "Pune");
-              setPostalCode((prev) => prev || defaultItem.pincode);
-              if (defaultItem.recipientName) setFullName((prev) => prev || defaultItem.recipientName || "");
-              if (defaultItem.recipientPhone) setPhoneNumber((prev) => prev || defaultItem.recipientPhone || "");
+              setStreetAddress(formatted);
+              setCity(defaultItem.city || "Pune");
+              setPostalCode(defaultItem.pincode);
+              if (defaultItem.recipientName) setFullName(defaultItem.recipientName);
+              if (defaultItem.recipientPhone) setPhoneNumber(defaultItem.recipientPhone);
             }
           } else {
             setAddressMode("manual");
@@ -197,6 +225,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       streetAddress: undefined,
       city: undefined,
       postalCode: undefined,
+      fullName: undefined,
+      phoneNumber: undefined,
     }));
   };
 
@@ -296,14 +326,14 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   }, [session, fullName]);
 
   useEffect(() => {
-    if (defaultAddress) {
+    if (addressMode === "manual" && defaultAddress) {
       const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
       const formattedStreet = parts.join(", ");
       if (formattedStreet) setStreetAddress(formattedStreet);
       if (defaultAddress.city) setCity(defaultAddress.city);
       if (defaultAddress.pincode) setPostalCode(defaultAddress.pincode);
     }
-  }, [defaultAddress]);
+  }, [defaultAddress, addressMode]);
 
   useEffect(() => {
     async function loadUserProfile() {
@@ -413,23 +443,183 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     maxDiscountAmount?: number | null;
     minimumCartValue?: number;
     discountLabel?: string;
+    calculatedDiscount?: number;
   } | null>(null);
+  const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
 
   // Order Placement States
   const [isOrderPlaced, setIsOrderPlaced] = useState<boolean>(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [pendingTx, setPendingTx] = useState<PendingOrderTransaction | null>(null);
+  const [isRecoveringTx, setIsRecoveringTx] = useState<boolean>(false);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+
+  // Network Offline / Online Detection
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    setIsOffline(!navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOffline(false);
+      showToast("Internet connection restored.", "info");
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      showToast("Unable to place your order. Please check your internet connection and try again.", "error");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Check and reconcile pending transactions on mount (Browser Refresh Recovery)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const stored = localStorage.getItem("pending_order_transaction");
+      if (stored) {
+        const parsed: PendingOrderTransaction = JSON.parse(stored);
+        const ageMs = Date.now() - (parsed.timestamp || 0);
+        // If older than 2 hours, expire it
+        if (ageMs > 2 * 60 * 60 * 1000) {
+          localStorage.removeItem("pending_order_transaction");
+        } else {
+          setPendingTx(parsed);
+
+          // If payment was already verified on gateway side, auto reconcile
+          if (parsed.status === "PAID_PENDING_CONFIRMATION" && parsed.razorpay_payment_id) {
+            autoFinalizePaidOrder(parsed);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse pending transaction from storage:", e);
+    }
+  }, []);
+
+  const autoFinalizePaidOrder = async (tx: PendingOrderTransaction) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      showToast("Unable to place your order. Please check your internet connection and try again.", "error");
+      setIsRecoveringTx(false);
+      return;
+    }
+
+    setIsRecoveringTx(true);
+    try {
+      const createRes = await fetchApi("/api/user/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sellerId: tx.sellerId || "seller",
+          items: tx.orderItems,
+          totalAmount: tx.grandTotal,
+          deliveryAddress: tx.deliveryAddress,
+          customerPhone: tx.customerPhone,
+          paymentMethod: "ONLINE",
+          appliedCouponId: tx.appliedCouponId || null,
+          razorpay_payment_id: tx.razorpay_payment_id,
+          razorpay_order_id: tx.razorpay_order_id,
+          razorpay_signature: tx.razorpay_signature,
+        }),
+      });
+
+      const createData = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) {
+        const errorMsg = createData.message || createData.error || "Failed to finalize order after payment.";
+        showToast(errorMsg, "error");
+        setIsRecoveringTx(false);
+        return;
+      }
+
+      const createdOrder = createData.data?.order || createData.order || createData.data;
+      const finalOrderId = createdOrder?.id || ("NCR-" + Math.floor(100000 + Math.random() * 900000));
+      setPlacedOrderNumber(finalOrderId);
+
+      const confirmedOrderPayload = {
+        orderId: finalOrderId,
+        orderTime: "Just now",
+        estimatedDelivery: "25-35 mins",
+        deliveryAddress: {
+          fullName: tx.fullName || fullName.trim(),
+          phoneNumber: tx.customerPhone || phoneNumber.trim(),
+          streetAddress: tx.streetAddress || streetAddress.trim(),
+          city: tx.city || city.trim() || "Kothrud, Pune",
+          pincode: tx.postalCode || postalCode.trim() || "411038",
+        },
+        paymentMethod: "Pay Online (Paid via Razorpay)",
+        items: (tx.checkoutItems || checkoutItems).map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          qty: item.qty,
+          image: item.image,
+          variant: item.variant,
+          itemType: "VEG",
+        })),
+        subtotal: tx.subtotal || subtotal,
+        discount: tx.discountAmount || discountAmount,
+        deliveryFee: 0,
+        taxes: 0,
+        grandTotal: tx.grandTotal || grandTotal,
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.removeItem("pending_order_transaction");
+        } catch (e) {
+          console.error("Failed to save confirmed order to storage:", e);
+        }
+      }
+
+      setPendingTx(null);
+      setIsOrderPlaced(true);
+      clearCart();
+      showToast("Payment Verified! Order Placed Successfully!");
+
+      setTimeout(() => {
+        router.push(`/order-confirmation?orderId=${encodeURIComponent(finalOrderId)}`);
+      }, 700);
+    } catch (err: any) {
+      console.error("Error finalizing recovered transaction:", err);
+      const isNetErr =
+        (typeof navigator !== "undefined" && !navigator.onLine) ||
+        err?.name === "TypeError" ||
+        err?.name === "NetworkError" ||
+        String(err?.message || "").toLowerCase().includes("network") ||
+        String(err?.message || "").toLowerCase().includes("fetch") ||
+        String(err?.message || "").toLowerCase().includes("internet");
+
+      if (isNetErr) {
+        showToast("Unable to place your order. Please check your internet connection and try again.", "error");
+      } else {
+        showToast(err?.message || "Failed to finalize order after payment.", "error");
+      }
+    } finally {
+      setIsRecoveringTx(false);
+    }
+  };
 
   // Toast Notification
   const [toast, setToast] = useState<{
     message: string;
-    type: "success" | "error" | "info";
+    type: "success" | "error" | "info" | "warning";
   } | null>(null);
 
   const showToast = (
     message: string,
-    type: "success" | "error" | "info" = "success"
+    type: "success" | "error" | "info" | "warning" = "success"
   ) => {
     setToast({ message, type });
     setTimeout(() => {
@@ -474,7 +664,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
   // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
-
   const discountAmount = React.useMemo(() => {
     if (!isPromoApplied || !appliedCoupon || subtotal <= 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
@@ -491,77 +680,56 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
+  const handleRemovePromo = () => {
+    setIsPromoApplied(false);
+    setDiscountPercent(0);
+    setAppliedCoupon(null);
+    setPromoCode("");
+    showToast("Promo code removed", "info");
+  };
+
   const handleApplyToggle = async () => {
     if (isPromoApplied) {
-      setIsPromoApplied(false);
-      setAppliedCoupon(null);
-      setDiscountPercent(0);
-      showToast("Promo code removed", "info");
-    } else {
-      const clean = promoCode.trim().toUpperCase();
-      if (!clean) {
-        showToast("Please enter a promo code", "error");
-        return;
-      }
+      handleRemovePromo();
+      return;
+    }
 
-      setIsValidatingPromo(true);
-      const currentSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
-      try {
-        const res = await fetchApi("/api/public/coupons/validate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code: clean,
-            sellerId: currentSellerId,
-            subtotal: subtotal,
-            items: checkoutItems.map((it) => ({
-              id: it.id,
-              foodItemId: it.foodItemId,
-              price: it.price,
-              quantity: it.qty,
-            })),
-            userId: session?.user?.id,
-          }),
-        });
+    const clean = promoCode.trim().toUpperCase();
+    if (!clean) {
+      showToast("Please enter a promo code", "error");
+      return;
+    }
 
-        const json = await res.json();
-        const cData = (json && typeof json === "object" && ("id" in json || "code" in json)) ? json : (json?.data || json);
-        if (res.ok && cData && (cData.code || cData.id)) {
-          setAppliedCoupon(cData);
-          setIsPromoApplied(true);
-          setDiscountPercent(cData.discountPercentage || 0);
-          showToast(cData.message || json?.message || `Promo code "${cData.code}" applied! (${cData.discountLabel || (cData.discountPercentage ? `${cData.discountPercentage}% Off` : `₹${cData.discountAmount} Off`)})`, "success");
-        } else {
-          const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Promo code "${clean}" is invalid or conditions not met.`);
-          // Fallback mock codes
-          if (clean === "NEO50") {
-            setAppliedCoupon({
-              id: "mock-neo50",
-              code: "NEO50",
-              discountType: "PERCENTAGE",
-              discountPercentage: 50,
-              discountLabel: "50% Off",
-            });
-            setIsPromoApplied(true);
-            setDiscountPercent(50);
-            showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
-          } else if (clean === "WELCOME20" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") {
-            setAppliedCoupon({
-              id: "mock-neo20",
-              code: clean,
-              discountType: "PERCENTAGE",
-              discountPercentage: 20,
-              discountLabel: "20% Off",
-            });
-            setIsPromoApplied(true);
-            setDiscountPercent(20);
-            showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
-          } else {
-            showToast(errorMsg, "error");
-          }
-        }
-      } catch (e) {
-        console.error("Promo validation error:", e);
+    setIsValidatingPromo(true);
+    const currentSellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
+    try {
+      const res = await fetchApi("/api/public/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: clean,
+          sellerId: currentSellerId,
+          subtotal: subtotal,
+          items: checkoutItems.map((it) => ({
+            id: it.id,
+            foodItemId: it.foodItemId,
+            price: it.price,
+            quantity: it.qty,
+          })),
+          userId: session?.user?.id,
+        }),
+      });
+
+      const json = await res.json();
+      const cData = json.data?.coupon || json.data || json;
+      if (res.ok && cData && (cData.code || cData.id)) {
+        setAppliedCoupon(cData);
+        setIsPromoApplied(true);
+        setDiscountPercent(cData.discountPercentage || 0);
+        showToast(cData.message || json?.message || `Promo code "${cData.code}" applied! (${cData.discountLabel || (cData.discountPercentage ? `${cData.discountPercentage}% Off` : `₹${cData.discountAmount} Off`)})`, "success");
+      } else {
+        const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Promo code "${clean}" is invalid or conditions not met.`);
+        // Fallback mock codes
         if (clean === "NEO50") {
           setAppliedCoupon({
             id: "mock-neo50",
@@ -585,15 +753,54 @@ const loadRazorpayScript = (): Promise<boolean> => {
           setDiscountPercent(20);
           showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
         } else {
-          showToast(`Failed to validate promo code "${clean}".`, "error");
+          setIsPromoApplied(false);
+          setDiscountPercent(0);
+          setAppliedCoupon(null);
+          showToast(errorMsg, "error");
         }
-      } finally {
-        setIsValidatingPromo(false);
       }
+    } catch (e: any) {
+      console.error("Promo validation error:", e);
+      if (clean === "NEO50") {
+        setAppliedCoupon({
+          id: "mock-neo50",
+          code: "NEO50",
+          discountType: "PERCENTAGE",
+          discountPercentage: 50,
+          discountLabel: "50% Off",
+        });
+        setIsPromoApplied(true);
+        setDiscountPercent(50);
+        showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
+      } else if (clean === "WELCOME20" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") {
+        setAppliedCoupon({
+          id: "mock-neo20",
+          code: clean,
+          discountType: "PERCENTAGE",
+          discountPercentage: 20,
+          discountLabel: "20% Off",
+        });
+        setIsPromoApplied(true);
+        setDiscountPercent(20);
+        showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
+      } else {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        showToast(`Failed to validate promo code "${clean}".`, "error");
+      }
+    } finally {
+      setIsValidatingPromo(false);
     }
   };
 
   const handlePlaceOrderClick = async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      showToast("Unable to place your order. Please check your internet connection and try again.", "error");
+      setIsSubmitting(false);
+      return;
+    }
+
     if (checkoutItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
       showToast(
         "Your cart is empty. Please add a product to the cart before placing an order.",
@@ -668,6 +875,31 @@ const loadRazorpayScript = (): Promise<boolean> => {
       // Initiate Razorpay checkout first -> Validate -> Place Order
       // -------------------------------------------------------------
       if (paymentMethod === "UPI") {
+        const pendingData: PendingOrderTransaction = {
+          id: `TX-${Date.now()}`,
+          status: "INITIATED",
+          amount: grandTotal,
+          sellerId: sellerId || "seller",
+          orderItems,
+          deliveryAddress: fullDeliveryAddress,
+          customerPhone: phoneNumber,
+          appliedCouponId: isPromoApplied ? promoCode : null,
+          checkoutItems,
+          fullName: fullName.trim(),
+          streetAddress: streetAddress.trim(),
+          city: city.trim(),
+          postalCode: postalCode.trim(),
+          subtotal,
+          discountAmount,
+          grandTotal,
+          timestamp: Date.now(),
+        };
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pending_order_transaction", JSON.stringify(pendingData));
+        }
+        setPendingTx(pendingData);
+
         const initRes = await fetchApi("/api/user/orders/initiate-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -694,12 +926,16 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
-          showToast("Failed to load Razorpay SDK. Please check your internet connection.", "error");
+          showToast("Unable to place your order. Please check your internet connection and try again.", "error");
           setIsSubmitting(false);
           return;
         }
 
         const rzpData = initData.data || initData;
+        pendingData.razorpayOrderId = rzpData.razorpayOrderId;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pending_order_transaction", JSON.stringify(pendingData));
+        }
 
         const options = {
           key: rzpData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TX4MPQgJuetMFP",
@@ -711,6 +947,20 @@ const loadRazorpayScript = (): Promise<boolean> => {
           handler: async function (response: any) {
             try {
               setIsSubmitting(true);
+              const paidPendingData: PendingOrderTransaction = {
+                ...pendingData,
+                status: "PAID_PENDING_CONFIRMATION",
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                timestamp: Date.now(),
+              };
+
+              if (typeof window !== "undefined") {
+                localStorage.setItem("pending_order_transaction", JSON.stringify(paidPendingData));
+              }
+              setPendingTx(paidPendingData);
+
               const createRes = await fetchApi("/api/user/orders", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -771,10 +1021,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
               if (typeof window !== "undefined") {
                 try {
                   sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+                  localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+                  localStorage.removeItem("pending_order_transaction");
                 } catch (e) {
                   console.error("Failed to save confirmed order to session storage:", e);
                 }
               }
+
+              setPendingTx(null);
 
               // Real-time broadcast to Seller Operations Console & Bell Notification Counter
               try {
@@ -801,13 +1055,29 @@ const loadRazorpayScript = (): Promise<boolean> => {
               }, 700);
             } catch (err: any) {
               console.error("Error finalizing online order:", err);
-              showToast(err?.message || "Failed to complete order after payment.", "error");
+              const isNetErr =
+                (typeof navigator !== "undefined" && !navigator.onLine) ||
+                err?.name === "TypeError" ||
+                err?.name === "NetworkError" ||
+                String(err?.message || "").toLowerCase().includes("network") ||
+                String(err?.message || "").toLowerCase().includes("fetch") ||
+                String(err?.message || "").toLowerCase().includes("internet");
+
+              if (isNetErr) {
+                showToast("Unable to place your order. Please check your internet connection and try again.", "error");
+              } else {
+                showToast(err?.message || "Failed to complete order after payment.", "error");
+              }
               setIsSubmitting(false);
             }
           },
           modal: {
             ondismiss: function () {
               setIsSubmitting(false);
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("pending_order_transaction");
+              }
+              setPendingTx(null);
               showToast("Payment cancelled. Order was not placed.", "info");
             },
           },
@@ -823,6 +1093,16 @@ const loadRazorpayScript = (): Promise<boolean> => {
         const rzp = new (window as any).Razorpay(options);
         rzp.on("payment.failed", function (response: any) {
           setIsSubmitting(false);
+          const failedTx: PendingOrderTransaction = {
+            ...pendingData,
+            status: "PAYMENT_FAILED",
+            failureReason: response.error?.description || "Transaction declined",
+            timestamp: Date.now(),
+          };
+          if (typeof window !== "undefined") {
+            localStorage.setItem("pending_order_transaction", JSON.stringify(failedTx));
+          }
+          setPendingTx(failedTx);
           showToast("Payment failed: " + (response.error?.description || "Transaction declined"), "error");
         });
         rzp.open();
@@ -898,6 +1178,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
       if (typeof window !== "undefined") {
         try {
           sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
+          localStorage.removeItem("pending_order_transaction");
         } catch (e) {
           console.error("Failed to save confirmed order to session storage:", e);
         }
@@ -928,11 +1210,21 @@ const loadRazorpayScript = (): Promise<boolean> => {
       }, 700);
     } catch (err: any) {
       console.error("Error placing order:", err);
-      showToast(err?.message || "Failed to place order. Please try again.");
-    } finally {
-      if (paymentMethod !== "UPI") {
-        setIsSubmitting(false);
+      const isNetErr =
+        (typeof navigator !== "undefined" && !navigator.onLine) ||
+        err?.name === "TypeError" ||
+        err?.name === "NetworkError" ||
+        String(err?.message || "").toLowerCase().includes("network") ||
+        String(err?.message || "").toLowerCase().includes("fetch") ||
+        String(err?.message || "").toLowerCase().includes("internet");
+
+      if (isNetErr) {
+        showToast("Unable to place your order. Please check your internet connection and try again.", "error");
+      } else {
+        showToast(err?.message || "Failed to place order. Please try again.", "error");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -998,6 +1290,90 @@ const loadRazorpayScript = (): Promise<boolean> => {
               : "Complete your gourmet order in just a few simple steps."}
           </p>
         </section>
+
+        {/* Offline Banner */}
+        {isOffline && (
+          <div className={styles.offlineBanner}>
+            <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Internet connection unavailable.</strong> Unable to place your order. Please check your internet connection and try again.
+            </div>
+          </div>
+        )}
+
+        {/* Transaction Recovery Banner for PAID_PENDING_CONFIRMATION */}
+        {pendingTx && pendingTx.status === "PAID_PENDING_CONFIRMATION" && !isOrderPlaced && (
+          <div className={styles.recoveryBanner}>
+            <div className={styles.recoveryLeft}>
+              <div className={styles.recoveryIconBox}>
+                <CheckCircle2 size={24} color="#16A34A" />
+              </div>
+              <div>
+                <h4 className={styles.recoveryTitle}>
+                  Payment of ₹{pendingTx.grandTotal} Confirmed on Gateway — Order Finalization Pending
+                </h4>
+                <p className={styles.recoverySubtitle}>
+                  We detected your recent payment (ID: <code>{pendingTx.razorpay_payment_id}</code>). Click below to complete your order confirmation without paying again.
+                </p>
+              </div>
+            </div>
+            <div className={styles.recoveryActions}>
+              <button
+                type="button"
+                className={styles.recoveryPrimaryBtn}
+                disabled={isRecoveringTx}
+                onClick={() => autoFinalizePaidOrder(pendingTx)}
+              >
+                {isRecoveringTx ? "Finalizing Order..." : "Complete & Confirm Order"}
+              </button>
+              <button
+                type="button"
+                className={styles.recoverySecondaryBtn}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.removeItem("pending_order_transaction");
+                  }
+                  setPendingTx(null);
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Failed Alert Banner */}
+        {pendingTx && pendingTx.status === "PAYMENT_FAILED" && !isOrderPlaced && (
+          <div className={styles.paymentFailedBanner}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: "0.88rem", color: "#991B1B", fontWeight: 600 }}>
+                Previous Payment Failed: {pendingTx.failureReason || "Transaction was declined."} Your cart items and address are preserved so you can retry below.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("pending_order_transaction");
+                }
+                setPendingTx(null);
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#DC2626",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontSize: "0.82rem",
+                textDecoration: "underline",
+                flexShrink: 0,
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {isOrderPlaced ? (
           /* Step 3: Order Confirmation Card */
@@ -1389,6 +1765,105 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 ) : (
                   /* MODE 2: WRITE NEW / MANUAL ADDRESS ENTRY */
                   <div className={styles.formFieldsStack}>
+                    {/* Quick Pin on Map & GPS Location Toolbar (NC-BUG-110) */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        backgroundColor: "#FFF7ED",
+                        border: "1px solid #FFEDD5",
+                        borderRadius: "14px",
+                        padding: "12px 16px",
+                        gap: "12px",
+                        flexWrap: "wrap",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "10px",
+                            backgroundColor: "#FF6B00",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#FFFFFF",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <MapPin size={18} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#1E293B" }}>
+                            Pin Precise Delivery Location
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#64748B" }}>
+                            Pin on map or use current GPS to auto-fill street address
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => openLocationModal()}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            backgroundColor: "#FFFFFF",
+                            border: "1px solid #CBD5E1",
+                            borderRadius: "8px",
+                            fontSize: "0.82rem",
+                            fontWeight: "700",
+                            color: "#0F172A",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          <MapPin size={14} color="#EA580C" />
+                          <span>📍 Pin on Map</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (detectGpsLocation) {
+                              const ok = await detectGpsLocation();
+                              if (ok) {
+                                showToast("Current GPS location detected!", "success");
+                              } else {
+                                showToast("Could not detect GPS location. Please check browser permissions or pin on map.", "warning");
+                              }
+                            }
+                          }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            backgroundColor: "#FF6B00",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.82rem",
+                            fontWeight: "700",
+                            color: "#FFFFFF",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            boxShadow: "0 2px 6px rgba(255, 107, 0, 0.25)",
+                          }}
+                        >
+                          <Navigation size={14} color="#FFFFFF" />
+                          <span>🎯 Use Current GPS</span>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Row 1: Full Name & Phone Number */}
                     <div className={styles.formRowTwoCol}>
                       <div className={styles.fieldGroup}>
@@ -1682,29 +2157,79 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
                 <div className={styles.divider} />
 
-                {/* Promo Code Input Row */}
-                <div className={styles.promoGroup}>
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    placeholder="Enter Coupon Code"
-                    className={styles.promoInput}
-                    disabled={checkoutItems.length === 0}
-                  />
-                  <button
-                    type="button"
-                    className={
-                      isPromoApplied
-                        ? styles.promoBtnApplied
-                        : styles.promoBtnApply
-                    }
-                    onClick={handleApplyToggle}
-                    disabled={checkoutItems.length === 0}
+                {/* Promo Code Input Row (NC-BUG-117) */}
+                {isPromoApplied ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      backgroundColor: "#F0FDF4",
+                      border: "1px solid #86EFAC",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      gap: "10px",
+                    }}
                   >
-                    {isPromoApplied ? "Remove" : "Apply"}
-                  </button>
-                </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                      <Tag size={16} color="#16A34A" />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
+                          {appliedCouponData?.code || promoCode}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
+                          -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        backgroundColor: "#DC2626",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "5px 10px",
+                        fontSize: "0.75rem",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        transition: "all 0.15s ease",
+                      }}
+                      title="Remove applied coupon"
+                    >
+                      <X size={13} strokeWidth={2.5} />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.promoGroup}>
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleApplyToggle();
+                      }}
+                      placeholder="Enter Coupon Code"
+                      className={styles.promoInput}
+                      disabled={checkoutItems.length === 0 || isValidatingPromo}
+                    />
+                    <button
+                      type="button"
+                      className={styles.promoBtnApply}
+                      onClick={handleApplyToggle}
+                      disabled={checkoutItems.length === 0 || !promoCode.trim() || isValidatingPromo}
+                    >
+                      {isValidatingPromo ? "Checking..." : "Apply"}
+                    </button>
+                  </div>
+                )}
 
                 <div className={styles.divider} />
 

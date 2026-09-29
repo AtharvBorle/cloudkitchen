@@ -6,7 +6,7 @@
 
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 
 
@@ -18,7 +18,8 @@ import { fetchApi } from "@/lib/fetch-api";
 
 
 
-import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter, Paperclip } from "lucide-react";
+import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
 
 
 
@@ -59,6 +60,7 @@ export default function SuperAdminSupportPage() {
 
 
     const [replyText, setReplyText] = useState("");
+    const replyFileInputRef = useRef<HTMLInputElement>(null);
 
 
 
@@ -3225,7 +3227,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                        {msg.message}
+                                                        <TicketAttachmentRenderer content={msg.message} isCurrentUser={isAdmin} />
 
 
 
@@ -3329,9 +3331,44 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                            <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px" }}>
+                                            <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
 
+                                                <input
+                                                    type="file"
+                                                    ref={replyFileInputRef}
+                                                    accept="image/*"
+                                                    style={{ display: "none" }}
+                                                    onChange={(e) => {
+                                                        if (e.target.files && e.target.files[0]) {
+                                                            const file = e.target.files[0];
+                                                            const reader = new FileReader();
+                                                            reader.onload = () => {
+                                                                const dataUrl = reader.result as string;
+                                                                setReplyText(prev => (prev ? `${prev}\n\n![${file.name}](${dataUrl})` : `![${file.name}](${dataUrl})`));
+                                                            };
+                                                            reader.readAsDataURL(file);
+                                                        }
+                                                    }}
+                                                />
 
+                                                <button
+                                                    type="button"
+                                                    onClick={() => replyFileInputRef.current?.click()}
+                                                    style={{
+                                                        backgroundColor: "#F1F5F9",
+                                                        border: "1px solid #CBD5E1",
+                                                        borderRadius: "10px",
+                                                        padding: "10px 12px",
+                                                        color: "#475569",
+                                                        cursor: "pointer",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center"
+                                                    }}
+                                                    title="Attach screenshot/image"
+                                                >
+                                                    <Paperclip size={18} />
+                                                </button>
 
                                                 <input
 
@@ -3828,7 +3865,44 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                    <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
+                                    {(() => {
+                                        const isOrderOrBookingRelated = Boolean(
+                                            selectedTicket && (
+                                                selectedTicket.category === "FOOD" ||
+                                                selectedTicket.category === "PAYMENT" ||
+                                                selectedTicket.category === "ORDER" ||
+                                                selectedTicket.category === "REFUND" ||
+                                                selectedTicket.category === "ROOM" ||
+                                                /order|refund|delivery|booking|payment|food|dish/i.test(selectedTicket.title || "") ||
+                                                /order|refund|delivery|booking|payment|food|dish/i.test(selectedTicket.description || "")
+                                            )
+                                        );
+
+                                        if (!isOrderOrBookingRelated) {
+                                            return (
+                                                <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                                    <div style={{
+                                                        backgroundColor: "#F8FAFC",
+                                                        border: "1px solid #E2E8F0",
+                                                        borderRadius: "8px",
+                                                        padding: "12px",
+                                                        fontSize: "0.75rem",
+                                                        color: "#64748B",
+                                                        lineHeight: "1.5"
+                                                    }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                                            <AlertCircle size={14} color="#64748B" />
+                                                            <span>Non-Order Support Inquiry</span>
+                                                        </div>
+                                                        This ticket is filed under <strong>{selectedTicket.category || "General"}</strong>. Order actions and refund controls are automatically hidden for non-order inquiries.
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <>
+<h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em" }}>
 
 
 
@@ -4765,6 +4839,9 @@ export default function SuperAdminSupportPage() {
 
 
                                     )}
+                                            </>
+                                        );
+                                    })()}
 
 
 

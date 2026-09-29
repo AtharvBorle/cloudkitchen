@@ -25,7 +25,7 @@ interface RecommendedForYouProps {
 
 export default function RecommendedForYou({
   title = "Recommended For You",
-  seeAllLink = "/explore-desktop",
+  seeAllLink = "/food-explore",
   items,
 }: RecommendedForYouProps) {
   if (!items || items.length === 0) {

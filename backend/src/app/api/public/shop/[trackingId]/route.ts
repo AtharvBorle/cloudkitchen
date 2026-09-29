@@ -144,14 +144,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
                 parsedTimings = [];
             }
 
+            const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
             return {
                 ...plan,
                 sellerId: seller.id,
                 sellerName: seller.businessName || seller.user?.name || "Kitchen Partner",
                 weeklyPrice: plan.weeklyPrice,
-                monthlyPrice: plan.monthlyPrice || plan.weeklyPrice * 4,
-                quarterlyPrice: plan.quarterlyPrice || plan.weeklyPrice * 12 * 0.9,
-                yearlyPrice: plan.yearlyPrice || plan.weeklyPrice * 52 * 0.8,
+                monthlyPrice: plan.monthlyPrice || (isWeekly ? null : plan.weeklyPrice),
+                quarterlyPrice: plan.quarterlyPrice || null,
+                yearlyPrice: plan.yearlyPrice || null,
                 features: parsedFeatures,
                 mealTimings: parsedTimings,
             };

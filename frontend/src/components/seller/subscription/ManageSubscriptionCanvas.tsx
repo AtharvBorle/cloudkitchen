@@ -29,6 +29,22 @@ import {
 } from "@/lib/meal-subscriptions";
 import { Trash2, Power, Eye, EyeOff } from "lucide-react";
 
+export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: string): string {
+  if (!rawAddress || rawAddress.trim() === "") {
+    return roomNo && roomNo !== "Delivery" ? roomNo : "Doorstep Delivery";
+  }
+  const trimmed = rawAddress.trim();
+  if (trimmed.includes("Lat:") || trimmed.includes("Lng:")) {
+    const cleaned = trimmed
+      .replace(/Current Location\s*\([^)]+\),?\s*/gi, "")
+      .replace(/\(Lat:[^)]+\),?\s*/gi, "")
+      .replace(/Lat:\s*[\d.]+,?\s*Lng:\s*[\d.]+,?\s*/gi, "")
+      .trim();
+    return cleaned || "Pune City, Maharashtra - 411038";
+  }
+  return trimmed;
+}
+
 export type PlanItem = MealSubscriptionPlan;
 export type RecentSubscriber = MealSubscriber;
 
@@ -137,9 +153,26 @@ export default function ManageSubscriptionCanvas() {
   });
 
   const activePlansCount = plans.filter((p) => p.status === "Live").length;
-  const totalSubscribers = subscribers.filter((s) => s.status === "Active").length + plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0);
-  const totalMonthlyRevNum = subscribers.reduce((sum, s) => sum + (parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0), 0) +
-    plans.reduce((sum, p) => sum + (parseFloat((p.monthlyPrice || "").replace(/[^\d.]/g, "")) || 0) * (p.subscribersCount || 0), 0);
+  // Calculate active subscribers accurately without double counting
+  const totalSubscribers = subscribers.length > 0
+    ? subscribers.filter((s) => s.status === "Active" || s.status === "ACTIVE").length
+    : plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0);
+
+  const totalMonthlyRevNum = subscribers.length > 0
+    ? subscribers
+        .filter((s) => s.status === "Active" || s.status === "ACTIVE")
+        .reduce((sum, s) => {
+          const price = s.pricePaid || parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0;
+          const cycle = (s.cycle || "1 Week").toLowerCase();
+          if (cycle.includes("2 week") || cycle === "biweekly") return sum + price * 2;
+          if (cycle.includes("week") || cycle === "weekly" || cycle.includes("1 week")) return sum + price * 4;
+          if (cycle.includes("quarter") || cycle.includes("3 month")) return sum + Math.round(price / 3);
+          if (cycle.includes("6 month") || cycle === "half_yearly") return sum + Math.round(price / 6);
+          if (cycle.includes("year") || cycle === "yearly") return sum + Math.round(price / 12);
+          return sum + price;
+        }, 0)
+    : plans.reduce((sum, p) => sum + ((p.rawWeeklyPrice || parseFloat((p.weeklyPrice || "").replace(/[^\d.]/g, "")) || 0) * 4 * (p.subscribersCount || 0)), 0);
+
   const totalMonthlyRev = totalMonthlyRevNum > 0 ? `₹${totalMonthlyRevNum.toLocaleString("en-IN")}` : "₹0";
 
   return (
@@ -944,8 +977,8 @@ export default function ManageSubscriptionCanvas() {
                   backgroundColor: "#F8FAFC",
                 }}
               >
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>RESIDENT</th>
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>ROOM ASSIGNED</th>
+                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>SUBSCRIBER</th>
+                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>DELIVERY ADDRESS</th>
                 <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>PLAN PACKAGE</th>
                 <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>START DATE</th>
                 <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>NEXT RENEWAL</th>
@@ -965,7 +998,7 @@ export default function ManageSubscriptionCanvas() {
                       fontSize: "13.5px",
                     }}
                   >
-                    No active subscribers yet. Once residents subscribe to your meal plans, their assignments will appear here.
+                    No active subscribers yet. Once customers subscribe to your meal plans, their details will appear here.
                   </td>
                 </tr>
               ) : (
@@ -979,9 +1012,11 @@ export default function ManageSubscriptionCanvas() {
                     className="sub-row"
                   >
                     <td style={{ padding: "14px 16px", fontWeight: 600, color: "#0F172A" }}>
-                      {sub.name}
+                      {sub.customerName || sub.name || "Subscriber"}
                     </td>
-                    <td style={{ padding: "14px 16px", color: "#475569" }}>{sub.roomNo}</td>
+                    <td style={{ padding: "14px 16px", color: "#475569" }}>
+                      {formatDeliveryAddressDisplay(sub.deliveryAddress, sub.roomNo)}
+                    </td>
                     <td style={{ padding: "14px 16px", color: "#334155", fontWeight: 500 }}>
                       {sub.planName}
                     </td>

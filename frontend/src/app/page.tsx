@@ -338,8 +338,8 @@ export default function Home() {
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
-      stockQuantity: f.stockQuantity,
-      maxStock: f.maxStock,
+      stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
+      maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
       distanceText: f.distanceText,
     }));
   }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
@@ -405,8 +405,8 @@ export default function Home() {
       sellerName: f.sellerName,
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
-      stockQuantity: f.stockQuantity,
-      maxStock: f.maxStock,
+      stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
+      maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
       distanceText: f.distanceText,
     }));
   }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);

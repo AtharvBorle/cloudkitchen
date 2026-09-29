@@ -47,7 +47,6 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   // State Management
   const [cartItems, setCartItems] = useState<UserCartItem[]>(initialItems);
   const [isVegOnly, setIsVegOnly] = useState<boolean>(true);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>("EN");
   const [promoCode, setPromoCode] = useState<string>("");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -61,7 +60,9 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     maxDiscountAmount?: number | null;
     minimumCartValue?: number;
     discountLabel?: string;
+    calculatedDiscount?: number;
   } | null>(null);
+  const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
 
   const formattedDefaultAddress = React.useMemo(() => {
@@ -109,8 +110,20 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     showToast(`Removed "${name}" from cart`);
   };
 
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setAppliedCoupon(null);
+    setDiscountPercent(0);
+    setPromoCode("");
+    showToast("Promo code removed");
+  };
+
   // Promo Code Apply
   const handleApplyPromo = async () => {
+    if (appliedCoupon || appliedPromo) {
+      handleRemovePromo();
+      return;
+    }
     if (!promoCode.trim()) {
       showToast("Please enter a promo code");
       return;
@@ -140,7 +153,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       });
 
       const json = await res.json();
-      const cData = (json && typeof json === "object" && ("id" in json || "code" in json)) ? json : (json?.data || json);
+      const cData = json.data?.coupon || json.data || json;
       if (res.ok && cData && (cData.code || cData.id)) {
         setAppliedCoupon(cData);
         setAppliedPromo(cData.code);
@@ -159,7 +172,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           setAppliedPromo("NEO50");
           setDiscountPercent(50);
           showToast('Super offer "NEO50" applied! 50% discount');
-        } else if (cleanCode === "NEO20" || cleanCode === "WELCOME20" || cleanCode === "DISCOUNT20") {
+        } else if (cleanCode === "NEO20" || cleanCode === "WELCOME20" || cleanCode === "DISCOUNT20" || cleanCode === "NEOBITE20") {
           setAppliedCoupon({
             id: "mock-neo20",
             code: cleanCode,
@@ -190,7 +203,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         setAppliedPromo("NEO50");
         setDiscountPercent(50);
         showToast('Super offer "NEO50" applied! 50% discount');
-      } else if (cleanCode === "NEO20" || cleanCode === "WELCOME20" || cleanCode === "DISCOUNT20") {
+      } else if (cleanCode === "NEO20" || cleanCode === "WELCOME20" || cleanCode === "DISCOUNT20" || cleanCode === "NEOBITE20") {
         setAppliedCoupon({
           id: "mock-neo20",
           code: cleanCode,
@@ -202,6 +215,9 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         setDiscountPercent(20);
         showToast(`Promo code "${cleanCode}" applied! 20% discount`);
       } else {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
         showToast(`Failed to validate coupon "${cleanCode}".`);
       }
     } finally {
@@ -223,7 +239,6 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     const flat = appliedCoupon.discountAmount || 0;
     return Math.min(flat, subtotal);
   }, [appliedCoupon, subtotal]);
-
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -389,31 +404,100 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
           {/* Right Column: Promo Code & Order Summary */}
           <aside className={styles.sidebarRight}>
-            {/* 1. Promo Code Box */}
-            <div className={styles.promoCard}>
-              <div className={styles.promoInputBox}>
-                <Tag size={18} className={styles.promoTagIcon} />
-                <input
-                  type="text"
-                  placeholder="Enter promo code"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleApplyPromo();
-                    }
-                  }}
-                  className={styles.promoInput}
-                />
-              </div>
-              <button
-                type="button"
-                className={styles.applyButton}
-                onClick={handleApplyPromo}
+            {/* 1. Promo Code Box (NC-BUG-117) */}
+            {appliedPromo ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: "#F0FDF4",
+                  border: "1px solid #86EFAC",
+                  borderRadius: "14px",
+                  padding: "12px 16px",
+                  gap: "10px",
+                  marginBottom: "16px",
+                  boxShadow: "0 2px 8px rgba(22, 163, 74, 0.08)",
+                }}
               >
-                Apply
-              </button>
-            </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      backgroundColor: "#DCFCE7",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#16A34A",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Tag size={16} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
+                      {appliedCouponData?.code || appliedPromo}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
+                      -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleRemovePromo}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "6px 10px",
+                    fontSize: "0.75rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    transition: "all 0.15s ease",
+                  }}
+                  title="Remove applied coupon"
+                >
+                  <X size={13} strokeWidth={2.5} />
+                  <span>Remove</span>
+                </button>
+              </div>
+            ) : (
+              <div className={styles.promoCard}>
+                <div className={styles.promoInputBox}>
+                  <Tag size={18} className={styles.promoTagIcon} />
+                  <input
+                    type="text"
+                    placeholder="Enter promo code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleApplyPromo();
+                      }
+                    }}
+                    disabled={isValidatingPromo}
+                    className={styles.promoInput}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className={styles.applyButton}
+                  onClick={handleApplyPromo}
+                  disabled={!promoCode.trim() || isValidatingPromo}
+                >
+                  {isValidatingPromo ? "..." : "Apply"}
+                </button>
+              </div>
+            )}
 
             {/* 2. Order Summary Card */}
             <div className={styles.summaryCard}>

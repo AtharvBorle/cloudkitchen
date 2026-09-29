@@ -315,6 +315,12 @@
   color: #FFFFFF;
 }
 
+.nodeCancelled {
+  background-color: #DC2626;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
 .nodeUpcoming {
   background-color: #F1F5F9;
   border: 1.5px solid #CBD5E1;
@@ -332,6 +338,10 @@
 
 .lineCompleted {
   background-color: #F97316;
+}
+
+.lineCancelled {
+  background-color: #DC2626;
 }
 
 .timelineText {
@@ -352,6 +362,11 @@
   color: #EA580C;
 }
 
+.stepTitleCancelled {
+  color: #DC2626 !important;
+  font-weight: 600 !important;
+}
+
 .stepTitleUpcoming {
   color: #64748B;
   font-weight: 600;
@@ -366,6 +381,11 @@
 .stepSubtitleActive {
   color: #F97316;
   font-weight: 500;
+}
+
+.stepSubtitleCancelled {
+  color: #B91C1C !important;
+  font-weight: 500 !important;
 }
 
 .stepSubtitleUpcoming {

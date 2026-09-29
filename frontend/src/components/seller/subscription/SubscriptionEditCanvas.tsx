@@ -76,13 +76,13 @@ const DEFAULT_DATA: SubscriptionPlanData = {
   planName: "Bronze Plan",
   planTier: "Bronze",
   monthlyPrice: "₹ 999.00",
-  quarterlyPrice: "₹ 2,699.00",
-  yearlyPrice: "₹ 9,599.00",
+  quarterlyPrice: "",
+  yearlyPrice: "",
   includedFeatures: DEFAULT_INCLUDED_FEATURES,
   customFeature: "",
   planDuration: "1 Week",
   mealTimings: DEFAULT_MEAL_TIMINGS,
-  allowCancelSubscription: true,
+  allowCancelSubscription: false,
   allowPauseBilling: true,
   metrics: {
     subscribers: 342,
@@ -153,7 +153,7 @@ export default function SubscriptionEditCanvas({
               timing: timing || t,
             };
           }),
-          allowCancelSubscription: found.allowCancel ?? true,
+          allowCancelSubscription: false,
           allowPauseBilling: found.pauseBillingPeriod !== "None",
           pauseBillingPeriod: found.pauseBillingPeriod || "30 Days",
           metrics: {
@@ -291,7 +291,7 @@ export default function SubscriptionEditCanvas({
         duration: formData.planDuration,
         features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
         mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
-        allowCancel: formData.allowCancelSubscription,
+        allowCancel: false,
         pauseBillingPeriod: formData.pauseBillingPeriod || (formData.allowPauseBilling ? "30 Days" : "None"),
       });
     }
@@ -1257,70 +1257,7 @@ export default function SubscriptionEditCanvas({
               Subscription Policies
             </h2>
 
-            {/* Policy 1: Allow User to Cancel Subscription */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "16px",
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    color: "#0F172A",
-                  }}
-                >
-                  Allow User to Cancel Subscription
-                </span>
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: "#64748B",
-                    fontWeight: 400,
-                  }}
-                >
-                  Partners can cancel anytime directly from their cloud merchant dashboard.
-                </span>
-              </div>
-
-              {/* Toggle switch */}
-              <div
-                onClick={() => handleToggle("allowCancelSubscription")}
-                style={{
-                  width: "42px",
-                  height: "24px",
-                  borderRadius: "12px",
-                  backgroundColor: formData.allowCancelSubscription ? "#FF5500" : "#CBD5E1",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "2px",
-                  cursor: "pointer",
-                  boxSizing: "border-box",
-                  transition: "background-color 0.2s ease",
-                  flexShrink: 0,
-                }}
-              >
-                <div
-                  style={{
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "50%",
-                    backgroundColor: "#FFFFFF",
-                    transform: formData.allowCancelSubscription
-                      ? "translateX(18px)"
-                      : "translateX(0px)",
-                    transition: "transform 0.2s ease",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Policy 2: Allow User to Pause Billing */}
+            {/* Policy: Allow User to Pause Billing */}
             <div
               style={{
                 display: "flex",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -13,16 +13,19 @@ import { DeliveryTimes, DeliverySlot } from "@/components/my-subscription/delive
 import { SubscriptionBenefits } from "@/components/my-subscription/subscription-benefits";
 import { SubscriptionActions } from "@/components/my-subscription/subscription-actions";
 import { ChangePlanModal } from "@/components/my-subscription/change-plan-modal";
-import { CancelSubscriptionModal } from "@/components/my-subscription/cancel-subscription-modal";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useLocation } from "@/components/location-provider";
 import {
   fetchUserMealSubscriptions,
   togglePauseUserSubscription,
   subscribeToMealPlan,
+  loadRazorpayScript,
+  initiateMealSubscriptionPayment,
+  verifyAndActivateMealSubscription,
   getTierColors,
   UserActiveMealSubscription,
 } from "@/lib/meal-subscriptions";
+import { fetchApi } from "@/lib/fetch-api";
 import {
   Utensils,
   CheckCircle2,
@@ -42,8 +45,30 @@ import {
   Loader2,
   Award,
   Layers,
+  Navigation,
+  Home,
+  Briefcase,
 } from "lucide-react";
 import styles from "./MySubscriptionPage.module.css";
+
+const PUNE_LOCALITY_SUGGESTIONS = [
+  { name: "Kothrud, Pune", pincode: "411038" },
+  { name: "Baner, Pune", pincode: "411045" },
+  { name: "Aundh, Pune", pincode: "411007" },
+  { name: "Hinjawadi, Pune", pincode: "411057" },
+  { name: "Deccan Gymkhana, Pune", pincode: "411004" },
+  { name: "Viman Nagar, Pune", pincode: "411014" },
+  { name: "Kalyani Nagar, Pune", pincode: "411006" },
+  { name: "Shivajinagar, Pune", pincode: "411005" },
+  { name: "Wakad, Pune", pincode: "411057" },
+  { name: "Koregaon Park, Pune", pincode: "411001" },
+  { name: "Magarpatta City, Hadapsar, Pune", pincode: "411028" },
+  { name: "Pimple Saudagar, Pune", pincode: "411027" },
+  { name: "Senapati Bapat Road, Pune", pincode: "411016" },
+  { name: "Swargate / Dattawadi, Pune", pincode: "411030" },
+  { name: "Karve Nagar, Pune", pincode: "411052" },
+  { name: "Bavdhan, Pune", pincode: "411021" },
+];
 
 interface PublicMealPlan {
   id: string;
@@ -77,7 +102,7 @@ interface SellerInfo {
   plansCount: number;
 }
 
-type BillingCycle = "weekly" | "monthly" | "quarterly" | "yearly";
+type BillingCycle = "all" | "weekly" | "biweekly" | "monthly";
 
 function MySubscriptionContent() {
   const router = useRouter();
@@ -94,7 +119,6 @@ function MySubscriptionContent() {
   const [subscription, setSubscription] = useState<UserActiveMealSubscription | null>(null);
   const [isLoadingActive, setIsLoadingActive] = useState<boolean>(true);
   const [isChangingPlan, setIsChangingPlan] = useState<boolean>(false);
-  const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
   // All Subscription Plans Explorer State
@@ -102,8 +126,7 @@ function MySubscriptionContent() {
   const [allKitchens, setAllKitchens] = useState<any[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState<boolean>(false);
   const [selectedSellerId, setSelectedSellerId] = useState<string | "all">("all");
-  const [selectedDiet, setSelectedDiet] = useState<string>("all");
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Subscribe Modal State
@@ -114,6 +137,27 @@ function MySubscriptionContent() {
   const [isSubmittingSub, setIsSubmittingSub] = useState<boolean>(false);
   const [subSuccessMsg, setSubSuccessMsg] = useState<string | null>(null);
   const [subErrorMsg, setSubErrorMsg] = useState<string | null>(null);
+
+  // Address intelligence & selection states
+  const [userSavedAddresses, setUserSavedAddresses] = useState<any[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
+  const [isChangingAddress, setIsChangingAddress] = useState<boolean>(false);
+  const [isEditingPhone, setIsEditingPhone] = useState<boolean>(false);
+  const [showManualAddressInput, setShowManualAddressInput] = useState<boolean>(false);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState<boolean>(false);
+  const [isDetectingGps, setIsDetectingGps] = useState<boolean>(false);
+  const addressSuggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (addressSuggestionsRef.current && !addressSuggestionsRef.current.contains(e.target as Node)) {
+        setShowAddressSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Sync tab with URL
   useEffect(() => {
@@ -160,19 +204,19 @@ function MySubscriptionContent() {
       try {
         setIsLoadingPlans(true);
         const [plansRes, exploreRes] = await Promise.all([
-          fetch("http://localhost:5000/api/public/meal-plans").catch(() => fetch("/api/public/meal-plans")),
-          fetch("http://localhost:5000/api/public/explore").catch(() => fetch("/api/public/explore")),
+          fetchApi("/api/public/meal-plans").catch(() => null),
+          fetchApi("/api/public/explore").catch(() => null),
         ]);
 
         let plansData: PublicMealPlan[] = [];
         let kitchensData: any[] = [];
 
-        if (plansRes.ok) {
+        if (plansRes && plansRes.ok) {
           const plansJson = await plansRes.json();
           plansData = plansJson.data || plansJson || [];
         }
 
-        if (exploreRes.ok) {
+        if (exploreRes && exploreRes.ok) {
           const exploreJson = await exploreRes.json();
           kitchensData = exploreJson.data?.kitchens || exploreJson.kitchens || [];
         }
@@ -240,7 +284,7 @@ function MySubscriptionContent() {
     return sellersList.find((s) => s.id === selectedSellerId) || null;
   }, [selectedSellerId, sellersList]);
 
-  // Filter plans based on selected seller, dietary preference, and search query
+  // Filter plans based on selected seller, billing cycle, and search query
   const filteredPlans = useMemo(() => {
     let list = allPlans;
 
@@ -248,13 +292,20 @@ function MySubscriptionContent() {
       list = list.filter((p) => p.sellerId === selectedSellerId);
     }
 
-    if (selectedDiet && selectedDiet !== "all") {
-      const d = selectedDiet.toLowerCase();
-      if (d === "veg") {
-        list = list.filter((p) => (p.foodType || "").toUpperCase() !== "NON_VEG");
-      } else if (d === "non-veg") {
-        list = list.filter((p) => (p.foodType || "").toUpperCase() !== "PURE_VEG" && (p.foodType || "").toUpperCase() !== "VEG");
-      }
+    if (billingCycle !== "all") {
+      list = list.filter((p) => {
+        const dur = (p.duration || "1 Week").toLowerCase().trim();
+        if (billingCycle === "weekly") {
+          return dur.includes("1 week") || (dur.includes("week") && !dur.includes("2 week") && !dur.includes("bi") && !dur.includes("by"));
+        }
+        if (billingCycle === "biweekly") {
+          return dur.includes("2 week") || dur.includes("bi") || dur.includes("by");
+        }
+        if (billingCycle === "monthly") {
+          return dur.includes("month");
+        }
+        return true;
+      });
     }
 
     if (searchQuery.trim()) {
@@ -269,50 +320,33 @@ function MySubscriptionContent() {
     }
 
     return list;
-  }, [allPlans, selectedSellerId, selectedDiet, searchQuery]);
+  }, [allPlans, selectedSellerId, billingCycle, searchQuery]);
 
-  const getCyclePrice = (plan: PublicMealPlan, cycle: BillingCycle) => {
-    switch (cycle) {
-      case "weekly":
-        return plan.weeklyPrice;
-      case "monthly":
-        return plan.monthlyPrice || plan.weeklyPrice * 4;
-      case "quarterly":
-        return plan.quarterlyPrice || Math.round(plan.weeklyPrice * 12 * 0.9);
-      case "yearly":
-        return plan.yearlyPrice || Math.round(plan.weeklyPrice * 52 * 0.8);
-      default:
-        return plan.weeklyPrice;
+  const getPlanPrice = (plan: PublicMealPlan) => {
+    const dur = (plan.duration || "1 Week").toLowerCase();
+    if (dur.includes("week")) {
+      return plan.weeklyPrice || plan.monthlyPrice || 0;
     }
+    if (dur.includes("month") && !dur.includes("quarter") && !dur.includes("3 month")) {
+      return plan.monthlyPrice || plan.weeklyPrice || 0;
+    }
+    if (dur.includes("quarter") || dur.includes("3 month")) {
+      return plan.quarterlyPrice || plan.monthlyPrice || plan.weeklyPrice || 0;
+    }
+    if (dur.includes("year")) {
+      return plan.yearlyPrice || plan.monthlyPrice || plan.weeklyPrice || 0;
+    }
+    return plan.weeklyPrice || plan.monthlyPrice || 0;
   };
 
-  const getCycleLabel = (cycle: BillingCycle) => {
-    switch (cycle) {
-      case "weekly":
-        return "/ week";
-      case "monthly":
-        return "/ month";
-      case "quarterly":
-        return "/ 3 months";
-      case "yearly":
-        return "/ year";
-      default:
-        return "/ month";
-    }
-  };
-
-  const getPerMealEstimate = (plan: PublicMealPlan, cycle: BillingCycle) => {
-    const price = getCyclePrice(plan, cycle);
-    let totalMeals = 7;
-    if (cycle === "weekly") totalMeals = 7;
-    else if (cycle === "monthly") totalMeals = 30;
-    else if (cycle === "quarterly") totalMeals = 90;
-    else if (cycle === "yearly") totalMeals = 365;
-
-    const timingsCount = plan.mealTimings && plan.mealTimings.length > 0 ? plan.mealTimings.length : 1;
-    const estMeals = totalMeals * Math.max(1, timingsCount <= 2 ? timingsCount : 2);
-    const perMeal = Math.round(price / estMeals);
-    return perMeal > 0 ? perMeal : 65;
+  const getPlanDurationLabel = (plan: PublicMealPlan) => {
+    const dur = (plan.duration || "1 Week").toLowerCase();
+    if (dur.includes("2 week") || dur.includes("bi") || dur.includes("by")) return "/ 2 weeks";
+    if (dur.includes("week")) return "/ week";
+    if (dur.includes("6 month")) return "/ 6 months";
+    if (dur.includes("month")) return "/ month";
+    if (dur.includes("year")) return "/ year";
+    return `/${plan.duration || "cycle"}`;
   };
 
   const handleTogglePause = async (nextPaused: boolean) => {
@@ -366,19 +400,6 @@ function MySubscriptionContent() {
     );
   };
 
-  const handleSubscriptionCancelled = () => {
-    setSubscription((prev) =>
-      prev
-        ? {
-            ...prev,
-            status: "CANCELLED",
-            isPaused: false,
-          }
-        : null
-    );
-    showToast("info", "Your meal subscription has been cancelled.");
-  };
-
   // Open Subscribe Modal
   const handleOpenSubscribeModal = (plan: PublicMealPlan) => {
     if (!session?.user) {
@@ -386,17 +407,162 @@ function MySubscriptionContent() {
       return;
     }
     setSelectedPlanForSub(plan);
-    setDeliveryAddressInput(defaultAddress?.address || defaultAddress?.label || "");
+    const initialAddr = defaultAddress?.address || defaultAddress?.label || (typeof window !== "undefined" ? localStorage.getItem("active-selected-address") || "" : "");
+    setDeliveryAddressInput(initialAddr);
     setContactPhoneInput((session.user as any)?.phone || "");
     setSubErrorMsg(null);
     setSubSuccessMsg(null);
+    setIsChangingAddress(false);
+    setIsEditingPhone(false);
+    setShowManualAddressInput(false);
+    setShowAddressSuggestions(false);
+
+    // Fetch user saved addresses
+    fetchApi("/api/user/addresses")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          const list = data.data?.addresses || data.addresses || data.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setUserSavedAddresses(list);
+
+            // Pre-fill with default address or first saved address
+            const defaultSaved = list.find((a: any) => a.isDefault) || list.find((a: any) => (a.type || "").toLowerCase() === "home") || list[0];
+            if (defaultSaved) {
+              setSelectedSavedAddressId(defaultSaved.id);
+              const parts = [
+                defaultSaved.houseNumber,
+                defaultSaved.street,
+                defaultSaved.landmark ? `Near ${defaultSaved.landmark}` : null,
+                defaultSaved.city || "Pune",
+                defaultSaved.pincode,
+              ].filter(Boolean);
+              const line = parts.join(", ");
+              setDeliveryAddressInput(line || defaultSaved.address || defaultSaved.label || initialAddr);
+              if (defaultSaved.recipientPhone && !(session.user as any)?.phone) {
+                setContactPhoneInput(defaultSaved.recipientPhone);
+              }
+            }
+          }
+        }
+      })
+      .catch(() => {});
   };
 
-  // Submit Subscription
+  // Handle GPS Location Detection with Nominatim Reverse Geocoding
+  const handleDetectGpsLocation = () => {
+    if (!navigator.geolocation) {
+      setSubErrorMsg("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setIsDetectingGps(true);
+    setSubErrorMsg(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const road = addr.road || addr.street || addr.neighbourhood || addr.suburb || addr.residential || "";
+            const suburb = addr.suburb || addr.neighbourhood || addr.city_district || "";
+            const city = addr.city || addr.town || addr.municipality || "Pune";
+            const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6) || "411038";
+
+            const parts = [road, suburb && suburb !== road ? suburb : "", city, `Maharashtra - ${pincode}`].filter(Boolean);
+            const fullAddr = parts.join(", ") || data.display_name?.split(",").slice(0, 3).join(",") || "Kothrud, Pune - 411038";
+            setDeliveryAddressInput(fullAddr);
+            setSelectedSavedAddressId(null);
+            setIsChangingAddress(false);
+            setShowAddressSuggestions(false);
+          } else {
+            setDeliveryAddressInput(defaultAddress?.address || "Kothrud, Pune - 411038");
+            setIsChangingAddress(false);
+          }
+        } catch (e) {
+          setDeliveryAddressInput(defaultAddress?.address || "Kothrud, Pune - 411038");
+          setIsChangingAddress(false);
+        } finally {
+          setIsDetectingGps(false);
+        }
+      },
+      () => {
+        setIsDetectingGps(false);
+        const fallback = defaultAddress?.address || "Kothrud, Pune - 411038";
+        setDeliveryAddressInput(fallback);
+        setIsChangingAddress(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
+
+  const handleSelectSavedAddress = (addr: any) => {
+    const parts = [
+      addr.houseNumber,
+      addr.street,
+      addr.landmark ? `Near ${addr.landmark}` : null,
+      addr.city || "Pune",
+      addr.pincode,
+    ].filter(Boolean);
+    const line = parts.join(", ");
+    setDeliveryAddressInput(line || addr.address || addr.label || "");
+    setSelectedSavedAddressId(addr.id);
+    setIsChangingAddress(false);
+    if (addr.recipientPhone && !contactPhoneInput) {
+      setContactPhoneInput(addr.recipientPhone);
+    }
+    setShowAddressSuggestions(false);
+  };
+
+  const handleSelectLocality = (loc: { name: string; pincode: string }) => {
+    const trimmed = deliveryAddressInput.trim();
+    if (trimmed && !trimmed.toLowerCase().includes(loc.name.toLowerCase().split(",")[0])) {
+      setDeliveryAddressInput(`${trimmed}, ${loc.name} - ${loc.pincode}`);
+    } else {
+      setDeliveryAddressInput(`${loc.name} - ${loc.pincode}`);
+    }
+    setShowAddressSuggestions(false);
+  };
+
+  const filteredLocalities = PUNE_LOCALITY_SUGGESTIONS.filter((loc) => {
+    if (!deliveryAddressInput.trim()) return true;
+    const q = deliveryAddressInput.toLowerCase();
+    return loc.name.toLowerCase().includes(q) || loc.pincode.includes(q);
+  });
+
+  // Submit Subscription with Online Payment Flow
   const handleConfirmSubscription = async () => {
     if (!selectedPlanForSub) return;
-    if (!deliveryAddressInput.trim()) {
+    const trimmedAddress = deliveryAddressInput.trim();
+    if (!trimmedAddress) {
       setSubErrorMsg("Please provide your delivery address or room number.");
+      return;
+    }
+    if (trimmedAddress.length < 5) {
+      setSubErrorMsg("Delivery address must be at least 5 characters long.");
+      return;
+    }
+    if (trimmedAddress.length > 120) {
+      setSubErrorMsg("Delivery address cannot exceed 120 characters.");
+      return;
+    }
+
+    const cleanPhone = contactPhoneInput.replace(/\D/g, "");
+    if (!cleanPhone) {
+      setSubErrorMsg("Please enter your 10-digit contact phone number.");
+      return;
+    }
+    if (cleanPhone.length !== 10) {
+      setSubErrorMsg("Contact phone number must be exactly 10 digits.");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setSubErrorMsg("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.");
       return;
     }
 
@@ -404,29 +570,86 @@ function MySubscriptionContent() {
     setSubErrorMsg(null);
 
     try {
-      const res = await subscribeToMealPlan(selectedPlanForSub.id, {
-        deliveryAddress: deliveryAddressInput.trim(),
-        contactPhone: contactPhoneInput.trim(),
-        cycle: billingCycle.toUpperCase(),
-      });
+      // 1. Initiate online payment order on backend
+      const planCycle = selectedPlanForSub.duration || "1 Week";
+      const initData = await initiateMealSubscriptionPayment(
+        selectedPlanForSub.id,
+        planCycle
+      );
 
-      setSubSuccessMsg(res.message || "Meal plan subscribed successfully!");
-      
-      // Reload active subscriptions and switch tab
-      const subs = await fetchUserMealSubscriptions();
-      if (subs && subs.length > 0) {
-        const active = subs.find((s) => s.status === "ACTIVE") || subs[0];
-        setSubscription(active);
+      // 2. Load Razorpay Checkout SDK
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setSubErrorMsg("Failed to load Razorpay payment SDK. Please check your internet connection.");
+        setIsSubmittingSub(false);
+        return;
       }
 
-      setTimeout(() => {
-        setSelectedPlanForSub(null);
-        setActiveTab("active");
-        showToast("success", "Welcome to your new meal subscription!");
-      }, 1200);
+      // 3. Open Razorpay Checkout Modal
+      const options = {
+        key: initData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TX4MPQgJuetMFP",
+        amount: initData.amount,
+        currency: initData.currency || "INR",
+        name: "Neo Cloud Kitchen",
+        description: `Subscription: ${selectedPlanForSub.name} (${initData.subscriptionCycle || planCycle})`,
+        order_id: initData.razorpayOrderId,
+        handler: async function (response: any) {
+          try {
+            setIsSubmittingSub(true);
+            const verified = await verifyAndActivateMealSubscription({
+              planId: selectedPlanForSub.id,
+              cycle: initData.subscriptionCycle || planCycle,
+              deliveryAddress: deliveryAddressInput.trim(),
+              contactPhone: contactPhoneInput.trim(),
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            setSubSuccessMsg(verified.message || "Payment verified! Subscription activated successfully!");
+
+            // Reload active subscriptions and switch tab
+            const subs = await fetchUserMealSubscriptions();
+            if (subs && subs.length > 0) {
+              const active = subs.find((s) => s.status === "ACTIVE") || subs[0];
+              setSubscription(active);
+            }
+
+            setTimeout(() => {
+              setSelectedPlanForSub(null);
+              setActiveTab("active");
+              showToast("success", "Welcome to your new meal subscription!");
+            }, 1200);
+          } catch (vErr: any) {
+            console.error("Verification error:", vErr);
+            setSubErrorMsg(vErr.message || "Payment verification failed. Please contact support.");
+            setIsSubmittingSub(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsSubmittingSub(false);
+            setSubErrorMsg("Payment was cancelled. Subscription was not activated.");
+            showToast("info", "Payment was cancelled. Subscription was not activated.");
+          },
+        },
+        prefill: {
+          name: session?.user?.name || "",
+          contact: contactPhoneInput.trim() || (session?.user as any)?.phone || "",
+        },
+        theme: {
+          color: "#FF6B00",
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", function (response: any) {
+        setIsSubmittingSub(false);
+        setSubErrorMsg("Payment failed: " + (response.error?.description || "Transaction declined. Subscription was not activated."));
+      });
+      rzp.open();
     } catch (err: any) {
-      setSubErrorMsg(err.message || "Failed to create subscription. Please try again.");
-    } finally {
+      setSubErrorMsg(err.message || "Failed to initiate payment. Please try again.");
       setIsSubmittingSub(false);
     }
   };
@@ -709,9 +932,7 @@ function MySubscriptionContent() {
                     {/* Subscription Actions */}
                     <SubscriptionActions
                       onChangePlan={() => setIsChangingPlan(true)}
-                      onCancelSubscription={() => setIsCancelling(true)}
                       status={subscription.status}
-                      allowCancel={subscription.plan?.allowCancel ?? true}
                     />
                   </>
                 )}
@@ -813,26 +1034,6 @@ function MySubscriptionContent() {
 
                   {/* Secondary Filters: Dietary, Search & Billing Cycle */}
                   <div className={styles.filterRow}>
-                    {/* Dietary Pills */}
-                    <div className={styles.dietaryPills}>
-                      {[
-                        { id: "all", label: "All Diets" },
-                        { id: "veg", label: "Pure Veg 🥦" },
-                        { id: "non-veg", label: "Non-Veg 🍗" },
-                      ].map((diet) => (
-                        <button
-                          key={diet.id}
-                          type="button"
-                          className={`${styles.dietPill} ${
-                            selectedDiet === diet.id ? styles.dietPillActive : ""
-                          }`}
-                          onClick={() => setSelectedDiet(diet.id)}
-                        >
-                          {diet.label}
-                        </button>
-                      ))}
-                    </div>
-
                     {/* Search Input */}
                     <div className={styles.searchBox}>
                       <Search size={15} className={styles.searchIcon} />
@@ -850,6 +1051,15 @@ function MySubscriptionContent() {
                       <button
                         type="button"
                         className={`${styles.cycleBtn} ${
+                          billingCycle === "all" ? styles.cycleBtnActive : ""
+                        }`}
+                        onClick={() => setBillingCycle("all")}
+                      >
+                        <span>All</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.cycleBtn} ${
                           billingCycle === "weekly" ? styles.cycleBtnActive : ""
                         }`}
                         onClick={() => setBillingCycle("weekly")}
@@ -859,32 +1069,20 @@ function MySubscriptionContent() {
                       <button
                         type="button"
                         className={`${styles.cycleBtn} ${
+                          billingCycle === "biweekly" ? styles.cycleBtnActive : ""
+                        }`}
+                        onClick={() => setBillingCycle("biweekly")}
+                      >
+                        <span>Bi-weekly</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.cycleBtn} ${
                           billingCycle === "monthly" ? styles.cycleBtnActive : ""
                         }`}
                         onClick={() => setBillingCycle("monthly")}
                       >
                         <span>Monthly</span>
-                        <span className={styles.cycleDiscountBadge}>Popular</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.cycleBtn} ${
-                          billingCycle === "quarterly" ? styles.cycleBtnActive : ""
-                        }`}
-                        onClick={() => setBillingCycle("quarterly")}
-                      >
-                        <span>Quarterly</span>
-                        <span className={styles.cycleDiscountBadge}>-10%</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.cycleBtn} ${
-                          billingCycle === "yearly" ? styles.cycleBtnActive : ""
-                        }`}
-                        onClick={() => setBillingCycle("yearly")}
-                      >
-                        <span>Yearly</span>
-                        <span className={styles.cycleDiscountBadge}>-20%</span>
                       </button>
                     </div>
                   </div>
@@ -950,7 +1148,7 @@ function MySubscriptionContent() {
                       type="button"
                       onClick={() => {
                         setSelectedSellerId("all");
-                        setSelectedDiet("all");
+                        setBillingCycle("all");
                         setSearchQuery("");
                       }}
                       className={styles.resetBtn}
@@ -962,8 +1160,8 @@ function MySubscriptionContent() {
                   <div className={styles.plansGrid}>
                     {filteredPlans.map((plan, idx) => {
                       const tierColors = getTierColors(plan.tier);
-                      const price = getCyclePrice(plan, billingCycle);
-                      const perMeal = getPerMealEstimate(plan, billingCycle);
+                      const price = getPlanPrice(plan);
+                      const cycleLabel = getPlanDurationLabel(plan);
                       const isPopular = idx === 0 || plan.tier?.toLowerCase() === "gold";
 
                       return (
@@ -1007,12 +1205,8 @@ function MySubscriptionContent() {
                               <div className={styles.priceMain}>
                                 <span className={styles.currencySymbol}>₹</span>
                                 <span className={styles.priceAmount}>{price.toLocaleString("en-IN")}</span>
-                                <span className={styles.priceCycle}>{getCycleLabel(billingCycle)}</span>
+                                <span className={styles.priceCycle}>{cycleLabel}</span>
                               </div>
-                            </div>
-                            <div className={styles.pricePerMeal}>
-                              <span className={styles.perMealTag}>≈ ₹{perMeal} / meal</span>
-                              <div className={styles.perMealSub}>Zero Delivery Fee</div>
                             </div>
                           </div>
 
@@ -1108,17 +1302,6 @@ function MySubscriptionContent() {
         />
       )}
 
-      {/* Cancel Subscription Modal */}
-      {subscription && isCancelling && (
-        <CancelSubscriptionModal
-          isOpen={isCancelling}
-          onClose={() => setIsCancelling(false)}
-          subscriptionId={subscription.id}
-          planName={subscription.plan?.name || "Daily Meal Plan"}
-          onCancelled={handleSubscriptionCancelled}
-        />
-      )}
-
       {/* Subscribe Confirmation Modal */}
       {selectedPlanForSub && (
         <div
@@ -1171,27 +1354,180 @@ function MySubscriptionContent() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FF5500" }}>
-                    ₹{getCyclePrice(selectedPlanForSub, billingCycle).toLocaleString("en-IN")}
+                    ₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")}
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "#64748B", fontWeight: 600 }}>
-                    {billingCycle.toUpperCase()} CYCLE
+                    {(selectedPlanForSub.duration || "1 Week").toUpperCase()}
                   </div>
                 </div>
               </div>
 
               {/* Delivery Address */}
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>
-                  <MapPin size={13} color="#FF5500" />
-                  <span>Delivery Address / Room Number *</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Room 204, Dattawadi near PMC School, Pune"
-                  value={deliveryAddressInput}
-                  onChange={(e) => setDeliveryAddressInput(e.target.value)}
-                  className={styles.formInput}
-                />
+              <div className={styles.formGroup} ref={addressSuggestionsRef}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+                  <label className={styles.formLabel}>
+                    <MapPin size={13} color="#FF5500" />
+                    <span>Delivery Address *</span>
+                  </label>
+                </div>
+
+                {!isChangingAddress && deliveryAddressInput ? (
+                  /* Selected Address Display Card */
+                  <div className={styles.selectedAddressCard}>
+                    <div className={styles.addressCardHeader}>
+                      <div className={styles.addressCardType}>
+                        {(() => {
+                          const selected = userSavedAddresses.find((a) => a.id === selectedSavedAddressId);
+                          const type = (selected?.type || "Home").toLowerCase();
+                          return type === "work" ? <Briefcase size={14} color="#FF5500" /> : <Home size={14} color="#FF5500" />;
+                        })()}
+                        <span>
+                          {(() => {
+                            const selected = userSavedAddresses.find((a) => a.id === selectedSavedAddressId);
+                            return selected?.type || "Delivery Address";
+                          })()}
+                        </span>
+                        {userSavedAddresses.find((a) => a.id === selectedSavedAddressId)?.isDefault && (
+                          <span className={styles.defaultBadge}>Default</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsChangingAddress(true)}
+                        className={styles.changeAddressBtn}
+                      >
+                        Change Address
+                      </button>
+                    </div>
+                    <div className={styles.addressCardDetails}>
+                      {deliveryAddressInput}
+                    </div>
+                  </div>
+                ) : (
+                  /* Address Picker / Selection Mode */
+                  <div className={styles.addressPickerContainer}>
+                    <div className={styles.addressPickerHeader}>
+                      <span className={styles.addressPickerTitle}>Choose Saved Delivery Address</span>
+                      {deliveryAddressInput && (
+                        <button
+                          type="button"
+                          onClick={() => setIsChangingAddress(false)}
+                          className={styles.addressPickerCloseBtn}
+                        >
+                          Keep Current
+                        </button>
+                      )}
+                    </div>
+
+                    {userSavedAddresses.length > 0 && (
+                      <div className={styles.savedAddressesList}>
+                        {userSavedAddresses.map((addr) => {
+                          const isSelected = selectedSavedAddressId === addr.id;
+                          return (
+                            <button
+                              key={addr.id}
+                              type="button"
+                              className={`${styles.savedAddressItem} ${isSelected ? styles.savedAddressItemSelected : ""}`}
+                              onClick={() => handleSelectSavedAddress(addr)}
+                            >
+                              <div className={styles.savedAddressRadio}>
+                                {isSelected ? (
+                                  <CheckCircle2 size={16} color="#FF5500" />
+                                ) : (
+                                  <div style={{ width: 14, height: 14, borderRadius: "50%", border: "1.5px solid #CBD5E1" }} />
+                                )}
+                              </div>
+                              <div className={styles.savedAddressInfo}>
+                                <div className={styles.savedAddressTypeRow}>
+                                  {addr.type?.toLowerCase() === "work" ? <Briefcase size={12} /> : <Home size={12} />}
+                                  <span>{addr.type || "Home"}</span>
+                                  {addr.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                                </div>
+                                <div className={styles.savedAddressLines}>
+                                  <div style={{ fontWeight: 600, color: "#1E293B" }}>
+                                    {addr.houseNumber ? `${addr.houseNumber}, ` : ""}{addr.street}
+                                  </div>
+                                  <div>
+                                    {addr.landmark ? `Landmark: ${addr.landmark}, ` : ""}{addr.city || "Pune"} - {addr.pincode}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Picker Action Buttons */}
+                    <div className={styles.addressPickerActions}>
+                      <button
+                        type="button"
+                        onClick={handleDetectGpsLocation}
+                        disabled={isDetectingGps}
+                        className={styles.gpsDetectBtn}
+                        title="Detect current location via GPS"
+                      >
+                        {isDetectingGps ? <Loader2 size={12} className="animate-spin" /> : <Navigation size={12} />}
+                        <span>{isDetectingGps ? "Detecting GPS..." : "Use Current GPS"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowManualAddressInput((prev) => !prev)}
+                        className={styles.customAddrBtn}
+                      >
+                        {showManualAddressInput ? "Hide Custom Input" : "Type Custom Address"}
+                      </button>
+                    </div>
+
+                    {/* Manual Input / Suggestions */}
+                    {(showManualAddressInput || userSavedAddresses.length === 0) && (
+                      <div style={{ position: "relative", marginTop: "4px" }}>
+                        <input
+                          type="text"
+                          maxLength={120}
+                          placeholder="Type flat/room number, building, street (max 120 chars)..."
+                          value={deliveryAddressInput}
+                          onChange={(e) => {
+                            setDeliveryAddressInput(e.target.value.slice(0, 120));
+                            setSelectedSavedAddressId(null);
+                            setShowAddressSuggestions(true);
+                          }}
+                          onFocus={() => setShowAddressSuggestions(true)}
+                          className={styles.formInput}
+                          style={{ width: "100%", boxSizing: "border-box" }}
+                        />
+                        <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }}>
+                          <MapPin size={16} />
+                        </div>
+
+                        {showAddressSuggestions && filteredLocalities.length > 0 && (
+                          <div className={styles.suggestionsDropdown}>
+                            <div className={styles.suggestionsHeader}>
+                              <Search size={12} />
+                              <span>Suggested Localities in Pune</span>
+                            </div>
+                            <div className={styles.suggestionsList}>
+                              {filteredLocalities.slice(0, 6).map((loc, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  className={styles.suggestionItem}
+                                  onClick={() => handleSelectLocality(loc)}
+                                >
+                                  <MapPin size={14} className={styles.suggestionPin} />
+                                  <div className={styles.suggestionText}>
+                                    <span className={styles.suggestionName}>{loc.name}</span>
+                                    <span className={styles.suggestionPinCode}>PIN: {loc.pincode}</span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Contact Phone */}
@@ -1200,13 +1536,50 @@ function MySubscriptionContent() {
                   <Phone size={13} color="#FF5500" />
                   <span>Contact Phone Number</span>
                 </label>
-                <input
-                  type="tel"
-                  placeholder="e.g. +91 9876543210"
-                  value={contactPhoneInput}
-                  onChange={(e) => setContactPhoneInput(e.target.value)}
-                  className={styles.formInput}
-                />
+
+                {!isEditingPhone && contactPhoneInput ? (
+                  <div className={styles.phoneCard}>
+                    <div className={styles.phoneCardLeft}>
+                      <div className={styles.phoneCardIcon}>
+                        <Phone size={14} />
+                      </div>
+                      <div>
+                        <div className={styles.phoneCardNumber}>+91 {contactPhoneInput}</div>
+                        <div className={styles.phoneCardLabel}>Account Registered Phone (Used for delivery &amp; OTP)</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPhone(true)}
+                      className={styles.editPhoneBtn}
+                    >
+                      Edit Number
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.phoneEditRow}>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      maxLength={10}
+                      placeholder="e.g. 9876543210"
+                      value={contactPhoneInput}
+                      onChange={(e) => setContactPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      className={styles.formInput}
+                      style={{ flex: 1 }}
+                    />
+                    {contactPhoneInput.length === 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPhone(false)}
+                        className={styles.phoneDoneBtn}
+                      >
+                        Done
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Start Date Preference */}
@@ -1229,8 +1602,8 @@ function MySubscriptionContent() {
               {/* Breakdown */}
               <div className={styles.priceBreakdown}>
                 <div className={styles.breakdownRow}>
-                  <span>Base Plan ({billingCycle})</span>
-                  <span>₹{getCyclePrice(selectedPlanForSub, billingCycle).toLocaleString("en-IN")}</span>
+                  <span>Base Plan ({selectedPlanForSub.duration || "1 Week"})</span>
+                  <span>₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")}</span>
                 </div>
                 <div className={styles.breakdownRow}>
                   <span>Doorstep Delivery (All Meals)</span>
@@ -1238,7 +1611,7 @@ function MySubscriptionContent() {
                 </div>
                 <div className={styles.breakdownTotal}>
                   <span>Total Amount Due</span>
-                  <span>₹{getCyclePrice(selectedPlanForSub, billingCycle).toLocaleString("en-IN")}</span>
+                  <span>₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")}</span>
                 </div>
               </div>
 
@@ -1302,7 +1675,7 @@ function MySubscriptionContent() {
                   </>
                 ) : (
                   <>
-                    <span>Confirm &amp; Subscribe</span>
+                    <span>Pay Online &amp; Subscribe (₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")})</span>
                     <ArrowRight size={15} />
                   </>
                 )}

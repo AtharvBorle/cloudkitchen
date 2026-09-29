@@ -238,7 +238,12 @@ export async function middleware(request: NextRequest) {
     pathname === "/order-history-desktop" ||
     pathname === "/order-confirmation" ||
     pathname === "/my-subscription" ||
+    pathname === "/my-subscriptions" ||
     pathname === "/my-subscriptions-desktop" ||
+    pathname === "/mysubscription" ||
+    pathname === "/mysubscriptions" ||
+    pathname === "/subscription" ||
+    pathname === "/subscriptions" ||
     pathname === "/payment-methods-desktop" ||
     pathname === "/delivery-addresses-desktop" ||
     pathname === "/notifications-desktop" ||

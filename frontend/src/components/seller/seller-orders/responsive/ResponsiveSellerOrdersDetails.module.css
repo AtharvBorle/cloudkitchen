@@ -208,6 +208,12 @@
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
 }
 
+.stepCircleCancelled {
+  background-color: #DC2626;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+
 .stepCircleInactive {
   background-color: #F1F5F9;
   color: #94A3B8;
@@ -224,6 +230,11 @@
 .stepLabelActive {
   font-weight: 700;
   color: #0F172A;
+}
+
+.stepLabelCancelled {
+  font-weight: 700;
+  color: #DC2626;
 }
 
 .stepLabelInactive {
@@ -243,8 +254,39 @@
   border-top: 2px dashed #F97316;
 }
 
+.dottedLineCancelled {
+  border-top: 2px dashed #DC2626;
+}
+
 .dottedLineInactive {
   border-top: 2px dashed #CBD5E1;
+}
+
+.cancelledNoticeCard {
+  background-color: #FEF2F2;
+  border-radius: 16px;
+  border: 1px solid #FECACA;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.cancelledNoticeHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #DC2626;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.cancelledNoticeText {
+  margin: 0;
+  font-size: 11.5px;
+  color: #7F1D1D;
+  line-height: 1.4;
 }
 
 /* 3. Rider Quick Status Card */
