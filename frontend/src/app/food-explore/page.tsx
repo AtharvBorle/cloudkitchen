@@ -769,7 +769,7 @@ function FoodExploreContent() {
                     boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
                     border: "1px solid #E2E8F0",
                     zIndex: 1000,
-                    minWidth: "190px",
+                    minWidth: "180px",
                     display: "flex",
                     flexDirection: "column",
                     gap: "4px",
@@ -777,9 +777,9 @@ function FoodExploreContent() {
                 >
                   {[
                     { id: "all", label: "Any Price", count: filterCounts.all },
-                    { id: "under-150", label: "Under ₹150 (Budget)", count: filterCounts.under150 },
-                    { id: "150-300", label: "₹150 – ₹300 (Standard)", count: filterCounts.price150to300 },
-                    { id: "300-plus", label: "₹300+ (Premium)", count: filterCounts.price300plus },
+                    { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
+                    { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
+                    { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
                   ].map((p) => {
                     const isSelected = selectedPrice === p.id;
                     return (
@@ -802,10 +802,16 @@ function FoodExploreContent() {
                           fontWeight: isSelected ? "700" : "500",
                           fontSize: "13px",
                           cursor: "pointer",
+                          gap: "12px",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        <span>{p.label}</span>
-                        {p.count > 0 && <span style={{ fontSize: "11px", color: "#94A3B8" }}>({p.count})</span>}
+                        <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
+                        {p.count > 0 && (
+                          <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
+                            ({p.count})
+                          </span>
+                        )}
                       </button>
                     );
                   })}

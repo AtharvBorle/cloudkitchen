@@ -503,7 +503,7 @@ export default function FilterRow({
                 boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
                 border: "1px solid #E2E8F0",
                 zIndex: 1000,
-                minWidth: "195px",
+                minWidth: "180px",
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
@@ -511,9 +511,9 @@ export default function FilterRow({
             >
               {[
                 { id: "all", label: "Any Price", count: counts?.all },
-                { id: "under-150", label: "Under ₹150 (Budget)", count: counts?.under150 },
-                { id: "150-300", label: "₹150 – ₹300 (Standard)", count: counts?.price150to300 },
-                { id: "300-plus", label: "₹300+ (Premium)", count: counts?.price300plus },
+                { id: "under-150", label: "Under ₹150", count: counts?.under150 },
+                { id: "150-300", label: "₹150 – ₹300", count: counts?.price150to300 },
+                { id: "300-plus", label: "₹300+", count: counts?.price300plus },
               ].map((opt) => {
                 const isSelected =
                   (internalFilters.priceTier || "all") === opt.id ||
@@ -536,11 +536,12 @@ export default function FilterRow({
                       fontSize: "13.5px",
                       cursor: "pointer",
                       textAlign: "left",
-                      gap: "8px",
+                      gap: "12px",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    <span>{opt.label}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ whiteSpace: "nowrap" }}>{opt.label}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                       {opt.count !== undefined && (
                         <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
                           ({opt.count})

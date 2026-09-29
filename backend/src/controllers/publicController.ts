@@ -197,10 +197,11 @@ export const getPublicRoomAvailability = (id: string) => unstable_cache(
 
 export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
     async () => {
+        const cleanSellerId = (sellerId && sellerId !== "none" && sellerId !== "all" && sellerId !== "null" && sellerId !== "undefined") ? sellerId : null;
         let sellerCategory = "BOTH";
-        if (sellerId) {
+        if (cleanSellerId) {
             const seller = await prisma.sellerProfile.findUnique({
-                where: { id: sellerId }
+                where: { id: cleanSellerId }
             });
             if (seller) {
                 sellerCategory = seller.businessCategory;
@@ -213,10 +214,15 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             where: {
                 isActive: true,
                 approvalStatus: "APPROVED",
-                OR: [
-                    { appliesToSellerId: null },
-                    ...(sellerId ? [{ appliesToSellerId: sellerId }] : [])
-                ],
+                ...(cleanSellerId
+                    ? {
+                        OR: [
+                            { appliesToSellerId: null },
+                            { appliesToSellerId: cleanSellerId }
+                        ]
+                    }
+                    : {}
+                ),
                 AND: [
                     {
                         validFrom: { lte: now }
@@ -232,7 +238,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         });
 
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            return !c.category || c.category === "BOTH" || c.category === sellerCategory || !sellerId;
+            return !c.category || c.category === "BOTH" || c.category === sellerCategory || !cleanSellerId;
         });
 
         const safeCoupons = filteredCoupons.map((c: any) => ({
@@ -246,6 +252,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             maxDiscountAmount: c.maxDiscountAmount,
             customerEligibility: c.customerEligibility || "ALL",
             appliesTo: c.appliesTo || "ALL",
+            appliesToSellerId: c.appliesToSellerId || null,
             appliesToProductId: c.appliesToProductId || null,
             maxUsagesPerUser: c.maxUsagesPerUser || c.perUserLimit || 1,
             maxUsers: c.maxUsers || c.usageLimit || null,
