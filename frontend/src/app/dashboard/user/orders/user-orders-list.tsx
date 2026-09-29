@@ -545,9 +545,16 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                                                     View Invoice
                                                 </button>
                                             )}
-                                            {order.refund && (
-                                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: order.refund.status === 'APPROVED' ? '#10B981' : order.refund.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }}>
-                                                    Refund: {order.refund.status}
+                                            {(order.refund || (order.status === 'CANCELLED' && order.isPaid)) && (
+                                                <span style={{
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 'bold',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '6px',
+                                                    backgroundColor: order.refund?.status === 'APPROVED' ? '#DCFCE7' : order.refund?.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
+                                                    color: order.refund?.status === 'APPROVED' ? '#10B981' : order.refund?.status === 'REJECTED' ? '#EF4444' : '#D97706'
+                                                }}>
+                                                    Refund: {order.refund?.status || 'PENDING'} (₹{order.refund?.amount || order.totalAmount})
                                                 </span>
                                             )}
                                         </div>

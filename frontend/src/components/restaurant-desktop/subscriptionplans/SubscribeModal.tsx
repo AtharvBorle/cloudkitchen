@@ -76,6 +76,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const { defaultAddress } = useLocation();
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [startDatePreference, setStartDatePreference] = useState("Tomorrow");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -315,6 +316,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               cycle: initData.subscriptionCycle || planDuration,
               deliveryAddress: deliveryAddress.trim(),
               contactPhone: contactPhone.trim(),
+              startDatePreference: startDatePreference,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
@@ -631,6 +633,24 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Subscription Start Date Preference */}
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              <Calendar size={14} color="#EA580C" />
+              <span>Subscription Start Date</span>
+            </label>
+            <select
+              value={startDatePreference}
+              onChange={(e) => setStartDatePreference(e.target.value)}
+              className={styles.formInput}
+              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontWeight: 600, color: "#1E293B" }}
+            >
+              <option value="Tomorrow">Starts Tomorrow (Next Delivery Slot)</option>
+              <option value="Monday">Starts Coming Monday</option>
+              <option value="1st">Starts 1st of Next Month</option>
+            </select>
           </div>
 
           {/* Included Features */}

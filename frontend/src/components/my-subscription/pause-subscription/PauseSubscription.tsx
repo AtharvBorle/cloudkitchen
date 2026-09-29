@@ -10,6 +10,8 @@ export interface PauseSubscriptionProps {
   initialPaused?: boolean;
   isPaused?: boolean;
   disabled?: boolean;
+  allowPause?: boolean;
+  pausePolicyNote?: string;
   onTogglePause?: (paused: boolean) => void;
 }
 
@@ -17,6 +19,8 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   initialPaused = false,
   isPaused: controlledPaused,
   disabled = false,
+  allowPause = true,
+  pausePolicyNote,
   onTogglePause,
 }) => {
   const router = useRouter();
@@ -32,9 +36,10 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   }, [controlledPaused]);
 
   const activePaused = controlledPaused !== undefined ? controlledPaused : internalPaused;
+  const isSwitchDisabled = disabled || !allowPause;
 
   const handleToggle = () => {
-    if (disabled) return;
+    if (isSwitchDisabled) return;
     if (!session?.user) {
       router.push("/login?callbackUrl=/my-subscriptions-desktop");
       return;
@@ -47,7 +52,7 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   };
 
   return (
-    <div className={`${styles.container} ${disabled ? styles.disabledContainer : ""}`}>
+    <div className={`${styles.container} ${isSwitchDisabled ? styles.disabledContainer : ""}`}>
       <div className={styles.left}>
         <div className={styles.iconSquare}>
           <PauseCircle size={24} className={styles.icon} />
@@ -55,7 +60,9 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
         <div>
           <h3 className={styles.title}>Pause Subscription</h3>
           <p className={styles.subtitle}>
-            Pause your subscription if you&apos;re traveling. Your meals and billing will freeze automatically.
+            {!allowPause
+              ? (pausePolicyNote || "Pausing is disabled for this meal plan by the kitchen partner.")
+              : "Pause your subscription if you're traveling. Your meals and billing will freeze automatically."}
           </p>
         </div>
       </div>
@@ -65,12 +72,13 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
         type="button"
         role="switch"
         aria-checked={activePaused}
-        disabled={disabled}
+        disabled={isSwitchDisabled}
         className={`${styles.toggleSwitch} ${activePaused ? styles.toggleActive : ""} ${
-          disabled ? styles.toggleDisabled : ""
+          isSwitchDisabled ? styles.toggleDisabled : ""
         }`}
         onClick={handleToggle}
         aria-label="Pause Subscription Switch"
+        title={!allowPause ? "Pausing is disabled for this meal plan by the kitchen partner." : undefined}
       >
         <div className={styles.toggleThumb} />
       </button>
