@@ -67,9 +67,9 @@ export const getUserMealSubscriptions = async () => {
                 tier: sub.plan.tier,
                 description: sub.plan.description || "",
                 weeklyPrice: sub.plan.weeklyPrice,
-                monthlyPrice: sub.plan.monthlyPrice || sub.plan.weeklyPrice * 4,
-                quarterlyPrice: sub.plan.quarterlyPrice || sub.plan.weeklyPrice * 12 * 0.9,
-                yearlyPrice: sub.plan.yearlyPrice || sub.plan.weeklyPrice * 52 * 0.8,
+                monthlyPrice: sub.plan.monthlyPrice || ((sub.plan.duration || "").toLowerCase().includes("week") ? null : sub.plan.weeklyPrice),
+                quarterlyPrice: sub.plan.quarterlyPrice || null,
+                yearlyPrice: sub.plan.yearlyPrice || null,
                 duration: sub.plan.duration,
                 features,
                 mealTimings,
@@ -118,29 +118,30 @@ export const initiateMealSubscriptionPayment = async (req: Request) => {
         throw new ApiError("This kitchen partner is currently offline and not accepting new subscriptions.", 400);
     }
 
+    const planDuration = (plan.duration || "1 Week").toLowerCase();
     const cycleNormalized = (cycle || plan.duration || "WEEKLY").toUpperCase();
     let calculatedPrice = plan.weeklyPrice;
     let durationDays = 7;
-    let subscriptionCycle = "1 Week";
+    let subscriptionCycle = plan.duration || "1 Week";
 
-    if (cycleNormalized.includes("YEAR") || cycleNormalized === "YEARLY") {
-        calculatedPrice = plan.yearlyPrice || Math.round(plan.weeklyPrice * 52 * 0.8);
+    if (cycleNormalized.includes("YEAR") || cycleNormalized === "YEARLY" || planDuration.includes("year")) {
+        calculatedPrice = plan.yearlyPrice || plan.weeklyPrice;
         durationDays = 365;
         subscriptionCycle = "1 Year";
-    } else if (cycleNormalized.includes("6 MONTH") || cycleNormalized === "6 MONTHS" || cycleNormalized === "HALF_YEARLY") {
-        calculatedPrice = Math.round((plan.monthlyPrice || plan.weeklyPrice * 4) * 6 * 0.85);
+    } else if (cycleNormalized.includes("6 MONTH") || cycleNormalized === "6 MONTHS" || cycleNormalized === "HALF_YEARLY" || planDuration.includes("6 month")) {
+        calculatedPrice = plan.monthlyPrice ? plan.monthlyPrice * 6 : plan.weeklyPrice;
         durationDays = 180;
         subscriptionCycle = "6 Months";
-    } else if (cycleNormalized.includes("QUARTER") || cycleNormalized === "QUARTERLY" || cycleNormalized.includes("3 MONTH")) {
-        calculatedPrice = plan.quarterlyPrice || Math.round(plan.weeklyPrice * 12 * 0.9);
+    } else if (cycleNormalized.includes("QUARTER") || cycleNormalized === "QUARTERLY" || cycleNormalized.includes("3 MONTH") || planDuration.includes("quarter") || planDuration.includes("3 month")) {
+        calculatedPrice = plan.quarterlyPrice || plan.monthlyPrice || plan.weeklyPrice;
         durationDays = 90;
         subscriptionCycle = "3 Months";
-    } else if (cycleNormalized.includes("MONTH") || cycleNormalized === "MONTHLY" || cycleNormalized.includes("1 MONTH")) {
-        calculatedPrice = plan.monthlyPrice || plan.weeklyPrice * 4;
+    } else if (cycleNormalized.includes("MONTH") || cycleNormalized === "MONTHLY" || cycleNormalized.includes("1 MONTH") || planDuration.includes("month")) {
+        calculatedPrice = plan.monthlyPrice || plan.weeklyPrice;
         durationDays = 30;
         subscriptionCycle = "1 Month";
-    } else if (cycleNormalized.includes("2 WEEK") || cycleNormalized === "BIWEEKLY") {
-        calculatedPrice = plan.weeklyPrice * 2;
+    } else if (cycleNormalized.includes("2 WEEK") || cycleNormalized === "BIWEEKLY" || planDuration.includes("2 week")) {
+        calculatedPrice = plan.weeklyPrice;
         durationDays = 14;
         subscriptionCycle = "2 Weeks";
     } else {
@@ -221,8 +222,19 @@ export const createUserMealSubscription = async (req: Request) => {
         throw new ApiError("Plan ID is required", 400);
     }
 
-    if (!deliveryAddress || !String(deliveryAddress).trim()) {
+    const cleanAddress = String(deliveryAddress || "").trim();
+    if (!cleanAddress) {
         throw new ApiError("Delivery address is required for meal delivery", 400);
+    }
+    if (cleanAddress.length < 5 || cleanAddress.length > 150) {
+        throw new ApiError("Delivery address must be between 5 and 150 characters", 400);
+    }
+
+    if (contactPhone) {
+        const cleanPhone = String(contactPhone).replace(/\D/g, "");
+        if (cleanPhone.length !== 10) {
+            throw new ApiError("Contact phone number must be exactly 10 digits", 400);
+        }
     }
 
     // Enforce Online Payment Verification via Razorpay
@@ -265,29 +277,30 @@ export const createUserMealSubscription = async (req: Request) => {
         throw new ApiError("Selected meal plan is unavailable or inactive", 404);
     }
 
+    const planDuration = (plan.duration || "1 Week").toLowerCase();
     const cycleNormalized = (cycle || plan.duration || "WEEKLY").toUpperCase();
     let calculatedPrice = plan.weeklyPrice;
     let durationDays = 7;
-    let subscriptionCycle = "1 Week";
+    let subscriptionCycle = plan.duration || "1 Week";
 
-    if (cycleNormalized.includes("YEAR") || cycleNormalized === "YEARLY") {
-        calculatedPrice = plan.yearlyPrice || Math.round(plan.weeklyPrice * 52 * 0.8);
+    if (cycleNormalized.includes("YEAR") || cycleNormalized === "YEARLY" || planDuration.includes("year")) {
+        calculatedPrice = plan.yearlyPrice || plan.weeklyPrice;
         durationDays = 365;
         subscriptionCycle = "1 Year";
-    } else if (cycleNormalized.includes("6 MONTH") || cycleNormalized === "6 MONTHS" || cycleNormalized === "HALF_YEARLY") {
-        calculatedPrice = Math.round((plan.monthlyPrice || plan.weeklyPrice * 4) * 6 * 0.85);
+    } else if (cycleNormalized.includes("6 MONTH") || cycleNormalized === "6 MONTHS" || cycleNormalized === "HALF_YEARLY" || planDuration.includes("6 month")) {
+        calculatedPrice = plan.monthlyPrice ? plan.monthlyPrice * 6 : plan.weeklyPrice;
         durationDays = 180;
         subscriptionCycle = "6 Months";
-    } else if (cycleNormalized.includes("QUARTER") || cycleNormalized === "QUARTERLY" || cycleNormalized.includes("3 MONTH")) {
-        calculatedPrice = plan.quarterlyPrice || Math.round(plan.weeklyPrice * 12 * 0.9);
+    } else if (cycleNormalized.includes("QUARTER") || cycleNormalized === "QUARTERLY" || cycleNormalized.includes("3 MONTH") || planDuration.includes("quarter") || planDuration.includes("3 month")) {
+        calculatedPrice = plan.quarterlyPrice || plan.monthlyPrice || plan.weeklyPrice;
         durationDays = 90;
         subscriptionCycle = "3 Months";
-    } else if (cycleNormalized.includes("MONTH") || cycleNormalized === "MONTHLY" || cycleNormalized.includes("1 MONTH")) {
-        calculatedPrice = plan.monthlyPrice || plan.weeklyPrice * 4;
+    } else if (cycleNormalized.includes("MONTH") || cycleNormalized === "MONTHLY" || cycleNormalized.includes("1 MONTH") || planDuration.includes("month")) {
+        calculatedPrice = plan.monthlyPrice || plan.weeklyPrice;
         durationDays = 30;
         subscriptionCycle = "1 Month";
-    } else if (cycleNormalized.includes("2 WEEK") || cycleNormalized === "BIWEEKLY") {
-        calculatedPrice = plan.weeklyPrice * 2;
+    } else if (cycleNormalized.includes("2 WEEK") || cycleNormalized === "BIWEEKLY" || planDuration.includes("2 week")) {
+        calculatedPrice = plan.weeklyPrice;
         durationDays = 14;
         subscriptionCycle = "2 Weeks";
     } else {

@@ -103,7 +103,7 @@ interface SellerInfo {
   plansCount: number;
 }
 
-type BillingCycle = "weekly" | "monthly" | "quarterly" | "yearly";
+type BillingCycle = "all" | "weekly" | "monthly" | "quarterly" | "yearly";
 
 function MySubscriptionContent() {
   const router = useRouter();
@@ -129,7 +129,7 @@ function MySubscriptionContent() {
   const [isLoadingPlans, setIsLoadingPlans] = useState<boolean>(false);
   const [selectedSellerId, setSelectedSellerId] = useState<string | "all">("all");
   const [selectedDiet, setSelectedDiet] = useState<string>("all");
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Subscribe Modal State
@@ -283,7 +283,7 @@ function MySubscriptionContent() {
     return sellersList.find((s) => s.id === selectedSellerId) || null;
   }, [selectedSellerId, sellersList]);
 
-  // Filter plans based on selected seller, dietary preference, and search query
+  // Filter plans based on selected seller, dietary preference, billing cycle, and search query
   const filteredPlans = useMemo(() => {
     let list = allPlans;
 
@@ -300,6 +300,25 @@ function MySubscriptionContent() {
       }
     }
 
+    if (billingCycle !== "all") {
+      list = list.filter((p) => {
+        const dur = (p.duration || "1 Week").toLowerCase();
+        if (billingCycle === "weekly") {
+          return dur.includes("week") || (p.weeklyPrice && !p.monthlyPrice);
+        }
+        if (billingCycle === "monthly") {
+          return (dur.includes("month") && !dur.includes("quarter") && !dur.includes("3 month")) || Boolean(p.monthlyPrice);
+        }
+        if (billingCycle === "quarterly") {
+          return dur.includes("quarter") || dur.includes("3 month") || Boolean(p.quarterlyPrice);
+        }
+        if (billingCycle === "yearly") {
+          return dur.includes("year") || Boolean(p.yearlyPrice);
+        }
+        return true;
+      });
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((p) => {
@@ -312,50 +331,33 @@ function MySubscriptionContent() {
     }
 
     return list;
-  }, [allPlans, selectedSellerId, selectedDiet, searchQuery]);
+  }, [allPlans, selectedSellerId, selectedDiet, billingCycle, searchQuery]);
 
-  const getCyclePrice = (plan: PublicMealPlan, cycle: BillingCycle) => {
-    switch (cycle) {
-      case "weekly":
-        return plan.weeklyPrice;
-      case "monthly":
-        return plan.monthlyPrice || plan.weeklyPrice * 4;
-      case "quarterly":
-        return plan.quarterlyPrice || Math.round(plan.weeklyPrice * 12 * 0.9);
-      case "yearly":
-        return plan.yearlyPrice || Math.round(plan.weeklyPrice * 52 * 0.8);
-      default:
-        return plan.weeklyPrice;
+  const getPlanPrice = (plan: PublicMealPlan) => {
+    const dur = (plan.duration || "1 Week").toLowerCase();
+    if (dur.includes("week")) {
+      return plan.weeklyPrice || plan.monthlyPrice || 0;
     }
+    if (dur.includes("month") && !dur.includes("quarter") && !dur.includes("3 month")) {
+      return plan.monthlyPrice || plan.weeklyPrice || 0;
+    }
+    if (dur.includes("quarter") || dur.includes("3 month")) {
+      return plan.quarterlyPrice || plan.monthlyPrice || plan.weeklyPrice || 0;
+    }
+    if (dur.includes("year")) {
+      return plan.yearlyPrice || plan.monthlyPrice || plan.weeklyPrice || 0;
+    }
+    return plan.weeklyPrice || plan.monthlyPrice || 0;
   };
 
-  const getCycleLabel = (cycle: BillingCycle) => {
-    switch (cycle) {
-      case "weekly":
-        return "/ week";
-      case "monthly":
-        return "/ month";
-      case "quarterly":
-        return "/ 3 months";
-      case "yearly":
-        return "/ year";
-      default:
-        return "/ month";
-    }
-  };
-
-  const getPerMealEstimate = (plan: PublicMealPlan, cycle: BillingCycle) => {
-    const price = getCyclePrice(plan, cycle);
-    let totalMeals = 7;
-    if (cycle === "weekly") totalMeals = 7;
-    else if (cycle === "monthly") totalMeals = 30;
-    else if (cycle === "quarterly") totalMeals = 90;
-    else if (cycle === "yearly") totalMeals = 365;
-
-    const timingsCount = plan.mealTimings && plan.mealTimings.length > 0 ? plan.mealTimings.length : 1;
-    const estMeals = totalMeals * Math.max(1, timingsCount <= 2 ? timingsCount : 2);
-    const perMeal = Math.round(price / estMeals);
-    return perMeal > 0 ? perMeal : 65;
+  const getPlanDurationLabel = (plan: PublicMealPlan) => {
+    const dur = (plan.duration || "1 Week").toLowerCase();
+    if (dur.includes("2 week")) return "/ 2 weeks";
+    if (dur.includes("week")) return "/ week";
+    if (dur.includes("6 month")) return "/ 6 months";
+    if (dur.includes("month")) return "/ month";
+    if (dur.includes("year")) return "/ year";
+    return `/${plan.duration || "cycle"}`;
   };
 
   const handleTogglePause = async (nextPaused: boolean) => {
@@ -443,7 +445,37 @@ function MySubscriptionContent() {
         if (data) {
           const list = data.data?.addresses || data.addresses || data.data || [];
           if (Array.isArray(list)) {
-            setUserSavedAddresses(list);
+            // Deduplicate addresses so each type (e.g. Home, Work) is only displayed once
+            const uniqueAddresses: any[] = [];
+            const seenTypes = new Set<string>();
+            const seenKeys = new Set<string>();
+
+            // Prioritize default address first, then newest
+            const sorted = [...list].sort((a, b) => {
+              if (a.isDefault && !b.isDefault) return -1;
+              if (!a.isDefault && b.isDefault) return 1;
+              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            });
+
+            for (const addr of sorted) {
+              const type = (addr.type || "Home").trim().toLowerCase();
+              const key = `${(addr.houseNumber || "").trim().toLowerCase()}-${(addr.street || "").trim().toLowerCase()}-${(addr.pincode || "").toString().replace(/\D/g, "")}`;
+              if (!seenTypes.has(type) && !seenKeys.has(key)) {
+                seenTypes.add(type);
+                seenKeys.add(key);
+                uniqueAddresses.push(addr);
+              }
+            }
+
+            setUserSavedAddresses(uniqueAddresses);
+
+            // Pre-fill with correct saved home/default address if available
+            const defaultSaved = uniqueAddresses.find((a) => a.isDefault) || uniqueAddresses.find((a) => (a.type || "").toLowerCase() === "home") || uniqueAddresses[0];
+            if (defaultSaved) {
+              const parts = [defaultSaved.houseNumber, defaultSaved.street, defaultSaved.landmark, defaultSaved.city || "Pune", defaultSaved.pincode].filter(Boolean);
+              const line = parts.join(", ");
+              setDeliveryAddressInput(line || defaultSaved.address || defaultSaved.label || initialAddr);
+            }
           }
         }
       })
@@ -506,8 +538,31 @@ function MySubscriptionContent() {
   // Submit Subscription with Online Payment Flow
   const handleConfirmSubscription = async () => {
     if (!selectedPlanForSub) return;
-    if (!deliveryAddressInput.trim()) {
+    const trimmedAddress = deliveryAddressInput.trim();
+    if (!trimmedAddress) {
       setSubErrorMsg("Please provide your delivery address or room number.");
+      return;
+    }
+    if (trimmedAddress.length < 5) {
+      setSubErrorMsg("Delivery address must be at least 5 characters long.");
+      return;
+    }
+    if (trimmedAddress.length > 120) {
+      setSubErrorMsg("Delivery address cannot exceed 120 characters.");
+      return;
+    }
+
+    const cleanPhone = contactPhoneInput.replace(/\D/g, "");
+    if (!cleanPhone) {
+      setSubErrorMsg("Please enter your 10-digit contact phone number.");
+      return;
+    }
+    if (cleanPhone.length !== 10) {
+      setSubErrorMsg("Contact phone number must be exactly 10 digits.");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setSubErrorMsg("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.");
       return;
     }
 
@@ -516,9 +571,10 @@ function MySubscriptionContent() {
 
     try {
       // 1. Initiate online payment order on backend
+      const planCycle = selectedPlanForSub.duration || "1 Week";
       const initData = await initiateMealSubscriptionPayment(
         selectedPlanForSub.id,
-        billingCycle.toUpperCase()
+        planCycle
       );
 
       // 2. Load Razorpay Checkout SDK
@@ -535,14 +591,14 @@ function MySubscriptionContent() {
         amount: initData.amount,
         currency: initData.currency || "INR",
         name: "Neo Cloud Kitchen",
-        description: `Subscription: ${selectedPlanForSub.name} (${initData.subscriptionCycle || billingCycle.toUpperCase()})`,
+        description: `Subscription: ${selectedPlanForSub.name} (${initData.subscriptionCycle || planCycle})`,
         order_id: initData.razorpayOrderId,
         handler: async function (response: any) {
           try {
             setIsSubmittingSub(true);
             const verified = await verifyAndActivateMealSubscription({
               planId: selectedPlanForSub.id,
-              cycle: initData.subscriptionCycle || billingCycle.toUpperCase(),
+              cycle: initData.subscriptionCycle || planCycle,
               deliveryAddress: deliveryAddressInput.trim(),
               contactPhone: contactPhoneInput.trim(),
               razorpay_order_id: response.razorpay_order_id,
@@ -1017,6 +1073,15 @@ function MySubscriptionContent() {
                       <button
                         type="button"
                         className={`${styles.cycleBtn} ${
+                          billingCycle === "all" ? styles.cycleBtnActive : ""
+                        }`}
+                        onClick={() => setBillingCycle("all")}
+                      >
+                        <span>All Plans</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.cycleBtn} ${
                           billingCycle === "weekly" ? styles.cycleBtnActive : ""
                         }`}
                         onClick={() => setBillingCycle("weekly")}
@@ -1031,7 +1096,6 @@ function MySubscriptionContent() {
                         onClick={() => setBillingCycle("monthly")}
                       >
                         <span>Monthly</span>
-                        <span className={styles.cycleDiscountBadge}>Popular</span>
                       </button>
                       <button
                         type="button"
@@ -1041,7 +1105,6 @@ function MySubscriptionContent() {
                         onClick={() => setBillingCycle("quarterly")}
                       >
                         <span>Quarterly</span>
-                        <span className={styles.cycleDiscountBadge}>-10%</span>
                       </button>
                       <button
                         type="button"
@@ -1051,7 +1114,6 @@ function MySubscriptionContent() {
                         onClick={() => setBillingCycle("yearly")}
                       >
                         <span>Yearly</span>
-                        <span className={styles.cycleDiscountBadge}>-20%</span>
                       </button>
                     </div>
                   </div>
@@ -1118,6 +1180,7 @@ function MySubscriptionContent() {
                       onClick={() => {
                         setSelectedSellerId("all");
                         setSelectedDiet("all");
+                        setBillingCycle("all");
                         setSearchQuery("");
                       }}
                       className={styles.resetBtn}
@@ -1129,8 +1192,8 @@ function MySubscriptionContent() {
                   <div className={styles.plansGrid}>
                     {filteredPlans.map((plan, idx) => {
                       const tierColors = getTierColors(plan.tier);
-                      const price = getCyclePrice(plan, billingCycle);
-                      const perMeal = getPerMealEstimate(plan, billingCycle);
+                      const price = getPlanPrice(plan);
+                      const cycleLabel = getPlanDurationLabel(plan);
                       const isPopular = idx === 0 || plan.tier?.toLowerCase() === "gold";
 
                       return (
@@ -1174,12 +1237,8 @@ function MySubscriptionContent() {
                               <div className={styles.priceMain}>
                                 <span className={styles.currencySymbol}>₹</span>
                                 <span className={styles.priceAmount}>{price.toLocaleString("en-IN")}</span>
-                                <span className={styles.priceCycle}>{getCycleLabel(billingCycle)}</span>
+                                <span className={styles.priceCycle}>{cycleLabel}</span>
                               </div>
-                            </div>
-                            <div className={styles.pricePerMeal}>
-                              <span className={styles.perMealTag}>≈ ₹{perMeal} / meal</span>
-                              <div className={styles.perMealSub}>Zero Delivery Fee</div>
                             </div>
                           </div>
 
@@ -1338,10 +1397,10 @@ function MySubscriptionContent() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FF5500" }}>
-                    ₹{getCyclePrice(selectedPlanForSub, billingCycle).toLocaleString("en-IN")}
+                    ₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")}
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "#64748B", fontWeight: 600 }}>
-                    {billingCycle.toUpperCase()} CYCLE
+                    {(selectedPlanForSub.duration || "1 Week").toUpperCase()}
                   </div>
                 </div>
               </div>
@@ -1394,10 +1453,11 @@ function MySubscriptionContent() {
                 <div style={{ position: "relative" }}>
                   <input
                     type="text"
-                    placeholder="Type street, room number, or select area suggestion below..."
+                    maxLength={120}
+                    placeholder="Type street, room number, or select area suggestion below (max 120 chars)..."
                     value={deliveryAddressInput}
                     onChange={(e) => {
-                      setDeliveryAddressInput(e.target.value);
+                      setDeliveryAddressInput(e.target.value.slice(0, 120));
                       setShowAddressSuggestions(true);
                     }}
                     onFocus={() => setShowAddressSuggestions(true)}
@@ -1439,13 +1499,16 @@ function MySubscriptionContent() {
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>
                   <Phone size={13} color="#FF5500" />
-                  <span>Contact Phone Number</span>
+                  <span>Contact Phone Number (10 digits)</span>
                 </label>
                 <input
                   type="tel"
-                  placeholder="e.g. +91 9876543210"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  placeholder="e.g. 9876543210"
                   value={contactPhoneInput}
-                  onChange={(e) => setContactPhoneInput(e.target.value)}
+                  onChange={(e) => setContactPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   className={styles.formInput}
                 />
               </div>
@@ -1470,8 +1533,8 @@ function MySubscriptionContent() {
               {/* Breakdown */}
               <div className={styles.priceBreakdown}>
                 <div className={styles.breakdownRow}>
-                  <span>Base Plan ({billingCycle})</span>
-                  <span>₹{getCyclePrice(selectedPlanForSub, billingCycle).toLocaleString("en-IN")}</span>
+                  <span>Base Plan ({selectedPlanForSub.duration || "1 Week"})</span>
+                  <span>₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")}</span>
                 </div>
                 <div className={styles.breakdownRow}>
                   <span>Doorstep Delivery (All Meals)</span>
@@ -1479,7 +1542,7 @@ function MySubscriptionContent() {
                 </div>
                 <div className={styles.breakdownTotal}>
                   <span>Total Amount Due</span>
-                  <span>₹{getCyclePrice(selectedPlanForSub, billingCycle).toLocaleString("en-IN")}</span>
+                  <span>₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")}</span>
                 </div>
               </div>
 
@@ -1543,7 +1606,7 @@ function MySubscriptionContent() {
                   </>
                 ) : (
                   <>
-                    <span>Pay Online &amp; Subscribe (₹{getCyclePrice(selectedPlanForSub, billingCycle).toLocaleString("en-IN")})</span>
+                    <span>Pay Online &amp; Subscribe (₹{getPlanPrice(selectedPlanForSub).toLocaleString("en-IN")})</span>
                     <ArrowRight size={15} />
                   </>
                 )}

@@ -103,132 +103,23 @@ export const submitOrderReview = async (orderId: string, req: Request) => {
 };
 
 export const submitAppFeedback = async (req: Request) => {
-    const session = await getAuthSession();
-    
-    // Resolve user ID from session or fallback to default user if unauthenticated
-    let userId = session?.user?.id;
-    if (!userId) {
-        const defaultUser = await db.user.findFirst({
-            where: { role: "USER" }
-        }) || await db.user.findFirst();
-
-        if (defaultUser) {
-            userId = defaultUser.id;
-        } else {
-            throw new ApiError("Please log in to submit your feedback", 401);
-        }
-    }
-
-    const body = await req.json();
-    const { rating, comment, aspects, tags, sentiment, sellerId: explicitSellerId } = body;
+    const body = await req.json().catch(() => ({}));
+    const { rating } = body;
 
     const parsedRating = parseInt(rating, 10);
     if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
         throw new ApiError("Valid rating between 1 and 5 is required", 400);
     }
 
-    // Determine seller to link to if not provided
-    let sellerId = explicitSellerId || null;
-
-    if (!sellerId) {
-        // Find latest order for user to associate seller
-        const latestOrder = await db.order.findFirst({
-            where: { userId },
-            orderBy: { createdAt: "desc" }
-        });
-
-        if (latestOrder) {
-            sellerId = latestOrder.sellerId;
-        } else {
-            // Find first available approved seller in the system so feedback is linked
-            const defaultSeller = await db.sellerProfile.findFirst({
-                where: { verificationStatus: "APPROVED" }
-            }) || await db.sellerProfile.findFirst();
-
-            if (defaultSeller) {
-                sellerId = defaultSeller.id;
-            }
-        }
-    }
-
-    const aspectsJson = Array.isArray(aspects) ? JSON.stringify(aspects) : typeof aspects === "string" ? aspects : "[]";
-    const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : typeof tags === "string" ? tags : "[]";
-
-    // Rate Our App creates general experience reviews without unique order constraint
-    const newReview = await db.review.create({
-        data: {
-            userId: userId,
-            sellerId: sellerId,
-            orderId: null as any,
-            rating: parsedRating,
-            comment: comment ? String(comment).trim() : null,
-            aspects: aspectsJson,
-            tags: tagsJson,
-            sentiment: sentiment ? String(sentiment).trim() : null
-        } as any,
-        include: {
-            user: {
-                select: { name: true, email: true }
-            },
-            seller: {
-                select: { id: true, businessName: true }
-            }
-        }
-    });
-
+    // App reviews are for app store feedback and do not alter kitchen/seller ratings or records
     return {
         success: true,
-        review: newReview
+        message: "Thank you for your rating & feedback! Your review has been recorded."
     };
 };
 
 export const getAppFeedback = async () => {
-    const session = await getAuthSession();
-    let userId = session?.user?.id;
-    if (!userId) {
-        const defaultUser = await db.user.findFirst({
-            where: { role: "USER" }
-        }) || await db.user.findFirst();
-        userId = defaultUser?.id;
-    }
-
-    if (!userId) {
-        return { reviews: [] };
-    }
-
-    const reviews = await db.review.findMany({
-        where: { userId },
-        include: {
-            seller: {
-                select: { id: true, businessName: true }
-            }
-        },
-        orderBy: { createdAt: "desc" },
-        take: 20
-    });
-
-    const parseJsonArray = (val: string | null | undefined): string[] => {
-        if (!val) return [];
-        try {
-            const parsed = JSON.parse(val);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
-    };
-
-    const formattedReviews = reviews.map((r) => ({
-        ...r,
-        aspects: parseJsonArray((r as any).aspects),
-        tags: parseJsonArray((r as any).tags),
-        sentiment: (r as any).sentiment || null,
-        managerResponse: r.sellerReply ? {
-            text: r.sellerReply,
-            createdAt: r.repliedAt || r.updatedAt,
-            date: r.repliedAt || r.updatedAt
-        } : null
-    }));
-
-    return { reviews: formattedReviews };
+    // App feedback is not tied to kitchen order reviews
+    return { reviews: [] };
 };
 

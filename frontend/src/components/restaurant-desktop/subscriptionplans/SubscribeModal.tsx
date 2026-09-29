@@ -105,7 +105,27 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           const data = await res.json();
           const list = data.data?.addresses || data.addresses || data.data || [];
           if (Array.isArray(list)) {
-            setSavedAddresses(list);
+            const uniqueAddresses: any[] = [];
+            const seenTypes = new Set<string>();
+            const seenKeys = new Set<string>();
+
+            const sorted = [...list].sort((a, b) => {
+              if (a.isDefault && !b.isDefault) return -1;
+              if (!a.isDefault && b.isDefault) return 1;
+              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            });
+
+            for (const addr of sorted) {
+              const type = (addr.type || "Home").trim().toLowerCase();
+              const key = `${(addr.houseNumber || "").trim().toLowerCase()}-${(addr.street || "").trim().toLowerCase()}-${(addr.pincode || "").toString().replace(/\D/g, "")}`;
+              if (!seenTypes.has(type) && !seenKeys.has(key)) {
+                seenTypes.add(type);
+                seenKeys.add(key);
+                uniqueAddresses.push(addr);
+              }
+            }
+
+            setSavedAddresses(uniqueAddresses);
           }
         }
       } catch (err) {
@@ -193,8 +213,31 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   });
 
   const handleConfirm = async () => {
-    if (!deliveryAddress.trim()) {
+    const trimmedAddress = deliveryAddress.trim();
+    if (!trimmedAddress) {
       setErrorMsg("Please enter your delivery address or room number.");
+      return;
+    }
+    if (trimmedAddress.length < 5) {
+      setErrorMsg("Delivery address must be at least 5 characters long.");
+      return;
+    }
+    if (trimmedAddress.length > 120) {
+      setErrorMsg("Delivery address cannot exceed 120 characters.");
+      return;
+    }
+
+    const cleanPhone = contactPhone.replace(/\D/g, "");
+    if (!cleanPhone) {
+      setErrorMsg("Please enter your 10-digit contact phone number.");
+      return;
+    }
+    if (cleanPhone.length !== 10) {
+      setErrorMsg("Contact phone number must be exactly 10 digits.");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setErrorMsg("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.");
       return;
     }
 
@@ -375,11 +418,12 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             <div style={{ position: "relative" }}>
               <input
                 type="text"
+                maxLength={120}
                 className={styles.formInput}
-                placeholder="Type street, room number, or select area suggestion below..."
+                placeholder="Type street, room number, or select area suggestion below (max 120 chars)..."
                 value={deliveryAddress}
                 onChange={(e) => {
-                  setDeliveryAddress(e.target.value);
+                  setDeliveryAddress(e.target.value.slice(0, 120));
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
@@ -397,19 +441,19 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                   </div>
                   <div className={styles.suggestionsList}>
                     {filteredLocalities.slice(0, 6).map((loc, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        className={styles.suggestionItem}
-                        onClick={() => handleSelectLocality(loc)}
-                      >
-                        <MapPin size={14} className={styles.suggestionPin} />
-                        <div className={styles.suggestionText}>
-                          <span className={styles.suggestionName}>{loc.name}</span>
-                          <span className={styles.suggestionPinCode}>PIN: {loc.pincode}</span>
-                        </div>
-                      </button>
-                    ))}
+                          <button
+                            key={idx}
+                            type="button"
+                            className={styles.suggestionItem}
+                            onClick={() => handleSelectLocality(loc)}
+                          >
+                            <MapPin size={14} className={styles.suggestionPin} />
+                            <div className={styles.suggestionText}>
+                              <span className={styles.suggestionName}>{loc.name}</span>
+                              <span className={styles.suggestionPinCode}>PIN: {loc.pincode}</span>
+                            </div>
+                          </button>
+                        ))}
                   </div>
                 </div>
               )}
@@ -420,14 +464,17 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>
               <Phone size={14} color="#EA580C" />
-              <span>Contact Phone</span>
+              <span>Contact Phone (10 digits)</span>
             </label>
             <input
               type="tel"
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              maxLength={10}
               className={styles.formInput}
-              placeholder="Your contact number for daily meal delivery"
+              placeholder="e.g. 9876543210"
               value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
+              onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
             />
           </div>
 

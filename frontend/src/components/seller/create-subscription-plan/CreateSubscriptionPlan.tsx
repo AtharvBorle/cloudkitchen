@@ -529,33 +529,14 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
                     const durLower = planDuration.toLowerCase();
                     const isWeekly = durLower.includes("week");
-                    let weeklyCalculated = basePriceNum;
-                    let monthlyCalculated = basePriceNum * 4;
-
-                    if (durLower.includes("2 week")) {
-                      weeklyCalculated = basePriceNum / 2;
-                      monthlyCalculated = basePriceNum * 2;
-                    } else if (durLower.includes("1 week") || durLower.includes("week")) {
-                      weeklyCalculated = basePriceNum;
-                      monthlyCalculated = basePriceNum * 4;
-                    } else if (durLower.includes("1 month") || durLower.includes("month")) {
-                      monthlyCalculated = basePriceNum;
-                      weeklyCalculated = basePriceNum / 4;
-                    } else if (durLower.includes("6 month")) {
-                      monthlyCalculated = basePriceNum / 6;
-                      weeklyCalculated = basePriceNum / 26;
-                    } else if (durLower.includes("year")) {
-                      monthlyCalculated = basePriceNum / 12;
-                      weeklyCalculated = basePriceNum / 52;
-                    }
 
                     await saveMealPlan({
                       name: planName.trim(),
                       tier: planTier,
-                      weeklyPrice: String(basePriceNum),
-                      monthlyPrice: `₹${monthlyCalculated.toFixed(0)}`,
-                      quarterlyPrice: isWeekly ? "" : `₹${(monthlyCalculated * 3 * 0.9).toFixed(0)}`,
-                      yearlyPrice: isWeekly ? "" : `₹${(monthlyCalculated * 12 * 0.8).toFixed(0)}`,
+                      weeklyPrice: isWeekly ? String(basePriceNum) : "",
+                      monthlyPrice: isWeekly ? "" : `₹${basePriceNum.toFixed(0)}`,
+                      quarterlyPrice: "",
+                      yearlyPrice: "",
                       duration: planDuration,
                       features: enabledFeatures.map((f) => f.label),
                       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
