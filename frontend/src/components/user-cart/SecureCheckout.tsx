@@ -84,8 +84,13 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 }) => {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { cartItems, cartTotal, clearCart, syncCartWithLiveMenu } = useCart();
   const { defaultAddress, openLocationModal } = useLocation();
+
+  // Sync with live seller prices on mount
+  useEffect(() => {
+    syncCartWithLiveMenu();
+  }, [syncCartWithLiveMenu]);
 
   // Authentication redirect guard
   useEffect(() => {
@@ -145,11 +150,12 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
               recipientName: a.recipientName || session?.user?.name || "Registered User",
               recipientPhone: a.recipientPhone || (session?.user as any)?.phone || "",
             }));
-            setSavedAddresses(mapped);
+            const sortedMapped = [...mapped].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+            setSavedAddresses(sortedMapped);
             setAddressMode("saved");
 
             // Auto-select default or first address
-            const defaultItem = mapped.find((m) => m.isDefault) || mapped[0];
+            const defaultItem = sortedMapped.find((m) => m.isDefault) || sortedMapped[0];
             if (defaultItem) {
               setSelectedSavedAddressId(defaultItem.id);
               const formatted = `${defaultItem.houseNumber ? defaultItem.houseNumber + ", " : ""}${defaultItem.street}${defaultItem.landmark ? ", Near " + defaultItem.landmark : ""}`;
@@ -643,8 +649,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   fullName: fullName.trim(),
                   phoneNumber: phoneNumber.trim(),
                   streetAddress: streetAddress.trim(),
-                  city: city.trim() || "Kothrud, Pune",
-                  pincode: postalCode.trim() || "411038",
+                  city: city.trim() || "Pune",
+                  pincode: postalCode.trim() || "",
                 },
                 paymentMethod: "Pay Online (Paid via Razorpay)",
                 items: checkoutItems.map((item) => ({
@@ -769,8 +775,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           fullName: fullName.trim(),
           phoneNumber: phoneNumber.trim(),
           streetAddress: streetAddress.trim(),
-          city: city.trim() || "Kothrud, Pune",
-          pincode: postalCode.trim() || "411038",
+          city: city.trim() || "Pune",
+          pincode: postalCode.trim() || "",
         },
         paymentMethod: "Cash on Delivery",
         items: checkoutItems.map((item) => ({
@@ -1508,7 +1514,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         Please add products to your cart before placing an order.
                       </p>
                       <Link
-                        href="/explore-desktop"
+                        href="/food-explore"
                         style={{
                           display: "inline-block",
                           padding: "8px 18px",

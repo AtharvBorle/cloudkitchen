@@ -36,8 +36,8 @@ export interface UserCheckoutProps {
 
 export const UserCheckout: React.FC<UserCheckoutProps> = ({
   initialItems = [],
-  defaultLocation = "Kothrud, Pune",
-  defaultAddress: defaultAddressProp = "Flat 402, Golden Crest Apartments, Kothrud",
+  defaultLocation = "Select Location",
+  defaultAddress: defaultAddressProp = "",
   onProceedToCheckout,
 }) => {
   const router = useRouter();
@@ -277,7 +277,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 <p className={styles.emptySubtitle}>
                   Looks like you haven&apos;t added any delicious dishes yet.
                 </p>
-                <Link href="/explore-desktop" className={styles.exploreMenuBtn}>
+                <Link href="/food-explore" className={styles.exploreMenuBtn}>
                   Explore Menu
                 </Link>
               </div>
@@ -388,10 +388,6 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 </span>
                 <ArrowRight size={18} />
               </button>
-
-              <p className={styles.securityNote}>
-                Secure 256-bit SSL encrypted connection
-              </p>
             </div>
           </aside>
         </div>

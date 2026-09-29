@@ -131,26 +131,30 @@ export async function middleware(request: NextRequest) {
   }
 
   // ──────────────────────────────────────────
-  // 4. LOGIN PAGE GUARDS — if already logged in, redirect away from login pages
-  //    to prevent cross-role session reuse
+  // 4. LOGIN PAGE GUARDS — allow users to access login pages directly to sign in or switch accounts
   // ──────────────────────────────────────────
-  const isUserLoginPage = pathname === "/login" || pathname === "/signup";
   const isSellerLoginPage =
     pathname === "/seller/login" ||
     pathname === "/seller/res/login" ||
+    pathname.startsWith("/seller/login") ||
+    pathname.startsWith("/seller/res/login") ||
     pathname === "/auth/login/seller";
   const isAdminLoginPage =
     pathname === "/auth/login/admin" ||
     pathname === "/admin/login";
   const isDeliveryLoginPage = pathname === "/auth/login/delivery";
 
-  const isAnyLoginPage =
-    isUserLoginPage || isSellerLoginPage || isAdminLoginPage || isDeliveryLoginPage;
-
-  // If authenticated and trying to access ANY login page, redirect to their own dashboard
-  if (isAuthenticated && userRole && isAnyLoginPage) {
-    const dashboardUrl = new URL(getDashboardForRole(userRole), request.url);
-    return NextResponse.redirect(dashboardUrl);
+  if (isAuthenticated && userRole) {
+    const role = userRole.toUpperCase();
+    if (
+      (role === "ADMIN" || role === "SUPERADMIN" || role === "AGENT" || role === "SUPPORT") &&
+      isAdminLoginPage
+    ) {
+      return NextResponse.redirect(new URL(getDashboardForRole(role), request.url));
+    }
+    if (role === "DELIVERY" && isDeliveryLoginPage) {
+      return NextResponse.redirect(new URL("/dashboard/delivery", request.url));
+    }
   }
 
   // ──────────────────────────────────────────
@@ -159,6 +163,8 @@ export async function middleware(request: NextRequest) {
   const isPublicSellerPath =
     pathname === "/seller/login" ||
     pathname === "/seller/res/login" ||
+    pathname.startsWith("/seller/login") ||
+    pathname.startsWith("/seller/res/login") ||
     pathname === "/auth/login/seller" ||
     pathname.startsWith("/seller/registration") ||
     pathname.startsWith("/seller/account-information") ||
@@ -170,6 +176,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/seller/media-gallery") ||
     pathname.startsWith("/seller/media-information") ||
     pathname.startsWith("/seller/verification") ||
+    pathname.startsWith("/seller/verification-status") ||
     pathname.startsWith("/seller/faq") ||
     pathname.startsWith("/seller/res/faq") ||
     pathname.startsWith("/seller/tc") ||

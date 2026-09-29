@@ -140,55 +140,76 @@ export function isDishMatchingDiet(
   const norm = normalizeDietary(dietary);
   if (norm === "all") return true;
 
-  const rawType = (dish.itemType || "").toUpperCase().trim();
+  const raw = String(dish.itemType || "")
+    .toUpperCase()
+    .replace(/[\s-]/g, "_");
+  const tokens = raw.split(",").map((s) => s.trim());
+
+  const isNonVeg =
+    tokens.some((t) => t === "NON_VEG" || t === "NONVEG" || t === "NON_VEGETARIAN") ||
+    raw.includes("NON_VEG");
+
+  const isVegan =
+    tokens.some((t) => t === "VEGAN" || t === "PLANT_BASED") ||
+    raw.includes("VEGAN");
+
+  const isJain =
+    tokens.some((t) => t === "JAIN" || t === "SATVIK") ||
+    raw.includes("JAIN") ||
+    raw.includes("SATVIK");
+
+  const isVeg =
+    tokens.some((t) => t === "VEG" || t === "PURE_VEG" || t === "VEGETARIAN") ||
+    raw.includes("VEG") ||
+    raw.includes("PURE_VEG") ||
+    isVegan ||
+    isJain;
+
   const text = `${dish.name || ""} ${dish.description || ""} ${dish.categoryName || ""}`.toLowerCase();
 
-  const containsNonVegStrict = NON_VEG_STRICT_WORDS.some((word) => {
-    const regex = new RegExp(`\\b${word}\\b`, "i");
-    return regex.test(text);
-  });
-
   if (norm === "veg") {
-    if (rawType === "NON_VEG" || rawType === "NON-VEG" || containsNonVegStrict) {
-      return false;
-    }
-    return true;
+    if (isNonVeg) return false;
+    if (isVeg || isVegan || isJain) return true;
+    const containsNonVegStrict = NON_VEG_STRICT_WORDS.some((word) => {
+      const regex = new RegExp(`\\b${word}\\b`, "i");
+      return regex.test(text);
+    });
+    return !containsNonVegStrict;
   }
 
   if (norm === "non_veg") {
-    if (rawType === "NON_VEG" || rawType === "NON-VEG" || containsNonVegStrict) {
-      return true;
-    }
-    return NON_VEG_KEYWORDS.some((kw) => text.includes(kw));
+    if (isNonVeg) return true;
+    if (isVeg || isVegan || isJain) return false;
+    return NON_VEG_STRICT_WORDS.some((word) => {
+      const regex = new RegExp(`\\b${word}\\b`, "i");
+      return regex.test(text);
+    });
   }
 
   if (norm === "vegan") {
-    if (rawType === "VEGAN") return true;
-    if (containsNonVegStrict || rawType === "NON_VEG" || rawType === "NON-VEG") return false;
-    const hasDairy = NON_VEGAN_WORDS.some((w) => {
-      const regex = new RegExp(`\\b${w}\\b`, "i");
-      return regex.test(text);
-    });
-    if (hasDairy) return false;
-    return (
-      VEGAN_POSITIVE_WORDS.some((w) => text.includes(w)) ||
-      (rawType === "VEG" && (text.includes("salad") || text.includes("juice") || text.includes("fruit") || text.includes("rice") || text.includes("dal")))
-    );
+    if (isNonVeg) return false;
+    if (isVegan) return true;
+    if (text.includes("vegan") || text.includes("plant-based") || text.includes("plant based")) {
+      const hasDairy = NON_VEGAN_WORDS.some((w) => {
+        const regex = new RegExp(`\\b${w}\\b`, "i");
+        return regex.test(text);
+      });
+      return !hasDairy;
+    }
+    return false;
   }
 
   if (norm === "jain") {
-    if (rawType === "JAIN") return true;
-    if (containsNonVegStrict || rawType === "NON_VEG" || rawType === "NON-VEG") return false;
-    const hasRoots = NON_JAIN_ROOTS.some((w) => {
-      const regex = new RegExp(`\\b${w}\\b`, "i");
-      return regex.test(text);
-    });
-    if (hasRoots) return false;
-    return (
-      JAIN_POSITIVE_WORDS.some((w) => text.includes(w)) ||
-      text.includes("jain") ||
-      text.includes("satvik")
-    );
+    if (isNonVeg) return false;
+    if (isJain) return true;
+    if (text.includes("jain") || text.includes("satvik") || text.includes("swaminarayan")) {
+      const hasRoots = NON_JAIN_ROOTS.some((w) => {
+        const regex = new RegExp(`\\b${w}\\b`, "i");
+        return regex.test(text);
+      });
+      return !hasRoots;
+    }
+    return false;
   }
 
   return true;
@@ -215,8 +236,7 @@ export function isKitchenMatchingDiet(
   const norm = normalizeDietary(dietary);
   if (norm === "all") return true;
 
-  const rawFoodType = (kitchen.foodType || "").toUpperCase().trim();
-  const text = `${kitchen.name || ""} ${kitchen.category || ""}`.toLowerCase();
+  const rawFoodType = (kitchen.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
 
   const kitchenDishes = foodItems
     ? foodItems.filter(
@@ -229,56 +249,30 @@ export function isKitchenMatchingDiet(
 
   if (norm === "veg") {
     if (rawFoodType === "PURE_VEG" || rawFoodType === "VEG") return true;
-    if (rawFoodType === "BOTH") return true;
-    if (rawFoodType === "NON_VEG" || rawFoodType === "NON-VEG") {
-      return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
+    if (rawFoodType === "BOTH") {
+      return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
     }
-    if (text.includes("veg") || text.includes("thali") || text.includes("pure veg") || text.includes("satvik")) {
-      return true;
+    if (rawFoodType === "NON_VEG") {
+      return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
     }
     return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
   }
 
   if (norm === "non_veg") {
     if (rawFoodType === "PURE_VEG") return false;
-    if (rawFoodType === "NON_VEG" || rawFoodType === "NON-VEG" || rawFoodType === "BOTH") return true;
-    if (
-      text.includes("non-veg") ||
-      text.includes("non veg") ||
-      text.includes("biryani") ||
-      text.includes("chicken") ||
-      text.includes("meat") ||
-      text.includes("fish")
-    ) {
-      return true;
+    if (rawFoodType === "NON_VEG" || rawFoodType === "BOTH") {
+      return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "non_veg"));
     }
     return kitchenDishes.some((d) => isDishMatchingDiet(d, "non_veg"));
   }
 
   if (norm === "vegan") {
     if (rawFoodType === "VEGAN") return true;
-    if (
-      text.includes("vegan") ||
-      text.includes("plant") ||
-      text.includes("healthy") ||
-      text.includes("salad") ||
-      text.includes("organic")
-    ) {
-      return true;
-    }
     return kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
   }
 
   if (norm === "jain") {
     if (rawFoodType === "JAIN") return true;
-    if (
-      text.includes("jain") ||
-      text.includes("satvik") ||
-      text.includes("swaminarayan") ||
-      text.includes("pure veg")
-    ) {
-      return true;
-    }
     return kitchenDishes.some((d) => isDishMatchingDiet(d, "jain"));
   }
 
@@ -331,49 +325,311 @@ export function matchesSearchQuery(
   if (!normQuery) return true;
   if (normTarget.includes(normQuery)) return true;
 
-  // 3. Compact match (all spaces and symbols stripped, e.g. "7/12" vs "712", "cloudkitchen" vs "cloud kitchen")
+  // 3. Compact match (all spaces and symbols stripped, e.g. "7/12" vs "712")
   const compactTarget = normTarget.replace(/\s+/g, "");
   const compactQuery = normQuery.replace(/\s+/g, "");
-  if (compactTarget.includes(compactQuery) || compactQuery.includes(compactTarget)) return true;
+  if (compactTarget.includes(compactQuery)) return true;
 
-  // 4. Stemmed / possessive match (strip trailing 's')
+  // 4. Stemmed match (strip trailing 's')
   const stem = (str: string) => str.replace(/\bs\b/g, "").replace(/s\b/g, "");
   const stemmedTarget = stem(normTarget);
   const stemmedQuery = stem(normQuery);
-  if (stemmedTarget.includes(stemmedQuery) || normTarget.includes(stemmedQuery)) return true;
+  if (stemmedTarget.includes(stemmedQuery)) return true;
 
-  // 5. Multi-token word match (all query words must match a part of target words)
-  const queryTokens = normQuery.split(" ").filter(Boolean);
-  const targetTokens = normTarget.split(" ").filter(Boolean);
+  return false;
+}
 
-  if (queryTokens.length > 0) {
-    const allTokensMatch = queryTokens.every((qToken) => {
-      const qTokenStem = qToken.endsWith("s") ? qToken.slice(0, -1) : qToken;
-      return targetTokens.some((tToken) => {
-        const tTokenStem = tToken.endsWith("s") ? tToken.slice(0, -1) : tToken;
-        return (
-          tToken.includes(qToken) ||
-          (qTokenStem && tToken.includes(qTokenStem)) ||
-          (tTokenStem && qToken.includes(tTokenStem))
-        );
-      });
-    });
-    if (allTokensMatch) return true;
+export function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export interface CategoryRule {
+  categoryNames: string[];
+  namePatterns: RegExp[];
+}
+
+export const CATEGORY_RULES: Record<string, CategoryRule> = {
+  burger: {
+    categoryNames: ["burger", "burgers"],
+    namePatterns: [/\b(burger|burgers|cheeseburger|hamburger|whopper|slider|sliders)\b/i],
+  },
+  cake: {
+    categoryNames: ["cake", "cakes", "pastry", "pastries", "bakery", "cupcake", "cupcakes"],
+    namePatterns: [/\b(cake|cakes|pastry|pastries|cupcake|cupcakes|brownie|brownies|black forest|red velvet|cheesecake|mousse|lava cake|truffle cake)\b/i],
+  },
+  pastry: {
+    categoryNames: ["pastry", "pastries", "cake", "cakes", "bakery", "cupcake", "cupcakes"],
+    namePatterns: [/\b(pastry|pastries|cake|cakes|cupcake|cupcakes|brownie|brownies|black forest|red velvet|cheesecake|lava cake)\b/i],
+  },
+  pizza: {
+    categoryNames: ["pizza", "pizzas", "calzone"],
+    namePatterns: [/\b(pizza|pizzas|margherita|calzone)\b/i],
+  },
+  shake: {
+    categoryNames: ["shake", "shakes", "milkshake", "milkshakes", "smoothie", "smoothies", "thickshake", "thickshakes"],
+    namePatterns: [/\b(shake|shakes|milkshake|milkshakes|smoothie|smoothies|thickshake|thick shake|cold coffee|frappe|lassi|mastani)\b/i],
+  },
+  biryani: {
+    categoryNames: ["biryani", "biryanis", "pulao"],
+    namePatterns: [/\b(biryani|biryanis|pulao|dum biryani|hyderabadi biryani|murgh biryani)\b/i],
+  },
+  meal: {
+    categoryNames: ["meal", "meals", "thali", "thalis", "tiffin", "combo meal", "combo meals"],
+    namePatterns: [/\b(meal|meals|thali|thalis|tiffin|combo meal|mini meal|executive meal|deluxe meal|dal fry meal|paneer meal|chicken meal|veg meal|non veg meal)\b/i],
+  },
+  mess: {
+    categoryNames: ["mess", "daily mess", "student mess", "tiffin service"],
+    namePatterns: [/\b(mess|daily mess|monthly mess|tiffin service|dabba)\b/i],
+  },
+  thali: {
+    categoryNames: ["thali", "thalis"],
+    namePatterns: [/\b(thali|thalis|deluxe thali|special thali|gujarati thali|punjabi thali|maharashtrian thali|rajasthani thali|veg thali|non veg thali|jain thali)\b/i],
+  },
+  dalrice: {
+    categoryNames: ["dalrice", "dal rice", "dal-rice", "khichdi", "dal khichdi"],
+    namePatterns: [/\b(dal\s*rice|dalrice|dal\s*khichdi|varan\s*bhat|dal\s*fry\s*rice|dal\s*tadka\s*rice|khichdi)\b/i],
+  },
+  "dal rice": {
+    categoryNames: ["dalrice", "dal rice", "dal-rice", "khichdi", "dal khichdi"],
+    namePatterns: [/\b(dal\s*rice|dalrice|dal\s*khichdi|varan\s*bhat|dal\s*fry\s*rice|dal\s*tadka\s*rice|khichdi)\b/i],
+  },
+  dosa: {
+    categoryNames: ["dosa", "dosas"],
+    namePatterns: [/\b(dosa|dosas|masala dosa|plain dosa|mysore dosa|rava dosa|set dosa|uttapam|uttapams)\b/i],
+  },
+  idli: {
+    categoryNames: ["idli", "idlis", "idly"],
+    namePatterns: [/\b(idli|idlis|idly|rava idli|steamed idli|medu vada|vada sambar|sambar vada)\b/i],
+  },
+  pohe: {
+    categoryNames: ["pohe", "poha"],
+    namePatterns: [/\b(pohe|poha|kanda pohe|kanda poha|batata pohe|batata poha|indori poha|dadpe pohe)\b/i],
+  },
+  poha: {
+    categoryNames: ["pohe", "poha"],
+    namePatterns: [/\b(pohe|poha|kanda pohe|kanda poha|batata pohe|batata poha|indori poha|dadpe pohe)\b/i],
+  },
+  sabudana: {
+    categoryNames: ["sabudana"],
+    namePatterns: [/\b(sabudana|sabudana khichdi|sabudana vada|sabudana usal)\b/i],
+  },
+  shira: {
+    categoryNames: ["shira", "sheera", "halwa"],
+    namePatterns: [/\b(shira|sheera|suji halwa|sooji halwa|moong dal halwa|gajar halwa|halwa|prasad)\b/i],
+  },
+  sheera: {
+    categoryNames: ["shira", "sheera", "halwa"],
+    namePatterns: [/\b(shira|sheera|suji halwa|sooji halwa|moong dal halwa|gajar halwa|halwa|prasad)\b/i],
+  },
+  upma: {
+    categoryNames: ["upma"],
+    namePatterns: [/\b(upma|rava upma|sooji upma)\b/i],
+  },
+  healthy: {
+    categoryNames: ["healthy", "salad", "salads", "organic", "diet"],
+    namePatterns: [/\b(salad|salads|sprouts|fruit bowl|protein bowl|green salad|keto|healthy)\b/i],
+  },
+  dessert: {
+    categoryNames: ["dessert", "desserts", "sweet", "sweets", "bakery", "ice cream"],
+    namePatterns: [/\b(dessert|desserts|sweet|sweets|halwa|shira|sheera|ice cream|kheer|gulab jamun|rasgulla|pastry|pastries|cake|cakes|brownie|brownies|waffle|waffles)\b/i],
+  },
+  desserts: {
+    categoryNames: ["dessert", "desserts", "sweet", "sweets", "bakery", "ice cream"],
+    namePatterns: [/\b(dessert|desserts|sweet|sweets|halwa|shira|sheera|ice cream|kheer|gulab jamun|rasgulla|pastry|pastries|cake|cakes|brownie|brownies|waffle|waffles)\b/i],
+  },
+  drinks: {
+    categoryNames: ["drinks", "drink", "beverage", "beverages", "juice", "juices", "tea", "coffee"],
+    namePatterns: [/\b(drink|drinks|beverage|beverages|shake|shakes|milkshake|juice|juices|chai|tea|coffee|cold coffee|lassi|lemonade|mojito|soda)\b/i],
+  },
+  drink: {
+    categoryNames: ["drinks", "drink", "beverage", "beverages", "juice", "juices", "tea", "coffee"],
+    namePatterns: [/\b(drink|drinks|beverage|beverages|shake|shakes|milkshake|juice|juices|chai|tea|coffee|cold coffee|lassi|lemonade|mojito|soda)\b/i],
+  },
+  beverages: {
+    categoryNames: ["drinks", "drink", "beverage", "beverages", "juice", "juices", "tea", "coffee"],
+    namePatterns: [/\b(drink|drinks|beverage|beverages|shake|shakes|milkshake|juice|juices|chai|tea|coffee|cold coffee|lassi|lemonade|mojito|soda)\b/i],
+  },
+  beverage: {
+    categoryNames: ["drinks", "drink", "beverage", "beverages", "juice", "juices", "tea", "coffee"],
+    namePatterns: [/\b(drink|drinks|beverage|beverages|shake|shakes|milkshake|juice|juices|chai|tea|coffee|cold coffee|lassi|lemonade|mojito|soda)\b/i],
+  },
+  snacks: {
+    categoryNames: ["snacks", "snack", "street food", "starters"],
+    namePatterns: [/\b(snack|snacks|samosa|samosas|kachori|pakoda|pakode|bhajiya|fries|french fries|nachos|chaat|pani puri|sev puri|bhel|vada pav|dabeli|pohe|poha|sabudana vada)\b/i],
+  },
+  snack: {
+    categoryNames: ["snacks", "snack", "street food", "starters"],
+    namePatterns: [/\b(snack|snacks|samosa|samosas|kachori|pakoda|pakode|bhajiya|fries|french fries|nachos|chaat|pani puri|sev puri|bhel|vada pav|dabeli|pohe|poha|sabudana vada)\b/i],
+  },
+  chinese: {
+    categoryNames: ["chinese", "indo-chinese", "pan asian", "asian"],
+    namePatterns: [/\b(noodles|hakka noodles|chowmein|chow mein|fried rice|manchurian|momos|momo|spring roll|spring rolls|chilli paneer|chilli chicken|schezwan|dimsum|dim sum)\b/i],
+  },
+  roll: {
+    categoryNames: ["roll", "rolls", "wraps", "wrap"],
+    namePatterns: [/\b(roll|rolls|wrap|wraps|frankie|frankies|kathi roll|shawarma)\b/i],
+  },
+  sandwich: {
+    categoryNames: ["sandwich", "sandwiches"],
+    namePatterns: [/\b(sandwich|sandwiches|toast|panini|grilled sandwich|club sandwich)\b/i],
+  },
+};
+
+export const CATEGORY_ALIASES: Record<string, string[]> = {
+  cake: ["cake", "cakes", "black forest", "pastry", "pastries", "mousse", "cupcake", "brownie", "dessert", "desserts", "sweet", "sweets", "bakery"],
+  pastry: ["pastry", "pastries", "cake", "cakes", "black forest", "brownie", "dessert", "desserts", "bakery"],
+  burger: ["burger", "burgers", "hamburger", "cheeseburger", "veg burger", "crispy burger"],
+  meal: ["meal", "meals", "thali", "thalis", "homemeal", "tiffin", "combo meal"],
+  mess: ["mess", "daily mess", "student mess", "homely mess", "tiffin", "subscription"],
+  thali: ["thali", "thalis", "punjabi thali", "gujarati thali", "maharashtrian thali", "deluxe thali", "special thali", "veg thali", "non veg thali", "jain thali"],
+  biryani: ["biryani", "biryanis", "dum biryani", "hyderabadi", "chicken biryani", "veg biryani", "pulao"],
+  pizza: ["pizza", "pizzas", "margherita", "calzone", "pan pizza", "cheese pizza"],
+  shake: ["shake", "shakes", "milkshake", "thick shake", "smoothie", "cold coffee", "oreo shake", "mango shake", "lassi"],
+  dalrice: ["dalrice", "dal rice", "dal-rice", "dal khichdi", "varan bhat", "dal fry rice", "khichdi"],
+  "dal rice": ["dalrice", "dal rice", "dal-rice", "dal khichdi", "varan bhat", "dal fry rice", "khichdi"],
+  dosa: ["dosa", "dosas", "masala dosa", "plain dosa", "mysore dosa", "paper dosa", "set dosa", "onion dosa", "rava dosa", "south indian", "uttapam"],
+  idli: ["idli", "idlis", "idly", "rava idli", "steamed idli", "button idli", "south indian", "vada", "medu vada"],
+  pohe: ["pohe", "poha", "kanda poha", "batata poha", "indori poha"],
+  poha: ["pohe", "poha", "kanda poha", "batata poha", "indori poha"],
+  sabudana: ["sabudana", "sabudana khichdi", "sabudana vada", "sabudana usal"],
+  shira: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa"],
+  sheera: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa"],
+  upma: ["upma", "rava upma", "sooji upma"],
+  healthy: ["healthy", "salad", "salads", "bowl", "organic", "diet", "sprouts"],
+  dessert: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun"],
+  desserts: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun"],
+  drinks: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
+  drink: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
+  beverages: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
+  beverage: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
+  snacks: ["snacks", "snack", "samosa", "kachori", "chaat", "pakoda", "bhajiya", "fries", "pohe", "poha", "sabudana"],
+  snack: ["snacks", "snack", "samosa", "kachori", "chaat", "pakoda", "bhajiya", "fries", "pohe", "poha", "sabudana"],
+  chinese: ["chinese", "noodles", "fried rice", "manchurian", "momos", "spring roll", "chilli paneer", "hakka noodles", "schezwan"],
+  roll: ["roll", "rolls", "wrap", "wraps", "kathi roll", "paneer roll", "chicken roll", "egg roll", "frankie"],
+  sandwich: ["sandwich", "sandwiches", "toast", "grilled sandwich", "club sandwich", "cheese sandwich", "panini"],
+};
+
+export const FOOD_TAG_KEYWORDS = CATEGORY_ALIASES;
+
+/**
+ * Matches a single dish against a food category filter.
+ * Strict category matching:
+ * 1. Checks specific category name matches (ignoring generic words like 'Food').
+ * 2. Checks word-bounded title matches based on category rules.
+ */
+export function matchesDishCategory(
+  category: string | null | undefined,
+  dish: {
+    name?: string | null;
+    categoryName?: string | null;
+    description?: string | null;
+  }
+): boolean {
+  if (!category || !category.trim()) return true;
+  const cleanCat = category.trim().toLowerCase();
+  if (cleanCat === "all" || cleanCat === "food") return true;
+
+  const catNorm = normalizeSearchString(category);
+  const dishCatNorm = normalizeSearchString(dish.categoryName);
+  const dishName = (dish.name || "").trim();
+
+  // 1. Exact normalized category match (dish.categoryName === category, not 'food')
+  if (dishCatNorm && dishCatNorm !== "food" && dishCatNorm === catNorm) {
+    return true;
+  }
+
+  // 2. Check defined category rule
+  const ruleKey = Object.keys(CATEGORY_RULES).find(
+    (key) =>
+      key.toLowerCase() === catNorm ||
+      key.toLowerCase().replace(/[^a-z0-9]/g, "") === catNorm.replace(/[^a-z0-9]/g, "")
+  );
+
+  if (ruleKey) {
+    const rule = CATEGORY_RULES[ruleKey];
+
+    // Check if dish.categoryName matches any defined categoryNames (excluding generic 'food')
+    if (dishCatNorm && dishCatNorm !== "food") {
+      const isCatMatch = rule.categoryNames.some(
+        (cn) => cn === dishCatNorm || dishCatNorm === normalizeSearchString(cn)
+      );
+      if (isCatMatch) return true;
+    }
+
+    // Check if dish.name matches any regex pattern
+    if (dishName && rule.namePatterns.some((pat) => pat.test(dishName))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // 3. Fallback for custom or unlisted categories (e.g. 'Pasta', 'Keto', etc.)
+  if (dishCatNorm && dishCatNorm !== "food") {
+    if (dishCatNorm === catNorm || dishCatNorm.includes(catNorm)) {
+      return true;
+    }
+  }
+
+  if (dishName) {
+    const wordPattern = new RegExp(`\\b${escapeRegex(catNorm)}\\b`, "i");
+    if (wordPattern.test(dishName)) {
+      return true;
+    }
   }
 
   return false;
 }
 
-export const FOOD_TAG_KEYWORDS: Record<string, string[]> = {
-  pizza: ["pizza", "pizzas", "margherita", "italian", "calzone", "crust", "cheese pizza", "pan pizza", "pasta"],
-  "lemon-rice": ["lemon rice", "lemon", "rice", "bhaat", "chawal", "pulao", "curd rice", "south indian", "fried rice", "jeera rice", "dal khichdi", "khichdi"],
-  "lemon rice": ["lemon rice", "lemon", "rice", "bhaat", "chawal", "pulao", "curd rice", "south indian", "fried rice", "jeera rice", "dal khichdi", "khichdi"],
-  burger: ["burger", "burgers", "hamburger", "cheeseburger", "veg burger", "crispy burger", "patty", "sandwich", "sandwiches", "fries", "fast food", "wrap", "roll", "snack"],
-  thali: ["thali", "thalis", "meal", "meals", "homemeal", "mess", "lunch", "dinner", "tiffin", "roti", "chapati", "dal", "sabzi", "sabji", "poli", "bhaat", "maharashtrian", "gujarati", "punjabi thali", "deluxe thali", "special thali", "veg thali", "non veg thali"],
-  biryani: ["biryani", "biryanis", "dum biryani", "hyderabadi", "chicken biryani", "veg biryani", "pulao", "rice", "mughlai"],
-  cake: ["cake", "cakes", "pastry", "pastries", "dessert", "desserts", "bakery", "sweet", "brownie", "mousse", "cupcake", "chocolate cake", "biscuit", "pie"],
-  healthy: ["healthy", "salad", "salads", "bowl", "bowls", "organic", "diet", "sprouts", "fruit", "fruits", "juice", "juices", "smoothie", "vegan", "keto", "oats", "greens", "avocado"],
-};
+/**
+ * Checks whether a kitchen serves dishes matching the requested food category.
+ * A kitchen matches a category IF AND ONLY IF it has active menu items in that category.
+ */
+export function matchesKitchenCategoryFilter(
+  category: string | null | undefined,
+  kitchen: {
+    id?: string | null;
+    trackingId?: string | null;
+    name?: string | null;
+    category?: string | null;
+  },
+  foodItems?: Array<{
+    sellerId?: string | null;
+    sellerTrackingId?: string | null;
+    sellerName?: string | null;
+    name?: string | null;
+    categoryName?: string | null;
+    description?: string | null;
+  }>
+): boolean {
+  if (!category || !category.trim()) return true;
+  const cleanCat = category.trim().toLowerCase();
+  if (cleanCat === "all" || cleanCat === "food") return true;
+
+  // Direct match on kitchen's declared category if applicable
+  if (
+    kitchen.category &&
+    matchesDishCategory(category, { name: kitchen.category, categoryName: kitchen.category })
+  ) {
+    return true;
+  }
+
+  if (!foodItems || foodItems.length === 0) return false;
+
+  const kitchenDishes = foodItems.filter((f) => {
+    const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
+    const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
+    const matchCrossId =
+      (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
+      (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
+    const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
+    return matchId || matchTracking || matchCrossId || matchName;
+  });
+
+  if (kitchenDishes.length === 0) return false;
+
+  return kitchenDishes.some((dish) => matchesDishCategory(category, dish));
+}
 
 export function matchesDishSearch(
   query: string | null | undefined,
@@ -397,16 +653,16 @@ export function matchesDishSearch(
     return true;
   }
 
-  // 2. Tag / category semantic alias expansion
-  const normKey = q.replace(/[^a-z0-9]/g, "");
-  for (const [tagKey, keywords] of Object.entries(FOOD_TAG_KEYWORDS)) {
-    const cleanTagKey = tagKey.replace(/[^a-z0-9]/g, "");
-    if (cleanTagKey === normKey || keywords.some((kw) => kw.replace(/[^a-z0-9]/g, "") === normKey)) {
-      const dishText = `${dish.name || ""} ${dish.categoryName || ""} ${dish.description || ""}`.toLowerCase();
-      if (keywords.some((kw) => dishText.includes(kw) || matchesSearchQuery(dishText, kw))) {
-        return true;
-      }
-    }
+  // 2. Check if search query matches a category rule
+  const normKey = normalizeSearchString(q);
+  const ruleKey = Object.keys(CATEGORY_RULES).find(
+    (key) =>
+      key.toLowerCase() === normKey ||
+      key.toLowerCase().replace(/[^a-z0-9]/g, "") === normKey.replace(/[^a-z0-9]/g, "")
+  );
+
+  if (ruleKey) {
+    return matchesDishCategory(ruleKey, dish);
   }
 
   return false;
@@ -434,29 +690,16 @@ export function matchesKitchenOrDishSearch(
   if (!query || !query.trim()) return true;
   const q = query.toLowerCase().trim();
 
-  // 1. Check direct kitchen metadata
+  // 1. Direct match on kitchen name or location
   if (
     matchesSearchQuery(kitchen.name, q) ||
-    matchesSearchQuery(kitchen.category, q) ||
-    matchesSearchQuery(kitchen.foodType, q) ||
-    matchesSearchQuery(kitchen.locality, q)
+    matchesSearchQuery(kitchen.locality, q) ||
+    matchesSearchQuery(kitchen.category, q)
   ) {
     return true;
   }
 
-  // 2. Semantic aliases against kitchen metadata
-  const normKey = q.replace(/[^a-z0-9]/g, "");
-  for (const [tagKey, keywords] of Object.entries(FOOD_TAG_KEYWORDS)) {
-    const cleanTagKey = tagKey.replace(/[^a-z0-9]/g, "");
-    if (cleanTagKey === normKey || keywords.some((kw) => kw.replace(/[^a-z0-9]/g, "") === normKey)) {
-      const kText = `${kitchen.name || ""} ${kitchen.category || ""} ${kitchen.foodType || ""}`.toLowerCase();
-      if (keywords.some((kw) => kText.includes(kw) || matchesSearchQuery(kText, kw))) {
-        return true;
-      }
-    }
-  }
-
-  // 3. Check child dishes (matching by sellerId, trackingId, cross-ID, or sellerName)
+  // 2. Check child dishes of this kitchen
   if (foodItems && foodItems.length > 0) {
     const kitchenDishes = foodItems.filter((f) => {
       const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();

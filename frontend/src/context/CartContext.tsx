@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+import { fetchApi } from "@/lib/fetch-api";
+
 export type AddonItem = {
     id?: string;
     name: string;
@@ -38,6 +40,7 @@ type CartContextType = {
     decreaseQuantity: (itemId: string) => void;
     removeFromCart: (itemId: string) => void;
     clearCart: () => void;
+    syncCartWithLiveMenu: (customList?: CartItem[]) => Promise<void>;
     cartTotal: number;
     initiateRoomBooking: (room: any) => void; // Dedicated flow for rooms
 };
@@ -48,17 +51,127 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const router = useRouter();
 
-    // Load from local storage on mount
+    const syncCartWithLiveMenu = async (customList?: CartItem[]) => {
+        const targetList = customList || cartItems;
+        if (!targetList || targetList.length === 0) return;
+
+        const sellerIds = Array.from(new Set(targetList.map(i => i.sellerId).filter(Boolean)));
+        if (sellerIds.length === 0) return;
+
+        let hasAnyUpdates = false;
+        const updatesMap = new Map<string, Partial<CartItem>>();
+
+        await Promise.all(
+            sellerIds.map(async (sid) => {
+                try {
+                    const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sid)}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        const sellerObj = json.data || json;
+                        const liveFoodItems: any[] = sellerObj?.foodItems || [];
+
+                        for (const item of targetList) {
+                            if (item.sellerId !== sid) continue;
+
+                            const live = liveFoodItems.find(
+                                (f: any) =>
+                                    f.id === item.foodItemId ||
+                                    f.id === item.id ||
+                                    (f.name && item.name && f.name.toLowerCase().trim() === item.name.toLowerCase().trim())
+                            );
+
+                            if (live) {
+                                const newBasePrice = Number(live.price);
+                                const currentBasePrice = item.basePrice !== undefined ? Number(item.basePrice) : Number(item.price) || 0;
+                                const addonsSum = (item.selectedAddons || []).reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+                                const newUnitPrice = newBasePrice + addonsSum;
+
+                                const liveStock = live.stockQuantity !== undefined && live.stockQuantity !== null ? Number(live.stockQuantity) : -1;
+                                const liveImage = live.imageUrl || item.imageUrl || item.image;
+
+                                const priceChanged = currentBasePrice !== newBasePrice || item.price !== newUnitPrice;
+                                const stockChanged = item.maxStock !== liveStock || item.stockQuantity !== liveStock;
+
+                                if (priceChanged || stockChanged) {
+                                    hasAnyUpdates = true;
+                                    updatesMap.set(item.id, {
+                                        basePrice: newBasePrice,
+                                        price: newUnitPrice,
+                                        addonsTotal: addonsSum,
+                                        maxStock: liveStock,
+                                        stockQuantity: liveStock,
+                                        image: liveImage,
+                                        imageUrl: liveImage,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to sync cart prices with live menu:", err);
+                }
+            })
+        );
+
+        if (hasAnyUpdates && updatesMap.size > 0) {
+            setCartItems(prev => {
+                const updated = prev.map(item => {
+                    const patch = updatesMap.get(item.id);
+                    if (!patch) return item;
+                    return {
+                        ...item,
+                        ...patch,
+                    };
+                });
+                try {
+                    localStorage.setItem("kitchen_cart", JSON.stringify(updated));
+                } catch {}
+                return updated;
+            });
+        }
+    };
+
+    // Load from local storage on mount and sync with live seller prices
     useEffect(() => {
         const saved = localStorage.getItem("kitchen_cart");
         if (saved) {
             try {
-                setCartItems(JSON.parse(saved));
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setCartItems(parsed);
+                    syncCartWithLiveMenu(parsed);
+                }
             } catch (e) {
                 console.error("Failed to parse cart");
             }
         }
     }, []);
+
+    // Sync prices on focus, visibility change, or storage update
+    useEffect(() => {
+        const handleSync = () => {
+            syncCartWithLiveMenu();
+        };
+
+        if (typeof window !== "undefined") {
+            window.addEventListener("focus", handleSync);
+            window.addEventListener("seller-menu-updated", handleSync);
+            window.addEventListener("cart-sync-requested", handleSync);
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") {
+                    handleSync();
+                }
+            });
+        }
+
+        return () => {
+            if (typeof window !== "undefined") {
+                window.removeEventListener("focus", handleSync);
+                window.removeEventListener("seller-menu-updated", handleSync);
+                window.removeEventListener("cart-sync-requested", handleSync);
+            }
+        };
+    }, [cartItems]);
 
     // Save to local storage on change
     useEffect(() => {
@@ -247,10 +360,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const updateItemAddons = (itemId: string, selectedAddons: AddonItem[]) => {
         setCartItems(prev => {
-            return prev.map(i => {
+            const updated = prev.map(i => {
                 if (i.id === itemId) {
                     const addonsSum = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
-                    const basePrice = i.basePrice !== undefined ? Number(i.basePrice) : Number(i.price) || 0;
+                    const basePrice = i.basePrice !== undefined 
+                        ? Number(i.basePrice) 
+                        : Math.max(0, (Number(i.price) || 0) - (Number(i.addonsTotal) || 0));
                     return {
                         ...i,
                         basePrice,
@@ -261,6 +376,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 }
                 return i;
             });
+            try {
+                localStorage.setItem("kitchen_cart", JSON.stringify(updated));
+            } catch {}
+            return updated;
         });
     };
 
@@ -280,7 +399,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, addMultipleToCart, updateQuantity, updateItemAddons, decreaseQuantity, removeFromCart, clearCart, cartTotal, initiateRoomBooking }}>
+        <CartContext.Provider value={{ cartItems, addToCart, addMultipleToCart, updateQuantity, updateItemAddons, decreaseQuantity, removeFromCart, clearCart, syncCartWithLiveMenu, cartTotal, initiateRoomBooking }}>
             {children}
         </CartContext.Provider>
     );

@@ -24,6 +24,7 @@ export interface SearchResultsSectionProps {
   kitchens: DynamicKitchen[];
   foodItems: DynamicFoodItem[];
   rooms: DynamicRoom[];
+  isLoading?: boolean;
   onClearSearch?: () => void;
   onTagClick?: (tag: string) => void;
 }
@@ -47,6 +48,7 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
   kitchens = [],
   foodItems = [],
   rooms = [],
+  isLoading = false,
   onClearSearch,
   onTagClick,
 }) => {
@@ -59,8 +61,39 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
   const showDishes = (activeTab === "all" || activeTab === "dishes") && foodItems.length > 0;
   const showRooms = (activeTab === "all" || activeTab === "rooms") && rooms.length > 0;
 
+  if (isLoading) {
+    return (
+      <div id="search-results-section" className={styles.searchSectionWrapper}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "20px 0" }}>
+          <div style={{ width: "240px", height: "28px", backgroundColor: "#F1F5F9", borderRadius: "8px" }} />
+          <div className={styles.dishesGrid}>
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "18px",
+                  height: "260px",
+                  border: "1px solid #F1F5F9",
+                  padding: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ width: "100%", height: "140px", backgroundColor: "#F1F5F9", borderRadius: "12px" }} />
+                <div style={{ width: "70%", height: "18px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
+                <div style={{ width: "40%", height: "14px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.searchSectionWrapper}>
+    <div id="search-results-section" className={styles.searchSectionWrapper}>
       {/* 1. Header Banner */}
       <div className={styles.headerBanner}>
         <div className={styles.headerLeft}>

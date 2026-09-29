@@ -1307,11 +1307,6 @@ function CheckoutContent() {
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: '600', fontSize: '0.95rem', color: '#1E293B' }}>{item.name}</div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>₹{item.price} each</div>
-                                            {stockLimit !== -1 && (
-                                                <div style={{ fontSize: '0.72rem', color: isAtMaxStock ? '#EF4444' : '#10B981', fontWeight: 600, marginTop: '2px' }}>
-                                                    {isAtMaxStock ? `Max stock reached (${stockLimit})` : `${stockLimit} in stock`}
-                                                </div>
-                                            )}
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #EAEAEA', borderRadius: '6px', overflow: 'hidden' }}>

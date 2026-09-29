@@ -491,15 +491,11 @@ export default function UserFoodPage() {
                                             ) : null}
                                         </p>
                                         <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                            {item.stockQuantity === 0 ? (
+                                        {item.stockQuantity === 0 && (
+                                            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
                                                 <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                            ) : item.stockQuantity > 0 ? (
-                                                <span>Only {item.stockQuantity} left!</span>
-                                            ) : (
-                                                <span style={{ color: '#10B981' }}>In Stock</span>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </Link>
 
                                     <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
@@ -553,15 +549,11 @@ export default function UserFoodPage() {
                                                     ) : null}
                                                 </p>
                                                 <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                                                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                                    {item.stockQuantity === 0 ? (
+                                                {item.stockQuantity === 0 && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
                                                         <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                                    ) : item.stockQuantity > 0 ? (
-                                                        <span>Only {item.stockQuantity} left!</span>
-                                                    ) : (
-                                                        <span style={{ color: '#10B981' }}>In Stock</span>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                )}
                                             </Link>
 
                                             <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />

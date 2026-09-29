@@ -30,6 +30,8 @@ import {
   isDishMatchingDiet,
   matchesKitchenOrDishSearch,
   matchesDishSearch,
+  matchesDishCategory,
+  matchesKitchenCategoryFilter,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 
@@ -105,10 +107,10 @@ function FoodExploreContent() {
 
     return {
       all: items.length,
-      veg: items.filter((f) => f.itemType === "VEG" || f.itemType === "VEGAN" || f.itemType === "JAIN").length,
-      non_veg: items.filter((f) => f.itemType === "NON_VEG" || f.itemType?.includes("NON_VEG")).length,
-      vegan: items.filter((f) => f.itemType === "VEGAN").length,
-      jain: items.filter((f) => f.itemType === "JAIN").length,
+      veg: items.filter((f) => isDishMatchingDiet(f, "veg")).length,
+      non_veg: items.filter((f) => isDishMatchingDiet(f, "non_veg")).length,
+      vegan: items.filter((f) => isDishMatchingDiet(f, "vegan")).length,
+      jain: items.filter((f) => isDishMatchingDiet(f, "jain")).length,
       under150: items.filter((f) => f.price <= 150).length,
       price150to300: items.filter((f) => f.price > 150 && f.price <= 300).length,
       price300plus: items.filter((f) => f.price > 300).length,
@@ -130,13 +132,7 @@ function FoodExploreContent() {
 
     // Category
     if (selectedCategory && selectedCategory !== "all" && selectedCategory !== "food") {
-      const cat = selectedCategory.toLowerCase();
-      list = list.filter(
-        (f) =>
-          f.categoryName?.toLowerCase().includes(cat) ||
-          f.name.toLowerCase().includes(cat) ||
-          f.description.toLowerCase().includes(cat)
-      );
+      list = list.filter((f) => matchesDishCategory(selectedCategory, f));
     }
 
     // Dietary
@@ -156,11 +152,7 @@ function FoodExploreContent() {
     // Cuisines
     if (selectedCuisines.length > 0) {
       list = list.filter((f) =>
-        selectedCuisines.some(
-          (c) =>
-            f.categoryName?.toLowerCase().includes(c.toLowerCase()) ||
-            f.name.toLowerCase().includes(c.toLowerCase())
-        )
+        selectedCuisines.some((c) => matchesDishCategory(c, f))
       );
     }
 
@@ -219,12 +211,10 @@ function FoodExploreContent() {
     }
 
     if (selectedCategory && selectedCategory !== "all" && selectedCategory !== "food") {
-      const cat = selectedCategory.toLowerCase();
       list = list.filter(
         (k) =>
-          k.category?.toLowerCase().includes(cat) ||
-          k.foodType?.toLowerCase().includes(cat) ||
-          k.name.toLowerCase().includes(cat)
+          matchesKitchenCategoryFilter(selectedCategory, k, sourceFoodItems) ||
+          matchesDishCategory(selectedCategory, { name: k.category, categoryName: k.category })
       );
     }
 
@@ -265,6 +255,86 @@ function FoodExploreContent() {
     openOnly,
     sortBy,
   ]);
+
+  // Dynamic list of categories with live dish counts and emojis
+  const dynamicCategories = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; emoji: string; count: number }>();
+
+    const EMOJI_MAP: Record<string, string> = {
+      burger: "🍔",
+      cake: "🍰",
+      meal: "🍱",
+      mess: "🍲",
+      thali: "🍱",
+      biryani: "🍚",
+      pizza: "🍕",
+      shake: "🥤",
+      dalrice: "🍛",
+      "dal rice": "🍛",
+      dosa: "🥞",
+      idli: "🥟",
+      pohe: "🥣",
+      poha: "🥣",
+      sabudana: "🥣",
+      shira: "🍮",
+      sheera: "🍮",
+      upma: "🥣",
+      healthy: "🥗",
+      dessert: "🍨",
+      desserts: "🍨",
+      drinks: "🧃",
+      drink: "🧃",
+      beverages: "🧃",
+      beverage: "🧃",
+      snacks: "🍟",
+      snack: "🍟",
+      chinese: "🍜",
+      roll: "🌯",
+      sandwich: "🥪",
+      pastry: "🧁",
+      pastries: "🧁",
+    };
+
+    if (homeData.categories && Array.isArray(homeData.categories)) {
+      homeData.categories
+        .filter((c) => c.id !== "food" && c.id !== "rooms" && c.name)
+        .forEach((c) => {
+          const rawName = c.name.trim();
+          const lower = rawName.toLowerCase();
+          map.set(lower, {
+            id: c.id || lower,
+            name: rawName,
+            emoji: c.emoji && c.emoji !== "🍽️" && c.emoji !== "🍲" ? c.emoji : (EMOJI_MAP[lower] || "🍲"),
+            count: 0,
+          });
+        });
+    }
+
+    const sourceItems = homeData.allFoodItems?.length > 0 ? homeData.allFoodItems : homeData.foodItems;
+    sourceItems.forEach((f) => {
+      if (f.categoryName && f.categoryName.trim()) {
+        const rawName = f.categoryName.trim();
+        const lower = rawName.toLowerCase();
+        if (lower !== "food" && lower !== "rooms" && !map.has(lower)) {
+          map.set(lower, {
+            id: lower,
+            name: rawName.charAt(0).toUpperCase() + rawName.slice(1),
+            emoji: EMOJI_MAP[lower] || "🍲",
+            count: 0,
+          });
+        }
+      }
+    });
+
+    return Array.from(map.values()).map((cat) => ({
+      ...cat,
+      count: sourceItems.filter((f) => {
+        const matchesCategory = matchesDishCategory(cat.name, f);
+        const matchesDiet = selectedDiet === "all" ? true : isDishMatchingDiet(f, selectedDiet);
+        return matchesCategory && matchesDiet;
+      }).length,
+    }));
+  }, [homeData.categories, homeData.foodItems, homeData.allFoodItems, selectedDiet]);
 
   const activeFiltersCount =
     (selectedDiet !== "all" ? 1 : 0) +
@@ -445,7 +515,7 @@ function FoodExploreContent() {
         </div>
 
         {/* Dynamic Category Chips */}
-        {homeData.categories && homeData.categories.length > 0 && (
+        {dynamicCategories.length > 0 && (
           <div
             style={{
               display: "flex",
@@ -459,7 +529,15 @@ function FoodExploreContent() {
           >
             <button
               type="button"
-              onClick={() => setSelectedCategory("")}
+              onClick={() => {
+                setSelectedCategory("");
+                if (typeof window !== "undefined") {
+                  const params = new URLSearchParams(window.location.search);
+                  params.delete("category");
+                  const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                  router.replace(newUrl, { scroll: false });
+                }
+              }}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -474,40 +552,68 @@ function FoodExploreContent() {
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
+                transition: "all 0.2s ease",
               }}
             >
-              🍽️ All Cuisines
+              <span>🍽️</span>
+              <span>All Cuisines</span>
             </button>
-            {homeData.categories
-              .filter((c) => c.id !== "food" && c.id !== "rooms")
-              .map((cat) => {
-                const isSelected = selectedCategory.toLowerCase() === cat.name.toLowerCase();
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(isSelected ? "" : cat.name)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "8px 16px",
-                      borderRadius: "12px",
-                      border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
-                      color: isSelected ? "#FF6B00" : "#475569",
-                      fontWeight: isSelected ? "700" : "600",
-                      fontSize: "0.88rem",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span>{cat.emoji || "🍲"}</span>
-                    <span>{cat.name}</span>
-                  </button>
-                );
-              })}
+            {dynamicCategories.map((cat) => {
+              const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    const newCat = isSelected ? "" : cat.name;
+                    setSelectedCategory(newCat);
+                    if (typeof window !== "undefined") {
+                      const params = new URLSearchParams(window.location.search);
+                      if (newCat) {
+                        params.set("category", newCat);
+                      } else {
+                        params.delete("category");
+                      }
+                      const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                      router.replace(newUrl, { scroll: false });
+                    }
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 16px",
+                    borderRadius: "12px",
+                    border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                    backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
+                    color: isSelected ? "#FF6B00" : "#475569",
+                    fontWeight: isSelected ? "700" : "600",
+                    fontSize: "0.88rem",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <span>{cat.emoji || "🍲"}</span>
+                  <span>{cat.name}</span>
+                  {cat.count > 0 && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        padding: "1px 6px",
+                        borderRadius: "8px",
+                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                        color: isSelected ? "#EA580C" : "#64748B",
+                        fontWeight: "700",
+                      }}
+                    >
+                      {cat.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -905,7 +1011,38 @@ function FoodExploreContent() {
         {/* 2. Results Content: Dishes Grid or Kitchens Grid */}
         {activeTab === "dishes" ? (
           <div>
-            {filteredFoodItems.length > 0 ? (
+            {homeData.isLoading ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                  gap: "20px",
+                  width: "100%",
+                }}
+                className="food-explore-grid"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "20px",
+                      height: "320px",
+                      border: "1px solid #F1F5F9",
+                      padding: "16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
+                    <div style={{ width: "70%", height: "20px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
+                    <div style={{ width: "45%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
+                    <div style={{ width: "90%", height: "36px", backgroundColor: "#F1F5F9", borderRadius: "10px", marginTop: "auto" }} />
+                  </div>
+                ))}
+              </div>
+            ) : filteredFoodItems.length > 0 ? (
               <div
                 style={{
                   display: "grid",
@@ -1225,7 +1362,37 @@ function FoodExploreContent() {
         ) : (
           /* Cloud Kitchens Grid */
           <div>
-            {filteredKitchens.length > 0 ? (
+            {homeData.isLoading ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "24px",
+                  width: "100%",
+                }}
+                className="kitchens-explore-grid"
+              >
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "20px",
+                      height: "300px",
+                      border: "1px solid #F1F5F9",
+                      padding: "16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
+                    <div style={{ width: "65%", height: "22px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
+                    <div style={{ width: "40%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
+                  </div>
+                ))}
+              </div>
+            ) : filteredKitchens.length > 0 ? (
               <div
                 style={{
                   display: "grid",

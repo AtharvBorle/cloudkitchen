@@ -31,6 +31,10 @@ const POPULAR_AREAS = [
   { pincode: "411057", name: "Hinjawadi, Pune", lat: 18.5913, lng: 73.7389 },
   { pincode: "411004", name: "Deccan, Pune", lat: 18.5173, lng: 73.8415 },
   { pincode: "411014", name: "Viman Nagar, Pune", lat: 18.5679, lng: 73.9143 },
+  { pincode: "411051", name: "Karve Nagar, Pune", lat: 18.4912, lng: 73.8217 },
+  { pincode: "411028", name: "Hadapsar, Pune", lat: 18.5089, lng: 73.9259 },
+  { pincode: "411006", name: "Kalyani Nagar, Pune", lat: 18.5463, lng: 73.9033 },
+  { pincode: "411030", name: "Sadashiv Peth, Pune", lat: 18.5126, lng: 73.8478 },
 ];
 
 export const LocationModal: React.FC = () => {
@@ -335,6 +339,23 @@ export const LocationModal: React.FC = () => {
       });
 
       if (res.ok) {
+        const resData = await res.json().catch(() => ({}));
+        const newId = resData.data?.address?.id || resData.address?.id || resData.data?.id || resData.id;
+        if (newId) {
+          await fetchApi(`/api/user/addresses/${newId}/default`, {
+            method: "PATCH",
+          }).catch(() => {});
+        }
+        if (typeof window !== "undefined") {
+          localStorage.setItem("active-selected-pincode", cleanPin);
+          localStorage.setItem("guest-pincode", cleanPin);
+          if (street) localStorage.setItem("guest-locality", street.trim());
+          if (latitude !== null) localStorage.setItem("guest-lat", String(latitude));
+          if (longitude !== null) localStorage.setItem("guest-lng", String(longitude));
+          window.dispatchEvent(new Event("location-changed"));
+          window.dispatchEvent(new CustomEvent("default-address-changed", { detail: { id: newId, pincode: cleanPin, street, latitude, longitude, isDefault: true } }));
+          window.dispatchEvent(new Event("storage"));
+        }
         await refreshAddress();
         setShowAddForm(false);
         showNotification("success", "New address saved and set as default!");
@@ -474,6 +495,7 @@ export const LocationModal: React.FC = () => {
                     onClick={() => {
                       setPincodeInput(area.pincode);
                       setSelectedAreaInfo(area);
+                      handleApplyLocation(area.pincode, area);
                     }}
                   >
                     <MapPin size={12} />
@@ -613,55 +635,57 @@ export const LocationModal: React.FC = () => {
               ) : (
                 <div className={styles.addressesList}>
                   {savedAddresses && savedAddresses.length > 0 ? (
-                    savedAddresses.map((addr) => {
-                      const isActive =
-                        defaultAddress?.id === addr.id ||
-                        (defaultAddress?.pincode === addr.pincode && addr.isDefault);
-                      const isHome = (addr.type || "").toUpperCase().includes("HOME");
-                      const isWork = (addr.type || "").toUpperCase().includes("WORK");
+                    [...savedAddresses]
+                      .sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
+                      .map((addr) => {
+                        const isActive =
+                          defaultAddress?.id === addr.id ||
+                          (defaultAddress?.pincode === addr.pincode && addr.isDefault);
+                        const isHome = (addr.type || "").toUpperCase().includes("HOME");
+                        const isWork = (addr.type || "").toUpperCase().includes("WORK");
 
-                      return (
-                        <div
-                          key={addr.id}
-                          className={`${styles.addressCard} ${
-                            isActive ? styles.addressCardActive : ""
-                          }`}
-                          onClick={() => handleSelectSavedAddress(addr.id)}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <div className={styles.radioIndicator}>
-                            {isActive && <Check size={12} color="#FFFFFF" strokeWidth={3.5} />}
-                          </div>
-
-                          <div className={styles.addressCardContent}>
-                            <div className={styles.tagRow}>
-                              <span
-                                className={`${styles.typeBadge} ${
-                                  isHome
-                                    ? styles.typeHome
-                                    : isWork
-                                    ? styles.typeWork
-                                    : styles.typeOther
-                                }`}
-                              >
-                                {addr.type}
-                              </span>
-                              {addr.isDefault && (
-                                <span className={styles.defaultBadge}>DEFAULT</span>
-                              )}
+                        return (
+                          <div
+                            key={addr.id}
+                            className={`${styles.addressCard} ${
+                              isActive ? styles.addressCardActive : ""
+                            }`}
+                            onClick={() => handleSelectSavedAddress(addr.id)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className={styles.radioIndicator}>
+                              {isActive && <Check size={12} color="#FFFFFF" strokeWidth={3.5} />}
                             </div>
 
-                            <p className={styles.addressMainText}>
-                              {addr.houseNumber}, {addr.street}
-                            </p>
-                            <p className={styles.addressSubText}>
-                              {addr.landmark ? `Near ${addr.landmark}, ` : ""}PIN: {addr.pincode}
-                            </p>
+                            <div className={styles.addressCardContent}>
+                              <div className={styles.tagRow}>
+                                <span
+                                  className={`${styles.typeBadge} ${
+                                    isHome
+                                      ? styles.typeHome
+                                      : isWork
+                                      ? styles.typeWork
+                                      : styles.typeOther
+                                  }`}
+                                >
+                                  {addr.type}
+                                </span>
+                                {addr.isDefault && (
+                                  <span className={styles.defaultBadge}>DEFAULT</span>
+                                )}
+                              </div>
+
+                              <p className={styles.addressMainText}>
+                                {addr.houseNumber}, {addr.street}
+                              </p>
+                              <p className={styles.addressSubText}>
+                                {addr.landmark ? `Near ${addr.landmark}, ` : ""}PIN: {addr.pincode}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })
                   ) : (
                     <div
                       style={{

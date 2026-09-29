@@ -61,11 +61,6 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/explore/furniture" className={styles.footerLink}>
-                  Furniture Rental
-                </Link>
-              </li>
-              <li>
                 <Link href="/explore-desktop" className={styles.footerLink}>
                   Cloud Kitchen Reels
                 </Link>

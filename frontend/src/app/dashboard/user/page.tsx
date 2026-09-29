@@ -536,15 +536,11 @@ export default function UserDashboard() {
                                                         )}
                                                     </p>
                                                     <p style={{ color: '#555', fontSize: '0.8rem', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4rem' }}>{item.description}</p>
-                                                    <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '10px' }}>
-                                                        {item.stockQuantity === 0 ? (
+                                                    {item.stockQuantity === 0 && (
+                                                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '10px' }}>
                                                             <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                                        ) : item.stockQuantity > 0 ? (
-                                                            <span>Only {item.stockQuantity} left!</span>
-                                                        ) : (
-                                                            <span style={{ color: '#10B981' }}>In Stock</span>
-                                                        )}
-                                                    </div>
+                                                        </div>
+                                                    )}
                                                 </Link>
                                                 <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
                                             </div>

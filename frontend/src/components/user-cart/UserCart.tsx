@@ -52,12 +52,12 @@ export interface UserCartProps {
 
 export const UserCart: React.FC<UserCartProps> = ({
   initialItems = [],
-  defaultLocation = "Kothrud, Pune",
-  defaultAddress: defaultAddressProp = "Flat 402, Golden Crest Apartments, Kothrud",
+  defaultLocation = "Select Location",
+  defaultAddress: defaultAddressProp = "",
   onProceedToCheckout,
 }) => {
   const router = useRouter();
-  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal } = useCart();
+  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal, syncCartWithLiveMenu } = useCart();
   const { defaultAddress, savedAddresses, openLocationModal, selectAddress } = useLocation();
 
   // State Management
@@ -68,13 +68,21 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
 
-  // Sync formatted current address from LocationProvider's defaultAddress
+  // Sync formatted current address from LocationProvider's defaultAddress or savedAddresses
   const formattedDefaultAddress = React.useMemo(() => {
-    if (!defaultAddress) return defaultAddressProp || "No address selected";
-    const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
-    const line = parts.join(", ");
-    return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
-  }, [defaultAddress, defaultAddressProp]);
+    if (defaultAddress) {
+      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
+    }
+    if (savedAddresses && savedAddresses.length > 0) {
+      const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+      const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      return def.pincode ? `${line} - ${def.pincode}` : line;
+    }
+    return defaultAddressProp || "No address selected";
+  }, [defaultAddress, defaultAddressProp, savedAddresses]);
 
   const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
@@ -83,11 +91,14 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
   const [sellerDetails, setSellerDetails] = useState<any>(null);
 
+  // Sync with live seller prices on mount
   useEffect(() => {
-    if (defaultAddress) {
-      setCurrentAddress(formattedDefaultAddress);
-    }
-  }, [defaultAddress, formattedDefaultAddress]);
+    syncCartWithLiveMenu();
+  }, [syncCartWithLiveMenu]);
+
+  useEffect(() => {
+    setCurrentAddress(formattedDefaultAddress);
+  }, [formattedDefaultAddress]);
 
   // Active items derived from context if present
   const cartItems: UserCartItem[] = contextCartItems.length > 0
@@ -130,6 +141,10 @@ export const UserCart: React.FC<UserCartProps> = ({
           } else {
             setIsSellerClosed(false);
           }
+          // Automatically sync live item prices & stock from sellerObj.foodItems
+          if (Array.isArray(sellerObj?.foodItems) && sellerObj.foodItems.length > 0) {
+            syncCartWithLiveMenu();
+          }
         }
       } catch (e) {
         // Silently continue
@@ -140,7 +155,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cartItems]);
+  }, [cartItems, syncCartWithLiveMenu]);
 
   // Coverage calculation
   const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
@@ -236,7 +251,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         const rawStock = existing.maxStock !== undefined ? existing.maxStock : existing.stockQuantity;
         const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
         if (stockLimit !== -1 && existing.quantity >= stockLimit) {
-          showToast(`Cannot add more. Only ${stockLimit} available in stock.`);
+          showToast("Maximum available quantity reached.");
           return;
         }
         addToCart({
@@ -267,7 +282,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           .map((item) => {
             if (item.id === id) {
               if (delta > 0 && item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) {
-                showToast(`Cannot add more. Only ${item.maxStock} available in stock.`);
+                showToast("Maximum available quantity reached.");
                 return item;
               }
               const newQty = item.qty + delta;
@@ -517,20 +532,6 @@ export const UserCart: React.FC<UserCartProps> = ({
                             (₹{item.basePrice} base + ₹{item.addonsTotal} add-ons)
                           </span>
                         )}
-                        {item.maxStock !== undefined && item.maxStock !== -1 && (
-                          <span
-                            style={{
-                              fontSize: "0.72rem",
-                              fontWeight: "600",
-                              color: item.qty >= item.maxStock ? "#EF4444" : "#10B981",
-                              backgroundColor: item.qty >= item.maxStock ? "#FEF2F2" : "#ECFDF5",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            {item.qty >= item.maxStock ? `Max Stock (${item.maxStock})` : `${item.maxStock} in stock`}
-                          </span>
-                        )}
                       </div>
 
                       {/* Customize Button if Item has Add-ons available */}
@@ -602,7 +603,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                 <p className={styles.emptySubtitle}>
                   Looks like you haven&apos;t added any delicious dishes yet.
                 </p>
-                <Link href="/explore-desktop" className={styles.exploreMenuBtn}>
+                <Link href="/food-explore" className={styles.exploreMenuBtn}>
                   Explore Menu
                 </Link>
               </div>
@@ -827,10 +828,6 @@ export const UserCart: React.FC<UserCartProps> = ({
                 </span>
                 <ArrowRight size={18} />
               </button>
-
-              <p className={styles.securityNote}>
-                Secure 256-bit SSL encrypted connection
-              </p>
             </div>
           </aside>
         </div>
@@ -861,35 +858,37 @@ export const UserCart: React.FC<UserCartProps> = ({
 
             <div className={styles.addressOptionList}>
               {savedAddresses && savedAddresses.length > 0 ? (
-                savedAddresses.map((addr) => {
-                  const parts = [addr.houseNumber, addr.street, addr.locality, addr.landmark].filter(Boolean);
-                  const fullAddr = `${parts.join(", ")} - ${addr.pincode}`;
-                  const isSelected = defaultAddress?.id === addr.id;
-                  return (
-                    <div
-                      key={addr.id}
-                      className={`${styles.addressOptionCard} ${
-                        isSelected ? styles.addressOptionActive : ""
-                      }`}
-                      onClick={() => {
-                        selectAddress(addr.id);
-                        setCurrentAddress(fullAddr);
-                        setIsAddressModalOpen(false);
-                        showToast(`Delivery address set to ${addr.type || "Saved Address"}`);
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                        <span className={styles.optLabel}>{addr.type || "Home"}</span>
-                        {addr.isDefault && (
-                          <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#E0F2FE", color: "#0369A1", padding: "2px 6px", borderRadius: "4px" }}>
-                            DEFAULT
-                          </span>
-                        )}
+                [...savedAddresses]
+                  .sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
+                  .map((addr) => {
+                    const parts = [addr.houseNumber, addr.street, addr.locality, addr.landmark].filter(Boolean);
+                    const fullAddr = `${parts.join(", ")} - ${addr.pincode}`;
+                    const isSelected = defaultAddress?.id === addr.id || (defaultAddress?.pincode === addr.pincode && addr.isDefault);
+                    return (
+                      <div
+                        key={addr.id}
+                        className={`${styles.addressOptionCard} ${
+                          isSelected ? styles.addressOptionActive : ""
+                        }`}
+                        onClick={() => {
+                          selectAddress(addr.id);
+                          setCurrentAddress(fullAddr);
+                          setIsAddressModalOpen(false);
+                          showToast(`Delivery address set to ${addr.type || "Saved Address"}`);
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                          <span className={styles.optLabel}>{addr.type || "Home"}</span>
+                          {addr.isDefault && (
+                            <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#E0F2FE", color: "#0369A1", padding: "2px 6px", borderRadius: "4px" }}>
+                              DEFAULT
+                            </span>
+                          )}
+                        </div>
+                        <span className={styles.optText}>{fullAddr}</span>
                       </div>
-                      <span className={styles.optText}>{fullAddr}</span>
-                    </div>
-                  );
-                })
+                    );
+                  })
               ) : (
                 <div style={{ padding: "24px 16px", textAlign: "center", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px dashed #CBD5E1" }}>
                   <MapPin size={28} color="#94A3B8" style={{ margin: "0 auto 8px" }} />
@@ -971,21 +970,24 @@ export const UserCart: React.FC<UserCartProps> = ({
         <AddonCustomizationModal
           isOpen={!!customizingItem}
           onClose={() => setCustomizingItem(null)}
+          isEditMode={true}
+          submitButtonText="Update Item"
           item={{
             id: customizingItem.id,
             name: customizingItem.name,
-            price: customizingItem.basePrice || customizingItem.price,
+            basePrice: customizingItem.basePrice !== undefined ? customizingItem.basePrice : customizingItem.price,
+            price: customizingItem.basePrice !== undefined ? customizingItem.basePrice : customizingItem.price,
             description: customizingItem.description,
             imageUrl: customizingItem.image,
             itemType: customizingItem.itemType,
-            addons: (customizingItem.addons || []).map((a, idx) => ({
-              id: a.id || `${idx + 1}`,
+            addons: (customizingItem.addons || []).map((a) => ({
+              id: a.id || `addon_${(a.name || "").toLowerCase().replace(/\s+/g, "_")}`,
               name: a.name,
               price: a.price,
             })),
           }}
-          initialSelectedAddons={(customizingItem.selectedAddons || []).map((a, idx) => ({
-            id: a.id || `${idx + 1}`,
+          initialSelectedAddons={(customizingItem.selectedAddons || []).map((a) => ({
+            id: a.id || `addon_${(a.name || "").toLowerCase().replace(/\s+/g, "_")}`,
             name: a.name,
             price: a.price,
           }))}

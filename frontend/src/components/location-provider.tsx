@@ -135,6 +135,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
                   isDefault: true,
                 };
                 setDefaultAddress(detectedAddress);
+                localStorage.setItem("user-has-selected-location", "true");
                 localStorage.setItem("guest-pincode", pin);
                 localStorage.setItem("guest-locality", locality);
                 localStorage.setItem("guest-city", city);
@@ -181,6 +182,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     const finalCity = city || pinInfo?.city || "Pune";
 
     if (typeof window !== "undefined") {
+      localStorage.setItem("user-has-selected-location", "true");
       localStorage.setItem("active-selected-pincode", pincode);
       localStorage.setItem("guest-pincode", pincode);
       if (finalLocality) localStorage.setItem("guest-locality", finalLocality);
@@ -216,6 +218,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         const finalCity = target.city || pinInfo?.city || "Pune";
 
         if (typeof window !== "undefined") {
+          localStorage.setItem("user-has-selected-location", "true");
           localStorage.setItem("active-selected-pincode", target.pincode);
           localStorage.setItem("guest-pincode", target.pincode);
           localStorage.setItem("guest-locality", finalLocality);
@@ -248,15 +251,26 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
     if (status !== "authenticated") {
       // Guest / Non-logged in flow
-      const guestPin = typeof window !== "undefined" ? (localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode")) : null;
-      const guestLocality = typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
-      const guestCity = typeof window !== "undefined" ? localStorage.getItem("guest-city") : null;
-      const rawLat = typeof window !== "undefined" ? localStorage.getItem("guest-lat") : null;
-      const rawLng = typeof window !== "undefined" ? localStorage.getItem("guest-lng") : null;
+      const hasExplicitlySelected = typeof window !== "undefined" && localStorage.getItem("user-has-selected-location") === "true";
+      const guestPin = hasExplicitlySelected && typeof window !== "undefined"
+        ? (localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode"))
+        : null;
+      const guestLocality = hasExplicitlySelected && typeof window !== "undefined"
+        ? localStorage.getItem("guest-locality")
+        : null;
+      const guestCity = hasExplicitlySelected && typeof window !== "undefined"
+        ? localStorage.getItem("guest-city")
+        : null;
+      const rawLat = hasExplicitlySelected && typeof window !== "undefined"
+        ? localStorage.getItem("guest-lat")
+        : null;
+      const rawLng = hasExplicitlySelected && typeof window !== "undefined"
+        ? localStorage.getItem("guest-lng")
+        : null;
       const parsedLat = rawLat ? parseFloat(rawLat) : null;
       const parsedLng = rawLng ? parseFloat(rawLng) : null;
 
-      if (guestPin) {
+      if (hasExplicitlySelected && guestPin) {
         const fallbackCoords = getPincodeCoordinates(guestPin);
         const resolvedLat = parsedLat && !isNaN(parsedLat) ? parsedLat : (fallbackCoords?.lat ?? null);
         const resolvedLng = parsedLng && !isNaN(parsedLng) ? parsedLng : (fallbackCoords?.lng ?? null);
@@ -275,20 +289,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
         return;
       }
 
-      // If user has NO location set, request GPS permission directly
-      setIsLoading(true);
-      if (!hasAttemptedGpsRef.current) {
-        hasAttemptedGpsRef.current = true;
-        const success = await detectGpsLocation();
-        if (!success && !shouldDisableLocation) {
-          // If GPS was denied/unavailable and this is first arrival on user customer pages
-          const modalPrompted = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("location-modal-shown") : null;
-          if (!modalPrompted) {
-            sessionStorage.setItem("location-modal-shown", "true");
-            setIsLocationModalOpen(true);
-          }
-        }
-      }
+      // If user has NO location set, keep defaultAddress as null so user selects first
+      setDefaultAddress(null);
       setIsLoading(false);
       return;
     }
@@ -296,102 +298,73 @@ export function LocationProvider({ children }: LocationProviderProps) {
     // Authenticated user flow
     setIsLoading(true);
     try {
-      const userSelectedPin = typeof window !== "undefined"
+      const hasExplicitlySelected = typeof window !== "undefined" && localStorage.getItem("user-has-selected-location") === "true";
+      const userSelectedPin = hasExplicitlySelected && typeof window !== "undefined"
         ? (localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode"))
         : null;
-      const userLocality = typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
-      const userCity = typeof window !== "undefined" ? localStorage.getItem("guest-city") : null;
-      const rawLat = typeof window !== "undefined" ? localStorage.getItem("guest-lat") : null;
-      const rawLng = typeof window !== "undefined" ? localStorage.getItem("guest-lng") : null;
+      const userLocality = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
+      const userCity = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-city") : null;
+      const rawLat = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-lat") : null;
+      const rawLng = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-lng") : null;
       const parsedLat = rawLat ? parseFloat(rawLat) : null;
       const parsedLng = rawLng ? parseFloat(rawLng) : null;
 
-      // 1. Fetch Default Address / active location
-      const defRes = await fetchApi("/api/user/location/default");
-      let activeAddr: Address | null = null;
-      if (defRes.ok) {
-        const defData = await defRes.json();
-        const payload = defData?.data || defData;
-        if (payload && payload.pincode) {
-          activeAddr = payload;
-        }
-      }
-
-      // 2. Fetch all saved addresses
+      // 1. Fetch all saved addresses
       const addrRes = await fetchApi("/api/user/addresses");
       let addressList: Address[] = [];
       if (addrRes.ok) {
         const addrData = await addrRes.json();
         const list = addrData?.data?.addresses || addrData?.addresses || addrData?.data || [];
         if (Array.isArray(list)) {
-          addressList = list;
-          setSavedAddresses(list);
+          const sortedList = [...list].sort((a: any, b: any) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+          addressList = sortedList;
+          setSavedAddresses(sortedList);
         }
       }
 
-      // If user has explicitly selected a pincode, prioritize it
+      // Prioritize the user's actively selected location if they chose one
       if (userSelectedPin) {
         const matchedSaved = addressList.find((a) => a.pincode === userSelectedPin);
         if (matchedSaved) {
           const pinCoords = getPincodeCoordinates(userSelectedPin);
-          const resolvedLat = matchedSaved.latitude ?? (parsedLat && !isNaN(parsedLat) ? parsedLat : (pinCoords?.lat ?? null));
-          const resolvedLng = matchedSaved.longitude ?? (parsedLng && !isNaN(parsedLng) ? parsedLng : (pinCoords?.lng ?? null));
+          const resolvedLat = (matchedSaved.latitude != null && !isNaN(Number(matchedSaved.latitude)))
+            ? Number(matchedSaved.latitude)
+            : (parsedLat && !isNaN(parsedLat) ? parsedLat : (pinCoords?.lat ?? null));
+          const resolvedLng = (matchedSaved.longitude != null && !isNaN(Number(matchedSaved.longitude)))
+            ? Number(matchedSaved.longitude)
+            : (parsedLng && !isNaN(parsedLng) ? parsedLng : (pinCoords?.lng ?? null));
+          const resolvedLocality = matchedSaved.locality || matchedSaved.street || userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`;
+          const resolvedCity = matchedSaved.city || userCity || pinCoords?.city || "Pune";
+
           setDefaultAddress({
             ...matchedSaved,
+            locality: resolvedLocality,
+            city: resolvedCity,
             latitude: resolvedLat,
             longitude: resolvedLng,
             isDefault: true,
           });
         } else {
           const pinCoords = getPincodeCoordinates(userSelectedPin);
-          const resolvedLat = parsedLat && !isNaN(parsedLat) ? parsedLat : (pinCoords?.lat ?? null);
-          const resolvedLng = parsedLng && !isNaN(parsedLng) ? parsedLng : (pinCoords?.lng ?? null);
+          const resolvedLat = (parsedLat && !isNaN(parsedLat)) ? parsedLat : (pinCoords?.lat ?? null);
+          const resolvedLng = (parsedLng && !isNaN(parsedLng)) ? parsedLng : (pinCoords?.lng ?? null);
+          const resolvedLocality = userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`;
+          const resolvedCity = userCity || pinCoords?.city || "Pune";
+
           setDefaultAddress({
             id: "guest-location",
             type: "Current Location",
             pincode: userSelectedPin,
-            locality: userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`,
-            city: userCity || pinCoords?.city || "Pune",
+            locality: resolvedLocality,
+            city: resolvedCity,
             latitude: resolvedLat,
             longitude: resolvedLng,
             isDefault: true,
           });
         }
       } else {
-        if (!activeAddr && addressList.length > 0) {
-          activeAddr = addressList.find((a) => a.isDefault) || addressList[0];
-        }
-
-        if (activeAddr) {
-          if (activeAddr.latitude === null || activeAddr.latitude === undefined || activeAddr.longitude === null || activeAddr.longitude === undefined) {
-            const matchedSaved = addressList.find((a) => (a.id === activeAddr?.id || a.pincode === activeAddr?.pincode) && a.latitude && a.longitude);
-            if (matchedSaved) {
-              activeAddr.latitude = matchedSaved.latitude;
-              activeAddr.longitude = matchedSaved.longitude;
-            } else {
-              const pinCoords = getPincodeCoordinates(activeAddr.pincode);
-              if (pinCoords) {
-                activeAddr.latitude = pinCoords.lat;
-                activeAddr.longitude = pinCoords.lng;
-              }
-            }
-          }
-          if (typeof window !== "undefined") {
-            localStorage.setItem("active-selected-pincode", activeAddr.pincode);
-            localStorage.setItem("guest-pincode", activeAddr.pincode);
-            if (activeAddr.locality) localStorage.setItem("guest-locality", activeAddr.locality);
-            if (activeAddr.city) localStorage.setItem("guest-city", activeAddr.city);
-            if (activeAddr.latitude != null) localStorage.setItem("guest-lat", String(activeAddr.latitude));
-            if (activeAddr.longitude != null) localStorage.setItem("guest-lng", String(activeAddr.longitude));
-          }
-          setDefaultAddress(activeAddr);
-        } else if (!hasAttemptedGpsRef.current) {
-          hasAttemptedGpsRef.current = true;
-          const success = await detectGpsLocation();
-          if (!success && !shouldDisableLocation) {
-            setIsLocationModalOpen(true);
-          }
-        }
+        // If user has not chosen a location yet, leave defaultAddress as null so user selects first
+        setDefaultAddress(null);
       }
     } catch (err) {
       console.error("Failed to fetch address for LocationProvider", err);
@@ -402,6 +375,24 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
   useEffect(() => {
     fetchAddress();
+  }, [fetchAddress]);
+
+  useEffect(() => {
+    const handleLocationEvent = () => {
+      fetchAddress();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("location-changed", handleLocationEvent);
+      window.addEventListener("default-address-changed", handleLocationEvent);
+      window.addEventListener("storage", handleLocationEvent);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("location-changed", handleLocationEvent);
+        window.removeEventListener("default-address-changed", handleLocationEvent);
+        window.removeEventListener("storage", handleLocationEvent);
+      }
+    };
   }, [fetchAddress]);
 
   return (

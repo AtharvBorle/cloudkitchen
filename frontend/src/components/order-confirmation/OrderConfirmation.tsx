@@ -73,7 +73,7 @@ interface ConfirmedOrderData {
 }
 
 const DEFAULT_DEMO_ORDER: ConfirmedOrderData = {
-  orderId: "NCB-" + Math.floor(100000 + Math.random() * 900000),
+  orderId: "NCB-782410",
   orderTime: "Just now",
   status: "PENDING",
   estimatedDelivery: "25-35 mins",
@@ -108,6 +108,20 @@ const DEFAULT_DEMO_ORDER: ConfirmedOrderData = {
 // Colors for the celebratory confetti
 const CONFETTI_COLORS = ["#FF6B00", "#F97316", "#22C55E", "#EAB308", "#EC4899", "#3B82F6", "#A855F7"];
 
+// Deterministic static confetti configuration for identical SSR and client hydration
+const STATIC_CONFETTI = Array.from({ length: 36 }).map((_, i) => {
+  const leftPct = (i * 2.77 + ((i * 17) % 7) * 0.35).toFixed(1);
+  const delaySec = (((i * 13) % 23) * 0.09).toFixed(2);
+  const sizePx = 8 + ((i * 7) % 9);
+  return {
+    id: i,
+    left: `${leftPct}%`,
+    bg: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    delay: `${delaySec}s`,
+    size: `${sizePx}px`,
+  };
+});
+
 export default function OrderConfirmation() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,16 +130,10 @@ export default function OrderConfirmation() {
   const [orderData, setOrderData] = useState<ConfirmedOrderData>(DEFAULT_DEMO_ORDER);
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
-  // Generate randomized confetti pieces once on mount
-  const confettiPieces = useMemo(() => {
-    return Array.from({ length: 36 }).map((_, i) => ({
-      id: i,
-      left: `${(i * 2.8 + Math.random() * 2).toFixed(1)}%`,
-      bg: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      delay: `${(Math.random() * 2.2).toFixed(2)}s`,
-      size: `${8 + Math.floor(Math.random() * 8)}px`,
-    }));
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   const parseAndSetOrder = (data: any) => {
@@ -138,8 +146,8 @@ export default function OrderConfirmation() {
       try {
         const arr = JSON.parse(rawOrder.items);
         if (Array.isArray(arr)) {
-          parsedItems = arr.map((item: any) => ({
-            id: item.id || String(Math.random()),
+          parsedItems = arr.map((item: any, idx: number) => ({
+            id: item.id || `item_${idx + 1}`,
             name: item.name || "Food Item",
             price: item.price || 0,
             basePrice: item.basePrice,
@@ -155,8 +163,8 @@ export default function OrderConfirmation() {
         console.error("Failed to parse order items:", e);
       }
     } else if (Array.isArray(rawOrder.items)) {
-      parsedItems = rawOrder.items.map((item: any) => ({
-        id: item.id || String(Math.random()),
+      parsedItems = rawOrder.items.map((item: any, idx: number) => ({
+        id: item.id || `item_${idx + 1}`,
         name: item.name || "Food Item",
         price: item.price || 0,
         basePrice: item.basePrice,
@@ -366,10 +374,10 @@ export default function OrderConfirmation() {
       {/* 0. Top Navbar */}
       <Navbar />
 
-      {/* Celebratory Floating Confetti */}
-      {showConfetti && !isCancelled && (
+      {/* Celebratory Floating Confetti (Rendered on client to eliminate SSR hydration mismatch) */}
+      {mounted && showConfetti && !isCancelled && (
         <div className={styles.confettiCanvas} aria-hidden="true">
-          {confettiPieces.map((piece) => (
+          {STATIC_CONFETTI.map((piece) => (
             <div
               key={piece.id}
               className={styles.confettiPiece}
