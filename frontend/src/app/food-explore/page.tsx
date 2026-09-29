@@ -44,7 +44,7 @@ function FoodExploreContent() {
   const sortParam = searchParams.get("sort") || "popular";
 
   const { defaultAddress, openLocationModal } = useLocation();
-  const { addToCart } = useCart();
+  const { addToCart, showToast, cartItems } = useCart();
   const homeData = useHomeData();
 
   // Local Filter States
@@ -288,7 +288,28 @@ function FoodExploreContent() {
   };
 
   const handleAddToCart = (dish: DynamicFoodItem) => {
-    if (dish.sellerIsOnline === false || dish.isAvailable === false) return;
+    if (dish.sellerIsOnline === false) {
+      showToast(`Sorry, "${dish.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
+      return;
+    }
+    if (dish.isAvailable === false) {
+      showToast(`Sorry, "${dish.name}" is currently unavailable.`, "warning");
+      return;
+    }
+
+    const rawStock = (dish as any).maxStock !== undefined ? (dish as any).maxStock : (dish as any).stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
+    if (stockLimit === 0) {
+      showToast(`Sorry, "${dish.name}" is currently out of stock.`, "warning");
+      return;
+    }
+
+    const existingInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
+      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${dish.name}.`, "warning");
+      return;
+    }
 
     addToCart({
       id: dish.id,
@@ -300,7 +321,8 @@ function FoodExploreContent() {
       sellerName: dish.sellerName || "Verified Cloud Kitchen",
       image: dish.imageUrl || "/images/places/place-biryani.png",
       imageUrl: dish.imageUrl || "/images/places/place-biryani.png",
-      stockQuantity: -1,
+      stockQuantity: stockLimit,
+      maxStock: stockLimit,
     });
 
     setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
@@ -1125,20 +1147,24 @@ function FoodExploreContent() {
                           </div>
 
                           {isClosed ? (
-                            <span
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCart(dish)}
                               style={{
                                 backgroundColor: "#F1F5F9",
-                                color: "#94A3B8",
+                                color: "#64748B",
                                 fontSize: "0.82rem",
                                 fontWeight: "700",
                                 padding: "6px 14px",
                                 borderRadius: "10px",
-                                border: "1px solid #E2E8F0",
-                                cursor: "not-allowed",
+                                border: "1px solid #CBD5E1",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
                               }}
+                              title={isSellerClosed ? "Seller is closed" : "Unavailable"}
                             >
                               {isSellerClosed ? "Closed" : "Unavailable"}
-                            </span>
+                            </button>
                           ) : (
                             <button
                               type="button"

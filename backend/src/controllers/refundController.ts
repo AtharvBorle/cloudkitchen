@@ -149,14 +149,90 @@ export const updateRefundStatus = async (req: Request, refundId: string) => {
             await db.order.update({
                 where: { id: refund.orderId },
                 data: { isPaid: false }
-            });
+            }).catch(() => {});
         }
         if (refund.bookingId) {
             await db.booking.update({
                 where: { id: refund.bookingId },
                 data: { status: "CANCELLED" }
+            }).catch(() => {});
+        }
+    }
+
+    // NC-BUG-119: Send Notification to User & Resolve Support Ticket
+    try {
+        const ticketRefMatch = refund.reason?.match(/\[Ticket Ref: #?([a-fA-F0-9-]+)\]/);
+        let targetTicketId = ticketRefMatch ? ticketRefMatch[1] : null;
+
+        if (!targetTicketId) {
+            const existingTicket = await db.ticket.findFirst({
+                where: {
+                    userId: refund.userId,
+                    OR: [
+                        { title: { contains: refund.orderId || refund.id } },
+                        { description: { contains: refund.orderId || refund.id } },
+                        { category: "REFUND" }
+                    ]
+                },
+                orderBy: { createdAt: "desc" }
+            });
+            if (existingTicket) {
+                targetTicketId = existingTicket.id;
+            }
+        }
+
+        const entityName = refund.orderId
+            ? `Order #${refund.orderId.slice(0, 8)}`
+            : `Booking #${refund.bookingId ? refund.bookingId.slice(0, 8) : refund.id.slice(0, 8)}`;
+
+        const notificationMessage = status === "APPROVED"
+            ? `✅ Great news! Your refund request for ₹${refund.amount} on ${entityName} has been APPROVED and processed.\n\n` +
+              `• Amount: ₹${refund.amount}\n` +
+              `• Reference / Transaction ID: ${transactionId || "N/A"}\n` +
+              `• Note: ${adminNote || "Refund initiated to your original payment method. Please allow 3-5 business days for settlement."}`
+            : `❌ Your refund request for ₹${refund.amount} on ${entityName} has been reviewed and REJECTED.\n\n` +
+              `• Reason / Admin Note: ${adminNote || "The request does not meet platform refund policy guidelines."}`;
+
+        if (targetTicketId) {
+            await db.ticketMessage.create({
+                data: {
+                    ticketId: targetTicketId,
+                    senderId: session.user.id,
+                    message: notificationMessage
+                }
+            });
+            await db.ticket.update({
+                where: { id: targetTicketId },
+                data: { status: status === "APPROVED" ? "RESOLVED" : "CLOSED" }
+            });
+        } else {
+            const newTicket = await db.ticket.create({
+                data: {
+                    userId: refund.userId,
+                    title: `Refund ${status === "APPROVED" ? "Approved" : "Rejected"} - ${entityName}`,
+                    description: `Refund request of ₹${refund.amount} processed by Admin.`,
+                    category: "REFUND",
+                    status: status === "APPROVED" ? "RESOLVED" : "CLOSED"
+                }
+            });
+            await db.ticketMessage.create({
+                data: {
+                    ticketId: newTicket.id,
+                    senderId: session.user.id,
+                    message: notificationMessage
+                }
             });
         }
+
+        await db.auditLog.create({
+            data: {
+                action: `REFUND_${status}`,
+                performedBy: session.user.email || session.user.id,
+                details: `Refund ID ${refundId} of ₹${refund.amount} was ${status.toLowerCase()} by Superadmin. Admin Note: ${adminNote || "None"}. Reference ID: ${transactionId || "None"}`
+            }
+        }).catch(() => {});
+    } catch (err) {
+        console.error("Failed to send user refund notification:", err);
     }
 
     return updatedRefund;

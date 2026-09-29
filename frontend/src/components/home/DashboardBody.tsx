@@ -45,7 +45,14 @@ export default function DashboardBody({
   }
 
   const handleOrder = (item: TopRatedItem) => {
-    if (item.sellerIsOnline === false || item.isAvailable === false) return;
+    if (item.sellerIsOnline === false) {
+      showToast(`Sorry, "${item.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
+      return;
+    }
+    if (item.isAvailable === false) {
+      showToast(`Sorry, "${item.name}" is currently unavailable.`, "warning");
+      return;
+    }
 
     const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
@@ -297,22 +304,27 @@ export default function DashboardBody({
 
               {/* Right Column: Order Button */}
               {isClosed ? (
-                <span
+                <button
+                  type="button"
+                  onClick={() => handleOrder(item)}
                   style={{
                     backgroundColor: "#F1F5F9",
-                    color: "#94A3B8",
+                    color: "#64748B",
                     fontSize: "0.82rem",
                     fontWeight: "700",
                     padding: "6px 14px",
                     borderRadius: "9999px",
-                    border: "1px solid #E2E8F0",
-                    cursor: "not-allowed",
+                    border: "1px solid #CBD5E1",
+                    cursor: "pointer",
                     whiteSpace: "nowrap",
                     flexShrink: 0,
+                    transition: "all 0.2s ease",
                   }}
+                  className="top-rated-order-btn-closed"
+                  title={isSellerClosed ? "Kitchen closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
                 >
                   {isSellerClosed ? "Closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
-                </span>
+                </button>
               ) : (
                 <button
                   type="button"
