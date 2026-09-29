@@ -49,7 +49,6 @@ export interface ResSellerSubEditProps {
   initialFeatures?: string[];
   initialDuration?: string;
   initialMealTimings?: MealServingTiming[];
-  initialAllowCancellation?: boolean;
   initialAllowPauseBilling?: boolean;
   initialMetadata?: PlanMetadataData;
   onBack?: () => void;
@@ -92,7 +91,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   initialFeatures = DEFAULT_FEATURES,
   initialDuration = "1 Week",
   initialMealTimings = DEFAULT_MEAL_TIMINGS,
-  initialAllowCancellation = true,
   initialAllowPauseBilling = false,
   initialMetadata = DEFAULT_METADATA,
   onBack,
@@ -114,7 +112,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   const [duration, setDuration] = useState(initialDuration);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
   const [mealTimings, setMealTimings] = useState<MealServingTiming[]>(initialMealTimings);
-  const [allowCancellation, setAllowCancellation] = useState(initialAllowCancellation);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
   const [metadata, setMetadata] = useState<PlanMetadataData>(initialMetadata);
@@ -157,8 +154,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             };
           })
         );
-        setAllowCancellation(found.allowCancel ?? true);
-        setAllowPauseBilling(found.pauseBillingPeriod !== "None");
+          setAllowPauseBilling(found.pauseBillingPeriod !== "None");
         setPauseBillingPeriod(found.pauseBillingPeriod || "30 Days");
         setMetrics({
           subscribers: found.subscribersCount || 0,
@@ -241,7 +237,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
         duration,
         features: validFeatures,
         mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
-        allowCancel: allowCancellation,
+        allowCancel: false,
         pauseBillingPeriod: pauseBillingPeriod || "30 Days",
       });
     }
@@ -253,7 +249,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       duration,
       features: validFeatures,
       mealTimings,
-      allowCancellation,
+      allowCancellation: false,
       allowPauseBilling,
       metadata,
     };
@@ -563,25 +559,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             <h2 className={styles.cardTitle}>Subscription Policies</h2>
 
             <div className={styles.policyList}>
-              {/* Allow User to Cancel Subscription */}
-              <div className={styles.policyRow}>
-                <div className={styles.policyInfo}>
-                  <h3 className={styles.policyTitle}>Allow User to Cancel Subscription</h3>
-                  <p className={styles.policyDesc}>Partners can cancel anytime directly from their cloud merchant dashboard.</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={allowCancellation}
-                  className={`${styles.toggleSwitch} ${
-                    allowCancellation ? styles.toggleSwitchActive : ""
-                  }`}
-                  onClick={() => setAllowCancellation((prev) => !prev)}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
-              </div>
-
               {/* Allow User to Pause Billing */}
               <div className={styles.policyRow}>
                 <div className={styles.policyInfo}>

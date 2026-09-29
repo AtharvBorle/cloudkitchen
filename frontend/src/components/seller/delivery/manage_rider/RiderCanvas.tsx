@@ -17,6 +17,8 @@ import {
   Phone,
   Mail,
   Key,
+  Eye,
+  EyeOff,
   ShieldCheck,
   Check,
 } from "lucide-react";
@@ -100,6 +102,7 @@ export default function RiderCanvas({
 
   // Modal States
   const [editingRider, setEditingRider] = useState<RiderWalletRecord | null>(null);
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: "",
     phone: "",
@@ -281,6 +284,7 @@ export default function RiderCanvas({
   const handleOpenEdit = (rider: RiderWalletRecord, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setEditingRider(rider);
+    setShowEditPassword(false);
     setEditFormData({
       name: rider.name,
       phone: rider.phone,
@@ -1382,16 +1386,16 @@ export default function RiderCanvas({
                   Change Password (optional)
                 </label>
                 <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <Key size={16} color="#94A3B8" style={{ position: "absolute", left: "12px" }} />
+                  <Key size={16} color="#94A3B8" style={{ position: "absolute", left: "12px", pointerEvents: "none" }} />
                   <input
-                    type="password"
+                    type={showEditPassword ? "text" : "password"}
                     value={editFormData.password}
                     onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
                     placeholder="Leave empty to keep unchanged"
                     style={{
                       width: "100%",
                       height: "40px",
-                      padding: "0 12px 0 38px",
+                      padding: "0 40px 0 38px",
                       borderRadius: "8px",
                       border: "1.5px solid #CBD5E1",
                       fontSize: "13.5px",
@@ -1400,6 +1404,25 @@ export default function RiderCanvas({
                       boxSizing: "border-box",
                     }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword((prev) => !prev)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      color: "#64748B",
+                    }}
+                    title={showEditPassword ? "Hide password" : "Show password"}
+                    aria-label={showEditPassword ? "Hide password" : "Show password"}
+                  >
+                    {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
 

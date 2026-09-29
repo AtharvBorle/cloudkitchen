@@ -129,7 +129,8 @@ export const createCoupon = async (req: Request) => {
 
     const role = session.user.role;
     let finalSellerId = appliesToSellerId;
-    let approvalStatus = "APPROVED";
+    const isDraft = status === "Draft" || status === "DRAFT" || body.isActive === false;
+    let approvalStatus = isDraft ? "DRAFT" : "APPROVED";
 
     if (status === "Pending") {
         approvalStatus = "PENDING_APPROVAL";
@@ -202,7 +203,7 @@ export const createCoupon = async (req: Request) => {
             maxUsers: finalUsageLimit,
             minimumCartValue: finalMinCart,
             maxDiscountAmount: finalMaxCap,
-            isActive: status !== "Expired",
+            isActive: !isDraft && status !== "Expired" && status !== "Paused" && status !== "Pending",
             approvalStatus,
             category: category || "BOTH"
         };
@@ -380,10 +381,14 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     if (status !== undefined) {
         if (status === "Expired") {
             updateData.isActive = false;
-        } else if (status === "Active") {
+        } else if (status === "Draft" || status === "DRAFT") {
+            updateData.isActive = false;
+            updateData.approvalStatus = "DRAFT";
+        } else if (status === "Active" || status === "LIVE") {
             updateData.isActive = true;
             updateData.approvalStatus = "APPROVED";
         } else if (status === "Pending") {
+            updateData.isActive = false;
             updateData.approvalStatus = "PENDING_APPROVAL";
         }
     }

@@ -59,7 +59,6 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   ]);
 
   // 5. Subscription Policies
-  const [allowCancel, setAllowCancel] = useState(true);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState('30 Days');
 
   const handleRemoveMealTiming = (id: string) => {
@@ -381,33 +380,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Subscription Policies</h2>
 
-                {/* Policy 1: Allow User to Cancel Subscription */}
-                <div className={styles.policyRow}>
-                  <div className={styles.policyInfo}>
-                    <span className={styles.policyLabel}>Allow User to Cancel Subscription</span>
-                    <p className={styles.policyDescription}>
-                      Partners can cancel anytime directly from their cloud merchant dashboard.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAllowCancel((prev) => !prev)}
-                    className={`${styles.toggleSwitch} ${
-                      allowCancel ? styles.toggleSwitchActive : ''
-                    }`}
-                    aria-label="Toggle allow cancel subscription"
-                  >
-                    <span
-                      className={`${styles.toggleThumb} ${
-                        allowCancel ? styles.toggleThumbActive : ''
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className={styles.policyDivider} />
-
-                {/* Policy 2: Allow User to Pause Billing */}
+                {/* Policy: Allow User to Pause Billing */}
                 <div className={styles.policyRow}>
                   <div className={styles.policyInfo}>
                     <span className={styles.policyLabel}>Allow User to Pause Billing</span>
@@ -541,7 +514,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       features: enabledFeatures.map((f) => f.label),
                       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
                       status: 'Live',
-                      allowCancel,
+                      allowCancel: false,
                       pauseBillingPeriod,
                     });
 

@@ -229,7 +229,7 @@ export const createSellerMealPlan = async (req: Request) => {
         features = [],
         mealTimings = [],
         status = "Live",
-        allowCancel = true,
+        allowCancel = false,
         pauseBillingPeriod = "Monthly",
     } = body;
 
@@ -273,7 +273,7 @@ export const createSellerMealPlan = async (req: Request) => {
             features: JSON.stringify(Array.isArray(features) ? features : []),
             mealTimings: JSON.stringify(Array.isArray(mealTimings) ? mealTimings : []),
             status: status || "Live",
-            allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : true,
+            allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : false,
             pauseBillingPeriod: pauseBillingPeriod || "Monthly",
         }
     });
