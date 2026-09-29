@@ -61,10 +61,10 @@ export const authConfig: NextAuthConfig = {
 
                 // ── OTP-based login (phone + OTP) ──
                 if (loginType === "OTP_USER") {
-                    const phone = (credentials?.phone as string || "").replace(/\D/g, "");
+                    const rawPhone = (credentials?.phone as string || "").replace(/\D/g, "");
                     const otp = (credentials?.otp as string || "").trim();
 
-                    if (!phone || phone.length < 10) {
+                    if (!rawPhone || rawPhone.length < 10) {
                         throw new CustomAuthError("INVALID_PHONE");
                     }
                     if (!otp) {
@@ -74,17 +74,22 @@ export const authConfig: NextAuthConfig = {
                     // Master OTP for development
                     const MASTER_OTP = "123456";
                     if (otp !== MASTER_OTP) {
-                        console.log("Invalid OTP for phone:", phone);
+                        console.log("Invalid OTP for phone:", rawPhone);
                         throw new CustomAuthError("INVALID_OTP");
                     }
 
                     // Look up user by phone (last 10 digits)
-                    const phoneDigits = phone.length > 10 ? phone.slice(-10) : phone;
+                    const phoneDigits = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
                     console.log("OTP login attempt for phone:", phoneDigits);
 
                     const user = await db.user.findFirst({
                         where: {
-                            phone: phoneDigits,
+                            OR: [
+                                { phone: phoneDigits },
+                                { phone: `+91${phoneDigits}` },
+                                { phone: `+91 ${phoneDigits}` },
+                                { phone: { contains: phoneDigits } }
+                            ],
                             role: "USER",
                         }
                     });
@@ -94,38 +99,59 @@ export const authConfig: NextAuthConfig = {
                         throw new CustomAuthError("USER_NOT_FOUND");
                     }
 
-                    console.log("OTP login successful for:", user.email);
+                    console.log("OTP login successful for user:", user.name, "phone:", user.phone);
                     return {
                         id: user.id,
-                        email: user.email,
+                        email: user.email || "",
                         name: user.name,
                         role: user.role
                     };
                 }
 
-                // ── Email + Password login ──
-                if (!credentials?.email || !credentials?.password) return null;
+                // ── Email / Phone + Password login ──
+                const rawIdentifier = ((credentials?.email as string) || (credentials?.phone as string) || "").trim();
+                const password = credentials?.password as string;
 
-                const email = (credentials.email as string).toLowerCase();
-                console.log("Login attempt for:", email, "with loginType:", loginType);
+                if (!rawIdentifier || !password) return null;
 
-                const user = await db.user.findUnique({
-                    where: { email }
-                });
+                const cleanDigits = rawIdentifier.replace(/\D/g, "");
+                const isPhoneIdentifier = cleanDigits.length >= 10 && !rawIdentifier.includes("@");
+
+                let user = null;
+                if (isPhoneIdentifier) {
+                    const phoneDigits = cleanDigits.length > 10 ? cleanDigits.slice(-10) : cleanDigits;
+                    console.log("Login attempt with phone:", phoneDigits, "with loginType:", loginType);
+                    user = await db.user.findFirst({
+                        where: {
+                            OR: [
+                                { phone: phoneDigits },
+                                { phone: `+91${phoneDigits}` },
+                                { phone: `+91 ${phoneDigits}` },
+                                { phone: { contains: phoneDigits } }
+                            ]
+                        }
+                    });
+                } else {
+                    const email = rawIdentifier.toLowerCase();
+                    console.log("Login attempt for email:", email, "with loginType:", loginType);
+                    user = await db.user.findUnique({
+                        where: { email }
+                    });
+                }
 
                 if (!user) {
-                    console.log("User not found for email:", email);
+                    console.log("User not found for identifier:", rawIdentifier);
                     throw new CustomAuthError("USER_NOT_FOUND");
                 }
 
                 console.log("User found, checking password...");
                 const isPasswordValid = await bcrypt.compare(
-                    credentials.password as string,
+                    password,
                     user.passwordHash
                 );
 
                 if (!isPasswordValid) {
-                    console.log("Invalid password for user:", email);
+                    console.log("Invalid password for user:", rawIdentifier);
                     throw new CustomAuthError("INVALID_PASSWORD");
                 }
 
@@ -147,10 +173,10 @@ export const authConfig: NextAuthConfig = {
                     throw new CustomAuthError("ROLE_MISMATCH_DELIVERY");
                 }
 
-                console.log("Login successful for:", email);
+                console.log("Login successful for:", user.name, user.email || user.phone);
                 return {
                     id: user.id,
-                    email: user.email,
+                    email: user.email || "",
                     name: user.name,
                     role: user.role
                 };
@@ -162,7 +188,7 @@ export const authConfig: NextAuthConfig = {
             if (user) {
                 return {
                     id: user.id,
-                    email: user.email,
+                    email: user.email || "",
                     name: user.name,
                     role: user.role,
                 };
@@ -173,7 +199,7 @@ export const authConfig: NextAuthConfig = {
             if (session.user) {
                 session.user.role = token.role as string;
                 session.user.id = token.id as string;
-                session.user.email = token.email as string;
+                session.user.email = (token.email as string) || "";
                 session.user.name = token.name as string;
             }
             return session;

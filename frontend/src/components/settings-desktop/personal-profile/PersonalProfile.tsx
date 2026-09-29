@@ -33,8 +33,8 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
   fullName: customFullName,
   email: customEmail,
   phone: customPhone,
-  dob = "15 / 08 / 1995",
-  gender = "Male",
+  dob = "",
+  gender = "",
   onEdit,
 }) => {
   const router = useRouter();
