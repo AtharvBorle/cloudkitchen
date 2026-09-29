@@ -23,6 +23,7 @@ import {
     ArrowLeft
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
 
 interface Message {
     id: string;
@@ -625,7 +626,7 @@ export default function ChatbotWidget() {
                             text: "You don't have any active delivery orders right now. Once you place an order, live tracking details will appear here!",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -764,7 +765,7 @@ export default function ChatbotWidget() {
                             text: "You don't have any previous or active orders on your account. Support tickets and issue reporting are restricted to accounts with placed orders.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -932,18 +933,72 @@ export default function ChatbotWidget() {
             }
 
             else if (optionType === "show_order_options") {
-                setMessages(prev => [...prev, {
-                    id: `b_${Date.now()}`,
-                    sender: "bot",
-                    text: `Support for Order #${payload.id.slice(0, 8)} (Status: ${payload.status}):\nWhat issue are you experiencing?`,
-                    timestamp: new Date(),
-                    options: [
-                        { label: "🛵 Delivery Delay / Not Received", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Delivery Delay / Not Received", defaultDesc: `Order #${payload.id} is delayed or has not been delivered on time.` }) },
-                        { label: "🍲 Missing / Wrong Food Item", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Missing / Wrong Food Item", defaultDesc: `Items were missing or incorrect in Order #${payload.id}.` }) },
-                        { label: "💸 Refund / Cancellation Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Refund / Cancellation Request", defaultDesc: `I would like to request a cancellation/refund for Order #${payload.id}.` }) },
-                        { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                    ]
-                }]);
+                const isCancelled = payload.status === "CANCELLED";
+                const isRejected = payload.status === "REJECTED";
+                const isCancelledOrRejected = isCancelled || isRejected;
+                const isCod = payload.paymentMethod === "COD" || payload.paymentMethod === "CASH" || (!payload.isPaid && payload.paymentMethod !== "ONLINE");
+                const isDelivered = payload.status === "DELIVERED";
+
+                if (isCancelledOrRejected) {
+                    if (isCod && !payload.isPaid) {
+                        // NC-BUG-105 & NC-BUG-106: Cancelled COD order -> No payment collected, no refund applicable, no delivery tracking
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: `❌ Order #${payload.id.slice(0, 8)} was ${payload.status === "REJECTED" ? "rejected by the seller" : "cancelled"}.\n\nSince this was a Cash on Delivery (COD) order cancelled prior to payment collection, **no amount was charged and no refund is applicable**. Delivery is no longer active.`,
+                            timestamp: new Date(),
+                            options: [
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
+                                { label: "🎟️ General Order Query", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: `Order Query (#${payload.id.slice(0, 8)})`, desc: `General inquiry regarding ${payload.status.toLowerCase()} COD order #${payload.id}.` }) },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    } else {
+                        // Cancelled/Rejected online order -> Refund is automatically processed, no delivery tracking (NC-BUG-106)
+                        setMessages(prev => [...prev, {
+                            id: `b_${Date.now()}`,
+                            sender: "bot",
+                            text: `❌ Order #${payload.id.slice(0, 8)} was ${payload.status === "REJECTED" ? "rejected by the seller" : "cancelled"}.\n\nDelivery is not in progress. Your online payment of ₹${payload.totalAmount} is being processed back to your original payment method (typically 24-48 business hours).`,
+                            timestamp: new Date(),
+                            options: [
+                                { label: "💸 Check Refund Status", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Refund Status Inquiry", defaultDesc: `Inquiry regarding refund status for ${payload.status.toLowerCase()} online order #${payload.id} (Amount: ₹${payload.totalAmount}).` }) },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
+                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                            ]
+                        }]);
+                    }
+                } else if (isDelivered) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: `Support for delivered Order #${payload.id.slice(0, 8)}:\nWhat issue are you experiencing?`,
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🍲 Missing / Wrong Food Item", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Missing / Wrong Food Item", defaultDesc: `Items were missing or incorrect in Order #${payload.id}.` }) },
+                            ...(payload.isPaid ? [
+                                { label: "💸 Food Quality / Refund Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Food Quality / Refund Request", defaultDesc: `I am requesting a refund or compensation for delivered Order #${payload.id} due to food quality or missing items.` }) }
+                            ] : []),
+                            { label: "🍕 Reorder / Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                } else {
+                    // Active order (PENDING, ACCEPTED, PREPARING, OUT_FOR_DELIVERY)
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: `Support for active Order #${payload.id.slice(0, 8)} (Status: ${payload.status}):\nWhat issue are you experiencing?`,
+                        timestamp: new Date(),
+                        options: [
+                            { label: "🛵 Delivery Delay / Not Received", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Delivery Delay / Not Received", defaultDesc: `Order #${payload.id} is delayed or has not been delivered on time.` }) },
+                            { label: "🍲 Missing / Wrong Food Item", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Missing / Wrong Food Item", defaultDesc: `Items were missing or incorrect in Order #${payload.id}.` }) },
+                            (isCod && !payload.isPaid)
+                                ? { label: "❌ Cancel Order Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Cancel Order Request", defaultDesc: `I would like to cancel active COD Order #${payload.id}.` }) }
+                                : { label: "💸 Refund / Cancellation Request", action: () => handleSelectOption("select_order_issue", { orderId: payload.id, issueLabel: "Refund / Cancellation Request", defaultDesc: `I would like to request a cancellation/refund for Order #${payload.id}.` }) },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                }
             }
 
             else if (optionType === "show_booking_options") {
@@ -1026,7 +1081,7 @@ export default function ChatbotWidget() {
                             timestamp: new Date(),
                             options: [
                                 { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -1041,7 +1096,7 @@ export default function ChatbotWidget() {
                             text: "You do not have any previous or active orders. The support ticket system is only available for users who have placed an order. Please place an order first before raising a ticket.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -1100,7 +1155,7 @@ export default function ChatbotWidget() {
                             timestamp: new Date(),
                             options: [
                                 { label: "🔑 Log In", action: () => { toggleOpen(false); router.push("/login"); } },
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -1115,7 +1170,7 @@ export default function ChatbotWidget() {
                             text: "You do not have any previous or active orders. The support ticket system is only available for users who have placed an order. Please place an order first before raising a ticket.",
                             timestamp: new Date(),
                             options: [
-                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/explore-desktop"); } },
+                                { label: "🍕 Browse Food Menu", action: () => { toggleOpen(false); router.push("/food-explore"); } },
                                 { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                             ]
                         }]);
@@ -1267,7 +1322,7 @@ export default function ChatbotWidget() {
                     ];
                 }
                 else if (normalizedText.includes("food") || normalizedText.includes("order") || normalizedText.includes("item") || normalizedText.includes("dish") || normalizedText.includes("delivery") || normalizedText.includes("menu") || normalizedText.includes("buy")) {
-                    replyText = "To order delicious food, browse our active cloud kitchens at our [Explore Food](/explore-desktop) page. You can add items to your cart, set your delivery address, and proceed to checkout.\n\nIf you want to track a recent order or report missing/incorrect food items, select below:";
+                    replyText = "To order delicious food, browse our active cloud kitchens at our [Explore Food](/food-explore) page. You can add items to your cart, set your delivery address, and proceed to checkout.\n\nIf you want to track a recent order or report missing/incorrect food items, select below:";
                     generatedOptions = [
                         { label: "📦 Select recent order", action: () => handleSelectOption("orders") },
                         { label: "🎟️ Raise order support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "FOOD", title: "Food order assistance request", desc: "I need help with my food order delivery or quality." }) },
@@ -1965,7 +2020,7 @@ Details: Category request submitted via chatbot assistant.`;
                                         border: msg.sender === "bot" ? "1.5px solid #FDE8E1" : "none",
                                         whiteSpace: "pre-line"
                                     }}>
-                                        {renderMessageText(msg.text)}
+                                        <TicketAttachmentRenderer content={msg.text} isCurrentUser={msg.sender === "user"} />
                                         {msg.isTicketSuccess && msg.ticketId && (
                                             <div style={{ marginTop: "10px", borderTop: "1.5px solid #FDE8E1", paddingTop: "8px" }}>
                                                 <Link
@@ -2358,7 +2413,7 @@ Details: Category request submitted via chatbot assistant.`;
                         <button
                             onClick={() => {
                                 toggleOpen(false);
-                                router.push("/explore-desktop");
+                                router.push("/food-explore");
                             }}
                             style={{
                                 padding: "5px 12px",
@@ -2402,28 +2457,50 @@ Details: Category request submitted via chatbot assistant.`;
                         <input
                             type="file"
                             ref={fileInputRef}
+                            accept="image/*,.pdf,.doc,.docx"
                             style={{ display: "none" }}
                             onChange={(e) => {
                                 if (e.target.files && e.target.files[0]) {
                                     const file = e.target.files[0];
-                                    setMessages(prev => [...prev, {
-                                        id: `u_${Date.now()}`,
-                                        sender: "user",
-                                        text: `📎 Attached file: ${file.name}`,
-                                        timestamp: new Date()
-                                    }]);
-                                    showTypingIndicator(() => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                        const dataUrl = reader.result as string;
+                                        const isImg = file.type.startsWith("image/");
+                                        const attachmentPayload = isImg 
+                                            ? `![${file.name}](${dataUrl})\n📎 Attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`
+                                            : `📎 Attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                                        
+                                        const ticketDescPayload = isImg
+                                            ? `User attached image file: ${file.name}\n\n![${file.name}](${dataUrl})`
+                                            : `User attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+
                                         setMessages(prev => [...prev, {
-                                            id: `b_${Date.now()}`,
-                                            sender: "bot",
-                                            text: `Received file "${file.name}". Would you like to log this file with a support ticket?`,
-                                            timestamp: new Date(),
-                                            options: [
-                                                { label: "🎟️ Submit Ticket with Attachment", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: `Attachment Query: ${file.name}`, desc: `User attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)` }) },
-                                                { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
-                                            ]
+                                            id: `u_${Date.now()}`,
+                                            sender: "user",
+                                            text: attachmentPayload,
+                                            timestamp: new Date()
                                         }]);
-                                    });
+                                        showTypingIndicator(() => {
+                                            setMessages(prev => [...prev, {
+                                                id: `b_${Date.now()}`,
+                                                sender: "bot",
+                                                text: `Received attachment "${file.name}". Would you like to submit a support ticket with this attachment?`,
+                                                timestamp: new Date(),
+                                                options: [
+                                                    { 
+                                                        label: "🎟️ Submit Ticket with Attachment", 
+                                                        action: () => handleSelectOption("custom_ticket_prefilled", { 
+                                                            category: "OTHER", 
+                                                            title: `Attachment Query: ${file.name}`, 
+                                                            desc: ticketDescPayload 
+                                                        }) 
+                                                    },
+                                                    { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                                                ]
+                                            }]);
+                                        });
+                                    };
+                                    reader.readAsDataURL(file);
                                 }
                             }}
                         />

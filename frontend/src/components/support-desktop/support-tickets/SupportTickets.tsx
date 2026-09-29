@@ -19,7 +19,9 @@ import {
   X,
   ArrowLeft,
   Headphones,
+  Paperclip,
 } from "lucide-react";
+import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
 import styles from "./SupportTickets.module.css";
 
 interface TicketMessage {
@@ -65,6 +67,8 @@ export const SupportTickets: React.FC = () => {
   const [replyText, setReplyText] = useState<string>("");
   const [submittingReply, setSubmittingReply] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const replyFileInputRef = useRef<HTMLInputElement>(null);
+  const createFileInputRef = useRef<HTMLInputElement>(null);
 
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
@@ -624,7 +628,9 @@ export const SupportTickets: React.FC = () => {
                     </div>
                     <span>{formatDate(selectedTicket.createdAt)}</span>
                   </div>
-                  <p className={styles.issueDesc}>{selectedTicket.description}</p>
+                  <div className={styles.issueDesc}>
+                    <TicketAttachmentRenderer content={selectedTicket.description} isCurrentUser={false} />
+                  </div>
                 </div>
 
                 {/* Follow-up Message Thread */}
@@ -637,7 +643,9 @@ export const SupportTickets: React.FC = () => {
 
                     return isUserMessage ? (
                       <div key={m.id} className={styles.userBubble}>
-                        <p className={styles.userBubbleText}>{m.message}</p>
+                        <div className={styles.userBubbleText}>
+                          <TicketAttachmentRenderer content={m.message} isCurrentUser={true} />
+                        </div>
                         <span className={styles.userBubbleTime}>{formatDate(m.createdAt)}</span>
                       </div>
                     ) : (
@@ -646,7 +654,9 @@ export const SupportTickets: React.FC = () => {
                           <ShieldCheck size={14} />
                           <span>{m.senderName || m.sender?.name || "Support Team Specialist"}</span>
                         </div>
-                        <p className={styles.agentBubbleText}>{m.message}</p>
+                        <div className={styles.agentBubbleText}>
+                          <TicketAttachmentRenderer content={m.message} isCurrentUser={false} />
+                        </div>
                         <span className={styles.agentBubbleTime}>{formatDate(m.createdAt)}</span>
                       </div>
                     );
@@ -672,6 +682,42 @@ export const SupportTickets: React.FC = () => {
               {/* Bottom Reply Box / Resolved State Card */}
               {selectedTicket.status === "OPEN" || selectedTicket.status === "IN_PROGRESS" ? (
                 <form onSubmit={handleSendReply} className={styles.replyBar}>
+                  <input
+                    type="file"
+                    ref={replyFileInputRef}
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const dataUrl = reader.result as string;
+                          setReplyText(prev => (prev ? `${prev}\n\n![${file.name}](${dataUrl})` : `![${file.name}](${dataUrl})`));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => replyFileInputRef.current?.click()}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#64748B",
+                      cursor: "pointer",
+                      padding: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "8px",
+                      transition: "all 0.15s ease",
+                    }}
+                    title="Attach screenshot/image"
+                  >
+                    <Paperclip size={18} />
+                  </button>
                   <textarea
                     rows={1}
                     placeholder="Type your reply to the support team..."
@@ -795,7 +841,44 @@ export const SupportTickets: React.FC = () => {
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>DETAILED DESCRIPTION</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label className={styles.formLabel}>DETAILED DESCRIPTION</label>
+                  <input
+                    type="file"
+                    ref={createFileInputRef}
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const dataUrl = reader.result as string;
+                          setNewDescription(prev => (prev ? `${prev}\n\n![${file.name}](${dataUrl})` : `![${file.name}](${dataUrl})`));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => createFileInputRef.current?.click()}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#FF5500",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <Paperclip size={13} />
+                    <span>Attach Image</span>
+                  </button>
+                </div>
                 <textarea
                   rows={4}
                   placeholder="Please describe your query or issue with as much detail as possible..."
