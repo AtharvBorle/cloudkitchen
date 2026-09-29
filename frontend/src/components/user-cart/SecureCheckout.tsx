@@ -1801,35 +1801,12 @@ const loadRazorpayScript = (): Promise<boolean> => {
                             Pin Precise Delivery Location
                           </div>
                           <div style={{ fontSize: "0.78rem", color: "#64748B" }}>
-                            Pin on map or use current GPS to auto-fill street address
+                            Use current GPS to auto-fill street address
                           </div>
                         </div>
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={() => openLocationModal()}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 14px",
-                            backgroundColor: "#FFFFFF",
-                            border: "1px solid #CBD5E1",
-                            borderRadius: "8px",
-                            fontSize: "0.82rem",
-                            fontWeight: "700",
-                            color: "#0F172A",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                          }}
-                        >
-                          <MapPin size={14} color="#EA580C" />
-                          <span>📍 Pin on Map</span>
-                        </button>
-
                         <button
                           type="button"
                           onClick={async () => {
@@ -1838,7 +1815,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                               if (ok) {
                                 showToast("Current GPS location detected!", "success");
                               } else {
-                                showToast("Could not detect GPS location. Please check browser permissions or pin on map.", "warning");
+                                showToast("Could not detect GPS location. Please check browser permissions.", "warning");
                               }
                             }
                           }}
