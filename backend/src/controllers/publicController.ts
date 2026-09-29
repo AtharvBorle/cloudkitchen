@@ -320,13 +320,53 @@ export const validateCouponForCart = async (req: Request) => {
     }
 
     // Check seller store restriction
-    if (coupon.appliesToSellerId && sellerId && coupon.appliesToSellerId !== sellerId) {
-        const seller = await prisma.sellerProfile.findUnique({
-            where: { id: coupon.appliesToSellerId },
-            select: { businessName: true }
+    if (coupon.appliesToSellerId) {
+        const couponSeller = await prisma.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { id: coupon.appliesToSellerId },
+                    { trackingId: coupon.appliesToSellerId }
+                ]
+            },
+            select: { id: true, businessName: true }
         });
-        const storeName = seller?.businessName ? ` from "${seller.businessName}"` : " from its specific store";
-        throw new ApiError(`Coupon "${coupon.code}" is only valid for items${storeName}.`, 400);
+
+        // Resolve cart's seller
+        let cartSeller: { id: string; businessName: string } | null = null;
+        if (sellerId && sellerId !== "seller" && sellerId !== "k-1") {
+            cartSeller = await prisma.sellerProfile.findFirst({
+                where: {
+                    OR: [
+                        { id: sellerId },
+                        { trackingId: sellerId }
+                    ]
+                },
+                select: { id: true, businessName: true }
+            });
+        }
+
+        // If cartSeller not found yet, check from cart items
+        if (!cartSeller && Array.isArray(items) && items.length > 0) {
+            const firstItemId = items[0].foodItemId || items[0].id;
+            if (firstItemId) {
+                const fi = await prisma.foodItem.findUnique({
+                    where: { id: firstItemId },
+                    include: { seller: { select: { id: true, businessName: true } } }
+                });
+                if (fi?.seller) cartSeller = fi.seller;
+            }
+        }
+
+        const couponKitchenName = couponSeller?.businessName ? `"${couponSeller.businessName}"` : "its specific kitchen";
+        const cartKitchenName = cartSeller?.businessName ? `"${cartSeller.businessName}"` : "another kitchen";
+
+        if (cartSeller && couponSeller && cartSeller.id !== couponSeller.id) {
+            throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
+        }
+
+        if (sellerId && sellerId !== "seller" && couponSeller && sellerId !== couponSeller.id) {
+            throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
+        }
     }
 
     // Check minimum cart value

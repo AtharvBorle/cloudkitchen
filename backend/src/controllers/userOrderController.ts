@@ -192,8 +192,14 @@ export const createOrder = async (req: Request) => {
         }
 
         // Seller match check
-        if (validatedCoupon.appliesToSellerId && validatedCoupon.appliesToSellerId !== sellerProfile.id) {
-            throw new ApiError("This coupon is not valid for this store", 400);
+        if (validatedCoupon.appliesToSellerId && validatedCoupon.appliesToSellerId !== sellerProfile.id && validatedCoupon.appliesToSellerId !== sellerProfile.trackingId) {
+            const couponSeller = await db.sellerProfile.findFirst({
+                where: { OR: [{ id: validatedCoupon.appliesToSellerId }, { trackingId: validatedCoupon.appliesToSellerId }] },
+                select: { businessName: true }
+            });
+            const couponKitchenName = couponSeller?.businessName ? `"${couponSeller.businessName}"` : "its specific kitchen";
+            const currentKitchenName = sellerProfile.businessName ? `"${sellerProfile.businessName}"` : "this kitchen";
+            throw new ApiError(`Coupon "${validatedCoupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to ${currentKitchenName}.`, 400);
         }
 
         // Specific Item check

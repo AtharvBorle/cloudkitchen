@@ -422,6 +422,14 @@ export const UserCart: React.FC<UserCartProps> = ({
     }
   };
 
+  const handleRemovePromo = () => {
+    setAppliedCoupon(null);
+    setAppliedPromo(null);
+    setDiscountPercent(0);
+    setPromoCode("");
+    showToast("Coupon removed");
+  };
+
   // Price Calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
@@ -802,23 +810,63 @@ export const UserCart: React.FC<UserCartProps> = ({
                   type="text"
                   placeholder="Enter promo code"
                   value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleApplyPromo();
+                      if (appliedCoupon) {
+                        handleRemovePromo();
+                      } else {
+                        handleApplyPromo();
+                      }
                     }
                   }}
                   className={styles.promoInput}
+                  disabled={appliedCoupon !== null}
                 />
               </div>
-              <button
-                type="button"
-                className={styles.applyButton}
-                onClick={handleApplyPromo}
-              >
-                Apply
-              </button>
+              {appliedCoupon ? (
+                <button
+                  type="button"
+                  className={styles.applyButton}
+                  style={{ backgroundColor: "#EF4444", borderColor: "#EF4444", color: "#FFFFFF" }}
+                  onClick={handleRemovePromo}
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.applyButton}
+                  onClick={handleApplyPromo}
+                  disabled={isValidatingPromo || !promoCode.trim()}
+                >
+                  {isValidatingPromo ? "..." : "Apply"}
+                </button>
+              )}
             </div>
+
+            {appliedCoupon && (
+              <div style={{
+                marginTop: "10px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#F0FDF4",
+                border: "1px solid #BBF7D0",
+                borderRadius: "10px",
+                padding: "10px 14px",
+                fontSize: "13px",
+                color: "#166534",
+                fontWeight: 600,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>✓</span>
+                  <span>Coupon <strong>{appliedCoupon.code}</strong> applied ({appliedCoupon.discountLabel || `${appliedCoupon.discountPercentage}% OFF`})</span>
+                </div>
+                <span style={{ color: "#15803D", fontWeight: 700 }}>-₹{discountAmount}</span>
+              </div>
+            )}
 
             {/* 2. Order Summary Card */}
             <div className={styles.summaryCard}>
@@ -858,7 +906,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                 {discountAmount > 0 && (
                   <div className={styles.pricingRow}>
                     <span className={styles.discountValue}>
-                      Discount ({discountPercent}%)
+                      Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})
                     </span>
                     <span className={styles.discountValue}>
                       - ₹{discountAmount.toLocaleString("en-IN")}
