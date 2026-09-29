@@ -10,11 +10,13 @@ import {
   CheckCircle2, 
   AlertCircle,
   ArrowRight,
-  ShoppingBag
+  ShoppingBag,
+  RotateCcw,
+  Loader2
 } from "lucide-react";
 import styles from "./ReorderModal.module.css";
 
-export type ReorderModalType = "OFFLINE" | "ALL_UNAVAILABLE" | "PARTIAL" | "CART_CONFLICT" | "ERROR";
+export type ReorderModalType = "CONFIRM" | "OFFLINE" | "ALL_UNAVAILABLE" | "PARTIAL" | "CART_CONFLICT" | "ERROR";
 
 export interface ReorderItemInfo {
   id?: string;
@@ -35,6 +37,8 @@ export interface ReorderModalProps {
   availableItems?: ReorderItemInfo[];
   unavailableItems?: ReorderItemInfo[];
   errorMessage?: string;
+  isLoading?: boolean;
+  onConfirmReorder?: () => void;
   onConfirmClearAndReorder?: () => void;
   onConfirmPartialReorder?: () => void;
   onExploreOtherKitchens?: () => void;
@@ -51,6 +55,8 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
   availableItems = [],
   unavailableItems = [],
   errorMessage,
+  isLoading = false,
+  onConfirmReorder,
   onConfirmClearAndReorder,
   onConfirmPartialReorder,
   onExploreOtherKitchens,
@@ -75,6 +81,11 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
         {/* ================= HEADER ================= */}
         <div className={styles.modalHeader}>
           <div className={styles.headerLeft}>
+            {type === "CONFIRM" && (
+              <div className={`${styles.iconCircle} ${styles.iconConfirm}`}>
+                <RotateCcw size={24} />
+              </div>
+            )}
             {type === "OFFLINE" && (
               <div className={`${styles.iconCircle} ${styles.iconOffline}`}>
                 <Store size={24} />
@@ -103,6 +114,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
 
             <div className={styles.headerTitles}>
               <h3 className={styles.modalTitle}>
+                {type === "CONFIRM" && "Confirm Reorder"}
                 {type === "OFFLINE" && "Kitchen is Offline"}
                 {type === "ALL_UNAVAILABLE" && "Items Currently Unavailable"}
                 {type === "PARTIAL" && "Some Items Unavailable"}
@@ -110,6 +122,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                 {type === "ERROR" && "Unable to Process Reorder"}
               </h3>
               <p className={styles.modalSubtitle}>
+                {type === "CONFIRM" && (sellerName ? `${sellerName} • Reorder Items` : "Reorder Items")}
                 {type === "OFFLINE" && sellerName}
                 {type === "ALL_UNAVAILABLE" && `${sellerName} • Reorder Update`}
                 {type === "PARTIAL" && `${sellerName} • Partial Availability`}
@@ -131,6 +144,46 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
 
         {/* ================= BODY ================= */}
         <div className={styles.modalBody}>
+          {/* CONFIRMATION VIEW */}
+          {type === "CONFIRM" && (
+            <>
+              <div className={styles.confirmNotice}>
+                <p className={styles.confirmQuestion}>
+                  Do you want to reorder these items?
+                </p>
+                <p className={styles.confirmSubtext}>
+                  {availableItems.length > 0
+                    ? `Live stock and kitchen availability will be validated for ${availableItems.length} item(s) from ${sellerName}.`
+                    : `Live stock and kitchen availability will be validated before adding items to your cart.`}
+                </p>
+              </div>
+
+              {availableItems.length > 0 && (
+                <div className={styles.sectionBlock}>
+                  <div className={`${styles.sectionHeader} ${styles.sectionHeaderAvailable}`}>
+                    <span>Items to Reorder ({availableItems.length})</span>
+                  </div>
+                  <div className={styles.itemList}>
+                    {availableItems.map((item, idx) => (
+                      <div key={idx} className={`${styles.itemCard} ${styles.itemCardAvailable}`}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>{item.name}</span>
+                          {item.warning && <span className={styles.itemWarning}>{item.warning}</span>}
+                        </div>
+                        <div className={styles.itemMeta}>
+                          <span style={{ color: "#64748b" }}>Qty: {item.quantity || 1}</span>
+                          {item.price !== undefined && item.price > 0 && (
+                            <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {/* OFFLINE VIEW */}
           {type === "OFFLINE" && (
             <>
@@ -263,6 +316,39 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
 
         {/* ================= FOOTER ================= */}
         <div className={styles.modalFooter}>
+          {type === "CONFIRM" && (
+            <>
+              <button
+                type="button"
+                className={styles.btnCancel}
+                onClick={onClose}
+                disabled={isLoading}
+              >
+                No, Cancel
+              </button>
+              {onConfirmReorder && (
+                <button
+                  type="button"
+                  className={styles.btnPrimary}
+                  onClick={onConfirmReorder}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className={styles.spinner} />
+                      <span>Validating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw size={16} />
+                      <span>Yes, Reorder</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </>
+          )}
+
           {type === "OFFLINE" && (
             <>
               <button type="button" className={styles.btnCancel} onClick={onClose}>

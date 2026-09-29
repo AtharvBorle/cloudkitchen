@@ -146,6 +146,7 @@ export default function OrderHistoryDesktopPage() {
   const [liveOrders, setLiveOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
+  const [pendingOrderIdForReorder, setPendingOrderIdForReorder] = useState<string | null>(null);
 
   // Modal State for Alerts and Confirmation Popups
   const [modalState, setModalState] = useState<{
@@ -330,7 +331,38 @@ export default function OrderHistoryDesktopPage() {
     router.push(`/order-confirmation?orderId=${orderId}`);
   };
 
-  const handleReorderMeal = async (orderId: string) => {
+  const handleReorderMeal = (orderId: string) => {
+    const order = formattedOrders.find((o) => o.id === orderId);
+    const rawItems = order?.rawItems || [];
+    const items: ReorderItemInfo[] = rawItems.length > 0
+      ? rawItems.map((item: any) => ({
+          id: item.foodItemId || item.id,
+          name: item.name || item.title || "Food Item",
+          quantity: item.quantity || item.qty || 1,
+          price: item.price,
+        }))
+      : [
+          {
+            name: order?.itemsOrdered || "Delicious Meal",
+            quantity: 1,
+            price: order?.totalAmount,
+          },
+        ];
+
+    setPendingOrderIdForReorder(orderId);
+    setModalState({
+      isOpen: true,
+      type: "CONFIRM",
+      sellerName: order?.restaurantName || "Cloud Kitchen",
+      sellerId: order?.sellerId,
+      availableItems: items,
+    });
+  };
+
+  const handleExecuteReorderMeal = async () => {
+    if (!pendingOrderIdForReorder) return;
+    const orderId = pendingOrderIdForReorder;
+
     setReorderingOrderId(orderId);
     try {
       const res = await fetchApi("/api/user/orders/validate-reorder", {
@@ -404,6 +436,7 @@ export default function OrderHistoryDesktopPage() {
       }
 
       // Everything is clear: Add items to cart and redirect to /cart
+      setModalState((prev) => ({ ...prev, isOpen: false }));
       addMultipleToCart(data.availableItems, false);
       router.push("/cart");
     } catch (err: any) {
@@ -560,6 +593,8 @@ export default function OrderHistoryDesktopPage() {
         availableItems={modalState.availableItems}
         unavailableItems={modalState.unavailableItems}
         errorMessage={modalState.errorMessage}
+        isLoading={Boolean(reorderingOrderId)}
+        onConfirmReorder={handleExecuteReorderMeal}
         onConfirmClearAndReorder={handleConfirmClearAndReorder}
         onConfirmPartialReorder={handleConfirmPartialReorder}
         onExploreOtherKitchens={handleExploreOtherKitchens}

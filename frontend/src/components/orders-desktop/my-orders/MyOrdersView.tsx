@@ -351,6 +351,9 @@ export default function MyOrdersView() {
     type: "ERROR",
   });
 
+  const [pendingOrderForReorder, setPendingOrderForReorder] = useState<OrderItemData | null>(null);
+  const [isReorderValidating, setIsReorderValidating] = useState(false);
+
   const [mainCategory, setMainCategory] = useState<MainCategory>(initialTab);
   const [orders, setOrders] = useState<OrderItemData[]>([]);
   const [bookings, setBookings] = useState<RoomBookingData[]>([]);
@@ -492,7 +495,38 @@ export default function MyOrdersView() {
     setIsSidebarOpen(true);
   };
 
-  const handleReorder = async (order: OrderItemData) => {
+  const handleReorder = (order: OrderItemData) => {
+    const rawItems = order.rawItems || [];
+    const items: ReorderItemInfo[] = rawItems.length > 0
+      ? rawItems.map((item: any) => ({
+          id: item.foodItemId || item.id,
+          name: item.name || "Food Item",
+          quantity: item.quantity || item.qty || 1,
+          price: item.price,
+        }))
+      : [
+          {
+            name: order.itemSummary || order.itemsDetail || "Delicious Meal",
+            quantity: 1,
+            price: order.price || order.billBreakdown?.totalPaid || 0,
+          },
+        ];
+
+    setPendingOrderForReorder(order);
+    setModalState({
+      isOpen: true,
+      type: "CONFIRM",
+      sellerName: order.vendorName,
+      sellerId: order.vendorName,
+      availableItems: items,
+    });
+  };
+
+  const handleExecuteReorder = async () => {
+    if (!pendingOrderForReorder) return;
+    const order = pendingOrderForReorder;
+
+    setIsReorderValidating(true);
     try {
       const res = await fetchApi("/api/user/orders/validate-reorder", {
         method: "POST",
@@ -565,12 +599,14 @@ export default function MyOrdersView() {
       }
 
       // Everything is clear: Add items to cart and redirect to /cart
+      setModalState((prev) => ({ ...prev, isOpen: false }));
       addMultipleToCart(data.availableItems, false);
       router.push("/cart");
     } catch (err: any) {
       console.error("Reorder error:", err);
       // Fallback
       if (order.rawItems && order.rawItems.length > 0) {
+        setModalState((prev) => ({ ...prev, isOpen: false }));
         addMultipleToCart(
           order.rawItems.map((item) => ({
             id: item.id || `reorder-${item.name}`,
@@ -587,8 +623,11 @@ export default function MyOrdersView() {
         );
         router.push("/cart");
       } else {
+        setModalState((prev) => ({ ...prev, isOpen: false }));
         router.push("/explore-desktop");
       }
+    } finally {
+      setIsReorderValidating(false);
     }
   };
 
@@ -1958,6 +1997,8 @@ export default function MyOrdersView() {
         availableItems={modalState.availableItems}
         unavailableItems={modalState.unavailableItems}
         errorMessage={modalState.errorMessage}
+        isLoading={isReorderValidating}
+        onConfirmReorder={handleExecuteReorder}
         onConfirmClearAndReorder={handleConfirmClearAndReorder}
         onConfirmPartialReorder={handleConfirmPartialReorder}
         onExploreOtherKitchens={handleExploreOtherKitchens}
