@@ -108,7 +108,7 @@ function isKitchenMatchingPrice(
   maxPrice: number,
   foodItems: Array<any> = []
 ): boolean {
-  if (pricePreset === "all" && maxPrice >= 1000) {
+  if (pricePreset === "all" && maxPrice >= 2500) {
     return true;
   }
 
@@ -129,7 +129,7 @@ function isKitchenMatchingPrice(
     return prices.some((p) => p >= 150 && p <= 400);
   } else if (pricePreset === "400-plus") {
     return prices.some((p) => p >= 400);
-  } else if (maxPrice < 1000) {
+  } else if (maxPrice < 2500) {
     return prices.some((p) => p <= maxPrice);
   }
 
@@ -161,7 +161,7 @@ interface PropertiesProps {
 export default function Properties({ places, foodItems = [] }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [maxPrice, setMaxPrice] = useState<number>(1000);
+  const [maxPrice, setMaxPrice] = useState<number>(2500);
   const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
   const basePlaces = places || [];
@@ -253,7 +253,7 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
   const handleClearAll = () => {
     setSelectedCuisines([]);
     setSelectedDietary([]);
-    setMaxPrice(1000);
+    setMaxPrice(2500);
     setActivePricePreset("all");
   };
 
@@ -528,8 +528,8 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                   ? "₹150 – ₹400"
                   : activePricePreset === "400-plus"
                   ? "₹400+"
-                  : maxPrice >= 1000
-                  ? "₹0 – ₹1000+"
+                  : maxPrice >= 2500
+                  ? "₹0 – ₹2500+"
                   : `Up to ₹${maxPrice}`}
               </span>
             </div>
@@ -539,9 +539,9 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
               <input
                 type="range"
                 min="0"
-                max="1000"
-                step="10"
-                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-400" ? 400 : 1000) : maxPrice}
+                max="2500"
+                step="25"
+                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-400" ? 400 : 2500) : maxPrice}
                 onChange={(e) => {
                   setMaxPrice(Number(e.target.value));
                   setActivePricePreset("custom");
@@ -554,8 +554,8 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: "#94A3B8", fontWeight: "600" }}>
                 <span>₹0</span>
-                <span>₹500</span>
-                <span>₹1000+</span>
+                <span>₹1250</span>
+                <span>₹2500+</span>
               </div>
             </div>
 
@@ -575,13 +575,13 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                     onClick={() => {
                       if (isSelected) {
                         setActivePricePreset("all");
-                        setMaxPrice(1000);
+                        setMaxPrice(2500);
                       } else {
                         setActivePricePreset(tier.id);
                         if (tier.id === "under-150") setMaxPrice(150);
                         else if (tier.id === "150-400") setMaxPrice(400);
-                        else if (tier.id === "400-plus") setMaxPrice(1000);
-                        else setMaxPrice(1000);
+                        else if (tier.id === "400-plus") setMaxPrice(2500);
+                        else setMaxPrice(2500);
                       }
                     }}
                     style={{
