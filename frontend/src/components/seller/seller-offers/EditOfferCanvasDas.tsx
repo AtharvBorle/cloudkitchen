@@ -184,7 +184,7 @@ function EditOfferForm({
   const [noExpiry, setNoExpiry] = useState(true);
   const [expiryDate, setExpiryDate] = useState("Runs indefinitely");
   const [perUserLimit, setPerUserLimit] = useState("1");
-  const [status, setStatus] = useState<"Active" | "Pending" | "Expired">("Active");
+  const [status, setStatus] = useState<"Active" | "Pending" | "Draft" | "Expired">("Active");
 
   const startDateRef = useRef<HTMLInputElement>(null);
   const expiryDateRef = useRef<HTMLInputElement>(null);
@@ -197,8 +197,7 @@ function EditOfferForm({
     // 1. First check local demo dictionary for immediate exact match
     const demoMatch =
       (offerId && DEMO_OFFER_DETAILS[offerId]) ||
-      (codeParam && DEMO_OFFER_DETAILS[codeParam]) ||
-      DEMO_OFFER_DETAILS["SUMMER20"];
+      (codeParam && DEMO_OFFER_DETAILS[codeParam]);
 
     if (demoMatch) {
       setCouponCode(demoMatch.code || "");
@@ -277,7 +276,15 @@ function EditOfferForm({
               setExpiryDate("Runs indefinitely");
             }
 
-            setStatus(matched.isActive ? "Active" : "Expired");
+            if (matched.approvalStatus === "DRAFT" || matched.status === "Draft" || matched.status === "DRAFT") {
+              setStatus("Draft");
+            } else if (matched.approvalStatus === "PENDING_APPROVAL" || matched.status === "Pending") {
+              setStatus("Pending");
+            } else if (matched.isActive) {
+              setStatus("Active");
+            } else {
+              setStatus("Expired");
+            }
           }
         }
       } catch (err) {
@@ -290,7 +297,7 @@ function EditOfferForm({
 
   const isFormValid = couponCode.trim().length > 0 && discountValue.trim().length > 0;
 
-  const handleUpdate = async (isDraft: boolean = false) => {
+  const handleUpdate = async (isDraft: boolean = false, targetStatus?: "Active" | "Pending" | "Draft" | "Expired") => {
     if (!couponCode.trim()) {
       alert("Please enter a valid coupon code.");
       return;
@@ -298,6 +305,7 @@ function EditOfferForm({
 
     setSubmitting(true);
     try {
+      const finalStatus: "Active" | "Pending" | "Draft" | "Expired" = targetStatus || (isDraft ? "Draft" : (status === "Draft" ? "Active" : status));
       const payload = {
         id: resolvedId || offerId,
         code: couponCode.trim().toUpperCase(),
@@ -311,7 +319,8 @@ function EditOfferForm({
         usageLimit: usageLimit ? Number(usageLimit) : null,
         perUserLimit: Number(perUserLimit) || 1,
         noExpiry: noExpiry,
-        status: isDraft ? "Pending" : status,
+        status: finalStatus,
+        isActive: finalStatus === "Active",
       };
 
       const res = await fetchApi(`/api/seller/dashboard/offers`, {
@@ -441,18 +450,24 @@ function EditOfferForm({
                     borderColor:
                       status === "Active"
                         ? "#BBF7D0"
+                        : status === "Draft"
+                        ? "#CBD5E1"
                         : status === "Pending"
                         ? "#FEF08A"
                         : "#FED7AA",
                     backgroundColor:
                       status === "Active"
                         ? "#F0FDF4"
+                        : status === "Draft"
+                        ? "#F8FAFC"
                         : status === "Pending"
                         ? "#FEFCE8"
                         : "#FFF7ED",
                     color:
                       status === "Active"
                         ? "#16A34A"
+                        : status === "Draft"
+                        ? "#64748B"
                         : status === "Pending"
                         ? "#CA8A04"
                         : "#EA580C",
@@ -464,6 +479,8 @@ function EditOfferForm({
                       backgroundColor:
                         status === "Active"
                           ? "#16A34A"
+                          : status === "Draft"
+                          ? "#64748B"
                           : status === "Pending"
                           ? "#CA8A04"
                           : "#EA580C",
@@ -472,22 +489,45 @@ function EditOfferForm({
                   <span>{status}</span>
                 </div>
                 <div className={styles.desktopActions}>
-                  <button
-                    type="button"
-                    className={styles.saveDraftBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(true)}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.publishBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(false)}
-                  >
-                    {submitting ? "Saving..." : "Update Offer"}
-                  </button>
+                  {status === "Draft" ? (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.saveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.publishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, "Active")}
+                      >
+                        {submitting ? "Publishing..." : "Publish Offer"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.saveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save as Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.publishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, status === "Pending" ? "Pending" : "Active")}
+                      >
+                        {submitting ? "Saving..." : "Update Offer"}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -983,22 +1023,45 @@ function EditOfferForm({
                 </div>
 
                 <div className={styles.mobileFormActions}>
-                  <button
-                    type="button"
-                    className={styles.mobileSaveDraftBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(true)}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.mobilePublishBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(false)}
-                  >
-                    {submitting ? "Saving..." : "Update Offer"}
-                  </button>
+                  {status === "Draft" ? (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.mobileSaveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.mobilePublishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, "Active")}
+                      >
+                        {submitting ? "Publishing..." : "Publish Offer"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.mobileSaveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save as Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.mobilePublishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, status === "Pending" ? "Pending" : "Active")}
+                      >
+                        {submitting ? "Saving..." : "Update Offer"}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

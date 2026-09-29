@@ -197,10 +197,6 @@ export const getPublicRoomAvailability = (id: string) => unstable_cache(
 
 export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
     async () => {
-        if (!sellerId) {
-            throw new Error("sellerId is required");
-        }
-
         let sellerCategory = "BOTH";
         if (sellerId) {
             const seller = await prisma.sellerProfile.findUnique({
@@ -216,9 +212,10 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         const activeCoupons = await prisma.coupon.findMany({
             where: {
                 isActive: true,
+                approvalStatus: "APPROVED",
                 OR: [
                     { appliesToSellerId: null },
-                    { appliesToSellerId: sellerId }
+                    ...(sellerId ? [{ appliesToSellerId: sellerId }] : [])
                 ],
                 AND: [
                     {
@@ -235,7 +232,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         });
 
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            return c.category === "BOTH" || c.category === sellerCategory;
+            return !c.category || c.category === "BOTH" || c.category === sellerCategory || !sellerId;
         });
 
         const safeCoupons = filteredCoupons.map((c: any) => ({

@@ -82,6 +82,7 @@ export default function DashboardBody({
       maxStock: stockLimit,
     });
     setAddedId(item.id);
+    showToast(`Added "${item.name}" to your cart!`, "success");
     setTimeout(() => setAddedId(null), 1800);
   };
 

@@ -8,6 +8,7 @@ import { useHomeData, DynamicFoodItem, DynamicKitchen } from "@/lib/useHomeData"
 import { useLocation } from "@/components/location-provider";
 import { useCart } from "@/context/CartContext";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import {
   Search,
   SlidersHorizontal,
@@ -66,6 +67,7 @@ function FoodExploreContent() {
   const [openPricePopover, setOpenPricePopover] = useState(false);
   const [openCuisinePopover, setOpenCuisinePopover] = useState(false);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
+  const [customizingDish, setCustomizingDish] = useState<DynamicFoodItem | null>(null);
 
   // Sync state if URL changes
   React.useEffect(() => {
@@ -305,6 +307,24 @@ function FoodExploreContent() {
       return;
     }
 
+    // Check if dish has configured add-ons
+    let parsedAddons: any[] = [];
+    try {
+      const raw = (dish as any).addons;
+      if (typeof raw === "string") {
+        parsedAddons = JSON.parse(raw);
+      } else if (Array.isArray(raw)) {
+        parsedAddons = raw;
+      }
+    } catch (e) {
+      parsedAddons = [];
+    }
+
+    if (parsedAddons && Array.isArray(parsedAddons) && parsedAddons.length > 0) {
+      setCustomizingDish(dish);
+      return;
+    }
+
     const existingInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
     if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
       showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${dish.name}.`, "warning");
@@ -326,6 +346,7 @@ function FoodExploreContent() {
     });
 
     setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
+    showToast(`Added "${dish.name}" to your cart!`, "success");
     setTimeout(() => {
       setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
     }, 1800);
@@ -1267,7 +1288,7 @@ function FoodExploreContent() {
                     <Link
                       key={kitchen.id}
                       href={`/shop/${kitchen.trackingId || kitchen.id}`}
-                      style={{ textDecoration: "none" }}
+                      style={{ textDecoration: "none", height: "100%", display: "flex", flexDirection: "column" }}
                     >
                       <div
                         style={{
@@ -1278,6 +1299,8 @@ function FoodExploreContent() {
                           boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
                           display: "flex",
                           flexDirection: "column",
+                          height: "100%",
+                          flex: 1,
                           transition: "all 0.25s ease",
                           cursor: "pointer",
                           opacity: isClosed ? 0.85 : 1,
@@ -1292,6 +1315,7 @@ function FoodExploreContent() {
                             position: "relative",
                             overflow: "hidden",
                             backgroundColor: "#F1F5F9",
+                            flexShrink: 0,
                           }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1331,32 +1355,36 @@ function FoodExploreContent() {
                             display: "flex",
                             flexDirection: "column",
                             gap: "8px",
+                            flex: 1,
+                            justifyContent: "space-between",
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <h3
-                              style={{
-                                fontSize: "1.1rem",
-                                fontWeight: "800",
-                                color: isClosed ? "#64748B" : "#18181B",
-                                margin: 0,
-                              }}
-                            >
-                              {kitchen.name}
-                            </h3>
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                              <Star size={14} fill={isClosed ? "#94A3B8" : "#F59E0B"} color={isClosed ? "#94A3B8" : "#F59E0B"} />
-                              <span style={{ fontWeight: "800", fontSize: "0.85rem", color: isClosed ? "#94A3B8" : "#18181B" }}>
-                                {kitchen.rating || 5.0}
-                              </span>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <h3
+                                style={{
+                                  fontSize: "1.1rem",
+                                  fontWeight: "800",
+                                  color: isClosed ? "#64748B" : "#18181B",
+                                  margin: 0,
+                                }}
+                              >
+                                {kitchen.name}
+                              </h3>
+                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Star size={14} fill={isClosed ? "#94A3B8" : "#F59E0B"} color={isClosed ? "#94A3B8" : "#F59E0B"} />
+                                <span style={{ fontWeight: "800", fontSize: "0.85rem", color: isClosed ? "#94A3B8" : "#18181B" }}>
+                                  {kitchen.rating || 5.0}
+                                </span>
+                              </div>
                             </div>
+
+                            <span style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "600", display: "block", marginTop: "4px" }}>
+                              {kitchen.category} • {kitchen.time || "20-30 min"}
+                            </span>
                           </div>
 
-                          <span style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "600" }}>
-                            {kitchen.category} • {kitchen.time || "20-30 min"}
-                          </span>
-
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "10px", borderTop: "1px solid #F1F5F9" }}>
                             <span style={{ fontSize: "0.82rem", color: "#94A3B8" }}>
                               📍 {kitchen.locality || kitchen.city || "Pune"} {kitchen.distanceText ? `(${kitchen.distanceText})` : ""}
                             </span>
@@ -1413,6 +1441,68 @@ function FoodExploreContent() {
           </div>
         )}
       </main>
+
+      {/* Addon Customization Modal */}
+      {customizingDish && (
+        <AddonCustomizationModal
+          isOpen={!!customizingDish}
+          onClose={() => setCustomizingDish(null)}
+          item={{
+            id: customizingDish.id,
+            name: customizingDish.name,
+            price: customizingDish.price,
+            basePrice: customizingDish.price,
+            description: customizingDish.description,
+            imageUrl: customizingDish.imageUrl,
+            itemType: customizingDish.itemType,
+            addons: (() => {
+              try {
+                const raw = (customizingDish as any).addons;
+                if (typeof raw === "string") return JSON.parse(raw);
+                if (Array.isArray(raw)) return raw;
+              } catch (e) {}
+              return [];
+            })(),
+          }}
+          onAddToCart={(selectedAddons) => {
+            const rawStock = (customizingDish as any).maxStock !== undefined ? (customizingDish as any).maxStock : (customizingDish as any).stockQuantity;
+            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+            const addonsSum = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+
+            addToCart({
+              id: customizingDish.id,
+              foodItemId: customizingDish.id,
+              name: customizingDish.name,
+              basePrice: customizingDish.price,
+              price: customizingDish.price + addonsSum,
+              addonsTotal: addonsSum,
+              selectedAddons: selectedAddons,
+              addons: (() => {
+                try {
+                  const raw = (customizingDish as any).addons;
+                  if (typeof raw === "string") return JSON.parse(raw);
+                  if (Array.isArray(raw)) return raw;
+                } catch (e) {}
+                return [];
+              })(),
+              quantity: 1,
+              sellerId: customizingDish.sellerId || "k-1",
+              sellerName: customizingDish.sellerName || "Verified Cloud Kitchen",
+              image: customizingDish.imageUrl || "/images/places/place-biryani.png",
+              imageUrl: customizingDish.imageUrl || "/images/places/place-biryani.png",
+              stockQuantity: stockLimit,
+              maxStock: stockLimit,
+            });
+
+            setAddedIds((prev) => ({ ...prev, [customizingDish.id]: true }));
+            showToast(`Added "${customizingDish.name}" to your cart!`, "success");
+            setCustomizingDish(null);
+            setTimeout(() => {
+              setAddedIds((prev) => ({ ...prev, [customizingDish.id]: false }));
+            }, 1800);
+          }}
+        />
+      )}
 
       {/* Footer */}
       <Footer />
