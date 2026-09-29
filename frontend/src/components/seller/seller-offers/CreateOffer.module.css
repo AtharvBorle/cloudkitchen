@@ -309,7 +309,8 @@
   position: absolute;
   right: 12px;
   color: #94A3B8;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
   display: flex;
   align-items: center;
 }

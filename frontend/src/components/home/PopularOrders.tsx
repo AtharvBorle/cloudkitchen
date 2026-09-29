@@ -36,7 +36,7 @@ export default function PopularOrders({
   offers,
 }: PopularOrdersProps) {
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart, showToast, cartItems } = useCart();
   const [activeSeller, setActiveSeller] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -73,10 +73,28 @@ export default function PopularOrders({
   const [addedId, setAddedId] = useState<string | null>(null);
 
   const handleOrderNow = (offer: OfferCardData) => {
-    if (offer.sellerIsOnline === false || offer.isAvailable === false) return;
+    if (offer.sellerIsOnline === false) {
+      showToast(`Sorry, "${offer.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
+      return;
+    }
+    if (offer.isAvailable === false) {
+      showToast(`Sorry, "${offer.title}" is currently unavailable.`, "warning");
+      return;
+    }
 
     const rawStock = (offer as any).maxStock !== undefined ? (offer as any).maxStock : (offer as any).stockQuantity;
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
+    if (stockLimit === 0) {
+      showToast(`Sorry, "${offer.title}" is currently out of stock.`, "warning");
+      return;
+    }
+
+    const existingInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
+    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
+      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${offer.title}.`, "warning");
+      return;
+    }
 
     addToCart({
       id: offer.id,
@@ -312,7 +330,6 @@ export default function PopularOrders({
               <button
                 type="button"
                 onClick={() => handleOrderNow(offer)}
-                disabled={isClosed}
                 style={{
                   marginTop: "auto",
                   backgroundColor: isClosed
@@ -320,16 +337,17 @@ export default function PopularOrders({
                     : addedId === offer.id
                     ? "#10B981"
                     : "#FF6B00",
-                  color: isClosed ? "#94A3B8" : "#FFFFFF",
-                  border: isClosed ? "1px solid #E2E8F0" : "none",
+                  color: isClosed ? "#64748B" : "#FFFFFF",
+                  border: isClosed ? "1px solid #CBD5E1" : "none",
                   borderRadius: "12px",
                   padding: "10px",
                   fontSize: "0.92rem",
                   fontWeight: "700",
-                  cursor: isClosed ? "not-allowed" : "pointer",
+                  cursor: "pointer",
                   transition: "all 0.2s ease",
                   boxShadow: isClosed ? "none" : "0 4px 12px rgba(255, 107, 0, 0.25)",
                 }}
+                title={isClosed ? (isSellerClosed ? "Seller is closed" : "Unavailable") : "Order Now"}
               >
                 {isClosed ? (isSellerClosed ? "Closed" : "Unavailable") : addedId === offer.id ? "Added to Cart! ✓" : "Order Now"}
               </button>

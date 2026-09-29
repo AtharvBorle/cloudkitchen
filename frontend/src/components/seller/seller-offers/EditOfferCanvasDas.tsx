@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import SellerSidebar from "../sidebar/Sidebar";
@@ -185,6 +185,10 @@ function EditOfferForm({
   const [expiryDate, setExpiryDate] = useState("Runs indefinitely");
   const [perUserLimit, setPerUserLimit] = useState("1");
   const [status, setStatus] = useState<"Active" | "Pending" | "Expired">("Active");
+
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const expiryDateRef = useRef<HTMLInputElement>(null);
+  const todayStr = new Date().toISOString().split("T")[0];
 
   const [resolvedId, setResolvedId] = useState(offerId);
 
@@ -844,15 +848,35 @@ function EditOfferForm({
                   {/* Start Date */}
                   <div>
                     <label className={styles.fieldLabel}>Start Date</label>
-                    <div className={styles.suffixInputWrapper}>
+                    <div
+                      className={styles.suffixInputWrapper}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        try {
+                          startDateRef.current?.showPicker?.();
+                        } catch {}
+                      }}
+                    >
                       <input
-                        type="text"
+                        ref={startDateRef}
+                        type="date"
+                        min={todayStr}
                         className={styles.suffixInputField}
-                        value={startDate}
+                        value={startDate === "Today (Immediately)" ? "" : startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        placeholder="Today (Immediately)"
+                        placeholder="Select start date"
+                        style={{ cursor: "pointer" }}
                       />
-                      <span className={styles.suffixIconBox}>
+                      <span
+                        className={styles.suffixIconBox}
+                        style={{ cursor: "pointer", pointerEvents: "auto" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          try {
+                            startDateRef.current?.showPicker?.();
+                          } catch {}
+                        }}
+                      >
                         <Calendar size={16} />
                       </span>
                     </div>
@@ -888,16 +912,43 @@ function EditOfferForm({
                       </div>
                     </div>
 
-                    <div className={styles.suffixInputWrapper}>
+                    <div
+                      className={styles.suffixInputWrapper}
+                      style={{ cursor: noExpiry ? "not-allowed" : "pointer" }}
+                      onClick={() => {
+                        if (!noExpiry) {
+                          try {
+                            expiryDateRef.current?.showPicker?.();
+                          } catch {}
+                        }
+                      }}
+                    >
                       <input
-                        type="text"
+                        ref={expiryDateRef}
+                        type={noExpiry ? "text" : "date"}
                         disabled={noExpiry}
+                        min={startDate && startDate !== "Today (Immediately)" ? startDate : todayStr}
                         className={styles.suffixInputField}
                         value={noExpiry ? "Runs indefinitely" : expiryDate}
                         onChange={(e) => setExpiryDate(e.target.value)}
-                        placeholder="DD/MM/YYYY"
+                        placeholder="Select expiry date"
+                        style={{ cursor: noExpiry ? "not-allowed" : "pointer" }}
                       />
-                      <span className={styles.suffixIconBox}>
+                      <span
+                        className={styles.suffixIconBox}
+                        style={{
+                          cursor: noExpiry ? "not-allowed" : "pointer",
+                          pointerEvents: noExpiry ? "none" : "auto",
+                        }}
+                        onClick={(e) => {
+                          if (!noExpiry) {
+                            e.stopPropagation();
+                            try {
+                              expiryDateRef.current?.showPicker?.();
+                            } catch {}
+                          }
+                        }}
+                      >
                         <Calendar size={16} />
                       </span>
                     </div>

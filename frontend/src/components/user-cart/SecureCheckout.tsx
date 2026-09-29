@@ -24,6 +24,9 @@ import {
   Navigation,
   Check,
   Plus,
+  X,
+  Tag,
+  Loader2,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Navbar } from "@/components/navbar";
@@ -110,7 +113,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const router = useRouter();
   const { data: session, status } = useSession();
   const { cartItems, cartTotal, clearCart } = useCart();
-  const { defaultAddress, openLocationModal } = useLocation();
+  const { defaultAddress, openLocationModal, detectGpsLocation } = useLocation();
 
   // Authentication redirect guard
   useEffect(() => {
@@ -178,11 +181,11 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
             if (defaultItem) {
               setSelectedSavedAddressId(defaultItem.id);
               const formatted = `${defaultItem.houseNumber ? defaultItem.houseNumber + ", " : ""}${defaultItem.street}${defaultItem.landmark ? ", Near " + defaultItem.landmark : ""}`;
-              setStreetAddress((prev) => prev || formatted);
-              setCity((prev) => prev || defaultItem.city || "Pune");
-              setPostalCode((prev) => prev || defaultItem.pincode);
-              if (defaultItem.recipientName) setFullName((prev) => prev || defaultItem.recipientName || "");
-              if (defaultItem.recipientPhone) setPhoneNumber((prev) => prev || defaultItem.recipientPhone || "");
+              setStreetAddress(formatted);
+              setCity(defaultItem.city || "Pune");
+              setPostalCode(defaultItem.pincode);
+              if (defaultItem.recipientName) setFullName(defaultItem.recipientName);
+              if (defaultItem.recipientPhone) setPhoneNumber(defaultItem.recipientPhone);
             }
           } else {
             setAddressMode("manual");
@@ -216,6 +219,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       streetAddress: undefined,
       city: undefined,
       postalCode: undefined,
+      fullName: undefined,
+      phoneNumber: undefined,
     }));
   };
 
@@ -315,14 +320,14 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   }, [session, fullName]);
 
   useEffect(() => {
-    if (defaultAddress) {
+    if (addressMode === "manual" && defaultAddress) {
       const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
       const formattedStreet = parts.join(", ");
       if (formattedStreet) setStreetAddress(formattedStreet);
       if (defaultAddress.city) setCity(defaultAddress.city);
       if (defaultAddress.pincode) setPostalCode(defaultAddress.pincode);
     }
-  }, [defaultAddress]);
+  }, [defaultAddress, addressMode]);
 
   useEffect(() => {
     async function loadUserProfile() {
@@ -422,6 +427,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [promoCode, setPromoCode] = useState<string>("");
   const [isPromoApplied, setIsPromoApplied] = useState<boolean>(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [appliedCouponData, setAppliedCouponData] = useState<any | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
 
   // Order Placement States
   const [isOrderPlaced, setIsOrderPlaced] = useState<boolean>(false);
@@ -639,35 +646,83 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
   // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
-  const discountAmount = isPromoApplied && subtotal > 0 ? Math.round((subtotal * discountPercent) / 100) : 0;
+  const discountAmount = isPromoApplied && subtotal > 0
+    ? (appliedCouponData?.calculatedDiscount !== undefined
+        ? Math.min(appliedCouponData.calculatedDiscount, subtotal)
+        : Math.round((subtotal * discountPercent) / 100))
+    : 0;
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
-  const handleApplyToggle = () => {
+  const handleRemovePromo = () => {
+    setIsPromoApplied(false);
+    setDiscountPercent(0);
+    setAppliedCouponData(null);
+    setPromoCode("");
+    showToast("Promo code removed", "info");
+  };
+
+  const handleApplyToggle = async () => {
     if (isPromoApplied) {
-      setIsPromoApplied(false);
-      setDiscountPercent(0);
-      showToast("Promo code removed", "info");
-    } else {
-      const clean = promoCode.trim().toUpperCase();
-      if (!clean) {
-        showToast("Please enter a promo code", "error");
-        return;
-      }
-      if (clean === "NEO50") {
+      handleRemovePromo();
+      return;
+    }
+
+    const clean = promoCode.trim().toUpperCase();
+    if (!clean) {
+      showToast("Please enter a promo code", "error");
+      return;
+    }
+
+    setIsValidatingPromo(true);
+    try {
+      const sellerId = checkoutItems[0]?.sellerId || cartItems[0]?.sellerId;
+      const res = await fetchApi("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: clean,
+          sellerId,
+          subtotal,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.data?.coupon) {
+        const coupon = data.data.coupon;
+        setAppliedCouponData(coupon);
         setIsPromoApplied(true);
-        setDiscountPercent(50);
-        showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
-      } else if (clean === "WELCOME20" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") {
-        setIsPromoApplied(true);
-        setDiscountPercent(20);
-        showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
+        const pct = coupon.discountPercentage || 0;
+        setDiscountPercent(pct);
+        const savedAmt = coupon.calculatedDiscount || Math.round((subtotal * pct) / 100);
+        showToast(`Promo code "${coupon.code}" applied! Saved ₹${savedAmt}`, "success");
       } else {
-        setIsPromoApplied(true);
-        setDiscountPercent(15);
-        showToast(`Promo code "${clean}" applied! (15% Off)`, "success");
+        // Fallback for default demo system promo codes if offline or db not seeded
+        if (clean === "NEO50" && subtotal >= 100) {
+          const discount = Math.round((subtotal * 50) / 100);
+          setAppliedCouponData({ code: clean, calculatedDiscount: discount, discountPercentage: 50 });
+          setIsPromoApplied(true);
+          setDiscountPercent(50);
+          showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
+        } else if ((clean === "WELCOME20" || clean === "NEO20" || clean === "NEOBITE20") && subtotal >= 100) {
+          const discount = Math.round((subtotal * 20) / 100);
+          setAppliedCouponData({ code: clean, calculatedDiscount: discount, discountPercentage: 20 });
+          setIsPromoApplied(true);
+          setDiscountPercent(20);
+          showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
+        } else {
+          setIsPromoApplied(false);
+          setDiscountPercent(0);
+          setAppliedCouponData(null);
+          showToast(data.message || `Invalid promo code "${clean}". Please enter a valid coupon.`, "error");
+        }
       }
+    } catch (err: any) {
+      console.error("Promo validation error:", err);
+      showToast("Failed to validate promo code. Please try again.", "error");
+    } finally {
+      setIsValidatingPromo(false);
     }
   };
 
@@ -1641,6 +1696,105 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 ) : (
                   /* MODE 2: WRITE NEW / MANUAL ADDRESS ENTRY */
                   <div className={styles.formFieldsStack}>
+                    {/* Quick Pin on Map & GPS Location Toolbar (NC-BUG-110) */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        backgroundColor: "#FFF7ED",
+                        border: "1px solid #FFEDD5",
+                        borderRadius: "14px",
+                        padding: "12px 16px",
+                        gap: "12px",
+                        flexWrap: "wrap",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "10px",
+                            backgroundColor: "#FF6B00",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#FFFFFF",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <MapPin size={18} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#1E293B" }}>
+                            Pin Precise Delivery Location
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "#64748B" }}>
+                            Pin on map or use current GPS to auto-fill street address
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => openLocationModal()}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            backgroundColor: "#FFFFFF",
+                            border: "1px solid #CBD5E1",
+                            borderRadius: "8px",
+                            fontSize: "0.82rem",
+                            fontWeight: "700",
+                            color: "#0F172A",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          <MapPin size={14} color="#EA580C" />
+                          <span>📍 Pin on Map</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (detectGpsLocation) {
+                              const ok = await detectGpsLocation();
+                              if (ok) {
+                                showToast("Current GPS location detected!", "success");
+                              } else {
+                                showToast("Could not detect GPS location. Please check browser permissions or pin on map.", "warning");
+                              }
+                            }
+                          }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "8px 14px",
+                            backgroundColor: "#FF6B00",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.82rem",
+                            fontWeight: "700",
+                            color: "#FFFFFF",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            boxShadow: "0 2px 6px rgba(255, 107, 0, 0.25)",
+                          }}
+                        >
+                          <Navigation size={14} color="#FFFFFF" />
+                          <span>🎯 Use Current GPS</span>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Row 1: Full Name & Phone Number */}
                     <div className={styles.formRowTwoCol}>
                       <div className={styles.fieldGroup}>
@@ -1934,29 +2088,79 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
                 <div className={styles.divider} />
 
-                {/* Promo Code Input Row */}
-                <div className={styles.promoGroup}>
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    placeholder="Enter Coupon Code"
-                    className={styles.promoInput}
-                    disabled={checkoutItems.length === 0}
-                  />
-                  <button
-                    type="button"
-                    className={
-                      isPromoApplied
-                        ? styles.promoBtnApplied
-                        : styles.promoBtnApply
-                    }
-                    onClick={handleApplyToggle}
-                    disabled={checkoutItems.length === 0}
+                {/* Promo Code Input Row (NC-BUG-117) */}
+                {isPromoApplied ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      backgroundColor: "#F0FDF4",
+                      border: "1px solid #86EFAC",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      gap: "10px",
+                    }}
                   >
-                    {isPromoApplied ? "Remove" : "Apply"}
-                  </button>
-                </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                      <Tag size={16} color="#16A34A" />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
+                          {appliedCouponData?.code || promoCode}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
+                          -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        backgroundColor: "#DC2626",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "5px 10px",
+                        fontSize: "0.75rem",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        transition: "all 0.15s ease",
+                      }}
+                      title="Remove applied coupon"
+                    >
+                      <X size={13} strokeWidth={2.5} />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.promoGroup}>
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleApplyToggle();
+                      }}
+                      placeholder="Enter Coupon Code"
+                      className={styles.promoInput}
+                      disabled={checkoutItems.length === 0 || isValidatingPromo}
+                    />
+                    <button
+                      type="button"
+                      className={styles.promoBtnApply}
+                      onClick={handleApplyToggle}
+                      disabled={checkoutItems.length === 0 || !promoCode.trim() || isValidatingPromo}
+                    >
+                      {isValidatingPromo ? "Checking..." : "Apply"}
+                    </button>
+                  </div>
+                )}
 
                 <div className={styles.divider} />
 
