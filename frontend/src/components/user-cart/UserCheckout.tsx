@@ -140,13 +140,14 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       });
 
       const json = await res.json();
-      if (res.ok && json.data) {
-        const cData = json.data;
+      const cData = (json && typeof json === "object" && ("id" in json || "code" in json)) ? json : (json?.data || json);
+      if (res.ok && cData && (cData.code || cData.id)) {
         setAppliedCoupon(cData);
         setAppliedPromo(cData.code);
         setDiscountPercent(cData.discountPercentage || 0);
-        showToast(json.message || `Promo code "${cData.code}" applied! (${cData.discountLabel || `${cData.discountPercentage}% OFF`})`);
+        showToast(cData.message || json?.message || `Promo code "${cData.code}" applied! (${cData.discountLabel || (cData.discountPercentage ? `${cData.discountPercentage}% OFF` : `₹${cData.discountAmount} OFF`)})`);
       } else {
+        const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Coupon "${cleanCode}" is invalid or requirements not met.`);
         if (cleanCode === "NEO50") {
           setAppliedCoupon({
             id: "mock-neo50",
@@ -173,7 +174,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           setAppliedCoupon(null);
           setAppliedPromo(null);
           setDiscountPercent(0);
-          showToast(json.message || `Coupon "${cleanCode}" is invalid or requirements not met.`);
+          showToast(errorMsg);
         }
       }
     } catch (e) {

@@ -525,13 +525,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
         });
 
         const json = await res.json();
-        if (res.ok && json.data) {
-          const cData = json.data;
+        const cData = (json && typeof json === "object" && ("id" in json || "code" in json)) ? json : (json?.data || json);
+        if (res.ok && cData && (cData.code || cData.id)) {
           setAppliedCoupon(cData);
           setIsPromoApplied(true);
           setDiscountPercent(cData.discountPercentage || 0);
-          showToast(json.message || `Promo code "${cData.code}" applied! (${cData.discountLabel || `${cData.discountPercentage}% Off`})`, "success");
+          showToast(cData.message || json?.message || `Promo code "${cData.code}" applied! (${cData.discountLabel || (cData.discountPercentage ? `${cData.discountPercentage}% Off` : `₹${cData.discountAmount} Off`)})`, "success");
         } else {
+          const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Promo code "${clean}" is invalid or conditions not met.`);
           // Fallback mock codes
           if (clean === "NEO50") {
             setAppliedCoupon({
@@ -556,7 +557,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
             setDiscountPercent(20);
             showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
           } else {
-            showToast(json.message || `Promo code "${clean}" is invalid or conditions not met.`, "error");
+            showToast(errorMsg, "error");
           }
         }
       } catch (e) {
