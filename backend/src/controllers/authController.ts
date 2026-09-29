@@ -300,7 +300,7 @@ export const registerUser = async (req: Request) => {
             const user = await tx.user.create({
                 data: {
                     name: finalName,
-                    email: finalEmail || null,
+                    email: finalEmail || undefined,
                     phone: finalPhone || "",
                     city: finalCity || "",
                     pincode: finalPincode || "",

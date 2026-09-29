@@ -92,12 +92,12 @@ const DEFAULT_BEST_OFFERS = [
 
 export const UserCart: React.FC<UserCartProps> = ({
   initialItems = [],
-  defaultLocation = "Kothrud, Pune",
-  defaultAddress: defaultAddressProp = "Flat 402, Golden Crest Apartments, Kothrud",
+  defaultLocation = "Select Location",
+  defaultAddress: defaultAddressProp = "",
   onProceedToCheckout,
 }) => {
   const router = useRouter();
-  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal } = useCart();
+  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal, syncCartWithLiveMenu } = useCart();
   const { defaultAddress, savedAddresses, openLocationModal, selectAddress } = useLocation();
 
   // State Management
@@ -107,18 +107,38 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [promoCode, setPromoCode] = useState<string>("");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [appliedCouponData, setAppliedCouponData] = useState<any | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    description?: string;
+    discountType: "PERCENTAGE" | "FLAT";
+    discountPercentage?: number | null;
+    discountAmount?: number | null;
+    maxDiscountAmount?: number | null;
+    minimumCartValue?: number;
+    discountLabel?: string;
+    calculatedDiscount?: number;
+  } | null>(null);
+  const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
   const [availableOffers, setAvailableOffers] = useState<any[]>(DEFAULT_BEST_OFFERS);
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
 
-  // Sync formatted current address from LocationProvider's defaultAddress
+  // Sync formatted current address from LocationProvider's defaultAddress or savedAddresses
   const formattedDefaultAddress = React.useMemo(() => {
-    if (!defaultAddress) return defaultAddressProp || "No address selected";
-    const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
-    const line = parts.join(", ");
-    return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
-  }, [defaultAddress, defaultAddressProp]);
+    if (defaultAddress) {
+      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
+    }
+    if (savedAddresses && savedAddresses.length > 0) {
+      const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+      const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      return def.pincode ? `${line} - ${def.pincode}` : line;
+    }
+    return defaultAddressProp || "No address selected";
+  }, [defaultAddress, defaultAddressProp, savedAddresses]);
 
   const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
@@ -127,11 +147,14 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
   const [sellerDetails, setSellerDetails] = useState<any>(null);
 
+  // Sync with live seller prices on mount
   useEffect(() => {
-    if (defaultAddress) {
-      setCurrentAddress(formattedDefaultAddress);
-    }
-  }, [defaultAddress, formattedDefaultAddress]);
+    syncCartWithLiveMenu();
+  }, [syncCartWithLiveMenu]);
+
+  useEffect(() => {
+    setCurrentAddress(formattedDefaultAddress);
+  }, [formattedDefaultAddress]);
 
   // Active items derived from context if present
   const cartItems: UserCartItem[] = contextCartItems.length > 0
@@ -174,6 +197,10 @@ export const UserCart: React.FC<UserCartProps> = ({
           } else {
             setIsSellerClosed(false);
           }
+          // Automatically sync live item prices & stock from sellerObj.foodItems
+          if (Array.isArray(sellerObj?.foodItems) && sellerObj.foodItems.length > 0) {
+            syncCartWithLiveMenu();
+          }
         }
       } catch (e) {
         // Silently continue
@@ -184,7 +211,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cartItems]);
+  }, [cartItems, syncCartWithLiveMenu]);
 
   // Coverage calculation
   const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
@@ -280,7 +307,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         const rawStock = existing.maxStock !== undefined ? existing.maxStock : existing.stockQuantity;
         const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
         if (stockLimit !== -1 && existing.quantity >= stockLimit) {
-          showToast(`Cannot add more. Only ${stockLimit} available in stock.`);
+          showToast("Maximum available quantity reached.");
           return;
         }
         addToCart({
@@ -311,7 +338,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           .map((item) => {
             if (item.id === id) {
               if (delta > 0 && item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) {
-                showToast(`Cannot add more. Only ${item.maxStock} available in stock.`);
+                showToast("Maximum available quantity reached.");
                 return item;
               }
               const newQty = item.qty + delta;
@@ -373,11 +400,11 @@ export const UserCart: React.FC<UserCartProps> = ({
   }, [cartItems]);
 
   const handleRemovePromo = () => {
+    setAppliedCoupon(null);
     setAppliedPromo(null);
-    setAppliedCouponData(null);
     setDiscountPercent(0);
     setPromoCode("");
-    showToast("Promo code removed");
+    showToast("Coupon removed");
   };
 
   // Promo Code Apply (supports typing or clicking from Best Offers)
@@ -398,30 +425,43 @@ export const UserCart: React.FC<UserCartProps> = ({
     setPromoCode(targetCode);
 
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-    const sellerId = cartItems[0]?.sellerId;
+    const cartSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || cartItems[0]?.sellerId;
+
+    if (currentSubtotal <= 0) {
+      showToast("Please add items to cart before applying coupon");
+      return;
+    }
 
     setIsValidatingPromo(true);
     try {
-      const res = await fetchApi("/api/coupons/validate", {
+      const res = await fetchApi("/api/public/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: targetCode,
-          sellerId,
+          sellerId: cartSellerId,
           subtotal: currentSubtotal,
+          items: cartItems.map((it) => ({
+            id: it.id,
+            foodItemId: it.foodItemId,
+            price: it.price,
+            quantity: it.qty,
+          })),
+          userId: session?.user?.id,
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success && data.data?.coupon) {
-        const coupon = data.data.coupon;
-        setAppliedCouponData(coupon);
-        setAppliedPromo(coupon.code);
-        const pct = coupon.discountPercentage || 0;
+      const json = await res.json();
+      const cData = json.data?.coupon || json.data || json;
+      if (res.ok && cData && (cData.code || cData.id)) {
+        const pct = cData.discountPercentage || 0;
+        const savedAmt = cData.calculatedDiscount || (pct > 0 ? Math.round((currentSubtotal * pct) / 100) : (cData.discountAmount || 0));
+        setAppliedCoupon(cData);
+        setAppliedPromo(cData.code);
         setDiscountPercent(pct);
-        const savedAmt = coupon.calculatedDiscount || (pct > 0 ? Math.round((currentSubtotal * pct) / 100) : (coupon.discountAmount || 0));
-        showToast(`Coupon "${coupon.code}" applied! Saved ₹${savedAmt}`);
+        showToast(cData.message || json?.message || `Coupon "${cData.code}" applied! Saved ₹${savedAmt}`);
       } else {
+        const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Coupon "${targetCode}" is invalid or requirements not met.`);
         // Match against available offers list or fallback rules
         const matchedOffer = availableOffers.find((c) => c.code.toUpperCase() === targetCode) ||
           DEFAULT_BEST_OFFERS.find((c) => c.code.toUpperCase() === targetCode);
@@ -446,34 +486,81 @@ export const UserCart: React.FC<UserCartProps> = ({
             setDiscountPercent(0);
           }
 
-          setAppliedCouponData({
-            ...matchedOffer,
+          setAppliedCoupon({
+            id: matchedOffer.id || matchedOffer.code,
+            code: matchedOffer.code,
+            discountType: matchedOffer.discountType || "PERCENTAGE",
+            discountPercentage: matchedOffer.discountPercentage,
+            discountAmount: matchedOffer.discountAmount,
+            maxDiscountAmount: matchedOffer.maxDiscountAmount,
+            minimumCartValue: matchedOffer.minimumCartValue,
             calculatedDiscount: discount,
           });
           setAppliedPromo(matchedOffer.code);
           showToast(`Offer "${matchedOffer.code}" applied! Saved ₹${discount}`);
         } else if (targetCode === "NEO50" && currentSubtotal >= 100) {
           const discount = Math.min(Math.round((currentSubtotal * 50) / 100), 120);
-          setAppliedCouponData({ code: targetCode, calculatedDiscount: discount, discountPercentage: 50 });
+          setAppliedCoupon({
+            id: "mock-neo50",
+            code: "NEO50",
+            discountType: "PERCENTAGE",
+            discountPercentage: 50,
+            discountLabel: "50% OFF",
+            calculatedDiscount: discount,
+          });
           setAppliedPromo(targetCode);
           setDiscountPercent(50);
           showToast(`Super offer "${targetCode}" applied! 50% discount`);
         } else if ((targetCode === "WELCOME20" || targetCode === "WELCOME50" || targetCode === "NEO20" || targetCode === "DISCOUNT20" || targetCode === "NEOBITE20") && currentSubtotal >= 99) {
           const discount = Math.round((currentSubtotal * 20) / 100);
-          setAppliedCouponData({ code: targetCode, calculatedDiscount: discount, discountPercentage: 20 });
+          setAppliedCoupon({
+            id: `mock-${targetCode.toLowerCase()}`,
+            code: targetCode,
+            discountType: "PERCENTAGE",
+            discountPercentage: 20,
+            discountLabel: "20% OFF",
+            calculatedDiscount: discount,
+          });
           setAppliedPromo(targetCode);
           setDiscountPercent(20);
           showToast(`Coupon "${targetCode}" applied! Saved ₹${discount}`);
         } else {
+          setAppliedCoupon(null);
           setAppliedPromo(null);
-          setAppliedCouponData(null);
           setDiscountPercent(0);
-          showToast(data.message || `Invalid promo code "${targetCode}".`);
+          showToast(errorMsg);
         }
       }
-    } catch (err: any) {
-      console.error("Promo validation error in cart:", err);
-      showToast("Failed to validate promo code. Please try again.");
+    } catch (e) {
+      console.error("Coupon validation error:", e);
+      if (targetCode === "NEO50") {
+        setAppliedCoupon({
+          id: "mock-neo50",
+          code: "NEO50",
+          discountType: "PERCENTAGE",
+          discountPercentage: 50,
+          discountLabel: "50% OFF",
+        });
+        setAppliedPromo("NEO50");
+        setDiscountPercent(50);
+        showToast('Super offer "NEO50" applied! 50% discount');
+      } else if (targetCode === "NEO20" || targetCode === "WELCOME20" || targetCode === "DISCOUNT20" || targetCode === "NEOBITE20") {
+        setAppliedCoupon({
+          id: `mock-${targetCode.toLowerCase()}`,
+          code: targetCode,
+          discountType: "PERCENTAGE",
+          discountPercentage: 20,
+          discountLabel: "20% OFF",
+        });
+        setAppliedPromo(targetCode);
+        setDiscountPercent(20);
+        showToast(`Promo code "${targetCode}" applied! 20% discount`);
+      } else {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        showToast(`Failed to validate coupon "${targetCode}".`);
+      }
     } finally {
       setIsValidatingPromo(false);
     }
@@ -481,11 +568,18 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Price Calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const discountAmount = appliedPromo && subtotal > 0
-    ? (appliedCouponData?.calculatedDiscount !== undefined
-        ? Math.min(appliedCouponData.calculatedDiscount, subtotal)
-        : Math.round((subtotal * discountPercent) / 100))
-    : 0;
+
+  const discountAmount = React.useMemo(() => {
+    if (!appliedCoupon || subtotal <= 0) return 0;
+    if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+    if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
+      const pct = appliedCoupon.discountPercentage || 0;
+      const raw = Math.round((subtotal * pct) / 100);
+      return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+    }
+    const flat = appliedCoupon.discountAmount || 0;
+    return Math.min(flat, subtotal);
+  }, [appliedCoupon, subtotal]);
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -687,20 +781,6 @@ export const UserCart: React.FC<UserCartProps> = ({
                             (₹{item.basePrice} base + ₹{item.addonsTotal} add-ons)
                           </span>
                         )}
-                        {item.maxStock !== undefined && item.maxStock !== -1 && (
-                          <span
-                            style={{
-                              fontSize: "0.72rem",
-                              fontWeight: "600",
-                              color: item.qty >= item.maxStock ? "#EF4444" : "#10B981",
-                              backgroundColor: item.qty >= item.maxStock ? "#FEF2F2" : "#ECFDF5",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            {item.qty >= item.maxStock ? `Max Stock (${item.maxStock})` : `${item.maxStock} in stock`}
-                          </span>
-                        )}
                       </div>
 
                       {/* Customize Button if Item has Add-ons available */}
@@ -730,29 +810,40 @@ export const UserCart: React.FC<UserCartProps> = ({
 
                   {/* Right: Quantity Stepper & Remove */}
                   <div className={styles.itemRightActions}>
-                    <div className={styles.qtyStepper}>
-                      <button
-                        type="button"
-                        className={styles.qtyBtn}
-                        onClick={() => handleQtyChange(item.id, -1)}
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus size={14} strokeWidth={3} />
-                      </button>
-                      <span className={styles.qtyNumber}>{item.qty}</span>
-                      <button
-                        type="button"
-                        className={styles.qtyBtn}
-                        onClick={() => handleQtyChange(item.id, 1)}
-                        aria-label="Increase quantity"
-                        disabled={item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock}
-                        style={{
-                          opacity: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? 0.4 : 1,
-                          cursor: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? "not-allowed" : "pointer",
-                        }}
-                      >
-                        <Plus size={14} strokeWidth={3} />
-                      </button>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                      <div className={styles.qtyStepper}>
+                        <button
+                          type="button"
+                          className={styles.qtyBtn}
+                          onClick={() => handleQtyChange(item.id, -1)}
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus size={14} strokeWidth={3} />
+                        </button>
+                        <span className={styles.qtyNumber}>{item.qty}</span>
+                        <button
+                          type="button"
+                          className={styles.qtyBtn}
+                          onClick={() => handleQtyChange(item.id, 1)}
+                          aria-label="Increase quantity"
+                          disabled={item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock}
+                          style={{
+                            opacity: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? 0.35 : 1,
+                            cursor: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          <Plus size={14} strokeWidth={3} />
+                        </button>
+                      </div>
+                      {(item.maxStock === 0) ? (
+                        <span style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: "700", textAlign: "center", whiteSpace: "nowrap" }}>
+                          Out of stock
+                        </span>
+                      ) : (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) ? (
+                        <span style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: "700", textAlign: "center", whiteSpace: "nowrap" }}>
+                          Out of stock
+                        </span>
+                      ) : null}
                     </div>
 
                     <button
@@ -1053,7 +1144,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                 {discountAmount > 0 && (
                   <div className={styles.pricingRow}>
                     <span className={styles.discountValue}>
-                      Discount ({discountPercent}%)
+                      Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})
                     </span>
                     <span className={styles.discountValue}>
                       - ₹{discountAmount.toLocaleString("en-IN")}
@@ -1140,10 +1231,6 @@ export const UserCart: React.FC<UserCartProps> = ({
                 </span>
                 <ArrowRight size={18} />
               </button>
-
-              <p className={styles.securityNote}>
-                Secure 256-bit SSL encrypted connection
-              </p>
             </div>
           </aside>
         </div>
@@ -1174,35 +1261,37 @@ export const UserCart: React.FC<UserCartProps> = ({
 
             <div className={styles.addressOptionList}>
               {savedAddresses && savedAddresses.length > 0 ? (
-                savedAddresses.map((addr) => {
-                  const parts = [addr.houseNumber, addr.street, addr.locality, addr.landmark].filter(Boolean);
-                  const fullAddr = `${parts.join(", ")} - ${addr.pincode}`;
-                  const isSelected = defaultAddress?.id === addr.id;
-                  return (
-                    <div
-                      key={addr.id}
-                      className={`${styles.addressOptionCard} ${
-                        isSelected ? styles.addressOptionActive : ""
-                      }`}
-                      onClick={() => {
-                        selectAddress(addr.id);
-                        setCurrentAddress(fullAddr);
-                        setIsAddressModalOpen(false);
-                        showToast(`Delivery address set to ${addr.type || "Saved Address"}`);
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                        <span className={styles.optLabel}>{addr.type || "Home"}</span>
-                        {addr.isDefault && (
-                          <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#E0F2FE", color: "#0369A1", padding: "2px 6px", borderRadius: "4px" }}>
-                            DEFAULT
-                          </span>
-                        )}
+                [...savedAddresses]
+                  .sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
+                  .map((addr) => {
+                    const parts = [addr.houseNumber, addr.street, addr.locality, addr.landmark].filter(Boolean);
+                    const fullAddr = `${parts.join(", ")} - ${addr.pincode}`;
+                    const isSelected = defaultAddress?.id === addr.id || (defaultAddress?.pincode === addr.pincode && addr.isDefault);
+                    return (
+                      <div
+                        key={addr.id}
+                        className={`${styles.addressOptionCard} ${
+                          isSelected ? styles.addressOptionActive : ""
+                        }`}
+                        onClick={() => {
+                          selectAddress(addr.id);
+                          setCurrentAddress(fullAddr);
+                          setIsAddressModalOpen(false);
+                          showToast(`Delivery address set to ${addr.type || "Saved Address"}`);
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                          <span className={styles.optLabel}>{addr.type || "Home"}</span>
+                          {addr.isDefault && (
+                            <span style={{ fontSize: "11px", fontWeight: 700, backgroundColor: "#E0F2FE", color: "#0369A1", padding: "2px 6px", borderRadius: "4px" }}>
+                              DEFAULT
+                            </span>
+                          )}
+                        </div>
+                        <span className={styles.optText}>{fullAddr}</span>
                       </div>
-                      <span className={styles.optText}>{fullAddr}</span>
-                    </div>
-                  );
-                })
+                    );
+                  })
               ) : (
                 <div style={{ padding: "24px 16px", textAlign: "center", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px dashed #CBD5E1" }}>
                   <MapPin size={28} color="#94A3B8" style={{ margin: "0 auto 8px" }} />
@@ -1284,11 +1373,13 @@ export const UserCart: React.FC<UserCartProps> = ({
         <AddonCustomizationModal
           isOpen={!!customizingItem}
           onClose={() => setCustomizingItem(null)}
+          isEditMode={true}
+          submitButtonText="Update Item"
           item={{
             id: customizingItem.id,
             name: customizingItem.name,
-            price: customizingItem.basePrice || customizingItem.price,
-            basePrice: customizingItem.basePrice || customizingItem.price,
+            basePrice: customizingItem.basePrice !== undefined ? customizingItem.basePrice : customizingItem.price,
+            price: customizingItem.basePrice !== undefined ? customizingItem.basePrice : customizingItem.price,
             description: customizingItem.description,
             imageUrl: customizingItem.image,
             itemType: customizingItem.itemType,
@@ -1298,12 +1389,12 @@ export const UserCart: React.FC<UserCartProps> = ({
           onConfirm={(selectedAddons) => {
             updateItemAddons(customizingItem.id, selectedAddons);
             setCustomizingItem(null);
-            showToast(`Updated add-ons for "${customizingItem.name}"`, "success");
+            showToast(`Updated add-ons for "${customizingItem.name}"`);
           }}
           onAddToCart={(selectedAddons) => {
             updateItemAddons(customizingItem.id, selectedAddons);
             setCustomizingItem(null);
-            showToast(`Updated add-ons for "${customizingItem.name}"`, "success");
+            showToast(`Updated add-ons for "${customizingItem.name}"`);
           }}
         />
       )}

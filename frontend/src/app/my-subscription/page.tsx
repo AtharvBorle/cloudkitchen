@@ -1203,7 +1203,6 @@ function MySubscriptionContent() {
                       type="button"
                       onClick={() => {
                         setSelectedSellerId("all");
-                        setSelectedDiet("all");
                         setBillingCycle("all");
                         setSearchQuery("");
                       }}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Star, CheckCircle2, Send, ThumbsUp, Heart, MessageSquare, Utensils, Clock } from "lucide-react";
+import { Star, CheckCircle2, Send, ThumbsUp, Heart, MessageSquare, Utensils } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./RatingExperience.module.css";
 
@@ -44,10 +44,6 @@ interface UserReview {
   seller?: {
     id: string;
     businessName: string;
-  };
-  managerResponse?: {
-    text: string;
-    date: string;
   };
 }
 
@@ -337,31 +333,6 @@ export const RatingExperience: React.FC = () => {
                         ★ {tg}
                       </span>
                     ))}
-                  </div>
-                )}
-
-                {/* Verified Kitchen Response or Status */}
-                {rev.managerResponse ? (
-                  <div className={styles.managerResponseBox}>
-                    <div className={styles.managerResponseHeader}>
-                      <span className={styles.managerResponseTitle}>
-                        <CheckCircle2 size={15} color="#EA580C" />
-                        <span>Verified Kitchen / Chef Response</span>
-                      </span>
-                      <span className={styles.managerResponseDate}>
-                        {new Date(rev.managerResponse.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                    <p className={styles.managerResponseText}>{rev.managerResponse.text}</p>
-                  </div>
-                ) : (
-                  <div className={styles.awaitingResponseBadge}>
-                    <Clock size={13} />
-                    <span>Delivered to Kitchen • Awaiting chef response</span>
                   </div>
                 )}
               </div>

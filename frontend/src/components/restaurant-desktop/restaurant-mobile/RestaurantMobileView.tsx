@@ -516,7 +516,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                               fontWeight: "700",
                             }}
                           >
-                            <span>Unavailable</span>
+                            <span>Out of Stock</span>
                           </button>
                         ) : isOutOfStock ? (
                           <button

@@ -654,17 +654,15 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                 </div>
                                             )}
 
-                                            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                                {item.isAvailable === false ? (
-                                                    <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Unavailable</span>
-                                                ) : item.stockQuantity === 0 ? (
-                                                    <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                                ) : item.stockQuantity > 0 ? (
-                                                    <span>Only {item.stockQuantity} left!</span>
-                                                ) : (
-                                                    <span style={{ color: '#10B981' }}>In Stock</span>
-                                                )}
-                                            </div>
+                                            {(item.isAvailable === false || item.stockQuantity === 0) && (
+                                                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                                    {item.isAvailable === false ? (
+                                                        <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Unavailable</span>
+                                                    ) : (
+                                                        <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {userAddress && !isDeliverable(item) && (
                                                 <div style={{

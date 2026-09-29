@@ -35,6 +35,7 @@ import { useCart, CartItem } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { ReorderModal, ReorderModalType, ReorderItemInfo } from "@/components/order-history-desktop/reorder-modal";
+import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import styles from "./MyOrdersView.module.css";
 
 export interface OrderItemData {
@@ -121,7 +122,7 @@ type MainCategory = "FOODS" | "ROOMS";
 type FoodFilterType = "ALL" | "ONGOING" | "COMPLETED" | "CANCELLED";
 type RoomFilterType = "ALL" | "CONFIRMED" | "PENDING" | "CANCELLED";
 
-function getOrderStepIndex(rawStatus: string): number {
+function getOrderStepIndex(rawStatus: string, partner?: any): number {
   const s = (rawStatus || "").toUpperCase();
   switch (s) {
     case "PENDING":
@@ -129,12 +130,13 @@ function getOrderStepIndex(rawStatus: string): number {
       return 0; // Placed & Waiting for seller confirmation
     case "ACCEPTED":
     case "CONFIRMED":
+      return 1;
     case "PREPARING":
-      return 1; // Confirmed & Cooking active
+      // Stop at Preparing (1) until rider is assigned; once rider is assigned, advance past Picked Up to On the way (3)
+      return partner ? 3 : 1;
     case "PICKED_UP":
-      return 2; // Picked Up done
     case "OUT_FOR_DELIVERY":
-      return 3; // On the way active
+      return 3; // On the way active (halfway green line pushed towards Delivered)
     case "DELIVERED":
       return 4; // Delivered done
     default:
@@ -163,6 +165,18 @@ function parseOrderFromDb(o: any): OrderItemData {
     ? parsedItems.map((it) => `${it.quantity || it.qty || 1}x ${it.name}`).join(", ")
     : "Fresh culinary preparation";
 
+  // Delivery partner details - strictly real data, no fake fallbacks
+  const dp = o.deliveryPerson;
+  const partner = dp
+    ? {
+        name: dp.name || "Delivery Partner",
+        avatar: dp.avatar || "",
+        phone: dp.phone || "",
+        vehicleType: dp.vehicleType || "",
+        vehicleNumber: dp.vehicleNumber || "",
+      }
+    : null;
+
   const rawStatus = (o.status || "PENDING").toUpperCase();
   let status: "ONGOING" | "DELIVERED" | "CANCELLED" = "ONGOING";
   let statusDisplay = "Out for Delivery";
@@ -185,13 +199,13 @@ function parseOrderFromDb(o: any): OrderItemData {
       statusDisplay = "Order Confirmed";
       arrivingIn = "20-30 min";
     } else if (rawStatus === "PREPARING") {
-      statusDisplay = "Preparing Food";
-      arrivingIn = "15-25 min";
+      statusDisplay = partner ? "On the way" : "Preparing Food";
+      arrivingIn = partner ? "10-15 min" : "15-25 min";
     } else if (rawStatus === "PICKED_UP") {
-      statusDisplay = "Picked Up";
+      statusDisplay = "On the way";
       arrivingIn = "10-15 min";
     } else if (rawStatus === "OUT_FOR_DELIVERY") {
-      statusDisplay = "Out for Delivery";
+      statusDisplay = "On the way";
       arrivingIn = "8-12 min";
     }
   }
@@ -227,18 +241,6 @@ function parseOrderFromDb(o: any): OrderItemData {
     o.seller?.businessName ||
     o.seller?.user?.name ||
     "Chef Anjali's Gourmet Kitchen";
-
-  // Delivery partner details - strictly real data, no fake fallbacks
-  const dp = o.deliveryPerson;
-  const partner = dp
-    ? {
-        name: dp.name || "Delivery Partner",
-        avatar: dp.avatar || "",
-        phone: dp.phone || "",
-        vehicleType: dp.vehicleType || "",
-        vehicleNumber: dp.vehicleNumber || "",
-      }
-    : null;
 
   const itemTotal = parsedItems.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || it.qty || 1), 0) || (o.totalAmount || 0);
   const deliveryFee = 0;
@@ -363,6 +365,9 @@ export default function MyOrdersView() {
     isOpen: false,
     type: "ERROR",
   });
+
+  const [pendingOrderForReorder, setPendingOrderForReorder] = useState<OrderItemData | null>(null);
+  const [isReorderValidating, setIsReorderValidating] = useState(false);
 
   const [mainCategory, setMainCategory] = useState<MainCategory>(initialTab);
   const [orders, setOrders] = useState<OrderItemData[]>([]);
@@ -505,7 +510,38 @@ export default function MyOrdersView() {
     setIsSidebarOpen(true);
   };
 
-  const handleReorder = async (order: OrderItemData) => {
+  const handleReorder = (order: OrderItemData) => {
+    const rawItems = order.rawItems || [];
+    const items: ReorderItemInfo[] = rawItems.length > 0
+      ? rawItems.map((item: any) => ({
+          id: item.foodItemId || item.id,
+          name: item.name || "Food Item",
+          quantity: item.quantity || item.qty || 1,
+          price: item.price,
+        }))
+      : [
+          {
+            name: order.itemSummary || order.itemsDetail || "Delicious Meal",
+            quantity: 1,
+            price: order.price || order.billBreakdown?.totalPaid || 0,
+          },
+        ];
+
+    setPendingOrderForReorder(order);
+    setModalState({
+      isOpen: true,
+      type: "CONFIRM",
+      sellerName: order.vendorName,
+      sellerId: order.vendorName,
+      availableItems: items,
+    });
+  };
+
+  const handleExecuteReorder = async () => {
+    if (!pendingOrderForReorder) return;
+    const order = pendingOrderForReorder;
+
+    setIsReorderValidating(true);
     try {
       const res = await fetchApi("/api/user/orders/validate-reorder", {
         method: "POST",
@@ -578,12 +614,14 @@ export default function MyOrdersView() {
       }
 
       // Everything is clear: Add items to cart and redirect to /cart
+      setModalState((prev) => ({ ...prev, isOpen: false }));
       addMultipleToCart(data.availableItems, false);
       router.push("/cart");
     } catch (err: any) {
       console.error("Reorder error:", err);
       // Fallback
       if (order.rawItems && order.rawItems.length > 0) {
+        setModalState((prev) => ({ ...prev, isOpen: false }));
         addMultipleToCart(
           order.rawItems.map((item) => ({
             id: item.id || `reorder-${item.name}`,
@@ -600,8 +638,11 @@ export default function MyOrdersView() {
         );
         router.push("/cart");
       } else {
+        setModalState((prev) => ({ ...prev, isOpen: false }));
         router.push("/explore-desktop");
       }
+    } finally {
+      setIsReorderValidating(false);
     }
   };
 
@@ -660,20 +701,54 @@ export default function MyOrdersView() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleCancelOrder = async (order: OrderItemData) => {
+  const handleCancelOrder = async (reason: string, customComment?: string) => {
+    if (!cancelModalOrder) return;
+    const order = cancelModalOrder;
     setCancellingOrderId(order.id);
     setCancelError(null);
     try {
       const res = await fetchApi(`/api/user/orders/${order.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ reason, comment: customComment }),
       });
 
       const json = await res.json().catch(() => null);
+
       if (!res.ok || (json && json.success === false)) {
-        setCancelError(json?.message || json?.error || "Failed to cancel order. Please try again.");
-        return;
+        const errorMsg = json?.message || json?.error || "Failed to cancel order. Please try again.";
+        const isAlreadyCancelled =
+          typeof errorMsg === "string" &&
+          (errorMsg.toLowerCase().includes("cannot cancel order in cancelled state") ||
+            errorMsg.toLowerCase().includes("already cancelled"));
+
+        if (isAlreadyCancelled) {
+          const updatedCancelledOrder: OrderItemData = {
+            ...order,
+            status: "CANCELLED",
+            rawStatus: "CANCELLED",
+            statusDisplay: "Cancelled",
+            deliveredLabel: "Order cancelled",
+            deliveredTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
+            arrivingIn: "Cancelled",
+          };
+
+          setOrders((prev) =>
+            prev.map((o) => (o.id === order.id ? updatedCancelledOrder : o))
+          );
+
+          if (selectedOrder?.id === order.id) {
+            setSelectedOrder(updatedCancelledOrder);
+          }
+
+          setCancelModalOrder(null);
+          setCancelError(null);
+          showToast("Your order is already cancelled.");
+          return;
+        }
+
+        setCancelError(errorMsg);
+        throw new Error(errorMsg);
       }
 
       // Update state locally
@@ -700,7 +775,7 @@ export default function MyOrdersView() {
       showToast("Your order has been cancelled successfully.");
     } catch (err: any) {
       console.error("Cancel order error:", err);
-      setCancelError(err?.message || "An error occurred while cancelling the order.");
+      throw err;
     } finally {
       setCancellingOrderId(null);
     }
@@ -1003,7 +1078,7 @@ export default function MyOrdersView() {
                 const isSelected = selectedOrder?.id === order.id;
 
                 if (isOngoing) {
-                  const currentStep = getOrderStepIndex(order.rawStatus);
+                  const currentStep = getOrderStepIndex(order.rawStatus, order.partner);
 
                   return (
                     <article
@@ -1108,7 +1183,7 @@ export default function MyOrdersView() {
                           <div className={styles.trackerStep}>
                             <div
                               className={
-                                currentStep > 2
+                                currentStep >= 3
                                   ? styles.stepCircleFilledDone
                                   : currentStep === 2
                                   ? styles.stepCircleActiveNav
@@ -1119,7 +1194,7 @@ export default function MyOrdersView() {
                             </div>
                             <span
                               className={
-                                currentStep > 2
+                                currentStep >= 3
                                   ? styles.stepTextDone
                                   : currentStep === 2
                                   ? styles.stepTextActiveNav
@@ -1136,10 +1211,8 @@ export default function MyOrdersView() {
                           <div className={styles.trackerStep}>
                             <div
                               className={
-                                currentStep > 3
+                                currentStep >= 3
                                   ? styles.stepCircleFilledDone
-                                  : currentStep === 3
-                                  ? styles.stepCircleActiveNav
                                   : styles.stepCirclePendingHome
                               }
                             >
@@ -1147,10 +1220,8 @@ export default function MyOrdersView() {
                             </div>
                             <span
                               className={
-                                currentStep > 3
+                                currentStep >= 3
                                   ? styles.stepTextDone
-                                  : currentStep === 3
-                                  ? styles.stepTextActiveNav
                                   : styles.stepTextPending
                               }
                             >
@@ -1158,7 +1229,7 @@ export default function MyOrdersView() {
                             </span>
                           </div>
 
-                          <div className={currentStep >= 4 ? styles.stepperLineDone : styles.stepperLinePending} />
+                          <div className={currentStep >= 4 ? styles.stepperLineDone : currentStep === 3 ? styles.stepperLineHalf : styles.stepperLinePending} />
 
                           {/* 5. Delivered */}
                           <div className={styles.trackerStep}>
@@ -2045,6 +2116,8 @@ export default function MyOrdersView() {
         availableItems={modalState.availableItems}
         unavailableItems={modalState.unavailableItems}
         errorMessage={modalState.errorMessage}
+        isLoading={isReorderValidating}
+        onConfirmReorder={handleExecuteReorder}
         onConfirmClearAndReorder={handleConfirmClearAndReorder}
         onConfirmPartialReorder={handleConfirmPartialReorder}
         onExploreOtherKitchens={handleExploreOtherKitchens}
@@ -2445,87 +2518,16 @@ export default function MyOrdersView() {
         </div>
       )}
 
-      {/* Cancel Order Confirmation Modal */}
+      {/* Professional Animated Cancel Order Modal */}
       {cancelModalOrder && (
-        <div
-          className={styles.cancelModalOverlay}
-          onClick={() => {
-            if (!cancellingOrderId) setCancelModalOrder(null);
-          }}
-        >
-          <div
-            className={styles.cancelModalBox}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className={styles.cancelModalHeader}>
-              <div className={styles.cancelModalTitleRow}>
-                <div className={styles.cancelIconBadge}>
-                  <X size={20} />
-                </div>
-                <h3 className={styles.cancelModalHeading}>Cancel Food Order?</h3>
-              </div>
-              <button
-                type="button"
-                className={styles.closeSidebarBtn}
-                onClick={() => {
-                  if (!cancellingOrderId) setCancelModalOrder(null);
-                }}
-                disabled={Boolean(cancellingOrderId)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className={styles.cancelModalOrderSummary}>
-              <div className={styles.cancelModalVendor}>{cancelModalOrder.vendorName}</div>
-              <div className={styles.cancelModalItems}>{cancelModalOrder.itemSummary}</div>
-              <div className={styles.cancelModalAmount}>
-                Order ID: #{cancelModalOrder.orderId} • Total: ₹{cancelModalOrder.price}
-              </div>
-            </div>
-
-            <p className={styles.cancelModalNote}>
-              Are you sure you want to cancel this order? Since the restaurant has not started preparing your food yet, your order can be cancelled and any amount paid will be refunded.
-            </p>
-
-            {cancelError && (
-              <div className={styles.cancelModalError}>
-                {cancelError}
-              </div>
-            )}
-
-            <div className={styles.cancelModalActions}>
-              <button
-                type="button"
-                className={styles.keepOrderBtn}
-                onClick={() => setCancelModalOrder(null)}
-                disabled={Boolean(cancellingOrderId)}
-              >
-                Keep Order
-              </button>
-              <button
-                type="button"
-                className={styles.confirmCancelBtn}
-                onClick={() => handleCancelOrder(cancelModalOrder)}
-                disabled={Boolean(cancellingOrderId)}
-              >
-                {cancellingOrderId ? (
-                  <>
-                    <Loader2 className="animate-spin" size={16} />
-                    <span>Cancelling...</span>
-                  </>
-                ) : (
-                  <>
-                    <X size={16} />
-                    <span>Yes, Cancel Order</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CancelOrderModal
+          isOpen={!!cancelModalOrder}
+          onClose={() => setCancelModalOrder(null)}
+          orderId={cancelModalOrder.orderId}
+          sellerName={cancelModalOrder.vendorName}
+          totalAmount={cancelModalOrder.price}
+          onConfirmCancel={handleCancelOrder}
+        />
       )}
 
       {/* Floating Toast Message */}

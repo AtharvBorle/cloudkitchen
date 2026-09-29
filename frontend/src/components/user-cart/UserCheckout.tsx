@@ -77,8 +77,8 @@ const DEFAULT_BEST_OFFERS = [
 
 export const UserCheckout: React.FC<UserCheckoutProps> = ({
   initialItems = [],
-  defaultLocation = "Kothrud, Pune",
-  defaultAddress: defaultAddressProp = "Flat 402, Golden Crest Apartments, Kothrud",
+  defaultLocation = "Select Location",
+  defaultAddress: defaultAddressProp = "",
   onProceedToCheckout,
 }) => {
   const router = useRouter();
@@ -90,7 +90,19 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const [promoCode, setPromoCode] = useState<string>("");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [appliedCouponData, setAppliedCouponData] = useState<any | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    description?: string;
+    discountType: "PERCENTAGE" | "FLAT";
+    discountPercentage?: number | null;
+    discountAmount?: number | null;
+    maxDiscountAmount?: number | null;
+    minimumCartValue?: number;
+    discountLabel?: string;
+    calculatedDiscount?: number;
+  } | null>(null);
+  const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
   const [availableOffers, setAvailableOffers] = useState<any[]>(DEFAULT_BEST_OFFERS);
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
@@ -177,7 +189,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
   const handleRemovePromo = () => {
     setAppliedPromo(null);
-    setAppliedCouponData(null);
+    setAppliedCoupon(null);
     setDiscountPercent(0);
     setPromoCode("");
     showToast("Promo code removed");
@@ -200,27 +212,38 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     setPromoCode(targetCode);
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
+    if (currentSubtotal <= 0) {
+      showToast("Please add items to cart before applying coupon");
+      return;
+    }
+
     setIsValidatingPromo(true);
     try {
-      const res = await fetchApi("/api/coupons/validate", {
+      const res = await fetchApi("/api/public/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: targetCode,
           subtotal: currentSubtotal,
+          items: cartItems.map((it) => ({
+            id: it.id,
+            price: it.price,
+            quantity: it.qty,
+          })),
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success && data.data?.coupon) {
-        const coupon = data.data.coupon;
-        setAppliedCouponData(coupon);
-        setAppliedPromo(coupon.code);
-        const pct = coupon.discountPercentage || 0;
+      const json = await res.json();
+      const cData = json.data?.coupon || json.data || json;
+      if (res.ok && cData && (cData.code || cData.id)) {
+        const pct = cData.discountPercentage || 0;
+        const savedAmt = cData.calculatedDiscount || (pct > 0 ? Math.round((currentSubtotal * pct) / 100) : (cData.discountAmount || 0));
+        setAppliedCoupon(cData);
+        setAppliedPromo(cData.code);
         setDiscountPercent(pct);
-        const savedAmt = coupon.calculatedDiscount || (pct > 0 ? Math.round((currentSubtotal * pct) / 100) : (coupon.discountAmount || 0));
-        showToast(`Coupon "${coupon.code}" applied! Saved ₹${savedAmt}`);
+        showToast(cData.message || json?.message || `Coupon "${cData.code}" applied! Saved ₹${savedAmt}`);
       } else {
+        const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Coupon "${targetCode}" is invalid or requirements not met.`);
         const matchedOffer = availableOffers.find((c) => c.code.toUpperCase() === targetCode) ||
           DEFAULT_BEST_OFFERS.find((c) => c.code.toUpperCase() === targetCode);
 
@@ -244,34 +267,81 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
             setDiscountPercent(0);
           }
 
-          setAppliedCouponData({
-            ...matchedOffer,
+          setAppliedCoupon({
+            id: matchedOffer.id || matchedOffer.code,
+            code: matchedOffer.code,
+            discountType: matchedOffer.discountType || "PERCENTAGE",
+            discountPercentage: matchedOffer.discountPercentage,
+            discountAmount: matchedOffer.discountAmount,
+            maxDiscountAmount: matchedOffer.maxDiscountAmount,
+            minimumCartValue: matchedOffer.minimumCartValue,
             calculatedDiscount: discount,
           });
           setAppliedPromo(matchedOffer.code);
           showToast(`Offer "${matchedOffer.code}" applied! Saved ₹${discount}`);
         } else if (targetCode === "NEO50" && currentSubtotal >= 100) {
           const discount = Math.min(Math.round((currentSubtotal * 50) / 100), 120);
-          setAppliedCouponData({ code: targetCode, calculatedDiscount: discount, discountPercentage: 50 });
+          setAppliedCoupon({
+            id: "mock-neo50",
+            code: "NEO50",
+            discountType: "PERCENTAGE",
+            discountPercentage: 50,
+            discountLabel: "50% OFF",
+            calculatedDiscount: discount,
+          });
           setAppliedPromo(targetCode);
           setDiscountPercent(50);
           showToast(`Offer "${targetCode}" applied! 50% discount`);
         } else if ((targetCode === "WELCOME20" || targetCode === "WELCOME50" || targetCode === "NEO20" || targetCode === "DISCOUNT20" || targetCode === "NEOBITE20") && currentSubtotal >= 99) {
           const discount = Math.round((currentSubtotal * 20) / 100);
-          setAppliedCouponData({ code: targetCode, calculatedDiscount: discount, discountPercentage: 20 });
+          setAppliedCoupon({
+            id: `mock-${targetCode.toLowerCase()}`,
+            code: targetCode,
+            discountType: "PERCENTAGE",
+            discountPercentage: 20,
+            discountLabel: "20% OFF",
+            calculatedDiscount: discount,
+          });
           setAppliedPromo(targetCode);
           setDiscountPercent(20);
           showToast(`Coupon "${targetCode}" applied! Saved ₹${discount}`);
         } else {
+          setAppliedCoupon(null);
           setAppliedPromo(null);
-          setAppliedCouponData(null);
           setDiscountPercent(0);
-          showToast(data.message || `Invalid promo code "${targetCode}".`);
+          showToast(errorMsg);
         }
       }
-    } catch (err: any) {
-      console.error("Promo validation error in UserCheckout:", err);
-      showToast("Failed to validate promo code. Please try again.");
+    } catch (e) {
+      console.error("Coupon validation error:", e);
+      if (targetCode === "NEO50") {
+        setAppliedCoupon({
+          id: "mock-neo50",
+          code: "NEO50",
+          discountType: "PERCENTAGE",
+          discountPercentage: 50,
+          discountLabel: "50% OFF",
+        });
+        setAppliedPromo("NEO50");
+        setDiscountPercent(50);
+        showToast('Super offer "NEO50" applied! 50% discount');
+      } else if (targetCode === "NEO20" || targetCode === "WELCOME20" || targetCode === "DISCOUNT20" || targetCode === "NEOBITE20") {
+        setAppliedCoupon({
+          id: `mock-${targetCode.toLowerCase()}`,
+          code: targetCode,
+          discountType: "PERCENTAGE",
+          discountPercentage: 20,
+          discountLabel: "20% OFF",
+        });
+        setAppliedPromo(targetCode);
+        setDiscountPercent(20);
+        showToast(`Promo code "${targetCode}" applied! 20% discount`);
+      } else {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        showToast(`Failed to validate coupon "${targetCode}".`);
+      }
     } finally {
       setIsValidatingPromo(false);
     }
@@ -279,11 +349,18 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
   // Price Calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const discountAmount = appliedPromo && subtotal > 0
-    ? (appliedCouponData?.calculatedDiscount !== undefined
-        ? Math.min(appliedCouponData.calculatedDiscount, subtotal)
-        : Math.round((subtotal * discountPercent) / 100))
-    : 0;
+
+  const discountAmount = React.useMemo(() => {
+    if (!appliedCoupon || subtotal <= 0) return 0;
+    if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+    if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
+      const pct = appliedCoupon.discountPercentage || 0;
+      const raw = Math.round((subtotal * pct) / 100);
+      return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+    }
+    const flat = appliedCoupon.discountAmount || 0;
+    return Math.min(flat, subtotal);
+  }, [appliedCoupon, subtotal]);
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -656,7 +733,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 {discountAmount > 0 && (
                   <div className={styles.pricingRow}>
                     <span className={styles.discountValue}>
-                      Discount ({discountPercent}%)
+                      Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})
                     </span>
                     <span className={styles.discountValue}>
                       - ₹{discountAmount.toLocaleString("en-IN")}
@@ -694,10 +771,6 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 </span>
                 <ArrowRight size={18} />
               </button>
-
-              <p className={styles.securityNote}>
-                Secure 256-bit SSL encrypted connection
-              </p>
             </div>
           </aside>
         </div>

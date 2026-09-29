@@ -167,6 +167,11 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
     return findDuplicateAddressIds(addresses);
   }, [addresses]);
 
+  // Sort addresses so that DEFAULT address is always displayed first
+  const sortedAddresses = useMemo(() => {
+    return [...addresses].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+  }, [addresses]);
+
   // Validation function with fuzzy duplicate matching
   const validateForm = (
     hNum: string,
@@ -395,7 +400,32 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
       });
 
       if (res.ok) {
+        const resData = await res.json().catch(() => ({}));
+        const targetId = editingAddressId || resData.data?.address?.id || resData.address?.id || resData.data?.id || resData.id;
+
+        if (isDefault && targetId) {
+          try {
+            await fetchApi(`/api/user/addresses/${targetId}/default`, {
+              method: "PATCH",
+            });
+          } catch (patchErr) {
+            console.warn("Failed to set address as default:", patchErr);
+          }
+        }
+
         setIsModalOpen(false);
+        if (isDefault || addresses.length === 0) {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("active-selected-pincode", cleanPin);
+            localStorage.setItem("guest-pincode", cleanPin);
+            if (street) localStorage.setItem("guest-locality", street.trim());
+            if (latitude !== null) localStorage.setItem("guest-lat", String(latitude));
+            if (longitude !== null) localStorage.setItem("guest-lng", String(longitude));
+            window.dispatchEvent(new Event("location-changed"));
+            window.dispatchEvent(new CustomEvent("default-address-changed", { detail: { id: targetId, pincode: cleanPin, street, latitude, longitude, isDefault: true } }));
+            window.dispatchEvent(new Event("storage"));
+          }
+        }
         await fetchAddresses();
         showToast(editingAddressId ? "Address updated successfully!" : "New address added successfully!");
       } else {
@@ -439,15 +469,43 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
   const handleSetDefault = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
+      const target = addresses.find((a) => a.id === id);
+      if (!target) return;
+
+      // Optimistically update local state so user sees toggle change immediately
+      setAddresses((prev) =>
+        prev.map((a) => ({
+          ...a,
+          isDefault: a.id === id,
+        }))
+      );
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("active-selected-pincode", target.pincode);
+        localStorage.setItem("guest-pincode", target.pincode);
+        if (target.street) localStorage.setItem("guest-locality", target.street);
+        if (target.latitude !== null && target.latitude !== undefined) {
+          localStorage.setItem("guest-lat", String(target.latitude));
+        }
+        if (target.longitude !== null && target.longitude !== undefined) {
+          localStorage.setItem("guest-lng", String(target.longitude));
+        }
+        window.dispatchEvent(new Event("location-changed"));
+        window.dispatchEvent(new CustomEvent("default-address-changed", { detail: target }));
+        window.dispatchEvent(new Event("storage"));
+      }
+
       const res = await fetchApi(`/api/user/addresses/${id}/default`, { method: "PATCH" });
       if (res.ok) {
         await fetchAddresses();
         showToast("Default delivery address updated");
       } else {
+        await fetchAddresses();
         alert("Failed to set as default address.");
       }
     } catch (err) {
       console.error("Set default failed", err);
+      await fetchAddresses();
     }
   };
 
@@ -528,7 +586,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
             </p>
           </div>
         ) : (
-          addresses.map((addr) => {
+          sortedAddresses.map((addr) => {
             const isHome = (addr.type || "").toUpperCase().includes("HOME");
             const isWork = (addr.type || "").toUpperCase().includes("WORK") || (addr.type || "").toUpperCase().includes("OFFICE");
             const isDuplicate = duplicateIds.has(addr.id);
@@ -566,14 +624,18 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                         background: "none",
                         border: "none",
                         cursor: "pointer",
-                        padding: 0,
+                        padding: "2px",
                         display: "flex",
                         alignItems: "center",
+                        justifyContent: "center",
                       }}
                       title={addr.isDefault ? "Current default delivery address" : "Click to set as default"}
+                      aria-label={addr.isDefault ? "Current default delivery address" : "Click to set as default"}
                     >
                       {addr.isDefault ? (
-                        <Check size={18} strokeWidth={3} className={styles.checkIcon} />
+                        <div className={styles.radioSelectedCircle}>
+                          <Check size={13} strokeWidth={3.5} />
+                        </div>
                       ) : (
                         <div className={styles.radioCircle} />
                       )}

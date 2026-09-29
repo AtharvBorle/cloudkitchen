@@ -22,6 +22,8 @@ import {
   isKitchenMatchingDiet,
   isDishMatchingDiet,
   matchesKitchenOrDishSearch,
+  matchesKitchenCategoryFilter,
+  matchesDishCategory,
   matchesDishSearch,
   matchesSearchQuery,
 } from "@/lib/dietary-filter";
@@ -98,7 +100,7 @@ function ExploreDesktopContent() {
     }));
   }, [homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
-  // Dynamic Meal Moments from DB Categories
+  // Dynamic Meal Moments from DB Categories (Deduplicated)
   const dynamicMoments = useMemo(() => {
     if (!homeData.categories || homeData.categories.length === 0) return undefined;
     const bgClasses = [
@@ -111,9 +113,21 @@ function ExploreDesktopContent() {
       momentStyles.bgDesserts,
       momentStyles.bgHealthy,
     ];
-    return homeData.categories.slice(0, 8).map((c, idx) => ({
+    // Filter out non-food categories like rooms and deduplicate
+    const seen = new Set<string>();
+    const foodCategories: typeof homeData.categories = [];
+    for (const c of homeData.categories) {
+      const lower = c.name.toLowerCase().trim();
+      if (c.id === "rooms" || lower === "rooms") continue;
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        foodCategories.push(c);
+      }
+    }
+    const BADGES = ["Popular", "Special", "Trending", "Cravings", "Quick Bite", "Chef's Pick", "Fresh", "Classic"];
+    return foodCategories.map((c, idx) => ({
       id: c.id,
-      badge: "Category",
+      badge: BADGES[idx % BADGES.length],
       title: c.name,
       icon: c.image || "/images/categories/cat-food.png",
       bgClass: bgClasses[idx % bgClasses.length],
@@ -124,16 +138,11 @@ function ExploreDesktopContent() {
   // Filtered Kitchens if user arrived via search or category filter
   const filteredKitchens = useMemo(() => {
     if (!categoryFilter && !searchQuery) return [];
-    const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = searchQuery || categoryFilter ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = searchQuery || categoryFilter ? homeData.allFoodItems : homeData.foodItems;
     let list = sourceKitchens || [];
     if (categoryFilter) {
-      const q = categoryFilter.toLowerCase();
-      list = list.filter(
-        (k) =>
-          k.category?.toLowerCase().includes(q) ||
-          k.name.toLowerCase().includes(q)
-      );
+      list = list.filter((k) => matchesKitchenCategoryFilter(categoryFilter, k, sourceFoodItems));
     }
     if (searchQuery) {
       list = list.filter((k) => matchesKitchenOrDishSearch(searchQuery, k, sourceFoodItems));
@@ -147,15 +156,10 @@ function ExploreDesktopContent() {
   // Filtered Food Items if user arrived via search, dietary, or category filter
   const filteredFoodItems = useMemo(() => {
     if (!categoryFilter && !searchQuery && selectedDiet === "all") return [];
-    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
-    let list = sourceFoodItems;
+    const sourceFoodItems = searchQuery || categoryFilter ? homeData.allFoodItems : homeData.foodItems;
+    let list = sourceFoodItems || [];
     if (categoryFilter) {
-      list = list.filter(
-        (f) =>
-          matchesSearchQuery(f.categoryName, categoryFilter) ||
-          matchesSearchQuery(f.name, categoryFilter) ||
-          matchesSearchQuery(f.description, categoryFilter)
-      );
+      list = list.filter((f) => matchesDishCategory(categoryFilter, f));
     }
     if (searchQuery) {
       list = list.filter((f) => matchesDishSearch(searchQuery, f));
@@ -279,6 +283,7 @@ function ExploreDesktopContent() {
               kitchens={filteredKitchens}
               foodItems={filteredFoodItems}
               rooms={filteredRooms}
+              isLoading={homeData.isLoading}
             />
           )}
 
@@ -294,8 +299,11 @@ function ExploreDesktopContent() {
           {/* 5. Curated Dining Collections (8 Category Cards with Badges) */}
           <CuratedDiningCollections items={dynamicDiningItems} />
 
-          {/* 6. What's on Your Mind? (8 Meal Moment Cards) */}
-          <WhatsOnYourMind moments={dynamicMoments} />
+          {/* 6. What's on Your Mind? (Meal Moment Category Cards) */}
+          <WhatsOnYourMind
+            moments={dynamicMoments}
+            activeCategory={categoryFilter || ""}
+          />
         </main>
         <Footer />
       </div>

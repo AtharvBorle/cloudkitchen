@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
     // In production, Nginx handles all CORS headers.
     // In development, we set them here for local testing.
     if (request.nextUrl.pathname.startsWith("/api/") && process.env.NODE_ENV === "development") {

@@ -487,9 +487,13 @@ export default function UserDashboard() {
                                     overflowX: 'auto', 
                                     padding: '5px 5px 15px 5px',
                                 }} className="hide-scrollbar">
-                                    {items.map(item => (
+                                    {items.map(item => {
+                                        const isOutOfStock = item.stockQuantity === 0 || item.maxStock === 0 || item.isAvailable === false;
+                                        const isGrey = !item.sellerIsOnline || isOutOfStock;
+
+                                        return (
                                         <div key={item.id} style={{ 
-                                            backgroundColor: 'white', 
+                                            backgroundColor: isGrey ? '#F8FAFC' : 'white', 
                                             borderRadius: '12px', 
                                             overflow: 'hidden', 
                                             boxShadow: 'var(--shadow-card)', 
@@ -497,23 +501,67 @@ export default function UserDashboard() {
                                             flexDirection: 'column', 
                                             width: '280px',
                                             flexShrink: 0,
+                                            opacity: isGrey ? 0.75 : 1,
+                                            border: isGrey ? '1.5px solid #E2E8F0' : '1px solid transparent',
                                             transition: 'transform 0.2s ease, box-shadow 0.2s' 
                                         }} className="hover-lift">
                                             <Link href={`/shop/${item.sellerTrackingId}`} style={{ display: 'block', height: '160px', position: 'relative' }}>
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                {item.distanceText && (
+                                                <img 
+                                                    src={item.imageUrl || placeholderImage} 
+                                                    alt={item.name} 
+                                                    style={{ 
+                                                        width: '100%', 
+                                                        height: '100%', 
+                                                        objectFit: 'cover',
+                                                        filter: isGrey ? 'grayscale(80%)' : 'none'
+                                                    }} 
+                                                />
+                                                {isOutOfStock && (
+                                                    <div
+                                                        style={{
+                                                            position: "absolute",
+                                                            top: 0,
+                                                            left: 0,
+                                                            right: 0,
+                                                            bottom: 0,
+                                                            backgroundColor: "rgba(0, 0, 0, 0.45)",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            zIndex: 2,
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                backgroundColor: "#DC2626",
+                                                                color: "#FFFFFF",
+                                                                padding: "4px 16px",
+                                                                fontSize: "0.75rem",
+                                                                fontWeight: "800",
+                                                                letterSpacing: "1px",
+                                                                textTransform: "uppercase",
+                                                                borderRadius: "4px",
+                                                                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                                                                transform: "rotate(-6deg)",
+                                                            }}
+                                                        >
+                                                            Out of Stock
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {item.distanceText && !isOutOfStock && (
                                                     <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'rgba(0,0,0,0.75)', color: 'white', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
                                                         📍 {item.distanceText}
                                                     </div>
                                                 )}
-                                                <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '4px 8px', borderRadius: '20px', fontWeight: 'bold', color: 'var(--coral)', fontSize: '0.85rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                                                <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '4px 8px', borderRadius: '20px', fontWeight: 'bold', color: isGrey ? '#64748B' : 'var(--coral)', fontSize: '0.85rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
                                                     ₹{item.price}
                                                 </div>
                                             </Link>
                                             <div style={{ padding: '15px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                                 <Link href={`/shop/${item.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                    <h4 style={{ fontSize: '1.05rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    <h4 style={{ fontSize: '1.05rem', fontWeight: 'bold', color: isGrey ? '#64748B' : 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                         {item.name}
                                                         <span style={{
                                                             display: 'inline-block',
@@ -536,20 +584,21 @@ export default function UserDashboard() {
                                                         )}
                                                     </p>
                                                     <p style={{ color: '#555', fontSize: '0.8rem', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4rem' }}>{item.description}</p>
-                                                    <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '10px' }}>
-                                                        {item.stockQuantity === 0 ? (
-                                                            <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                                        ) : item.stockQuantity > 0 ? (
-                                                            <span>Only {item.stockQuantity} left!</span>
-                                                        ) : (
-                                                            <span style={{ color: '#10B981' }}>In Stock</span>
-                                                        )}
-                                                    </div>
+                                                    {isOutOfStock ? (
+                                                        <div style={{ fontSize: '0.75rem', marginBottom: '10px' }}>
+                                                            <span style={{ color: '#DC2626', fontWeight: '700' }}>Out of Stock</span>
+                                                        </div>
+                                                    ) : item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
+                                                        <div style={{ fontSize: '0.75rem', marginBottom: '10px' }}>
+                                                            <span style={{ color: '#D97706', fontWeight: '700' }}>Only {item.stockQuantity} left</span>
+                                                        </div>
+                                                    ) : null}
                                                 </Link>
-                                                <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
+                                                <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || isOutOfStock} />
                                             </div>
                                         </div>
-                                    ))}
+                                    );
+                                    })}
                                 </div>
                             </div>
                         );

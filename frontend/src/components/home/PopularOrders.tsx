@@ -108,6 +108,7 @@ export default function PopularOrders({
       imageUrl: offer.imageUrl,
       stockQuantity: stockLimit,
       maxStock: stockLimit,
+      itemType: offer.itemType,
     });
     setAddedId(offer.id);
     setTimeout(() => setAddedId(null), 1800);
@@ -182,8 +183,12 @@ export default function PopularOrders({
         >
           {displayOffers.map((offer) => {
             const isSellerClosed = offer.sellerIsOnline === false;
-            const isItemUnavailable = offer.isAvailable === false;
-            const isClosed = isSellerClosed || isItemUnavailable;
+            const isOutOfStock = (offer as any).stockQuantity === 0 || (offer as any).maxStock === 0 || offer.isAvailable === false;
+            const isClosed = isSellerClosed || isOutOfStock;
+            const rawStock = (offer as any).maxStock !== undefined ? (offer as any).maxStock : (offer as any).stockQuantity;
+            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+            const currentInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
+            const isMaxStockInCart = !isClosed && stockLimit > 0 && (currentInCart ? currentInCart.quantity >= stockLimit : false);
 
             return (
             <div
@@ -196,16 +201,16 @@ export default function PopularOrders({
                 background: isClosed
                   ? "#F8FAFC"
                   : "linear-gradient(135deg, #FFDEB1 0%, #EEB06A 100%)",
-                border: isClosed ? "1px solid #E2E8F0" : undefined,
+                border: isClosed ? "1.5px solid #E2E8F0" : undefined,
                 display: "flex",
                 flexDirection: "column",
                 gap: "10px",
                 boxSizing: "border-box",
                 boxShadow: isClosed
-                  ? "0 4px 12px rgba(0, 0, 0, 0.03)"
+                  ? "0 2px 8px rgba(0, 0, 0, 0.02)"
                   : "0 6px 20px rgba(238, 176, 106, 0.25)",
                 transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                opacity: isClosed ? 0.85 : 1,
+                opacity: isClosed ? 0.75 : 1,
               }}
               className="offer-card"
             >
@@ -266,7 +271,7 @@ export default function PopularOrders({
                     height: "100%",
                     objectFit: "cover",
                     transition: "transform 0.3s ease",
-                    filter: isClosed ? "grayscale(100%)" : "none",
+                    filter: isClosed ? "grayscale(80%)" : "none",
                   }}
                   className="offer-img"
                 />
@@ -278,7 +283,7 @@ export default function PopularOrders({
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      backgroundColor: "rgba(15, 23, 42, 0.4)",
+                      backgroundColor: "rgba(15, 23, 42, 0.45)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -287,17 +292,19 @@ export default function PopularOrders({
                   >
                     <span
                       style={{
-                        backgroundColor: "#0F172A",
+                        backgroundColor: isOutOfStock ? "#DC2626" : "#0F172A",
                         color: "#FFFFFF",
-                        fontSize: "9px",
+                        fontSize: "10px",
                         fontWeight: "800",
-                        letterSpacing: "0.6px",
-                        padding: "3px 8px",
+                        letterSpacing: "0.8px",
+                        padding: "4px 10px",
                         borderRadius: "10px",
                         textTransform: "uppercase",
+                        boxShadow: "0 3px 10px rgba(0,0,0,0.3)",
+                        border: "1px solid rgba(255,255,255,0.25)",
                       }}
                     >
-                      {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
+                      {isSellerClosed ? "Closed" : "Out of Stock"}
                     </span>
                   </div>
                 )}
@@ -324,6 +331,21 @@ export default function PopularOrders({
                 >
                   {offer.code}
                 </span>
+
+                {/* Stock Notice */}
+                {isOutOfStock ? (
+                  <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: "700" }}>
+                    Out of stock
+                  </span>
+                ) : isMaxStockInCart ? (
+                  <span style={{ fontSize: "0.74rem", color: "#D97706", fontWeight: "700" }}>
+                    Max in cart ({stockLimit})
+                  </span>
+                ) : stockLimit > 0 && stockLimit <= 5 ? (
+                  <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
+                    Only {stockLimit} left
+                  </span>
+                ) : null}
               </div>
 
               {/* Action Button: Order Now */}

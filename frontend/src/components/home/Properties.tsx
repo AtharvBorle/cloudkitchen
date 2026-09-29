@@ -78,28 +78,62 @@ function kitchenMatchesCuisine(
   });
 }
 
-function getKitchenPrice(kitchen: PlaceCardData, foodItems: Array<any> = []): number {
-  if (kitchen.price && kitchen.price > 0) return kitchen.price;
-  const dishes = foodItems.filter((f) => {
-    const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
-    const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
-    const matchKitchenId = kitchen.kitchenId && (
-      (f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.kitchenId).toLowerCase()) ||
-      (f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.kitchenId).toLowerCase())
+function getKitchenDishes(kitchen: PlaceCardData, foodItems: Array<any> = []): Array<any> {
+  const kId = (kitchen.id || "").toLowerCase().trim();
+  const kTracking = (kitchen.trackingId || "").toLowerCase().trim();
+  const kKitchenId = (kitchen.kitchenId || "").toLowerCase().trim();
+  const kName = (kitchen.name || "").toLowerCase().trim();
+
+  return foodItems.filter((f) => {
+    const fSellerId = (f.sellerId || "").toLowerCase().trim();
+    const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+    const fSellerName = (f.sellerName || "").toLowerCase().trim();
+
+    const matchId = kId && fSellerId && (fSellerId === kId || fTracking === kId);
+    const matchTracking = kTracking && (fTracking === kTracking || fSellerId === kTracking);
+    const matchKitchenId = kKitchenId && (fSellerId === kKitchenId || fTracking === kKitchenId);
+    const matchName = kName && fSellerName && (
+      kName === fSellerName ||
+      kName.includes(fSellerName) ||
+      fSellerName.includes(kName)
     );
-    const matchCrossId =
-      (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
-      (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
-    const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
-    return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
+
+    return matchId || matchTracking || matchKitchenId || matchName;
   });
-  if (dishes.length > 0) {
-    const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
-    if (prices.length > 0) {
-      return Math.min(...prices);
+}
+
+function isKitchenMatchingPrice(
+  kitchen: PlaceCardData,
+  pricePreset: string,
+  maxPrice: number,
+  foodItems: Array<any> = []
+): boolean {
+  if (pricePreset === "all" && maxPrice >= 2500) {
+    return true;
+  }
+
+  const dishes = getKitchenDishes(kitchen, foodItems);
+  const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
+
+  if (prices.length === 0) {
+    if (kitchen.price && kitchen.price > 0) {
+      prices.push(kitchen.price);
+    } else {
+      return false;
     }
   }
-  return 199;
+
+  if (pricePreset === "under-150") {
+    return prices.some((p) => p <= 150);
+  } else if (pricePreset === "150-400") {
+    return prices.some((p) => p >= 150 && p <= 400);
+  } else if (pricePreset === "400-plus") {
+    return prices.some((p) => p >= 400);
+  } else if (maxPrice < 2500) {
+    return prices.some((p) => p <= maxPrice);
+  }
+
+  return true;
 }
 
 const DIETARY = [
@@ -127,7 +161,7 @@ interface PropertiesProps {
 export default function Properties({ places, foodItems = [] }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [maxPrice, setMaxPrice] = useState<number>(1000);
+  const [maxPrice, setMaxPrice] = useState<number>(2500);
   const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
   const basePlaces = places || [];
@@ -184,19 +218,10 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
       );
     }
 
-    // Filter by price range (0 to 1000+)
-    if (activePricePreset === "under-150") {
-      list = list.filter((p) => getKitchenPrice(p, foodItems) <= 150);
-    } else if (activePricePreset === "150-400") {
-      list = list.filter((p) => {
-        const pr = getKitchenPrice(p, foodItems);
-        return pr >= 150 && pr <= 400;
-      });
-    } else if (activePricePreset === "400-plus") {
-      list = list.filter((p) => getKitchenPrice(p, foodItems) >= 400);
-    } else if (maxPrice < 1000) {
-      list = list.filter((p) => getKitchenPrice(p, foodItems) <= maxPrice);
-    }
+    // Filter by price range (0 to 1000+ and presets)
+    list = list.filter((p) =>
+      isKitchenMatchingPrice(p, activePricePreset, maxPrice, foodItems)
+    );
 
     return list;
   }, [basePlaces, selectedCuisines, selectedDietary, maxPrice, activePricePreset, foodItems]);
@@ -228,7 +253,7 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
   const handleClearAll = () => {
     setSelectedCuisines([]);
     setSelectedDietary([]);
-    setMaxPrice(1000);
+    setMaxPrice(2500);
     setActivePricePreset("all");
   };
 
@@ -503,8 +528,8 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                   ? "₹150 – ₹400"
                   : activePricePreset === "400-plus"
                   ? "₹400+"
-                  : maxPrice >= 1000
-                  ? "₹0 – ₹1000+"
+                  : maxPrice >= 2500
+                  ? "₹0 – ₹2500+"
                   : `Up to ₹${maxPrice}`}
               </span>
             </div>
@@ -514,9 +539,9 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
               <input
                 type="range"
                 min="0"
-                max="1000"
-                step="10"
-                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-400" ? 400 : 1000) : maxPrice}
+                max="2500"
+                step="25"
+                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-400" ? 400 : 2500) : maxPrice}
                 onChange={(e) => {
                   setMaxPrice(Number(e.target.value));
                   setActivePricePreset("custom");
@@ -529,8 +554,8 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: "#94A3B8", fontWeight: "600" }}>
                 <span>₹0</span>
-                <span>₹500</span>
-                <span>₹1000+</span>
+                <span>₹1250</span>
+                <span>₹2500+</span>
               </div>
             </div>
 
@@ -550,13 +575,13 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                     onClick={() => {
                       if (isSelected) {
                         setActivePricePreset("all");
-                        setMaxPrice(1000);
+                        setMaxPrice(2500);
                       } else {
                         setActivePricePreset(tier.id);
                         if (tier.id === "under-150") setMaxPrice(150);
                         else if (tier.id === "150-400") setMaxPrice(400);
-                        else if (tier.id === "400-plus") setMaxPrice(1000);
-                        else setMaxPrice(1000);
+                        else if (tier.id === "400-plus") setMaxPrice(2500);
+                        else setMaxPrice(2500);
                       }
                     }}
                     style={{

@@ -40,11 +40,12 @@ export interface DynamicFoodItem {
   distanceKm?: number;
   distanceText?: string;
   categoryName?: string;
+  stockQuantity?: number;
+  maxStock?: number;
   rating?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
   isWithin5km?: boolean;
-  stockQuantity?: number;
 }
 
 export interface DynamicRoom {
@@ -203,11 +204,23 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           drink: "/images/categories/cat-drink.png",
           drinks: "/images/categories/cat-drink.png",
           rooms: "/images/categories/cat-rooms.png",
+          burger: "/images/categories/cat-food.png",
+          cake: "/images/categories/cat-backery.png",
+          meal: "/images/categories/cat-homemeals.png",
+          pizza: "/images/categories/cat-food.png",
+          shake: "/images/categories/cat-drink.png",
+          dosa: "/images/categories/cat-food.png",
+          idli: "/images/categories/cat-food.png",
+          pastry: "/images/categories/cat-backery.png",
+          pohe: "/images/categories/cat-food.png",
+          sabudana: "/images/categories/cat-food.png",
+          shira: "/images/categories/cat-food.png",
+          upma: "/images/categories/cat-food.png",
         };
 
-        // 1. Process Categories
-        const dbCategories: DynamicCategory[] = [];
-        dbCategories.push({
+        // 1. Process Categories (Deduplicated)
+        const categoryMap = new Map<string, DynamicCategory>();
+        categoryMap.set("food", {
           id: "food",
           name: "Food",
           image: "/images/categories/cat-food.png",
@@ -215,39 +228,45 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           route: "/food-explore",
         });
 
+        const processCatEntry = (fc: any) => {
+          if (!fc || !fc.name) return;
+          const rawName = String(fc.name).trim();
+          const lower = rawName.toLowerCase();
+          if (!lower || lower === "food" || lower === "rooms") return;
+          const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+          const mappedImage = fc.imageUrl || CATEGORY_IMAGE_MAP[lower] || "/images/categories/cat-food.png";
+          const existing = categoryMap.get(lower);
+
+          if (!existing) {
+            categoryMap.set(lower, {
+              id: fc.id || lower,
+              name: displayName,
+              image: mappedImage,
+              emoji: "🍽️",
+              route: "/food-explore?category=" + encodeURIComponent(lower),
+            });
+          } else if (fc.imageUrl && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
+            categoryMap.set(lower, {
+              ...existing,
+              id: fc.id || existing.id,
+              name: displayName,
+              image: fc.imageUrl,
+            });
+          }
+        };
+
         if (exploreRes?.foodCategories && Array.isArray(exploreRes.foodCategories) && exploreRes.foodCategories.length > 0) {
-          exploreRes.foodCategories.forEach((fc: any) => {
-            const lower = (fc.name || "").toLowerCase().trim();
-            if (lower && lower !== "food" && lower !== "rooms") {
-              const mappedImage = CATEGORY_IMAGE_MAP[lower] || fc.imageUrl || "/images/categories/cat-food.png";
-              dbCategories.push({
-                id: fc.id || lower,
-                name: fc.name,
-                image: mappedImage,
-                emoji: "🍽️",
-                route: "/food-explore?category=" + encodeURIComponent(lower),
-              });
-            }
-          });
-        } else if (categoriesRes?.categories && Array.isArray(categoriesRes.categories) && categoriesRes.categories.length > 0) {
-          categoriesRes.categories.forEach((cat: any) => {
-            const lower = (cat.name || "").toLowerCase().trim();
-            if (lower && lower !== "food" && lower !== "rooms") {
-              const mappedImage = CATEGORY_IMAGE_MAP[lower] || "/images/categories/cat-food.png";
-              dbCategories.push({
-                id: cat.id || lower,
-                name: cat.name,
-                image: mappedImage,
-                emoji: "🍲",
-                route: "/food-explore?category=" + encodeURIComponent(lower),
-              });
-            }
-          });
+          exploreRes.foodCategories.forEach(processCatEntry);
+        }
+        if (categoriesRes?.categories && Array.isArray(categoriesRes.categories) && categoriesRes.categories.length > 0) {
+          categoriesRes.categories.forEach(processCatEntry);
+        } else if (Array.isArray(categoriesRes) && categoriesRes.length > 0) {
+          categoriesRes.forEach(processCatEntry);
         }
 
         // Add rooms if not present
-        if (!dbCategories.some((c) => c.id === "rooms" || c.name.toLowerCase() === "rooms")) {
-          dbCategories.push({
+        if (!categoryMap.has("rooms")) {
+          categoryMap.set("rooms", {
             id: "rooms",
             name: "Rooms",
             image: "/images/categories/cat-rooms.png",
@@ -256,6 +275,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           });
         }
 
+        const dbCategories: DynamicCategory[] = Array.from(categoryMap.values());
         setCategories(dbCategories);
 
         // 2. Process Food Items & Kitchens
@@ -268,6 +288,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             const resolvedLat = item.sellerLatitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = item.sellerLongitude ?? defaultCoords?.lng ?? null;
 
+            const rawStock = item.stockQuantity !== undefined && item.stockQuantity !== null
+              ? Number(item.stockQuantity)
+              : (item.maxStock !== undefined && item.maxStock !== null ? Number(item.maxStock) : -1);
+
             const foodItem: DynamicFoodItem = {
               id: item.id,
               name: item.name,
@@ -275,7 +299,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               price: item.price || 0,
               imageUrl: item.imageUrl || null,
               itemType: item.itemType || 'VEG',
-              isAvailable: item.isAvailable !== false,
+              isAvailable: item.isAvailable !== false && rawStock !== 0,
+              stockQuantity: rawStock,
+              maxStock: rawStock,
               sellerId: item.sellerId,
               sellerName: item.sellerName || 'Cloud Kitchen',
               sellerCity: item.sellerCity,
@@ -292,7 +318,6 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : 0),
               deliveryTime: item.deliveryTime || '20-30 min',
               servedPincodes: item.servedPincodes || [],
-              stockQuantity: typeof item.stockQuantity === "number" ? item.stockQuantity : (typeof item.maxStock === "number" ? item.maxStock : -1),
             };
             rawFoodItems.push(foodItem);
           });

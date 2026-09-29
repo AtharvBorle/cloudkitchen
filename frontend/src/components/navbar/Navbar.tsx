@@ -87,6 +87,7 @@ export const DEFAULT_NAV_ITEMS = [
 export const NAV_ITEM_ROUTES: Record<string, string> = {
   Home: "/",
   Explore: "/explore-desktop",
+  "Explore Menu": "/explore-menu",
   Food: "/explore-desktop",
   Orders: "/orders-desktop",
   Rooms: "/room-booking",
@@ -190,7 +191,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   const getActiveItemFromPath = (): string => {
     if (controlledActiveItem !== undefined) return controlledActiveItem;
     if (pathname === "/") return "Home";
-    if (pathname.startsWith("/explore-desktop") || pathname.startsWith("/explore-meal-plans") || pathname.startsWith("/meal-plans")) {
+    if (
+      pathname.startsWith("/explore-desktop") ||
+      pathname.startsWith("/explore-menu") ||
+      pathname.startsWith("/food-explore") ||
+      pathname.startsWith("/explore-meal-plans") ||
+      pathname.startsWith("/meal-plans")
+    ) {
       return navItems.includes("Food") ? "Food" : "Explore";
     }
     if (pathname.startsWith("/room-booking")) {

@@ -2,7 +2,7 @@ export async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Pr
     let target = input;
     if (typeof target === "string" && target.startsWith("/api/")) {
         if (typeof window === "undefined") {
-            const internalBase = process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:3001";
+            const internalBase = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
             target = `${internalBase.replace(/\/$/, "")}${target}`;
         }
     }

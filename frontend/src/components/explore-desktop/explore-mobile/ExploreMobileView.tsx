@@ -21,6 +21,12 @@ import styles from "./ExploreMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useLocation } from "@/components/location-provider";
 import logoImg from "@/components/navbar/logo-nav.png";
+import {
+  matchesKitchenOrDishSearch,
+  matchesKitchenCategoryFilter,
+  matchesDishCategory,
+  matchesDishSearch,
+} from "@/lib/dietary-filter";
 
 const LANG_OPTIONS = [
   { id: "hi", label: "Hindi", code: "HI" },
@@ -189,54 +195,31 @@ export const ExploreMobileView: React.FC = () => {
   // Filtered Kitchens
   const filteredKitchens = React.useMemo(() => {
     if (!categoryFilter && !queryParam) return [];
-    let list = homeData.kitchens || [];
+    const sourceKitchens = categoryFilter || queryParam ? (homeData.allKitchens?.length ? homeData.allKitchens : (homeData.kitchens || [])) : (homeData.kitchens || []);
+    const sourceFoodItems = categoryFilter || queryParam ? (homeData.allFoodItems?.length ? homeData.allFoodItems : (homeData.foodItems || [])) : (homeData.foodItems || []);
+    let list = sourceKitchens;
     if (categoryFilter) {
-      const q = categoryFilter.toLowerCase();
-      list = list.filter(
-        (k) =>
-          k.category?.toLowerCase().includes(q) ||
-          k.name.toLowerCase().includes(q)
-      );
+      list = list.filter((k) => matchesKitchenCategoryFilter(categoryFilter, k, sourceFoodItems));
     }
     if (queryParam) {
-      const q = queryParam.toLowerCase().trim();
-      list = list.filter(
-        (k) =>
-          k.name.toLowerCase().includes(q) ||
-          k.category?.toLowerCase().includes(q) ||
-          k.locality?.toLowerCase().includes(q) ||
-          k.city?.toLowerCase().includes(q) ||
-          k.pincode?.includes(q)
-      );
+      list = list.filter((k) => matchesKitchenOrDishSearch(queryParam, k, sourceFoodItems));
     }
     return list;
-  }, [homeData.kitchens, categoryFilter, queryParam]);
+  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, categoryFilter, queryParam]);
 
   // Filtered Food Items
   const filteredFoodItems = React.useMemo(() => {
     if (!categoryFilter && !queryParam) return [];
-    let list = homeData.foodItems || [];
+    const sourceFoodItems = categoryFilter || queryParam ? (homeData.allFoodItems?.length ? homeData.allFoodItems : (homeData.foodItems || [])) : (homeData.foodItems || []);
+    let list = sourceFoodItems;
     if (categoryFilter) {
-      const q = categoryFilter.toLowerCase();
-      list = list.filter(
-        (f) =>
-          f.categoryName?.toLowerCase().includes(q) ||
-          f.name.toLowerCase().includes(q) ||
-          f.description.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishCategory(categoryFilter, f));
     }
     if (queryParam) {
-      const q = queryParam.toLowerCase().trim();
-      list = list.filter(
-        (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.description.toLowerCase().includes(q) ||
-          f.sellerName.toLowerCase().includes(q) ||
-          f.categoryName?.toLowerCase().includes(q)
-      );
+      list = list.filter((f) => matchesDishSearch(queryParam, f));
     }
     return list;
-  }, [homeData.foodItems, categoryFilter, queryParam]);
+  }, [homeData.foodItems, homeData.allFoodItems, categoryFilter, queryParam]);
 
   // Filtered Rooms
   const filteredRooms = React.useMemo(() => {
@@ -312,7 +295,17 @@ export const ExploreMobileView: React.FC = () => {
       styles.cardLateNight,
       styles.cardDrinks,
     ];
-    return (homeData.categories || []).slice(0, 6).map((c, idx) => ({
+    const seen = new Set<string>();
+    const foodCategories: typeof homeData.categories = [];
+    for (const c of homeData.categories || []) {
+      const lower = (c.name || "").toLowerCase().trim();
+      if (c.id === "rooms" || lower === "rooms") continue;
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        foodCategories.push(c);
+      }
+    }
+    return foodCategories.map((c, idx) => ({
       id: c.id,
       tag: "Category",
       name: c.name,
@@ -558,6 +551,7 @@ export const ExploreMobileView: React.FC = () => {
             kitchens={filteredKitchens}
             foodItems={filteredFoodItems}
             rooms={filteredRooms}
+            isLoading={homeData.isLoading}
             onClearSearch={() => {
               setSearchQuery("");
               router.push("/explore-desktop");
@@ -723,35 +717,50 @@ export const ExploreMobileView: React.FC = () => {
           </div>
 
           <div className={styles.mindGrid}>
-            {mealMoments.map((moment) => (
-              <div
-                key={moment.id}
-                className={`${styles.momentCard} ${moment.cardClass}`}
-                onClick={() => router.push(`/explore-desktop?category=${encodeURIComponent(moment.name.toLowerCase())}`)}
-                style={{ cursor: "pointer" }}
-              >
-                <span
-                  className={`${styles.momentTag} ${moment.isDark ? styles.momentTagDark : ""}`}
+            {mealMoments.map((moment) => {
+              const isSelected = categoryFilter.toLowerCase().trim() === moment.name.toLowerCase().trim();
+              return (
+                <div
+                  key={moment.id}
+                  className={`${styles.momentCard} ${moment.cardClass}`}
+                  onClick={() => {
+                    if (isSelected) {
+                      router.push("/explore-desktop");
+                    } else {
+                      router.push(`/explore-desktop?category=${encodeURIComponent(moment.name.toLowerCase())}`);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    border: isSelected ? "2.5px solid #FF6B00" : undefined,
+                    transform: isSelected ? "scale(1.03)" : undefined,
+                  }}
                 >
-                  {moment.tag}
-                </span>
-
-                <div className={styles.momentBottomRow}>
-                  <Image
-                    src={moment.icon}
-                    alt={moment.name}
-                    width={32}
-                    height={32}
-                    className={styles.momentIconImg}
-                  />
                   <span
-                    className={`${styles.momentName} ${moment.isDark ? styles.momentNameLight : ""}`}
+                    className={`${styles.momentTag} ${moment.isDark ? styles.momentTagDark : ""}`}
+                    style={isSelected ? { backgroundColor: "#FF6B00", color: "#FFFFFF" } : undefined}
                   >
-                    {moment.name}
+                    {isSelected ? "Selected" : moment.tag}
                   </span>
+
+                  <div className={styles.momentBottomRow}>
+                    <Image
+                      src={moment.icon}
+                      alt={moment.name}
+                      width={32}
+                      height={32}
+                      className={styles.momentIconImg}
+                    />
+                    <span
+                      className={`${styles.momentName} ${moment.isDark ? styles.momentNameLight : ""}`}
+                    >
+                      {moment.name}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
