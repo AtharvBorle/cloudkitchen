@@ -145,7 +145,7 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     monthlyRevenue,
     status: rawPlan.status || "Live",
     deployedDate,
-    allowCancel: rawPlan.allowCancel ?? true,
+    allowCancel: rawPlan.allowCancel ?? false,
     pauseBillingPeriod: rawPlan.pauseBillingPeriod || "30 Days",
   };
 }
@@ -268,7 +268,7 @@ export async function saveMealPlan(
         features: planData.features || [],
         mealTimings: planData.mealTimings || [],
         status: planData.status || "Live",
-        allowCancel: planData.allowCancel ?? true,
+        allowCancel: planData.allowCancel ?? false,
         pauseBillingPeriod: planData.pauseBillingPeriod || "30 Days",
       }),
     });

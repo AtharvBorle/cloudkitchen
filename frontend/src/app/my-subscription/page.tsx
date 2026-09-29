@@ -13,7 +13,6 @@ import { DeliveryTimes, DeliverySlot } from "@/components/my-subscription/delive
 import { SubscriptionBenefits } from "@/components/my-subscription/subscription-benefits";
 import { SubscriptionActions } from "@/components/my-subscription/subscription-actions";
 import { ChangePlanModal } from "@/components/my-subscription/change-plan-modal";
-import { CancelSubscriptionModal } from "@/components/my-subscription/cancel-subscription-modal";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useLocation } from "@/components/location-provider";
 import {
@@ -103,7 +102,7 @@ interface SellerInfo {
   plansCount: number;
 }
 
-type BillingCycle = "all" | "weekly" | "monthly" | "quarterly" | "yearly";
+type BillingCycle = "all" | "weekly" | "biweekly" | "monthly";
 
 function MySubscriptionContent() {
   const router = useRouter();
@@ -120,7 +119,6 @@ function MySubscriptionContent() {
   const [subscription, setSubscription] = useState<UserActiveMealSubscription | null>(null);
   const [isLoadingActive, setIsLoadingActive] = useState<boolean>(true);
   const [isChangingPlan, setIsChangingPlan] = useState<boolean>(false);
-  const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
   // All Subscription Plans Explorer State
@@ -128,7 +126,6 @@ function MySubscriptionContent() {
   const [allKitchens, setAllKitchens] = useState<any[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState<boolean>(false);
   const [selectedSellerId, setSelectedSellerId] = useState<string | "all">("all");
-  const [selectedDiet, setSelectedDiet] = useState<string>("all");
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -283,7 +280,7 @@ function MySubscriptionContent() {
     return sellersList.find((s) => s.id === selectedSellerId) || null;
   }, [selectedSellerId, sellersList]);
 
-  // Filter plans based on selected seller, dietary preference, billing cycle, and search query
+  // Filter plans based on selected seller, billing cycle, and search query
   const filteredPlans = useMemo(() => {
     let list = allPlans;
 
@@ -291,29 +288,17 @@ function MySubscriptionContent() {
       list = list.filter((p) => p.sellerId === selectedSellerId);
     }
 
-    if (selectedDiet && selectedDiet !== "all") {
-      const d = selectedDiet.toLowerCase();
-      if (d === "veg") {
-        list = list.filter((p) => (p.foodType || "").toUpperCase() !== "NON_VEG");
-      } else if (d === "non-veg") {
-        list = list.filter((p) => (p.foodType || "").toUpperCase() !== "PURE_VEG" && (p.foodType || "").toUpperCase() !== "VEG");
-      }
-    }
-
     if (billingCycle !== "all") {
       list = list.filter((p) => {
-        const dur = (p.duration || "1 Week").toLowerCase();
+        const dur = (p.duration || "1 Week").toLowerCase().trim();
         if (billingCycle === "weekly") {
-          return dur.includes("week") || (p.weeklyPrice && !p.monthlyPrice);
+          return dur.includes("1 week") || (dur.includes("week") && !dur.includes("2 week") && !dur.includes("bi") && !dur.includes("by"));
+        }
+        if (billingCycle === "biweekly") {
+          return dur.includes("2 week") || dur.includes("bi") || dur.includes("by");
         }
         if (billingCycle === "monthly") {
-          return (dur.includes("month") && !dur.includes("quarter") && !dur.includes("3 month")) || Boolean(p.monthlyPrice);
-        }
-        if (billingCycle === "quarterly") {
-          return dur.includes("quarter") || dur.includes("3 month") || Boolean(p.quarterlyPrice);
-        }
-        if (billingCycle === "yearly") {
-          return dur.includes("year") || Boolean(p.yearlyPrice);
+          return dur.includes("month");
         }
         return true;
       });
@@ -331,7 +316,7 @@ function MySubscriptionContent() {
     }
 
     return list;
-  }, [allPlans, selectedSellerId, selectedDiet, billingCycle, searchQuery]);
+  }, [allPlans, selectedSellerId, billingCycle, searchQuery]);
 
   const getPlanPrice = (plan: PublicMealPlan) => {
     const dur = (plan.duration || "1 Week").toLowerCase();
@@ -352,7 +337,7 @@ function MySubscriptionContent() {
 
   const getPlanDurationLabel = (plan: PublicMealPlan) => {
     const dur = (plan.duration || "1 Week").toLowerCase();
-    if (dur.includes("2 week")) return "/ 2 weeks";
+    if (dur.includes("2 week") || dur.includes("bi") || dur.includes("by")) return "/ 2 weeks";
     if (dur.includes("week")) return "/ week";
     if (dur.includes("6 month")) return "/ 6 months";
     if (dur.includes("month")) return "/ month";
@@ -409,19 +394,6 @@ function MySubscriptionContent() {
       "success",
       `Meal plan successfully changed to ${updatedData.name || updatedData.tier || "new tier"}!`
     );
-  };
-
-  const handleSubscriptionCancelled = () => {
-    setSubscription((prev) =>
-      prev
-        ? {
-            ...prev,
-            status: "CANCELLED",
-            isPaused: false,
-          }
-        : null
-    );
-    showToast("info", "Your meal subscription has been cancelled.");
   };
 
   // Open Subscribe Modal
@@ -932,9 +904,7 @@ function MySubscriptionContent() {
                     {/* Subscription Actions */}
                     <SubscriptionActions
                       onChangePlan={() => setIsChangingPlan(true)}
-                      onCancelSubscription={() => setIsCancelling(true)}
                       status={subscription.status}
-                      allowCancel={subscription.plan?.allowCancel ?? true}
                     />
                   </>
                 )}
@@ -1036,26 +1006,6 @@ function MySubscriptionContent() {
 
                   {/* Secondary Filters: Dietary, Search & Billing Cycle */}
                   <div className={styles.filterRow}>
-                    {/* Dietary Pills */}
-                    <div className={styles.dietaryPills}>
-                      {[
-                        { id: "all", label: "All Diets" },
-                        { id: "veg", label: "Pure Veg 🥦" },
-                        { id: "non-veg", label: "Non-Veg 🍗" },
-                      ].map((diet) => (
-                        <button
-                          key={diet.id}
-                          type="button"
-                          className={`${styles.dietPill} ${
-                            selectedDiet === diet.id ? styles.dietPillActive : ""
-                          }`}
-                          onClick={() => setSelectedDiet(diet.id)}
-                        >
-                          {diet.label}
-                        </button>
-                      ))}
-                    </div>
-
                     {/* Search Input */}
                     <div className={styles.searchBox}>
                       <Search size={15} className={styles.searchIcon} />
@@ -1077,7 +1027,7 @@ function MySubscriptionContent() {
                         }`}
                         onClick={() => setBillingCycle("all")}
                       >
-                        <span>All Plans</span>
+                        <span>All</span>
                       </button>
                       <button
                         type="button"
@@ -1091,29 +1041,20 @@ function MySubscriptionContent() {
                       <button
                         type="button"
                         className={`${styles.cycleBtn} ${
+                          billingCycle === "biweekly" ? styles.cycleBtnActive : ""
+                        }`}
+                        onClick={() => setBillingCycle("biweekly")}
+                      >
+                        <span>Bi-weekly</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.cycleBtn} ${
                           billingCycle === "monthly" ? styles.cycleBtnActive : ""
                         }`}
                         onClick={() => setBillingCycle("monthly")}
                       >
                         <span>Monthly</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.cycleBtn} ${
-                          billingCycle === "quarterly" ? styles.cycleBtnActive : ""
-                        }`}
-                        onClick={() => setBillingCycle("quarterly")}
-                      >
-                        <span>Quarterly</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.cycleBtn} ${
-                          billingCycle === "yearly" ? styles.cycleBtnActive : ""
-                        }`}
-                        onClick={() => setBillingCycle("yearly")}
-                      >
-                        <span>Yearly</span>
                       </button>
                     </div>
                   </div>
@@ -1331,17 +1272,6 @@ function MySubscriptionContent() {
           sellerName={subscription.seller?.businessName}
           currentPlanId={subscription.planId}
           onPlanChanged={handlePlanChanged}
-        />
-      )}
-
-      {/* Cancel Subscription Modal */}
-      {subscription && isCancelling && (
-        <CancelSubscriptionModal
-          isOpen={isCancelling}
-          onClose={() => setIsCancelling(false)}
-          subscriptionId={subscription.id}
-          planName={subscription.plan?.name || "Daily Meal Plan"}
-          onCancelled={handleSubscriptionCancelled}
         />
       )}
 

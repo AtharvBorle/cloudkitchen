@@ -240,21 +240,6 @@ export const ChangePlanModal: React.FC<ChangePlanModalProps> = ({
                       </ul>
                     )}
 
-                    {/* Policy indicator */}
-                    <div className={styles.policyRow}>
-                      {plan.allowCancel ? (
-                        <span className={styles.policyAllowed}>
-                          <ShieldCheck size={13} />
-                          Cancellation Allowed
-                        </span>
-                      ) : (
-                        <span className={styles.policyRestricted}>
-                          <ShieldAlert size={13} />
-                          Non-refundable / No self-cancel
-                        </span>
-                      )}
-                    </div>
-
                     {/* Action Button */}
                     <div className={styles.cardActionRow}>
                       {isCurrent ? (
