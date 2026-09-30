@@ -96,7 +96,7 @@ export default function PopularOrders({
       return;
     }
 
-    addToCart({
+    const success = addToCart({
       id: offer.id,
       foodItemId: offer.foodItemId || offer.id,
       name: offer.title,
@@ -110,8 +110,12 @@ export default function PopularOrders({
       maxStock: stockLimit,
       itemType: offer.itemType,
     });
-    setAddedId(offer.id);
-    setTimeout(() => setAddedId(null), 1800);
+
+    if (success) {
+      setAddedId(offer.id);
+      showToast(`Added "${offer.title}" to your cart!`, "success");
+      setTimeout(() => setAddedId(null), 1800);
+    }
   };
 
   return (
