@@ -1308,14 +1308,6 @@ function FoodExploreContent() {
                           <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: "700" }}>
                             Out of stock
                           </div>
-                        ) : isMaxStockInCart ? (
-                          <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
-                            We have only {dish.stockQuantity} left in stock
-                          </div>
-                        ) : dish.stockQuantity !== undefined && dish.stockQuantity > 0 && dish.stockQuantity <= 5 ? (
-                          <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
-                            Only {dish.stockQuantity} left in stock
-                          </div>
                         ) : null}
 
                         {/* Distance Badge */}
@@ -1391,21 +1383,24 @@ function FoodExploreContent() {
                                   style={{
                                     position: "absolute",
                                     bottom: "calc(100% + 4px)",
+                                    left: "0",
                                     right: "0",
+                                    width: "100%",
                                     zIndex: 10,
                                     pointerEvents: "none",
-                                    whiteSpace: "nowrap",
-                                    fontSize: "0.62rem",
+                                    fontSize: "0.58rem",
                                     color: "#EA580C",
                                     backgroundColor: "#FFF7ED",
                                     border: "1px solid #FFEDD5",
                                     borderRadius: "6px",
-                                    padding: "2px 6px",
+                                    padding: "2px 3px",
                                     fontWeight: "800",
                                     textAlign: "center",
-                                    lineHeight: "1.2",
+                                    lineHeight: "1.15",
                                     boxShadow: "0 2px 6px rgba(234, 88, 12, 0.12)",
                                     boxSizing: "border-box",
+                                    whiteSpace: "normal",
+                                    wordBreak: "break-word",
                                   }}
                                 >
                                   We have only {dish.stockQuantity} left in stock

@@ -689,26 +689,29 @@ export const UserCart: React.FC<UserCartProps> = ({
                           style={{
                             position: "absolute",
                             bottom: "calc(100% + 4px)",
-                            left: "50%",
-                            transform: "translateX(-50%)",
+                            left: "0",
+                            right: "0",
+                            width: "100%",
                             backgroundColor: "#FFF7ED",
                             border: "1px solid #FFEDD5",
                             borderRadius: "6px",
-                            padding: "2px 6px",
+                            padding: "2px 3px",
                             boxShadow: "0 2px 6px rgba(234, 88, 12, 0.12)",
                             zIndex: 10,
                             pointerEvents: "none",
-                            whiteSpace: "nowrap",
+                            boxSizing: "border-box",
                           }}
                         >
                           <span
                             style={{
-                              fontSize: "0.62rem",
+                              fontSize: "0.58rem",
                               color: "#EA580C",
                               fontWeight: "800",
-                              lineHeight: "1.2",
+                              lineHeight: "1.15",
                               display: "block",
                               textAlign: "center",
+                              whiteSpace: "normal",
+                              wordBreak: "break-word",
                             }}
                           >
                             We have only {item.maxStock} left in stock
