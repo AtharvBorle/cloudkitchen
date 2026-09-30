@@ -133,7 +133,8 @@ const ScrollableAvailableAddonsRow: React.FC<{
 
   return (
     <div className={styles.availableAddonsScrollWrapper}>
-      {canScrollLeft && <div className={styles.scrollEdgeFadeLeft} />}
+      {/* Permanent dark shadow cues on both sides so user immediately sees it is scrollable */}
+      {addons.length >= 3 && <div className={styles.permanentScrollShadowLeft} />}
       {canScrollLeft && (
         <button
           type="button"
@@ -189,7 +190,7 @@ const ScrollableAvailableAddonsRow: React.FC<{
           <ChevronRight size={14} strokeWidth={2.5} />
         </button>
       )}
-      {canScrollRight && <div className={styles.scrollEdgeFadeRight} />}
+      {addons.length >= 3 && <div className={styles.permanentScrollShadowRight} />}
     </div>
   );
 };

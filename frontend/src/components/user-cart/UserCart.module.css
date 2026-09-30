@@ -1362,6 +1362,30 @@
   scroll-behavior: auto;
 }
 
+.permanentScrollShadowLeft {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 28px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 8px 0 0 8px;
+}
+
+.permanentScrollShadowRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 36px;
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 0 8px 8px 0;
+}
+
 .scrollEdgeFadeLeft {
   position: absolute;
   top: 0;
