@@ -70,13 +70,13 @@ export default function DashboardBody({
   const getCartQuantityForDish = (item: TopRatedItem) => {
     const baseId = item.foodItemId || item.id;
     return cartItems
-      .filter((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId)
+      .filter((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId || ci.id.startsWith(baseId + "_"))
       .reduce((sum, ci) => sum + (ci.quantity || 0), 0);
   };
 
   const getPrimaryCartItemForDish = (item: TopRatedItem) => {
     const baseId = item.foodItemId || item.id;
-    return cartItems.find((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId);
+    return cartItems.find((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId || ci.id.startsWith(baseId + "_"));
   };
 
   const handleOrderClick = (item: TopRatedItem) => {
@@ -125,12 +125,12 @@ export default function DashboardBody({
       maxStock: stockLimit,
       itemType: item.itemType,
       addons: item.addons,
+    }, false, () => {
+      setAddedId(item.id);
+      setTimeout(() => {
+        setAddedId(null);
+      }, 1200);
     });
-
-    setAddedId(item.id);
-    setTimeout(() => {
-      setAddedId(null);
-    }, 1200);
   };
 
   const handleIncrement = (item: TopRatedItem) => {
@@ -173,13 +173,18 @@ export default function DashboardBody({
         maxStock: stockLimit,
         itemType: item.itemType,
         addons: item.addons,
+      }, false, () => {
+        setAddedId(item.id);
+        setTimeout(() => {
+          setAddedId(null);
+        }, 1200);
       });
     }
   };
 
   const handleDecrement = (item: TopRatedItem) => {
     const baseId = item.foodItemId || item.id;
-    const matchingItems = cartItems.filter((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId);
+    const matchingItems = cartItems.filter((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId || ci.id.startsWith(baseId + "_"));
     if (matchingItems.length === 0) return;
 
     const target = matchingItems[matchingItems.length - 1];
@@ -200,6 +205,9 @@ export default function DashboardBody({
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
     const baseFoodId = item.foodItemId || item.id;
     const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
+    const savedItemId = item.id;
+
+    setCustomizingItem(null);
 
     addToCart({
       id: cartItemId,
@@ -218,14 +226,12 @@ export default function DashboardBody({
       maxStock: stockLimit,
       itemType: item.itemType,
       addons: item.addons,
+    }, false, () => {
+      setAddedId(savedItemId);
+      setTimeout(() => {
+        setAddedId(null);
+      }, 1200);
     });
-
-    const savedItemId = item.id;
-    setCustomizingItem(null);
-    setAddedId(savedItemId);
-    setTimeout(() => {
-      setAddedId(null);
-    }, 1200);
   };
 
   const displayItems = items;

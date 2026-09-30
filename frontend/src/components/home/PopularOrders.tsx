@@ -109,9 +109,10 @@ export default function PopularOrders({
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: offer.itemType,
+    }, false, () => {
+      setAddedId(offer.id);
+      setTimeout(() => setAddedId(null), 1800);
     });
-    setAddedId(offer.id);
-    setTimeout(() => setAddedId(null), 1800);
   };
 
   return (
