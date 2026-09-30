@@ -1,11 +1,11 @@
-﻿.floatingBarContainer {
+.floatingBarContainer {
   position: fixed;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 40px);
   max-width: 860px;
-  z-index: 99999;
+  z-index: 9990;
   animation: slideUpFloating 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
   pointer-events: none; /* Allows click-through outside the bar */
