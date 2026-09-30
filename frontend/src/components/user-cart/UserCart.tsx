@@ -715,43 +715,26 @@ export const UserCart: React.FC<UserCartProps> = ({
                         if (remainingAddons.length === 0) return null;
 
                         return (
-                          <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px dashed #FED7AA" }}>
-                            <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#9A3412", marginBottom: "4px" }}>
-                              Available Add-ons:
+                          <div className={styles.availableAddonsSection}>
+                            <div className={styles.availableAddonsHeader}>
+                              <Sparkles size={13} style={{ color: "#059669" }} />
+                              <span>Available Add-ons</span>
                             </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                            <div className={styles.availableAddonsList}>
                               {remainingAddons.map((addon) => (
                                 <button
                                   key={addon.id || addon.name}
                                   type="button"
                                   onClick={() => handleAddAddonToItem(item, addon)}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    fontSize: "0.74rem",
-                                    fontWeight: "600",
-                                    color: "#EA580C",
-                                    backgroundColor: "#FFF7ED",
-                                    border: "1px solid #FED7AA",
-                                    padding: "3px 8px",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                  onMouseOver={(e) => {
-                                    e.currentTarget.style.backgroundColor = "#FFEDD5";
-                                    e.currentTarget.style.borderColor = "#FDBA74";
-                                  }}
-                                  onMouseOut={(e) => {
-                                    e.currentTarget.style.backgroundColor = "#FFF7ED";
-                                    e.currentTarget.style.borderColor = "#FED7AA";
-                                  }}
+                                  className={styles.availableAddonBtn}
                                   title={`Add ${addon.name} (+₹${addon.price})`}
                                 >
                                   <span>{addon.name}</span>
-                                  <strong style={{ color: "#EA580C" }}>+₹{addon.price}</strong>
-                                  <span style={{ fontWeight: "800", color: "#C2410C", marginLeft: "2px" }}>+ Add</span>
+                                  <span className={styles.availableAddonPrice}>+₹{addon.price}</span>
+                                  <span className={styles.availableAddonAddTag}>
+                                    <Plus size={11} strokeWidth={3} />
+                                    <span>Add</span>
+                                  </span>
                                 </button>
                               ))}
                             </div>

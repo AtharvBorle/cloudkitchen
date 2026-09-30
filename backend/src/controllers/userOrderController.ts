@@ -799,7 +799,28 @@ export const validateReorder = async (orderId: string) => {
 
     const availableItems: any[] = [];
     const unavailableItems: any[] = [];
+    const allUnavailableAddons: any[] = [];
     const allItems: any[] = [];
+
+    const parseItemAddons = (itemObj: any): Array<{ id: string; name: string; price: number }> => {
+        const raw = itemObj?.addons || itemObj?.variants;
+        if (!raw) return [];
+        try {
+            const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+            if (Array.isArray(parsed)) {
+                return parsed
+                    .map((a: any, idx: number) => ({
+                        id: String(a.id || `addon_${idx + 1}`),
+                        name: String(a.name || "").trim(),
+                        price: Math.max(0, typeof a.price === "number" ? a.price : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0)
+                    }))
+                    .filter(a => Boolean(a.name));
+            }
+        } catch (e) {
+            // ignore parse error
+        }
+        return [];
+    };
 
     for (const item of rawItems) {
         const foodItemId = item.foodItemId || item.id;
@@ -884,12 +905,53 @@ export const validateReorder = async (orderId: string) => {
             stockWarning = `Only ${foodItem.stockQuantity} item(s) available in stock (you previously ordered ${requestedQty}).`;
         }
 
+        // Validate add-ons against live foodItem addons
+        const liveAddons = parseItemAddons(foodItem);
+        const validSelectedAddons: Array<{ id: string; name: string; price: number }> = [];
+        const itemUnavailableAddons: Array<{ id?: string; name: string; price: number; itemName: string }> = [];
+
+        if (Array.isArray(item.selectedAddons) && item.selectedAddons.length > 0) {
+            for (const prevAddon of item.selectedAddons) {
+                const prevName = String(prevAddon.name || "").toLowerCase().trim();
+                const prevId = prevAddon.id ? String(prevAddon.id).trim() : null;
+
+                // Match with live menu add-ons by ID or Name
+                const matchedLiveAddon = liveAddons.find((la) => 
+                    (prevId && String(la.id).trim() === prevId) ||
+                    (la.name && String(la.name).toLowerCase().trim() === prevName)
+                );
+
+                if (matchedLiveAddon) {
+                    validSelectedAddons.push({
+                        id: matchedLiveAddon.id,
+                        name: matchedLiveAddon.name,
+                        price: matchedLiveAddon.price
+                    });
+                } else {
+                    const unAddon = {
+                        id: prevAddon.id,
+                        name: prevAddon.name || "Add-on",
+                        price: Number(prevAddon.price) || 0,
+                        itemName: foodItem.name
+                    };
+                    itemUnavailableAddons.push(unAddon);
+                    allUnavailableAddons.push(unAddon);
+                }
+            }
+        }
+
+        const validAddonsTotal = validSelectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+        const currentBasePrice = foodItem.price !== undefined 
+            ? Number(foodItem.price) 
+            : (item.basePrice !== undefined ? Number(item.basePrice) : (Number(item.price) || 0));
+        const finalUnitPrice = currentBasePrice + validAddonsTotal;
+
         const availItem = {
             id: foodItem.id,
             foodItemId: foodItem.id,
             name: foodItem.name,
-            price: foodItem.price !== undefined ? foodItem.price : (item.price || 0),
-            basePrice: foodItem.price !== undefined ? foodItem.price : (item.basePrice || item.price || 0),
+            price: finalUnitPrice,
+            basePrice: currentBasePrice,
             quantity: finalQty,
             sellerId: seller?.id || order.sellerId,
             sellerName,
@@ -898,20 +960,24 @@ export const validateReorder = async (orderId: string) => {
             stockQuantity: foodItem.stockQuantity,
             maxStock: foodItem.stockQuantity,
             itemType: foodItem.itemType || item.itemType || "VEG",
-            selectedAddons: item.selectedAddons || [],
-            addonsTotal: item.addonsTotal || 0,
-            addons: item.addons || [],
+            selectedAddons: validSelectedAddons,
+            addonsTotal: validAddonsTotal,
+            addons: liveAddons,
             isAvailable: true,
             inStock: true,
-            warning: stockWarning
+            warning: stockWarning,
+            unavailableAddons: itemUnavailableAddons.length > 0 ? itemUnavailableAddons : undefined
         };
 
         availableItems.push(availItem);
         allItems.push(availItem);
     }
 
-    const canReorderFull = isSellerOnline && unavailableItems.length === 0 && availableItems.length > 0;
-    const canReorderPartial = isSellerOnline && availableItems.length > 0;
+    const hasUnavailableAddons = allUnavailableAddons.length > 0;
+    const hasUnavailableItems = unavailableItems.length > 0;
+
+    const canReorderFull = isSellerOnline && !hasUnavailableItems && !hasUnavailableAddons && availableItems.length > 0;
+    const canReorderPartial = isSellerOnline && availableItems.length > 0 && (hasUnavailableItems || hasUnavailableAddons);
 
     return {
         orderId: order.id,
@@ -920,16 +986,21 @@ export const validateReorder = async (orderId: string) => {
         sellerOnline: isSellerOnline,
         canReorderFull,
         canReorderPartial,
+        hasUnavailableAddons,
         totalItemsCount: rawItems.length,
         availableItemsCount: availableItems.length,
         unavailableItemsCount: unavailableItems.length,
+        unavailableAddonsCount: allUnavailableAddons.length,
         availableItems,
         unavailableItems,
+        unavailableAddons: allUnavailableAddons,
         allItems,
         message: canReorderFull 
             ? "All items from this order are available for reorder."
+            : hasUnavailableAddons && !hasUnavailableItems
+            ? `Some add-ons are no longer available (${allUnavailableAddons.length} deleted add-on${allUnavailableAddons.length > 1 ? "s" : ""}).`
             : canReorderPartial
-            ? `Some items are unavailable (${unavailableItems.length} unavailable).`
+            ? `Some items or add-ons are unavailable (${unavailableItems.length} item(s), ${allUnavailableAddons.length} add-on(s)).`
             : "None of the items from this order are currently available."
     };
 };
