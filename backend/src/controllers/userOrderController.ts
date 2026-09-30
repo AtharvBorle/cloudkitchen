@@ -94,9 +94,9 @@ export const createOrder = async (req: Request) => {
         throw new ApiError("Missing required fields", 400);
     }
 
-    // For online payments: validate Razorpay transaction signature BEFORE creating order in DB
+    // For online payments: validate Razorpay transaction signature BEFORE creating order in DB (when totalAmount > 0)
     const isOnlinePayment = paymentMethod === "ONLINE";
-    if (isOnlinePayment) {
+    if (isOnlinePayment && Number(totalAmount) > 0) {
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
             throw new ApiError("Missing online payment verification details", 400);
         }
@@ -400,7 +400,7 @@ export const createOrder = async (req: Request) => {
                 customerPhone: customerPhone || dbUser.phone || "N/A",
                 paymentMethod: isOnlinePayment ? "ONLINE" : "COD",
                 totalAmount: totalAmount,
-                isPaid: isOnlinePayment,
+                isPaid: isOnlinePayment || Number(totalAmount) === 0,
                 appliedCouponId: validatedCoupon ? validatedCoupon.id : (appliedCouponId || null),
                 razorpayOrderId: isOnlinePayment ? razorpay_order_id : null,
                 razorpayPaymentId: isOnlinePayment ? razorpay_payment_id : null,

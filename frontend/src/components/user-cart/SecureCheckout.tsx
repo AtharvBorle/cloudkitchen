@@ -791,7 +791,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
-    if (checkoutItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
+    if (checkoutItems.length === 0 || subtotal <= 0) {
       showToast(
         "Your cart is empty. Please add a product to the cart before placing an order.",
         "error"
@@ -864,7 +864,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       // FLOW 1: ONLINE PAYMENT (Razorpay)
       // Initiate Razorpay checkout first -> Validate -> Place Order
       // -------------------------------------------------------------
-      if (paymentMethod === "UPI") {
+      if (paymentMethod === "UPI" && grandTotal > 0) {
         const pendingData: PendingOrderTransaction = {
           id: `TX-${Date.now()}`,
           status: "INITIATED",
@@ -904,10 +904,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
           let errMsg = initData.message || initData.error || "Failed to initialize online payment";
           if (
             errMsg.toLowerCase().includes("invalid total") ||
-            errMsg.toLowerCase().includes("invalid amount") ||
-            grandTotal <= 0
+            errMsg.toLowerCase().includes("invalid amount")
           ) {
-            errMsg = "Your cart is empty. Please add a product to the cart before placing an order.";
+            errMsg = "Please review your cart items and try again.";
           }
           showToast(errMsg, "error");
           setIsSubmitting(false);
@@ -1100,7 +1099,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       }
 
       // -------------------------------------------------------------
-      // FLOW 2: CASH ON DELIVERY (COD)
+      // FLOW 2: CASH ON DELIVERY (COD) or ZERO PAYMENT (100% OFF)
       // -------------------------------------------------------------
       const res = await fetchApi("/api/user/orders", {
         method: "POST",
@@ -1111,7 +1110,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           totalAmount: grandTotal,
           deliveryAddress: fullDeliveryAddress,
           customerPhone: phoneNumber,
-          paymentMethod: "COD",
+          paymentMethod: grandTotal === 0 ? (paymentMethod === "UPI" ? "ONLINE" : "COD") : "COD",
           appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
         }),
       });
@@ -1122,10 +1121,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
         let errorMsg = resData.message || resData.error || "Failed to place order. Please try again.";
         if (
           errorMsg.toLowerCase().includes("invalid total") ||
-          errorMsg.toLowerCase().includes("invalid amount") ||
-          grandTotal <= 0
+          errorMsg.toLowerCase().includes("invalid amount")
         ) {
-          errorMsg = "Your cart is empty. Please add a product to the cart before placing an order.";
+          errorMsg = "Please review your cart items and try again.";
         }
         showToast(errorMsg, "error");
         setIsSubmitting(false);
@@ -2352,7 +2350,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 )}
 
                 {(() => {
-                  const isCartEmpty = checkoutItems.length === 0 || grandTotal <= 0;
+                  const isCartEmpty = checkoutItems.length === 0 || subtotal <= 0;
                   const isButtonDisabled = isSubmitting || isSellerClosed || isOutsideCoverage || isCartEmpty;
 
                   return (

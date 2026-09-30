@@ -118,9 +118,11 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   React.useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
+      const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
       try {
         setIsLoadingOffers(true);
-        const res = await fetchApi("/api/public/coupons");
+        const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
+        const res = await fetchApi(url);
         if (res.ok && isMounted) {
           const json = await res.json();
           const serverCoupons = json.data || [];
@@ -140,7 +142,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [cartItems]);
 
   const handleRemovePromo = () => {
     setAppliedPromo(null);
@@ -236,7 +238,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   const handleCheckoutClick = () => {
-    if (cartItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
+    if (cartItems.length === 0 || subtotal <= 0) {
       showToast("Your cart is empty. Please add a product to the cart before placing an order.");
       return;
     }
@@ -627,15 +629,15 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 type="button"
                 className={styles.checkoutButton}
                 onClick={handleCheckoutClick}
-                disabled={cartItems.length === 0 || grandTotal <= 0}
+                disabled={cartItems.length === 0 || subtotal <= 0}
                 style={{
-                  opacity: cartItems.length === 0 || grandTotal <= 0 ? 0.6 : 1,
-                  cursor: cartItems.length === 0 || grandTotal <= 0 ? "not-allowed" : "pointer",
-                  backgroundColor: cartItems.length === 0 || grandTotal <= 0 ? "#94A3B8" : undefined,
+                  opacity: cartItems.length === 0 || subtotal <= 0 ? 0.6 : 1,
+                  cursor: cartItems.length === 0 || subtotal <= 0 ? "not-allowed" : "pointer",
+                  backgroundColor: cartItems.length === 0 || subtotal <= 0 ? "#94A3B8" : undefined,
                 }}
               >
                 <span>
-                  {cartItems.length === 0 || grandTotal <= 0
+                  {cartItems.length === 0 || subtotal <= 0
                     ? "Cart is Empty • Add Products"
                     : "Proceed to Checkout"}
                 </span>
