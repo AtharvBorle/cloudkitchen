@@ -23,7 +23,6 @@ import { useLocation } from "@/components/location-provider";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
-import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./UserCart.module.css";
 
@@ -105,7 +104,6 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [customizingItem, setCustomizingItem] = useState<UserCartItem | null>(null);
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
   const [sellerDetails, setSellerDetails] = useState<any>(null);
 
@@ -239,26 +237,52 @@ export const UserCart: React.FC<UserCartProps> = ({
     }, 2800);
   };
 
-  // Recommendations for add-ons not yet chosen across cart items
-  const availableAddonRecommendations = React.useMemo(() => {
-    const list: Array<{ item: UserCartItem; addon: { id?: string; name: string; price: number } }> = [];
-    cartItems.forEach((item) => {
-      if (item.addons && Array.isArray(item.addons)) {
-        const selectedNames = new Set((item.selectedAddons || []).map((a) => (a.name || "").toLowerCase()));
-        item.addons.forEach((addon) => {
-          if (!selectedNames.has((addon.name || "").toLowerCase())) {
-            list.push({ item, addon });
-          }
-        });
+  // Parse add-ons from string or array safely
+  const parseItemAddons = (raw: any): Array<{ id?: string; name: string; price: number }> => {
+    if (!raw) return [];
+    try {
+      const list = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (Array.isArray(list)) {
+        return list
+          .filter((a: any) => a && (a.name || "").trim())
+          .map((a: any, idx: number) => ({
+            id: a.id ? String(a.id) : `addon_${idx + 1}_${String(a.name).toLowerCase().replace(/\s+/g, "_")}`,
+            name: String(a.name).trim(),
+            price: typeof a.price === "number" ? a.price : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0,
+          }));
       }
-    });
-    return list;
-  }, [cartItems]);
+    } catch {}
+    return [];
+  };
 
-  const handleQuickAddAddon = (item: UserCartItem, addon: { id?: string; name: string; price: number }) => {
-    const newSelected = [...(item.selectedAddons || []), addon];
+  // Get all configured add-ons available for this dish (either from cart item or live seller menu)
+  const getDishAvailableAddons = (item: UserCartItem): Array<{ id?: string; name: string; price: number }> => {
+    let raw: any = item.addons;
+    if ((!raw || (Array.isArray(raw) && raw.length === 0)) && sellerDetails?.foodItems && Array.isArray(sellerDetails.foodItems)) {
+      const baseId = item.foodItemId || (item.id.includes("_") ? item.id.split("_")[0] : item.id);
+      const fi = sellerDetails.foodItems.find((f: any) => f.id === baseId || (f.name && item.name && f.name.toLowerCase().trim() === item.name.toLowerCase().trim()));
+      if (fi) {
+        raw = fi.addons || fi.variants;
+      }
+    }
+    return parseItemAddons(raw);
+  };
+
+  const handleAddAddonToItem = (item: UserCartItem, addon: { id?: string; name: string; price: number }) => {
+    const currentSelected = item.selectedAddons || [];
+    const newSelected = [...currentSelected, addon];
     updateItemAddons(item.id, newSelected);
     showToast(`Added ${addon.name} (+₹${addon.price}) to ${item.name}`);
+  };
+
+  const handleRemoveAddonFromItem = (item: UserCartItem, addonIndex: number) => {
+    const currentSelected = item.selectedAddons || [];
+    const removed = currentSelected[addonIndex];
+    const newSelected = currentSelected.filter((_, i) => i !== addonIndex);
+    updateItemAddons(item.id, newSelected);
+    if (removed) {
+      showToast(`Removed ${removed.name} from ${item.name}`);
+    }
   };
 
   // Quantity Handlers
@@ -612,7 +636,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                       <h2 className={styles.itemTitle}>{item.name}</h2>
                       <p className={styles.itemSubtitle}>{item.description}</p>
                       
-                      {/* Selected Add-ons Badge List */}
+                      {/* Selected Add-ons Badge List with Tiny Cross (X) */}
                       {item.selectedAddons && item.selectedAddons.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "6px 0 4px 0" }}>
                           {item.selectedAddons.map((addon, idx) => (
@@ -628,11 +652,44 @@ export const UserCart: React.FC<UserCartProps> = ({
                                 borderRadius: "6px",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "4px",
+                                gap: "5px",
                               }}
                             >
                               <span>+ {addon.name}</span>
                               <strong style={{ color: "#EA580C" }}>(₹{addon.price})</strong>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveAddonFromItem(item, idx);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  padding: "0",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "#9A3412",
+                                  cursor: "pointer",
+                                  borderRadius: "50%",
+                                  marginLeft: "2px",
+                                  opacity: 0.8,
+                                  transition: "all 0.15s ease",
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.opacity = "1";
+                                  e.currentTarget.style.color = "#DC2626";
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.opacity = "0.8";
+                                  e.currentTarget.style.color = "#9A3412";
+                                }}
+                                title={`Remove ${addon.name}`}
+                                aria-label={`Remove ${addon.name}`}
+                              >
+                                <X size={13} strokeWidth={2.5} />
+                              </button>
                             </span>
                           ))}
                         </div>
@@ -649,28 +706,58 @@ export const UserCart: React.FC<UserCartProps> = ({
                         )}
                       </div>
 
-                      {/* Customize Button if Item has Add-ons available */}
-                      {item.addons && item.addons.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setCustomizingItem(item)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            padding: "4px 0",
-                            marginTop: "4px",
-                            color: "#EA580C",
-                            fontSize: "0.78rem",
-                            fontWeight: "700",
-                            cursor: "pointer",
-                            textDecoration: "underline",
-                            textAlign: "left",
-                            width: "fit-content",
-                          }}
-                        >
-                          ⚙️ Customize Add-ons
-                        </button>
-                      )}
+                      {/* Available remaining add-ons for this specific dish */}
+                      {(() => {
+                        const allAddons = getDishAvailableAddons(item);
+                        const selectedNames = new Set((item.selectedAddons || []).map((a) => (a.name || "").toLowerCase().trim()));
+                        const remainingAddons = allAddons.filter((a) => !selectedNames.has((a.name || "").toLowerCase().trim()));
+
+                        if (remainingAddons.length === 0) return null;
+
+                        return (
+                          <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px dashed #FED7AA" }}>
+                            <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#9A3412", marginBottom: "4px" }}>
+                              Available Add-ons:
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                              {remainingAddons.map((addon) => (
+                                <button
+                                  key={addon.id || addon.name}
+                                  type="button"
+                                  onClick={() => handleAddAddonToItem(item, addon)}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    fontSize: "0.74rem",
+                                    fontWeight: "600",
+                                    color: "#EA580C",
+                                    backgroundColor: "#FFF7ED",
+                                    border: "1px solid #FED7AA",
+                                    padding: "3px 8px",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#FFEDD5";
+                                    e.currentTarget.style.borderColor = "#FDBA74";
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#FFF7ED";
+                                    e.currentTarget.style.borderColor = "#FED7AA";
+                                  }}
+                                  title={`Add ${addon.name} (+₹${addon.price})`}
+                                >
+                                  <span>{addon.name}</span>
+                                  <strong style={{ color: "#EA580C" }}>+₹{addon.price}</strong>
+                                  <span style={{ fontWeight: "800", color: "#C2410C", marginLeft: "2px" }}>+ Add</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -762,71 +849,6 @@ export const UserCart: React.FC<UserCartProps> = ({
                 <Link href="/food-explore" className={styles.exploreMenuBtn}>
                   Explore Menu
                 </Link>
-              </div>
-            )}
-
-            {/* Zomato-style Add-on Recommendation Strip */}
-            {cartItems.length > 0 && availableAddonRecommendations.length > 0 && (
-              <div
-                style={{
-                  marginTop: "16px",
-                  padding: "16px 20px",
-                  backgroundColor: "#FFFBF7",
-                  border: "1px dashed #FDBA74",
-                  borderRadius: "14px",
-                }}
-              >
-                <div style={{ marginBottom: "12px" }}>
-                  <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: "700", color: "#9A3412" }}>
-                    🍛 Complete Your Meal with Add-ons
-                  </h4>
-                  <p style={{ margin: "2px 0 0 0", fontSize: "0.8rem", color: "#C2410C" }}>
-                    Add extra accompaniments to your dishes in one tap
-                  </p>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "10px" }}>
-                  {availableAddonRecommendations.map(({ item, addon }) => (
-                    <div
-                      key={`${item.id}-${addon.id || addon.name}`}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "10px 14px",
-                        backgroundColor: "#FFFFFF",
-                        border: "1px solid #FED7AA",
-                        borderRadius: "10px",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                      }}
-                    >
-                      <div style={{ overflow: "hidden", marginRight: "8px" }}>
-                        <div style={{ fontSize: "0.86rem", fontWeight: "700", color: "#1E293B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {addon.name}
-                        </div>
-                        <div style={{ fontSize: "0.75rem", color: "#64748B" }}>
-                          for {item.name} • <strong style={{ color: "#EA580C" }}>+₹{addon.price}</strong>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickAddAddon(item, addon)}
-                        style={{
-                          padding: "5px 12px",
-                          backgroundColor: "#FFF7ED",
-                          border: "1px solid #EA580C",
-                          borderRadius: "6px",
-                          color: "#EA580C",
-                          fontWeight: "700",
-                          fontSize: "0.78rem",
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        + Add
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </div>
@@ -1264,37 +1286,6 @@ export const UserCart: React.FC<UserCartProps> = ({
           <CheckCircle2 size={18} color="#10B981" />
           <span>{toastMessage}</span>
         </div>
-      )}
-
-      {/* Addon Customization Modal for Cart Item */}
-      {customizingItem && (
-        <AddonCustomizationModal
-          isOpen={!!customizingItem}
-          onClose={() => setCustomizingItem(null)}
-          isEditMode={true}
-          submitButtonText="Update Item"
-          item={{
-            id: customizingItem.id,
-            name: customizingItem.name,
-            basePrice: customizingItem.basePrice !== undefined ? customizingItem.basePrice : customizingItem.price,
-            price: customizingItem.basePrice !== undefined ? customizingItem.basePrice : customizingItem.price,
-            description: customizingItem.description,
-            imageUrl: customizingItem.image,
-            itemType: customizingItem.itemType,
-            addons: customizingItem.addons || [],
-          }}
-          initialSelectedAddons={customizingItem.selectedAddons || []}
-          onConfirm={(selectedAddons) => {
-            updateItemAddons(customizingItem.id, selectedAddons);
-            setCustomizingItem(null);
-            showToast(`Updated add-ons for "${customizingItem.name}"`);
-          }}
-          onAddToCart={(selectedAddons) => {
-            updateItemAddons(customizingItem.id, selectedAddons);
-            setCustomizingItem(null);
-            showToast(`Updated add-ons for "${customizingItem.name}"`);
-          }}
-        />
       )}
 
       {/* Global Responsive Footer */}

@@ -28,6 +28,8 @@ export interface UserCartItem {
   price: number;
   qty: number;
   image: string;
+  sellerId?: string;
+  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
 }
 
 export interface UserCheckoutProps {
@@ -342,6 +344,30 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     <div className={styles.itemInfo}>
                       <h2 className={styles.itemTitle}>{item.name}</h2>
                       <p className={styles.itemSubtitle}>{item.description}</p>
+                      {item.selectedAddons && item.selectedAddons.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "4px 0" }}>
+                          {item.selectedAddons.map((addon, idx) => (
+                            <span
+                              key={addon.id || `${addon.name}-${idx}`}
+                              style={{
+                                fontSize: "0.74rem",
+                                fontWeight: "600",
+                                color: "#C2410C",
+                                backgroundColor: "#FFF7ED",
+                                border: "1px solid #FFEDD5",
+                                padding: "2px 8px",
+                                borderRadius: "6px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <span>+ {addon.name}</span>
+                              <strong style={{ color: "#EA580C" }}>(₹{addon.price})</strong>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <span className={styles.itemPrice}>
                         ₹{item.price.toLocaleString("en-IN")}
                       </span>
