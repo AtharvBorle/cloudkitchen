@@ -202,7 +202,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           drink: "/images/categories/cat-drink.png",
           drinks: "/images/categories/cat-drink.png",
           rooms: "/images/categories/cat-rooms.png",
-          burger: "/images/categories/cat-food.png",
+          burger: "/images/categories/cat-burger.png",
+          burgers: "/images/categories/cat-burger.png",
           cake: "/images/categories/cat-backery.png",
           meal: "/images/categories/cat-meal.png",
           meals: "/images/categories/cat-meal.png",
@@ -249,7 +250,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               ? "/images/categories/cat-meal.png"
               : CATEGORY_IMAGE_MAP[lower] ||
                 CATEGORY_IMAGE_MAP[cleanKey] ||
-                (cleanKey.includes("meal") || cleanKey.includes("thali")
+                (cleanKey.includes("burger")
+                  ? "/images/categories/cat-burger.png"
+                  : cleanKey.includes("meal") || cleanKey.includes("thali")
                   ? "/images/categories/cat-meal.png"
                   : cleanKey.includes("dal")
                   ? "/images/categories/cat-dalrice.png"
