@@ -327,7 +327,8 @@
   user-select: none;
 }
 
-.emailInputWithBtn {
+.emailInputWithBtn,
+.phoneInputFieldWithBtn {
   padding-right: 105px !important;
 }
 
@@ -479,6 +480,11 @@
     height: 44px;
     font-size: 13.5px;
     padding: 0 36px 0 10px;
+  }
+
+  .emailInputWithBtn,
+  .phoneInputFieldWithBtn {
+    padding-right: 95px !important;
   }
 
   .helperText {

@@ -32,6 +32,8 @@ function AccountInfoContent() {
       sellerRole: draft.sellerRole || "Owner",
       isEmailVerified: draft.isEmailVerified,
       verifiedEmail: draft.verifiedEmail,
+      isPhoneVerified: draft.isPhoneVerified,
+      verifiedPhone: draft.verifiedPhone,
     });
   }, []);
 

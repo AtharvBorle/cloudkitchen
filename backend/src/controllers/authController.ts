@@ -628,3 +628,58 @@ export const checkEmailAvailability = async (req: Request) => {
         message: "Email is available and verified."
     };
 };
+
+export const checkPhoneAvailability = async (req: Request) => {
+    let rawPhone = "";
+    if (req.method === "POST") {
+        try {
+            const body = await req.json();
+            rawPhone = body.phone || body.mobile || "";
+        } catch {
+            rawPhone = "";
+        }
+    } else {
+        const url = new URL(req.url);
+        rawPhone = url.searchParams.get("phone") || url.searchParams.get("mobile") || "";
+    }
+
+    if (!rawPhone || typeof rawPhone !== "string" || !rawPhone.trim()) {
+        throw new ApiError("Phone number is required.", 400);
+    }
+
+    const digitsOnly = String(rawPhone).replace(/\D/g, "");
+    const phoneDigits = digitsOnly.length > 10 ? digitsOnly.slice(-10) : digitsOnly;
+
+    if (phoneDigits.length !== 10) {
+        throw new ApiError("Please enter a valid 10-digit mobile number.", 400);
+    }
+
+    const existingUser = await db.user.findFirst({
+        where: {
+            OR: [
+                { phone: phoneDigits },
+                { phone: `+91${phoneDigits}` },
+                { phone: `+91 ${phoneDigits}` },
+                { phone: { contains: phoneDigits } }
+            ]
+        },
+        select: { id: true, phone: true, role: true }
+    });
+
+    if (existingUser) {
+        return {
+            available: false,
+            exists: true,
+            phone: phoneDigits,
+            message: "An account with this mobile number already exists. Please sign in or use a different mobile number."
+        };
+    }
+
+    return {
+        available: true,
+        exists: false,
+        phone: phoneDigits,
+        message: "Mobile number is available and verified."
+    };
+};
+
