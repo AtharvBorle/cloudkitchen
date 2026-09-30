@@ -1,14 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
   AlertCircle,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { saveSellerDraft } from "@/lib/seller-registration-store";
 import { validateEmail } from "@/lib/email-validation";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./AccountInformation.module.css";
 
 export interface AccountStepData {
@@ -17,6 +21,8 @@ export interface AccountStepData {
   phone: string;
   password: string;
   sellerRole: string;
+  isEmailVerified?: boolean;
+  verifiedEmail?: string;
 }
 
 export type AccountInformationData = AccountStepData;
@@ -44,14 +50,28 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  // Email verification state
+  const initialVerifiedEmail = initialData?.verifiedEmail || (initialData?.isEmailVerified && initialData?.email ? initialData.email.trim().toLowerCase() : "");
+  const [verifiedEmail, setVerifiedEmail] = useState<string>(initialVerifiedEmail);
+  const [verificationStatus, setVerificationStatus] = useState<"idle" | "verifying" | "verified" | "taken" | "error">(
+    initialVerifiedEmail && initialData?.email && initialData.email.trim().toLowerCase() === initialVerifiedEmail ? "verified" : "idle"
+  );
+  const [emailCheckError, setEmailCheckError] = useState<string | null>(null);
+
   // Validation States
   const isNameValid = formData.ownerName.trim().length >= 2;
   const isNameError = touched.ownerName && !isNameValid;
 
   const emailCheck = validateEmail(formData.email);
-  const isEmailValid = emailCheck.isValid;
+  const isEmailFormatValid = emailCheck.isValid;
   const isEmailEmpty = formData.email.trim().length === 0;
-  const isEmailError = !isEmailEmpty ? !isEmailValid : Boolean(touched.email && !isEmailValid);
+  const isEmailVerified = Boolean(
+    isEmailFormatValid &&
+    verifiedEmail &&
+    formData.email.trim().toLowerCase() === verifiedEmail.toLowerCase() &&
+    verificationStatus === "verified"
+  );
+  const isEmailError = !isEmailEmpty ? (!isEmailFormatValid || verificationStatus === "taken" || verificationStatus === "error") : Boolean(touched.email && !isEmailFormatValid);
 
   const phoneDigits = formData.phone;
   const phoneLength = phoneDigits.length;
@@ -72,6 +92,70 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
       return next;
     });
     setTouched((prev) => ({ ...prev, [name]: true }));
+
+    if (name === "email") {
+      const cleanVal = value.trim().toLowerCase();
+      if (cleanVal !== verifiedEmail.toLowerCase()) {
+        setVerificationStatus("idle");
+        setEmailCheckError(null);
+        saveSellerDraft({ isEmailVerified: false, verifiedEmail: "" });
+      }
+    }
+  };
+
+  const handleVerifyEmail = async (): Promise<boolean> => {
+    setTouched((prev) => ({ ...prev, email: true }));
+    const cleanEmail = formData.email.trim();
+    const formatCheck = validateEmail(cleanEmail);
+
+    if (!formatCheck.isValid) {
+      setEmailCheckError(formatCheck.error || "Please enter a valid email address.");
+      setVerificationStatus("error");
+      return false;
+    }
+
+    setVerificationStatus("verifying");
+    setEmailCheckError(null);
+
+    try {
+      const res = await fetchApi("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      const isAvailable = Boolean(res.ok && json?.data?.available);
+
+      if (isAvailable) {
+        const norm = (json?.data?.email || cleanEmail).toLowerCase();
+        setVerificationStatus("verified");
+        setVerifiedEmail(norm);
+        setEmailCheckError(null);
+        saveSellerDraft({
+          email: cleanEmail,
+          isEmailVerified: true,
+          verifiedEmail: norm,
+        });
+        return true;
+      } else {
+        const msg =
+          json?.data?.message ||
+          json?.message ||
+          json?.error ||
+          "An account with this email address already exists. Please use a different email or sign in.";
+        setVerificationStatus("taken");
+        setVerifiedEmail("");
+        setEmailCheckError(msg);
+        saveSellerDraft({ isEmailVerified: false, verifiedEmail: "" });
+        return false;
+      }
+    } catch (err: any) {
+      console.error("Email verification error:", err);
+      setVerificationStatus("error");
+      setEmailCheckError(err?.message || "Failed to verify email availability. Please try again.");
+      return false;
+    }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +180,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched({
       ownerName: true,
@@ -105,14 +189,26 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
       password: true,
     });
 
-    if (!isNameValid || !isEmailValid || !isPhoneComplete || !isPasswordValid) {
+    if (!isNameValid || !isEmailFormatValid || !isPhoneComplete || !isPasswordValid) {
       return;
     }
 
-    const cleanData = {
+    // Block step transition until email is verified as available
+    let verified = isEmailVerified;
+    if (!verified) {
+      verified = await handleVerifyEmail();
+      if (!verified) {
+        return;
+      }
+    }
+
+    const cleanData: AccountStepData = {
       ...formData,
+      email: formData.email.trim(),
       sellerRole: "Owner",
       phone: formData.phone.replace(/\D/g, "").slice(-10),
+      isEmailVerified: true,
+      verifiedEmail: formData.email.trim().toLowerCase(),
     };
 
     saveSellerDraft(cleanData);
@@ -176,7 +272,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
           )}
         </div>
 
-        {/* Email Address */}
+        {/* Email Address with Verification Button */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="email">
             Email <span className={styles.required}>*</span>
@@ -191,8 +287,8 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
               value={formData.email}
               onChange={handleChange}
               onBlur={() => handleBlur("email")}
-              className={`${styles.input} ${
-                isEmailValid
+              className={`${styles.input} ${styles.emailInputWithBtn} ${
+                isEmailVerified
                   ? styles.inputSuccess
                   : isEmailError
                   ? styles.inputError
@@ -200,27 +296,58 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
               }`}
               autoComplete="email"
             />
-            {isEmailValid && (
-              <div className={styles.statusIconBox}>
-                <CheckCircle2 size={18} className={styles.validCheckIcon} />
+
+            {/* Email Verification Action / Status Badge */}
+            {verificationStatus === "verifying" ? (
+              <div className={styles.verifyingBadge}>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Checking...</span>
               </div>
-            )}
-            {isEmailError && (
-              <div className={styles.statusIconBox}>
-                <AlertCircle size={18} className={styles.invalidAlertIcon} />
+            ) : isEmailVerified ? (
+              <div className={styles.verifiedBadge}>
+                <Check size={14} strokeWidth={3} />
+                <span>Verified</span>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleVerifyEmail}
+                disabled={!isEmailFormatValid || verificationStatus === "verifying"}
+                className={styles.verifyEmailBtn}
+                title={!isEmailFormatValid ? "Enter valid email to verify" : "Verify email availability"}
+              >
+                <span>Verify</span>
+              </button>
             )}
           </div>
-          {isEmailValid ? (
+
+          {/* Email Status Feedback */}
+          {isEmailVerified ? (
             <div className={styles.helperTextSuccess}>
               <CheckCircle2 size={13} />
-              <span>Valid email address</span>
+              <span>Email verified & available for registration</span>
+            </div>
+          ) : verificationStatus === "taken" || emailCheckError ? (
+            <div className={styles.helperTextError}>
+              <AlertCircle size={13} style={{ flexShrink: 0 }} />
+              <span>
+                {emailCheckError || "An account with this email address already exists."}
+                {(emailCheckError?.includes("already exists") || verificationStatus === "taken") && (
+                  <Link href="/seller/login" className={styles.loginShortcutLink}>
+                    Sign In
+                  </Link>
+                )}
+              </span>
             </div>
           ) : isEmailError ? (
             <div className={styles.helperTextError}>
               <AlertCircle size={13} />
               <span>{emailCheck.error || "Please enter a valid email address."}</span>
             </div>
+          ) : isEmailFormatValid && !isEmailVerified ? (
+            <span style={{ fontSize: "0.78rem", color: "#EA580C", marginTop: "2px", fontWeight: "500" }}>
+              Please click &quot;Verify&quot; to check email availability before continuing.
+            </span>
           ) : (
             <span className={styles.helperText}>
               Used for account notifications and verification

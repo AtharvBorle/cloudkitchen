@@ -7,6 +7,8 @@ export interface SellerRegistrationDraft {
   phone: string;
   password: string;
   sellerRole: string; // Hidden default "Owner"
+  isEmailVerified?: boolean;
+  verifiedEmail?: string;
 
   // Step 2: Business
   businessName: string;
@@ -45,6 +47,8 @@ export const DEFAULT_SELLER_DRAFT: SellerRegistrationDraft = {
   phone: "",
   password: "",
   sellerRole: "Owner",
+  isEmailVerified: false,
+  verifiedEmail: "",
 
   businessName: "",
   sellerType: "FOOD",

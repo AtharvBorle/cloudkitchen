@@ -581,3 +581,50 @@ export const resetPasswordWithOtp = async (req: Request) => {
         message: "Password has been reset successfully. You can now log in with your new password."
     };
 };
+
+export const checkEmailAvailability = async (req: Request) => {
+    let email = "";
+    if (req.method === "POST") {
+        try {
+            const body = await req.json();
+            email = body.email || "";
+        } catch {
+            email = "";
+        }
+    } else {
+        const url = new URL(req.url);
+        email = url.searchParams.get("email") || "";
+    }
+
+    if (!email || typeof email !== "string" || !email.trim()) {
+        throw new ApiError("Email address is required.", 400);
+    }
+
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.isValid) {
+        throw new ApiError(emailCheck.error || "Please enter a valid email address.", 400);
+    }
+
+    const normalizedEmail = emailCheck.normalizedEmail;
+
+    const existingUser = await db.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true, email: true, role: true }
+    });
+
+    if (existingUser) {
+        return {
+            available: false,
+            exists: true,
+            email: normalizedEmail,
+            message: "An account with this email address already exists. Please sign in or use a different email."
+        };
+    }
+
+    return {
+        available: true,
+        exists: false,
+        email: normalizedEmail,
+        message: "Email is available and verified."
+    };
+};
