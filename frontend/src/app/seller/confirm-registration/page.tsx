@@ -24,22 +24,28 @@ export default function ConfirmRegistrationPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const currentDraft = getSellerDraft();
-    setDraft(currentDraft);
+    const syncDraft = () => {
+      const currentDraft = getSellerDraft();
+      setDraft(currentDraft);
 
-    hydrateSellerDraftAsync().then((hydrated) => {
-      setDraft((prev) => ({
-        ...prev,
-        ...hydrated,
-        kitchenPhotos: hydrated.kitchenPhotos?.some(Boolean) ? hydrated.kitchenPhotos : prev.kitchenPhotos,
-        cuisinePhotos: hydrated.cuisinePhotos?.some(Boolean) ? hydrated.cuisinePhotos : prev.cuisinePhotos,
-        roomPhotos: hydrated.roomPhotos?.some(Boolean) ? hydrated.roomPhotos : prev.roomPhotos,
-      }));
-    });
+      hydrateSellerDraftAsync().then((hydrated) => {
+        setDraft((prev) => ({
+          ...prev,
+          ...hydrated,
+          kitchenPhotos: hydrated.kitchenPhotos?.some(Boolean) ? hydrated.kitchenPhotos : prev.kitchenPhotos,
+          cuisinePhotos: hydrated.cuisinePhotos?.some(Boolean) ? hydrated.cuisinePhotos : prev.cuisinePhotos,
+          roomPhotos: hydrated.roomPhotos?.some(Boolean) ? hydrated.roomPhotos : prev.roomPhotos,
+        }));
+      });
+    };
+
+    syncDraft();
+    window.addEventListener("focus", syncDraft);
+    return () => window.removeEventListener("focus", syncDraft);
   }, []);
 
   const handleSubmit = async () => {
-    const activeDraft = getSellerDraft() || draft;
+    const activeDraft = { ...(draft || {}), ...(getSellerDraft() || {}) };
     if (!activeDraft) return;
     setErrorMessage(null);
 

@@ -256,6 +256,93 @@
   color: #0f172a;
 }
 
+.verifyEmailBtn {
+  position: absolute;
+  right: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #fdba74;
+  background-color: #fff7ed;
+  color: #ea580c;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.verifyEmailBtn:hover:not(:disabled) {
+  background-color: #ea580c;
+  color: #ffffff;
+  border-color: #ea580c;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+}
+
+.verifyEmailBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+  color: #94a3b8;
+}
+
+.verifiedBadge {
+  position: absolute;
+  right: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #059669;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 2;
+  user-select: none;
+}
+
+.verifyingBadge {
+  position: absolute;
+  right: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  user-select: none;
+}
+
+.emailInputWithBtn {
+  padding-right: 105px !important;
+}
+
+.loginShortcutLink {
+  color: #dc2626;
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 6px;
+  cursor: pointer;
+}
+
+.loginShortcutLink:hover {
+  color: #b91c1c;
+}
+
 .helperText {
   font-size: 0.78rem;
   color: #94a3b8;
