@@ -299,11 +299,6 @@ export default function DashboardBody({
                     }}
                   >
                     {item.category} • ₹{item.price} {item.distanceText ? `• 📍 ${item.distanceText}` : ""} • {item.time}
-                    {item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
-                      <span style={{ color: "#EA580C", fontWeight: "700", marginLeft: "4px" }}>
-                        • Only {item.stockQuantity} left!
-                      </span>
-                    ) : null}
                   </span>
 
                   {/* Stock Notice */}
