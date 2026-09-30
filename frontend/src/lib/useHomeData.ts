@@ -198,24 +198,20 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           dabba: "/images/categories/cat-mess.png",
           bakery: "/images/categories/cat-bakery.png",
           backery: "/images/categories/cat-bakery.png",
-          bakeries: "/images/categories/cat-bakery.png",
-          bread: "/images/categories/cat-bakery.png",
           healthy: "/images/categories/cat-healthy.png",
           snacks: "/images/categories/cat-snacks.png",
+          snack: "/images/categories/cat-snacks.png",
           desserts: "/images/categories/cat-deserts.png",
           dessert: "/images/categories/cat-deserts.png",
+          deserts: "/images/categories/cat-deserts.png",
           drink: "/images/categories/cat-drink.png",
           drinks: "/images/categories/cat-drink.png",
           beverage: "/images/categories/cat-drink.png",
           beverages: "/images/categories/cat-drink.png",
           shake: "/images/categories/cat-shake.png",
           shakes: "/images/categories/cat-shake.png",
-          milkshake: "/images/categories/cat-shake.png",
-          milkshakes: "/images/categories/cat-shake.png",
           rooms: "/images/categories/cat-rooms.png",
           room: "/images/categories/cat-rooms.png",
-          pg: "/images/categories/cat-rooms.png",
-          hostel: "/images/categories/cat-rooms.png",
           "rent property": "/images/categories/cat-rentproperty.png",
           rentproperty: "/images/categories/cat-rentproperty.png",
           property: "/images/categories/cat-rentproperty.png",
@@ -265,7 +261,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           if (k.includes("southindian") || k.includes("dosa") || k.includes("idli") || n.includes("south indian") || n.includes("dosa")) return "/images/categories/cat-southindian.png";
           if (k.includes("cafe") || k.includes("coffee") || n.includes("cafe")) return "/images/categories/cat-cafe.png";
           if (k.includes("property") || k.includes("rent") || n.includes("rent property")) return "/images/categories/cat-rentproperty.png";
-          if (k.includes("baker") || n.includes("bakery") || k.includes("bread") || n.includes("bread")) return "/images/categories/cat-bakery.png";
+          if (k.includes("baker") || n.includes("bakery")) return "/images/categories/cat-bakery.png";
           if (k.includes("cake") || k.includes("pastry") || n.includes("cake")) return "/images/categories/cat-cake.png";
           if (k.includes("burger") || n.includes("burger")) return "/images/categories/cat-burger.png";
           if (k.includes("pizza") || n.includes("pizza")) return "/images/categories/cat-pizza.png";
@@ -275,9 +271,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           if (k.includes("health") || n.includes("healthy")) return "/images/categories/cat-healthy.png";
           if (k.includes("snack") || n.includes("snacks")) return "/images/categories/cat-snacks.png";
           if (k.includes("desert") || k.includes("dessert") || n.includes("dessert")) return "/images/categories/cat-deserts.png";
-          if (k.includes("shake") || n.includes("shake") || k.includes("milkshake") || n.includes("milkshake")) return "/images/categories/cat-shake.png";
+          if (k.includes("shake") || n.includes("shake")) return "/images/categories/cat-shake.png";
           if (k.includes("drink") || k.includes("beverage") || n.includes("drink")) return "/images/categories/cat-drink.png";
-          if (k.includes("room") || n.includes("room") || k.includes("pg") || n.includes("pg") || k.includes("hostel") || n.includes("hostel")) return "/images/categories/cat-rooms.png";
+          if (k.includes("room") || n.includes("room")) return "/images/categories/cat-rooms.png";
           return "/images/categories/cat-food.png";
         };
 
@@ -299,7 +295,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           if (key.includes("health")) return "🥗";
           if (key.includes("snack")) return "🍟";
           if (key.includes("desert") || key.includes("dessert")) return "🍨";
-          if (key.includes("drink") || key.includes("beverage") || key.includes("shake")) return "🧃";
+          if (key.includes("shake")) return "🥤";
+          if (key.includes("drink") || key.includes("beverage")) return "🧃";
+          if (key.includes("room")) return "🛏️";
           return "🍽️";
         };
 
