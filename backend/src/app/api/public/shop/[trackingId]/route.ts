@@ -124,6 +124,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
                 ...item,
                 averageRating: avgRating,
                 totalRatings: totalRatings,
+                rating: avgRating > 0 ? avgRating : 0,
                 itemRatings: undefined // Remove raw ratings array
             };
         });

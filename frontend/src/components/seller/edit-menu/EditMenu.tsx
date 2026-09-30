@@ -257,7 +257,8 @@ function EditMenuInner({
       return;
     }
 
-    // Validate all Add-ons: name and price are mandatory, price must be non-negative
+    // Validate all Add-ons: name and price are mandatory, price must be non-negative, and no duplicate add-ons
+    const seenAddonNames = new Set<string>();
     for (let i = 0; i < variants.length; i++) {
       const v = variants[i];
       const trimmedName = (v.name || '').trim();
@@ -265,6 +266,13 @@ function EditMenuInner({
         alert(`Add-on #${i + 1} name is required. Please provide a name or delete the add-on.`);
         return;
       }
+      const lowerName = trimmedName.toLowerCase();
+      if (seenAddonNames.has(lowerName)) {
+        alert(`Duplicate add-on "${trimmedName}" is not allowed. Each add-on must have a unique name.`);
+        return;
+      }
+      seenAddonNames.add(lowerName);
+
       if (v.price === '' || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
         alert(`Price for add-on "${trimmedName}" is mandatory and must be ₹0 or greater (negative numbers are not allowed).`);
         return;

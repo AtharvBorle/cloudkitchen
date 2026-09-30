@@ -41,7 +41,6 @@ export default function adminLayout({ children }: { children: React.ReactNode })
     const navLinks = [
         { href: "/dashboard/admin", label: "Overview", icon: <LayoutDashboard size={20} /> },
         { href: "/dashboard/admin/registrations", label: "Seller Approvals", icon: <Users size={20} /> },
-        { href: "/dashboard/admin/coupons", label: "Offers & Coupons", icon: <Tag size={20} /> },
         { href: "/dashboard/admin/delivery", label: "Delivery Staff", icon: <Bike size={20} /> },
     ];
 

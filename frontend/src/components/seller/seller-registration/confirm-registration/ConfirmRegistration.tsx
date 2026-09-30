@@ -28,18 +28,25 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   const [liveDraft, setLiveDraft] = useState<SellerRegistrationDraft>(() => getSellerDraft());
 
   useEffect(() => {
-    const current = getSellerDraft();
-    setLiveDraft(current);
+    const syncLive = () => {
+      const current = getSellerDraft();
+      setLiveDraft(current);
 
-    hydrateSellerDraftAsync().then((hydrated) => {
-      setLiveDraft((prev) => ({
-        ...prev,
-        ...hydrated,
-      }));
-    });
+      hydrateSellerDraftAsync().then((hydrated) => {
+        setLiveDraft((prev) => ({
+          ...prev,
+          ...hydrated,
+        }));
+      });
+    };
+
+    syncLive();
+    window.addEventListener("focus", syncLive);
+    return () => window.removeEventListener("focus", syncLive);
   }, [propDraft]);
 
-  const activeDraft = { ...liveDraft, ...(propDraft || {}) };
+  const freshDraft = getSellerDraft();
+  const activeDraft = { ...liveDraft, ...(propDraft || {}), ...(freshDraft || {}) };
 
   const cleanPhone = (activeDraft.phone || "").replace(/\D/g, "").slice(-10);
   const account = {

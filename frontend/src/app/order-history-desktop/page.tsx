@@ -6,7 +6,7 @@ import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar"
 import { OrderHistoryHeader } from "@/components/order-history-desktop/order-history-header";
 import { OrderFilters, OrderFilterTab } from "@/components/order-history-desktop/order-filters";
 import { OrderList, OrderItemData } from "@/components/order-history-desktop/order-list";
-import { ReorderModal, ReorderModalType, ReorderItemInfo } from "@/components/order-history-desktop/reorder-modal";
+import { ReorderModal, ReorderModalType, ReorderItemInfo, UnavailableAddonInfo } from "@/components/order-history-desktop/reorder-modal";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { useCart, CartItem } from "@/context/CartContext";
@@ -157,6 +157,7 @@ export default function OrderHistoryDesktopPage() {
     currentCartSellerName?: string;
     availableItems?: ReorderItemInfo[];
     unavailableItems?: ReorderItemInfo[];
+    unavailableAddons?: UnavailableAddonInfo[];
     rawAvailableItems?: CartItem[];
     errorMessage?: string;
   }>({
@@ -406,7 +407,7 @@ export default function OrderHistoryDesktopPage() {
         return;
       }
 
-      // Check 3: Partial items available
+      // Check 3: Partial items available (out of stock / unavailable items)
       if (data.unavailableItems && data.unavailableItems.length > 0) {
         setModalState({
           isOpen: true,
@@ -415,6 +416,22 @@ export default function OrderHistoryDesktopPage() {
           sellerId: data.sellerId,
           availableItems: data.availableItems,
           unavailableItems: data.unavailableItems,
+          unavailableAddons: data.unavailableAddons || [],
+          rawAvailableItems: data.availableItems,
+        });
+        return;
+      }
+
+      // Check 3b: Unavailable add-ons detected (deleted by seller)
+      if (data.hasUnavailableAddons || (data.unavailableAddons && data.unavailableAddons.length > 0)) {
+        setModalState({
+          isOpen: true,
+          type: "UNAVAILABLE_ADDONS",
+          sellerName: data.sellerName || "Cloud Kitchen",
+          sellerId: data.sellerId,
+          availableItems: data.availableItems,
+          unavailableItems: data.unavailableItems || [],
+          unavailableAddons: data.unavailableAddons || [],
           rawAvailableItems: data.availableItems,
         });
         return;
@@ -592,6 +609,7 @@ export default function OrderHistoryDesktopPage() {
         currentCartSellerName={modalState.currentCartSellerName}
         availableItems={modalState.availableItems}
         unavailableItems={modalState.unavailableItems}
+        unavailableAddons={modalState.unavailableAddons}
         errorMessage={modalState.errorMessage}
         isLoading={Boolean(reorderingOrderId)}
         onConfirmReorder={handleExecuteReorderMeal}

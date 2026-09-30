@@ -633,6 +633,8 @@ export async function verifyAndActivateMealSubscription(params: {
   cycle?: string;
   deliveryAddress: string;
   contactPhone?: string;
+  startDatePreference?: string;
+  startDate?: string;
   razorpay_order_id: string;
   razorpay_payment_id: string;
   razorpay_signature: string;
@@ -646,6 +648,8 @@ export async function verifyAndActivateMealSubscription(params: {
         cycle: params.cycle || "WEEKLY",
         deliveryAddress: params.deliveryAddress,
         contactPhone: params.contactPhone || "",
+        startDatePreference: params.startDatePreference,
+        startDate: params.startDate,
         razorpay_order_id: params.razorpay_order_id,
         razorpay_payment_id: params.razorpay_payment_id,
         razorpay_signature: params.razorpay_signature,
@@ -672,6 +676,8 @@ export async function subscribeToMealPlan(
     deliveryAddress?: string;
     contactPhone?: string;
     cycle?: string;
+    startDatePreference?: string;
+    startDate?: string;
     razorpay_order_id?: string;
     razorpay_payment_id?: string;
     razorpay_signature?: string;
@@ -686,6 +692,8 @@ export async function subscribeToMealPlan(
         deliveryAddress: options?.deliveryAddress || "",
         contactPhone: options?.contactPhone || "",
         cycle: options?.cycle || "WEEKLY",
+        startDatePreference: options?.startDatePreference,
+        startDate: options?.startDate,
         razorpay_order_id: options?.razorpay_order_id,
         razorpay_payment_id: options?.razorpay_payment_id,
         razorpay_signature: options?.razorpay_signature,

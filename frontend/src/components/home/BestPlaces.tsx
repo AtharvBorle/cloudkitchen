@@ -19,6 +19,7 @@ export interface DishItem {
   stockQuantity?: number;
   maxStock?: number;
   distanceText?: string;
+  discount?: string;
 }
 
 interface BestPlacesProps {
@@ -166,6 +167,27 @@ export default function BestPlaces({
                       size="xs"
                     />
                   </div>
+                  {/* Offer Badge if coupon exists */}
+                  {dish.discount && !isClosed && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        backgroundColor: "#FF5500",
+                        color: "#FFFFFF",
+                        fontSize: "10px",
+                        fontWeight: "800",
+                        padding: "3px 7px",
+                        borderRadius: "6px",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                        zIndex: 2,
+                        letterSpacing: "0.3px",
+                      }}
+                    >
+                      {dish.discount}
+                    </div>
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={dish.imageUrl}

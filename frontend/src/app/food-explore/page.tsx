@@ -438,7 +438,7 @@ function FoodExploreContent() {
       return;
     }
 
-    addToCart({
+    const ok = addToCart({
       id: dish.id,
       foodItemId: dish.id,
       name: dish.name,
@@ -928,7 +928,7 @@ function FoodExploreContent() {
                     boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
                     border: "1px solid #E2E8F0",
                     zIndex: 1000,
-                    minWidth: "190px",
+                    minWidth: "180px",
                     display: "flex",
                     flexDirection: "column",
                     gap: "4px",
@@ -936,9 +936,9 @@ function FoodExploreContent() {
                 >
                   {[
                     { id: "all", label: "Any Price", count: filterCounts.all },
-                    { id: "under-150", label: "Under ₹150 (Budget)", count: filterCounts.under150 },
-                    { id: "150-300", label: "₹150 – ₹300 (Standard)", count: filterCounts.price150to300 },
-                    { id: "300-plus", label: "₹300+ (Premium)", count: filterCounts.price300plus },
+                    { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
+                    { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
+                    { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
                   ].map((p) => {
                     const isSelected = selectedPrice === p.id;
                     return (
@@ -961,10 +961,16 @@ function FoodExploreContent() {
                           fontWeight: isSelected ? "700" : "500",
                           fontSize: "13px",
                           cursor: "pointer",
+                          gap: "12px",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        <span>{p.label}</span>
-                        {p.count > 0 && <span style={{ fontSize: "11px", color: "#94A3B8" }}>({p.count})</span>}
+                        <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
+                        {p.count > 0 && (
+                          <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
+                            ({p.count})
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -1682,7 +1688,7 @@ function FoodExploreContent() {
                     <Link
                       key={kitchen.id}
                       href={`/shop/${kitchen.trackingId || kitchen.id}`}
-                      style={{ textDecoration: "none" }}
+                      style={{ textDecoration: "none", height: "100%", display: "flex", flexDirection: "column" }}
                     >
                       <div
                         style={{
@@ -1693,6 +1699,8 @@ function FoodExploreContent() {
                           boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
                           display: "flex",
                           flexDirection: "column",
+                          height: "100%",
+                          flex: 1,
                           transition: "all 0.25s ease",
                           cursor: "pointer",
                           opacity: isClosed ? 0.85 : 1,
@@ -1707,6 +1715,7 @@ function FoodExploreContent() {
                             position: "relative",
                             overflow: "hidden",
                             backgroundColor: "#F1F5F9",
+                            flexShrink: 0,
                           }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1746,32 +1755,36 @@ function FoodExploreContent() {
                             display: "flex",
                             flexDirection: "column",
                             gap: "8px",
+                            flex: 1,
+                            justifyContent: "space-between",
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <h3
-                              style={{
-                                fontSize: "1.1rem",
-                                fontWeight: "800",
-                                color: isClosed ? "#64748B" : "#18181B",
-                                margin: 0,
-                              }}
-                            >
-                              {kitchen.name}
-                            </h3>
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                              <Star size={14} fill={isClosed ? "#94A3B8" : "#F59E0B"} color={isClosed ? "#94A3B8" : "#F59E0B"} />
-                              <span style={{ fontWeight: "800", fontSize: "0.85rem", color: isClosed ? "#94A3B8" : "#18181B" }}>
-                                {kitchen.rating || 5.0}
-                              </span>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <h3
+                                style={{
+                                  fontSize: "1.1rem",
+                                  fontWeight: "800",
+                                  color: isClosed ? "#64748B" : "#18181B",
+                                  margin: 0,
+                                }}
+                              >
+                                {kitchen.name}
+                              </h3>
+                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Star size={14} fill={isClosed ? "#94A3B8" : "#F59E0B"} color={isClosed ? "#94A3B8" : "#F59E0B"} />
+                                <span style={{ fontWeight: "800", fontSize: "0.85rem", color: isClosed ? "#94A3B8" : "#18181B" }}>
+                                  {kitchen.rating || 5.0}
+                                </span>
+                              </div>
                             </div>
+
+                            <span style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "600", display: "block", marginTop: "4px" }}>
+                              {kitchen.category} • {kitchen.time || "20-30 min"}
+                            </span>
                           </div>
 
-                          <span style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "600" }}>
-                            {kitchen.category} • {kitchen.time || "20-30 min"}
-                          </span>
-
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "10px", borderTop: "1px solid #F1F5F9" }}>
                             <span style={{ fontSize: "0.82rem", color: "#94A3B8" }}>
                               📍 {kitchen.locality || kitchen.city || "Pune"} {kitchen.distanceText ? `(${kitchen.distanceText})` : ""}
                             </span>

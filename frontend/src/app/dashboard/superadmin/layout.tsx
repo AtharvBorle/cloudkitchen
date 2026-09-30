@@ -151,6 +151,16 @@ export default function SuperadminLayout({
                         }}>
                         Manage Refunds
                     </Link>
+                    <Link href="/dashboard/superadmin/settings"
+                        style={{
+                            padding: "var(--spacing-2) var(--spacing-3)",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: pathname.includes("/settings") ? "var(--primary)" : "transparent",
+                            color: pathname.includes("/settings") ? "var(--text-inverse)" : "var(--text-main)",
+                            fontWeight: pathname.includes("/settings") ? "500" : "normal"
+                        }}>
+                        System Settings
+                    </Link>
                 </nav>
 
                 <div style={{ padding: "var(--spacing-4)", borderTop: "1px solid var(--border)" }}>

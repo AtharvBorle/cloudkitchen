@@ -36,7 +36,7 @@ export default function PopularOrders({
   offers,
 }: PopularOrdersProps) {
   const router = useRouter();
-  const { addToCart, showToast, cartItems } = useCart();
+  const { addToCart, showToast, cartItems, decreaseQuantity } = useCart();
   const [activeSeller, setActiveSeller] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function PopularOrders({
       return;
     }
 
-    addToCart({
+    const success = addToCart({
       id: offer.id,
       foodItemId: offer.foodItemId || offer.id,
       name: offer.title,
@@ -349,31 +349,144 @@ export default function PopularOrders({
                 ) : null}
               </div>
 
-              {/* Action Button: Order Now */}
-              <button
-                type="button"
-                onClick={() => handleOrderNow(offer)}
-                style={{
-                  marginTop: "auto",
-                  backgroundColor: isClosed
-                    ? "#F1F5F9"
-                    : addedId === offer.id
-                    ? "#10B981"
-                    : "#FF6B00",
-                  color: isClosed ? "#64748B" : "#FFFFFF",
-                  border: isClosed ? "1px solid #CBD5E1" : "none",
-                  borderRadius: "12px",
-                  padding: "10px",
-                  fontSize: "0.92rem",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  boxShadow: isClosed ? "none" : "0 4px 12px rgba(255, 107, 0, 0.25)",
-                }}
-                title={isClosed ? (isSellerClosed ? "Seller is closed" : "Unavailable") : "Order Now"}
-              >
-                {isClosed ? (isSellerClosed ? "Closed" : "Unavailable") : addedId === offer.id ? "Added to Cart! ✓" : "Order Now"}
-              </button>
+              {/* Action Button: Quantity Selector or Order Now */}
+              {isClosed ? (
+                <button
+                  type="button"
+                  style={{
+                    marginTop: "auto",
+                    backgroundColor: "#F1F5F9",
+                    color: "#64748B",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "12px",
+                    padding: "10px",
+                    fontSize: "0.92rem",
+                    fontWeight: "700",
+                    cursor: "not-allowed",
+                    height: "40px",
+                  }}
+                  disabled
+                >
+                  {isSellerClosed ? "Closed" : "Unavailable"}
+                </button>
+              ) : currentInCart && currentInCart.quantity > 0 ? (
+                <div
+                  style={{
+                    marginTop: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    backgroundColor: "#FFFFFF",
+                    border: "2px solid #FF6B00",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    boxShadow: "0 4px 12px rgba(255, 107, 0, 0.15)",
+                    height: "40px",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      decreaseQuantity(currentInCart.id);
+                      showToast(`Updated "${offer.title}" in cart`, "info");
+                    }}
+                    style={{
+                      flex: 1,
+                      height: "100%",
+                      backgroundColor: "transparent",
+                      border: "none",
+                      color: "#FF6B00",
+                      fontSize: "1.2rem",
+                      fontWeight: "800",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "background-color 0.15s ease",
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = "#FFF7ED";
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span
+                    style={{
+                      padding: "0 12px",
+                      fontWeight: "800",
+                      fontSize: "0.95rem",
+                      color: "#18181B",
+                      minWidth: "24px",
+                      textAlign: "center",
+                      userSelect: "none",
+                    }}
+                  >
+                    {currentInCart.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleOrderNow(offer)}
+                    disabled={isMaxStockInCart}
+                    style={{
+                      flex: 1,
+                      height: "100%",
+                      backgroundColor: isMaxStockInCart ? "#F1F5F9" : "transparent",
+                      border: "none",
+                      color: isMaxStockInCart ? "#94A3B8" : "#FF6B00",
+                      fontSize: "1.2rem",
+                      fontWeight: "800",
+                      cursor: isMaxStockInCart ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "background-color 0.15s ease",
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isMaxStockInCart) {
+                        e.currentTarget.style.backgroundColor = "#FFF7ED";
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!isMaxStockInCart) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleOrderNow(offer)}
+                  style={{
+                    marginTop: "auto",
+                    backgroundColor: addedId === offer.id ? "#10B981" : "#FF6B00",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "12px",
+                    padding: "10px",
+                    fontSize: "0.92rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  title="Order Now"
+                >
+                  {addedId === offer.id ? "Added to Cart! ✓" : "Order Now"}
+                </button>
+              )}
             </div>
             );
           })}

@@ -30,6 +30,10 @@ function AccountInfoContent() {
       phone: draft.phone || "",
       password: draft.password || "",
       sellerRole: draft.sellerRole || "Owner",
+      isEmailVerified: draft.isEmailVerified,
+      verifiedEmail: draft.verifiedEmail,
+      isPhoneVerified: draft.isPhoneVerified,
+      verifiedPhone: draft.verifiedPhone,
     });
   }, []);
 

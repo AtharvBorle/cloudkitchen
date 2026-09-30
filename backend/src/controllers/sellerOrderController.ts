@@ -233,7 +233,7 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
                         userId: existingOrder.userId,
                         orderId,
                         amount: existingOrder.totalAmount,
-                        reason: "Order cancelled / rejected by Kitchen Seller.",
+                        reason: `Order #${orderId} was rejected / cancelled by the kitchen partner. Auto-submitted for refund processing.`,
                         status: "PENDING"
                     }
                 });

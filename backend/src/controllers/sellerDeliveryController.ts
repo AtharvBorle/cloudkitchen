@@ -490,10 +490,13 @@ export const adjustDeliveryBalance = async (req: Request, deliveryPersonId: stri
     }
 
     const { amount, type, description } = await req.json(); // type: "INCREMENT" or "DECREMENT"
+    if (typeof amount === "string" && !/^\d+(\.\d+)?$/.test(amount.trim())) {
+        throw new ApiError("Please provide a valid numeric adjustment amount.", 400);
+    }
     const adjAmount = parseFloat(amount);
 
-    if (isNaN(adjAmount) || adjAmount <= 1) {
-        throw new ApiError("Adjustment amount must be greater than ₹1", 400);
+    if (isNaN(adjAmount) || adjAmount <= 0) {
+        throw new ApiError("Adjustment amount must be a positive number greater than ₹0", 400);
     }
 
     const deliveryPerson = await db.deliveryPerson.findUnique({

@@ -354,7 +354,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [activeFilterTab, setActiveFilterTab] = useState<"cuisines" | "dietary" | "price">("cuisines");
+  const [activeFilterTab, setActiveFilterTab] = useState<"cuisines" | "price">("cuisines");
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<string>("");
@@ -1338,7 +1338,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
 
-            {/* 3 Column Tabs Navigation */}
+            {/* 2 Column Tabs Navigation (Cuisines, Price) */}
             <div className={styles.filterTabColumns}>
               <button
                 type="button"
@@ -1350,19 +1350,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Cuisines</span>
                 {selectedCuisines.length > 0 && (
                   <span className={styles.tabBadge}>{selectedCuisines.length}</span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                className={`${styles.filterTabBtn} ${
-                  activeFilterTab === "dietary" ? styles.filterTabBtnActive : ""
-                }`}
-                onClick={() => setActiveFilterTab("dietary")}
-              >
-                <span>Dietary</span>
-                {selectedDietary.length > 0 && (
-                  <span className={styles.tabBadge}>{selectedDietary.length}</span>
                 )}
               </button>
 
@@ -1393,44 +1380,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                           key={item.id}
                           className={styles.checkboxRow}
                           onClick={() => toggleCuisine(item.id)}
-                        >
-                          <div className={styles.checkboxRowLeft}>
-                            <div
-                              className={`${styles.customCheckbox} ${
-                                isChecked ? styles.customCheckboxChecked : ""
-                              }`}
-                            >
-                              {isChecked && (
-                                <Check size={12} color="#FFFFFF" strokeWidth={3.5} />
-                              )}
-                            </div>
-                            <span
-                              className={`${styles.checkboxLabel} ${
-                                isChecked ? styles.checkboxLabelActive : ""
-                              }`}
-                            >
-                              {item.label}
-                            </span>
-                          </div>
-                          <span className={styles.checkboxCount}>{item.count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 2. Dietary Preferences Tab Content */}
-              {activeFilterTab === "dietary" && (
-                <div className={styles.filterSection}>
-                  <div className={styles.checkboxList}>
-                    {FILTER_DIETARY.map((item) => {
-                      const isChecked = selectedDietary.includes(item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          className={styles.checkboxRow}
-                          onClick={() => toggleDietary(item.id)}
                         >
                           <div className={styles.checkboxRowLeft}>
                             <div

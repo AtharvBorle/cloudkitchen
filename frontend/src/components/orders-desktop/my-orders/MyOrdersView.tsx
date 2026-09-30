@@ -34,7 +34,7 @@ import {
 import { useCart, CartItem } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
-import { ReorderModal, ReorderModalType, ReorderItemInfo } from "@/components/order-history-desktop/reorder-modal";
+import { ReorderModal, ReorderModalType, ReorderItemInfo, UnavailableAddonInfo } from "@/components/order-history-desktop/reorder-modal";
 import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import styles from "./MyOrdersView.module.css";
 
@@ -67,6 +67,18 @@ export interface OrderItemData {
     totalPaid: number;
   };
   rawItems: any[];
+  isPaid?: boolean;
+  paymentMethod?: string;
+  refund?: {
+    id: string;
+    status: string;
+    amount: number;
+    reason?: string;
+    adminNote?: string;
+    transactionId?: string;
+    updatedAt?: string;
+    createdAt?: string;
+  } | null;
   review?: {
     id: string;
     rating: number;
@@ -259,6 +271,9 @@ function parseOrderFromDb(o: any): OrderItemData {
     },
     rawItems: parsedItems,
     review: o.review || null,
+    isPaid: !!o.isPaid,
+    paymentMethod: o.paymentMethod || "COD",
+    refund: o.refund || null,
   };
 }
 
@@ -344,6 +359,7 @@ export default function MyOrdersView() {
     currentCartSellerName?: string;
     availableItems?: ReorderItemInfo[];
     unavailableItems?: ReorderItemInfo[];
+    unavailableAddons?: UnavailableAddonInfo[];
     rawAvailableItems?: CartItem[];
     errorMessage?: string;
   }>({
@@ -569,7 +585,7 @@ export default function MyOrdersView() {
         return;
       }
 
-      // Check 3: Partial items available
+      // Check 3: Partial items available (out of stock / unavailable items)
       if (data.unavailableItems && data.unavailableItems.length > 0) {
         setModalState({
           isOpen: true,
@@ -578,6 +594,22 @@ export default function MyOrdersView() {
           sellerId: data.sellerId,
           availableItems: data.availableItems,
           unavailableItems: data.unavailableItems,
+          unavailableAddons: data.unavailableAddons || [],
+          rawAvailableItems: data.availableItems,
+        });
+        return;
+      }
+
+      // Check 3b: Unavailable add-ons detected (deleted by seller)
+      if (data.hasUnavailableAddons || (data.unavailableAddons && data.unavailableAddons.length > 0)) {
+        setModalState({
+          isOpen: true,
+          type: "UNAVAILABLE_ADDONS",
+          sellerName: data.sellerName || order.vendorName,
+          sellerId: data.sellerId,
+          availableItems: data.availableItems,
+          unavailableItems: data.unavailableItems || [],
+          unavailableAddons: data.unavailableAddons || [],
           rawAvailableItems: data.availableItems,
         });
         return;
@@ -1355,6 +1387,44 @@ export default function MyOrdersView() {
                             <span className={styles.deliveredLabel}>{order.deliveredLabel || "Order cancelled"}</span>
                             <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
                           </div>
+                          {(order.refund || order.isPaid) && (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "4px 9px",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                backgroundColor:
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                    ? "#DCFCE7"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#FEE2E2"
+                                    : "#FEF3C7",
+                                color:
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                    ? "#15803D"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#B91C1C"
+                                    : "#B45309",
+                                border: `1px solid ${
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                    ? "#BBF7D0"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#FECACA"
+                                    : "#FDE68A"
+                                }`,
+                              }}
+                            >
+                              {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                ? `✓ Refund: Processed (₹${order.refund.amount || order.price})`
+                                : order.refund?.status === "REJECTED"
+                                ? `✕ Refund: Rejected`
+                                : `⏳ Refund: Processing (₹${order.price})`}
+                            </span>
+                          )}
                           <button
                             type="button"
                             className={styles.viewDetailsBtn}
@@ -1662,6 +1732,74 @@ export default function MyOrdersView() {
                     </span>
                   </div>
                 </div>
+
+                {/* Refund Status Card for Cancelled Paid Orders */}
+                {selectedOrder.status === "CANCELLED" && (selectedOrder.refund || selectedOrder.isPaid) && (
+                  <div
+                    style={{
+                      backgroundColor:
+                        selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                          ? "#F0FDF4"
+                          : selectedOrder.refund?.status === "REJECTED"
+                          ? "#FEF2F2"
+                          : "#FFFBEB",
+                      border: `1px solid ${
+                        selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                          ? "#BBF7D0"
+                          : selectedOrder.refund?.status === "REJECTED"
+                          ? "#FECACA"
+                          : "#FDE68A"
+                      }`,
+                      borderRadius: "12px",
+                      padding: "14px",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#1E293B", letterSpacing: "0.5px" }}>
+                        REFUND INFORMATION
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          backgroundColor:
+                            selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                              ? "#DCFCE7"
+                              : selectedOrder.refund?.status === "REJECTED"
+                              ? "#FEE2E2"
+                              : "#FEF3C7",
+                          color:
+                            selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                              ? "#15803D"
+                              : selectedOrder.refund?.status === "REJECTED"
+                              ? "#B91C1C"
+                              : "#B45309",
+                        }}
+                      >
+                        {selectedOrder.refund?.status || "PENDING"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#334155", marginBottom: "4px" }}>
+                      <strong>Refund Amount:</strong> ₹{selectedOrder.refund?.amount || selectedOrder.price}
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "#64748B", lineHeight: 1.4 }}>
+                      {selectedOrder.refund?.reason || "Cancelled paid order submitted for admin refund processing."}
+                    </div>
+                    {selectedOrder.refund?.transactionId && (
+                      <div style={{ fontSize: "0.78rem", color: "#15803D", marginTop: "6px", fontWeight: 600 }}>
+                        Reference / Txn ID: {selectedOrder.refund.transactionId}
+                      </div>
+                    )}
+                    {selectedOrder.refund?.adminNote && (
+                      <div style={{ fontSize: "0.78rem", color: "#64748B", marginTop: "4px", fontStyle: "italic" }}>
+                        Admin Note: &ldquo;{selectedOrder.refund.adminNote}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Order Items Breakdown */}
                 <div className={styles.orderItemsSection}>
@@ -1994,6 +2132,7 @@ export default function MyOrdersView() {
         currentCartSellerName={modalState.currentCartSellerName}
         availableItems={modalState.availableItems}
         unavailableItems={modalState.unavailableItems}
+        unavailableAddons={modalState.unavailableAddons}
         errorMessage={modalState.errorMessage}
         isLoading={isReorderValidating}
         onConfirmReorder={handleExecuteReorder}

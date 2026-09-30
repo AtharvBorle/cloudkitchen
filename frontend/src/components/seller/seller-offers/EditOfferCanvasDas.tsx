@@ -184,7 +184,7 @@ function EditOfferForm({
   const [noExpiry, setNoExpiry] = useState(true);
   const [expiryDate, setExpiryDate] = useState("Runs indefinitely");
   const [perUserLimit, setPerUserLimit] = useState("1");
-  const [status, setStatus] = useState<"Active" | "Pending" | "Expired">("Active");
+  const [status, setStatus] = useState<"Active" | "Pending" | "Draft" | "Expired">("Active");
 
   const startDateRef = useRef<HTMLInputElement>(null);
   const expiryDateRef = useRef<HTMLInputElement>(null);
@@ -197,8 +197,7 @@ function EditOfferForm({
     // 1. First check local demo dictionary for immediate exact match
     const demoMatch =
       (offerId && DEMO_OFFER_DETAILS[offerId]) ||
-      (codeParam && DEMO_OFFER_DETAILS[codeParam]) ||
-      DEMO_OFFER_DETAILS["SUMMER20"];
+      (codeParam && DEMO_OFFER_DETAILS[codeParam]);
 
     if (demoMatch) {
       setCouponCode(demoMatch.code || "");
@@ -277,7 +276,15 @@ function EditOfferForm({
               setExpiryDate("Runs indefinitely");
             }
 
-            setStatus(matched.isActive ? "Active" : "Expired");
+            if (matched.approvalStatus === "DRAFT" || matched.status === "Draft" || matched.status === "DRAFT") {
+              setStatus("Draft");
+            } else if (matched.approvalStatus === "PENDING_APPROVAL" || matched.status === "Pending") {
+              setStatus("Pending");
+            } else if (matched.isActive) {
+              setStatus("Active");
+            } else {
+              setStatus("Expired");
+            }
           }
         }
       } catch (err) {
@@ -290,28 +297,72 @@ function EditOfferForm({
 
   const isFormValid = couponCode.trim().length > 0 && discountValue.trim().length > 0;
 
-  const handleUpdate = async (isDraft: boolean = false) => {
+  const handleUpdate = async (isDraft: boolean = false, targetStatus?: "Active" | "Pending" | "Draft" | "Expired") => {
     if (!couponCode.trim()) {
       alert("Please enter a valid coupon code.");
       return;
     }
 
+    const dVal = parseFloat(discountValue);
+    if (isNaN(dVal) || dVal <= 0) {
+      alert("Discount value must be greater than 0.");
+      return;
+    }
+    if (discountType === "PERCENTAGE" && dVal > 100) {
+      alert("Percentage discount cannot exceed 100%.");
+      return;
+    }
+
+    if (minOrderValue.trim() !== "") {
+      const minVal = parseFloat(minOrderValue);
+      if (isNaN(minVal) || minVal < 0) {
+        alert("Minimum order value cannot be negative.");
+        return;
+      }
+    }
+
+    if (maxDiscountCap.trim() !== "") {
+      const capVal = parseFloat(maxDiscountCap);
+      if (isNaN(capVal) || capVal <= 0) {
+        alert("Max discount cap must be greater than 0.");
+        return;
+      }
+    }
+
+    if (usageLimit.trim() !== "") {
+      const limitVal = parseInt(usageLimit);
+      if (isNaN(limitVal) || limitVal <= 0) {
+        alert("Usage limit must be a positive number greater than 0.");
+        return;
+      }
+    }
+
+    if (perUserLimit.trim() !== "") {
+      const perUser = parseInt(perUserLimit);
+      if (isNaN(perUser) || perUser <= 0) {
+        alert("Per-user limit must be a positive number greater than 0.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
+      const finalStatus: "Active" | "Pending" | "Draft" | "Expired" = targetStatus || (isDraft ? "Draft" : (status === "Draft" ? "Active" : status));
       const payload = {
         id: resolvedId || offerId,
         code: couponCode.trim().toUpperCase(),
         description: internalDescription.trim(),
         discountType: discountType,
-        discountValue: Number(discountValue) || 0,
-        minOrderAmount: Number(minOrderValue) || 0,
-        maxDiscountAmount: maxDiscountCap ? Number(maxDiscountCap) : null,
+        discountValue: dVal,
+        minOrderAmount: minOrderValue.trim() !== "" ? parseFloat(minOrderValue) : 0,
+        maxDiscountAmount: maxDiscountCap.trim() !== "" ? parseFloat(maxDiscountCap) : null,
         appliesTo: appliesTo,
         customerEligibility: customerEligibility,
-        usageLimit: usageLimit ? Number(usageLimit) : null,
-        perUserLimit: Number(perUserLimit) || 1,
+        usageLimit: usageLimit.trim() !== "" ? parseInt(usageLimit) : null,
+        perUserLimit: perUserLimit.trim() !== "" ? parseInt(perUserLimit) : 1,
         noExpiry: noExpiry,
-        status: isDraft ? "Pending" : status,
+        status: finalStatus,
+        isActive: finalStatus === "Active",
       };
 
       const res = await fetchApi(`/api/seller/dashboard/offers`, {
@@ -441,18 +492,24 @@ function EditOfferForm({
                     borderColor:
                       status === "Active"
                         ? "#BBF7D0"
+                        : status === "Draft"
+                        ? "#CBD5E1"
                         : status === "Pending"
                         ? "#FEF08A"
                         : "#FED7AA",
                     backgroundColor:
                       status === "Active"
                         ? "#F0FDF4"
+                        : status === "Draft"
+                        ? "#F8FAFC"
                         : status === "Pending"
                         ? "#FEFCE8"
                         : "#FFF7ED",
                     color:
                       status === "Active"
                         ? "#16A34A"
+                        : status === "Draft"
+                        ? "#64748B"
                         : status === "Pending"
                         ? "#CA8A04"
                         : "#EA580C",
@@ -464,6 +521,8 @@ function EditOfferForm({
                       backgroundColor:
                         status === "Active"
                           ? "#16A34A"
+                          : status === "Draft"
+                          ? "#64748B"
                           : status === "Pending"
                           ? "#CA8A04"
                           : "#EA580C",
@@ -472,22 +531,45 @@ function EditOfferForm({
                   <span>{status}</span>
                 </div>
                 <div className={styles.desktopActions}>
-                  <button
-                    type="button"
-                    className={styles.saveDraftBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(true)}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.publishBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(false)}
-                  >
-                    {submitting ? "Saving..." : "Update Offer"}
-                  </button>
+                  {status === "Draft" ? (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.saveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.publishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, "Active")}
+                      >
+                        {submitting ? "Publishing..." : "Publish Offer"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.saveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save as Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.publishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, status === "Pending" ? "Pending" : "Active")}
+                      >
+                        {submitting ? "Saving..." : "Update Offer"}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -613,9 +695,14 @@ function EditOfferForm({
                       </span>
                       <input
                         type="number"
+                        min="1"
+                        max={discountType === "PERCENTAGE" ? "100" : undefined}
                         className={styles.prefixInputField}
                         value={discountValue}
                         onChange={(e) => setDiscountValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                        }}
                         placeholder="e.g. 20"
                       />
                     </div>
@@ -635,9 +722,13 @@ function EditOfferForm({
                       <span className={styles.prefixIconBox}>₹</span>
                       <input
                         type="number"
+                        min="0"
                         className={styles.prefixInputField}
                         value={minOrderValue}
                         onChange={(e) => setMinOrderValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                        }}
                         placeholder="0"
                       />
                     </div>
@@ -653,9 +744,13 @@ function EditOfferForm({
                       <span className={styles.prefixIconBox}>₹</span>
                       <input
                         type="number"
+                        min="1"
                         className={styles.prefixInputField}
                         value={maxDiscountCap}
                         onChange={(e) => setMaxDiscountCap(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                        }}
                         placeholder="Optional"
                       />
                     </div>
@@ -832,9 +927,13 @@ function EditOfferForm({
                     <label className={styles.fieldLabel}>Usage Limit</label>
                     <input
                       type="number"
+                      min="1"
                       className={styles.inputField}
                       value={usageLimit}
                       onChange={(e) => setUsageLimit(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                      }}
                       placeholder="e.g. 500"
                     />
                     <div className={styles.helpText}>
@@ -959,9 +1058,13 @@ function EditOfferForm({
                     <label className={styles.fieldLabel}>Per-User Limit</label>
                     <input
                       type="number"
+                      min="1"
                       className={styles.inputField}
                       value={perUserLimit}
                       onChange={(e) => setPerUserLimit(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                      }}
                       placeholder="1"
                     />
                     <div className={styles.helpText}>
@@ -983,22 +1086,45 @@ function EditOfferForm({
                 </div>
 
                 <div className={styles.mobileFormActions}>
-                  <button
-                    type="button"
-                    className={styles.mobileSaveDraftBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(true)}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.mobilePublishBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(false)}
-                  >
-                    {submitting ? "Saving..." : "Update Offer"}
-                  </button>
+                  {status === "Draft" ? (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.mobileSaveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.mobilePublishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, "Active")}
+                      >
+                        {submitting ? "Publishing..." : "Publish Offer"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.mobileSaveDraftBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(true, "Draft")}
+                      >
+                        Save as Draft
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.mobilePublishBtn}
+                        disabled={submitting}
+                        onClick={() => handleUpdate(false, status === "Pending" ? "Pending" : "Active")}
+                      >
+                        {submitting ? "Saving..." : "Update Offer"}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

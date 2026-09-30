@@ -218,6 +218,9 @@ export default function SuperadminDashboard() {
                     Manage Sellers
                 </Link>
                 <Link href="/dashboard/superadmin/subscriptions" style={{ padding: '10px 20px', color: 'var(--text-muted)', fontWeight: 'bold', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    Manage Subscriptions
+                </Link>
+                <Link href="/dashboard/superadmin/settings" style={{ padding: '10px 20px', color: 'var(--text-muted)', fontWeight: 'bold', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     System Settings
                 </Link>
             </div>
@@ -379,16 +382,6 @@ export default function SuperadminDashboard() {
                                     {editRole === "AGENT" && (
                                         <div className="input-group" style={{ marginTop: '10px', marginBottom: 0 }}>
                                             <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '12px', color: '#475569', fontWeight: '600' }}>Agent Permissions (Global)</label>
-
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: 'pointer', userSelect: 'none' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={editCanManageOffers}
-                                                    onChange={(e) => setEditCanManageOffers(e.target.checked)}
-                                                    style={{ width: '18px', height: '18px', accentColor: 'var(--coral)', cursor: 'pointer' }}
-                                                />
-                                                <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>Can Manage Global Offers (Coupons)</span>
-                                            </label>
 
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
                                                 <input

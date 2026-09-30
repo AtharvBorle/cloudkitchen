@@ -35,14 +35,15 @@ export const createCoupon = async (req: Request) => {
 
     const { code, discountPercentage, appliesToSellerId, category } = await req.json();
 
-    if (!code || discountPercentage === undefined) {
-        throw new ApiError("Coupon code and discount percentage are required.", 400);
+    const disc = parseFloat(discountPercentage);
+    if (isNaN(disc) || disc <= 0 || disc > 100) {
+        throw new ApiError("Discount percentage must be between 1% and 100%.", 400);
     }
 
     const coupon = await db.coupon.create({
         data: {
             code: code.toUpperCase(),
-            discountPercentage: parseFloat(discountPercentage),
+            discountPercentage: disc,
             appliesToSellerId: appliesToSellerId || null,
             category: category || "BOTH"
         }

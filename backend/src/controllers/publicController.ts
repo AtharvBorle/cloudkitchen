@@ -197,17 +197,22 @@ export const getPublicRoomAvailability = (id: string) => unstable_cache(
 
 export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
     async () => {
-        if (!sellerId) {
-            throw new Error("sellerId is required");
-        }
-
+        const cleanSellerId = (sellerId && sellerId !== "none" && sellerId !== "all" && sellerId !== "null" && sellerId !== "undefined") ? sellerId : null;
+        let resolvedSellerId = cleanSellerId;
         let sellerCategory = "BOTH";
-        if (sellerId) {
-            const seller = await prisma.sellerProfile.findUnique({
-                where: { id: sellerId }
+        if (cleanSellerId) {
+            const seller = await prisma.sellerProfile.findFirst({
+                where: {
+                    OR: [
+                        { id: cleanSellerId },
+                        { trackingId: cleanSellerId },
+                        { userId: cleanSellerId }
+                    ]
+                }
             });
             if (seller) {
-                sellerCategory = seller.businessCategory;
+                resolvedSellerId = seller.id;
+                sellerCategory = seller.businessCategory || "BOTH";
             }
         }
 
@@ -216,26 +221,38 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         const activeCoupons = await prisma.coupon.findMany({
             where: {
                 isActive: true,
-                OR: [
-                    { appliesToSellerId: null },
-                    { appliesToSellerId: sellerId }
-                ],
+                approvalStatus: "APPROVED",
+                ...(resolvedSellerId
+                    ? {
+                        OR: [
+                            { appliesToSellerId: null },
+                            { appliesToSellerId: resolvedSellerId },
+                            ...(cleanSellerId && cleanSellerId !== resolvedSellerId ? [{ appliesToSellerId: cleanSellerId }] : [])
+                        ]
+                    }
+                    : {}
+                ),
                 AND: [
-                    {
-                        validFrom: { lte: now }
-                    },
+                    { validFrom: { lte: now } },
                     {
                         OR: [
                             { validUntil: null },
-                            { validUntil: { gt: now } }
+                            { validUntil: { gt: now } },
+                            { noExpiry: true }
                         ]
                     }
                 ]
+            },
+            orderBy: {
+                createdAt: "desc"
             }
         });
 
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            return c.category === "BOTH" || c.category === sellerCategory;
+            const cat = (c.category || "BOTH").toUpperCase();
+            if (cat === "BOTH" || cat === "FOOD") return true;
+            if (sellerCategory && (cat === sellerCategory || sellerCategory === "BOTH")) return true;
+            return false;
         });
 
         const safeCoupons = filteredCoupons.map((c: any) => ({
@@ -249,6 +266,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             maxDiscountAmount: c.maxDiscountAmount,
             customerEligibility: c.customerEligibility || "ALL",
             appliesTo: c.appliesTo || "ALL",
+            appliesToSellerId: c.appliesToSellerId || null,
             appliesToProductId: c.appliesToProductId || null,
             maxUsagesPerUser: c.maxUsagesPerUser || c.perUserLimit || 1,
             maxUsers: c.maxUsers || c.usageLimit || null,
@@ -260,7 +278,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         return safeCoupons;
     },
     [`public-coupons-${sellerId || 'global'}`],
-    { revalidate: 60, tags: ["coupons"] }
+    { revalidate: 30, tags: ["coupons"] }
 )();
 
 export const getPublicPopupBanners = (sellerId: string | null) => unstable_cache(
@@ -328,11 +346,11 @@ export const validateCouponForCart = async (req: Request) => {
                     { trackingId: coupon.appliesToSellerId }
                 ]
             },
-            select: { id: true, businessName: true }
+            select: { id: true, businessName: true, trackingId: true }
         });
 
         // Resolve cart's seller
-        let cartSeller: { id: string; businessName: string } | null = null;
+        let cartSeller: { id: string; businessName: string; trackingId?: string | null } | null = null;
         if (sellerId && sellerId !== "seller" && sellerId !== "k-1") {
             cartSeller = await prisma.sellerProfile.findFirst({
                 where: {
@@ -341,7 +359,7 @@ export const validateCouponForCart = async (req: Request) => {
                         { trackingId: sellerId }
                     ]
                 },
-                select: { id: true, businessName: true }
+                select: { id: true, businessName: true, trackingId: true }
             });
         }
 
@@ -351,7 +369,7 @@ export const validateCouponForCart = async (req: Request) => {
             if (firstItemId) {
                 const fi = await prisma.foodItem.findUnique({
                     where: { id: firstItemId },
-                    include: { seller: { select: { id: true, businessName: true } } }
+                    include: { seller: { select: { id: true, businessName: true, trackingId: true } } }
                 });
                 if (fi?.seller) cartSeller = fi.seller;
             }
@@ -364,7 +382,7 @@ export const validateCouponForCart = async (req: Request) => {
             throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
         }
 
-        if (sellerId && sellerId !== "seller" && couponSeller && sellerId !== couponSeller.id) {
+        if (!cartSeller && sellerId && sellerId !== "seller" && couponSeller && sellerId !== couponSeller.id && sellerId !== couponSeller.trackingId) {
             throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
         }
     }
@@ -414,6 +432,9 @@ export const validateCouponForCart = async (req: Request) => {
         discountLabel = `${pct}% OFF`;
     } else {
         const flatAmt = coupon.discountAmount || 0;
+        if (flatAmt > 0 && numSubtotal < flatAmt) {
+            throw new ApiError(`Coupon "${coupon.code}" provides a ₹${flatAmt} discount and requires an order total of at least ₹${flatAmt}. (Your cart is ₹${numSubtotal})`, 400);
+        }
         calculatedDiscount = Math.min(flatAmt, numSubtotal);
         discountLabel = `₹${flatAmt} OFF`;
     }

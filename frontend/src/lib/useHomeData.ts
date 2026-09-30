@@ -79,6 +79,8 @@ export interface DynamicCoupon {
   discountPercentage?: number | null;
   discountAmount?: number | null;
   minimumCartValue?: number | null;
+  appliesToSellerId?: string | null;
+  appliesToProductId?: string | null;
 }
 
 export interface DynamicPromoBanner {
@@ -174,7 +176,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           .then((res) => (res.ok ? res.json() : null))
           .catch(() => null);
 
-        const couponsPromise = fetchApi('/api/public/coupons?sellerId=none')
+        const couponsPromise = fetchApi('/api/public/coupons')
           .then((res) => (res.ok ? res.json() : null))
           .catch(() => null);
 
@@ -412,8 +414,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : 0),
               deliveryTime: item.deliveryTime || '20-30 min',
               servedPincodes: item.servedPincodes || [],
-              addons: item.addons,
-              variants: item.variants,
+              addons: item.addons || item.variants || [],
+              variants: item.variants || item.addons || [],
             };
             rawFoodItems.push(foodItem);
           });
@@ -504,8 +506,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
         // 4. Process Coupons
         const rawCoupons: DynamicCoupon[] = [];
-        if (Array.isArray(couponsRes) && couponsRes.length > 0) {
-          couponsRes.forEach((c: any) => {
+        const couponList = Array.isArray(couponsRes)
+          ? couponsRes
+          : (couponsRes?.data?.coupons || couponsRes?.coupons || couponsRes?.data || []);
+        if (Array.isArray(couponList) && couponList.length > 0) {
+          couponList.forEach((c: any) => {
             rawCoupons.push({
               id: c.id,
               code: c.code,
@@ -513,6 +518,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               discountPercentage: c.discountPercentage,
               discountAmount: c.discountAmount,
               minimumCartValue: c.minimumCartValue,
+              appliesToSellerId: c.appliesToSellerId || null,
+              appliesToProductId: c.appliesToProductId || null,
             });
           });
         }

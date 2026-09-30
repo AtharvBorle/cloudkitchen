@@ -312,26 +312,48 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
+    if (activeFilters.offersOnly) {
+      list = list.filter((f) => {
+        return homeData.coupons.some(
+          (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
+        );
+      });
+    }
+
     if (activeFilters.minRating) {
       const filtered = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
       if (filtered.length > 0) list = filtered;
     }
 
-    return list.slice(0, 4).map((f) => ({
-      id: f.id,
-      name: f.name,
-      rating: f.rating || 5.0,
-      time: f.deliveryTime || "20-30 min",
-      imageUrl: f.imageUrl || "/images/places/place-biryani.png",
-      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
-      itemType: f.itemType || "VEG",
-      sellerIsOnline: f.sellerIsOnline !== false,
-      isAvailable: f.isAvailable !== false,
-      stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
-      maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
-      distanceText: f.distanceText,
-    }));
-  }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
+    return list.slice(0, 4).map((f) => {
+      const matchedCoupon = homeData.coupons.find(
+        (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
+      );
+      const discountText = matchedCoupon
+        ? matchedCoupon.discountPercentage
+          ? `${matchedCoupon.discountPercentage}% OFF`
+          : matchedCoupon.discountAmount
+          ? `₹${matchedCoupon.discountAmount} OFF`
+          : "OFFER"
+        : undefined;
+
+      return {
+        id: f.id,
+        name: f.name,
+        rating: f.rating || 5.0,
+        time: f.deliveryTime || "20-30 min",
+        imageUrl: f.imageUrl || "/images/places/place-biryani.png",
+        link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
+        itemType: f.itemType || "VEG",
+        sellerIsOnline: f.sellerIsOnline !== false,
+        isAvailable: f.isAvailable !== false,
+        stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
+        maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
+        distanceText: f.distanceText,
+        discount: discountText,
+      };
+    });
+  }, [homeData.foodItems, homeData.allFoodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Top Rated Items for DashboardBody
   const dynamicTopRated = useMemo(() => {

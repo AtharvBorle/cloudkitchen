@@ -116,6 +116,8 @@ function MySubscriptionContent() {
   );
 
   // Active Subscription State
+  const [userSubs, setUserSubs] = useState<UserActiveMealSubscription[]>([]);
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<UserActiveMealSubscription | null>(null);
   const [isLoadingActive, setIsLoadingActive] = useState<boolean>(true);
   const [isChangingPlan, setIsChangingPlan] = useState<boolean>(false);
@@ -176,11 +178,16 @@ function MySubscriptionContent() {
       try {
         setIsLoadingActive(true);
         const subs = await fetchUserMealSubscriptions();
-        if (isMounted && subs.length > 0) {
-          const active = subs.find((s) => s.status === "ACTIVE") || subs[0];
-          setSubscription(active);
-        } else if (isMounted) {
-          setSubscription(null);
+        if (isMounted) {
+          setUserSubs(subs);
+          if (subs.length > 0) {
+            const active = (selectedSubId ? subs.find((s) => s.id === selectedSubId) : null) || subs.find((s) => s.status === "ACTIVE") || subs[0];
+            setSubscription(active);
+            setSelectedSubId(active.id);
+          } else {
+            setSubscription(null);
+            setSelectedSubId(null);
+          }
         }
       } catch (err) {
         console.error("Error loading user subscriptions:", err);
@@ -311,11 +318,14 @@ function MySubscriptionContent() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((p) => {
-        const nameMatch = p.name.toLowerCase().includes(q);
+        const nameMatch = (p.name || "").toLowerCase().includes(q);
+        const descMatch = (p.description || "").toLowerCase().includes(q);
         const sellerMatch = (p.sellerName || "").toLowerCase().includes(q);
+        const localityMatch = (p.sellerLocality || "").toLowerCase().includes(q);
         const featuresMatch = (p.features || []).some((f) => f.toLowerCase().includes(q));
+        const timingsMatch = (p.mealTimings || []).some((t) => t.toLowerCase().includes(q));
         const tierMatch = (p.tier || "").toLowerCase().includes(q);
-        return nameMatch || sellerMatch || featuresMatch || tierMatch;
+        return nameMatch || descMatch || sellerMatch || localityMatch || featuresMatch || timingsMatch || tierMatch;
       });
     }
 
@@ -355,15 +365,13 @@ function MySubscriptionContent() {
       if (subscription.id && !subscription.id.startsWith("sub-demo")) {
         await togglePauseUserSubscription(subscription.id, nextPaused);
       }
-      setSubscription((prev) =>
-        prev
-          ? {
-              ...prev,
-              isPaused: nextPaused,
-              status: nextPaused ? "PAUSED" : "ACTIVE",
-            }
-          : null
-      );
+      const updatedSub = {
+        ...subscription,
+        isPaused: nextPaused,
+        status: nextPaused ? "PAUSED" : "ACTIVE",
+      };
+      setSubscription(updatedSub);
+      setUserSubs((prev) => prev.map((s) => s.id === subscription.id ? updatedSub : s));
       showToast(
         "success",
         nextPaused
@@ -378,21 +386,19 @@ function MySubscriptionContent() {
   const handlePlanChanged = (updatedData: any) => {
     if (!subscription) return;
     if (updatedData.plan) {
-      setSubscription((prev) =>
-        prev
-          ? {
-              ...prev,
-              planId: updatedData.planId || updatedData.plan.id,
-              tier: updatedData.tier || updatedData.plan.tier,
-              status: updatedData.status || "ACTIVE",
-              pricePaid: updatedData.pricePaid || updatedData.plan.weeklyPrice,
-              plan: {
-                ...prev.plan,
-                ...updatedData.plan,
-              },
-            }
-          : null
-      );
+      const updatedSub = {
+        ...subscription,
+        planId: updatedData.planId || updatedData.plan.id,
+        tier: updatedData.tier || updatedData.plan.tier,
+        status: updatedData.status || "ACTIVE",
+        pricePaid: updatedData.pricePaid || updatedData.plan.weeklyPrice,
+        plan: {
+          ...subscription.plan,
+          ...updatedData.plan,
+        },
+      };
+      setSubscription(updatedSub);
+      setUserSubs((prev) => prev.map((s) => s.id === subscription.id ? updatedSub : s));
     }
     showToast(
       "success",
@@ -601,6 +607,7 @@ function MySubscriptionContent() {
               cycle: initData.subscriptionCycle || planCycle,
               deliveryAddress: deliveryAddressInput.trim(),
               contactPhone: contactPhoneInput.trim(),
+              startDatePreference: startDatePreference,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
@@ -611,8 +618,10 @@ function MySubscriptionContent() {
             // Reload active subscriptions and switch tab
             const subs = await fetchUserMealSubscriptions();
             if (subs && subs.length > 0) {
-              const active = subs.find((s) => s.status === "ACTIVE") || subs[0];
-              setSubscription(active);
+              setUserSubs(subs);
+              const newlyActive = subs.find((s) => s.planId === selectedPlanForSub.id) || subs.find((s) => s.status === "ACTIVE") || subs[0];
+              setSubscription(newlyActive);
+              setSelectedSubId(newlyActive.id);
             }
 
             setTimeout(() => {
@@ -787,8 +796,8 @@ function MySubscriptionContent() {
                 }}
               >
                 <Calendar size={17} />
-                <span>My Active Subscription</span>
-                {subscription && (
+                <span>My Active Subscription{userSubs.length > 1 ? "s" : ""}</span>
+                {userSubs.length > 0 && (
                   <span
                     className={
                       activeTab === "active"
@@ -796,7 +805,7 @@ function MySubscriptionContent() {
                         : `${styles.tabCountBadge} ${styles.tabCountBadgeInactive}`
                     }
                   >
-                    {subscription.status}
+                    {userSubs.length > 1 ? `${userSubs.length} Active` : (subscription?.status || "Active")}
                   </span>
                 )}
               </button>
@@ -900,6 +909,63 @@ function MySubscriptionContent() {
                   </div>
                 ) : (
                   <>
+                    {/* Multi-Subscription Switcher if user has more than 1 plan */}
+                    {userSubs.length > 1 && (
+                      <div style={{ marginBottom: "16px" }}>
+                        <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#64748B", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          Active Subscriptions ({userSubs.length}) — Select a plan to manage:
+                        </div>
+                        <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "6px" }}>
+                          {userSubs.map((s) => {
+                            const isSelected = s.id === subscription.id;
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => {
+                                  setSubscription(s);
+                                  setSelectedSubId(s.id);
+                                }}
+                                style={{
+                                  padding: "10px 16px",
+                                  borderRadius: "12px",
+                                  border: isSelected ? "2px solid #FF5500" : "1px solid #CBD5E1",
+                                  backgroundColor: isSelected ? "#FFF4E6" : "#FFFFFF",
+                                  color: isSelected ? "#C2410C" : "#334155",
+                                  fontWeight: 700,
+                                  fontSize: "0.88rem",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  whiteSpace: "nowrap",
+                                  boxShadow: isSelected ? "0 2px 8px rgba(255, 85, 0, 0.15)" : "none",
+                                  transition: "all 0.2s ease",
+                                }}
+                              >
+                                <span>🍱 {s.plan?.name || "Meal Plan"}</span>
+                                <span style={{ fontSize: "0.78rem", color: isSelected ? "#EA580C" : "#64748B", fontWeight: 500 }}>
+                                  ({s.seller?.businessName || "Kitchen"})
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.7rem",
+                                    padding: "2px 6px",
+                                    borderRadius: "6px",
+                                    fontWeight: 700,
+                                    backgroundColor: s.isPaused ? "#FEF3C7" : s.status === "ACTIVE" ? "#DCFCE7" : "#F1F5F9",
+                                    color: s.isPaused ? "#B45309" : s.status === "ACTIVE" ? "#15803D" : "#64748B",
+                                  }}
+                                >
+                                  {s.isPaused ? "Paused" : s.status}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Active Plan Card */}
                     <SubscriptionPlanCard
                       title={subscription.plan?.name || "Daily Meal Plan"}
@@ -917,11 +983,19 @@ function MySubscriptionContent() {
                     />
 
                     {/* Pause Subscription Section */}
-                    <PauseSubscription
-                      isPaused={subscription.isPaused}
-                      disabled={subscription.status?.toUpperCase() === "CANCELLED"}
-                      onTogglePause={handleTogglePause}
-                    />
+                    {(() => {
+                      const pausePeriod = (subscription.plan?.pauseBillingPeriod || "").toLowerCase();
+                      const isPauseAllowed = !(pausePeriod === "disabled" || pausePeriod === "none" || (subscription.plan as any)?.allowPause === false);
+                      return (
+                        <PauseSubscription
+                          isPaused={subscription.isPaused}
+                          disabled={subscription.status?.toUpperCase() === "CANCELLED"}
+                          allowPause={isPauseAllowed}
+                          pausePolicyNote="Pausing is disabled for this meal plan by the kitchen partner."
+                          onTogglePause={handleTogglePause}
+                        />
+                      );
+                    })()}
 
                     {/* Delivery Times & Benefits Grid */}
                     <div className={styles.detailsGrid}>
@@ -952,25 +1026,6 @@ function MySubscriptionContent() {
                         <span>Select Kitchen Partner</span>
                         <span className={styles.sellerTabsCount}>{sellersList.length} Kitchens</span>
                       </h3>
-
-                      {selectedSellerId !== "all" && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedSellerId("all")}
-                          style={{
-                            padding: "6px 14px",
-                            borderRadius: "8px",
-                            backgroundColor: "#FFFFFF",
-                            border: "1px solid #CBD5E1",
-                            color: "#475569",
-                            fontSize: "0.78rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                        >
-                          View All Kitchen Plans
-                        </button>
-                      )}
                     </div>
 
                     <div className={styles.sellerScrollContainer}>

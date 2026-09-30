@@ -447,6 +447,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   } | null>(null);
   const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
+  const [availableOffers, setAvailableOffers] = useState<any[]>([]);
+  const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
 
   // Order Placement States
   const [isOrderPlaced, setIsOrderPlaced] = useState<boolean>(false);
@@ -680,6 +682,36 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
+  // Fetch available public coupons for the seller / platform
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchOffers() {
+      const sellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
+      try {
+        setIsLoadingOffers(true);
+        const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
+        const res = await fetchApi(url);
+        if (res.ok && isMounted) {
+          const json = await res.json();
+          const serverCoupons = json.data || [];
+          if (Array.isArray(serverCoupons)) {
+            setAvailableOffers(serverCoupons);
+          } else {
+            setAvailableOffers([]);
+          }
+        }
+      } catch {
+        if (isMounted) setAvailableOffers([]);
+      } finally {
+        if (isMounted) setIsLoadingOffers(false);
+      }
+    }
+    fetchOffers();
+    return () => {
+      isMounted = false;
+    };
+  }, [checkoutItems, cartItems]);
+
   const handleRemovePromo = () => {
     setIsPromoApplied(false);
     setDiscountPercent(0);
@@ -688,18 +720,20 @@ const loadRazorpayScript = (): Promise<boolean> => {
     showToast("Promo code removed", "info");
   };
 
-  const handleApplyToggle = async () => {
-    if (isPromoApplied) {
+  const handleApplyToggle = async (codeOverride?: string) => {
+    const clean = (codeOverride || promoCode).trim().toUpperCase();
+
+    if (isPromoApplied && (appliedCouponData?.code === clean || (!codeOverride && clean === promoCode.trim().toUpperCase()))) {
       handleRemovePromo();
       return;
     }
 
-    const clean = promoCode.trim().toUpperCase();
     if (!clean) {
-      showToast("Please enter a promo code", "error");
+      showToast("Please enter or select a promo code", "error");
       return;
     }
 
+    setPromoCode(clean);
     setIsValidatingPromo(true);
     const currentSellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
     try {
@@ -723,72 +757,28 @@ const loadRazorpayScript = (): Promise<boolean> => {
       const json = await res.json();
       const cData = json.data?.coupon || json.data || json;
       if (res.ok && cData && (cData.code || cData.id)) {
-        setAppliedCoupon(cData);
+        const pct = cData.discountPercentage || 0;
+        const savedAmt = cData.calculatedDiscount || (pct > 0 ? Math.round((subtotal * pct) / 100) : (cData.discountAmount || 0));
+        setAppliedCoupon({
+          ...cData,
+          calculatedDiscount: savedAmt,
+        });
         setIsPromoApplied(true);
-        setDiscountPercent(cData.discountPercentage || 0);
-        showToast(cData.message || json?.message || `Promo code "${cData.code}" applied! (${cData.discountLabel || (cData.discountPercentage ? `${cData.discountPercentage}% Off` : `₹${cData.discountAmount} Off`)})`, "success");
+        setDiscountPercent(pct);
+        showToast(cData.message || json?.message || `Coupon "${cData.code}" applied! Saved ₹${savedAmt}`, "success");
       } else {
         const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Promo code "${clean}" is invalid or conditions not met.`);
-        // Fallback mock codes
-        if (clean === "NEO50") {
-          setAppliedCoupon({
-            id: "mock-neo50",
-            code: "NEO50",
-            discountType: "PERCENTAGE",
-            discountPercentage: 50,
-            discountLabel: "50% Off",
-          });
-          setIsPromoApplied(true);
-          setDiscountPercent(50);
-          showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
-        } else if (clean === "WELCOME20" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") {
-          setAppliedCoupon({
-            id: "mock-neo20",
-            code: clean,
-            discountType: "PERCENTAGE",
-            discountPercentage: 20,
-            discountLabel: "20% Off",
-          });
-          setIsPromoApplied(true);
-          setDiscountPercent(20);
-          showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
-        } else {
-          setIsPromoApplied(false);
-          setDiscountPercent(0);
-          setAppliedCoupon(null);
-          showToast(errorMsg, "error");
-        }
-      }
-    } catch (e: any) {
-      console.error("Promo validation error:", e);
-      if (clean === "NEO50") {
-        setAppliedCoupon({
-          id: "mock-neo50",
-          code: "NEO50",
-          discountType: "PERCENTAGE",
-          discountPercentage: 50,
-          discountLabel: "50% Off",
-        });
-        setIsPromoApplied(true);
-        setDiscountPercent(50);
-        showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
-      } else if (clean === "WELCOME20" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") {
-        setAppliedCoupon({
-          id: "mock-neo20",
-          code: clean,
-          discountType: "PERCENTAGE",
-          discountPercentage: 20,
-          discountLabel: "20% Off",
-        });
-        setIsPromoApplied(true);
-        setDiscountPercent(20);
-        showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
-      } else {
         setIsPromoApplied(false);
         setDiscountPercent(0);
         setAppliedCoupon(null);
-        showToast(`Failed to validate promo code "${clean}".`, "error");
+        showToast(errorMsg, "error");
       }
+    } catch (e: any) {
+      console.error("Promo validation error:", e);
+      setIsPromoApplied(false);
+      setDiscountPercent(0);
+      setAppliedCoupon(null);
+      showToast(`Failed to validate promo code "${clean}".`, "error");
     } finally {
       setIsValidatingPromo(false);
     }
@@ -801,7 +791,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
-    if (checkoutItems.length === 0 || grandTotal <= 0 || subtotal <= 0) {
+    if (checkoutItems.length === 0 || subtotal <= 0) {
       showToast(
         "Your cart is empty. Please add a product to the cart before placing an order.",
         "error"
@@ -874,7 +864,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       // FLOW 1: ONLINE PAYMENT (Razorpay)
       // Initiate Razorpay checkout first -> Validate -> Place Order
       // -------------------------------------------------------------
-      if (paymentMethod === "UPI") {
+      if (paymentMethod === "UPI" && grandTotal > 0) {
         const pendingData: PendingOrderTransaction = {
           id: `TX-${Date.now()}`,
           status: "INITIATED",
@@ -914,10 +904,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
           let errMsg = initData.message || initData.error || "Failed to initialize online payment";
           if (
             errMsg.toLowerCase().includes("invalid total") ||
-            errMsg.toLowerCase().includes("invalid amount") ||
-            grandTotal <= 0
+            errMsg.toLowerCase().includes("invalid amount")
           ) {
-            errMsg = "Your cart is empty. Please add a product to the cart before placing an order.";
+            errMsg = "Please review your cart items and try again.";
           }
           showToast(errMsg, "error");
           setIsSubmitting(false);
@@ -1110,7 +1099,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       }
 
       // -------------------------------------------------------------
-      // FLOW 2: CASH ON DELIVERY (COD)
+      // FLOW 2: CASH ON DELIVERY (COD) or ZERO PAYMENT (100% OFF)
       // -------------------------------------------------------------
       const res = await fetchApi("/api/user/orders", {
         method: "POST",
@@ -1121,7 +1110,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           totalAmount: grandTotal,
           deliveryAddress: fullDeliveryAddress,
           customerPhone: phoneNumber,
-          paymentMethod: "COD",
+          paymentMethod: grandTotal === 0 ? (paymentMethod === "UPI" ? "ONLINE" : "COD") : "COD",
           appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
         }),
       });
@@ -1132,10 +1121,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
         let errorMsg = resData.message || resData.error || "Failed to place order. Please try again.";
         if (
           errorMsg.toLowerCase().includes("invalid total") ||
-          errorMsg.toLowerCase().includes("invalid amount") ||
-          grandTotal <= 0
+          errorMsg.toLowerCase().includes("invalid amount")
         ) {
-          errorMsg = "Your cart is empty. Please add a product to the cart before placing an order.";
+          errorMsg = "Please review your cart items and try again.";
         }
         showToast(errorMsg, "error");
         setIsSubmitting(false);
@@ -2134,79 +2122,156 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
                 <div className={styles.divider} />
 
-                {/* Promo Code Input Row (NC-BUG-117) */}
-                {isPromoApplied ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      backgroundColor: "#F0FDF4",
-                      border: "1px solid #86EFAC",
-                      borderRadius: "12px",
-                      padding: "10px 14px",
-                      gap: "10px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                      <Tag size={16} color="#16A34A" />
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
-                          {appliedCouponData?.code || promoCode}
-                        </div>
-                        <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
-                          -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
+                {/* Promo Code Input Row (NC-BUG-117) & Best Offers */}
+                <div className={styles.promoSectionWrapper}>
+                  {isPromoApplied ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        backgroundColor: "#F0FDF4",
+                        border: "1.5px solid #86EFAC",
+                        borderRadius: "12px",
+                        padding: "10px 14px",
+                        gap: "10px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                        <Tag size={16} color="#16A34A" />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
+                            {appliedCouponData?.code || promoCode}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
+                            -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={handleRemovePromo}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        backgroundColor: "#DC2626",
-                        color: "#FFFFFF",
-                        border: "none",
-                        borderRadius: "6px",
-                        padding: "5px 10px",
-                        fontSize: "0.75rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        transition: "all 0.15s ease",
-                      }}
-                      title="Remove applied coupon"
-                    >
-                      <X size={13} strokeWidth={2.5} />
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className={styles.promoGroup}>
-                    <input
-                      type="text"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleApplyToggle();
-                      }}
-                      placeholder="Enter Coupon Code"
-                      className={styles.promoInput}
-                      disabled={checkoutItems.length === 0 || isValidatingPromo}
-                    />
-                    <button
-                      type="button"
-                      className={styles.promoBtnApply}
-                      onClick={handleApplyToggle}
-                      disabled={checkoutItems.length === 0 || !promoCode.trim() || isValidatingPromo}
-                    >
-                      {isValidatingPromo ? "Checking..." : "Apply"}
-                    </button>
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        onClick={handleRemovePromo}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          backgroundColor: "#DC2626",
+                          color: "#FFFFFF",
+                          border: "none",
+                          borderRadius: "6px",
+                          padding: "5px 10px",
+                          fontSize: "0.75rem",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          flexShrink: 0,
+                          transition: "all 0.15s ease",
+                        }}
+                        title="Remove applied coupon"
+                      >
+                        <X size={13} strokeWidth={2.5} />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.promoGroup}>
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyToggle();
+                        }}
+                        placeholder="Enter Coupon Code"
+                        className={styles.promoInput}
+                        disabled={checkoutItems.length === 0 || isValidatingPromo}
+                      />
+                      <button
+                        type="button"
+                        className={styles.promoBtnApply}
+                        onClick={() => handleApplyToggle()}
+                        disabled={checkoutItems.length === 0 || !promoCode.trim() || isValidatingPromo}
+                      >
+                        {isValidatingPromo ? "Checking..." : "Apply"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Best Offers & Available Coupons */}
+                  {availableOffers.length > 0 && (
+                    <div className={styles.bestOffersContainer}>
+                      <div className={styles.bestOffersHeader}>
+                        <Sparkles size={15} className={styles.bestOffersIcon} />
+                        <span className={styles.bestOffersTitle}>Best Offers & Coupons</span>
+                      </div>
+                      <div className={styles.bestOffersList}>
+                        {availableOffers.map((offer) => {
+                          const isCurrentApplied = isPromoApplied && (appliedCouponData?.code || promoCode) === offer.code;
+                          const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
+
+                          return (
+                            <div
+                              key={offer.id || offer.code}
+                              className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
+                              onClick={() => {
+                                if (!isCurrentApplied) {
+                                  handleApplyToggle(offer.code);
+                                }
+                              }}
+                            >
+                              <div className={styles.offerCardLeft}>
+                                <div className={styles.offerCodeRow}>
+                                  <span className={styles.offerCodeBadge}>{offer.code}</span>
+                                  {offer.discountPercentage ? (
+                                    <span className={styles.offerSaveBadge}>{offer.discountPercentage}% OFF</span>
+                                  ) : offer.discountAmount ? (
+                                    <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
+                                  ) : null}
+                                </div>
+                                <p className={styles.offerDescription}>
+                                  {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off` : `Get ₹${offer.discountAmount} flat off`)}
+                                </p>
+                                {offer.minimumCartValue > 0 && (
+                                  <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
+                                    {minMet ? `Min order ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more`}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className={styles.offerCardRight}>
+                                {isCurrentApplied ? (
+                                  <button
+                                    type="button"
+                                    className={styles.offerAppliedBtn}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemovePromo();
+                                    }}
+                                  >
+                                    <Check size={12} strokeWidth={3} />
+                                    <span>Applied</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className={styles.offerApplyBtn}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleApplyToggle(offer.code);
+                                    }}
+                                    disabled={checkoutItems.length === 0 || isValidatingPromo}
+                                  >
+                                    Apply
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div className={styles.divider} />
 
@@ -2285,7 +2350,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 )}
 
                 {(() => {
-                  const isCartEmpty = checkoutItems.length === 0 || grandTotal <= 0;
+                  const isCartEmpty = checkoutItems.length === 0 || subtotal <= 0;
                   const isButtonDisabled = isSubmitting || isSellerClosed || isOutsideCoverage || isCartEmpty;
 
                   return (

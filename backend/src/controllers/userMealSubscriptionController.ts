@@ -213,6 +213,8 @@ export const createUserMealSubscription = async (req: Request) => {
         deliveryAddress,
         contactPhone,
         cycle = "WEEKLY",
+        startDate: customStartDate,
+        startDatePreference,
         razorpay_order_id,
         razorpay_payment_id,
         razorpay_signature
@@ -309,8 +311,32 @@ export const createUserMealSubscription = async (req: Request) => {
         subscriptionCycle = "1 Week";
     }
 
+    // Dynamic Start Date Calculation
+    const now = new Date();
+    let startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 8, 0, 0); // default tomorrow
+
+    if (customStartDate) {
+        const parsed = new Date(customStartDate);
+        if (!isNaN(parsed.getTime())) {
+            startDate = parsed;
+        }
+    } else if (startDatePreference) {
+        const pref = String(startDatePreference).toLowerCase().trim();
+        if (pref.includes("tomorrow") || pref === "tomorrow") {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 8, 0, 0);
+        } else if (pref.includes("monday") || pref === "monday") {
+            const day = now.getDay();
+            let daysUntilMonday = (1 + 7 - day) % 7;
+            if (daysUntilMonday === 0) daysUntilMonday = 7;
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMonday, 8, 0, 0);
+        } else if (pref.includes("1st") || pref.includes("month") || pref === "1st") {
+            startDate = new Date(now.getFullYear(), now.getMonth() + 1, 1, 8, 0, 0);
+        } else if (pref.includes("today") || pref === "today") {
+            startDate = now;
+        }
+    }
+
     // Calculate end date based on durationDays
-    const startDate = new Date();
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + durationDays);
 
@@ -504,11 +530,21 @@ export const togglePauseUserMealSubscription = async (subscriptionId: string, is
         where: {
             id: subscriptionId,
             userId: session.user.id,
-        }
+        },
+        include: { plan: true }
     });
 
     if (!subscription) {
         throw new ApiError("Subscription not found", 404);
+    }
+
+    if (isPaused) {
+        // Dynamic seller policy enforcement: check if pause is allowed by kitchen partner
+        const pausePeriod = (subscription.plan?.pauseBillingPeriod || "").toLowerCase();
+        const allowPause = (subscription.plan as any)?.allowPause;
+        if (pausePeriod === "disabled" || pausePeriod === "none" || allowPause === false) {
+            throw new ApiError("Pausing is not allowed for this meal plan by the kitchen partner.", 400);
+        }
     }
 
     const updated = await db.userMealSubscription.update({
