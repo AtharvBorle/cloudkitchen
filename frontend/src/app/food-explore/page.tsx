@@ -385,7 +385,7 @@ function FoodExploreContent() {
     setSortBy("popular");
   };
 
-  const handleAddToCart = (dish: DynamicFoodItem) => {
+  const handleAddToCart = (dish: DynamicFoodItem, showAnimation: boolean = true) => {
     if (dish.sellerIsOnline === false) {
       showToast(`Sorry, "${dish.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
       return;
@@ -423,6 +423,13 @@ function FoodExploreContent() {
       maxStock: stockLimit,
       itemType: dish.itemType,
     });
+
+    if (showAnimation) {
+      setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
+      setTimeout(() => {
+        setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
+      }, 1000);
+    }
   };
 
   const handleDecreaseFromCart = (dishId: string) => {
@@ -1111,6 +1118,7 @@ function FoodExploreContent() {
                   const isSellerClosed = dish.sellerIsOnline === false;
                   const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0 || dish.isAvailable === false;
                   const isClosed = isSellerClosed || isOutOfStock;
+                  const isAdded = addedIds[dish.id];
                   const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
                   const quantityInCart = currentInCart ? currentInCart.quantity : 0;
                   const isMaxStockInCart = !isClosed && dish.stockQuantity !== undefined && dish.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= dish.stockQuantity : false);
@@ -1338,7 +1346,7 @@ function FoodExploreContent() {
                           {isClosed ? (
                             <button
                               type="button"
-                              onClick={() => handleAddToCart(dish)}
+                              onClick={() => handleAddToCart(dish, true)}
                               style={{
                                 backgroundColor: "#F1F5F9",
                                 color: "#64748B",
@@ -1353,6 +1361,28 @@ function FoodExploreContent() {
                               title={isSellerClosed ? "Seller is closed" : "Unavailable"}
                             >
                               {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
+                            </button>
+                          ) : isAdded ? (
+                            <button
+                              type="button"
+                              style={{
+                                backgroundColor: "#10B981",
+                                color: "#FFFFFF",
+                                fontSize: "0.86rem",
+                                fontWeight: "700",
+                                padding: "7px 16px",
+                                borderRadius: "12px",
+                                border: "none",
+                                cursor: "default",
+                                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
+                                transition: "all 0.2s ease",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <span>Added!</span>
+                              <span>✓</span>
                             </button>
                           ) : quantityInCart > 0 ? (
                             <div
@@ -1405,7 +1435,7 @@ function FoodExploreContent() {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => handleAddToCart(dish)}
+                                onClick={() => handleAddToCart(dish, false)}
                                 disabled={isMaxStockInCart}
                                 style={{
                                   padding: "5px 11px",
@@ -1433,7 +1463,7 @@ function FoodExploreContent() {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => handleAddToCart(dish)}
+                              onClick={() => handleAddToCart(dish, true)}
                               style={{
                                 backgroundColor: "#FF6B00",
                                 color: "#FFFFFF",
