@@ -12,12 +12,34 @@ export type AddonItem = {
     price: number;
 };
 
+export function deduplicateAddons(addons?: AddonItem[]): AddonItem[] {
+    if (!addons || !Array.isArray(addons) || addons.length === 0) return [];
+    const seen = new Set<string>();
+    const result: AddonItem[] = [];
+    for (const addon of addons) {
+        if (!addon || !addon.name || !String(addon.name).trim()) continue;
+        const cleanName = String(addon.name).trim();
+        const key = cleanName.toLowerCase();
+        if (!seen.has(key)) {
+            seen.add(key);
+            result.push({
+                ...addon,
+                id: addon.id ? String(addon.id) : undefined,
+                name: cleanName,
+                price: Number(addon.price) || 0,
+            });
+        }
+    }
+    return result;
+}
+
 export function generateCartItemId(foodItemId: string, selectedAddons?: AddonItem[]): string {
     const baseId = (foodItemId || "").trim();
-    if (!selectedAddons || selectedAddons.length === 0) {
+    const cleanAddons = deduplicateAddons(selectedAddons);
+    if (!cleanAddons || cleanAddons.length === 0) {
         return baseId;
     }
-    const addonKey = selectedAddons
+    const addonKey = cleanAddons
         .map(a => (a.id || a.name || "").trim().toLowerCase())
         .filter(Boolean)
         .sort()
@@ -238,14 +260,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 return prev;
             }
 
-            const addons = item.selectedAddons || [];
+            const addons = deduplicateAddons(item.selectedAddons);
+            const availableAddons = deduplicateAddons(item.addons);
             const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
             const basePrice = item.basePrice !== undefined 
                 ? Number(item.basePrice) 
                 : (item.addonsTotal !== undefined ? (Number(item.price) - Number(item.addonsTotal)) : Number(item.price) || 0);
             const finalUnitPrice = basePrice + addonsSum;
             const baseFoodId = item.foodItemId || (item.id.includes("_") ? item.id.split("_")[0] : item.id);
-            const finalCartId = item.id.includes("_") ? item.id : generateCartItemId(baseFoodId, addons);
+            const finalCartId = generateCartItemId(baseFoodId, addons);
 
             const normalizedItem: CartItem = {
                 ...item,
@@ -255,6 +278,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 addonsTotal: addonsSum,
                 price: finalUnitPrice,
                 selectedAddons: addons,
+                addons: availableAddons.length > 0 ? availableAddons : item.addons,
             };
 
             const existing = prev.find(i => i.id === finalCartId);
@@ -339,14 +363,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             let updatedList = [...baseList];
 
             for (const item of items) {
-                const addons = item.selectedAddons || [];
+                const addons = deduplicateAddons(item.selectedAddons);
+                const availableAddons = deduplicateAddons(item.addons);
                 const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
                 const basePrice = item.basePrice !== undefined 
                     ? Number(item.basePrice) 
                     : (item.addonsTotal !== undefined ? (Number(item.price) - Number(item.addonsTotal)) : Number(item.price) || 0);
                 const finalUnitPrice = basePrice + addonsSum;
                 const baseFoodId = item.foodItemId || (item.id.includes("_") ? item.id.split("_")[0] : item.id);
-                const finalCartId = item.id.includes("_") ? item.id : generateCartItemId(baseFoodId, addons);
+                const finalCartId = generateCartItemId(baseFoodId, addons);
 
                 const normalizedItem: CartItem = {
                     ...item,
@@ -356,6 +381,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     addonsTotal: addonsSum,
                     price: finalUnitPrice,
                     selectedAddons: addons,
+                    addons: availableAddons.length > 0 ? availableAddons : item.addons,
                 };
 
                 const existingIndex = updatedList.findIndex(i => i.id === finalCartId);
@@ -435,9 +461,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             if (targetIndex === -1) return prev;
 
             const targetItem = prev[targetIndex];
+            const cleanAddons = deduplicateAddons(selectedAddons);
             const baseFoodId = targetItem.foodItemId || (targetItem.id.includes("_") ? targetItem.id.split("_")[0] : targetItem.id);
-            const newCartId = generateCartItemId(baseFoodId, selectedAddons);
-            const addonsSum = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+            const newCartId = generateCartItemId(baseFoodId, cleanAddons);
+            const addonsSum = cleanAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
             const basePrice = targetItem.basePrice !== undefined 
                 ? Number(targetItem.basePrice) 
                 : Math.max(0, (Number(targetItem.price) || 0) - (Number(targetItem.addonsTotal) || 0));
@@ -461,7 +488,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                             price: newUnitPrice,
                             basePrice,
                             addonsTotal: addonsSum,
-                            selectedAddons,
+                            selectedAddons: cleanAddons,
                         };
                     }
                     return item;
@@ -474,7 +501,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                             id: newCartId,
                             foodItemId: baseFoodId,
                             basePrice,
-                            selectedAddons,
+                            selectedAddons: cleanAddons,
                             addonsTotal: addonsSum,
                             price: newUnitPrice,
                         };

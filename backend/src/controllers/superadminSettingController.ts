@@ -15,7 +15,25 @@ export const getSystemSetting = async (req: Request) => {
     const key = url.searchParams.get("key");
 
     if (!key) {
-        throw new ApiError("Key parameter is required.", 400);
+        const allSettings = await db.systemSettings.findMany();
+        const settingsMap: Record<string, string> = {
+            PLATFORM_NAME: "Neo Cloud Kitchen",
+            PLATFORM_COMMISSION_PERCENTAGE: "10",
+            SUBSCRIPTION_PRICE: "199",
+            MAX_DELIVERY_RADIUS_KM: "15",
+            DEFAULT_DELIVERY_FEE: "40",
+            TAX_PERCENTAGE: "5",
+            SUPPORT_EMAIL: "support@neocloudkitchen.com",
+            SUPPORT_PHONE: "+91 98765 43210",
+            MAINTENANCE_MODE: "false"
+        };
+        for (const s of allSettings) {
+            settingsMap[s.key] = s.value;
+        }
+        return {
+            settings: allSettings,
+            settingsMap
+        };
     }
 
     const setting = await db.systemSettings.findUnique({
@@ -38,7 +56,28 @@ export const updateSystemSetting = async (req: Request) => {
         throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
-    const { key, value } = await req.json();
+    const body = await req.json();
+
+    if (body.settings && typeof body.settings === "object") {
+        const entries = Array.isArray(body.settings)
+            ? body.settings
+            : Object.entries(body.settings).map(([k, v]) => ({ key: k, value: String(v) }));
+
+        const results = [];
+        for (const item of entries) {
+            if (item.key && item.value !== undefined) {
+                const updated = await db.systemSettings.upsert({
+                    where: { key: item.key },
+                    update: { value: item.value.toString() },
+                    create: { id: item.key, key: item.key, value: item.value.toString() }
+                });
+                results.push(updated);
+            }
+        }
+        return { success: true, updated: results };
+    }
+
+    const { key, value } = body;
 
     if (!key || value === undefined) {
         throw new ApiError("Setting key and value are required.", 400);
@@ -52,3 +91,4 @@ export const updateSystemSetting = async (req: Request) => {
 
     return updatedSetting;
 };
+

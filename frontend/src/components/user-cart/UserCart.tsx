@@ -294,19 +294,33 @@ export const UserCart: React.FC<UserCartProps> = ({
     }, 2800);
   };
 
-  // Parse add-ons from string or array safely
+  // Parse add-ons from string or array safely and deduplicate
   const parseItemAddons = (raw: any): Array<{ id?: string; name: string; price: number }> => {
     if (!raw) return [];
     try {
       const list = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (Array.isArray(list)) {
-        return list
-          .filter((a: any) => a && (a.name || "").trim())
-          .map((a: any, idx: number) => ({
-            id: a.id ? String(a.id) : `addon_${idx + 1}_${String(a.name).toLowerCase().replace(/\s+/g, "_")}`,
-            name: String(a.name).trim(),
-            price: typeof a.price === "number" ? a.price : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0,
-          }));
+        const seenNames = new Set<string>();
+        const result: Array<{ id?: string; name: string; price: number }> = [];
+        list.forEach((a: any, idx: number) => {
+          if (!a || !(a.name || "").trim()) return;
+          const cleanName = String(a.name || "").trim();
+          const lowerName = cleanName.toLowerCase();
+          if (seenNames.has(lowerName)) return;
+          seenNames.add(lowerName);
+
+          const cleanId = a.id ? String(a.id) : `addon_${idx + 1}_${lowerName.replace(/\s+/g, "_")}`;
+          const cleanPrice =
+            typeof a.price === "number"
+              ? a.price
+              : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0;
+          result.push({
+            id: cleanId,
+            name: cleanName,
+            price: Math.max(0, cleanPrice),
+          });
+        });
+        return result;
       }
     } catch {}
     return [];
@@ -327,6 +341,11 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   const handleAddAddonToItem = (item: UserCartItem, addon: { id?: string; name: string; price: number }) => {
     const currentSelected = item.selectedAddons || [];
+    const lowerName = (addon.name || "").toLowerCase().trim();
+    if (currentSelected.some(a => (a.name || "").toLowerCase().trim() === lowerName || (addon.id && a.id === addon.id))) {
+      showToast(`${addon.name} is already added to this item`);
+      return;
+    }
     const newSelected = [...currentSelected, addon];
     updateItemAddons(item.id, newSelected);
     showToast(`Added ${addon.name} (+₹${addon.price}) to ${item.name}`);

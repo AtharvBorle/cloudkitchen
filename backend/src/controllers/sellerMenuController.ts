@@ -204,20 +204,51 @@ export const createMenuItem = async (req: Request) => {
     }
     const itemType = normalizeFoodItemType(rawItemType);
 
+    if (!name || !name.trim()) {
+        throw new ApiError("Item Name is required", 400);
+    }
+    const cleanName = name.trim();
+
+    // Prevent duplicate dishes with identical names for the same seller
+    const existingDish = await db.foodItem.findFirst({
+        where: {
+            sellerId: sellerProfile.id,
+            name: { equals: cleanName, mode: "insensitive" }
+        }
+    });
+    if (existingDish) {
+        throw new ApiError(`A dish with the name "${cleanName}" already exists in your kitchen menu. Please choose a unique name.`, 400);
+    }
+
+    if (isNaN(price) || price <= 0) {
+        throw new ApiError("Valid Price (greater than 0) is required", 400);
+    }
+    if (!description || !description.trim()) {
+        throw new ApiError("Description is required", 400);
+    }
+
     const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
     let addonsStr = "[]";
     if (rawAddons) {
         try {
             const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
             if (Array.isArray(parsed) && parsed.length > 0) {
+                const seenAddonNames = new Set<string>();
                 for (let i = 0; i < parsed.length; i++) {
                     const a = parsed[i];
                     if (!a || !a.name || !String(a.name).trim()) {
                         throw new ApiError(`Add-on #${i + 1} name is required`, 400);
                     }
+                    const addonName = String(a.name).trim();
+                    const lowerAddonName = addonName.toLowerCase();
+                    if (seenAddonNames.has(lowerAddonName)) {
+                        throw new ApiError(`Duplicate add-on "${addonName}" is not allowed. Each add-on must have a unique name.`, 400);
+                    }
+                    seenAddonNames.add(lowerAddonName);
+
                     const addonPrice = parseFloat(a.price);
                     if (isNaN(addonPrice) || addonPrice < 0) {
-                        throw new ApiError(`Add-on "${a.name}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                        throw new ApiError(`Add-on "${addonName}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
                     }
                 }
                 const cleaned = parsed.map((a: any, idx: number) => ({
@@ -231,19 +262,6 @@ export const createMenuItem = async (req: Request) => {
             if (e instanceof ApiError) throw e;
             console.error("Failed to parse addons JSON in createMenuItem:", e);
         }
-    }
-
-    let foodCategoryId = formData.get("foodCategoryId") as string | null;
-    const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
-
-    if (!name || !name.trim()) {
-        throw new ApiError("Item Name is required", 400);
-    }
-    if (isNaN(price) || price <= 0) {
-        throw new ApiError("Valid Price (greater than 0) is required", 400);
-    }
-    if (!description || !description.trim()) {
-        throw new ApiError("Description is required", 400);
     }
 
     if (!foodCategoryId) {
@@ -368,7 +386,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         const foodCategoryId = formData.get("foodCategoryId") as string | null;
         const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
-        if (name !== null) dataToUpdate.name = name;
+        if (name !== null) dataToUpdate.name = name.trim();
         if (description !== null) dataToUpdate.description = description;
         if (price !== null && !isNaN(parseFloat(price))) dataToUpdate.price = parseFloat(price);
         if (isAvailable !== null) dataToUpdate.isAvailable = isAvailable === "true";
@@ -386,14 +404,22 @@ export const updateMenuItem = async (req: Request, id: string) => {
             try {
                 const parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
                 if (Array.isArray(parsed) && parsed.length > 0) {
+                    const seenAddonNames = new Set<string>();
                     for (let i = 0; i < parsed.length; i++) {
                         const a = parsed[i];
                         if (!a || !a.name || !String(a.name).trim()) {
                             throw new ApiError(`Add-on #${i + 1} name is required`, 400);
                         }
+                        const addonName = String(a.name).trim();
+                        const lowerAddonName = addonName.toLowerCase();
+                        if (seenAddonNames.has(lowerAddonName)) {
+                            throw new ApiError(`Duplicate add-on "${addonName}" is not allowed. Each add-on must have a unique name.`, 400);
+                        }
+                        seenAddonNames.add(lowerAddonName);
+
                         const addonPrice = parseFloat(a.price);
                         if (isNaN(addonPrice) || addonPrice < 0) {
-                            throw new ApiError(`Add-on "${a.name}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                            throw new ApiError(`Add-on "${addonName}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
                         }
                     }
                     const cleaned = parsed.map((a: any, idx: number) => ({
@@ -422,7 +448,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         }
     } else {
         const body = await req.json();
-        if (body.name !== undefined) dataToUpdate.name = body.name;
+        if (body.name !== undefined) dataToUpdate.name = String(body.name).trim();
         if (body.description !== undefined) dataToUpdate.description = body.comment !== undefined ? body.comment : body.description;
         if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
         if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
@@ -440,23 +466,56 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (rawAddonsBody !== undefined) {
             try {
                 const parsed = typeof rawAddonsBody === "string" ? JSON.parse(rawAddonsBody) : rawAddonsBody;
-                if (Array.isArray(parsed)) {
-                    const cleaned = parsed
-                        .filter((a: any) => a && (a.name || "").trim())
-                        .map((a: any, idx: number) => ({
-                            id: String(a.id || `addon_${idx + 1}`),
-                            name: String(a.name || "").trim(),
-                            price: Math.max(0, parseFloat(a.price) || 0)
-                        }));
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const seenAddonNames = new Set<string>();
+                    for (let i = 0; i < parsed.length; i++) {
+                        const a = parsed[i];
+                        if (!a || !a.name || !String(a.name).trim()) {
+                            throw new ApiError(`Add-on #${i + 1} name is required`, 400);
+                        }
+                        const addonName = String(a.name).trim();
+                        const lowerAddonName = addonName.toLowerCase();
+                        if (seenAddonNames.has(lowerAddonName)) {
+                            throw new ApiError(`Duplicate add-on "${addonName}" is not allowed. Each add-on must have a unique name.`, 400);
+                        }
+                        seenAddonNames.add(lowerAddonName);
+
+                        const addonPrice = parseFloat(a.price);
+                        if (isNaN(addonPrice) || addonPrice < 0) {
+                            throw new ApiError(`Add-on "${addonName}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                        }
+                    }
+                    const cleaned = parsed.map((a: any, idx: number) => ({
+                        id: String(a.id || `addon_${idx + 1}`),
+                        name: String(a.name || "").trim(),
+                        price: Math.max(0, parseFloat(a.price) || 0)
+                    }));
                     dataToUpdate.addons = JSON.stringify(cleaned);
                     dataToUpdate.variants = JSON.stringify(cleaned);
+                } else if (Array.isArray(parsed) && parsed.length === 0) {
+                    dataToUpdate.addons = "[]";
+                    dataToUpdate.variants = "[]";
                 }
-            } catch (e) {
+            } catch (e: any) {
+                if (e instanceof ApiError) throw e;
                 console.error("Failed to parse addons JSON in updateMenuItem:", e);
             }
         }
         if (body.foodCategoryId !== undefined) dataToUpdate.foodCategoryId = body.foodCategoryId || null;
         if (body.foodSubCategoryId !== undefined) dataToUpdate.foodSubCategoryId = body.foodSubCategoryId || null;
+    }
+
+    if (dataToUpdate.name && dataToUpdate.name.toLowerCase() !== existingItem.name.toLowerCase()) {
+        const duplicateDish = await db.foodItem.findFirst({
+            where: {
+                sellerId: existingItem.sellerId,
+                name: { equals: dataToUpdate.name, mode: "insensitive" },
+                id: { not: id }
+            }
+        });
+        if (duplicateDish) {
+            throw new ApiError(`A dish with the name "${dataToUpdate.name}" already exists in your kitchen menu. Please choose a unique name.`, 400);
+        }
     }
 
     const updatedItem = await db.foodItem.update({
