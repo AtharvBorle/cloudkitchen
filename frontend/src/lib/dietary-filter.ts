@@ -346,6 +346,7 @@ export function escapeRegex(str: string): string {
 export interface CategoryRule {
   categoryNames: string[];
   namePatterns: RegExp[];
+  descriptionPatterns?: RegExp[];
 }
 
 export const CATEGORY_RULES: Record<string, CategoryRule> = {
@@ -426,8 +427,13 @@ export const CATEGORY_RULES: Record<string, CategoryRule> = {
     namePatterns: [/\b(upma|rava upma|sooji upma)\b/i],
   },
   healthy: {
-    categoryNames: ["healthy", "salad", "salads", "organic", "diet"],
-    namePatterns: [/\b(salad|salads|sprouts|fruit bowl|protein bowl|green salad|keto|healthy)\b/i],
+    categoryNames: ["healthy", "salad", "salads", "organic", "diet", "dietary", "nutrition", "fitness", "keto", "vegan", "raw", "greens", "superfood"],
+    namePatterns: [
+      /\b(healthy|health|salad|salads|sprouts?|fruit\s*bowl|protein\s*bowl|green\s*salad|keto|diet|detox|organic|nutritious|superfood|smoothie|quinoa|oats|oatmeal|boiled|steamed|grilled\s*paneer|grilled\s*chicken|whole\s*wheat|multigrain|veggie\s*wrap|vegetable\s*salad|avocado|soup)\b/i,
+    ],
+    descriptionPatterns: [
+      /\b(vegetables?|veggies?|boiled|steamed|salads?|whole\s*wheat|whole-wheat|multigrain|multi-grain|wrap|wraps|grilled\s*paneer|grilled\s*chicken|grilled|quinoa|sprouts?|sprouted|oats|oatmeal|protein|high\s*protein|avocado|fruits?|fruit\s*bowl|greens?|diet|keto|sugar\s*free|sugar-free|no\s*sugar|low\s*calorie|low\s*fat|oil\s*free|less\s*oil|superfood|satvik|organic|nutritious|raw|clean\s*eating|fiber|chia|flax|flaxseed)\b/i,
+    ],
   },
   dessert: {
     categoryNames: ["dessert", "desserts", "sweet", "sweets", "bakery", "ice cream"],
@@ -495,7 +501,7 @@ export const CATEGORY_ALIASES: Record<string, string[]> = {
   shira: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa"],
   sheera: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa"],
   upma: ["upma", "rava upma", "sooji upma"],
-  healthy: ["healthy", "salad", "salads", "bowl", "organic", "diet", "sprouts"],
+  healthy: ["healthy", "salad", "salads", "bowl", "organic", "diet", "sprouts", "vegetables", "vegetable", "veggies", "boiled", "steamed", "whole wheat", "wrap", "grilled paneer", "quinoa", "protein", "smoothie", "avocado", "keto"],
   dessert: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun"],
   desserts: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun"],
   drinks: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
@@ -516,6 +522,7 @@ export const FOOD_TAG_KEYWORDS = CATEGORY_ALIASES;
  * Strict category matching:
  * 1. Checks specific category name matches (ignoring generic words like 'Food').
  * 2. Checks word-bounded title matches based on category rules.
+ * 3. Checks description for healthy / category-specific keywords.
  */
 export function matchesDishCategory(
   category: string | null | undefined,
@@ -532,6 +539,7 @@ export function matchesDishCategory(
   const catNorm = normalizeSearchString(category);
   const dishCatNorm = normalizeSearchString(dish.categoryName);
   const dishName = (dish.name || "").trim();
+  const dishDesc = (dish.description || "").trim();
 
   // 1. Exact normalized category match (dish.categoryName === category, not 'food')
   if (dishCatNorm && dishCatNorm !== "food" && dishCatNorm === catNorm) {
@@ -561,6 +569,16 @@ export function matchesDishCategory(
       return true;
     }
 
+    // Check if dish.description matches any description or name regex patterns
+    if (dishDesc) {
+      if (rule.descriptionPatterns && rule.descriptionPatterns.some((pat) => pat.test(dishDesc))) {
+        return true;
+      }
+      if (rule.namePatterns.some((pat) => pat.test(dishDesc))) {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -574,6 +592,13 @@ export function matchesDishCategory(
   if (dishName) {
     const wordPattern = new RegExp(`\\b${escapeRegex(catNorm)}\\b`, "i");
     if (wordPattern.test(dishName)) {
+      return true;
+    }
+  }
+
+  if (dishDesc) {
+    const wordPattern = new RegExp(`\\b${escapeRegex(catNorm)}\\b`, "i");
+    if (wordPattern.test(dishDesc)) {
       return true;
     }
   }
