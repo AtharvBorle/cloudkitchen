@@ -1310,7 +1310,7 @@ function FoodExploreContent() {
                           </div>
                         ) : isMaxStockInCart ? (
                           <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
-                            Only {dish.stockQuantity} left in stock
+                            We have only {dish.stockQuantity} left in stock
                           </div>
                         ) : dish.stockQuantity !== undefined && dish.stockQuantity > 0 && dish.stockQuantity <= 5 ? (
                           <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
@@ -1385,80 +1385,104 @@ function FoodExploreContent() {
                               <span>✓</span>
                             </button>
                           ) : quantityInCart > 0 ? (
-                            <div
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                backgroundColor: "#FFF7ED",
-                                border: "1.5px solid #FF6B00",
-                                borderRadius: "10px",
-                                overflow: "hidden",
-                                boxShadow: "0 2px 8px rgba(255, 107, 0, 0.15)",
-                              }}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => handleDecreaseFromCart(dish.id)}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "3px" }}>
+                              <div
                                 style={{
-                                  padding: "5px 11px",
-                                  backgroundColor: "transparent",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  fontWeight: "800",
-                                  fontSize: "1rem",
-                                  color: "#FF6B00",
-                                  transition: "background-color 0.15s ease",
-                                  display: "flex",
+                                  display: "inline-flex",
                                   alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)")}
-                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                                aria-label="Decrease quantity"
-                              >
-                                -
-                              </button>
-                              <span
-                                style={{
-                                  padding: "5px 10px",
-                                  fontWeight: "800",
-                                  fontSize: "0.88rem",
-                                  color: "#FF6B00",
-                                  backgroundColor: "#FFFFFF",
-                                  borderLeft: "1.5px solid #FF6B00",
-                                  borderRight: "1.5px solid #FF6B00",
-                                  minWidth: "22px",
-                                  textAlign: "center",
+                                  backgroundColor: "#FFF7ED",
+                                  border: "1.5px solid #FF6B00",
+                                  borderRadius: "10px",
+                                  overflow: "hidden",
+                                  boxShadow: "0 2px 8px rgba(255, 107, 0, 0.15)",
                                 }}
                               >
-                                {quantityInCart}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleAddToCart(dish, false)}
-                                disabled={isMaxStockInCart}
-                                style={{
-                                  padding: "5px 11px",
-                                  backgroundColor: "transparent",
-                                  border: "none",
-                                  cursor: isMaxStockInCart ? "not-allowed" : "pointer",
-                                  opacity: isMaxStockInCart ? 0.35 : 1,
-                                  fontWeight: "800",
-                                  fontSize: "1rem",
-                                  color: "#FF6B00",
-                                  transition: "background-color 0.15s ease",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                                onMouseOver={(e) => {
-                                  if (!isMaxStockInCart) e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)";
-                                }}
-                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                                aria-label="Increase quantity"
-                              >
-                                +
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDecreaseFromCart(dish.id)}
+                                  style={{
+                                    padding: "5px 11px",
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontWeight: "800",
+                                    fontSize: "1rem",
+                                    color: "#FF6B00",
+                                    transition: "background-color 0.15s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)")}
+                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                  aria-label="Decrease quantity"
+                                >
+                                  -
+                                </button>
+                                <span
+                                  style={{
+                                    padding: "5px 10px",
+                                    fontWeight: "800",
+                                    fontSize: "0.88rem",
+                                    color: "#FF6B00",
+                                    backgroundColor: "#FFFFFF",
+                                    borderLeft: "1.5px solid #FF6B00",
+                                    borderRight: "1.5px solid #FF6B00",
+                                    minWidth: "22px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {quantityInCart}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddToCart(dish, false)}
+                                  disabled={isMaxStockInCart}
+                                  style={{
+                                    padding: "5px 11px",
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    cursor: isMaxStockInCart ? "not-allowed" : "pointer",
+                                    opacity: isMaxStockInCart ? 0.35 : 1,
+                                    fontWeight: "800",
+                                    fontSize: "1rem",
+                                    color: "#FF6B00",
+                                    transition: "background-color 0.15s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (!isMaxStockInCart) e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)";
+                                  }}
+                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                  aria-label="Increase quantity"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              {isMaxStockInCart && (
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    color: "#EA580C",
+                                    backgroundColor: "#FFF7ED",
+                                    border: "1px solid #FFEDD5",
+                                    borderRadius: "6px",
+                                    padding: "2px 6px",
+                                    fontWeight: "800",
+                                    textAlign: "center",
+                                    lineHeight: "1.2",
+                                    marginTop: "2px",
+                                    display: "inline-block",
+                                    maxWidth: "130px",
+                                    whiteSpace: "normal",
+                                    boxSizing: "border-box",
+                                  }}
+                                >
+                                  We have only {dish.stockQuantity} left in stock
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <button

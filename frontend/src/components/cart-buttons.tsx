@@ -199,22 +199,23 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                 {isAtMaxStock && (
                     <span
                         style={{
-                            fontSize: '0.70rem',
+                            fontSize: '0.68rem',
                             color: '#EA580C',
                             backgroundColor: '#FFF7ED',
                             border: '1px solid #FFEDD5',
                             borderRadius: '6px',
-                            padding: '2px 8px',
-                            fontWeight: '700',
+                            padding: '2px 6px',
+                            fontWeight: '800',
                             textAlign: 'center',
-                            lineHeight: '1.25',
+                            lineHeight: '1.2',
                             marginTop: '3px',
                             display: 'inline-block',
-                            maxWidth: '100%',
+                            maxWidth: '130px',
+                            whiteSpace: 'normal',
                             boxSizing: 'border-box',
                         }}
                     >
-                        Only {stockLimit} left in stock
+                        We have only {stockLimit} left in stock
                     </span>
                 )}
             </div>
