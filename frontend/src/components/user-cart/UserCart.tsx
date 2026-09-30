@@ -51,6 +51,63 @@ export interface UserCartProps {
   onProceedToCheckout?: () => void;
 }
 
+const ScrollableAvailableAddonsRow: React.FC<{
+  addons: Array<{ id?: string; name: string; price: number }>;
+  onAdd: (addon: { id?: string; name: string; price: number }) => void;
+}> = ({ addons, onAdd }) => {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const t = setTimeout(checkScroll, 120);
+    const handleResize = () => checkScroll();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [addons, checkScroll]);
+
+  return (
+    <div className={styles.availableAddonsScrollWrapper}>
+      {canScrollLeft && <div className={styles.scrollShadowLeft} />}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className={styles.availableAddonsList}
+      >
+        {addons.map((addon) => (
+          <button
+            key={addon.id || addon.name}
+            type="button"
+            onClick={() => onAdd(addon)}
+            className={styles.availableAddonBtn}
+            title={`Add ${addon.name} (+₹${addon.price})`}
+          >
+            <span>{addon.name}</span>
+            <span className={styles.availableAddonPrice}>+₹{addon.price}</span>
+            <span className={styles.availableAddonAddTag}>
+              <Plus size={11} strokeWidth={3} />
+              <span>Add</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {canScrollRight && <div className={styles.scrollShadowRight} />}
+    </div>
+  );
+};
+
 export const UserCart: React.FC<UserCartProps> = ({
   initialItems = [],
   defaultLocation = "Select Location",
@@ -720,24 +777,10 @@ export const UserCart: React.FC<UserCartProps> = ({
                               <Sparkles size={13} style={{ color: "#059669" }} />
                               <span>Available Add-ons</span>
                             </div>
-                            <div className={styles.availableAddonsList}>
-                              {remainingAddons.map((addon) => (
-                                <button
-                                  key={addon.id || addon.name}
-                                  type="button"
-                                  onClick={() => handleAddAddonToItem(item, addon)}
-                                  className={styles.availableAddonBtn}
-                                  title={`Add ${addon.name} (+₹${addon.price})`}
-                                >
-                                  <span>{addon.name}</span>
-                                  <span className={styles.availableAddonPrice}>+₹{addon.price}</span>
-                                  <span className={styles.availableAddonAddTag}>
-                                    <Plus size={11} strokeWidth={3} />
-                                    <span>Add</span>
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
+                            <ScrollableAvailableAddonsRow
+                              addons={remainingAddons}
+                              onAdd={(addon) => handleAddAddonToItem(item, addon)}
+                            />
                           </div>
                         );
                       })()}
