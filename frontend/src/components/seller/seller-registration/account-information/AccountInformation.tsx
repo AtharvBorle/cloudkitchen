@@ -125,10 +125,12 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
       });
 
       const json = await res.json().catch(() => ({}));
-      const isAvailable = Boolean(res.ok && json?.data?.available);
+      // fetchApi unwraps json.data if proxy was used, or returns raw object
+      const data = json && typeof json === "object" && "data" in json && json.data ? json.data : json;
+      const isAvailable = Boolean(res.ok && (data?.available === true || json?.available === true));
 
       if (isAvailable) {
-        const norm = (json?.data?.email || cleanEmail).toLowerCase();
+        const norm = (data?.email || json?.email || cleanEmail).toLowerCase();
         setVerificationStatus("verified");
         setVerifiedEmail(norm);
         setEmailCheckError(null);
@@ -139,12 +141,15 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
         });
         return true;
       } else {
+        const isTaken = data?.exists === true || json?.exists === true || data?.available === false || json?.available === false;
         const msg =
-          json?.data?.message ||
+          data?.message ||
           json?.message ||
           json?.error ||
-          "An account with this email address already exists. Please use a different email or sign in.";
-        setVerificationStatus("taken");
+          (isTaken
+            ? "An account with this email address already exists. Please use a different email or sign in."
+            : "Could not verify email availability. Please try again.");
+        setVerificationStatus(isTaken ? "taken" : "error");
         setVerifiedEmail("");
         setEmailCheckError(msg);
         saveSellerDraft({ isEmailVerified: false, verifiedEmail: "" });
@@ -327,22 +332,20 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
               <CheckCircle2 size={13} />
               <span>Email verified & available for registration</span>
             </div>
-          ) : verificationStatus === "taken" || emailCheckError ? (
+          ) : verificationStatus === "taken" ? (
             <div className={styles.helperTextError}>
               <AlertCircle size={13} style={{ flexShrink: 0 }} />
               <span>
                 {emailCheckError || "An account with this email address already exists."}
-                {(emailCheckError?.includes("already exists") || verificationStatus === "taken") && (
-                  <Link href="/seller/login" className={styles.loginShortcutLink}>
-                    Sign In
-                  </Link>
-                )}
+                <Link href="/seller/login" className={styles.loginShortcutLink}>
+                  Sign In
+                </Link>
               </span>
             </div>
-          ) : isEmailError ? (
+          ) : emailCheckError || isEmailError ? (
             <div className={styles.helperTextError}>
               <AlertCircle size={13} />
-              <span>{emailCheck.error || "Please enter a valid email address."}</span>
+              <span>{emailCheckError || emailCheck.error || "Please enter a valid email address."}</span>
             </div>
           ) : isEmailFormatValid && !isEmailVerified ? (
             <span style={{ fontSize: "0.78rem", color: "#EA580C", marginTop: "2px", fontWeight: "500" }}>
