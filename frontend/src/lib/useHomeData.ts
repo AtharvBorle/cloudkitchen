@@ -344,6 +344,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               id: fc.id || existing.id,
               name: displayName,
               image: mappedImage,
+              route: existing.route || `/food-explore?category=${encodeURIComponent(lower)}`,
             });
           }
         };
