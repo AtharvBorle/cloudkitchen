@@ -1,6 +1,6 @@
 "use client";
 
-import { useCart, AddonItem } from "@/context/CartContext";
+import { useCart, AddonItem, generateCartItemId } from "@/context/CartContext";
 import { ShoppingCart, Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -51,7 +51,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
         if (stockLimit !== -1) {
             const currentQty = cartItem ? cartItem.quantity : 0;
             if (currentQty >= stockLimit) {
-                showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+                showToast(`We have only ${stockLimit} left in stock.`, "warning");
                 return;
             }
         }
@@ -80,12 +80,12 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
     };
 
     const handleCustomizationConfirm = (selectedAddons: AddonItem[], totalUnitPrice: number) => {
-        const addonKey = selectedAddons.length > 0 ? selectedAddons.map(a => a.id).sort().join("_") : "";
-        const cartItemId = addonKey ? `${item.id}_${addonKey}` : item.id;
+        const baseFoodId = item.foodItemId || item.id;
+        const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
 
         const success = addToCart({
             id: cartItemId,
-            foodItemId: item.foodItemId || item.id,
+            foodItemId: baseFoodId,
             name: item.name,
             basePrice: item.price,
             selectedAddons,
@@ -109,7 +109,35 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
 
     if (cartItem) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: fullWidth ? '100%' : 'auto', gap: '3px' }}>
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', width: fullWidth ? '100%' : 'auto' }}>
+                {isAtMaxStock && (
+                    <span
+                        style={{
+                            position: 'absolute',
+                            bottom: 'calc(100% + 4px)',
+                            left: '0',
+                            right: '0',
+                            width: '100%',
+                            zIndex: 10,
+                            pointerEvents: 'none',
+                            fontSize: '0.58rem',
+                            color: '#EA580C',
+                            backgroundColor: '#FFF7ED',
+                            border: '1px solid #FFEDD5',
+                            borderRadius: '6px',
+                            padding: '2px 3px',
+                            fontWeight: '800',
+                            textAlign: 'center',
+                            lineHeight: '1.15',
+                            boxShadow: '0 2px 6px rgba(234, 88, 12, 0.12)',
+                            boxSizing: 'border-box',
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
+                        }}
+                    >
+                        We have only {stockLimit} left in stock
+                    </span>
+                )}
                 <div
                     style={{
                         width: '100%',
@@ -166,8 +194,14 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                         {cartItem.quantity}
                     </div>
                     <button
-                        onClick={handleAction}
-                        disabled={isAtMaxStock}
+                        type="button"
+                        onClick={() => {
+                            if (isAtMaxStock) {
+                                showToast(`We have only ${stockLimit} left in stock.`, "warning");
+                            } else {
+                                handleAction();
+                            }
+                        }}
                         style={{
                             flex: 1,
                             padding: '8px 14px',
@@ -198,11 +232,6 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                         +
                     </button>
                 </div>
-                {isAtMaxStock && (
-                    <span style={{ fontSize: '0.68rem', color: '#DC2626', fontWeight: '700', textAlign: 'center' }}>
-                        Out of stock
-                    </span>
-                )}
             </div>
         );
     }

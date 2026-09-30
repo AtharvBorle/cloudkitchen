@@ -92,7 +92,7 @@ export default function PopularOrders({
 
     const existingInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
     if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
-      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${offer.title}.`, "warning");
+      showToast(`We have only ${stockLimit} left in stock.`, "warning");
       return;
     }
 
@@ -342,8 +342,8 @@ export default function PopularOrders({
                     Out of stock
                   </span>
                 ) : isMaxStockInCart ? (
-                  <span style={{ fontSize: "0.74rem", color: "#D97706", fontWeight: "700" }}>
-                    Max in cart ({stockLimit})
+                  <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
+                    We have only {stockLimit} left in stock
                   </span>
                 ) : stockLimit > 0 && stockLimit <= 5 ? (
                   <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>

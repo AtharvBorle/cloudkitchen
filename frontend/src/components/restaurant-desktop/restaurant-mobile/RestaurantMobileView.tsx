@@ -300,8 +300,8 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         {/* Location Subtitle */}
         {kitchenData.location && <p className={styles.locationText}>{kitchenData.location}</p>}
 
-        {/* Delivery Time & Free Delivery Info */}
-        {(kitchenData.deliveryTime || kitchenData.deliveryFeeText) && (
+        {/* Delivery Time & Free Delivery & Diet Type Info */}
+        {(kitchenData.deliveryTime || kitchenData.deliveryFeeText || kitchenData.dietType) && (
           <div className={styles.deliveryRow}>
             {kitchenData.deliveryTime && (
               <div className={styles.deliveryItem}>
@@ -314,6 +314,81 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                 <Bike size={16} />
                 <span>{kitchenData.deliveryFeeText}</span>
               </div>
+            )}
+            {kitchenData.dietType && (
+              (() => {
+                const lower = kitchenData.dietType.toLowerCase();
+                const isBoth = lower.includes("&") || (lower.includes("veg") && lower.includes("non"));
+                const isPureVeg = !isBoth && (lower.includes("pure") || lower === "veg" || lower.includes("pure veg") || lower.includes("🥦"));
+
+                if (isBoth) {
+                  return (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        backgroundColor: "#FFFBEB",
+                        border: "1px solid #FEF3C7",
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        fontWeight: "700",
+                        fontSize: "0.76rem",
+                      }}
+                    >
+                      <span style={{ color: "#16A34A", display: "inline-flex", alignItems: "center", gap: "2px", fontWeight: "800" }}>
+                        <span style={{ fontSize: "0.55rem", lineHeight: 1 }}>●</span> Veg
+                      </span>
+                      <span style={{ color: "#D97706", fontWeight: "800", margin: "0 1px" }}>&</span>
+                      <span style={{ color: "#DC2626", display: "inline-flex", alignItems: "center", gap: "2px", fontWeight: "800" }}>
+                        <span style={{ fontSize: "0.55rem", lineHeight: 1 }}>●</span> Non-Veg
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (isPureVeg) {
+                  return (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        backgroundColor: "#F0FDF4",
+                        border: "1px solid #BBF7D0",
+                        color: "#16A34A",
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        fontWeight: "700",
+                        fontSize: "0.76rem",
+                      }}
+                    >
+                      <span style={{ color: "#16A34A", fontSize: "0.6rem", lineHeight: 1 }}>●</span>
+                      <span>Pure Veg</span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      backgroundColor: "#FEF2F2",
+                      border: "1px solid #FECACA",
+                      color: "#DC2626",
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      fontWeight: "700",
+                      fontSize: "0.76rem",
+                    }}
+                  >
+                    <span style={{ color: "#DC2626", fontSize: "0.6rem", lineHeight: 1 }}>●</span>
+                    <span>Non-Veg</span>
+                  </div>
+                );
+              })()
             )}
           </div>
         )}

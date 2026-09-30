@@ -20,13 +20,16 @@ async function getSessionRole(request: NextRequest): Promise<string | null> {
       process.env.NEXTAUTH_SECRET ||
       "super_secret_for_local_testing_dev_only";
 
+    const cookieEntry =
+      request.cookies.get("__Secure-authjs.session-token") ||
+      request.cookies.get("authjs.session-token") ||
+      request.cookies.get("__Secure-next-auth.session-token") ||
+      request.cookies.get("next-auth.session-token");
+
     const decoded = await decode({
       token: sessionToken,
       secret,
-      salt:
-        request.cookies.get("__Secure-next-auth.session-token")?.value
-          ? "__Secure-next-auth.session-token"
-          : "next-auth.session-token",
+      salt: cookieEntry?.name || "next-auth.session-token",
     });
 
     if (decoded && typeof decoded.role === "string") {

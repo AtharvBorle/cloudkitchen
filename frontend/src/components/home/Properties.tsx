@@ -37,7 +37,7 @@ const CUISINE_KEYWORDS: Record<string, string[]> = {
   biryani: ["biryani", "mughlai", "indian", "rice", "curry", "kebab", "tandoor", "tikka", "hyderabadi", "dum", "pulao"],
   homemeals: ["mess", "homemeal", "thali", "maharashtrian", "roti", "chapati", "dal", "sabzi", "sabji", "lunch", "dinner", "tiffin", "bhaat", "pithla", "poli", "khichdi"],
   italian: ["italian", "pizza", "pasta", "garlic bread", "lasagna", "calzone", "crust", "cheese", "margherita", "parmesan", "oregano"],
-  healthy: ["healthy", "salad", "organic", "bowl", "smoothie", "fruit", "diet", "sprouts", "oats", "greens", "juice", "avocado", "keto"],
+  healthy: ["healthy", "salad", "salads", "organic", "bowl", "smoothie", "fruit", "diet", "sprouts", "oats", "greens", "juice", "avocado", "keto", "vegetable", "vegetables", "veggie", "veggies", "boiled", "steamed", "whole wheat", "wrap", "grilled paneer", "quinoa", "protein", "superfood", "nutritious"],
   bakery: ["bakery", "cake", "dessert", "pastry", "brownie", "bread", "sweet", "croissant", "ice cream", "mousse", "cupcake", "donut", "cookies", "biscuit", "pie"],
   fastfood: ["burger", "snack", "fast food", "fries", "sandwich", "wrap", "roll", "shawarma", "nuggets", "hot dog", "pao", "chaat", "samosa", "frankie"],
   chinese: ["chinese", "noodle", "wok", "manchurian", "fried rice", "momos", "asian", "chilli", "schezwan", "hakka", "spring roll", "chowmein"],
