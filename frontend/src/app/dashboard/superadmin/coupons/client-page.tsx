@@ -39,6 +39,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const [discountValue, setDiscountValue] = useState("");
     const [scopeType, setScopeType] = useState<"GLOBAL" | "SELLER">("GLOBAL");
     const [sellerId, setSellerId] = useState("");
+    const [startDate, setStartDate] = useState("");
     const [hasEndDate, setHasEndDate] = useState(false);
     const [validUntil, setValidUntil] = useState("");
 
@@ -55,6 +56,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const [editDiscountValue, setEditDiscountValue] = useState("");
     const [editScopeType, setEditScopeType] = useState<"GLOBAL" | "SELLER">("GLOBAL");
     const [editSellerId, setEditSellerId] = useState("");
+    const [editStartDate, setEditStartDate] = useState("");
     const [editHasEndDate, setEditHasEndDate] = useState(false);
     const [editValidUntil, setEditValidUntil] = useState("");
     const [editMaxUsagesPerUser, setEditMaxUsagesPerUser] = useState("");
@@ -99,9 +101,13 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
             alert("Description should be at least 5 characters long.");
             return;
         }
+        if (!discountValue || discountValue.trim() === "") {
+            alert("Please enter a discount value.");
+            return;
+        }
         const parsedVal = parseFloat(discountValue);
         if (isNaN(parsedVal) || parsedVal <= 0) {
-            alert("Discount value must be greater than 0.");
+            alert("Discount value must be a positive number greater than 0.");
             return;
         }
         if (discountType === "PERCENTAGE" && parsedVal > 100) {
@@ -111,6 +117,14 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
         if (scopeType === "SELLER" && !sellerId) {
             alert("Please select a seller for specific scope.");
             return;
+        }
+        if (startDate && hasEndDate && validUntil) {
+            const start = new Date(startDate);
+            const end = new Date(validUntil);
+            if (end <= start) {
+                alert("Expiration date must be after the start date.");
+                return;
+            }
         }
         if (hasEndDate && validUntil) {
             const expiryDate = new Date(validUntil);
@@ -134,11 +148,12 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
 
         try {
             const payload = {
-                code,
+                code: cleanCode,
                 description,
                 appliesToSellerId: scopeType === "SELLER" ? sellerId : null,
-                discountPercentage: discountType === "PERCENTAGE" ? discountValue : null,
-                discountAmount: discountType === "AMOUNT" ? discountValue : null,
+                discountPercentage: discountType === "PERCENTAGE" ? parsedVal : null,
+                discountAmount: discountType === "AMOUNT" ? parsedVal : null,
+                validFrom: startDate ? new Date(startDate).toISOString() : new Date().toISOString(),
                 validUntil: hasEndDate && validUntil ? new Date(validUntil).toISOString() : null,
                 maxUsagesPerUser: maxUsagesPerUser ? parseInt(maxUsagesPerUser) : null,
                 maxUsers: maxUsers ? parseInt(maxUsers) : null,
@@ -162,6 +177,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 setCode("");
                 setDescription("");
                 setDiscountValue("");
+                setStartDate("");
                 setHasEndDate(false);
                 setValidUntil("");
                 setCouponCategory("BOTH");
@@ -192,7 +208,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     };
 
     // Helper to find seller name 
-        const handleOpenEdit = (coupon: CouponType) => {
+    const handleOpenEdit = (coupon: CouponType) => {
         setEditingCoupon(coupon);
         setEditCode(coupon.code);
         setEditDescription(coupon.description || "");
@@ -205,6 +221,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
         }
         setEditScopeType(coupon.appliesToSellerId ? "SELLER" : "GLOBAL");
         setEditSellerId(coupon.appliesToSellerId || "");
+        setEditStartDate(coupon.validFrom ? new Date(coupon.validFrom).toISOString().slice(0, 16) : "");
         setEditHasEndDate(!!coupon.validUntil);
         setEditValidUntil(coupon.validUntil ? new Date(coupon.validUntil).toISOString().slice(0, 16) : "");
         setEditMaxUsagesPerUser(coupon.maxUsagesPerUser ? String(coupon.maxUsagesPerUser) : "");
@@ -233,9 +250,13 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
             alert("Description should be at least 5 characters long.");
             return;
         }
+        if (!editDiscountValue || editDiscountValue.trim() === "") {
+            alert("Please enter a discount value.");
+            return;
+        }
         const parsedVal = parseFloat(editDiscountValue);
         if (isNaN(parsedVal) || parsedVal <= 0) {
-            alert("Discount value must be greater than 0.");
+            alert("Discount value must be a positive number greater than 0.");
             return;
         }
         if (editDiscountType === "PERCENTAGE" && parsedVal > 100) {
@@ -245,6 +266,14 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
         if (editScopeType === "SELLER" && !editSellerId) {
             alert("Please select a seller for specific scope.");
             return;
+        }
+        if (editStartDate && editHasEndDate && editValidUntil) {
+            const start = new Date(editStartDate);
+            const end = new Date(editValidUntil);
+            if (end <= start) {
+                alert("Expiration date must be after the start date.");
+                return;
+            }
         }
         if (editHasEndDate && editValidUntil) {
             const expiryDate = new Date(editValidUntil);
@@ -268,11 +297,12 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
 
         try {
             const payload = {
-                code: editCode,
+                code: cleanCode,
                 description: editDescription,
                 appliesToSellerId: editScopeType === "SELLER" ? editSellerId : null,
-                discountPercentage: editDiscountType === "PERCENTAGE" ? parseFloat(editDiscountValue) : null,
-                discountAmount: editDiscountType === "AMOUNT" ? parseFloat(editDiscountValue) : null,
+                discountPercentage: editDiscountType === "PERCENTAGE" ? parsedVal : null,
+                discountAmount: editDiscountType === "AMOUNT" ? parsedVal : null,
+                validFrom: editStartDate ? new Date(editStartDate).toISOString() : new Date().toISOString(),
                 validUntil: editHasEndDate && editValidUntil ? new Date(editValidUntil).toISOString() : null,
                 maxUsagesPerUser: editMaxUsagesPerUser ? parseInt(editMaxUsagesPerUser) : null,
                 maxUsers: editMaxUsers ? parseInt(editMaxUsers) : null,
@@ -410,7 +440,10 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                     <div style={{ display: "flex", gap: "10px" }}>
                                         <button
                                             type="button"
-                                            onClick={() => setDiscountType("PERCENTAGE")}
+                                            onClick={() => {
+                                                setDiscountType("PERCENTAGE");
+                                                if (parseFloat(discountValue) > 100) setDiscountValue("100");
+                                            }}
                                             style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${discountType === "PERCENTAGE" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: discountType === "PERCENTAGE" ? "#fff0f0" : "white", color: discountType === "PERCENTAGE" ? "var(--primary)" : "#64748b", fontWeight: "600", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer" }}
                                         >
                                             <Percent size={16} /> Percentage
@@ -434,7 +467,25 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         min="1"
                                         max={discountType === "PERCENTAGE" ? "100" : undefined}
                                         value={discountValue}
-                                        onChange={(e) => setDiscountValue(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === "") {
+                                                setDiscountValue("");
+                                                return;
+                                            }
+                                            const num = parseFloat(val);
+                                            if (num < 0) return;
+                                            if (discountType === "PERCENTAGE" && num > 100) {
+                                                setDiscountValue("100");
+                                                return;
+                                            }
+                                            setDiscountValue(val);
+                                        }}
                                         placeholder={discountType === "PERCENTAGE" ? "50" : "200"}
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
@@ -479,28 +530,42 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                 )}
                             </div>
 
-                            {/* Expiration */}
+                            {/* Expiration & Start Date */}
                             <div>
-                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Expiration</label>
-                                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem" }}>
-                                    <input
-                                        type="checkbox"
-                                        id="hasEndDate"
-                                        checked={!hasEndDate}
-                                        onChange={(e) => setHasEndDate(!e.target.checked)}
-                                        style={{ width: "16px", height: "16px" }}
-                                    />
-                                    <label htmlFor="hasEndDate" style={{ color: "#334155" }}>Run indefinitely (No expiration)</label>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Validity & Expiration</label>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.75rem", color: "#64748b", marginBottom: "4px" }}>Start Date (Optional - defaults to now)</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                                        />
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "2px" }}>
+                                        <input
+                                            type="checkbox"
+                                            id="hasEndDate"
+                                            checked={!hasEndDate}
+                                            onChange={(e) => setHasEndDate(!e.target.checked)}
+                                            style={{ width: "16px", height: "16px" }}
+                                        />
+                                        <label htmlFor="hasEndDate" style={{ color: "#334155", fontSize: "0.85rem" }}>Run indefinitely (No expiration)</label>
+                                    </div>
+                                    {hasEndDate && (
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "0.75rem", color: "#64748b", marginBottom: "4px" }}>Expiration Date*</label>
+                                            <input
+                                                required
+                                                type="datetime-local"
+                                                value={validUntil}
+                                                onChange={(e) => setValidUntil(e.target.value)}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                                {hasEndDate && (
-                                    <input
-                                        required
-                                        type="datetime-local"
-                                        value={validUntil}
-                                        onChange={(e) => setValidUntil(e.target.value)}
-                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
-                                    />
-                                )}
                             </div>
 
                             {/* Category Constraint */}
@@ -533,6 +598,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         min="0"
                                         step="1"
                                         value={minimumCartValue}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
                                         onChange={(e) => setMinimumCartValue(e.target.value)}
                                         placeholder="e.g. 500"
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
@@ -546,6 +612,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         min="1"
                                         step="1"
                                         value={maxUsagesPerUser}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
                                         onChange={(e) => setMaxUsagesPerUser(e.target.value)}
                                         placeholder="e.g. 1"
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
@@ -559,6 +626,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         min="1"
                                         step="1"
                                         value={maxUsers}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
                                         onChange={(e) => setMaxUsers(e.target.value)}
                                         placeholder="e.g. 50"
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
@@ -614,25 +682,40 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                             }}>
                                 <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "4px", backgroundColor: isExpired ? "#cbd5e1" : (isGlobal ? "var(--secondary)" : "var(--primary)") }} />
 
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
-                                    <div>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                                            <h3 style={{ fontSize: "1.5rem", fontWeight: "800", color: coupon.isActive ? "#0f172a" : "#94a3b8", letterSpacing: "1px", margin: 0 }}>{coupon.code}</h3>
-                                            <span style={{ fontSize: "0.7rem", backgroundColor: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>{(coupon as any).category || "BOTH"}</span>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", gap: "12px" }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                                            <h3 style={{
+                                                fontSize: "1.35rem",
+                                                fontWeight: "800",
+                                                color: coupon.isActive ? "#0f172a" : "#94a3b8",
+                                                letterSpacing: "0.5px",
+                                                margin: 0,
+                                                wordBreak: "break-all",
+                                                overflowWrap: "anywhere",
+                                                lineHeight: "1.2"
+                                            }}>
+                                                {coupon.code}
+                                            </h3>
+                                            <span style={{ fontSize: "0.7rem", backgroundColor: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                                                {(coupon as any).category || "BOTH"}
+                                            </span>
                                             {!coupon.isActive && (
-                                                <span style={{ fontSize: "0.7rem", backgroundColor: "#ef4444", color: "white", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>INACTIVE</span>
+                                                <span style={{ fontSize: "0.7rem", backgroundColor: "#ef4444", color: "white", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                                                    INACTIVE
+                                                </span>
                                             )}
-                                            <div style={{ display: "flex", gap: "8px", alignItems: "center", marginLeft: "10px" }}>
-                                                <button onClick={() => handleOpenEdit(coupon)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--teal)", fontWeight: "bold", fontSize: "0.85rem" }} title="Edit Coupon">Edit</button>
-                                                <button onClick={() => handleToggleActive(coupon)} style={{ background: "none", border: "none", cursor: "pointer", color: coupon.isActive ? "#e67e22" : "#27ae60", fontWeight: "bold", fontSize: "0.85rem" }}>
+                                            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
+                                                <button onClick={() => handleOpenEdit(coupon)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--teal)", fontWeight: "bold", fontSize: "0.85rem", padding: 0 }} title="Edit Coupon">Edit</button>
+                                                <button onClick={() => handleToggleActive(coupon)} style={{ background: "none", border: "none", cursor: "pointer", color: coupon.isActive ? "#e67e22" : "#27ae60", fontWeight: "bold", fontSize: "0.85rem", padding: 0 }}>
                                                     {coupon.isActive ? "Deactivate" : "Activate"}
                                                 </button>
-                                                <button onClick={() => handleDelete(coupon.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "flex" }} title="Delete Coupon">
+                                                <button onClick={() => handleDelete(coupon.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "flex", padding: 0 }} title="Delete Coupon">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
                                         </div>
-                                        <p style={{ color: "#64748b", margin: 0, fontSize: "0.9rem" }}>{coupon.description || "No description provided."}</p>
+                                        <p style={{ color: "#64748b", margin: 0, fontSize: "0.9rem", wordBreak: "break-word" }}>{coupon.description || "No description provided."}</p>
                                     </div>
                                     <div style={{
                                         backgroundColor: isExpired ? "#f1f5f9" : (coupon.discountPercentage ? "#e0f2fe" : "#f0fdf4"),
@@ -640,16 +723,18 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         padding: "8px 14px",
                                         borderRadius: "12px",
                                         fontWeight: "800",
-                                        fontSize: "1.25rem",
+                                        fontSize: "1.15rem",
                                         display: "flex",
-                                        alignItems: "center"
+                                        alignItems: "center",
+                                        flexShrink: 0,
+                                        whiteSpace: "nowrap"
                                     }}>
                                         {coupon.discountPercentage ? `${coupon.discountPercentage}% OFF` : `₹${coupon.discountAmount} OFF`}
                                     </div>
                                 </div>
 
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", fontSize: "0.9rem", color: "#475569" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", fontSize: "0.9rem", color: "#475569" }}>
                                         <Globe size={16} color="#94a3b8" />
                                         <span style={{ fontWeight: "600" }}>Available to: </span>
                                         {isGlobal ? (
@@ -660,14 +745,18 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                     </div>
                                     <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", color: "#475569" }}>
                                         <Calendar size={16} color="#94a3b8" />
-                                        <span style={{ fontWeight: "600" }}>Expires: </span>
-                                        {coupon.validUntil ? (
-                                            <span style={{ color: isExpired ? "#ef4444" : "inherit" }}>
-                                                {new Date(coupon.validUntil).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                                            </span>
-                                        ) : (
-                                            "Never (Indefinite)"
-                                        )}
+                                        <span style={{ fontWeight: "600" }}>Valid: </span>
+                                        <span>
+                                            {coupon.validFrom ? new Date(coupon.validFrom).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Immediate"}
+                                            {" — "}
+                                            {coupon.validUntil ? (
+                                                <span style={{ color: isExpired ? "#ef4444" : "inherit" }}>
+                                                    {new Date(coupon.validUntil).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                                                </span>
+                                            ) : (
+                                                "No Expiry"
+                                            )}
+                                        </span>
                                     </div>
 
                                     {/* Advanced Rules Indicators */}
@@ -759,7 +848,19 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                             min="1"
                                             max={editDiscountType === "PERCENTAGE" ? "100" : undefined}
                                             value={editDiscountValue}
-                                            onChange={(e) => setEditDiscountValue(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (['-', '+', 'e', 'E'].includes(e.key)) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (editDiscountType === "PERCENTAGE" && Number(val) > 100) {
+                                                    setEditDiscountValue("100");
+                                                } else {
+                                                    setEditDiscountValue(val);
+                                                }
+                                            }}
                                             style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                         />
                                     </div>
@@ -803,26 +904,40 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                 </div>
 
                                 <div>
-                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Expiration</label>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem" }}>
-                                        <input
-                                            type="checkbox"
-                                            id="editHasEndDate"
-                                            checked={!editHasEndDate}
-                                            onChange={(e) => setEditHasEndDate(!e.target.checked)}
-                                            style={{ width: "16px", height: "16px" }}
-                                        />
-                                        <label htmlFor="editHasEndDate" style={{ color: "#334155", fontSize: "0.85rem" }}>No expiration</label>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Validity & Expiration</label>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "0.75rem", color: "#64748b", marginBottom: "4px" }}>Start Date (Optional - defaults to now)</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={editStartDate}
+                                                onChange={(e) => setEditStartDate(e.target.value)}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                                            />
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "2px" }}>
+                                            <input
+                                                type="checkbox"
+                                                id="editHasEndDate"
+                                                checked={!editHasEndDate}
+                                                onChange={(e) => setEditHasEndDate(!e.target.checked)}
+                                                style={{ width: "16px", height: "16px" }}
+                                            />
+                                            <label htmlFor="editHasEndDate" style={{ color: "#334155", fontSize: "0.85rem" }}>No expiration</label>
+                                        </div>
+                                        {editHasEndDate && (
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "0.75rem", color: "#64748b", marginBottom: "4px" }}>Expiration Date*</label>
+                                                <input
+                                                    required
+                                                    type="datetime-local"
+                                                    value={editValidUntil}
+                                                    onChange={(e) => setEditValidUntil(e.target.value)}
+                                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
-                                    {editHasEndDate && (
-                                        <input
-                                            required
-                                            type="datetime-local"
-                                            value={editValidUntil}
-                                            onChange={(e) => setEditValidUntil(e.target.value)}
-                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
-                                        />
-                                    )}
                                 </div>
                             </div>
 
@@ -860,6 +975,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         type="number"
                                         min="0"
                                         value={editMinimumCartValue}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
                                         onChange={(e) => setEditMinimumCartValue(e.target.value)}
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
@@ -870,6 +986,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         type="number"
                                         min="1"
                                         value={editMaxUsagesPerUser}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
                                         onChange={(e) => setEditMaxUsagesPerUser(e.target.value)}
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
@@ -880,6 +997,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         type="number"
                                         min="1"
                                         value={editMaxUsers}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
                                         onChange={(e) => setEditMaxUsers(e.target.value)}
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />

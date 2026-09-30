@@ -18,26 +18,6 @@ export const getAllCoupons = async () => {
     if (role === "SUPERADMIN") {
         coupons = await prisma.coupon.findMany();
     }
-    else if (role === "ADMIN" || role === "AGENT") {
-        const agentProfile = await prisma.agentProfile.findUnique({
-            where: { userId: session.user.id },
-            include: { assignedSellers: true }
-        });
-
-        let sellerIds: string[] = [];
-        if (agentProfile && agentProfile.assignedSellers.length > 0) {
-            sellerIds = agentProfile.assignedSellers.map(s => s.id);
-        }
-
-        coupons = await prisma.coupon.findMany({
-            where: {
-                OR: [
-                    { appliesToSellerId: null } as any,
-                    { appliesToSellerId: { in: sellerIds } } as any
-                ]
-            }
-        });
-    }
     else if (role === "SELLER") {
         const sellerProfile = await prisma.sellerProfile.findUnique({
             where: { userId: session.user.id }
@@ -64,7 +44,7 @@ export const createCoupon = async (req: Request) => {
     if (!session?.user) {
         throw new ApiError("Please log in first to create coupons.", 401);
     }
-    if (!["SUPERADMIN", "ADMIN", "AGENT", "SELLER"].includes(session.user.role)) {
+    if (!["SUPERADMIN", "SELLER"].includes(session.user.role)) {
         throw new ApiError("Access denied. You do not have permission to create coupons.", 403);
     }
 
@@ -192,18 +172,6 @@ export const createCoupon = async (req: Request) => {
         });
         if (!sellerProfile) throw new ApiError("A valid seller profile is required to create seller coupons.", 403);
         finalSellerId = sellerProfile.id;
-    } else if (role === "AGENT") {
-        const agentProfile = await prisma.agentProfile.findUnique({
-            where: { userId: session.user.id }
-        });
-
-        if (!agentProfile || !agentProfile.canManageOffers) {
-            throw new ApiError("You do not have permission to manage discount offers.", 403);
-        }
-
-        if (!finalSellerId || finalSellerId === "GLOBAL") {
-            approvalStatus = "PENDING_APPROVAL";
-        }
     }
 
     let parsedStartDate = new Date();
@@ -278,7 +246,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     if (!session?.user) {
         throw new ApiError("Please log in first to update coupons.", 401);
     }
-    if (!["SUPERADMIN", "AGENT", "SELLER"].includes(session.user.role)) {
+    if (!["SUPERADMIN", "SELLER"].includes(session.user.role)) {
         throw new ApiError("Access denied. You do not have permission to update coupons.", 403);
     }
 
@@ -327,13 +295,6 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
             throw new ApiError("Access denied. You cannot modify coupons for another restaurant.", 403);
-        }
-    } else if (role === "AGENT") {
-        const agentProfile = await prisma.agentProfile.findUnique({
-            where: { userId: session.user.id }
-        });
-        if (!agentProfile || !agentProfile.canManageOffers) {
-            throw new ApiError("You do not have permission to manage discount offers.", 403);
         }
     }
 
@@ -548,7 +509,7 @@ export const deleteCoupon = async (couponId: string) => {
     if (!session?.user) {
         throw new ApiError("Please log in first to delete a coupon.", 401);
     }
-    if (!["SUPERADMIN", "AGENT", "SELLER"].includes(session.user.role)) {
+    if (!["SUPERADMIN", "SELLER"].includes(session.user.role)) {
         throw new ApiError("Access denied. You do not have permission to delete coupons.", 403);
     }
 
@@ -568,13 +529,6 @@ export const deleteCoupon = async (couponId: string) => {
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
             throw new ApiError("Access denied. You cannot delete coupons for another restaurant.", 403);
-        }
-    } else if (role === "AGENT") {
-        const agentProfile = await prisma.agentProfile.findUnique({
-            where: { userId: session.user.id }
-        });
-        if (!agentProfile || !agentProfile.canManageOffers) {
-            throw new ApiError("You do not have permission to manage discount offers.", 403);
         }
     }
 
