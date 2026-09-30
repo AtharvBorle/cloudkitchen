@@ -68,7 +68,7 @@ export default function DashboardBody({
       return;
     }
 
-    addToCart({
+    const success = addToCart({
       id: item.id,
       foodItemId: item.foodItemId || item.id,
       name: item.name,
@@ -82,9 +82,12 @@ export default function DashboardBody({
       maxStock: stockLimit,
       itemType: item.itemType,
     });
-    setAddedId(item.id);
-    showToast(`Added "${item.name}" to your cart!`, "success");
-    setTimeout(() => setAddedId(null), 1800);
+
+    if (success) {
+      setAddedId(item.id);
+      showToast(`Added "${item.name}" to your cart!`, "success");
+      setTimeout(() => setAddedId(null), 1800);
+    }
   };
 
   const displayItems = items;

@@ -408,7 +408,7 @@ function FoodExploreContent() {
     // Check if dish has configured add-ons
     let parsedAddons: any[] = [];
     try {
-      const raw = (dish as any).addons;
+      const raw = (dish as any).addons || (dish as any).variants;
       if (typeof raw === "string") {
         parsedAddons = JSON.parse(raw);
       } else if (Array.isArray(raw)) {
@@ -429,7 +429,7 @@ function FoodExploreContent() {
       return;
     }
 
-    addToCart({
+    const ok = addToCart({
       id: dish.id,
       foodItemId: dish.id,
       name: dish.name,
@@ -444,11 +444,13 @@ function FoodExploreContent() {
       itemType: dish.itemType,
     });
 
-    setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
-    showToast(`Added "${dish.name}" to your cart!`, "success");
-    setTimeout(() => {
-      setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
-    }, 1800);
+    if (ok) {
+      setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
+      showToast(`Added "${dish.name}" to your cart!`, "success");
+      setTimeout(() => {
+        setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
+      }, 1800);
+    }
   };
 
   return (
@@ -1678,7 +1680,7 @@ function FoodExploreContent() {
             itemType: customizingDish.itemType || undefined,
             addons: (() => {
               try {
-                const raw = (customizingDish as any).addons;
+                const raw = (customizingDish as any).addons || (customizingDish as any).variants;
                 if (typeof raw === "string") return JSON.parse(raw);
                 if (Array.isArray(raw)) return raw;
               } catch (e) {}
@@ -1690,7 +1692,7 @@ function FoodExploreContent() {
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const addonsSum = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
 
-            addToCart({
+            const ok = addToCart({
               id: customizingDish.id,
               foodItemId: customizingDish.id,
               name: customizingDish.name,
@@ -1700,7 +1702,7 @@ function FoodExploreContent() {
               selectedAddons: selectedAddons,
               addons: (() => {
                 try {
-                  const raw = (customizingDish as any).addons;
+                  const raw = (customizingDish as any).addons || (customizingDish as any).variants;
                   if (typeof raw === "string") return JSON.parse(raw);
                   if (Array.isArray(raw)) return raw;
                 } catch (e) {}
@@ -1715,12 +1717,14 @@ function FoodExploreContent() {
               maxStock: stockLimit,
             });
 
-            setAddedIds((prev) => ({ ...prev, [customizingDish.id]: true }));
-            showToast(`Added "${customizingDish.name}" to your cart!`, "success");
-            setCustomizingDish(null);
-            setTimeout(() => {
-              setAddedIds((prev) => ({ ...prev, [customizingDish.id]: false }));
-            }, 1800);
+            if (ok) {
+              setAddedIds((prev) => ({ ...prev, [customizingDish.id]: true }));
+              showToast(`Added "${customizingDish.name}" to your cart!`, "success");
+              setCustomizingDish(null);
+              setTimeout(() => {
+                setAddedIds((prev) => ({ ...prev, [customizingDish.id]: false }));
+              }, 1800);
+            }
           }}
         />
       )}

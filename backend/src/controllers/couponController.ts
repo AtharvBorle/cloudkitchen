@@ -124,8 +124,57 @@ export const createCoupon = async (req: Request) => {
         }
     }
 
-    if (finalDiscountPercentage === null && finalDiscountAmount === null) {
-        throw new ApiError("Please provide a valid discount value (percentage or flat amount).", 400);
+    if (finalDiscountType === "PERCENTAGE") {
+        if (finalDiscountPercentage === null || isNaN(finalDiscountPercentage)) {
+            throw new ApiError("Please provide a valid discount percentage.", 400);
+        }
+        if (finalDiscountPercentage < 0) {
+            throw new ApiError("Percentage discount cannot be negative.", 400);
+        }
+        if (finalDiscountPercentage === 0) {
+            throw new ApiError("Percentage discount must be greater than 0%.", 400);
+        }
+        if (finalDiscountPercentage > 100) {
+            throw new ApiError("Percentage discount cannot exceed 100%.", 400);
+        }
+    } else {
+        if (finalDiscountAmount === null || isNaN(finalDiscountAmount)) {
+            throw new ApiError("Please provide a valid flat discount amount.", 400);
+        }
+        if (finalDiscountAmount < 0) {
+            throw new ApiError("Discount amount cannot be negative.", 400);
+        }
+        if (finalDiscountAmount === 0) {
+            throw new ApiError("Flat discount amount must be greater than 0.", 400);
+        }
+    }
+
+    const finalMinCart = minOrderAmount !== undefined && minOrderAmount !== null && minOrderAmount !== "" ? parseFloat(minOrderAmount) : (minimumCartValue !== undefined && minimumCartValue !== null && minimumCartValue !== "" ? parseFloat(minimumCartValue) : null);
+    if (finalMinCart !== null) {
+        if (isNaN(finalMinCart) || finalMinCart < 0) {
+            throw new ApiError("Minimum order value cannot be negative.", 400);
+        }
+    }
+
+    const finalMaxCap = maxDiscountAmount !== undefined && maxDiscountAmount !== null && maxDiscountAmount !== "" ? parseFloat(maxDiscountAmount) : (maxDiscountCap !== undefined && maxDiscountCap !== null && maxDiscountCap !== "" ? parseFloat(maxDiscountCap) : null);
+    if (finalMaxCap !== null) {
+        if (isNaN(finalMaxCap) || finalMaxCap <= 0) {
+            throw new ApiError("Max discount cap must be greater than 0.", 400);
+        }
+    }
+
+    const finalUsageLimit = usageLimit !== undefined && usageLimit !== null && usageLimit !== "" ? parseInt(usageLimit) : (maxUsers !== undefined && maxUsers !== null && maxUsers !== "" ? parseInt(maxUsers) : null);
+    if (finalUsageLimit !== null) {
+        if (isNaN(finalUsageLimit) || finalUsageLimit <= 0) {
+            throw new ApiError("Usage limit must be a positive number greater than 0.", 400);
+        }
+    }
+
+    const finalPerUserLimit = perUserLimit !== undefined && perUserLimit !== null && perUserLimit !== "" ? parseInt(perUserLimit) : (maxUsagesPerUser !== undefined && maxUsagesPerUser !== null && maxUsagesPerUser !== "" ? parseInt(maxUsagesPerUser) : 1);
+    if (finalPerUserLimit !== null) {
+        if (isNaN(finalPerUserLimit) || finalPerUserLimit <= 0) {
+            throw new ApiError("Per-user limit must be a positive number greater than 0.", 400);
+        }
     }
 
     const role = session.user.role;
@@ -156,11 +205,6 @@ export const createCoupon = async (req: Request) => {
             approvalStatus = "PENDING_APPROVAL";
         }
     }
-
-    const finalMinCart = minOrderAmount !== undefined ? parseFloat(minOrderAmount) : (minimumCartValue !== undefined ? parseFloat(minimumCartValue) : null);
-    const finalMaxCap = maxDiscountAmount !== undefined && maxDiscountAmount !== null && maxDiscountAmount !== "" ? parseFloat(maxDiscountAmount) : (maxDiscountCap !== undefined && maxDiscountCap !== null && maxDiscountCap !== "" ? parseFloat(maxDiscountCap) : null);
-    const finalUsageLimit = usageLimit !== undefined && usageLimit !== null && usageLimit !== "" ? parseInt(usageLimit) : (maxUsers !== undefined && maxUsers !== null && maxUsers !== "" ? parseInt(maxUsers) : null);
-    const finalPerUserLimit = perUserLimit !== undefined && perUserLimit !== null && perUserLimit !== "" ? parseInt(perUserLimit) : (maxUsagesPerUser !== undefined && maxUsagesPerUser !== null && maxUsagesPerUser !== "" ? parseInt(maxUsagesPerUser) : 1);
 
     let parsedStartDate = new Date();
     if (startDate && startDate !== "Today (Immediately)") {
@@ -315,9 +359,21 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     let finalType = discountType || existingCoupon.discountType;
     if (discountType !== undefined) updateData.discountType = discountType;
 
-    if (discountValue !== undefined && discountValue !== "") {
+    if (discountValue !== undefined && discountValue !== null && discountValue !== "") {
         const val = parseFloat(discountValue);
+        if (isNaN(val)) {
+            throw new ApiError("Please provide a valid numeric discount value.", 400);
+        }
+        if (val < 0) {
+            throw new ApiError("Discount value cannot be negative.", 400);
+        }
+        if (val === 0) {
+            throw new ApiError("Discount value must be greater than 0.", 400);
+        }
         if (finalType === "PERCENTAGE") {
+            if (val > 100) {
+                throw new ApiError("Percentage discount cannot exceed 100%.", 400);
+            }
             updateData.discountPercentage = val;
             updateData.discountAmount = null;
         } else {
@@ -325,37 +381,108 @@ export const updateCoupon = async (req: Request, couponId: string) => {
             updateData.discountPercentage = null;
         }
     } else {
-        if (discountPercentage !== undefined) updateData.discountPercentage = discountPercentage ? parseFloat(discountPercentage) : null;
-        if (discountAmount !== undefined) updateData.discountAmount = discountAmount ? parseFloat(discountAmount) : null;
+        if (discountPercentage !== undefined) {
+            if (discountPercentage !== null && discountPercentage !== "") {
+                const val = parseFloat(discountPercentage);
+                if (isNaN(val) || val < 0) throw new ApiError("Percentage discount cannot be negative.", 400);
+                if (val === 0) throw new ApiError("Percentage discount must be greater than 0%.", 400);
+                if (val > 100) throw new ApiError("Percentage discount cannot exceed 100%.", 400);
+                updateData.discountPercentage = val;
+            } else {
+                updateData.discountPercentage = null;
+            }
+        }
+        if (discountAmount !== undefined) {
+            if (discountAmount !== null && discountAmount !== "") {
+                const val = parseFloat(discountAmount);
+                if (isNaN(val) || val < 0) throw new ApiError("Discount amount cannot be negative.", 400);
+                if (val === 0) throw new ApiError("Flat discount amount must be greater than 0.", 400);
+                updateData.discountAmount = val;
+            } else {
+                updateData.discountAmount = null;
+            }
+        }
     }
 
     // Min Cart / Max Cap / Limits
     if (minOrderAmount !== undefined) {
-        updateData.minimumCartValue = minOrderAmount ? parseFloat(minOrderAmount) : null;
+        if (minOrderAmount !== null && minOrderAmount !== "") {
+            const val = parseFloat(minOrderAmount);
+            if (isNaN(val) || val < 0) throw new ApiError("Minimum order value cannot be negative.", 400);
+            updateData.minimumCartValue = val;
+        } else {
+            updateData.minimumCartValue = null;
+        }
     } else if (minimumCartValue !== undefined) {
-        updateData.minimumCartValue = minimumCartValue ? parseFloat(minimumCartValue) : null;
+        if (minimumCartValue !== null && minimumCartValue !== "") {
+            const val = parseFloat(minimumCartValue);
+            if (isNaN(val) || val < 0) throw new ApiError("Minimum order value cannot be negative.", 400);
+            updateData.minimumCartValue = val;
+        } else {
+            updateData.minimumCartValue = null;
+        }
     }
 
     if (maxDiscountAmount !== undefined) {
-        updateData.maxDiscountAmount = maxDiscountAmount ? parseFloat(maxDiscountAmount) : null;
+        if (maxDiscountAmount !== null && maxDiscountAmount !== "") {
+            const val = parseFloat(maxDiscountAmount);
+            if (isNaN(val) || val <= 0) throw new ApiError("Max discount cap must be greater than 0.", 400);
+            updateData.maxDiscountAmount = val;
+        } else {
+            updateData.maxDiscountAmount = null;
+        }
     } else if (maxDiscountCap !== undefined) {
-        updateData.maxDiscountAmount = maxDiscountCap ? parseFloat(maxDiscountCap) : null;
+        if (maxDiscountCap !== null && maxDiscountCap !== "") {
+            const val = parseFloat(maxDiscountCap);
+            if (isNaN(val) || val <= 0) throw new ApiError("Max discount cap must be greater than 0.", 400);
+            updateData.maxDiscountAmount = val;
+        } else {
+            updateData.maxDiscountAmount = null;
+        }
     }
 
     if (usageLimit !== undefined) {
-        updateData.usageLimit = usageLimit ? parseInt(usageLimit) : null;
-        updateData.maxUsers = updateData.usageLimit;
+        if (usageLimit !== null && usageLimit !== "") {
+            const val = parseInt(usageLimit);
+            if (isNaN(val) || val <= 0) throw new ApiError("Usage limit must be a positive number greater than 0.", 400);
+            updateData.usageLimit = val;
+            updateData.maxUsers = val;
+        } else {
+            updateData.usageLimit = null;
+            updateData.maxUsers = null;
+        }
     } else if (maxUsers !== undefined) {
-        updateData.maxUsers = maxUsers ? parseInt(maxUsers) : null;
-        updateData.usageLimit = updateData.maxUsers;
+        if (maxUsers !== null && maxUsers !== "") {
+            const val = parseInt(maxUsers);
+            if (isNaN(val) || val <= 0) throw new ApiError("Usage limit must be a positive number greater than 0.", 400);
+            updateData.maxUsers = val;
+            updateData.usageLimit = val;
+        } else {
+            updateData.maxUsers = null;
+            updateData.usageLimit = null;
+        }
     }
 
     if (perUserLimit !== undefined) {
-        updateData.perUserLimit = perUserLimit ? parseInt(perUserLimit) : 1;
-        updateData.maxUsagesPerUser = updateData.perUserLimit;
+        if (perUserLimit !== null && perUserLimit !== "") {
+            const val = parseInt(perUserLimit);
+            if (isNaN(val) || val <= 0) throw new ApiError("Per-user limit must be a positive number greater than 0.", 400);
+            updateData.perUserLimit = val;
+            updateData.maxUsagesPerUser = val;
+        } else {
+            updateData.perUserLimit = 1;
+            updateData.maxUsagesPerUser = 1;
+        }
     } else if (maxUsagesPerUser !== undefined) {
-        updateData.maxUsagesPerUser = maxUsagesPerUser ? parseInt(maxUsagesPerUser) : 1;
-        updateData.perUserLimit = updateData.maxUsagesPerUser;
+        if (maxUsagesPerUser !== null && maxUsagesPerUser !== "") {
+            const val = parseInt(maxUsagesPerUser);
+            if (isNaN(val) || val <= 0) throw new ApiError("Per-user limit must be a positive number greater than 0.", 400);
+            updateData.maxUsagesPerUser = val;
+            updateData.perUserLimit = val;
+        } else {
+            updateData.maxUsagesPerUser = 1;
+            updateData.perUserLimit = 1;
+        }
     }
 
     if (noExpiry !== undefined) {

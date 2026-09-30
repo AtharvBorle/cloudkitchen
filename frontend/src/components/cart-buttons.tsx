@@ -56,7 +56,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
             }
         }
 
-        addToCart({
+        const success = addToCart({
             id: item.id,
             foodItemId: item.foodItemId || item.id,
             name: item.name,
@@ -73,7 +73,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
             itemType: item.itemType,
         });
 
-        if (!cartItem) {
+        if (success && !cartItem) {
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
         }
@@ -83,7 +83,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
         const addonKey = selectedAddons.length > 0 ? selectedAddons.map(a => a.id).sort().join("_") : "";
         const cartItemId = addonKey ? `${item.id}_${addonKey}` : item.id;
 
-        addToCart({
+        const success = addToCart({
             id: cartItemId,
             foodItemId: item.foodItemId || item.id,
             name: item.name,
@@ -101,8 +101,10 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
             itemType: item.itemType,
         });
 
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
+        if (success) {
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2000);
+        }
     };
 
     if (cartItem) {

@@ -41,7 +41,7 @@ export type ToastState = {
 
 type CartContextType = {
     cartItems: CartItem[];
-    addToCart: (item: CartItem) => void;
+    addToCart: (item: CartItem) => boolean;
     addMultipleToCart: (items: CartItem[], clearExisting?: boolean) => void;
     updateQuantity: (itemId: string, quantity: number) => void;
     updateItemAddons: (itemId: string, selectedAddons: AddonItem[]) => void;
@@ -217,88 +217,73 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("kitchen_cart", JSON.stringify(cartItems));
     }, [cartItems]);
 
-    const addToCart = (item: CartItem) => {
-        setCartItems(prev => {
-            // Prevent mixing items from different sellers in one order
-            if (prev.length > 0 && prev[0].sellerId && item.sellerId && prev[0].sellerId !== item.sellerId) {
-                showToast("You can only order from one kitchen at a time. Please clear your cart first.", "warning");
-                return prev;
-            }
+    const addToCart = (item: CartItem): boolean => {
+        // Prevent mixing items from different sellers in one order
+        if (cartItems.length > 0 && cartItems[0].sellerId && item.sellerId && cartItems[0].sellerId !== item.sellerId) {
+            showToast("You can only order from one kitchen at a time. Please clear your cart first.", "warning");
+            return false;
+        }
 
-            const addons = item.selectedAddons || [];
-            const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
-            const basePrice = item.basePrice !== undefined ? Number(item.basePrice) : (item.price !== undefined ? Number(item.price) : 0);
-            const finalUnitPrice = basePrice + addonsSum;
+        const addons = item.selectedAddons || [];
+        const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+        const basePrice = item.basePrice !== undefined ? Number(item.basePrice) : (item.price !== undefined ? Number(item.price) : 0);
+        const finalUnitPrice = basePrice + addonsSum;
 
-            const normalizedItem: CartItem = {
-                ...item,
-                basePrice,
-                addonsTotal: addonsSum,
-                price: finalUnitPrice,
-                selectedAddons: addons,
-            };
+        const normalizedItem: CartItem = {
+            ...item,
+            basePrice,
+            addonsTotal: addonsSum,
+            price: finalUnitPrice,
+            selectedAddons: addons,
+        };
 
-            const existing = prev.find(i => i.id === item.id);
-            const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
-            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
-            const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
+        const existing = cartItems.find(i => i.id === item.id);
+        const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
+        const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+        const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
 
-            // Out-of-stock validation
-            if (stockLimit === 0) {
-                showToast(`Sorry, "${item.name}" is currently out of stock.`, "warning");
-                return prev;
-            }
+        // Out-of-stock validation
+        if (stockLimit === 0) {
+            showToast(`Sorry, "${item.name}" is currently out of stock.`, "warning");
+            return false;
+        }
 
-            if (existing) {
-                const addQty = item.quantity !== undefined ? item.quantity : 1;
-                const newQty = existing.quantity + addQty;
+        if (existing) {
+            const addQty = item.quantity !== undefined ? item.quantity : 1;
+            const newQty = existing.quantity + addQty;
 
-                if (stockLimit !== -1 && (existing.quantity >= stockLimit || newQty > stockLimit)) {
-                    showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
-                    return prev.map(i => i.id === item.id ? {
-                        ...i,
-                        ...normalizedItem,
-                        quantity: Math.min(stockLimit, existing.quantity),
-                        maxStock: stockLimit,
-                        stockQuantity: stockLimit,
-                        image: itemImage,
-                        imageUrl: itemImage,
-                    } : i);
-                }
-
-                return prev.map(i => i.id === item.id ? {
-                    ...i,
-                    ...normalizedItem,
-                    quantity: newQty,
-                    maxStock: stockLimit,
-                    stockQuantity: stockLimit,
-                    image: itemImage,
-                    imageUrl: itemImage,
-                } : i);
-            }
-
-            const initialQty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
-            if (stockLimit !== -1 && initialQty > stockLimit) {
+            if (stockLimit !== -1 && (existing.quantity >= stockLimit || newQty > stockLimit)) {
                 showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
-                return [...prev, {
-                    ...normalizedItem,
-                    quantity: stockLimit,
-                    maxStock: stockLimit,
-                    stockQuantity: stockLimit,
-                    image: itemImage,
-                    imageUrl: itemImage,
-                }];
+                return false;
             }
 
-            return [...prev, {
+            setCartItems(prev => prev.map(i => i.id === item.id ? {
+                ...i,
                 ...normalizedItem,
-                quantity: initialQty,
+                quantity: newQty,
                 maxStock: stockLimit,
                 stockQuantity: stockLimit,
                 image: itemImage,
                 imageUrl: itemImage,
-            }];
-        });
+            } : i));
+            return true;
+        }
+
+        const initialQty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
+        if (stockLimit !== -1 && initialQty > stockLimit) {
+            showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+            return false;
+        }
+
+        setCartItems(prev => [...prev, {
+            ...normalizedItem,
+            quantity: initialQty,
+            maxStock: stockLimit,
+            stockQuantity: stockLimit,
+            image: itemImage,
+            imageUrl: itemImage,
+        }]);
+        return true;
     };
 
     const addMultipleToCart = (items: CartItem[], clearExisting = false) => {

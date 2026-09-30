@@ -303,6 +303,48 @@ function EditOfferForm({
       return;
     }
 
+    const dVal = parseFloat(discountValue);
+    if (isNaN(dVal) || dVal <= 0) {
+      alert("Discount value must be greater than 0.");
+      return;
+    }
+    if (discountType === "PERCENTAGE" && dVal > 100) {
+      alert("Percentage discount cannot exceed 100%.");
+      return;
+    }
+
+    if (minOrderValue.trim() !== "") {
+      const minVal = parseFloat(minOrderValue);
+      if (isNaN(minVal) || minVal < 0) {
+        alert("Minimum order value cannot be negative.");
+        return;
+      }
+    }
+
+    if (maxDiscountCap.trim() !== "") {
+      const capVal = parseFloat(maxDiscountCap);
+      if (isNaN(capVal) || capVal <= 0) {
+        alert("Max discount cap must be greater than 0.");
+        return;
+      }
+    }
+
+    if (usageLimit.trim() !== "") {
+      const limitVal = parseInt(usageLimit);
+      if (isNaN(limitVal) || limitVal <= 0) {
+        alert("Usage limit must be a positive number greater than 0.");
+        return;
+      }
+    }
+
+    if (perUserLimit.trim() !== "") {
+      const perUser = parseInt(perUserLimit);
+      if (isNaN(perUser) || perUser <= 0) {
+        alert("Per-user limit must be a positive number greater than 0.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const finalStatus: "Active" | "Pending" | "Draft" | "Expired" = targetStatus || (isDraft ? "Draft" : (status === "Draft" ? "Active" : status));
@@ -311,13 +353,13 @@ function EditOfferForm({
         code: couponCode.trim().toUpperCase(),
         description: internalDescription.trim(),
         discountType: discountType,
-        discountValue: Number(discountValue) || 0,
-        minOrderAmount: Number(minOrderValue) || 0,
-        maxDiscountAmount: maxDiscountCap ? Number(maxDiscountCap) : null,
+        discountValue: dVal,
+        minOrderAmount: minOrderValue.trim() !== "" ? parseFloat(minOrderValue) : 0,
+        maxDiscountAmount: maxDiscountCap.trim() !== "" ? parseFloat(maxDiscountCap) : null,
         appliesTo: appliesTo,
         customerEligibility: customerEligibility,
-        usageLimit: usageLimit ? Number(usageLimit) : null,
-        perUserLimit: Number(perUserLimit) || 1,
+        usageLimit: usageLimit.trim() !== "" ? parseInt(usageLimit) : null,
+        perUserLimit: perUserLimit.trim() !== "" ? parseInt(perUserLimit) : 1,
         noExpiry: noExpiry,
         status: finalStatus,
         isActive: finalStatus === "Active",
@@ -653,9 +695,14 @@ function EditOfferForm({
                       </span>
                       <input
                         type="number"
+                        min="1"
+                        max={discountType === "PERCENTAGE" ? "100" : undefined}
                         className={styles.prefixInputField}
                         value={discountValue}
                         onChange={(e) => setDiscountValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                        }}
                         placeholder="e.g. 20"
                       />
                     </div>
@@ -675,9 +722,13 @@ function EditOfferForm({
                       <span className={styles.prefixIconBox}>₹</span>
                       <input
                         type="number"
+                        min="0"
                         className={styles.prefixInputField}
                         value={minOrderValue}
                         onChange={(e) => setMinOrderValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                        }}
                         placeholder="0"
                       />
                     </div>
@@ -693,9 +744,13 @@ function EditOfferForm({
                       <span className={styles.prefixIconBox}>₹</span>
                       <input
                         type="number"
+                        min="1"
                         className={styles.prefixInputField}
                         value={maxDiscountCap}
                         onChange={(e) => setMaxDiscountCap(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                        }}
                         placeholder="Optional"
                       />
                     </div>
@@ -872,9 +927,13 @@ function EditOfferForm({
                     <label className={styles.fieldLabel}>Usage Limit</label>
                     <input
                       type="number"
+                      min="1"
                       className={styles.inputField}
                       value={usageLimit}
                       onChange={(e) => setUsageLimit(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                      }}
                       placeholder="e.g. 500"
                     />
                     <div className={styles.helpText}>
@@ -999,9 +1058,13 @@ function EditOfferForm({
                     <label className={styles.fieldLabel}>Per-User Limit</label>
                     <input
                       type="number"
+                      min="1"
                       className={styles.inputField}
                       value={perUserLimit}
                       onChange={(e) => setPerUserLimit(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E") e.preventDefault();
+                      }}
                       placeholder="1"
                     />
                     <div className={styles.helpText}>
