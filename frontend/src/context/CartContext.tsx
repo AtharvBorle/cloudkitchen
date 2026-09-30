@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
@@ -103,7 +103,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         };
     }, []);
 
-    const syncCartWithLiveMenu = async (customList?: CartItem[]) => {
+    const syncCartWithLiveMenu = useCallback(async (customList?: CartItem[]) => {
         const targetList = customList || cartItems;
         if (!targetList || targetList.length === 0) return;
 
@@ -115,9 +115,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         await Promise.all(
             sellerIds.map(async (sid) => {
+                // Skip static or mock seller IDs that do not exist in the database
+                if (!sid || sid.startsWith("k-") || sid.startsWith("mock_")) return;
+
                 try {
                     const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sid)}`);
-                    if (res.ok) {
+                    if (res && res.ok) {
                         const json = await res.json();
                         const sellerObj = json.data || json;
                         const liveFoodItems: any[] = sellerObj?.foodItems || [];
@@ -159,8 +162,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                             }
                         }
                     }
-                } catch (err) {
-                    console.error("Failed to sync cart prices with live menu:", err);
+                } catch {
+                    // Silently ignore background sync network errors when offline or during transient connection drops
                 }
             })
         );
@@ -181,7 +184,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 return updated;
             });
         }
-    };
+    }, [cartItems]);
 
     // Load from local storage on mount and sync with live seller prices
     useEffect(() => {
