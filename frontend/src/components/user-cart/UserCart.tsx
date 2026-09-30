@@ -63,17 +63,21 @@ const ScrollableAvailableAddonsRow: React.FC<{
     const el = scrollRef.current;
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
-    setCanScrollLeft(scrollLeft > 4);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 2);
   }, []);
 
   useEffect(() => {
     checkScroll();
-    const t = setTimeout(checkScroll, 120);
+    const raf = requestAnimationFrame(checkScroll);
+    const t1 = setTimeout(checkScroll, 50);
+    const t2 = setTimeout(checkScroll, 200);
     const handleResize = () => checkScroll();
     window.addEventListener("resize", handleResize);
     return () => {
-      clearTimeout(t);
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
       window.removeEventListener("resize", handleResize);
     };
   }, [addons, checkScroll]);
