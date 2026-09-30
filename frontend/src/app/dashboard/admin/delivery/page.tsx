@@ -50,8 +50,8 @@ export default function AdminDeliveryPage() {
         e.preventDefault();
         if (!selectedDp) return;
         const val = parseFloat(adjAmount);
-        if (isNaN(val) || val <= 1) {
-            alert("Adjustment amount must be greater than ₹1");
+        if (!adjAmount || isNaN(val) || val <= 0) {
+            alert("Please enter a valid numeric amount greater than ₹0");
             return;
         }
         setLoading(true);
@@ -256,7 +256,22 @@ export default function AdminDeliveryPage() {
                                 <div style={{ position: 'relative' }}>
                                     <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#718096', fontWeight: 'bold' }}>₹</span>
                                     <input
-                                        type="number" step="0.01" min="0.01" value={adjAmount} onChange={e => setAdjAmount(e.target.value)} required
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={adjAmount}
+                                        onKeyDown={(e) => {
+                                            if (['-', '+', 'e', 'E'].includes(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === "" || /^\d+(\.\d{0,2})?$/.test(val)) {
+                                                setAdjAmount(val);
+                                            }
+                                        }}
+                                        placeholder="0.00"
+                                        required
                                         style={{ width: '100%', padding: '12px 12px 12px 30px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '1.1rem', fontWeight: 'bold' }}
                                     />
                                 </div>
