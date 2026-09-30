@@ -9,7 +9,7 @@ import { PopularFood } from "@/components/restaurant-desktop/popularfood";
 import { SubscriptionPlans, PlanItem, SubscribeModal, SubscribeModalPlan } from "@/components/restaurant-desktop/subscriptionplans";
 import { RestaurantMobileView } from "@/components/restaurant-desktop/restaurant-mobile";
 import { getKitchenById, isStaticKitchen, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
-import { useCart } from "@/context/CartContext";
+import { useCart, generateCartItemId } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { Footer } from "@/components/explore-desktop/footer";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
@@ -648,10 +648,12 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             const rawStock = (addonModalItem as any).maxStock !== undefined ? (addonModalItem as any).maxStock : (addonModalItem as any).stockQuantity;
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const itemImg = typeof addonModalItem.image === "string" ? addonModalItem.image : (addonModalItem.image as any)?.src || "";
+            const baseFoodId = (addonModalItem as any).foodItemId || addonModalItem.id;
+            const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
 
             addToCart({
-              id: addonModalItem.id,
-              foodItemId: (addonModalItem as any).foodItemId || addonModalItem.id,
+              id: cartItemId,
+              foodItemId: baseFoodId,
               name: addonModalItem.title,
               price: unitPrice,
               basePrice: base,

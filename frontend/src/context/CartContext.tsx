@@ -12,6 +12,19 @@ export type AddonItem = {
     price: number;
 };
 
+export function generateCartItemId(foodItemId: string, selectedAddons?: AddonItem[]): string {
+    const baseId = (foodItemId || "").trim();
+    if (!selectedAddons || selectedAddons.length === 0) {
+        return baseId;
+    }
+    const addonKey = selectedAddons
+        .map(a => (a.id || a.name || "").trim().toLowerCase())
+        .filter(Boolean)
+        .sort()
+        .join("_");
+    return addonKey ? `${baseId}_${addonKey}` : baseId;
+}
+
 export type CartItem = {
     id: string; // The food item ID or composite key
     foodItemId?: string; // The base food item ID
@@ -227,18 +240,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             const addons = item.selectedAddons || [];
             const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
-            const basePrice = item.basePrice !== undefined ? Number(item.basePrice) : (item.price !== undefined ? Number(item.price) : 0);
+            const basePrice = item.basePrice !== undefined 
+                ? Number(item.basePrice) 
+                : (item.addonsTotal !== undefined ? (Number(item.price) - Number(item.addonsTotal)) : Number(item.price) || 0);
             const finalUnitPrice = basePrice + addonsSum;
+            const baseFoodId = item.foodItemId || (item.id.includes("_") ? item.id.split("_")[0] : item.id);
+            const finalCartId = item.id.includes("_") ? item.id : generateCartItemId(baseFoodId, addons);
 
             const normalizedItem: CartItem = {
                 ...item,
+                id: finalCartId,
+                foodItemId: baseFoodId,
                 basePrice,
                 addonsTotal: addonsSum,
                 price: finalUnitPrice,
                 selectedAddons: addons,
             };
 
-            const existing = prev.find(i => i.id === item.id);
+            const existing = prev.find(i => i.id === finalCartId);
             const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
@@ -255,7 +274,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
                 if (stockLimit !== -1 && (existing.quantity >= stockLimit || newQty > stockLimit)) {
                     showToast(`We have only ${stockLimit} left in stock.`, "warning");
-                    return prev.map(i => i.id === item.id ? {
+                    return prev.map(i => i.id === finalCartId ? {
                         ...i,
                         ...normalizedItem,
                         quantity: Math.min(stockLimit, existing.quantity),
@@ -266,7 +285,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     } : i);
                 }
 
-                return prev.map(i => i.id === item.id ? {
+                return prev.map(i => i.id === finalCartId ? {
                     ...i,
                     ...normalizedItem,
                     quantity: newQty,
@@ -321,18 +340,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             for (const item of items) {
                 const addons = item.selectedAddons || [];
                 const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
-                const basePrice = item.basePrice !== undefined ? Number(item.basePrice) : (item.price !== undefined ? Number(item.price) : 0);
+                const basePrice = item.basePrice !== undefined 
+                    ? Number(item.basePrice) 
+                    : (item.addonsTotal !== undefined ? (Number(item.price) - Number(item.addonsTotal)) : Number(item.price) || 0);
                 const finalUnitPrice = basePrice + addonsSum;
+                const baseFoodId = item.foodItemId || (item.id.includes("_") ? item.id.split("_")[0] : item.id);
+                const finalCartId = item.id.includes("_") ? item.id : generateCartItemId(baseFoodId, addons);
 
                 const normalizedItem: CartItem = {
                     ...item,
+                    id: finalCartId,
+                    foodItemId: baseFoodId,
                     basePrice,
                     addonsTotal: addonsSum,
                     price: finalUnitPrice,
                     selectedAddons: addons,
                 };
 
-                const existingIndex = updatedList.findIndex(i => i.id === item.id);
+                const existingIndex = updatedList.findIndex(i => i.id === finalCartId);
                 const existing = existingIndex !== -1 ? updatedList[existingIndex] : null;
                 const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
                 const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
@@ -405,22 +430,58 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const updateItemAddons = (itemId: string, selectedAddons: AddonItem[]) => {
         setCartItems(prev => {
-            const updated = prev.map(i => {
-                if (i.id === itemId) {
-                    const addonsSum = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
-                    const basePrice = i.basePrice !== undefined 
-                        ? Number(i.basePrice) 
-                        : Math.max(0, (Number(i.price) || 0) - (Number(i.addonsTotal) || 0));
-                    return {
-                        ...i,
-                        basePrice,
-                        selectedAddons,
-                        addonsTotal: addonsSum,
-                        price: basePrice + addonsSum,
-                    };
-                }
-                return i;
-            });
+            const targetIndex = prev.findIndex(i => i.id === itemId);
+            if (targetIndex === -1) return prev;
+
+            const targetItem = prev[targetIndex];
+            const baseFoodId = targetItem.foodItemId || (targetItem.id.includes("_") ? targetItem.id.split("_")[0] : targetItem.id);
+            const newCartId = generateCartItemId(baseFoodId, selectedAddons);
+            const addonsSum = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+            const basePrice = targetItem.basePrice !== undefined 
+                ? Number(targetItem.basePrice) 
+                : Math.max(0, (Number(targetItem.price) || 0) - (Number(targetItem.addonsTotal) || 0));
+            const newUnitPrice = basePrice + addonsSum;
+
+            // Check if another item in the cart already has this customized ID
+            const existingMergeIndex = prev.findIndex((i, idx) => idx !== targetIndex && i.id === newCartId);
+
+            let updated: CartItem[];
+            if (existingMergeIndex !== -1) {
+                updated = prev.map((item, idx) => {
+                    if (idx === existingMergeIndex) {
+                        const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+                        const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+                        const mergedQty = stockLimit !== -1 
+                            ? Math.min(stockLimit, item.quantity + targetItem.quantity)
+                            : item.quantity + targetItem.quantity;
+                        return {
+                            ...item,
+                            quantity: mergedQty,
+                            price: newUnitPrice,
+                            basePrice,
+                            addonsTotal: addonsSum,
+                            selectedAddons,
+                        };
+                    }
+                    return item;
+                }).filter((_, idx) => idx !== targetIndex);
+            } else {
+                updated = prev.map((item, idx) => {
+                    if (idx === targetIndex) {
+                        return {
+                            ...item,
+                            id: newCartId,
+                            foodItemId: baseFoodId,
+                            basePrice,
+                            selectedAddons,
+                            addonsTotal: addonsSum,
+                            price: newUnitPrice,
+                        };
+                    }
+                    return item;
+                });
+            }
+
             try {
                 localStorage.setItem("kitchen_cart", JSON.stringify(updated));
             } catch {}

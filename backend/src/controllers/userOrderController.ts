@@ -345,24 +345,30 @@ export const createOrder = async (req: Request) => {
         }
     }
 
-    const itemUpdates = [];
+    // Aggregate item quantities by base foodItemId to validate stock and update inventory properly
+    const aggregatedQuantities = new Map<string, { quantity: number; name: string }>();
     for (const cartItem of items) {
-        const foodItemId = cartItem.foodItemId || cartItem.id;
-        let foodItem = null;
-        if (foodItemId) {
-            foodItem = await db.foodItem.findUnique({ where: { id: foodItemId } }).catch(() => null);
-        }
+        const foodItemId = cartItem.foodItemId || (typeof cartItem.id === "string" && cartItem.id.includes("_") ? cartItem.id.split("_")[0] : cartItem.id);
+        if (!foodItemId) continue;
+        const current = aggregatedQuantities.get(foodItemId) || { quantity: 0, name: cartItem.name };
+        current.quantity += (cartItem.quantity || 1);
+        aggregatedQuantities.set(foodItemId, current);
+    }
+
+    const itemUpdates = [];
+    for (const [foodItemId, { quantity, name }] of aggregatedQuantities.entries()) {
+        const foodItem = await db.foodItem.findUnique({ where: { id: foodItemId } }).catch(() => null);
 
         if (foodItem) {
             if (!foodItem.isAvailable) {
-                throw new ApiError(`Item ${cartItem.name} is currently unavailable.`, 400);
+                throw new ApiError(`Item ${name} is currently unavailable.`, 400);
             }
 
             if (foodItem.stockQuantity !== -1) {
-                if (foodItem.stockQuantity < cartItem.quantity) {
-                    throw new ApiError(`Not enough stock for ${cartItem.name}. Only ${foodItem.stockQuantity} left.`, 400);
+                if (foodItem.stockQuantity < quantity) {
+                    throw new ApiError(`Not enough stock for ${name}. Only ${foodItem.stockQuantity} left.`, 400);
                 }
-                const newStock = Math.max(0, foodItem.stockQuantity - cartItem.quantity);
+                const newStock = Math.max(0, foodItem.stockQuantity - quantity);
                 itemUpdates.push({
                     id: foodItem.id,
                     newStock,

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image, { StaticImageData } from "next/image";
 import { Star, Plus, Minus, Utensils } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCart, generateCartItemId } from "@/context/CartContext";
 import { DietaryTag } from "@/components/common/DietaryTag";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import styles from "./PopularFood.module.css";
@@ -416,12 +416,12 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const itemImg = typeof modalItem.image === "string" ? modalItem.image : (modalItem.image as any)?.src || "";
 
-            const addonKey = selectedAddons.length > 0 ? selectedAddons.map(a => a.id).sort().join("_") : "";
-            const cartItemId = addonKey ? `${modalItem.id}_${addonKey}` : modalItem.id;
+            const baseFoodId = modalItem.foodItemId || modalItem.id;
+            const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
 
             addToCart({
               id: cartItemId,
-              foodItemId: modalItem.foodItemId || modalItem.id,
+              foodItemId: baseFoodId,
               name: modalItem.title,
               price: unitPrice,
               basePrice: base,

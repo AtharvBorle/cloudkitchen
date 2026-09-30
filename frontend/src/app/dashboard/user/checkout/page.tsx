@@ -844,7 +844,17 @@ function CheckoutContent() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         sellerId: cartItems[0].sellerId, // Validated to be single-seller earlier
-                        items: cartItems.map((item: any) => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price })),
+                        items: cartItems.map((item: any) => ({
+                            id: item.foodItemId || (typeof item.id === "string" && item.id.includes("_") ? item.id.split("_")[0] : item.id),
+                            cartItemId: item.id,
+                            foodItemId: item.foodItemId || (typeof item.id === "string" && item.id.includes("_") ? item.id.split("_")[0] : item.id),
+                            name: item.name + (item.selectedAddons && item.selectedAddons.length > 0 ? ` (+${item.selectedAddons.map((a: any) => a.name).join(", ")})` : ""),
+                            quantity: item.quantity,
+                            price: item.price,
+                            basePrice: item.basePrice,
+                            addonsTotal: item.addonsTotal,
+                            selectedAddons: item.selectedAddons,
+                        })),
                         totalAmount: finalTotalAmount,
                         deliveryAddress: finalAddressText,
                         customerPhone: phone,

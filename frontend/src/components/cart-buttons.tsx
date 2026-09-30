@@ -1,6 +1,6 @@
 "use client";
 
-import { useCart, AddonItem } from "@/context/CartContext";
+import { useCart, AddonItem, generateCartItemId } from "@/context/CartContext";
 import { ShoppingCart, Check } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -80,12 +80,12 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
     };
 
     const handleCustomizationConfirm = (selectedAddons: AddonItem[], totalUnitPrice: number) => {
-        const addonKey = selectedAddons.length > 0 ? selectedAddons.map(a => a.id).sort().join("_") : "";
-        const cartItemId = addonKey ? `${item.id}_${addonKey}` : item.id;
+        const baseFoodId = item.foodItemId || item.id;
+        const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
 
         addToCart({
             id: cartItemId,
-            foodItemId: item.foodItemId || item.id,
+            foodItemId: baseFoodId,
             name: item.name,
             basePrice: item.price,
             selectedAddons,
