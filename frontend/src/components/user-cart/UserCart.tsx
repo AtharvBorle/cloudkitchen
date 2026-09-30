@@ -51,6 +51,63 @@ export interface UserCartProps {
   onProceedToCheckout?: () => void;
 }
 
+const ScrollableAvailableAddonsRow: React.FC<{
+  addons: Array<{ id?: string; name: string; price: number }>;
+  onAdd: (addon: { id?: string; name: string; price: number }) => void;
+}> = ({ addons, onAdd }) => {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const t = setTimeout(checkScroll, 120);
+    const handleResize = () => checkScroll();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [addons, checkScroll]);
+
+  return (
+    <div className={styles.availableAddonsScrollWrapper}>
+      {canScrollLeft && <div className={styles.scrollShadowLeft} />}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className={styles.availableAddonsList}
+      >
+        {addons.map((addon) => (
+          <button
+            key={addon.id || addon.name}
+            type="button"
+            onClick={() => onAdd(addon)}
+            className={styles.availableAddonBtn}
+            title={`Add ${addon.name} (+₹${addon.price})`}
+          >
+            <span>{addon.name}</span>
+            <span className={styles.availableAddonPrice}>+₹{addon.price}</span>
+            <span className={styles.availableAddonAddTag}>
+              <Plus size={11} strokeWidth={3} />
+              <span>Add</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {canScrollRight && <div className={styles.scrollShadowRight} />}
+    </div>
+  );
+};
+
 export const UserCart: React.FC<UserCartProps> = ({
   initialItems = [],
   defaultLocation = "Select Location",
@@ -237,19 +294,33 @@ export const UserCart: React.FC<UserCartProps> = ({
     }, 2800);
   };
 
-  // Parse add-ons from string or array safely
+  // Parse add-ons from string or array safely and deduplicate
   const parseItemAddons = (raw: any): Array<{ id?: string; name: string; price: number }> => {
     if (!raw) return [];
     try {
       const list = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (Array.isArray(list)) {
-        return list
-          .filter((a: any) => a && (a.name || "").trim())
-          .map((a: any, idx: number) => ({
-            id: a.id ? String(a.id) : `addon_${idx + 1}_${String(a.name).toLowerCase().replace(/\s+/g, "_")}`,
-            name: String(a.name).trim(),
-            price: typeof a.price === "number" ? a.price : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0,
-          }));
+        const seenNames = new Set<string>();
+        const result: Array<{ id?: string; name: string; price: number }> = [];
+        list.forEach((a: any, idx: number) => {
+          if (!a || !(a.name || "").trim()) return;
+          const cleanName = String(a.name || "").trim();
+          const lowerName = cleanName.toLowerCase();
+          if (seenNames.has(lowerName)) return;
+          seenNames.add(lowerName);
+
+          const cleanId = a.id ? String(a.id) : `addon_${idx + 1}_${lowerName.replace(/\s+/g, "_")}`;
+          const cleanPrice =
+            typeof a.price === "number"
+              ? a.price
+              : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0;
+          result.push({
+            id: cleanId,
+            name: cleanName,
+            price: Math.max(0, cleanPrice),
+          });
+        });
+        return result;
       }
     } catch {}
     return [];
@@ -270,6 +341,11 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   const handleAddAddonToItem = (item: UserCartItem, addon: { id?: string; name: string; price: number }) => {
     const currentSelected = item.selectedAddons || [];
+    const lowerName = (addon.name || "").toLowerCase().trim();
+    if (currentSelected.some(a => (a.name || "").toLowerCase().trim() === lowerName || (addon.id && a.id === addon.id))) {
+      showToast(`${addon.name} is already added to this item`);
+      return;
+    }
     const newSelected = [...currentSelected, addon];
     updateItemAddons(item.id, newSelected);
     showToast(`Added ${addon.name} (+₹${addon.price}) to ${item.name}`);
@@ -720,24 +796,10 @@ export const UserCart: React.FC<UserCartProps> = ({
                               <Sparkles size={13} style={{ color: "#059669" }} />
                               <span>Available Add-ons</span>
                             </div>
-                            <div className={styles.availableAddonsList}>
-                              {remainingAddons.map((addon) => (
-                                <button
-                                  key={addon.id || addon.name}
-                                  type="button"
-                                  onClick={() => handleAddAddonToItem(item, addon)}
-                                  className={styles.availableAddonBtn}
-                                  title={`Add ${addon.name} (+₹${addon.price})`}
-                                >
-                                  <span>{addon.name}</span>
-                                  <span className={styles.availableAddonPrice}>+₹{addon.price}</span>
-                                  <span className={styles.availableAddonAddTag}>
-                                    <Plus size={11} strokeWidth={3} />
-                                    <span>Add</span>
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
+                            <ScrollableAvailableAddonsRow
+                              addons={remainingAddons}
+                              onAdd={(addon) => handleAddAddonToItem(item, addon)}
+                            />
                           </div>
                         );
                       })()}

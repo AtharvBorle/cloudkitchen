@@ -1273,7 +1273,7 @@
 }
 
 /* =========================================================
-   AVAILABLE ADD-ONS (VIBRANT EMERALD / FRESH ANIMATED PILLS)
+   AVAILABLE ADD-ONS (SINGLE LINE SCROLLABLE WITH EDGE SHADOWS)
    ========================================================= */
 .availableAddonsSection {
   margin-top: 10px;
@@ -1282,6 +1282,9 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .availableAddonsHeader {
@@ -1295,15 +1298,67 @@
   text-transform: uppercase;
 }
 
+.availableAddonsScrollWrapper {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
 .availableAddonsList {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px 6px 2px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.availableAddonsList::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollShadowLeft {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 32px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%);
+  box-shadow: inset 8px 0 10px -4px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 6px 0 0 6px;
+}
+
+.scrollShadowRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 36px;
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%);
+  box-shadow: inset -8px 0 10px -4px rgba(15, 23, 42, 0.14);
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 0 6px 6px 0;
 }
 
 .availableAddonBtn {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
   gap: 6px;
   font-size: 0.74rem;
   font-weight: 600;

@@ -437,6 +437,9 @@ export const validateCouponForCart = async (req: Request) => {
         discountLabel = `${pct}% OFF`;
     } else {
         const flatAmt = coupon.discountAmount || 0;
+        if (flatAmt > 0 && numSubtotal < flatAmt) {
+            throw new ApiError(`Coupon "${coupon.code}" provides a ₹${flatAmt} discount and requires an order total of at least ₹${flatAmt}. (Your cart is ₹${numSubtotal})`, 400);
+        }
         calculatedDiscount = Math.min(flatAmt, numSubtotal);
         discountLabel = `₹${flatAmt} OFF`;
     }

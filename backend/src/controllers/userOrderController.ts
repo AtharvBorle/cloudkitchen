@@ -245,14 +245,21 @@ export const createOrder = async (req: Request) => {
         }
 
         // 1. Minimum Cart Value check
+        let baseTotal = 0;
+        for (const item of items) {
+            baseTotal += (item.price || 0) * (item.quantity || 1);
+        }
+
         const minCart = validatedCoupon.minimumCartValue || (validatedCoupon as any).minOrderAmount;
-        if (minCart) {
-            let baseTotal = 0;
-            for (const item of items) {
-                baseTotal += (item.price || 0) * (item.quantity || 1);
-            }
-            if (baseTotal < minCart) {
-                throw new ApiError(`This coupon requires a minimum cart value of ₹${minCart}`, 400);
+        if (minCart && baseTotal < minCart) {
+            throw new ApiError(`This coupon requires a minimum cart value of ₹${minCart}`, 400);
+        }
+
+        const isPercentage = validatedCoupon.discountType === "PERCENTAGE" || (validatedCoupon.discountPercentage && !validatedCoupon.discountAmount);
+        if (!isPercentage && validatedCoupon.discountAmount) {
+            const flatAmt = Number(validatedCoupon.discountAmount);
+            if (flatAmt > 0 && baseTotal < flatAmt) {
+                throw new ApiError(`Coupon "${validatedCoupon.code}" provides a ₹${flatAmt} discount and requires an order total of at least ₹${flatAmt}. (Your cart is ₹${baseTotal})`, 400);
             }
         }
 

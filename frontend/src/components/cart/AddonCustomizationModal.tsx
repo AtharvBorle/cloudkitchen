@@ -68,27 +68,33 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
   const resolvedDescription =
     item?.description || propDescription || "";
 
-  // 2. Parse and normalize available add-ons list with stable keys
+  // 2. Parse and normalize available add-ons list with stable keys and deduplication
   const parsedAddons: AddonItem[] = useMemo(() => {
     const raw = item?.addons ?? propAddons ?? [];
     try {
       const list = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (Array.isArray(list)) {
-        return list
-          .filter((a: any) => a && (a.name || "").trim())
-          .map((a: any, idx: number) => {
-            const cleanName = String(a.name || "").trim();
-            const cleanId = a.id ? String(a.id) : `addon_${idx + 1}_${cleanName.toLowerCase().replace(/\s+/g, "_")}`;
-            const cleanPrice =
-              typeof a.price === "number"
-                ? a.price
-                : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0;
-            return {
-              id: cleanId,
-              name: cleanName,
-              price: Math.max(0, cleanPrice),
-            };
+        const seenNames = new Set<string>();
+        const result: AddonItem[] = [];
+        list.forEach((a: any, idx: number) => {
+          if (!a || !(a.name || "").trim()) return;
+          const cleanName = String(a.name || "").trim();
+          const lowerName = cleanName.toLowerCase();
+          if (seenNames.has(lowerName)) return;
+          seenNames.add(lowerName);
+
+          const cleanId = a.id ? String(a.id) : `addon_${idx + 1}_${lowerName.replace(/\s+/g, "_")}`;
+          const cleanPrice =
+            typeof a.price === "number"
+              ? a.price
+              : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0;
+          result.push({
+            id: cleanId,
+            name: cleanName,
+            price: Math.max(0, cleanPrice),
           });
+        });
+        return result;
       }
     } catch (err) {
       console.error("Failed to parse addons in AddonCustomizationModal:", err);
