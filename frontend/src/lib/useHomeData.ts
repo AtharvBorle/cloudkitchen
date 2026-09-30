@@ -204,7 +204,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           rooms: "/images/categories/cat-rooms.png",
           burger: "/images/categories/cat-burger.png",
           burgers: "/images/categories/cat-burger.png",
-          cake: "/images/categories/cat-backery.png",
+          cake: "/images/categories/cat-cake.png",
+          cakes: "/images/categories/cat-cake.png",
+          pastry: "/images/categories/cat-cake.png",
+          pastries: "/images/categories/cat-cake.png",
           meal: "/images/categories/cat-meal.png",
           meals: "/images/categories/cat-meal.png",
           thali: "/images/categories/cat-meal.png",
@@ -219,7 +222,6 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           "dal khichdi": "/images/categories/cat-dalrice.png",
           dosa: "/images/categories/cat-food.png",
           idli: "/images/categories/cat-food.png",
-          pastry: "/images/categories/cat-backery.png",
           pohe: "/images/categories/cat-food.png",
           sabudana: "/images/categories/cat-food.png",
           shira: "/images/categories/cat-food.png",
@@ -250,7 +252,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               ? "/images/categories/cat-meal.png"
               : CATEGORY_IMAGE_MAP[lower] ||
                 CATEGORY_IMAGE_MAP[cleanKey] ||
-                (cleanKey.includes("burger")
+                (cleanKey.includes("cake") || cleanKey.includes("pastry")
+                  ? "/images/categories/cat-cake.png"
+                  : cleanKey.includes("burger")
                   ? "/images/categories/cat-burger.png"
                   : cleanKey.includes("meal") || cleanKey.includes("thali")
                   ? "/images/categories/cat-meal.png"
@@ -264,7 +268,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               id: fc.id || lower,
               name: displayName,
               image: mappedImage,
-              emoji: cleanKey.includes("dal") ? "🍛" : cleanKey.includes("meal") || cleanKey.includes("thali") ? "🍱" : "🍽️",
+              emoji: cleanKey.includes("cake") || cleanKey.includes("pastry") ? "🍰" : cleanKey.includes("dal") ? "🍛" : cleanKey.includes("meal") || cleanKey.includes("thali") ? "🍱" : "🍽️",
               route: "/food-explore?category=" + encodeURIComponent(lower),
             });
           } else if (fc.imageUrl && !isMismatchedImg && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
