@@ -6,7 +6,7 @@ import Navbar from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useHomeData, DynamicFoodItem, DynamicKitchen } from "@/lib/useHomeData";
 import { useLocation } from "@/components/location-provider";
-import { useCart } from "@/context/CartContext";
+import { useCart, generateCartItemId, AddonItem } from "@/context/CartContext";
 import { DietaryTag } from "@/components/common/DietaryTag";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import {
@@ -36,6 +36,23 @@ import {
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 
+function parseDishAddons(rawAddons: any): AddonItem[] {
+  if (!rawAddons) return [];
+  try {
+    const p = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
+    if (Array.isArray(p) && p.length > 0) {
+      return p
+        .filter((a: any) => a && (a.name || "").trim())
+        .map((a: any, idx: number) => ({
+          id: String(a.id || `addon_${idx + 1}`),
+          name: String(a.name || "").trim(),
+          price: Math.max(0, parseFloat(a.price) || 0),
+        }));
+    }
+  } catch {}
+  return [];
+}
+
 function FoodExploreContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,7 +64,7 @@ function FoodExploreContent() {
   const sortParam = searchParams.get("sort") || "popular";
 
   const { defaultAddress, openLocationModal } = useLocation();
-  const { addToCart, showToast, cartItems } = useCart();
+  const { addToCart, decreaseQuantity, showToast, cartItems } = useCart();
   const homeData = useHomeData();
 
   // Local Filter States
@@ -65,11 +82,11 @@ function FoodExploreContent() {
   const [openOnly, setOpenOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<"dishes" | "kitchens">("dishes");
 
-  // Popover state
+  // Popover & Modal state
   const [openPricePopover, setOpenPricePopover] = useState(false);
   const [openCuisinePopover, setOpenCuisinePopover] = useState(false);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
-  const [customizingDish, setCustomizingDish] = useState<DynamicFoodItem | null>(null);
+  const [addonModalDish, setAddonModalDish] = useState<(DynamicFoodItem & { parsedAddons: AddonItem[] }) | null>(null);
 
   // Sync state if URL changes
   React.useEffect(() => {
@@ -387,7 +404,7 @@ function FoodExploreContent() {
     setSortBy("popular");
   };
 
-  const handleAddToCart = (dish: DynamicFoodItem) => {
+  const handleAddToCart = (dish: DynamicFoodItem, showAnimation: boolean = true) => {
     if (dish.sellerIsOnline === false) {
       showToast(`Sorry, "${dish.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
       return;
@@ -405,27 +422,19 @@ function FoodExploreContent() {
       return;
     }
 
-    // Check if dish has configured add-ons
-    let parsedAddons: any[] = [];
-    try {
-      const raw = (dish as any).addons || (dish as any).variants;
-      if (typeof raw === "string") {
-        parsedAddons = JSON.parse(raw);
-      } else if (Array.isArray(raw)) {
-        parsedAddons = raw;
-      }
-    } catch (e) {
-      parsedAddons = [];
-    }
-
-    if (parsedAddons && Array.isArray(parsedAddons) && parsedAddons.length > 0) {
-      setCustomizingDish(dish);
+    const matchingInCart = cartItems.filter((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+    const quantityInCart = matchingInCart.reduce((sum, ci) => sum + ci.quantity, 0);
+    if (stockLimit !== -1 && quantityInCart >= stockLimit) {
+      showToast(`We have only ${stockLimit} left in stock.`, "warning");
       return;
     }
 
-    const existingInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
-    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
-      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${dish.name}.`, "warning");
+    const parsedAddons = parseDishAddons(dish.addons || (dish as any).variants);
+    if (parsedAddons.length > 0) {
+      setAddonModalDish({
+        ...dish,
+        parsedAddons,
+      });
       return;
     }
 
@@ -434,6 +443,9 @@ function FoodExploreContent() {
       foodItemId: dish.id,
       name: dish.name,
       price: dish.price,
+      basePrice: dish.price,
+      addonsTotal: 0,
+      selectedAddons: [],
       quantity: 1,
       sellerId: dish.sellerId || "k-1",
       sellerName: dish.sellerName || "Verified Cloud Kitchen",
@@ -442,14 +454,24 @@ function FoodExploreContent() {
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: dish.itemType,
+      addons: parsedAddons,
     });
 
-    if (ok) {
+    if (showAnimation) {
       setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
-      showToast(`Added "${dish.name}" to your cart!`, "success");
       setTimeout(() => {
         setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
-      }, 1800);
+      }, 1000);
+    }
+  };
+
+  const handleDecreaseFromCart = (dishId: string) => {
+    const matching = cartItems.filter((ci) => ci.id === dishId || ci.foodItemId === dishId);
+    if (matching.length > 0) {
+      const target = matching[matching.length - 1];
+      decreaseQuantity(target.id);
+    } else {
+      decreaseQuantity(dishId);
     }
   };
 
@@ -1134,11 +1156,16 @@ function FoodExploreContent() {
               >
                 {filteredFoodItems.map((dish) => {
                   const isSellerClosed = dish.sellerIsOnline === false;
-                  const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0 || dish.isAvailable === false;
+                  const rawStock = (dish as any).maxStock !== undefined ? (dish as any).maxStock : (dish as any).stockQuantity;
+                  const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+                  const isOutOfStock = stockLimit === 0 || dish.isAvailable === false;
                   const isClosed = isSellerClosed || isOutOfStock;
                   const isAdded = addedIds[dish.id];
-                  const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
-                  const isMaxStockInCart = !isClosed && dish.stockQuantity !== undefined && dish.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= dish.stockQuantity : false);
+                  const matchingInCart = cartItems.filter((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+                  const quantityInCart = matchingInCart.reduce((sum, ci) => sum + ci.quantity, 0);
+                  const isMaxStockInCart = !isClosed && stockLimit !== -1 && quantityInCart >= stockLimit;
+                  const dishAddons = parseDishAddons(dish.addons || (dish as any).variants);
+                  const hasAddons = dishAddons.length > 0;
 
                   // Check if dish has an applicable coupon
                   const matchedCoupon = homeData.coupons.find(
@@ -1320,18 +1347,33 @@ function FoodExploreContent() {
                           </Link>
                         </div>
 
+                        {/* Add-ons Available Badge */}
+                        {hasAddons && !isClosed && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "1px 0" }}>
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: "700",
+                                color: "#EA580C",
+                                backgroundColor: "#FFF7ED",
+                                border: "1px solid #FFEDD5",
+                                padding: "2px 7px",
+                                borderRadius: "6px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Sparkles size={11} />
+                              <span>{dishAddons.length} Add-on{dishAddons.length > 1 ? "s" : ""} Available</span>
+                            </span>
+                          </div>
+                        )}
+
                         {/* Stock Quantity / Status Text */}
                         {isOutOfStock ? (
                           <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: "700" }}>
                             Out of stock
-                          </div>
-                        ) : isMaxStockInCart ? (
-                          <div style={{ fontSize: "0.76rem", color: "#D97706", fontWeight: "700" }}>
-                            Max in cart ({dish.stockQuantity})
-                          </div>
-                        ) : dish.stockQuantity !== undefined && dish.stockQuantity > 0 && dish.stockQuantity <= 5 ? (
-                          <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
-                            Only {dish.stockQuantity} left in stock
                           </div>
                         ) : null}
 
@@ -1363,7 +1405,7 @@ function FoodExploreContent() {
                           {isClosed ? (
                             <button
                               type="button"
-                              onClick={() => handleAddToCart(dish)}
+                              onClick={() => handleAddToCart(dish, true)}
                               style={{
                                 backgroundColor: "#F1F5F9",
                                 color: "#64748B",
@@ -1379,12 +1421,145 @@ function FoodExploreContent() {
                             >
                               {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
                             </button>
+                          ) : isAdded ? (
+                            <button
+                              type="button"
+                              style={{
+                                backgroundColor: "#10B981",
+                                color: "#FFFFFF",
+                                fontSize: "0.86rem",
+                                fontWeight: "700",
+                                padding: "7px 16px",
+                                borderRadius: "12px",
+                                border: "none",
+                                cursor: "default",
+                                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
+                                transition: "all 0.2s ease",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <span>Added!</span>
+                              <span>✓</span>
+                            </button>
+                          ) : quantityInCart > 0 ? (
+                            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                              {isMaxStockInCart && (
+                                <span
+                                  style={{
+                                    position: "absolute",
+                                    bottom: "calc(100% + 4px)",
+                                    left: "0",
+                                    right: "0",
+                                    width: "100%",
+                                    zIndex: 10,
+                                    pointerEvents: "none",
+                                    fontSize: "0.58rem",
+                                    color: "#EA580C",
+                                    backgroundColor: "#FFF7ED",
+                                    border: "1px solid #FFEDD5",
+                                    borderRadius: "6px",
+                                    padding: "2px 3px",
+                                    fontWeight: "800",
+                                    textAlign: "center",
+                                    lineHeight: "1.15",
+                                    boxShadow: "0 2px 6px rgba(234, 88, 12, 0.12)",
+                                    boxSizing: "border-box",
+                                    whiteSpace: "normal",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  We have only {stockLimit} left in stock
+                                </span>
+                              )}
+                              <div
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  backgroundColor: "#FFF7ED",
+                                  border: "1.5px solid #FF6B00",
+                                  borderRadius: "10px",
+                                  overflow: "hidden",
+                                  boxShadow: "0 2px 8px rgba(255, 107, 0, 0.15)",
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleDecreaseFromCart(dish.id)}
+                                  style={{
+                                    padding: "5px 11px",
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontWeight: "800",
+                                    fontSize: "1rem",
+                                    color: "#FF6B00",
+                                    transition: "background-color 0.15s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)")}
+                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                  aria-label="Decrease quantity"
+                                >
+                                  -
+                                </button>
+                                <span
+                                  style={{
+                                    padding: "5px 10px",
+                                    fontWeight: "800",
+                                    fontSize: "0.88rem",
+                                    color: "#FF6B00",
+                                    backgroundColor: "#FFFFFF",
+                                    borderLeft: "1.5px solid #FF6B00",
+                                    borderRight: "1.5px solid #FF6B00",
+                                    minWidth: "22px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {quantityInCart}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isMaxStockInCart) {
+                                      showToast(`We have only ${stockLimit} left in stock.`, "warning");
+                                    } else {
+                                      handleAddToCart(dish, false);
+                                    }
+                                  }}
+                                  style={{
+                                    padding: "5px 11px",
+                                    backgroundColor: "transparent",
+                                    border: "none",
+                                    cursor: isMaxStockInCart ? "not-allowed" : "pointer",
+                                    opacity: isMaxStockInCart ? 0.35 : 1,
+                                    fontWeight: "800",
+                                    fontSize: "1rem",
+                                    color: "#FF6B00",
+                                    transition: "background-color 0.15s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (!isMaxStockInCart) e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)";
+                                  }}
+                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                  aria-label="Increase quantity"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
                           ) : (
                             <button
                               type="button"
-                              onClick={() => handleAddToCart(dish)}
+                              onClick={() => handleAddToCart(dish, true)}
                               style={{
-                                backgroundColor: isAdded ? "#10B981" : "#FF6B00",
+                                backgroundColor: "#FF6B00",
                                 color: "#FFFFFF",
                                 fontSize: "0.86rem",
                                 fontWeight: "700",
@@ -1392,13 +1567,15 @@ function FoodExploreContent() {
                                 borderRadius: "12px",
                                 border: "none",
                                 cursor: "pointer",
-                                boxShadow: isAdded
-                                  ? "0 4px 12px rgba(16, 185, 129, 0.25)"
-                                  : "0 4px 12px rgba(255, 107, 0, 0.25)",
+                                boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
                                 transition: "all 0.2s ease",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
                               }}
                             >
-                              {isAdded ? "Added! ✓" : "Add to Cart"}
+                              <span>{hasAddons ? "Add Item" : "Add to Cart"}</span>
+                              {hasAddons && <span style={{ fontSize: "0.76rem", opacity: 0.9 }}>+</span>}
                             </button>
                           )}
                         </div>
@@ -1665,66 +1842,57 @@ function FoodExploreContent() {
         )}
       </main>
 
-      {/* Addon Customization Modal */}
-      {customizingDish && (
+      {/* Add-on Customization Modal */}
+      {addonModalDish && (
         <AddonCustomizationModal
-          isOpen={!!customizingDish}
-          onClose={() => setCustomizingDish(null)}
+          isOpen={!!addonModalDish}
+          onClose={() => setAddonModalDish(null)}
           item={{
-            id: customizingDish.id,
-            name: customizingDish.name,
-            price: customizingDish.price,
-            basePrice: customizingDish.price,
-            description: customizingDish.description || undefined,
-            imageUrl: customizingDish.imageUrl || undefined,
-            itemType: customizingDish.itemType || undefined,
-            addons: (() => {
-              try {
-                const raw = (customizingDish as any).addons || (customizingDish as any).variants;
-                if (typeof raw === "string") return JSON.parse(raw);
-                if (Array.isArray(raw)) return raw;
-              } catch (e) {}
-              return [];
-            })(),
+            id: addonModalDish.id,
+            name: addonModalDish.name,
+            price: addonModalDish.price,
+            basePrice: addonModalDish.price,
+            description: addonModalDish.description,
+            imageUrl: addonModalDish.imageUrl || "/images/places/place-biryani.png",
+            itemType: addonModalDish.itemType,
+            isVeg: addonModalDish.itemType === "VEG" || !addonModalDish.name?.toLowerCase().includes("chicken"),
+            addons: addonModalDish.parsedAddons || [],
           }}
-          onAddToCart={(selectedAddons) => {
-            const rawStock = (customizingDish as any).maxStock !== undefined ? (customizingDish as any).maxStock : (customizingDish as any).stockQuantity;
+          onAddToCart={(selectedAddons, quantity) => {
+            const base = addonModalDish.price;
+            const addonsTotal = selectedAddons.reduce((sum, a) => sum + (a.price || 0), 0);
+            const unitPrice = base + addonsTotal;
+            const rawStock = (addonModalDish as any).maxStock !== undefined ? (addonModalDish as any).maxStock : (addonModalDish as any).stockQuantity;
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
-            const addonsSum = selectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+            const itemImg = addonModalDish.imageUrl || "/images/places/place-biryani.png";
+            const baseFoodId = addonModalDish.id;
+            const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
 
-            const ok = addToCart({
-              id: customizingDish.id,
-              foodItemId: customizingDish.id,
-              name: customizingDish.name,
-              basePrice: customizingDish.price,
-              price: customizingDish.price + addonsSum,
-              addonsTotal: addonsSum,
+            addToCart({
+              id: cartItemId,
+              foodItemId: baseFoodId,
+              name: addonModalDish.name,
+              price: unitPrice,
+              basePrice: base,
+              addonsTotal: addonsTotal,
               selectedAddons: selectedAddons,
-              addons: (() => {
-                try {
-                  const raw = (customizingDish as any).addons || (customizingDish as any).variants;
-                  if (typeof raw === "string") return JSON.parse(raw);
-                  if (Array.isArray(raw)) return raw;
-                } catch (e) {}
-                return [];
-              })(),
-              quantity: 1,
-              sellerId: customizingDish.sellerId || "k-1",
-              sellerName: customizingDish.sellerName || "Verified Cloud Kitchen",
-              image: customizingDish.imageUrl || "/images/places/place-biryani.png",
-              imageUrl: customizingDish.imageUrl || "/images/places/place-biryani.png",
+              quantity: quantity || 1,
+              sellerId: addonModalDish.sellerId || "k-1",
+              sellerName: addonModalDish.sellerName || "Verified Cloud Kitchen",
+              image: itemImg,
+              imageUrl: itemImg,
               stockQuantity: stockLimit,
               maxStock: stockLimit,
+              itemType: addonModalDish.itemType,
+              addons: addonModalDish.parsedAddons,
             });
 
-            if (ok) {
-              setAddedIds((prev) => ({ ...prev, [customizingDish.id]: true }));
-              showToast(`Added "${customizingDish.name}" to your cart!`, "success");
-              setCustomizingDish(null);
-              setTimeout(() => {
-                setAddedIds((prev) => ({ ...prev, [customizingDish.id]: false }));
-              }, 1800);
-            }
+            setAddedIds((prev) => ({ ...prev, [addonModalDish.id]: true }));
+            setTimeout(() => {
+              setAddedIds((prev) => ({ ...prev, [addonModalDish.id]: false }));
+            }, 1000);
+
+            setAddonModalDish(null);
           }}
         />
       )}
