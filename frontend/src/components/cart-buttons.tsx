@@ -197,8 +197,24 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                     </button>
                 </div>
                 {isAtMaxStock && (
-                    <span style={{ fontSize: '0.68rem', color: '#DC2626', fontWeight: '700', textAlign: 'center' }}>
-                        Out of stock
+                    <span
+                        style={{
+                            fontSize: '0.70rem',
+                            color: '#EA580C',
+                            backgroundColor: '#FFF7ED',
+                            border: '1px solid #FFEDD5',
+                            borderRadius: '6px',
+                            padding: '2px 8px',
+                            fontWeight: '700',
+                            textAlign: 'center',
+                            lineHeight: '1.25',
+                            marginTop: '3px',
+                            display: 'inline-block',
+                            maxWidth: '100%',
+                            boxSizing: 'border-box',
+                        }}
+                    >
+                        Only {stockLimit} left in stock
                     </span>
                 )}
             </div>

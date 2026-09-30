@@ -1309,8 +1309,8 @@ function FoodExploreContent() {
                             Out of stock
                           </div>
                         ) : isMaxStockInCart ? (
-                          <div style={{ fontSize: "0.76rem", color: "#D97706", fontWeight: "700" }}>
-                            Max in cart ({dish.stockQuantity})
+                          <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
+                            Only {dish.stockQuantity} left in stock
                           </div>
                         ) : dish.stockQuantity !== undefined && dish.stockQuantity > 0 && dish.stockQuantity <= 5 ? (
                           <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>

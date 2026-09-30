@@ -308,8 +308,8 @@ export default function DashboardBody({
                       Out of stock
                     </span>
                   ) : isMaxStockInCart ? (
-                    <span style={{ fontSize: "0.74rem", color: "#D97706", fontWeight: "700" }}>
-                      Max in cart ({item.stockQuantity})
+                    <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
+                      Only {item.stockQuantity} left in stock
                     </span>
                   ) : item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
                     <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>

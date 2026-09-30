@@ -338,8 +338,8 @@ export default function PopularOrders({
                     Out of stock
                   </span>
                 ) : isMaxStockInCart ? (
-                  <span style={{ fontSize: "0.74rem", color: "#D97706", fontWeight: "700" }}>
-                    Max in cart ({stockLimit})
+                  <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
+                    Only {stockLimit} left in stock
                   </span>
                 ) : stockLimit > 0 && stockLimit <= 5 ? (
                   <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
