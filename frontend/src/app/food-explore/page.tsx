@@ -46,7 +46,7 @@ function FoodExploreContent() {
   const sortParam = searchParams.get("sort") || "popular";
 
   const { defaultAddress, openLocationModal } = useLocation();
-  const { addToCart, showToast, cartItems } = useCart();
+  const { addToCart, decreaseQuantity, showToast, cartItems } = useCart();
   const homeData = useHomeData();
 
   // Local Filter States
@@ -423,11 +423,15 @@ function FoodExploreContent() {
       maxStock: stockLimit,
       itemType: dish.itemType,
     });
+  };
 
-    setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
-    setTimeout(() => {
-      setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
-    }, 1800);
+  const handleDecreaseFromCart = (dishId: string) => {
+    const existingInCart = cartItems.find((ci) => ci.id === dishId || ci.foodItemId === dishId);
+    if (existingInCart) {
+      decreaseQuantity(existingInCart.id);
+    } else {
+      decreaseQuantity(dishId);
+    }
   };
 
   return (
@@ -1107,8 +1111,8 @@ function FoodExploreContent() {
                   const isSellerClosed = dish.sellerIsOnline === false;
                   const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0 || dish.isAvailable === false;
                   const isClosed = isSellerClosed || isOutOfStock;
-                  const isAdded = addedIds[dish.id];
                   const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+                  const quantityInCart = currentInCart ? currentInCart.quantity : 0;
                   const isMaxStockInCart = !isClosed && dish.stockQuantity !== undefined && dish.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= dish.stockQuantity : false);
 
                   // Check if dish has an applicable coupon
@@ -1350,12 +1354,88 @@ function FoodExploreContent() {
                             >
                               {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
                             </button>
+                          ) : quantityInCart > 0 ? (
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                backgroundColor: "#FFF7ED",
+                                border: "1.5px solid #FF6B00",
+                                borderRadius: "10px",
+                                overflow: "hidden",
+                                boxShadow: "0 2px 8px rgba(255, 107, 0, 0.15)",
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleDecreaseFromCart(dish.id)}
+                                style={{
+                                  padding: "5px 11px",
+                                  backgroundColor: "transparent",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  fontWeight: "800",
+                                  fontSize: "1rem",
+                                  color: "#FF6B00",
+                                  transition: "background-color 0.15s ease",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)")}
+                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                aria-label="Decrease quantity"
+                              >
+                                -
+                              </button>
+                              <span
+                                style={{
+                                  padding: "5px 10px",
+                                  fontWeight: "800",
+                                  fontSize: "0.88rem",
+                                  color: "#FF6B00",
+                                  backgroundColor: "#FFFFFF",
+                                  borderLeft: "1.5px solid #FF6B00",
+                                  borderRight: "1.5px solid #FF6B00",
+                                  minWidth: "22px",
+                                  textAlign: "center",
+                                }}
+                              >
+                                {quantityInCart}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleAddToCart(dish)}
+                                disabled={isMaxStockInCart}
+                                style={{
+                                  padding: "5px 11px",
+                                  backgroundColor: "transparent",
+                                  border: "none",
+                                  cursor: isMaxStockInCart ? "not-allowed" : "pointer",
+                                  opacity: isMaxStockInCart ? 0.35 : 1,
+                                  fontWeight: "800",
+                                  fontSize: "1rem",
+                                  color: "#FF6B00",
+                                  transition: "background-color 0.15s ease",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                                onMouseOver={(e) => {
+                                  if (!isMaxStockInCart) e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)";
+                                }}
+                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                aria-label="Increase quantity"
+                              >
+                                +
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"
                               onClick={() => handleAddToCart(dish)}
                               style={{
-                                backgroundColor: isAdded ? "#10B981" : "#FF6B00",
+                                backgroundColor: "#FF6B00",
                                 color: "#FFFFFF",
                                 fontSize: "0.86rem",
                                 fontWeight: "700",
@@ -1363,13 +1443,11 @@ function FoodExploreContent() {
                                 borderRadius: "12px",
                                 border: "none",
                                 cursor: "pointer",
-                                boxShadow: isAdded
-                                  ? "0 4px 12px rgba(16, 185, 129, 0.25)"
-                                  : "0 4px 12px rgba(255, 107, 0, 0.25)",
+                                boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
                                 transition: "all 0.2s ease",
                               }}
                             >
-                              {isAdded ? "Added! ✓" : "Add to Cart"}
+                              Add to Cart
                             </button>
                           )}
                         </div>
