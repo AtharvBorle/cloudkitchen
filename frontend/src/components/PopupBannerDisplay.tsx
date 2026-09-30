@@ -44,7 +44,7 @@ export default function PopupBannerDisplay({ sellerId }: { sellerId?: string }) 
                     }
                 }
             } catch (error) {
-                console.error("Failed to fetch public banners:", error);
+                console.warn("Could not load popup banners:", error);
             }
         };
 

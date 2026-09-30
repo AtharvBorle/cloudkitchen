@@ -457,18 +457,30 @@ export default function UserFoodPage() {
                         {foodCategories.find(c => c.id === selectedCategoryId)?.name || "Food Items"}
                     </h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
-                        {filteredFood.map(item => (
-                            <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s ease' }} className="hover-lift">
+                        {filteredFood.map(item => {
+                            const isOutOfStock = item.stockQuantity === 0;
+                            const isStoreOffline = item.sellerIsOnline === false;
+                            const isGrey = isOutOfStock || isStoreOffline;
+
+                            return (
+                            <div key={item.id} style={{ backgroundColor: isGrey ? '#F8FAFC' : 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: isGrey ? '0 2px 6px rgba(0,0,0,0.02)' : 'var(--shadow-card)', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s ease', opacity: isGrey ? 0.75 : 1, border: isGrey ? '1.5px solid #E2E8F0' : undefined }} className="hover-lift">
                                 <Link href={`/shop/${item.sellerTrackingId}`} style={{ display: 'block', height: '180px', position: 'relative' }}>
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '5px 10px', borderRadius: '20px', fontWeight: 'bold', color: 'var(--coral)', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                                    <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: isGrey ? 'grayscale(80%)' : 'none' }} />
+                                    <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '5px 10px', borderRadius: '20px', fontWeight: 'bold', color: isGrey ? '#64748B' : 'var(--coral)', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
                                         ₹{item.price}
                                     </div>
+                                    {isGrey && (
+                                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3 }}>
+                                            <span style={{ backgroundColor: isOutOfStock ? '#DC2626' : '#0F172A', color: '#FFFFFF', fontSize: '11px', fontWeight: '800', letterSpacing: '0.8px', padding: '5px 12px', borderRadius: '12px', textTransform: 'uppercase', boxShadow: '0 3px 10px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.25)' }}>
+                                                {isOutOfStock ? 'Out of Stock' : 'Closed'}
+                                            </span>
+                                        </div>
+                                    )}
                                 </Link>
                                 <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                     <Link href={`/shop/${item.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: isGrey ? '#64748B' : 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             {item.name}
                                             <span style={{
                                                 display: 'inline-block',
@@ -491,21 +503,18 @@ export default function UserFoodPage() {
                                             ) : null}
                                         </p>
                                         <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                                        <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                            {item.stockQuantity === 0 ? (
-                                                <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                            ) : item.stockQuantity > 0 ? (
-                                                <span>Only {item.stockQuantity} left!</span>
-                                            ) : (
-                                                <span style={{ color: '#10B981' }}>In Stock</span>
-                                            )}
-                                        </div>
+                                        {isOutOfStock && (
+                                            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                                <span style={{ color: '#DC2626', fontWeight: 'bold' }}>Out of Stock</span>
+                                            </div>
+                                        )}
                                     </Link>
 
-                                    <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
+                                    <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || isOutOfStock} />
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             ) : (
@@ -519,18 +528,30 @@ export default function UserFoodPage() {
                                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>{grouped[catName].length} items</span>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
-                                {grouped[catName].map(item => (
-                                    <div key={item.id} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s ease' }} className="hover-lift">
+                                {grouped[catName].map(item => {
+                                    const isOutOfStock = item.stockQuantity === 0;
+                                    const isStoreOffline = item.sellerIsOnline === false;
+                                    const isGrey = isOutOfStock || isStoreOffline;
+
+                                    return (
+                                    <div key={item.id} style={{ backgroundColor: isGrey ? '#F8FAFC' : 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: isGrey ? '0 2px 6px rgba(0,0,0,0.02)' : 'var(--shadow-card)', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s ease', opacity: isGrey ? 0.75 : 1, border: isGrey ? '1.5px solid #E2E8F0' : undefined }} className="hover-lift">
                                         <Link href={`/shop/${item.sellerTrackingId}`} style={{ display: 'block', height: '180px', position: 'relative' }}>
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '5px 10px', borderRadius: '20px', fontWeight: 'bold', color: 'var(--coral)', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                                            <img src={item.imageUrl || placeholderImage} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: isGrey ? 'grayscale(80%)' : 'none' }} />
+                                            <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '5px 10px', borderRadius: '20px', fontWeight: 'bold', color: isGrey ? '#64748B' : 'var(--coral)', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
                                                 ₹{item.price}
                                             </div>
+                                            {isGrey && (
+                                                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3 }}>
+                                                    <span style={{ backgroundColor: isOutOfStock ? '#DC2626' : '#0F172A', color: '#FFFFFF', fontSize: '11px', fontWeight: '800', letterSpacing: '0.8px', padding: '5px 12px', borderRadius: '12px', textTransform: 'uppercase', boxShadow: '0 3px 10px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.25)' }}>
+                                                        {isOutOfStock ? 'Out of Stock' : 'Closed'}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </Link>
                                         <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                             <Link href={`/shop/${item.sellerTrackingId}`} style={{ color: 'inherit', textDecoration: 'none', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: isGrey ? '#64748B' : 'var(--text-main)', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     {item.name}
                                                     <span style={{
                                                         display: 'inline-block',
@@ -553,21 +574,18 @@ export default function UserFoodPage() {
                                                     ) : null}
                                                 </p>
                                                 <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                                                <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                                                    {item.stockQuantity === 0 ? (
-                                                        <span style={{ color: '#EF4444', fontWeight: 'bold' }}>Out of Stock</span>
-                                                    ) : item.stockQuantity > 0 ? (
-                                                        <span>Only {item.stockQuantity} left!</span>
-                                                    ) : (
-                                                        <span style={{ color: '#10B981' }}>In Stock</span>
-                                                    )}
-                                                </div>
+                                                {isOutOfStock && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                                        <span style={{ color: '#DC2626', fontWeight: 'bold' }}>Out of Stock</span>
+                                                    </div>
+                                                )}
                                             </Link>
 
-                                            <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || item.stockQuantity === 0} />
+                                            <AddToCartButton item={{ ...item, sellerId: item.sellerId, sellerName: item.sellerName }} disabled={!item.sellerIsOnline || isOutOfStock} />
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     ))}

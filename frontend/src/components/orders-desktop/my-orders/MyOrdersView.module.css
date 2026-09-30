@@ -344,6 +344,13 @@
   margin: 0 4px 18px 4px;
 }
 
+.stepperLineHalf {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, #059669 50%, #e2e8f0 50%);
+  margin: 0 4px 18px 4px;
+}
+
 .stepperLinePending {
   flex: 1;
   height: 2px;
@@ -1130,6 +1137,7 @@
   }
 
   .stepperLineDone,
+  .stepperLineHalf,
   .stepperLinePending {
     flex: 1;
     margin: 0 1px 10px 1px;
@@ -1324,6 +1332,7 @@
   }
 
   .stepperLineDone,
+  .stepperLineHalf,
   .stepperLinePending {
     margin: 0 1px 8px 1px;
     height: 1px;

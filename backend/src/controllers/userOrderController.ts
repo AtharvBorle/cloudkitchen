@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { revalidateTag } from "next/cache";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
@@ -193,31 +194,45 @@ export const createOrder = async (req: Request) => {
     }
 
     // --- Coupon Validation Logic ---
+    let validatedCoupon: any = null;
     if (appliedCouponId) {
-        const coupon = await db.coupon.findUnique({ where: { id: appliedCouponId } });
-        if (!coupon) throw new ApiError("Invalid coupon selected", 400);
-        if (!coupon.isActive) throw new ApiError("This coupon is no longer active", 400);
+        validatedCoupon = await db.coupon.findFirst({
+            where: {
+                OR: [
+                    { id: appliedCouponId },
+                    { code: { equals: appliedCouponId.trim(), mode: "insensitive" } }
+                ]
+            }
+        });
+        if (!validatedCoupon) throw new ApiError("Invalid coupon selected", 400);
+        if (!validatedCoupon.isActive) throw new ApiError("This coupon is no longer active", 400);
 
         // Expiry check
-        if (!coupon.noExpiry && coupon.validUntil && new Date(coupon.validUntil) < new Date()) {
+        if (!validatedCoupon.noExpiry && validatedCoupon.validUntil && new Date(validatedCoupon.validUntil) < new Date()) {
             throw new ApiError("This coupon has expired", 400);
         }
 
         // Seller match check
-        if (coupon.appliesToSellerId && coupon.appliesToSellerId !== sellerProfile.id) {
-            throw new ApiError("This coupon is not valid for this store", 400);
+        if (validatedCoupon.appliesToSellerId && validatedCoupon.appliesToSellerId !== sellerProfile.id && validatedCoupon.appliesToSellerId !== sellerProfile.trackingId) {
+            const couponSeller = await db.sellerProfile.findFirst({
+                where: { OR: [{ id: validatedCoupon.appliesToSellerId }, { trackingId: validatedCoupon.appliesToSellerId }] },
+                select: { businessName: true }
+            });
+            const couponKitchenName = couponSeller?.businessName ? `"${couponSeller.businessName}"` : "its specific kitchen";
+            const currentKitchenName = sellerProfile.businessName ? `"${sellerProfile.businessName}"` : "this kitchen";
+            throw new ApiError(`Coupon "${validatedCoupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to ${currentKitchenName}.`, 400);
         }
 
         // Specific Item check
-        if (coupon.appliesToProductId) {
-            const hasProduct = items.some((it: any) => it.id === coupon.appliesToProductId || it.foodItemId === coupon.appliesToProductId);
+        if (validatedCoupon.appliesToProductId) {
+            const hasProduct = items.some((it: any) => it.id === validatedCoupon.appliesToProductId || it.foodItemId === validatedCoupon.appliesToProductId);
             if (!hasProduct) {
                 throw new ApiError("This coupon is only valid on specific items not found in your cart", 400);
             }
         }
 
         // Customer Eligibility check (NEW_ONLY)
-        if (coupon.customerEligibility === "NEW_ONLY") {
+        if (validatedCoupon.customerEligibility === "NEW_ONLY") {
             const previousOrdersCount = await db.order.count({
                 where: {
                     userId: session.user.id,
@@ -230,7 +245,7 @@ export const createOrder = async (req: Request) => {
         }
 
         // 1. Minimum Cart Value check
-        const minCart = coupon.minimumCartValue || (coupon as any).minOrderAmount;
+        const minCart = validatedCoupon.minimumCartValue || (validatedCoupon as any).minOrderAmount;
         if (minCart) {
             let baseTotal = 0;
             for (const item of items) {
@@ -242,12 +257,12 @@ export const createOrder = async (req: Request) => {
         }
 
         // 2. Max Usages Per User check
-        const userLimit = coupon.perUserLimit || coupon.maxUsagesPerUser;
+        const userLimit = validatedCoupon.perUserLimit || validatedCoupon.maxUsagesPerUser;
         if (userLimit) {
             const usageCount = await db.order.count({
                 where: {
                     userId: session.user.id,
-                    appliedCouponId: appliedCouponId,
+                    appliedCouponId: validatedCoupon.id,
                     status: { not: "CANCELLED" }
                 }
             });
@@ -257,16 +272,16 @@ export const createOrder = async (req: Request) => {
         }
 
         // 3. Max Users check
-        const totalLimit = coupon.usageLimit || coupon.maxUsers;
+        const totalLimit = validatedCoupon.usageLimit || validatedCoupon.maxUsers;
         if (totalLimit) {
-            if (coupon.currentUsersCount >= totalLimit) {
+            if (validatedCoupon.currentUsersCount >= totalLimit) {
                 throw new ApiError(`This coupon has reached its maximum users limit across the platform.`, 400);
             }
         }
 
         // 4. Category check
-        if (coupon.category && coupon.category !== "BOTH" && coupon.category !== sellerProfile.businessCategory) {
-            throw new ApiError(`This coupon is only valid for stores in the ${coupon.category} category.`, 400);
+        if (validatedCoupon.category && validatedCoupon.category !== "BOTH" && validatedCoupon.category !== sellerProfile.businessCategory) {
+            throw new ApiError(`This coupon is only valid for stores in the ${validatedCoupon.category} category.`, 400);
         }
     }
     // --- End Coupon Validation Logic ---
@@ -386,17 +401,18 @@ export const createOrder = async (req: Request) => {
                 paymentMethod: isOnlinePayment ? "ONLINE" : "COD",
                 totalAmount: totalAmount,
                 isPaid: isOnlinePayment,
-                appliedCouponId: appliedCouponId || null,
+                appliedCouponId: validatedCoupon ? validatedCoupon.id : (appliedCouponId || null),
                 razorpayOrderId: isOnlinePayment ? razorpay_order_id : null,
                 razorpayPaymentId: isOnlinePayment ? razorpay_payment_id : null,
             }
         })
     );
 
-    if (appliedCouponId) {
+    const couponRecordId = validatedCoupon ? validatedCoupon.id : appliedCouponId;
+    if (couponRecordId) {
         transactionOperations.push(
             db.coupon.update({
-                where: { id: appliedCouponId },
+                where: { id: couponRecordId },
                 data: { currentUsersCount: { increment: 1 } }
             })
         );
@@ -404,7 +420,7 @@ export const createOrder = async (req: Request) => {
 
     const results = await db.$transaction(transactionOperations);
     // Find the order from the transaction results. It's the one before the coupon update if applicable.
-    const order = appliedCouponId ? results[results.length - 2] : results[results.length - 1];
+    const order = couponRecordId ? results[results.length - 2] : results[results.length - 1];
 
     try {
         emitOrderCreated({
@@ -418,6 +434,13 @@ export const createOrder = async (req: Request) => {
         });
     } catch (e) {
         console.error("Realtime event emission error:", e);
+    }
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {
+        // Fallback
     }
 
     return {
@@ -531,6 +554,11 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
             });
         }
     }
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return cancelledOrder;
 };

@@ -180,7 +180,7 @@ export const initiateMealSubscriptionPayment = async (req: Request) => {
                 }
             });
             rzpOrderId = rzpOrder.id;
-            rzpAmount = rzpOrder.amount;
+            rzpAmount = Number(rzpOrder.amount);
             rzpCurrency = rzpOrder.currency;
         } catch (error: any) {
             console.error("Razorpay live order creation error for meal subscription:", error);

@@ -331,7 +331,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                         opacity: 0.8,
                       }}
                     >
-                      Unavailable
+                      Out of Stock
                     </button>
                   ) : (() => {
                     const currentQty = getItemQuantity(item.id);

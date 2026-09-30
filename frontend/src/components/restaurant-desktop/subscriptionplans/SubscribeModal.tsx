@@ -100,7 +100,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     setErrorMsg(null);
 
     if ((session?.user as any)?.phone) {
-      setContactPhone((session.user as any).phone);
+      setContactPhone((session?.user as any).phone);
     }
 
     // Prefill default address if empty

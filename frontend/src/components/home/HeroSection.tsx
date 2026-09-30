@@ -51,9 +51,11 @@ const QUICK_TAGS = [
 const PRESET_LOCATIONS = [
   { name: "Kothrud, Pune", pincode: "411038" },
   { name: "Baner, Pune", pincode: "411045" },
-  { name: "Viman Nagar, Pune", pincode: "411014" },
-  { name: "Wakad, Pune", pincode: "411057" },
   { name: "Aundh, Pune", pincode: "411007" },
+  { name: "Hinjawadi, Pune", pincode: "411057" },
+  { name: "Deccan, Pune", pincode: "411004" },
+  { name: "Viman Nagar, Pune", pincode: "411014" },
+  { name: "Karve Nagar, Pune", pincode: "411051" },
   { name: "Hadapsar, Pune", pincode: "411028" },
   { name: "Kalyani Nagar, Pune", pincode: "411006" },
 ];
@@ -290,12 +292,15 @@ export default function HeroSection({
             const data = await res.json();
             const address = data.address || {};
             const suburb = address.suburb || address.neighbourhood || address.residential || address.city_district || "";
+            const rawPostcode = (address.postcode || "").replace(/\D/g, "").slice(0, 6);
+            const postcode = rawPostcode || "";
             const city = address.city || address.town || address.state_district || "Pune";
-            const postcode = address.postcode || "411038";
 
-            const formatted = suburb ? `${suburb}, ${city}` : `${city} (${postcode})`;
+            const formatted = suburb ? `${suburb}, ${city}` : postcode ? `${city} (${postcode})` : city || "Current Location";
             setSelectedLocation(formatted);
-            setGuestLocation(postcode);
+            if (postcode) {
+              setGuestLocation(postcode, suburb || formatted, city, lat, lng);
+            }
           }
         } catch {
           setSelectedLocation("Current GPS Location");
@@ -556,8 +561,8 @@ export default function HeroSection({
               <span
                 style={{
                   fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#0F172A",
+                  fontWeight: selectedLocation === "Select Location" ? "500" : "600",
+                  color: selectedLocation === "Select Location" ? "#64748B" : "#0F172A",
                   whiteSpace: "nowrap",
                   fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                   maxWidth: "130px",

@@ -47,11 +47,14 @@ export function formatDistance(distanceKm?: number | null): string {
 export const PINCODE_COORDINATES: Record<string, { lat: number; lng: number; locality: string; city: string }> = {
   // Pune Central & West
   "411038": { lat: 18.5074, lng: 73.8077, locality: "Kothrud", city: "Pune" },
-  "411004": { lat: 18.5173, lng: 73.8415, locality: "Deccan Gymkhana", city: "Pune" },
-  "411016": { lat: 18.5362, lng: 73.8298, locality: "Model Colony / SB Road", city: "Pune" },
+  "411051": { lat: 18.5016, lng: 73.8216, locality: "Dattawadi / Karve Nagar", city: "Pune" },
   "411052": { lat: 18.4965, lng: 73.8188, locality: "Karve Nagar", city: "Pune" },
+  "411004": { lat: 18.5173, lng: 73.8415, locality: "Deccan Gymkhana", city: "Pune" },
+  "411030": { lat: 18.5124, lng: 73.8478, locality: "Sadashiv Peth / Narayan Peth", city: "Pune" },
+  "411016": { lat: 18.5362, lng: 73.8298, locality: "Model Colony / SB Road", city: "Pune" },
   "411058": { lat: 18.4891, lng: 73.8105, locality: "Warje", city: "Pune" },
   "411041": { lat: 18.4682, lng: 73.8368, locality: "Vadgaon Budruk / Sinhagad Rd", city: "Pune" },
+  "411023": { lat: 18.4620, lng: 73.7920, locality: "Dhayari", city: "Pune" },
 
   // Pune North & IT Corridor
   "411045": { lat: 18.5590, lng: 73.7868, locality: "Baner", city: "Pune" },
@@ -68,11 +71,14 @@ export const PINCODE_COORDINATES: Record<string, { lat: number; lng: number; loc
   "411002": { lat: 18.5158, lng: 73.8560, locality: "Budhwar Peth / Swargate", city: "Pune" },
   "411005": { lat: 18.5314, lng: 73.8446, locality: "Shivajinagar", city: "Pune" },
   "411006": { lat: 18.5529, lng: 73.8797, locality: "Yerwada", city: "Pune" },
+  "411009": { lat: 18.4912, lng: 73.8543, locality: "Parvati / Sahakar Nagar", city: "Pune" },
   "411014": { lat: 18.5679, lng: 73.9143, locality: "Viman Nagar", city: "Pune" },
   "411011": { lat: 18.5284, lng: 73.8740, locality: "Koregaon Park / Bund Garden", city: "Pune" },
+  "411015": { lat: 18.5620, lng: 73.8900, locality: "Dhanori / Vishrantwadi", city: "Pune" },
   "411028": { lat: 18.5089, lng: 73.9259, locality: "Hadapsar / Magarpatta", city: "Pune" },
   "411036": { lat: 18.5360, lng: 73.9015, locality: "Kalyani Nagar", city: "Pune" },
   "411037": { lat: 18.4872, lng: 73.8732, locality: "Salunke Vihar / Wanowrie", city: "Pune" },
+  "411046": { lat: 18.4550, lng: 73.8550, locality: "Katraj / Ambegaon", city: "Pune" },
   "411048": { lat: 18.4680, lng: 73.8820, locality: "Kondhwa", city: "Pune" },
   "411040": { lat: 18.5410, lng: 73.9450, locality: "Kharadi", city: "Pune" },
 

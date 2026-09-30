@@ -152,6 +152,35 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
+    // 6. Price Tier Filter
+    if (activeFilters.priceTier && activeFilters.priceTier !== "all") {
+      const tier = activeFilters.priceTier;
+      list = list.filter((k) => {
+        const kId = (k.id || "").toLowerCase().trim();
+        const kTracking = (k.trackingId || "").toLowerCase().trim();
+        const kName = (k.name || "").toLowerCase().trim();
+
+        const dishes = sourceFoodItems.filter((f) => {
+          const fSellerId = (f.sellerId || "").toLowerCase().trim();
+          const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+          const fSellerName = (f.sellerName || "").toLowerCase().trim();
+          return (
+            (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+            (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+            (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+          );
+        });
+
+        const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
+        if (prices.length === 0) return false;
+
+        if (tier === "under-150") return prices.some((p) => p <= 150);
+        if (tier === "150-300") return prices.some((p) => p >= 150 && p <= 300);
+        if (tier === "300-plus") return prices.some((p) => p >= 300);
+        return true;
+      });
+    }
+
     return list.map((k) => ({
       id: k.id,
       name: k.name,
@@ -294,25 +323,48 @@ export default function Home() {
       if (filtered.length > 0) list = filtered;
     }
 
+    if (activeFilters.offersOnly) {
+      list = list.filter((f) => {
+        return homeData.coupons.some(
+          (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
+        );
+      });
+    }
+
     if (activeFilters.minRating) {
       const filtered = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
       if (filtered.length > 0) list = filtered;
     }
 
-    return list.slice(0, 4).map((f) => ({
-      id: f.id,
-      name: f.name,
-      rating: f.rating || 5.0,
-      time: f.deliveryTime || "20-30 min",
-      imageUrl: f.imageUrl || "/images/places/place-biryani.png",
-      link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
-      itemType: f.itemType || "VEG",
-      sellerIsOnline: f.sellerIsOnline !== false,
-      isAvailable: f.isAvailable !== false,
-      stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
-      distanceText: f.distanceText,
-    }));
-  }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
+    return list.slice(0, 4).map((f) => {
+      const matchedCoupon = homeData.coupons.find(
+        (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
+      );
+      const discountText = matchedCoupon
+        ? matchedCoupon.discountPercentage
+          ? `${matchedCoupon.discountPercentage}% OFF`
+          : matchedCoupon.discountAmount
+          ? `₹${matchedCoupon.discountAmount} OFF`
+          : "OFFER"
+        : undefined;
+
+      return {
+        id: f.id,
+        name: f.name,
+        rating: f.rating || 5.0,
+        time: f.deliveryTime || "20-30 min",
+        imageUrl: f.imageUrl || "/images/places/place-biryani.png",
+        link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
+        itemType: f.itemType || "VEG",
+        sellerIsOnline: f.sellerIsOnline !== false,
+        isAvailable: f.isAvailable !== false,
+        stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
+        maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
+        distanceText: f.distanceText,
+        discount: discountText,
+      };
+    });
+  }, [homeData.foodItems, homeData.allFoodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Top Rated Items for DashboardBody
   const dynamicTopRated = useMemo(() => {
@@ -376,6 +428,7 @@ export default function Home() {
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
       stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
+      maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
       distanceText: f.distanceText,
     }));
   }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
@@ -432,6 +485,8 @@ export default function Home() {
       itemType: f.itemType || "VEG",
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
+      stockQuantity: f.stockQuantity,
+      maxStock: f.maxStock,
     }));
   }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
 

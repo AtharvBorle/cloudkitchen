@@ -88,6 +88,11 @@
   color: #dc2626;
 }
 
+.iconConfirm {
+  background-color: #fff7ed;
+  color: #ea580c;
+}
+
 .iconSuccess {
   background-color: #f0fdf4;
   color: #16a34a;
@@ -160,6 +165,43 @@
 .kitchenNoticeText {
   font-size: 0.875rem;
   color: #64748b;
+}
+
+.confirmNotice {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.confirmQuestion {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.confirmSubtext {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sectionBlock {

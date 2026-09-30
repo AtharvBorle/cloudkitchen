@@ -16,7 +16,10 @@ export interface DishItem {
   sellerIsOnline?: boolean;
   isOnline?: boolean;
   isAvailable?: boolean;
+  stockQuantity?: number;
+  maxStock?: number;
   distanceText?: string;
+  discount?: string;
 }
 
 interface BestPlacesProps {
@@ -109,8 +112,9 @@ export default function BestPlaces({
         >
           {displayDishes.slice(0, 4).map((dish) => {
             const isSellerClosed = dish.sellerIsOnline === false || dish.isOnline === false;
+            const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0;
             const isItemUnavailable = dish.isAvailable === false;
-            const isClosed = isSellerClosed || isItemUnavailable;
+            const isClosed = isSellerClosed || isItemUnavailable || isOutOfStock;
 
             return (
             <Link
@@ -163,6 +167,27 @@ export default function BestPlaces({
                       size="xs"
                     />
                   </div>
+                  {/* Offer Badge if coupon exists */}
+                  {dish.discount && !isClosed && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        backgroundColor: "#FF5500",
+                        color: "#FFFFFF",
+                        fontSize: "10px",
+                        fontWeight: "800",
+                        padding: "3px 7px",
+                        borderRadius: "6px",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                        zIndex: 2,
+                        letterSpacing: "0.3px",
+                      }}
+                    >
+                      {dish.discount}
+                    </div>
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={dish.imageUrl}
@@ -205,7 +230,7 @@ export default function BestPlaces({
                           border: "1px solid rgba(255,255,255,0.2)",
                         }}
                       >
-                        {isSellerClosed ? "🔴 CLOSED" : "🔴 UNAVAILABLE"}
+                        {isSellerClosed ? "🔴 CLOSED" : isOutOfStock ? "🔴 OUT OF STOCK" : "🔴 UNAVAILABLE"}
                       </span>
                     </div>
                   )}

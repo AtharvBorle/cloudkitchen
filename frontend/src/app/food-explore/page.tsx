@@ -31,6 +31,8 @@ import {
   isDishMatchingDiet,
   matchesKitchenOrDishSearch,
   matchesDishSearch,
+  matchesDishCategory,
+  matchesKitchenCategoryFilter,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 
@@ -107,10 +109,10 @@ function FoodExploreContent() {
 
     return {
       all: items.length,
-      veg: items.filter((f) => f.itemType === "VEG" || f.itemType === "VEGAN" || f.itemType === "JAIN").length,
-      non_veg: items.filter((f) => f.itemType === "NON_VEG" || f.itemType?.includes("NON_VEG")).length,
-      vegan: items.filter((f) => f.itemType === "VEGAN").length,
-      jain: items.filter((f) => f.itemType === "JAIN").length,
+      veg: items.filter((f) => isDishMatchingDiet(f, "veg")).length,
+      non_veg: items.filter((f) => isDishMatchingDiet(f, "non_veg")).length,
+      vegan: items.filter((f) => isDishMatchingDiet(f, "vegan")).length,
+      jain: items.filter((f) => isDishMatchingDiet(f, "jain")).length,
       under150: items.filter((f) => f.price <= 150).length,
       price150to300: items.filter((f) => f.price > 150 && f.price <= 300).length,
       price300plus: items.filter((f) => f.price > 300).length,
@@ -132,13 +134,7 @@ function FoodExploreContent() {
 
     // Category
     if (selectedCategory && selectedCategory !== "all" && selectedCategory !== "food") {
-      const cat = selectedCategory.toLowerCase();
-      list = list.filter(
-        (f) =>
-          f.categoryName?.toLowerCase().includes(cat) ||
-          f.name.toLowerCase().includes(cat) ||
-          f.description.toLowerCase().includes(cat)
-      );
+      list = list.filter((f) => matchesDishCategory(selectedCategory, f));
     }
 
     // Dietary
@@ -158,11 +154,7 @@ function FoodExploreContent() {
     // Cuisines
     if (selectedCuisines.length > 0) {
       list = list.filter((f) =>
-        selectedCuisines.some(
-          (c) =>
-            f.categoryName?.toLowerCase().includes(c.toLowerCase()) ||
-            f.name.toLowerCase().includes(c.toLowerCase())
-        )
+        selectedCuisines.some((c) => matchesDishCategory(c, f))
       );
     }
 
@@ -221,12 +213,10 @@ function FoodExploreContent() {
     }
 
     if (selectedCategory && selectedCategory !== "all" && selectedCategory !== "food") {
-      const cat = selectedCategory.toLowerCase();
       list = list.filter(
         (k) =>
-          k.category?.toLowerCase().includes(cat) ||
-          k.foodType?.toLowerCase().includes(cat) ||
-          k.name.toLowerCase().includes(cat)
+          matchesKitchenCategoryFilter(selectedCategory, k, sourceFoodItems) ||
+          matchesDishCategory(selectedCategory, { name: k.category, categoryName: k.category })
       );
     }
 
@@ -248,6 +238,33 @@ function FoodExploreContent() {
       list = list.filter((k) => k.isOnline !== false);
     }
 
+    if (selectedPrice && selectedPrice !== "all") {
+      list = list.filter((k) => {
+        const kId = (k.id || "").toLowerCase().trim();
+        const kTracking = (k.trackingId || "").toLowerCase().trim();
+        const kName = (k.name || "").toLowerCase().trim();
+
+        const dishes = sourceFoodItems.filter((f) => {
+          const fSellerId = (f.sellerId || "").toLowerCase().trim();
+          const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+          const fSellerName = (f.sellerName || "").toLowerCase().trim();
+          return (
+            (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+            (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+            (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+          );
+        });
+
+        const prices = dishes.map((d) => Number(d.price) || 0).filter((pr) => pr > 0);
+        if (prices.length === 0) return false;
+
+        if (selectedPrice === "under-150") return prices.some((p) => p <= 150);
+        if (selectedPrice === "150-300") return prices.some((p) => p >= 150 && p <= 300);
+        if (selectedPrice === "300-plus") return prices.some((p) => p >= 300);
+        return true;
+      });
+    }
+
     if (sortBy === "rating") {
       list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else if (sortBy === "fastest") {
@@ -264,9 +281,90 @@ function FoodExploreContent() {
     selectedCategory,
     selectedDiet,
     selectedCuisines,
+    selectedPrice,
     openOnly,
     sortBy,
   ]);
+
+  // Dynamic list of categories with live dish counts and emojis
+  const dynamicCategories = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; emoji: string; count: number }>();
+
+    const EMOJI_MAP: Record<string, string> = {
+      burger: "🍔",
+      cake: "🍰",
+      meal: "🍱",
+      mess: "🍲",
+      thali: "🍱",
+      biryani: "🍚",
+      pizza: "🍕",
+      shake: "🥤",
+      dalrice: "🍛",
+      "dal rice": "🍛",
+      dosa: "🥞",
+      idli: "🥟",
+      pohe: "🥣",
+      poha: "🥣",
+      sabudana: "🥣",
+      shira: "🍮",
+      sheera: "🍮",
+      upma: "🥣",
+      healthy: "🥗",
+      dessert: "🍨",
+      desserts: "🍨",
+      drinks: "🧃",
+      drink: "🧃",
+      beverages: "🧃",
+      beverage: "🧃",
+      snacks: "🍟",
+      snack: "🍟",
+      chinese: "🍜",
+      roll: "🌯",
+      sandwich: "🥪",
+      pastry: "🧁",
+      pastries: "🧁",
+    };
+
+    if (homeData.categories && Array.isArray(homeData.categories)) {
+      homeData.categories
+        .filter((c) => c.id !== "food" && c.id !== "rooms" && c.name)
+        .forEach((c) => {
+          const rawName = c.name.trim();
+          const lower = rawName.toLowerCase();
+          map.set(lower, {
+            id: c.id || lower,
+            name: rawName,
+            emoji: c.emoji && c.emoji !== "🍽️" && c.emoji !== "🍲" ? c.emoji : (EMOJI_MAP[lower] || "🍲"),
+            count: 0,
+          });
+        });
+    }
+
+    const sourceItems = homeData.allFoodItems?.length > 0 ? homeData.allFoodItems : homeData.foodItems;
+    sourceItems.forEach((f) => {
+      if (f.categoryName && f.categoryName.trim()) {
+        const rawName = f.categoryName.trim();
+        const lower = rawName.toLowerCase();
+        if (lower !== "food" && lower !== "rooms" && !map.has(lower)) {
+          map.set(lower, {
+            id: lower,
+            name: rawName.charAt(0).toUpperCase() + rawName.slice(1),
+            emoji: EMOJI_MAP[lower] || "🍲",
+            count: 0,
+          });
+        }
+      }
+    });
+
+    return Array.from(map.values()).map((cat) => ({
+      ...cat,
+      count: sourceItems.filter((f) => {
+        const matchesCategory = matchesDishCategory(cat.name, f);
+        const matchesDiet = selectedDiet === "all" ? true : isDishMatchingDiet(f, selectedDiet);
+        return matchesCategory && matchesDiet;
+      }).length,
+    }));
+  }, [homeData.categories, homeData.foodItems, homeData.allFoodItems, selectedDiet]);
 
   const activeFiltersCount =
     (selectedDiet !== "all" ? 1 : 0) +
@@ -343,6 +441,7 @@ function FoodExploreContent() {
       imageUrl: dish.imageUrl || "/images/places/place-biryani.png",
       stockQuantity: stockLimit,
       maxStock: stockLimit,
+      itemType: dish.itemType,
     });
 
     setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
@@ -488,7 +587,7 @@ function FoodExploreContent() {
         </div>
 
         {/* Dynamic Category Chips */}
-        {homeData.categories && homeData.categories.length > 0 && (
+        {dynamicCategories.length > 0 && (
           <div
             style={{
               display: "flex",
@@ -502,7 +601,15 @@ function FoodExploreContent() {
           >
             <button
               type="button"
-              onClick={() => setSelectedCategory("")}
+              onClick={() => {
+                setSelectedCategory("");
+                if (typeof window !== "undefined") {
+                  const params = new URLSearchParams(window.location.search);
+                  params.delete("category");
+                  const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                  router.replace(newUrl, { scroll: false });
+                }
+              }}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -517,40 +624,68 @@ function FoodExploreContent() {
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
+                transition: "all 0.2s ease",
               }}
             >
-              🍽️ All Cuisines
+              <span>🍽️</span>
+              <span>All Cuisines</span>
             </button>
-            {homeData.categories
-              .filter((c) => c.id !== "food" && c.id !== "rooms")
-              .map((cat) => {
-                const isSelected = selectedCategory.toLowerCase() === cat.name.toLowerCase();
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(isSelected ? "" : cat.name)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "8px 16px",
-                      borderRadius: "12px",
-                      border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
-                      color: isSelected ? "#FF6B00" : "#475569",
-                      fontWeight: isSelected ? "700" : "600",
-                      fontSize: "0.88rem",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span>{cat.emoji || "🍲"}</span>
-                    <span>{cat.name}</span>
-                  </button>
-                );
-              })}
+            {dynamicCategories.map((cat) => {
+              const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    const newCat = isSelected ? "" : cat.name;
+                    setSelectedCategory(newCat);
+                    if (typeof window !== "undefined") {
+                      const params = new URLSearchParams(window.location.search);
+                      if (newCat) {
+                        params.set("category", newCat);
+                      } else {
+                        params.delete("category");
+                      }
+                      const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                      router.replace(newUrl, { scroll: false });
+                    }
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 16px",
+                    borderRadius: "12px",
+                    border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                    backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
+                    color: isSelected ? "#FF6B00" : "#475569",
+                    fontWeight: isSelected ? "700" : "600",
+                    fontSize: "0.88rem",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <span>{cat.emoji || "🍲"}</span>
+                  <span>{cat.name}</span>
+                  {cat.count > 0 && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        padding: "1px 6px",
+                        borderRadius: "8px",
+                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                        color: isSelected ? "#EA580C" : "#64748B",
+                        fontWeight: "700",
+                      }}
+                    >
+                      {cat.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -769,7 +904,7 @@ function FoodExploreContent() {
                     boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
                     border: "1px solid #E2E8F0",
                     zIndex: 1000,
-                    minWidth: "190px",
+                    minWidth: "180px",
                     display: "flex",
                     flexDirection: "column",
                     gap: "4px",
@@ -777,9 +912,9 @@ function FoodExploreContent() {
                 >
                   {[
                     { id: "all", label: "Any Price", count: filterCounts.all },
-                    { id: "under-150", label: "Under ₹150 (Budget)", count: filterCounts.under150 },
-                    { id: "150-300", label: "₹150 – ₹300 (Standard)", count: filterCounts.price150to300 },
-                    { id: "300-plus", label: "₹300+ (Premium)", count: filterCounts.price300plus },
+                    { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
+                    { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
+                    { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
                   ].map((p) => {
                     const isSelected = selectedPrice === p.id;
                     return (
@@ -802,10 +937,16 @@ function FoodExploreContent() {
                           fontWeight: isSelected ? "700" : "500",
                           fontSize: "13px",
                           cursor: "pointer",
+                          gap: "12px",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        <span>{p.label}</span>
-                        {p.count > 0 && <span style={{ fontSize: "11px", color: "#94A3B8" }}>({p.count})</span>}
+                        <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
+                        {p.count > 0 && (
+                          <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
+                            ({p.count})
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -948,7 +1089,38 @@ function FoodExploreContent() {
         {/* 2. Results Content: Dishes Grid or Kitchens Grid */}
         {activeTab === "dishes" ? (
           <div>
-            {filteredFoodItems.length > 0 ? (
+            {homeData.isLoading ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                  gap: "20px",
+                  width: "100%",
+                }}
+                className="food-explore-grid"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "20px",
+                      height: "320px",
+                      border: "1px solid #F1F5F9",
+                      padding: "16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
+                    <div style={{ width: "70%", height: "20px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
+                    <div style={{ width: "45%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
+                    <div style={{ width: "90%", height: "36px", backgroundColor: "#F1F5F9", borderRadius: "10px", marginTop: "auto" }} />
+                  </div>
+                ))}
+              </div>
+            ) : filteredFoodItems.length > 0 ? (
               <div
                 style={{
                   display: "grid",
@@ -960,9 +1132,11 @@ function FoodExploreContent() {
               >
                 {filteredFoodItems.map((dish) => {
                   const isSellerClosed = dish.sellerIsOnline === false;
-                  const isItemUnavailable = dish.isAvailable === false;
-                  const isClosed = isSellerClosed || isItemUnavailable;
+                  const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0 || dish.isAvailable === false;
+                  const isClosed = isSellerClosed || isOutOfStock;
                   const isAdded = addedIds[dish.id];
+                  const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+                  const isMaxStockInCart = !isClosed && dish.stockQuantity !== undefined && dish.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= dish.stockQuantity : false);
 
                   // Check if dish has an applicable coupon
                   const matchedCoupon = homeData.coupons.find(
@@ -976,12 +1150,12 @@ function FoodExploreContent() {
                         backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                         borderRadius: "20px",
                         overflow: "hidden",
-                        border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
-                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
+                        border: isClosed ? "1.5px solid #E2E8F0" : "1px solid #F1F5F9",
+                        boxShadow: isClosed ? "0 2px 8px rgba(0, 0, 0, 0.02)" : "0 4px 16px rgba(0, 0, 0, 0.04)",
                         display: "flex",
                         flexDirection: "column",
                         transition: "all 0.25s ease",
-                        opacity: isClosed ? 0.85 : 1,
+                        opacity: isClosed ? 0.75 : 1,
                       }}
                       className="food-explore-card"
                     >
@@ -1041,13 +1215,13 @@ function FoodExploreContent() {
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
-                            filter: isClosed ? "grayscale(100%)" : "none",
+                            filter: isClosed ? "grayscale(80%)" : "none",
                             transition: "transform 0.3s ease",
                           }}
                           className="food-card-img"
                         />
 
-                        {/* Closed Overlay */}
+                        {/* Out of Stock / Closed Cross Band Overlay */}
                         {isClosed && (
                           <div
                             style={{
@@ -1056,7 +1230,7 @@ function FoodExploreContent() {
                               left: 0,
                               right: 0,
                               bottom: 0,
-                              backgroundColor: "rgba(15, 23, 42, 0.4)",
+                              backgroundColor: "rgba(15, 23, 42, 0.45)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -1065,17 +1239,19 @@ function FoodExploreContent() {
                           >
                             <span
                               style={{
-                                backgroundColor: "#0F172A",
+                                backgroundColor: isOutOfStock ? "#DC2626" : "#0F172A",
                                 color: "#FFFFFF",
-                                fontSize: "10px",
+                                fontSize: "11px",
                                 fontWeight: "800",
-                                letterSpacing: "0.6px",
-                                padding: "4px 10px",
-                                borderRadius: "10px",
+                                letterSpacing: "0.8px",
+                                padding: "5px 12px",
+                                borderRadius: "12px",
                                 textTransform: "uppercase",
+                                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                                border: "1px solid rgba(255,255,255,0.25)",
                               }}
                             >
-                              {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
+                              {isSellerClosed ? "Closed" : "Out of Stock"}
                             </span>
                           </div>
                         )}
@@ -1142,6 +1318,21 @@ function FoodExploreContent() {
                           </Link>
                         </div>
 
+                        {/* Stock Quantity / Status Text */}
+                        {isOutOfStock ? (
+                          <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: "700" }}>
+                            Out of stock
+                          </div>
+                        ) : isMaxStockInCart ? (
+                          <div style={{ fontSize: "0.76rem", color: "#D97706", fontWeight: "700" }}>
+                            Max in cart ({dish.stockQuantity})
+                          </div>
+                        ) : dish.stockQuantity !== undefined && dish.stockQuantity > 0 && dish.stockQuantity <= 5 ? (
+                          <div style={{ fontSize: "0.76rem", color: "#EA580C", fontWeight: "700" }}>
+                            Only {dish.stockQuantity} left in stock
+                          </div>
+                        ) : null}
+
                         {/* Distance Badge */}
                         {dish.distanceText && (
                           <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", color: "#FF6B00", fontWeight: "700" }}>
@@ -1184,7 +1375,7 @@ function FoodExploreContent() {
                               }}
                               title={isSellerClosed ? "Seller is closed" : "Unavailable"}
                             >
-                              {isSellerClosed ? "Closed" : "Unavailable"}
+                              {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
                             </button>
                           ) : (
                             <button
@@ -1272,7 +1463,37 @@ function FoodExploreContent() {
         ) : (
           /* Cloud Kitchens Grid */
           <div>
-            {filteredKitchens.length > 0 ? (
+            {homeData.isLoading ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "24px",
+                  width: "100%",
+                }}
+                className="kitchens-explore-grid"
+              >
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "20px",
+                      height: "300px",
+                      border: "1px solid #F1F5F9",
+                      padding: "16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
+                    <div style={{ width: "65%", height: "22px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
+                    <div style={{ width: "40%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
+                  </div>
+                ))}
+              </div>
+            ) : filteredKitchens.length > 0 ? (
               <div
                 style={{
                   display: "grid",
@@ -1452,9 +1673,9 @@ function FoodExploreContent() {
             name: customizingDish.name,
             price: customizingDish.price,
             basePrice: customizingDish.price,
-            description: customizingDish.description,
-            imageUrl: customizingDish.imageUrl,
-            itemType: customizingDish.itemType,
+            description: customizingDish.description || undefined,
+            imageUrl: customizingDish.imageUrl || undefined,
+            itemType: customizingDish.itemType || undefined,
             addons: (() => {
               try {
                 const raw = (customizingDish as any).addons;

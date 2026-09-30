@@ -150,8 +150,13 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 }) => {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { cartItems, cartTotal, clearCart, syncCartWithLiveMenu } = useCart();
   const { defaultAddress, openLocationModal, detectGpsLocation } = useLocation();
+
+  // Sync with live seller prices on mount
+  useEffect(() => {
+    syncCartWithLiveMenu();
+  }, [syncCartWithLiveMenu]);
 
   // Authentication redirect guard
   useEffect(() => {
@@ -211,11 +216,12 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
               recipientName: a.recipientName || session?.user?.name || "Registered User",
               recipientPhone: a.recipientPhone || (session?.user as any)?.phone || "",
             }));
-            setSavedAddresses(mapped);
+            const sortedMapped = [...mapped].sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+            setSavedAddresses(sortedMapped);
             setAddressMode("saved");
 
             // Auto-select default or first address
-            const defaultItem = mapped.find((m) => m.isDefault) || mapped[0];
+            const defaultItem = sortedMapped.find((m) => m.isDefault) || sortedMapped[0];
             if (defaultItem) {
               setSelectedSavedAddressId(defaultItem.id);
               const formatted = `${defaultItem.houseNumber ? defaultItem.houseNumber + ", " : ""}${defaultItem.street}${defaultItem.landmark ? ", Near " + defaultItem.landmark : ""}`;
@@ -465,7 +471,19 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [promoCode, setPromoCode] = useState<string>("");
   const [isPromoApplied, setIsPromoApplied] = useState<boolean>(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [appliedCouponData, setAppliedCouponData] = useState<any | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    description?: string;
+    discountType: "PERCENTAGE" | "FLAT";
+    discountPercentage?: number | null;
+    discountAmount?: number | null;
+    maxDiscountAmount?: number | null;
+    minimumCartValue?: number;
+    discountLabel?: string;
+    calculatedDiscount?: number;
+  } | null>(null);
+  const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
   const [availableOffers, setAvailableOffers] = useState<any[]>(DEFAULT_BEST_OFFERS);
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
@@ -636,12 +654,12 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   // Toast Notification
   const [toast, setToast] = useState<{
     message: string;
-    type: "success" | "error" | "info";
+    type: "success" | "error" | "info" | "warning";
   } | null>(null);
 
   const showToast = (
     message: string,
-    type: "success" | "error" | "info" = "success"
+    type: "success" | "error" | "info" | "warning" = "success"
   ) => {
     setToast({ message, type });
     setTimeout(() => {
@@ -686,11 +704,18 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
   // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
-  const discountAmount = isPromoApplied && subtotal > 0
-    ? (appliedCouponData?.calculatedDiscount !== undefined
-        ? Math.min(appliedCouponData.calculatedDiscount, subtotal)
-        : Math.round((subtotal * discountPercent) / 100))
-    : 0;
+  const discountAmount = React.useMemo(() => {
+    if (!isPromoApplied || !appliedCoupon || subtotal <= 0) return 0;
+    if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+    if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
+      const pct = appliedCoupon.discountPercentage || 0;
+      const raw = Math.round((subtotal * pct) / 100);
+      return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+    }
+    const flat = appliedCoupon.discountAmount || 0;
+    return Math.min(flat, subtotal);
+  }, [isPromoApplied, appliedCoupon, subtotal]);
+
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -699,7 +724,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
   useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
-      const sellerId = checkoutItems[0]?.sellerId || cartItems[0]?.sellerId;
+      const sellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
       try {
         setIsLoadingOffers(true);
         const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
@@ -735,7 +760,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const handleRemovePromo = () => {
     setIsPromoApplied(false);
     setDiscountPercent(0);
-    setAppliedCouponData(null);
+    setAppliedCoupon(null);
     setPromoCode("");
     showToast("Promo code removed", "info");
   };
@@ -755,28 +780,39 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
     setPromoCode(clean);
     setIsValidatingPromo(true);
+    const currentSellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
     try {
-      const sellerId = checkoutItems[0]?.sellerId || cartItems[0]?.sellerId;
-      const res = await fetchApi("/api/coupons/validate", {
+      const res = await fetchApi("/api/public/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: clean,
-          sellerId,
-          subtotal,
+          sellerId: currentSellerId,
+          subtotal: subtotal,
+          items: checkoutItems.map((it) => ({
+            id: it.id,
+            foodItemId: it.foodItemId,
+            price: it.price,
+            quantity: it.qty,
+          })),
+          userId: session?.user?.id,
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success && data.data?.coupon) {
-        const coupon = data.data.coupon;
-        setAppliedCouponData(coupon);
+      const json = await res.json();
+      const cData = json.data?.coupon || json.data || json;
+      if (res.ok && cData && (cData.code || cData.id)) {
+        const pct = cData.discountPercentage || 0;
+        const savedAmt = cData.calculatedDiscount || (pct > 0 ? Math.round((subtotal * pct) / 100) : (cData.discountAmount || 0));
+        setAppliedCoupon({
+          ...cData,
+          calculatedDiscount: savedAmt,
+        });
         setIsPromoApplied(true);
-        const pct = coupon.discountPercentage || 0;
         setDiscountPercent(pct);
-        const savedAmt = coupon.calculatedDiscount || (pct > 0 ? Math.round((subtotal * pct) / 100) : (coupon.discountAmount || 0));
-        showToast(`Coupon "${coupon.code}" applied! Saved ₹${savedAmt}`, "success");
+        showToast(cData.message || json?.message || `Coupon "${cData.code}" applied! Saved ₹${savedAmt}`, "success");
       } else {
+        const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Promo code "${clean}" is invalid or conditions not met.`);
         const matchedOffer = availableOffers.find((c) => c.code.toUpperCase() === clean) ||
           DEFAULT_BEST_OFFERS.find((c) => c.code.toUpperCase() === clean);
 
@@ -800,34 +836,80 @@ const loadRazorpayScript = (): Promise<boolean> => {
             setDiscountPercent(0);
           }
 
-          setAppliedCouponData({
-            ...matchedOffer,
+          setAppliedCoupon({
+            id: matchedOffer.id || matchedOffer.code,
+            code: matchedOffer.code,
+            description: matchedOffer.description,
+            discountType: matchedOffer.discountType || "PERCENTAGE",
+            discountPercentage: matchedOffer.discountPercentage,
+            discountAmount: matchedOffer.discountAmount,
+            maxDiscountAmount: matchedOffer.maxDiscountAmount,
+            minimumCartValue: matchedOffer.minimumCartValue,
             calculatedDiscount: discount,
           });
           setIsPromoApplied(true);
           showToast(`Offer "${matchedOffer.code}" applied! Saved ₹${discount}`, "success");
         } else if (clean === "NEO50" && subtotal >= 100) {
           const discount = Math.min(Math.round((subtotal * 50) / 100), 120);
-          setAppliedCouponData({ code: clean, calculatedDiscount: discount, discountPercentage: 50 });
+          setAppliedCoupon({
+            id: "mock-neo50",
+            code: clean,
+            discountType: "PERCENTAGE",
+            discountPercentage: 50,
+            calculatedDiscount: discount,
+          });
           setIsPromoApplied(true);
           setDiscountPercent(50);
           showToast(`Offer "${clean}" applied! Saved ₹${discount}`, "success");
         } else if ((clean === "WELCOME20" || clean === "WELCOME50" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") && subtotal >= 99) {
           const discount = Math.round((subtotal * 20) / 100);
-          setAppliedCouponData({ code: clean, calculatedDiscount: discount, discountPercentage: 20 });
+          setAppliedCoupon({
+            id: `mock-${clean.toLowerCase()}`,
+            code: clean,
+            discountType: "PERCENTAGE",
+            discountPercentage: 20,
+            calculatedDiscount: discount,
+          });
           setIsPromoApplied(true);
           setDiscountPercent(20);
           showToast(`Coupon "${clean}" applied! Saved ₹${discount}`, "success");
         } else {
           setIsPromoApplied(false);
           setDiscountPercent(0);
-          setAppliedCouponData(null);
-          showToast(data.message || `Invalid promo code "${clean}". Please enter a valid coupon.`, "error");
+          setAppliedCoupon(null);
+          showToast(errorMsg, "error");
         }
       }
-    } catch (err: any) {
-      console.error("Promo validation error:", err);
-      showToast("Failed to validate promo code. Please try again.", "error");
+    } catch (e: any) {
+      console.error("Promo validation error:", e);
+      if (clean === "NEO50") {
+        setAppliedCoupon({
+          id: "mock-neo50",
+          code: "NEO50",
+          discountType: "PERCENTAGE",
+          discountPercentage: 50,
+          discountLabel: "50% Off",
+        });
+        setIsPromoApplied(true);
+        setDiscountPercent(50);
+        showToast(`Promo code "${clean}" applied! (50% Off)`, "success");
+      } else if (clean === "WELCOME20" || clean === "NEO20" || clean === "DISCOUNT20" || clean === "NEOBITE20") {
+        setAppliedCoupon({
+          id: "mock-neo20",
+          code: clean,
+          discountType: "PERCENTAGE",
+          discountPercentage: 20,
+          discountLabel: "20% Off",
+        });
+        setIsPromoApplied(true);
+        setDiscountPercent(20);
+        showToast(`Promo code "${clean}" applied! (20% Off)`, "success");
+      } else {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        showToast(`Failed to validate promo code "${clean}".`, "error");
+      }
     } finally {
       setIsValidatingPromo(false);
     }
@@ -1010,7 +1092,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   deliveryAddress: fullDeliveryAddress,
                   customerPhone: phoneNumber,
                   paymentMethod: "ONLINE",
-                  appliedCouponId: isPromoApplied ? promoCode : null,
+                  appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_signature: response.razorpay_signature,
@@ -1037,8 +1119,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   fullName: fullName.trim(),
                   phoneNumber: phoneNumber.trim(),
                   streetAddress: streetAddress.trim(),
-                  city: city.trim() || "Kothrud, Pune",
-                  pincode: postalCode.trim() || "411038",
+                  city: city.trim() || "Pune",
+                  pincode: postalCode.trim() || "",
                 },
                 paymentMethod: "Pay Online (Paid via Razorpay)",
                 items: checkoutItems.map((item) => ({
@@ -1161,6 +1243,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           deliveryAddress: fullDeliveryAddress,
           customerPhone: phoneNumber,
           paymentMethod: "COD",
+          appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
         }),
       });
 
@@ -1193,8 +1276,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           fullName: fullName.trim(),
           phoneNumber: phoneNumber.trim(),
           streetAddress: streetAddress.trim(),
-          city: city.trim() || "Kothrud, Pune",
-          pincode: postalCode.trim() || "411038",
+          city: city.trim() || "Pune",
+          pincode: postalCode.trim() || "",
         },
         paymentMethod: "Cash on Delivery",
         items: checkoutItems.map((item) => ({
@@ -1839,35 +1922,12 @@ const loadRazorpayScript = (): Promise<boolean> => {
                             Pin Precise Delivery Location
                           </div>
                           <div style={{ fontSize: "0.78rem", color: "#64748B" }}>
-                            Pin on map or use current GPS to auto-fill street address
+                            Use current GPS to auto-fill street address
                           </div>
                         </div>
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={() => openLocationModal()}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 14px",
-                            backgroundColor: "#FFFFFF",
-                            border: "1px solid #CBD5E1",
-                            borderRadius: "8px",
-                            fontSize: "0.82rem",
-                            fontWeight: "700",
-                            color: "#0F172A",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                          }}
-                        >
-                          <MapPin size={14} color="#EA580C" />
-                          <span>📍 Pin on Map</span>
-                        </button>
-
                         <button
                           type="button"
                           onClick={async () => {
@@ -1876,7 +1936,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                               if (ok) {
                                 showToast("Current GPS location detected!", "success");
                               } else {
-                                showToast("Could not detect GPS location. Please check browser permissions or pin on map.", "warning");
+                                showToast("Could not detect GPS location. Please check browser permissions.", "warning");
                               }
                             }
                           }}
@@ -2357,7 +2417,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
                   {isPromoApplied && discountAmount > 0 && (
                     <div className={styles.pricingRowDiscount}>
-                      <span className={styles.discountLabel}>Promo Discount ({discountPercent}%)</span>
+                      <span className={styles.discountLabel}>Promo Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})</span>
                       <span className={styles.discountValue}>
                         -₹{discountAmount.toLocaleString("en-IN")}
                       </span>

@@ -107,93 +107,100 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
 
     if (cartItem) {
         return (
-            <div
-                style={{
-                    width: fullWidth ? '100%' : 'auto',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: '#FFF7ED',
-                    border: '1.5px solid #EA580C',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    boxShadow: '0 2px 8px rgba(234, 88, 12, 0.12)',
-                    boxSizing: 'border-box'
-                }}
-            >
-                <button
-                    onClick={() => decreaseQuantity(item.id)}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: fullWidth ? '100%' : 'auto', gap: '3px' }}>
+                <div
                     style={{
-                        flex: 1,
-                        padding: '8px 14px',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '800',
-                        fontSize: '1.1rem',
-                        color: '#EA580C',
-                        transition: 'all 0.15s ease',
+                        width: '100%',
                         display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        backgroundColor: '#FFF7ED',
+                        border: '1.5px solid #EA580C',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 8px rgba(234, 88, 12, 0.12)',
+                        boxSizing: 'border-box'
                     }}
-                    onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#EA580C';
-                        e.currentTarget.style.color = '#FFFFFF';
-                    }}
-                    onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#EA580C';
-                    }}
-                    aria-label="Decrease quantity"
                 >
-                    -
-                </button>
-                <div style={{
-                    padding: '8px 16px',
-                    fontWeight: '800',
-                    fontSize: '0.95rem',
-                    color: '#EA580C',
-                    backgroundColor: '#FFFFFF',
-                    borderLeft: '1.5px solid #EA580C',
-                    borderRight: '1.5px solid #EA580C',
-                    minWidth: '24px',
-                    textAlign: 'center'
-                }}>
-                    {cartItem.quantity}
-                </div>
-                <button
-                    onClick={handleAction}
-                    disabled={isAtMaxStock}
-                    style={{
-                        flex: 1,
-                        padding: '8px 14px',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        cursor: isAtMaxStock ? 'not-allowed' : 'pointer',
-                        opacity: isAtMaxStock ? 0.35 : 1,
-                        fontWeight: '800',
-                        fontSize: '1.1rem',
-                        color: '#EA580C',
-                        transition: 'all 0.15s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                    onMouseOver={(e) => {
-                        if (!isAtMaxStock) {
+                    <button
+                        onClick={() => decreaseQuantity(item.id)}
+                        style={{
+                            flex: 1,
+                            padding: '8px 14px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: '800',
+                            fontSize: '1.1rem',
+                            color: '#EA580C',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        onMouseOver={(e) => {
                             e.currentTarget.style.backgroundColor = '#EA580C';
                             e.currentTarget.style.color = '#FFFFFF';
-                        }
-                    }}
-                    onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#EA580C';
-                    }}
-                    aria-label="Increase quantity"
-                >
-                    +
-                </button>
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#EA580C';
+                        }}
+                        aria-label="Decrease quantity"
+                    >
+                        -
+                    </button>
+                    <div style={{
+                        padding: '8px 16px',
+                        fontWeight: '800',
+                        fontSize: '0.95rem',
+                        color: '#EA580C',
+                        backgroundColor: '#FFFFFF',
+                        borderLeft: '1.5px solid #EA580C',
+                        borderRight: '1.5px solid #EA580C',
+                        minWidth: '24px',
+                        textAlign: 'center'
+                    }}>
+                        {cartItem.quantity}
+                    </div>
+                    <button
+                        onClick={handleAction}
+                        disabled={isAtMaxStock}
+                        style={{
+                            flex: 1,
+                            padding: '8px 14px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: isAtMaxStock ? 'not-allowed' : 'pointer',
+                            opacity: isAtMaxStock ? 0.35 : 1,
+                            fontWeight: '800',
+                            fontSize: '1.1rem',
+                            color: '#EA580C',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        onMouseOver={(e) => {
+                            if (!isAtMaxStock) {
+                                e.currentTarget.style.backgroundColor = '#EA580C';
+                                e.currentTarget.style.color = '#FFFFFF';
+                            }
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#EA580C';
+                        }}
+                        aria-label="Increase quantity"
+                    >
+                        +
+                    </button>
+                </div>
+                {isAtMaxStock && (
+                    <span style={{ fontSize: '0.68rem', color: '#DC2626', fontWeight: '700', textAlign: 'center' }}>
+                        Out of stock
+                    </span>
+                )}
             </div>
         );
     }

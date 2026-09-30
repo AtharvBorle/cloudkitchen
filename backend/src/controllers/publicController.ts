@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { ApiError } from "@/lib/api-error";
 
 const prisma = new PrismaClient();
 
@@ -42,7 +43,6 @@ export const getPublicExploreData = unstable_cache(
                     select: { rating: true, comment: true }
                 },
                 foodItems: {
-                    where: { isAvailable: true },
                     include: {
                         category: true,
                         foodCategory: true,
@@ -197,10 +197,11 @@ export const getPublicRoomAvailability = (id: string) => unstable_cache(
 
 export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
     async () => {
+        const cleanSellerId = (sellerId && sellerId !== "none" && sellerId !== "all" && sellerId !== "null" && sellerId !== "undefined") ? sellerId : null;
         let sellerCategory = "BOTH";
-        if (sellerId) {
+        if (cleanSellerId) {
             const seller = await prisma.sellerProfile.findUnique({
-                where: { id: sellerId }
+                where: { id: cleanSellerId }
             });
             if (seller) {
                 sellerCategory = seller.businessCategory;
@@ -213,10 +214,15 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             where: {
                 isActive: true,
                 approvalStatus: "APPROVED",
-                OR: [
-                    { appliesToSellerId: null },
-                    ...(sellerId ? [{ appliesToSellerId: sellerId }] : [])
-                ],
+                ...(cleanSellerId
+                    ? {
+                        OR: [
+                            { appliesToSellerId: null },
+                            { appliesToSellerId: cleanSellerId }
+                        ]
+                    }
+                    : {}
+                ),
                 AND: [
                     {
                         validFrom: { lte: now }
@@ -232,7 +238,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         });
 
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            return !c.category || c.category === "BOTH" || c.category === sellerCategory || !sellerId;
+            return !c.category || c.category === "BOTH" || c.category === sellerCategory || !cleanSellerId;
         });
 
         const safeCoupons = filteredCoupons.map((c: any) => ({
@@ -246,6 +252,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             maxDiscountAmount: c.maxDiscountAmount,
             customerEligibility: c.customerEligibility || "ALL",
             appliesTo: c.appliesTo || "ALL",
+            appliesToSellerId: c.appliesToSellerId || null,
             appliesToProductId: c.appliesToProductId || null,
             maxUsagesPerUser: c.maxUsagesPerUser || c.perUserLimit || 1,
             maxUsers: c.maxUsers || c.usageLimit || null,
@@ -278,3 +285,154 @@ export const getPublicPopupBanners = (sellerId: string | null) => unstable_cache
     [`public-popup-banners-${sellerId || 'global'}`],
     { revalidate: 60, tags: ["popup-banners"] }
 )();
+
+export const validateCouponForCart = async (req: Request) => {
+    const body = await req.json();
+    const { code, sellerId, subtotal = 0, items = [], userId } = body;
+
+    if (!code || typeof code !== "string" || !code.trim()) {
+        throw new ApiError("Please enter a valid coupon code.", 400);
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const now = new Date();
+
+    const coupon = await prisma.coupon.findFirst({
+        where: {
+            code: { equals: cleanCode, mode: "insensitive" },
+            isActive: true,
+            approvalStatus: "APPROVED"
+        }
+    });
+
+    if (!coupon) {
+        throw new ApiError(`Coupon "${cleanCode}" is invalid or does not exist.`, 404);
+    }
+
+    // Check validity dates
+    if (coupon.validFrom && new Date(coupon.validFrom) > now) {
+        throw new ApiError(`Coupon "${coupon.code}" is not active yet.`, 400);
+    }
+    if (!coupon.noExpiry && coupon.validUntil && new Date(coupon.validUntil) < now) {
+        throw new ApiError(`Coupon "${coupon.code}" has expired.`, 400);
+    }
+
+    // Check usage limits
+    const totalLimit = coupon.usageLimit || coupon.maxUsers;
+    if (totalLimit && coupon.currentUsersCount >= totalLimit) {
+        throw new ApiError(`Coupon "${coupon.code}" has reached its maximum usage limit.`, 400);
+    }
+
+    // Check seller store restriction
+    if (coupon.appliesToSellerId) {
+        const couponSeller = await prisma.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { id: coupon.appliesToSellerId },
+                    { trackingId: coupon.appliesToSellerId }
+                ]
+            },
+            select: { id: true, businessName: true }
+        });
+
+        // Resolve cart's seller
+        let cartSeller: { id: string; businessName: string } | null = null;
+        if (sellerId && sellerId !== "seller" && sellerId !== "k-1") {
+            cartSeller = await prisma.sellerProfile.findFirst({
+                where: {
+                    OR: [
+                        { id: sellerId },
+                        { trackingId: sellerId }
+                    ]
+                },
+                select: { id: true, businessName: true }
+            });
+        }
+
+        // If cartSeller not found yet, check from cart items
+        if (!cartSeller && Array.isArray(items) && items.length > 0) {
+            const firstItemId = items[0].foodItemId || items[0].id;
+            if (firstItemId) {
+                const fi = await prisma.foodItem.findUnique({
+                    where: { id: firstItemId },
+                    include: { seller: { select: { id: true, businessName: true } } }
+                });
+                if (fi?.seller) cartSeller = fi.seller;
+            }
+        }
+
+        const couponKitchenName = couponSeller?.businessName ? `"${couponSeller.businessName}"` : "its specific kitchen";
+        const cartKitchenName = cartSeller?.businessName ? `"${cartSeller.businessName}"` : "another kitchen";
+
+        if (cartSeller && couponSeller && cartSeller.id !== couponSeller.id) {
+            throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
+        }
+
+        if (sellerId && sellerId !== "seller" && couponSeller && sellerId !== couponSeller.id) {
+            throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
+        }
+    }
+
+    // Check minimum cart value
+    const minCart = coupon.minimumCartValue ?? 0;
+    const numSubtotal = Number(subtotal) || 0;
+    if (minCart > 0 && numSubtotal < minCart) {
+        throw new ApiError(`Coupon "${coupon.code}" requires a minimum order of ₹${minCart}. (Your cart is ₹${numSubtotal})`, 400);
+    }
+
+    // Check specific product appliesToProductId
+    if (coupon.appliesToProductId && Array.isArray(items) && items.length > 0) {
+        const hasMatchingProduct = items.some((it: any) => 
+            it.id === coupon.appliesToProductId || 
+            it.foodItemId === coupon.appliesToProductId
+        );
+        if (!hasMatchingProduct) {
+            throw new ApiError(`Coupon "${coupon.code}" is only valid on specific items not present in your cart.`, 400);
+        }
+    }
+
+    // Check customer eligibility
+    if (coupon.customerEligibility === "NEW_ONLY" && userId) {
+        const previousOrdersCount = await prisma.order.count({
+            where: {
+                userId: userId,
+                status: { not: "CANCELLED" }
+            }
+        });
+        if (previousOrdersCount > 0) {
+            throw new ApiError(`Coupon "${coupon.code}" is exclusively for first-time customers.`, 400);
+        }
+    }
+
+    // Calculate discount
+    const isPercentage = coupon.discountType === "PERCENTAGE" || (coupon.discountPercentage && !coupon.discountAmount);
+    let calculatedDiscount = 0;
+    let discountLabel = "";
+
+    if (isPercentage) {
+        const pct = coupon.discountPercentage || 0;
+        calculatedDiscount = Math.round((numSubtotal * pct) / 100);
+        if (coupon.maxDiscountAmount && calculatedDiscount > coupon.maxDiscountAmount) {
+            calculatedDiscount = coupon.maxDiscountAmount;
+        }
+        discountLabel = `${pct}% OFF`;
+    } else {
+        const flatAmt = coupon.discountAmount || 0;
+        calculatedDiscount = Math.min(flatAmt, numSubtotal);
+        discountLabel = `₹${flatAmt} OFF`;
+    }
+
+    return {
+        id: coupon.id,
+        code: coupon.code,
+        description: coupon.description,
+        discountType: isPercentage ? "PERCENTAGE" : "FLAT",
+        discountPercentage: isPercentage ? (coupon.discountPercentage || 0) : null,
+        discountAmount: !isPercentage ? (coupon.discountAmount || 0) : null,
+        maxDiscountAmount: coupon.maxDiscountAmount,
+        minimumCartValue: coupon.minimumCartValue || 0,
+        calculatedDiscount,
+        discountLabel,
+        message: `Coupon "${coupon.code}" applied! (${discountLabel})`
+    };
+};

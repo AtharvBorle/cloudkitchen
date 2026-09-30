@@ -59,10 +59,11 @@ export const SavedAddresses: React.FC = () => {
               addressLines: `${a.houseNumber || ""}, ${a.street || ""}, ${a.landmark ? a.landmark + ", " : ""}${a.pincode || ""}`.trim(),
               mapType: (a.type || "").toLowerCase() === "office" ? "office" : "home",
             }));
-            setAddresses(mapped);
-            const defaultItem = mapped.find((m) => m.isDefault);
+            const sorted = mapped.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+            setAddresses(sorted);
+            const defaultItem = sorted.find((m) => m.isDefault);
             if (defaultItem) setSelectedId(defaultItem.id);
-            else if (mapped[0]) setSelectedId(mapped[0].id);
+            else if (sorted[0]) setSelectedId(sorted[0].id);
           }
         }
       } catch (err) {

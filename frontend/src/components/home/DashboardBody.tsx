@@ -80,6 +80,7 @@ export default function DashboardBody({
       imageUrl: item.imageUrl,
       stockQuantity: stockLimit,
       maxStock: stockLimit,
+      itemType: item.itemType,
     });
     setAddedId(item.id);
     showToast(`Added "${item.name}" to your cart!`, "success");
@@ -162,9 +163,10 @@ export default function DashboardBody({
         >
           {displayItems.slice(0, 6).map((item) => {
             const isSellerClosed = item.sellerIsOnline === false;
-            const isItemUnavailable = item.isAvailable === false;
-            const isOutOfStock = item.stockQuantity === 0;
-            const isClosed = isSellerClosed || isItemUnavailable || isOutOfStock;
+            const isOutOfStock = item.stockQuantity === 0 || item.maxStock === 0 || item.isAvailable === false;
+            const isClosed = isSellerClosed || isOutOfStock;
+            const currentInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
+            const isMaxStockInCart = !isClosed && item.stockQuantity !== undefined && item.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= item.stockQuantity : false);
 
             return (
             <div
@@ -176,12 +178,12 @@ export default function DashboardBody({
                 backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
                 borderRadius: "16px",
                 padding: "12px 16px",
-                border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
+                border: isClosed ? "1.5px solid #E2E8F0" : "1px solid #F1F5F9",
+                boxShadow: isClosed ? "0 2px 6px rgba(0, 0, 0, 0.02)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                 boxSizing: "border-box",
                 transition: "all 0.2s ease",
                 gap: "12px",
-                opacity: isClosed ? 0.85 : 1,
+                opacity: isClosed ? 0.75 : 1,
               }}
               className="top-rated-card"
             >
@@ -215,7 +217,7 @@ export default function DashboardBody({
                       width: "100%",
                       height: "100%",
                       objectFit: "cover",
-                      filter: isClosed ? "grayscale(100%)" : "none",
+                      filter: isClosed ? "grayscale(80%)" : "none",
                     }}
                   />
                 </div>
@@ -300,6 +302,21 @@ export default function DashboardBody({
                       </span>
                     ) : null}
                   </span>
+
+                  {/* Stock Notice */}
+                  {isOutOfStock ? (
+                    <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: "700" }}>
+                      Out of stock
+                    </span>
+                  ) : isMaxStockInCart ? (
+                    <span style={{ fontSize: "0.74rem", color: "#D97706", fontWeight: "700" }}>
+                      Max in cart ({item.stockQuantity})
+                    </span>
+                  ) : item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
+                    <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
+                      Only {item.stockQuantity} left
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -324,7 +341,7 @@ export default function DashboardBody({
                   className="top-rated-order-btn-closed"
                   title={isSellerClosed ? "Kitchen closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
                 >
-                  {isSellerClosed ? "Closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
+                  {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
                 </button>
               ) : (
                 <button
