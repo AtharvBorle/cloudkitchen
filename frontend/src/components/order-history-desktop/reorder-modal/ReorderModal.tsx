@@ -12,19 +12,30 @@ import {
   ArrowRight,
   ShoppingBag,
   RotateCcw,
-  Loader2
+  Loader2,
+  SlidersHorizontal
 } from "lucide-react";
 import styles from "./ReorderModal.module.css";
 
-export type ReorderModalType = "CONFIRM" | "OFFLINE" | "ALL_UNAVAILABLE" | "PARTIAL" | "CART_CONFLICT" | "ERROR";
+export type ReorderModalType = "CONFIRM" | "OFFLINE" | "ALL_UNAVAILABLE" | "PARTIAL" | "UNAVAILABLE_ADDONS" | "CART_CONFLICT" | "ERROR";
 
 export interface ReorderItemInfo {
   id?: string;
   name: string;
   quantity?: number;
   price?: number;
+  basePrice?: number;
+  addonsTotal?: number;
+  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
   reason?: string;
   warning?: string | null;
+}
+
+export interface UnavailableAddonInfo {
+  id?: string;
+  name: string;
+  price?: number;
+  itemName?: string;
 }
 
 export interface ReorderModalProps {
@@ -36,6 +47,7 @@ export interface ReorderModalProps {
   currentCartSellerName?: string;
   availableItems?: ReorderItemInfo[];
   unavailableItems?: ReorderItemInfo[];
+  unavailableAddons?: UnavailableAddonInfo[];
   errorMessage?: string;
   isLoading?: boolean;
   onConfirmReorder?: () => void;
@@ -54,6 +66,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
   currentCartSellerName = "another kitchen",
   availableItems = [],
   unavailableItems = [],
+  unavailableAddons = [],
   errorMessage,
   isLoading = false,
   onConfirmReorder,
@@ -101,6 +114,11 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                 <AlertTriangle size={24} />
               </div>
             )}
+            {type === "UNAVAILABLE_ADDONS" && (
+              <div className={`${styles.iconCircle} ${styles.iconAddons}`}>
+                <SlidersHorizontal size={24} />
+              </div>
+            )}
             {type === "CART_CONFLICT" && (
               <div className={`${styles.iconCircle} ${styles.iconConflict}`}>
                 <Trash2 size={24} />
@@ -118,6 +136,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                 {type === "OFFLINE" && "Kitchen is Offline"}
                 {type === "ALL_UNAVAILABLE" && "Items Currently Unavailable"}
                 {type === "PARTIAL" && "Some Items Unavailable"}
+                {type === "UNAVAILABLE_ADDONS" && "Add-on(s) No Longer Available"}
                 {type === "CART_CONFLICT" && "Replace Existing Cart Items?"}
                 {type === "ERROR" && "Unable to Process Reorder"}
               </h3>
@@ -126,6 +145,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                 {type === "OFFLINE" && sellerName}
                 {type === "ALL_UNAVAILABLE" && `${sellerName} • Reorder Update`}
                 {type === "PARTIAL" && `${sellerName} • Partial Availability`}
+                {type === "UNAVAILABLE_ADDONS" && `${sellerName} • Menu Customization Update`}
                 {type === "CART_CONFLICT" && "Single Kitchen Cart Policy"}
                 {type === "ERROR" && "Order Verification"}
               </p>
@@ -227,15 +247,103 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
             </>
           )}
 
+          {/* UNAVAILABLE ADDONS VIEW */}
+          {type === "UNAVAILABLE_ADDONS" && (
+            <>
+              <div className={styles.addonNoticeCard}>
+                <div className={styles.addonNoticeHeader}>
+                  <AlertCircle size={18} className={styles.addonNoticeIcon} />
+                  <span className={styles.addonNoticeTitle}>Customization Update Notice</span>
+                </div>
+                <p className={styles.addonNoticeText}>
+                  The seller has updated their menu. Some add-on(s) from your previous order are no longer offered and have been removed.
+                  Would you like to proceed with the available item(s) and active customizations?
+                </p>
+              </div>
+
+              {/* Removed Add-ons */}
+              {unavailableAddons.length > 0 && (
+                <div className={styles.sectionBlock}>
+                  <div className={`${styles.sectionHeader} ${styles.sectionHeaderUnavailable}`}>
+                    <span>Unavailable Add-on(s) ({unavailableAddons.length})</span>
+                  </div>
+                  <div className={styles.itemList}>
+                    {unavailableAddons.map((addon, idx) => (
+                      <div key={idx} className={`${styles.itemCard} ${styles.itemCardUnavailable}`}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>
+                            {addon.itemName ? `${addon.itemName} → ` : ""}{addon.name}
+                          </span>
+                          <span className={styles.itemReason}>Deleted by seller (No longer available)</span>
+                        </div>
+                        {addon.price !== undefined && addon.price > 0 && (
+                          <span className={styles.itemPrice} style={{ textDecoration: "line-through", color: "#94a3b8" }}>
+                            ₹{addon.price}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ready to Reorder items */}
+              {availableItems.length > 0 && (
+                <div className={styles.sectionBlock}>
+                  <div className={`${styles.sectionHeader} ${styles.sectionHeaderAvailable}`}>
+                    <span>Ready to Reorder ({availableItems.length})</span>
+                  </div>
+                  <div className={styles.itemList}>
+                    {availableItems.map((item, idx) => (
+                      <div key={idx} className={`${styles.itemCard} ${styles.itemCardAvailable}`}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>{item.name}</span>
+                          {item.selectedAddons && item.selectedAddons.length > 0 ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
+                              {item.selectedAddons.map((a, aIdx) => (
+                                <span
+                                  key={aIdx}
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    fontWeight: "600",
+                                    color: "#166534",
+                                    backgroundColor: "#dcfce7",
+                                    border: "1px solid #bbf7d0",
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  +{a.name} (+₹{a.price})
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: "0.8125rem", color: "#16a34a" }}>In Stock (No add-ons)</span>
+                          )}
+                        </div>
+                        <div className={styles.itemMeta}>
+                          <span style={{ color: "#64748b" }}>Qty: {item.quantity || 1}</span>
+                          {item.price !== undefined && (
+                            <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {/* PARTIAL VIEW */}
           {type === "PARTIAL" && (
             <>
               <p style={{ margin: 0, color: "#475569" }}>
-                Some items from your previous order are currently out of stock or unavailable.
+                Some items or customizations from your previous order are currently out of stock or unavailable.
                 Would you like to continue and add the remaining <strong>{availableItems.length} available item(s)</strong> to your cart?
               </p>
 
-              {/* Unavailable section */}
+              {/* Unavailable Items section */}
               {unavailableItems.length > 0 && (
                 <div className={styles.sectionBlock}>
                   <div className={`${styles.sectionHeader} ${styles.sectionHeaderUnavailable}`}>
@@ -259,6 +367,32 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                 </div>
               )}
 
+              {/* Unavailable Add-ons section */}
+              {unavailableAddons.length > 0 && (
+                <div className={styles.sectionBlock}>
+                  <div className={`${styles.sectionHeader} ${styles.sectionHeaderUnavailable}`}>
+                    <span>Unavailable Add-on(s) ({unavailableAddons.length})</span>
+                  </div>
+                  <div className={styles.itemList}>
+                    {unavailableAddons.map((addon, idx) => (
+                      <div key={idx} className={`${styles.itemCard} ${styles.itemCardUnavailable}`}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>
+                            {addon.itemName ? `${addon.itemName} → ` : ""}{addon.name}
+                          </span>
+                          <span className={styles.itemReason}>Deleted by seller</span>
+                        </div>
+                        {addon.price !== undefined && addon.price > 0 && (
+                          <span className={styles.itemPrice} style={{ textDecoration: "line-through", color: "#94a3b8" }}>
+                            ₹{addon.price}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Available section */}
               {availableItems.length > 0 && (
                 <div className={styles.sectionBlock}>
@@ -270,6 +404,26 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                       <div key={idx} className={`${styles.itemCard} ${styles.itemCardAvailable}`}>
                         <div className={styles.itemInfo}>
                           <span className={styles.itemName}>{item.name}</span>
+                          {item.selectedAddons && item.selectedAddons.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
+                              {item.selectedAddons.map((a, aIdx) => (
+                                <span
+                                  key={aIdx}
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    fontWeight: "600",
+                                    color: "#166534",
+                                    backgroundColor: "#dcfce7",
+                                    border: "1px solid #bbf7d0",
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  +{a.name} (+₹{a.price})
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {item.warning ? (
                             <span className={styles.itemWarning}>{item.warning}</span>
                           ) : (
@@ -372,6 +526,24 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                 <button type="button" className={styles.btnPrimary} onClick={onExploreSellerMenu}>
                   <ShoppingBag size={16} />
                   <span>Browse Full Menu</span>
+                </button>
+              )}
+            </>
+          )}
+
+          {type === "UNAVAILABLE_ADDONS" && (
+            <>
+              <button type="button" className={styles.btnCancel} onClick={onClose}>
+                Cancel
+              </button>
+              {(onConfirmPartialReorder || onConfirmReorder) && (
+                <button
+                  type="button"
+                  className={styles.btnPrimary}
+                  onClick={onConfirmPartialReorder || onConfirmReorder}
+                >
+                  <span>Continue & Reorder</span>
+                  <ArrowRight size={16} />
                 </button>
               )}
             </>

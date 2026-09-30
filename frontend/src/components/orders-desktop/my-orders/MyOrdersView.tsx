@@ -34,7 +34,7 @@ import {
 import { useCart, CartItem } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
-import { ReorderModal, ReorderModalType, ReorderItemInfo } from "@/components/order-history-desktop/reorder-modal";
+import { ReorderModal, ReorderModalType, ReorderItemInfo, UnavailableAddonInfo } from "@/components/order-history-desktop/reorder-modal";
 import CancelOrderModal from "@/components/orders/CancelOrderModal";
 import styles from "./MyOrdersView.module.css";
 
@@ -359,6 +359,7 @@ export default function MyOrdersView() {
     currentCartSellerName?: string;
     availableItems?: ReorderItemInfo[];
     unavailableItems?: ReorderItemInfo[];
+    unavailableAddons?: UnavailableAddonInfo[];
     rawAvailableItems?: CartItem[];
     errorMessage?: string;
   }>({
@@ -584,7 +585,7 @@ export default function MyOrdersView() {
         return;
       }
 
-      // Check 3: Partial items available
+      // Check 3: Partial items available (out of stock / unavailable items)
       if (data.unavailableItems && data.unavailableItems.length > 0) {
         setModalState({
           isOpen: true,
@@ -593,6 +594,22 @@ export default function MyOrdersView() {
           sellerId: data.sellerId,
           availableItems: data.availableItems,
           unavailableItems: data.unavailableItems,
+          unavailableAddons: data.unavailableAddons || [],
+          rawAvailableItems: data.availableItems,
+        });
+        return;
+      }
+
+      // Check 3b: Unavailable add-ons detected (deleted by seller)
+      if (data.hasUnavailableAddons || (data.unavailableAddons && data.unavailableAddons.length > 0)) {
+        setModalState({
+          isOpen: true,
+          type: "UNAVAILABLE_ADDONS",
+          sellerName: data.sellerName || order.vendorName,
+          sellerId: data.sellerId,
+          availableItems: data.availableItems,
+          unavailableItems: data.unavailableItems || [],
+          unavailableAddons: data.unavailableAddons || [],
           rawAvailableItems: data.availableItems,
         });
         return;
@@ -2115,6 +2132,7 @@ export default function MyOrdersView() {
         currentCartSellerName={modalState.currentCartSellerName}
         availableItems={modalState.availableItems}
         unavailableItems={modalState.unavailableItems}
+        unavailableAddons={modalState.unavailableAddons}
         errorMessage={modalState.errorMessage}
         isLoading={isReorderValidating}
         onConfirmReorder={handleExecuteReorder}
