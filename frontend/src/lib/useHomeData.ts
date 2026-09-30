@@ -195,8 +195,6 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           food: "/images/categories/cat-food.png",
           mess: "/images/categories/cat-mess.png",
           bakery: "/images/categories/cat-backery.png",
-          "home meals": "/images/categories/cat-homemeals.png",
-          homemeals: "/images/categories/cat-homemeals.png",
           healthy: "/images/categories/cat-healthy.png",
           snacks: "/images/categories/cat-snacks.png",
           desserts: "/images/categories/cat-deserts.png",
@@ -206,7 +204,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           rooms: "/images/categories/cat-rooms.png",
           burger: "/images/categories/cat-food.png",
           cake: "/images/categories/cat-backery.png",
-          meal: "/images/categories/cat-homemeals.png",
+          meal: "/images/categories/cat-meal.png",
+          meals: "/images/categories/cat-meal.png",
+          thali: "/images/categories/cat-meal.png",
+          "home meals": "/images/categories/cat-meal.png",
+          homemeals: "/images/categories/cat-meal.png",
           pizza: "/images/categories/cat-food.png",
           shake: "/images/categories/cat-drink.png",
           dalrice: "/images/categories/cat-dalrice.png",
@@ -240,11 +242,18 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           const cleanKey = lower.replace(/[\s\-_]+/g, "");
           if (!lower || lower === "food" || lower === "rooms") return;
           const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+          const isMismatchedImg = fc.imageUrl && String(fc.imageUrl).includes("zwy6klrcbxepkcjr1big");
+
           const mappedImage =
-            fc.imageUrl ||
-            CATEGORY_IMAGE_MAP[lower] ||
-            CATEGORY_IMAGE_MAP[cleanKey] ||
-            (cleanKey.includes("dalrice") || cleanKey.includes("dal") ? "/images/categories/cat-dalrice.png" : "/images/categories/cat-food.png");
+            isMismatchedImg
+              ? "/images/categories/cat-meal.png"
+              : CATEGORY_IMAGE_MAP[lower] ||
+                CATEGORY_IMAGE_MAP[cleanKey] ||
+                (cleanKey.includes("meal") || cleanKey.includes("thali")
+                  ? "/images/categories/cat-meal.png"
+                  : cleanKey.includes("dal")
+                  ? "/images/categories/cat-dalrice.png"
+                  : fc.imageUrl || "/images/categories/cat-food.png");
           const existing = categoryMap.get(lower);
 
           if (!existing) {
@@ -252,10 +261,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               id: fc.id || lower,
               name: displayName,
               image: mappedImage,
-              emoji: cleanKey.includes("dal") ? "🍛" : "🍽️",
+              emoji: cleanKey.includes("dal") ? "🍛" : cleanKey.includes("meal") || cleanKey.includes("thali") ? "🍱" : "🍽️",
               route: "/food-explore?category=" + encodeURIComponent(lower),
             });
-          } else if (fc.imageUrl && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
+          } else if (fc.imageUrl && !isMismatchedImg && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
             categoryMap.set(lower, {
               ...existing,
               id: fc.id || existing.id,
