@@ -23,6 +23,8 @@ import {
   isKitchenMatchingDiet,
   isDishMatchingDiet,
   matchesKitchenOrDishSearch,
+  matchesKitchenCategoryFilter,
+  matchesDishCategory,
   matchesDishSearch,
 } from "@/lib/dietary-filter";
 
@@ -114,12 +116,9 @@ export default function Home() {
 
     // 1. Category Bar Filter
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
-      const catLower = selectedCategory.toLowerCase();
-      const filtered = list.filter((k) =>
-        k.category?.toLowerCase().includes(catLower) ||
-        k.foodType?.toLowerCase().includes(catLower)
+      list = list.filter((k) =>
+        matchesKitchenCategoryFilter(selectedCategory, k, sourceFoodItems)
       );
-      if (filtered.length > 0) list = filtered;
     }
 
     // 2. Dietary Filter
@@ -210,12 +209,7 @@ export default function Home() {
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
-      const catLower = selectedCategory.toLowerCase();
-      const filtered = list.filter((f) =>
-        f.categoryName?.toLowerCase().includes(catLower) ||
-        f.name.toLowerCase().includes(catLower)
-      );
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => matchesDishCategory(selectedCategory, f));
     }
 
     if (activeFilters.dietary && activeFilters.dietary !== "all") {
@@ -292,12 +286,7 @@ export default function Home() {
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
-      const catLower = selectedCategory.toLowerCase();
-      const filtered = list.filter((f) =>
-        f.categoryName?.toLowerCase().includes(catLower) ||
-        f.name.toLowerCase().includes(catLower)
-      );
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => matchesDishCategory(selectedCategory, f));
     }
 
     if (activeFilters.dietary && activeFilters.dietary !== "all") {
@@ -355,12 +344,7 @@ export default function Home() {
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
-      const catLower = selectedCategory.toLowerCase();
-      const filtered = list.filter((f) =>
-        f.categoryName?.toLowerCase().includes(catLower) ||
-        f.name.toLowerCase().includes(catLower)
-      );
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => matchesDishCategory(selectedCategory, f));
     }
 
     if (activeFilters.dietary && activeFilters.dietary !== "all") {
@@ -422,12 +406,7 @@ export default function Home() {
     }
 
     if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
-      const catLower = selectedCategory.toLowerCase();
-      const filtered = list.filter((f) =>
-        f.categoryName?.toLowerCase().includes(catLower) ||
-        f.name.toLowerCase().includes(catLower)
-      );
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => matchesDishCategory(selectedCategory, f));
     }
 
     if (activeFilters.dietary && activeFilters.dietary !== "all") {
