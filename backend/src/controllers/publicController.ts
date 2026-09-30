@@ -198,13 +198,21 @@ export const getPublicRoomAvailability = (id: string) => unstable_cache(
 export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
     async () => {
         const cleanSellerId = (sellerId && sellerId !== "none" && sellerId !== "all" && sellerId !== "null" && sellerId !== "undefined") ? sellerId : null;
+        let resolvedSellerId = cleanSellerId;
         let sellerCategory = "BOTH";
         if (cleanSellerId) {
-            const seller = await prisma.sellerProfile.findUnique({
-                where: { id: cleanSellerId }
+            const seller = await prisma.sellerProfile.findFirst({
+                where: {
+                    OR: [
+                        { id: cleanSellerId },
+                        { trackingId: cleanSellerId },
+                        { userId: cleanSellerId }
+                    ]
+                }
             });
             if (seller) {
-                sellerCategory = seller.businessCategory;
+                resolvedSellerId = seller.id;
+                sellerCategory = seller.businessCategory || "BOTH";
             }
         }
 
@@ -214,31 +222,42 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             where: {
                 isActive: true,
                 approvalStatus: "APPROVED",
-                ...(cleanSellerId
+                ...(resolvedSellerId
                     ? {
                         OR: [
                             { appliesToSellerId: null },
-                            { appliesToSellerId: cleanSellerId }
+                            { appliesToSellerId: resolvedSellerId },
+                            ...(cleanSellerId && cleanSellerId !== resolvedSellerId ? [{ appliesToSellerId: cleanSellerId }] : [])
                         ]
                     }
                     : {}
                 ),
                 AND: [
                     {
-                        validFrom: { lte: now }
+                        OR: [
+                            { validFrom: null },
+                            { validFrom: { lte: now } }
+                        ]
                     },
                     {
                         OR: [
                             { validUntil: null },
-                            { validUntil: { gt: now } }
+                            { validUntil: { gt: now } },
+                            { noExpiry: true }
                         ]
                     }
                 ]
+            },
+            orderBy: {
+                createdAt: "desc"
             }
         });
 
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            return !c.category || c.category === "BOTH" || c.category === sellerCategory || !cleanSellerId;
+            const cat = (c.category || "BOTH").toUpperCase();
+            if (cat === "BOTH" || cat === "FOOD") return true;
+            if (sellerCategory && (cat === sellerCategory || sellerCategory === "BOTH")) return true;
+            return false;
         });
 
         const safeCoupons = filteredCoupons.map((c: any) => ({
@@ -264,7 +283,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
         return safeCoupons;
     },
     [`public-coupons-${sellerId || 'global'}`],
-    { revalidate: 60, tags: ["coupons"] }
+    { revalidate: 30, tags: ["coupons"] }
 )();
 
 export const getPublicPopupBanners = (sellerId: string | null) => unstable_cache(
@@ -368,7 +387,7 @@ export const validateCouponForCart = async (req: Request) => {
             throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
         }
 
-        if (sellerId && sellerId !== "seller" && couponSeller && sellerId !== couponSeller.id) {
+        if (!cartSeller && sellerId && sellerId !== "seller" && couponSeller && sellerId !== couponSeller.id && sellerId !== couponSeller.trackingId) {
             throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
         }
     }
