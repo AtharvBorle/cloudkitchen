@@ -124,8 +124,12 @@ const ScrollableAvailableAddonsRow: React.FC<{
 
   return (
     <div className={styles.availableAddonsScrollWrapper}>
-      {/* Permanent dark shadow cues on both sides so user immediately sees it is scrollable */}
-      {addons.length >= 3 && <div className={styles.permanentScrollShadowLeft} />}
+      <div
+        className={`${styles.permanentScrollShadowLeft} ${
+          addons.length >= 3 ? styles.visibleShadow : styles.hiddenShadow
+        }`}
+        aria-hidden="true"
+      />
       <div
         ref={scrollRef}
         onScroll={checkScroll}
@@ -136,9 +140,9 @@ const ScrollableAvailableAddonsRow: React.FC<{
         onWheel={handleWheel}
         className={`${styles.availableAddonsList} ${isDragging ? styles.isDragging : ""}`}
       >
-        {addons.map((addon) => (
+        {addons.map((addon, idx) => (
           <button
-            key={addon.id || addon.name}
+            key={addon.id ? `addon-btn-${addon.id}` : `addon-btn-${addon.name}-${idx}`}
             type="button"
             onClick={(e) => {
               if (hasDraggedRef.current) {
@@ -159,7 +163,12 @@ const ScrollableAvailableAddonsRow: React.FC<{
           </button>
         ))}
       </div>
-      {addons.length >= 3 && <div className={styles.permanentScrollShadowRight} />}
+      <div
+        className={`${styles.permanentScrollShadowRight} ${
+          addons.length >= 3 ? styles.visibleShadow : styles.hiddenShadow
+        }`}
+        aria-hidden="true"
+      />
     </div>
   );
 };
@@ -773,7 +782,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "6px 0 4px 0" }}>
                           {item.selectedAddons.map((addon, idx) => (
                             <span
-                              key={addon.id || `${addon.name}-${idx}`}
+                              key={addon.id ? `sel-${item.id}-${addon.id}-${idx}` : `sel-${item.id}-${addon.name}-${idx}`}
                               style={{
                                 fontSize: "0.76rem",
                                 fontWeight: "600",

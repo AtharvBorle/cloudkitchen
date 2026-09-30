@@ -160,8 +160,10 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
 
         return () => {
             try {
-                if (document.head.contains(link)) document.head.removeChild(link);
-                if (document.body.contains(script)) document.body.removeChild(script);
+                if (link && link.parentNode) link.parentNode.removeChild(link);
+                else if (link && typeof link.remove === "function") link.remove();
+                if (script && script.parentNode) script.parentNode.removeChild(script);
+                else if (script && typeof script.remove === "function") script.remove();
             } catch (e) {}
             if (mapRef.current) {
                 try {

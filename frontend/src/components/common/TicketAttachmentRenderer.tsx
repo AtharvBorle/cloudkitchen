@@ -84,7 +84,7 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
       link.download = filename || "downloaded-image.png";
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      if (link.parentNode) link.parentNode.removeChild(link);
     } catch {
       window.open(url, "_blank");
     }

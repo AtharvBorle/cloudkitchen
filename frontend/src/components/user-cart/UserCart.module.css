@@ -1386,6 +1386,19 @@
   border-radius: 0 8px 8px 0;
 }
 
+.visibleShadow {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.hiddenShadow {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
 .availableAddonBtn {
   display: inline-flex;
   align-items: center;
