@@ -16,6 +16,8 @@ import {
   Minus,
   ShoppingBag,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -58,6 +60,10 @@ const ScrollableAvailableAddonsRow: React.FC<{
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = React.useRef(0);
+  const scrollLeftRef = React.useRef(0);
+  const hasDraggedRef = React.useRef(false);
 
   const checkScroll = React.useCallback(() => {
     const el = scrollRef.current;
@@ -82,19 +88,84 @@ const ScrollableAvailableAddonsRow: React.FC<{
     };
   }, [addons, checkScroll]);
 
+  const scrollByAmount = (offset: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: offset, behavior: "smooth" });
+    setTimeout(checkScroll, 250);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setIsDragging(true);
+    hasDraggedRef.current = false;
+    startXRef.current = e.pageX - el.offsetLeft;
+    scrollLeftRef.current = el.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    if (Math.abs(walk) > 4) {
+      hasDraggedRef.current = true;
+    }
+    el.scrollLeft = scrollLeftRef.current - walk;
+    checkScroll();
+  };
+
+  const handleMouseUpOrLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && el.scrollWidth > el.clientWidth) {
+      el.scrollLeft += e.deltaY;
+      checkScroll();
+    }
+  };
+
   return (
     <div className={styles.availableAddonsScrollWrapper}>
-      {canScrollLeft && <div className={styles.scrollShadowLeft} />}
+      {canScrollLeft && <div className={styles.scrollEdgeFadeLeft} />}
+      {canScrollLeft && (
+        <button
+          type="button"
+          onClick={() => scrollByAmount(-180)}
+          className={styles.scrollArrowBtnLeft}
+          title="Scroll left"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft size={14} strokeWidth={2.5} />
+        </button>
+      )}
       <div
         ref={scrollRef}
         onScroll={checkScroll}
-        className={styles.availableAddonsList}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+        onWheel={handleWheel}
+        className={`${styles.availableAddonsList} ${isDragging ? styles.isDragging : ""}`}
       >
         {addons.map((addon) => (
           <button
             key={addon.id || addon.name}
             type="button"
-            onClick={() => onAdd(addon)}
+            onClick={(e) => {
+              if (hasDraggedRef.current) {
+                e.preventDefault();
+                return;
+              }
+              onAdd(addon);
+            }}
             className={styles.availableAddonBtn}
             title={`Add ${addon.name} (+₹${addon.price})`}
           >
@@ -107,7 +178,18 @@ const ScrollableAvailableAddonsRow: React.FC<{
           </button>
         ))}
       </div>
-      {canScrollRight && <div className={styles.scrollShadowRight} />}
+      {canScrollRight && (
+        <button
+          type="button"
+          onClick={() => scrollByAmount(180)}
+          className={styles.scrollArrowBtnRight}
+          title="Scroll right"
+          aria-label="Scroll right"
+        >
+          <ChevronRight size={14} strokeWidth={2.5} />
+        </button>
+      )}
+      {canScrollRight && <div className={styles.scrollEdgeFadeRight} />}
     </div>
   );
 };
@@ -797,8 +879,13 @@ export const UserCart: React.FC<UserCartProps> = ({
                         return (
                           <div className={styles.availableAddonsSection}>
                             <div className={styles.availableAddonsHeader}>
-                              <Sparkles size={13} style={{ color: "#059669" }} />
-                              <span>Available Add-ons</span>
+                              <div className={styles.availableAddonsHeaderLeft}>
+                                <Sparkles size={13} style={{ color: "#059669" }} />
+                                <span>Available Add-ons</span>
+                              </div>
+                              {remainingAddons.length > 3 && (
+                                <span className={styles.availableAddonsScrollHint}>Swipe or use arrows</span>
+                              )}
                             </div>
                             <ScrollableAvailableAddonsRow
                               addons={remainingAddons}
