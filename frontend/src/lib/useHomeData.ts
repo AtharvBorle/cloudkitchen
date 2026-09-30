@@ -209,6 +209,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           meal: "/images/categories/cat-homemeals.png",
           pizza: "/images/categories/cat-food.png",
           shake: "/images/categories/cat-drink.png",
+          dalrice: "/images/categories/cat-dalrice.png",
+          "dal rice": "/images/categories/cat-dalrice.png",
+          "dal-rice": "/images/categories/cat-dalrice.png",
+          khichdi: "/images/categories/cat-dalrice.png",
+          "dal khichdi": "/images/categories/cat-dalrice.png",
           dosa: "/images/categories/cat-food.png",
           idli: "/images/categories/cat-food.png",
           pastry: "/images/categories/cat-backery.png",
@@ -232,9 +237,14 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           if (!fc || !fc.name) return;
           const rawName = String(fc.name).trim();
           const lower = rawName.toLowerCase();
+          const cleanKey = lower.replace(/[\s\-_]+/g, "");
           if (!lower || lower === "food" || lower === "rooms") return;
           const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-          const mappedImage = fc.imageUrl || CATEGORY_IMAGE_MAP[lower] || "/images/categories/cat-food.png";
+          const mappedImage =
+            fc.imageUrl ||
+            CATEGORY_IMAGE_MAP[lower] ||
+            CATEGORY_IMAGE_MAP[cleanKey] ||
+            (cleanKey.includes("dalrice") || cleanKey.includes("dal") ? "/images/categories/cat-dalrice.png" : "/images/categories/cat-food.png");
           const existing = categoryMap.get(lower);
 
           if (!existing) {
@@ -242,7 +252,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               id: fc.id || lower,
               name: displayName,
               image: mappedImage,
-              emoji: "🍽️",
+              emoji: cleanKey.includes("dal") ? "🍛" : "🍽️",
               route: "/food-explore?category=" + encodeURIComponent(lower),
             });
           } else if (fc.imageUrl && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
