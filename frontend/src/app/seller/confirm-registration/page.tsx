@@ -210,12 +210,28 @@ export default function ConfirmRegistrationPage() {
       } else {
         const lowerMsg = (data?.message || data?.error || "").toLowerCase();
         if (
-          res.status === 409 ||
-          lowerMsg.includes("already exist") ||
-          lowerMsg.includes("already registered") ||
+          lowerMsg.includes("phone") ||
+          lowerMsg.includes("mobile") ||
+          lowerMsg.includes("number already exists")
+        ) {
+          setErrorMessage(
+            data?.message ||
+            "An account with this mobile number already exists. Please sign in to your existing account or use a different mobile number."
+          );
+        } else if (
+          lowerMsg.includes("email") ||
           lowerMsg.includes("account with this email")
         ) {
-          setErrorMessage("An account with this email address already exists. Please sign in to your existing account or use a different email.");
+          setErrorMessage(
+            data?.message ||
+            "An account with this email address already exists. Please sign in to your existing account or use a different email."
+          );
+        } else if (
+          res.status === 409 ||
+          lowerMsg.includes("already exist") ||
+          lowerMsg.includes("already registered")
+        ) {
+          setErrorMessage(data?.message || data?.error || "An account with these credentials already exists. Please sign in.");
         } else {
           setErrorMessage(data?.message || data?.error || "Registration could not be completed. Please check your details and try again.");
         }
