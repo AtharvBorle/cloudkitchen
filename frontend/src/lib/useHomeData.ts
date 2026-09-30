@@ -46,6 +46,8 @@ export interface DynamicFoodItem {
   deliveryTime?: string;
   servedPincodes?: string[];
   isWithin5km?: boolean;
+  addons?: any;
+  variants?: any;
 }
 
 export interface DynamicRoom {
@@ -316,6 +318,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : 0),
               deliveryTime: item.deliveryTime || '20-30 min',
               servedPincodes: item.servedPincodes || [],
+              addons: item.addons,
+              variants: item.variants,
             };
             rawFoodItems.push(foodItem);
           });

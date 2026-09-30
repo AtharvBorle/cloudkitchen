@@ -6,8 +6,9 @@ import Navbar from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useHomeData, DynamicFoodItem, DynamicKitchen } from "@/lib/useHomeData";
 import { useLocation } from "@/components/location-provider";
-import { useCart } from "@/context/CartContext";
+import { useCart, generateCartItemId, AddonItem } from "@/context/CartContext";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import {
   Search,
   SlidersHorizontal,
@@ -34,6 +35,23 @@ import {
   matchesKitchenCategoryFilter,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
+
+function parseDishAddons(rawAddons: any): AddonItem[] {
+  if (!rawAddons) return [];
+  try {
+    const p = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
+    if (Array.isArray(p) && p.length > 0) {
+      return p
+        .filter((a: any) => a && (a.name || "").trim())
+        .map((a: any, idx: number) => ({
+          id: String(a.id || `addon_${idx + 1}`),
+          name: String(a.name || "").trim(),
+          price: Math.max(0, parseFloat(a.price) || 0),
+        }));
+    }
+  } catch {}
+  return [];
+}
 
 function FoodExploreContent() {
   const router = useRouter();
@@ -64,10 +82,11 @@ function FoodExploreContent() {
   const [openOnly, setOpenOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<"dishes" | "kitchens">("dishes");
 
-  // Popover state
+  // Popover & Modal state
   const [openPricePopover, setOpenPricePopover] = useState(false);
   const [openCuisinePopover, setOpenCuisinePopover] = useState(false);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
+  const [addonModalDish, setAddonModalDish] = useState<(DynamicFoodItem & { parsedAddons: AddonItem[] }) | null>(null);
 
   // Sync state if URL changes
   React.useEffect(() => {
@@ -403,9 +422,19 @@ function FoodExploreContent() {
       return;
     }
 
-    const existingInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
-    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
+    const matchingInCart = cartItems.filter((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+    const quantityInCart = matchingInCart.reduce((sum, ci) => sum + ci.quantity, 0);
+    if (stockLimit !== -1 && quantityInCart >= stockLimit) {
       showToast(`We have only ${stockLimit} left in stock.`, "warning");
+      return;
+    }
+
+    const parsedAddons = parseDishAddons(dish.addons || (dish as any).variants);
+    if (parsedAddons.length > 0) {
+      setAddonModalDish({
+        ...dish,
+        parsedAddons,
+      });
       return;
     }
 
@@ -414,6 +443,9 @@ function FoodExploreContent() {
       foodItemId: dish.id,
       name: dish.name,
       price: dish.price,
+      basePrice: dish.price,
+      addonsTotal: 0,
+      selectedAddons: [],
       quantity: 1,
       sellerId: dish.sellerId || "k-1",
       sellerName: dish.sellerName || "Verified Cloud Kitchen",
@@ -422,6 +454,7 @@ function FoodExploreContent() {
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: dish.itemType,
+      addons: parsedAddons,
     });
 
     if (showAnimation) {
@@ -433,9 +466,10 @@ function FoodExploreContent() {
   };
 
   const handleDecreaseFromCart = (dishId: string) => {
-    const existingInCart = cartItems.find((ci) => ci.id === dishId || ci.foodItemId === dishId);
-    if (existingInCart) {
-      decreaseQuantity(existingInCart.id);
+    const matching = cartItems.filter((ci) => ci.id === dishId || ci.foodItemId === dishId);
+    if (matching.length > 0) {
+      const target = matching[matching.length - 1];
+      decreaseQuantity(target.id);
     } else {
       decreaseQuantity(dishId);
     }
@@ -1116,12 +1150,16 @@ function FoodExploreContent() {
               >
                 {filteredFoodItems.map((dish) => {
                   const isSellerClosed = dish.sellerIsOnline === false;
-                  const isOutOfStock = dish.stockQuantity === 0 || dish.maxStock === 0 || dish.isAvailable === false;
+                  const rawStock = (dish as any).maxStock !== undefined ? (dish as any).maxStock : (dish as any).stockQuantity;
+                  const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+                  const isOutOfStock = stockLimit === 0 || dish.isAvailable === false;
                   const isClosed = isSellerClosed || isOutOfStock;
                   const isAdded = addedIds[dish.id];
-                  const currentInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
-                  const quantityInCart = currentInCart ? currentInCart.quantity : 0;
-                  const isMaxStockInCart = !isClosed && dish.stockQuantity !== undefined && dish.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= dish.stockQuantity : false);
+                  const matchingInCart = cartItems.filter((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
+                  const quantityInCart = matchingInCart.reduce((sum, ci) => sum + ci.quantity, 0);
+                  const isMaxStockInCart = !isClosed && stockLimit !== -1 && quantityInCart >= stockLimit;
+                  const dishAddons = parseDishAddons(dish.addons || (dish as any).variants);
+                  const hasAddons = dishAddons.length > 0;
 
                   // Check if dish has an applicable coupon
                   const matchedCoupon = homeData.coupons.find(
@@ -1303,6 +1341,29 @@ function FoodExploreContent() {
                           </Link>
                         </div>
 
+                        {/* Add-ons Available Badge */}
+                        {hasAddons && !isClosed && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "1px 0" }}>
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: "700",
+                                color: "#EA580C",
+                                backgroundColor: "#FFF7ED",
+                                border: "1px solid #FFEDD5",
+                                padding: "2px 7px",
+                                borderRadius: "6px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Sparkles size={11} />
+                              <span>{dishAddons.length} Add-on{dishAddons.length > 1 ? "s" : ""} Available</span>
+                            </span>
+                          </div>
+                        )}
+
                         {/* Stock Quantity / Status Text */}
                         {isOutOfStock ? (
                           <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: "700" }}>
@@ -1403,7 +1464,7 @@ function FoodExploreContent() {
                                     wordBreak: "break-word",
                                   }}
                                 >
-                                  We have only {dish.stockQuantity} left in stock
+                                  We have only {stockLimit} left in stock
                                 </span>
                               )}
                               <div
@@ -1458,7 +1519,7 @@ function FoodExploreContent() {
                                   type="button"
                                   onClick={() => {
                                     if (isMaxStockInCart) {
-                                      showToast(`We have only ${dish.stockQuantity} left in stock.`, "warning");
+                                      showToast(`We have only ${stockLimit} left in stock.`, "warning");
                                     } else {
                                       handleAddToCart(dish, false);
                                     }
@@ -1502,9 +1563,13 @@ function FoodExploreContent() {
                                 cursor: "pointer",
                                 boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
                                 transition: "all 0.2s ease",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
                               }}
                             >
-                              Add to Cart
+                              <span>{hasAddons ? "Add Item" : "Add to Cart"}</span>
+                              {hasAddons && <span style={{ fontSize: "0.76rem", opacity: 0.9 }}>+</span>}
                             </button>
                           )}
                         </div>
@@ -1763,6 +1828,61 @@ function FoodExploreContent() {
           </div>
         )}
       </main>
+
+      {/* Add-on Customization Modal */}
+      {addonModalDish && (
+        <AddonCustomizationModal
+          isOpen={!!addonModalDish}
+          onClose={() => setAddonModalDish(null)}
+          item={{
+            id: addonModalDish.id,
+            name: addonModalDish.name,
+            price: addonModalDish.price,
+            basePrice: addonModalDish.price,
+            description: addonModalDish.description,
+            imageUrl: addonModalDish.imageUrl || "/images/places/place-biryani.png",
+            itemType: addonModalDish.itemType,
+            isVeg: addonModalDish.itemType === "VEG" || !addonModalDish.name?.toLowerCase().includes("chicken"),
+            addons: addonModalDish.parsedAddons || [],
+          }}
+          onAddToCart={(selectedAddons, quantity) => {
+            const base = addonModalDish.price;
+            const addonsTotal = selectedAddons.reduce((sum, a) => sum + (a.price || 0), 0);
+            const unitPrice = base + addonsTotal;
+            const rawStock = (addonModalDish as any).maxStock !== undefined ? (addonModalDish as any).maxStock : (addonModalDish as any).stockQuantity;
+            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+            const itemImg = addonModalDish.imageUrl || "/images/places/place-biryani.png";
+            const baseFoodId = addonModalDish.id;
+            const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
+
+            addToCart({
+              id: cartItemId,
+              foodItemId: baseFoodId,
+              name: addonModalDish.name,
+              price: unitPrice,
+              basePrice: base,
+              addonsTotal: addonsTotal,
+              selectedAddons: selectedAddons,
+              quantity: quantity || 1,
+              sellerId: addonModalDish.sellerId || "k-1",
+              sellerName: addonModalDish.sellerName || "Verified Cloud Kitchen",
+              image: itemImg,
+              imageUrl: itemImg,
+              stockQuantity: stockLimit,
+              maxStock: stockLimit,
+              itemType: addonModalDish.itemType,
+              addons: addonModalDish.parsedAddons,
+            });
+
+            setAddedIds((prev) => ({ ...prev, [addonModalDish.id]: true }));
+            setTimeout(() => {
+              setAddedIds((prev) => ({ ...prev, [addonModalDish.id]: false }));
+            }, 1000);
+
+            setAddonModalDish(null);
+          }}
+        />
+      )}
 
       {/* Footer */}
       <Footer />
