@@ -107,7 +107,33 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
 
     if (cartItem) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: fullWidth ? '100%' : 'auto', gap: '3px' }}>
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', width: fullWidth ? '100%' : 'auto' }}>
+                {isAtMaxStock && (
+                    <span
+                        style={{
+                            position: 'absolute',
+                            bottom: 'calc(100% + 4px)',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 10,
+                            pointerEvents: 'none',
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.62rem',
+                            color: '#EA580C',
+                            backgroundColor: '#FFF7ED',
+                            border: '1px solid #FFEDD5',
+                            borderRadius: '6px',
+                            padding: '2px 6px',
+                            fontWeight: '800',
+                            textAlign: 'center',
+                            lineHeight: '1.2',
+                            boxShadow: '0 2px 6px rgba(234, 88, 12, 0.12)',
+                            boxSizing: 'border-box',
+                        }}
+                    >
+                        We have only {stockLimit} left in stock
+                    </span>
+                )}
                 <div
                     style={{
                         width: '100%',
@@ -202,28 +228,6 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                         +
                     </button>
                 </div>
-                {isAtMaxStock && (
-                    <span
-                        style={{
-                            fontSize: '0.68rem',
-                            color: '#EA580C',
-                            backgroundColor: '#FFF7ED',
-                            border: '1px solid #FFEDD5',
-                            borderRadius: '6px',
-                            padding: '2px 6px',
-                            fontWeight: '800',
-                            textAlign: 'center',
-                            lineHeight: '1.2',
-                            marginTop: '3px',
-                            display: 'inline-block',
-                            maxWidth: '130px',
-                            whiteSpace: 'normal',
-                            boxSizing: 'border-box',
-                        }}
-                    >
-                        We have only {stockLimit} left in stock
-                    </span>
-                )}
             </div>
         );
     }

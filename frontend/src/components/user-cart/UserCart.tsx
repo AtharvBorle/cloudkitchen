@@ -265,7 +265,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         const rawStock = existing.maxStock !== undefined ? existing.maxStock : existing.stockQuantity;
         const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
         if (stockLimit !== -1 && existing.quantity >= stockLimit) {
-          showToast("Maximum available quantity reached.");
+          showToast(`We have only ${stockLimit} left in stock.`);
           return;
         }
         addToCart({
@@ -296,7 +296,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           .map((item) => {
             if (item.id === id) {
               if (delta > 0 && item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) {
-                showToast("Maximum available quantity reached.");
+                showToast(`We have only ${item.maxStock} left in stock.`);
                 return item;
               }
               const newQty = item.qty + delta;
@@ -683,7 +683,38 @@ export const UserCart: React.FC<UserCartProps> = ({
 
                   {/* Right: Quantity Stepper & Remove */}
                   <div className={styles.itemRightActions}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                    <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: "calc(100% + 4px)",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            backgroundColor: "#FFF7ED",
+                            border: "1px solid #FFEDD5",
+                            borderRadius: "6px",
+                            padding: "2px 6px",
+                            boxShadow: "0 2px 6px rgba(234, 88, 12, 0.12)",
+                            zIndex: 10,
+                            pointerEvents: "none",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.62rem",
+                              color: "#EA580C",
+                              fontWeight: "800",
+                              lineHeight: "1.2",
+                              display: "block",
+                              textAlign: "center",
+                            }}
+                          >
+                            We have only {item.maxStock} left in stock
+                          </span>
+                        </div>
+                      )}
                       <div className={styles.qtyStepper}>
                         <button
                           type="button"
@@ -697,9 +728,14 @@ export const UserCart: React.FC<UserCartProps> = ({
                         <button
                           type="button"
                           className={styles.qtyBtn}
-                          onClick={() => handleQtyChange(item.id, 1)}
+                          onClick={() => {
+                            if (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) {
+                              showToast(`We have only ${item.maxStock} left in stock.`);
+                            } else {
+                              handleQtyChange(item.id, 1);
+                            }
+                          }}
                           aria-label="Increase quantity"
-                          disabled={item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock}
                           style={{
                             opacity: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? 0.35 : 1,
                             cursor: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? "not-allowed" : "pointer",
@@ -708,15 +744,6 @@ export const UserCart: React.FC<UserCartProps> = ({
                           <Plus size={14} strokeWidth={3} />
                         </button>
                       </div>
-                      {(item.maxStock === 0) ? (
-                        <span style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: "700", textAlign: "center", whiteSpace: "nowrap" }}>
-                          Out of stock
-                        </span>
-                      ) : (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) ? (
-                        <span style={{ fontSize: "0.68rem", color: "#DC2626", fontWeight: "700", textAlign: "center", whiteSpace: "nowrap" }}>
-                          Out of stock
-                        </span>
-                      ) : null}
                     </div>
 
                     <button

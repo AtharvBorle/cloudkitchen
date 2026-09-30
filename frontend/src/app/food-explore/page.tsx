@@ -1385,7 +1385,32 @@ function FoodExploreContent() {
                               <span>✓</span>
                             </button>
                           ) : quantityInCart > 0 ? (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "3px" }}>
+                            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                              {isMaxStockInCart && (
+                                <span
+                                  style={{
+                                    position: "absolute",
+                                    bottom: "calc(100% + 4px)",
+                                    right: "0",
+                                    zIndex: 10,
+                                    pointerEvents: "none",
+                                    whiteSpace: "nowrap",
+                                    fontSize: "0.62rem",
+                                    color: "#EA580C",
+                                    backgroundColor: "#FFF7ED",
+                                    border: "1px solid #FFEDD5",
+                                    borderRadius: "6px",
+                                    padding: "2px 6px",
+                                    fontWeight: "800",
+                                    textAlign: "center",
+                                    lineHeight: "1.2",
+                                    boxShadow: "0 2px 6px rgba(234, 88, 12, 0.12)",
+                                    boxSizing: "border-box",
+                                  }}
+                                >
+                                  We have only {dish.stockQuantity} left in stock
+                                </span>
+                              )}
                               <div
                                 style={{
                                   display: "inline-flex",
@@ -1466,28 +1491,6 @@ function FoodExploreContent() {
                                   +
                                 </button>
                               </div>
-                              {isMaxStockInCart && (
-                                <span
-                                  style={{
-                                    fontSize: "0.68rem",
-                                    color: "#EA580C",
-                                    backgroundColor: "#FFF7ED",
-                                    border: "1px solid #FFEDD5",
-                                    borderRadius: "6px",
-                                    padding: "2px 6px",
-                                    fontWeight: "800",
-                                    textAlign: "center",
-                                    lineHeight: "1.2",
-                                    marginTop: "2px",
-                                    display: "inline-block",
-                                    maxWidth: "130px",
-                                    whiteSpace: "normal",
-                                    boxSizing: "border-box",
-                                  }}
-                                >
-                                  We have only {dish.stockQuantity} left in stock
-                                </span>
-                              )}
                             </div>
                           ) : (
                             <button
