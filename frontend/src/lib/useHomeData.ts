@@ -194,6 +194,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         const CATEGORY_IMAGE_MAP: Record<string, string> = {
           food: "/images/categories/cat-food.png",
           mess: "/images/categories/cat-mess.png",
+          tiffin: "/images/categories/cat-mess.png",
+          dabba: "/images/categories/cat-mess.png",
           bakery: "/images/categories/cat-backery.png",
           healthy: "/images/categories/cat-healthy.png",
           snacks: "/images/categories/cat-snacks.png",
@@ -252,7 +254,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               ? "/images/categories/cat-meal.png"
               : CATEGORY_IMAGE_MAP[lower] ||
                 CATEGORY_IMAGE_MAP[cleanKey] ||
-                (cleanKey.includes("cake") || cleanKey.includes("pastry")
+                (cleanKey.includes("mess") || cleanKey.includes("tiffin") || cleanKey.includes("dabba")
+                  ? "/images/categories/cat-mess.png"
+                  : cleanKey.includes("cake") || cleanKey.includes("pastry")
                   ? "/images/categories/cat-cake.png"
                   : cleanKey.includes("burger")
                   ? "/images/categories/cat-burger.png"
@@ -268,7 +272,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               id: fc.id || lower,
               name: displayName,
               image: mappedImage,
-              emoji: cleanKey.includes("cake") || cleanKey.includes("pastry") ? "🍰" : cleanKey.includes("dal") ? "🍛" : cleanKey.includes("meal") || cleanKey.includes("thali") ? "🍱" : "🍽️",
+              emoji: cleanKey.includes("mess") || cleanKey.includes("tiffin") ? "🍱" : cleanKey.includes("cake") || cleanKey.includes("pastry") ? "🍰" : cleanKey.includes("dal") ? "🍛" : cleanKey.includes("meal") || cleanKey.includes("thali") ? "🍱" : "🍽️",
               route: "/food-explore?category=" + encodeURIComponent(lower),
             });
           } else if (fc.imageUrl && !isMismatchedImg && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
