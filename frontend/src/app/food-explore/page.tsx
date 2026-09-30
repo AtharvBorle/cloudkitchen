@@ -405,7 +405,7 @@ function FoodExploreContent() {
 
     const existingInCart = cartItems.find((ci) => ci.id === dish.id || ci.foodItemId === dish.id);
     if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
-      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${dish.name}.`, "warning");
+      showToast(`We have only ${stockLimit} left in stock.`, "warning");
       return;
     }
 
@@ -1436,8 +1436,13 @@ function FoodExploreContent() {
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => handleAddToCart(dish, false)}
-                                  disabled={isMaxStockInCart}
+                                  onClick={() => {
+                                    if (isMaxStockInCart) {
+                                      showToast(`We have only ${dish.stockQuantity} left in stock.`, "warning");
+                                    } else {
+                                      handleAddToCart(dish, false);
+                                    }
+                                  }}
                                   style={{
                                     padding: "5px 11px",
                                     backgroundColor: "transparent",

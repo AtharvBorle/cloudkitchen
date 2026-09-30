@@ -92,7 +92,7 @@ export default function PopularOrders({
 
     const existingInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
     if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
-      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${offer.title}.`, "warning");
+      showToast(`We have only ${stockLimit} left in stock.`, "warning");
       return;
     }
 

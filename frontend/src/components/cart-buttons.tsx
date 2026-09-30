@@ -51,7 +51,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
         if (stockLimit !== -1) {
             const currentQty = cartItem ? cartItem.quantity : 0;
             if (currentQty >= stockLimit) {
-                showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+                showToast(`We have only ${stockLimit} left in stock.`, "warning");
                 return;
             }
         }
@@ -164,8 +164,14 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                         {cartItem.quantity}
                     </div>
                     <button
-                        onClick={handleAction}
-                        disabled={isAtMaxStock}
+                        type="button"
+                        onClick={() => {
+                            if (isAtMaxStock) {
+                                showToast(`We have only ${stockLimit} left in stock.`, "warning");
+                            } else {
+                                handleAction();
+                            }
+                        }}
                         style={{
                             flex: 1,
                             padding: '8px 14px',

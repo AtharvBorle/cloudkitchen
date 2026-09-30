@@ -64,7 +64,7 @@ export default function DashboardBody({
 
     const existingInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
     if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
-      showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+      showToast(`We have only ${stockLimit} left in stock.`, "warning");
       return;
     }
 

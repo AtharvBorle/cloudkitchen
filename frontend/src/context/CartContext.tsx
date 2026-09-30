@@ -254,7 +254,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 const newQty = existing.quantity + addQty;
 
                 if (stockLimit !== -1 && (existing.quantity >= stockLimit || newQty > stockLimit)) {
-                    showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+                    showToast(`We have only ${stockLimit} left in stock.`, "warning");
                     return prev.map(i => i.id === item.id ? {
                         ...i,
                         ...normalizedItem,
@@ -279,7 +279,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             const initialQty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
             if (stockLimit !== -1 && initialQty > stockLimit) {
-                showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${item.name}.`, "warning");
+                showToast(`We have only ${stockLimit} left in stock.`, "warning");
                 return [...prev, {
                     ...normalizedItem,
                     quantity: stockLimit,
@@ -383,7 +383,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
 
             if (stockLimit !== -1 && newQuantity > stockLimit) {
-                showToast(`Cannot add more. Only ${stockLimit} item${stockLimit === 1 ? "" : "s"} available in stock for ${existing.name}.`, "warning");
+                showToast(`We have only ${stockLimit} left in stock.`, "warning");
                 return prev.map(i => i.id === itemId ? { ...i, quantity: stockLimit } : i);
             }
 
