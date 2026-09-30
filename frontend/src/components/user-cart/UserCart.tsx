@@ -16,8 +16,6 @@ import {
   Minus,
   ShoppingBag,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -88,13 +86,6 @@ const ScrollableAvailableAddonsRow: React.FC<{
     };
   }, [addons, checkScroll]);
 
-  const scrollByAmount = (offset: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: offset, behavior: "smooth" });
-    setTimeout(checkScroll, 250);
-  };
-
   const handleMouseDown = (e: React.MouseEvent) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -135,17 +126,6 @@ const ScrollableAvailableAddonsRow: React.FC<{
     <div className={styles.availableAddonsScrollWrapper}>
       {/* Permanent dark shadow cues on both sides so user immediately sees it is scrollable */}
       {addons.length >= 3 && <div className={styles.permanentScrollShadowLeft} />}
-      {canScrollLeft && (
-        <button
-          type="button"
-          onClick={() => scrollByAmount(-180)}
-          className={styles.scrollArrowBtnLeft}
-          title="Scroll left"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft size={14} strokeWidth={2.5} />
-        </button>
-      )}
       <div
         ref={scrollRef}
         onScroll={checkScroll}
@@ -179,17 +159,6 @@ const ScrollableAvailableAddonsRow: React.FC<{
           </button>
         ))}
       </div>
-      {canScrollRight && (
-        <button
-          type="button"
-          onClick={() => scrollByAmount(180)}
-          className={styles.scrollArrowBtnRight}
-          title="Scroll right"
-          aria-label="Scroll right"
-        >
-          <ChevronRight size={14} strokeWidth={2.5} />
-        </button>
-      )}
       {addons.length >= 3 && <div className={styles.permanentScrollShadowRight} />}
     </div>
   );
