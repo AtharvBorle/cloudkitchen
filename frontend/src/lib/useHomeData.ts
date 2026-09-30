@@ -203,7 +203,14 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           dessert: "/images/categories/cat-deserts.png",
           drink: "/images/categories/cat-drink.png",
           drinks: "/images/categories/cat-drink.png",
+          beverage: "/images/categories/cat-drink.png",
+          beverages: "/images/categories/cat-drink.png",
           rooms: "/images/categories/cat-rooms.png",
+          "rent property": "/images/categories/cat-rentproperty.png",
+          rentproperty: "/images/categories/cat-rentproperty.png",
+          property: "/images/categories/cat-rentproperty.png",
+          cafe: "/images/categories/cat-cafe.png",
+          coffee: "/images/categories/cat-cafe.png",
           burger: "/images/categories/cat-burger.png",
           burgers: "/images/categories/cat-burger.png",
           cake: "/images/categories/cat-cake.png",
@@ -215,19 +222,76 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           thali: "/images/categories/cat-meal.png",
           "home meals": "/images/categories/cat-meal.png",
           homemeals: "/images/categories/cat-meal.png",
-          pizza: "/images/categories/cat-food.png",
+          "homely food": "/images/categories/cat-meal.png",
+          homelyfood: "/images/categories/cat-meal.png",
+          "lunch(homely food)": "/images/categories/cat-meal.png",
+          lunch: "/images/categories/cat-meal.png",
+          "south indian": "/images/categories/cat-southindian.png",
+          southindian: "/images/categories/cat-southindian.png",
+          dosa: "/images/categories/cat-southindian.png",
+          idli: "/images/categories/cat-southindian.png",
+          pizza: "/images/categories/cat-pizza.png",
+          pizzas: "/images/categories/cat-pizza.png",
           shake: "/images/categories/cat-drink.png",
+          shakes: "/images/categories/cat-drink.png",
           dalrice: "/images/categories/cat-dalrice.png",
           "dal rice": "/images/categories/cat-dalrice.png",
           "dal-rice": "/images/categories/cat-dalrice.png",
           khichdi: "/images/categories/cat-dalrice.png",
           "dal khichdi": "/images/categories/cat-dalrice.png",
-          dosa: "/images/categories/cat-food.png",
-          idli: "/images/categories/cat-food.png",
-          pohe: "/images/categories/cat-food.png",
-          sabudana: "/images/categories/cat-food.png",
-          shira: "/images/categories/cat-food.png",
-          upma: "/images/categories/cat-food.png",
+          pohe: "/images/categories/cat-pohe.png",
+          poha: "/images/categories/cat-pohe.png",
+          sabudana: "/images/categories/cat-sabudana.png",
+          shira: "/images/categories/cat-sheera.png",
+          sheera: "/images/categories/cat-sheera.png",
+          upma: "/images/categories/cat-upma.png",
+        };
+
+        const getCustomCategoryIcon = (key: string, name: string): string => {
+          const k = key.toLowerCase();
+          const n = name.toLowerCase();
+          if (k.includes("poh") || n.includes("poh")) return "/images/categories/cat-pohe.png";
+          if (k.includes("sabudana") || n.includes("sabudana")) return "/images/categories/cat-sabudana.png";
+          if (k.includes("shir") || k.includes("sheer") || n.includes("shir") || n.includes("sheer")) return "/images/categories/cat-sheera.png";
+          if (k.includes("upma") || n.includes("upma")) return "/images/categories/cat-upma.png";
+          if (k.includes("southindian") || k.includes("dosa") || k.includes("idli") || n.includes("south indian") || n.includes("dosa")) return "/images/categories/cat-southindian.png";
+          if (k.includes("cafe") || k.includes("coffee") || n.includes("cafe")) return "/images/categories/cat-cafe.png";
+          if (k.includes("property") || k.includes("rent") || n.includes("rent property")) return "/images/categories/cat-rentproperty.png";
+          if (k.includes("baker") || n.includes("bakery")) return "/images/categories/cat-backery.png";
+          if (k.includes("cake") || k.includes("pastry") || n.includes("cake")) return "/images/categories/cat-cake.png";
+          if (k.includes("burger") || n.includes("burger")) return "/images/categories/cat-burger.png";
+          if (k.includes("pizza") || n.includes("pizza")) return "/images/categories/cat-pizza.png";
+          if (k.includes("dalrice") || k.includes("khichdi") || n.includes("dal rice") || n.includes("dalrice")) return "/images/categories/cat-dalrice.png";
+          if (k.includes("meal") || k.includes("homely") || k.includes("lunch") || k.includes("thali") || n.includes("homely food") || n.includes("lunch")) return "/images/categories/cat-meal.png";
+          if (k.includes("mess") || k.includes("tiffin") || k.includes("dabba") || n.includes("mess")) return "/images/categories/cat-mess.png";
+          if (k.includes("health") || n.includes("healthy")) return "/images/categories/cat-healthy.png";
+          if (k.includes("snack") || n.includes("snacks")) return "/images/categories/cat-snacks.png";
+          if (k.includes("desert") || k.includes("dessert") || n.includes("dessert")) return "/images/categories/cat-deserts.png";
+          if (k.includes("drink") || k.includes("beverage") || k.includes("shake") || n.includes("drink")) return "/images/categories/cat-drink.png";
+          if (k.includes("room") || n.includes("room")) return "/images/categories/cat-rooms.png";
+          return "/images/categories/cat-food.png";
+        };
+
+        const getCustomCategoryEmoji = (key: string): string => {
+          if (key.includes("poh")) return "🥣";
+          if (key.includes("sabudana")) return "🥣";
+          if (key.includes("shir") || key.includes("sheer")) return "🍮";
+          if (key.includes("upma")) return "🥣";
+          if (key.includes("southindian") || key.includes("dosa") || key.includes("idli")) return "🥞";
+          if (key.includes("cafe") || key.includes("coffee")) return "☕";
+          if (key.includes("property") || key.includes("rent")) return "🏠";
+          if (key.includes("baker")) return "🥖";
+          if (key.includes("cake") || key.includes("pastry")) return "🍰";
+          if (key.includes("burger")) return "🍔";
+          if (key.includes("pizza")) return "🍕";
+          if (key.includes("dal")) return "🍛";
+          if (key.includes("meal") || key.includes("thali") || key.includes("lunch") || key.includes("homely")) return "🍱";
+          if (key.includes("mess") || key.includes("tiffin")) return "🍱";
+          if (key.includes("health")) return "🥗";
+          if (key.includes("snack")) return "🍟";
+          if (key.includes("desert") || key.includes("dessert")) return "🍨";
+          if (key.includes("drink") || key.includes("beverage") || key.includes("shake")) return "🧃";
+          return "🍽️";
         };
 
         // 1. Process Categories (Deduplicated)
@@ -248,23 +312,15 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           if (!lower || lower === "food" || lower === "rooms") return;
           const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
           const isMismatchedImg = fc.imageUrl && String(fc.imageUrl).includes("zwy6klrcbxepkcjr1big");
+          const customFallback = getCustomCategoryIcon(cleanKey, rawName);
 
           const mappedImage =
             isMismatchedImg
               ? "/images/categories/cat-meal.png"
               : CATEGORY_IMAGE_MAP[lower] ||
                 CATEGORY_IMAGE_MAP[cleanKey] ||
-                (cleanKey.includes("mess") || cleanKey.includes("tiffin") || cleanKey.includes("dabba")
-                  ? "/images/categories/cat-mess.png"
-                  : cleanKey.includes("cake") || cleanKey.includes("pastry")
-                  ? "/images/categories/cat-cake.png"
-                  : cleanKey.includes("burger")
-                  ? "/images/categories/cat-burger.png"
-                  : cleanKey.includes("meal") || cleanKey.includes("thali")
-                  ? "/images/categories/cat-meal.png"
-                  : cleanKey.includes("dal")
-                  ? "/images/categories/cat-dalrice.png"
-                  : fc.imageUrl || "/images/categories/cat-food.png");
+                customFallback;
+
           const existing = categoryMap.get(lower);
 
           if (!existing) {
@@ -272,7 +328,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               id: fc.id || lower,
               name: displayName,
               image: mappedImage,
-              emoji: cleanKey.includes("mess") || cleanKey.includes("tiffin") ? "🍱" : cleanKey.includes("cake") || cleanKey.includes("pastry") ? "🍰" : cleanKey.includes("dal") ? "🍛" : cleanKey.includes("meal") || cleanKey.includes("thali") ? "🍱" : "🍽️",
+              emoji: getCustomCategoryEmoji(cleanKey),
               route: "/food-explore?category=" + encodeURIComponent(lower),
             });
           } else if (fc.imageUrl && !isMismatchedImg && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
@@ -280,7 +336,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               ...existing,
               id: fc.id || existing.id,
               name: displayName,
-              image: fc.imageUrl,
+              image: mappedImage,
             });
           }
         };
