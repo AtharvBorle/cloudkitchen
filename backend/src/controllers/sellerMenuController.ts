@@ -197,8 +197,8 @@ export const createMenuItem = async (req: Request) => {
     const openTime = formData.get("openTime") as string | null;
     const closeTime = formData.get("closeTime") as string | null;
     const operationalHours = formData.get("operationalHours") as string | null;
-    let foodCategoryId = formData.get("foodCategoryId") as string | null;
-    const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
+    let foodCategoryId = (formData.get("foodCategoryId") as string | null) || null;
+    const foodSubCategoryId = (formData.get("foodSubCategoryId") as string | null) || null;
     const imageFile = formData.get("image") as File | null;
     const rawItemType = formData.get("itemType") as string | null;
     if (!rawItemType || !rawItemType.trim()) {

@@ -455,14 +455,14 @@ function FoodExploreContent() {
       maxStock: stockLimit,
       itemType: dish.itemType,
       addons: parsedAddons,
+    }, false, () => {
+      if (showAnimation) {
+        setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
+        setTimeout(() => {
+          setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
+        }, 1000);
+      }
     });
-
-    if (showAnimation) {
-      setAddedIds((prev) => ({ ...prev, [dish.id]: true }));
-      setTimeout(() => {
-        setAddedIds((prev) => ({ ...prev, [dish.id]: false }));
-      }, 1000);
-    }
   };
 
   const handleDecreaseFromCart = (dishId: string) => {
@@ -1867,6 +1867,8 @@ function FoodExploreContent() {
             const itemImg = addonModalDish.imageUrl || "/images/places/place-biryani.png";
             const baseFoodId = addonModalDish.id;
             const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
+            const savedDishId = addonModalDish.id;
+            setAddonModalDish(null);
 
             addToCart({
               id: cartItemId,
@@ -1885,14 +1887,12 @@ function FoodExploreContent() {
               maxStock: stockLimit,
               itemType: addonModalDish.itemType,
               addons: addonModalDish.parsedAddons,
+            }, false, () => {
+              setAddedIds((prev) => ({ ...prev, [savedDishId]: true }));
+              setTimeout(() => {
+                setAddedIds((prev) => ({ ...prev, [savedDishId]: false }));
+              }, 1000);
             });
-
-            setAddedIds((prev) => ({ ...prev, [addonModalDish.id]: true }));
-            setTimeout(() => {
-              setAddedIds((prev) => ({ ...prev, [addonModalDish.id]: false }));
-            }, 1000);
-
-            setAddonModalDish(null);
           }}
         />
       )}

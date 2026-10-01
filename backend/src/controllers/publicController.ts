@@ -415,7 +415,7 @@ export const validateCouponForCart = async (req: Request) => {
         });
 
         // Resolve cart's seller
-        let cartSeller: { id: string; businessName: string } | null = null;
+        let cartSeller: { id: string; businessName: string; trackingId?: string | null } | null = null;
         if (sellerId && sellerId !== "seller" && sellerId !== "k-1") {
             cartSeller = await prisma.sellerProfile.findFirst({
                 where: {
@@ -424,7 +424,7 @@ export const validateCouponForCart = async (req: Request) => {
                         { trackingId: sellerId }
                     ]
                 },
-                select: { id: true, businessName: true }
+                select: { id: true, businessName: true, trackingId: true }
             });
         }
 
@@ -434,7 +434,7 @@ export const validateCouponForCart = async (req: Request) => {
             if (firstItemId) {
                 const fi = await prisma.foodItem.findUnique({
                     where: { id: firstItemId },
-                    include: { seller: { select: { id: true, businessName: true } } }
+                    include: { seller: { select: { id: true, businessName: true, trackingId: true } } }
                 });
                 if (fi?.seller) cartSeller = fi.seller;
             }

@@ -2,9 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Star, Minus, Plus, Check } from "lucide-react";
 import { DietaryTag } from "@/components/common/DietaryTag";
-import { useCart } from "@/context/CartContext";
+import { useCart, generateCartItemId, AddonItem } from "@/context/CartContext";
+import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 
 export interface TopRatedItem {
   id: string;
@@ -24,6 +25,9 @@ export interface TopRatedItem {
   isAvailable?: boolean;
   stockQuantity?: number;
   maxStock?: number;
+  description?: string;
+  addons?: any;
+  variants?: any;
 }
 
 interface DashboardBodyProps {
@@ -37,14 +41,45 @@ export default function DashboardBody({
   seeAllLink = "/food-explore?sort=rating",
   items,
 }: DashboardBodyProps) {
-  const { addToCart, cartItems, showToast } = useCart();
+  const { addToCart, cartItems, updateQuantity, removeFromCart, showToast } = useCart();
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [customizingItem, setCustomizingItem] = useState<TopRatedItem | null>(null);
 
   if (!items || items.length === 0) {
     return null;
   }
 
-  const handleOrder = (item: TopRatedItem) => {
+  const parseItemAddons = (item: TopRatedItem): AddonItem[] => {
+    const raw = item.addons || item.variants;
+    if (!raw) return [];
+    try {
+      const list = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (Array.isArray(list)) {
+        return list
+          .filter((a: any) => a && (a.name || "").trim())
+          .map((a: any, idx: number) => ({
+            id: String(a.id || `addon_${idx + 1}`),
+            name: String(a.name || "").trim(),
+            price: Math.max(0, typeof a.price === "number" ? a.price : parseFloat(a.price) || 0),
+          }));
+      }
+    } catch {}
+    return [];
+  };
+
+  const getCartQuantityForDish = (item: TopRatedItem) => {
+    const baseId = item.foodItemId || item.id;
+    return cartItems
+      .filter((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId || ci.id.startsWith(baseId + "_"))
+      .reduce((sum, ci) => sum + (ci.quantity || 0), 0);
+  };
+
+  const getPrimaryCartItemForDish = (item: TopRatedItem) => {
+    const baseId = item.foodItemId || item.id;
+    return cartItems.find((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId || ci.id.startsWith(baseId + "_"));
+  };
+
+  const handleOrderClick = (item: TopRatedItem) => {
     if (item.sellerIsOnline === false) {
       showToast(`Sorry, "${item.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
       return;
@@ -62,17 +97,25 @@ export default function DashboardBody({
       return;
     }
 
-    const existingInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
-    if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
+    const currentQty = getCartQuantityForDish(item);
+    if (stockLimit !== -1 && currentQty >= stockLimit) {
       showToast(`We have only ${stockLimit} left in stock.`, "warning");
       return;
     }
 
-    const success = addToCart({
-      id: item.id,
-      foodItemId: item.foodItemId || item.id,
+    const parsedAddons = parseItemAddons(item);
+    if (parsedAddons.length > 0) {
+      setCustomizingItem(item);
+      return;
+    }
+
+    const baseFoodId = item.foodItemId || item.id;
+    addToCart({
+      id: baseFoodId,
+      foodItemId: baseFoodId,
       name: item.name,
       price: item.price || 0,
+      basePrice: item.price || 0,
       quantity: 1,
       sellerId: item.sellerId || "k-1",
       sellerName: item.sellerName || "Verified Cloud Kitchen",
@@ -81,13 +124,114 @@ export default function DashboardBody({
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: item.itemType,
-    });
-
-    if (success) {
+      addons: item.addons,
+    }, false, () => {
       setAddedId(item.id);
-      showToast(`Added "${item.name}" to your cart!`, "success");
-      setTimeout(() => setAddedId(null), 1800);
+      setTimeout(() => {
+        setAddedId(null);
+      }, 1200);
+    });
+  };
+
+  const handleIncrement = (item: TopRatedItem) => {
+    if (item.sellerIsOnline === false) {
+      showToast(`Sorry, "${item.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
+      return;
     }
+    const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+    const currentQty = getCartQuantityForDish(item);
+
+    if (stockLimit !== -1 && currentQty >= stockLimit) {
+      showToast(`We have only ${stockLimit} left in stock.`, "warning");
+      return;
+    }
+
+    const parsedAddons = parseItemAddons(item);
+    if (parsedAddons.length > 0) {
+      setCustomizingItem(item);
+      return;
+    }
+
+    const baseFoodId = item.foodItemId || item.id;
+    const matchingCartItem = getPrimaryCartItemForDish(item);
+    if (matchingCartItem) {
+      updateQuantity(matchingCartItem.id, matchingCartItem.quantity + 1);
+    } else {
+      addToCart({
+        id: baseFoodId,
+        foodItemId: baseFoodId,
+        name: item.name,
+        price: item.price || 0,
+        basePrice: item.price || 0,
+        quantity: 1,
+        sellerId: item.sellerId || "k-1",
+        sellerName: item.sellerName || "Verified Cloud Kitchen",
+        image: item.imageUrl,
+        imageUrl: item.imageUrl,
+        stockQuantity: stockLimit,
+        maxStock: stockLimit,
+        itemType: item.itemType,
+        addons: item.addons,
+      }, false, () => {
+        setAddedId(item.id);
+        setTimeout(() => {
+          setAddedId(null);
+        }, 1200);
+      });
+    }
+  };
+
+  const handleDecrement = (item: TopRatedItem) => {
+    const baseId = item.foodItemId || item.id;
+    const matchingItems = cartItems.filter((ci) => ci.id === item.id || ci.foodItemId === baseId || ci.id === baseId || ci.id.startsWith(baseId + "_"));
+    if (matchingItems.length === 0) return;
+
+    const target = matchingItems[matchingItems.length - 1];
+    if (target.quantity > 1) {
+      updateQuantity(target.id, target.quantity - 1);
+    } else {
+      removeFromCart(target.id);
+    }
+  };
+
+  const handleCustomizationConfirm = (selectedAddons: AddonItem[], quantity: number = 1) => {
+    if (!customizingItem) return;
+    const item = customizingItem;
+    const base = Number(item.price) || 0;
+    const addonsTotal = selectedAddons.reduce((sum, a) => sum + (a.price || 0), 0);
+    const unitPrice = base + addonsTotal;
+    const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+    const baseFoodId = item.foodItemId || item.id;
+    const cartItemId = generateCartItemId(baseFoodId, selectedAddons);
+    const savedItemId = item.id;
+
+    setCustomizingItem(null);
+
+    addToCart({
+      id: cartItemId,
+      foodItemId: baseFoodId,
+      name: item.name,
+      price: unitPrice,
+      basePrice: base,
+      addonsTotal: addonsTotal,
+      selectedAddons: selectedAddons,
+      quantity: quantity || 1,
+      sellerId: item.sellerId || "k-1",
+      sellerName: item.sellerName || "Verified Cloud Kitchen",
+      image: item.imageUrl,
+      imageUrl: item.imageUrl,
+      stockQuantity: stockLimit,
+      maxStock: stockLimit,
+      itemType: item.itemType,
+      addons: item.addons,
+    }, false, () => {
+      setAddedId(savedItemId);
+      setTimeout(() => {
+        setAddedId(null);
+      }, 1200);
+    });
   };
 
   const displayItems = items;
@@ -168,8 +312,10 @@ export default function DashboardBody({
             const isSellerClosed = item.sellerIsOnline === false;
             const isOutOfStock = item.stockQuantity === 0 || item.maxStock === 0 || item.isAvailable === false;
             const isClosed = isSellerClosed || isOutOfStock;
-            const currentInCart = cartItems.find((ci) => ci.id === item.id || ci.foodItemId === (item.foodItemId || item.id));
-            const isMaxStockInCart = !isClosed && item.stockQuantity !== undefined && item.stockQuantity > 0 && (currentInCart ? currentInCart.quantity >= item.stockQuantity : false);
+            const currentInCartQty = getCartQuantityForDish(item);
+            const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
+            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+            const isMaxStockInCart = !isClosed && stockLimit !== -1 && currentInCartQty >= stockLimit;
 
             return (
             <div
@@ -211,6 +357,7 @@ export default function DashboardBody({
                     backgroundColor: "#F8FAFC",
                     position: "relative",
                   }}
+                  className="top-rated-thumb"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -253,6 +400,7 @@ export default function DashboardBody({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                       }}
+                      className="top-rated-name"
                     >
                       {item.name}
                     </h3>
@@ -308,67 +456,203 @@ export default function DashboardBody({
                     </span>
                   ) : isMaxStockInCart ? (
                     <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
-                      We have only {item.stockQuantity} left in stock
+                      We have only {stockLimit} left in stock
                     </span>
-                  ) : item.stockQuantity !== undefined && item.stockQuantity > 0 && item.stockQuantity <= 5 ? (
+                  ) : stockLimit > 0 && stockLimit <= 5 ? (
                     <span style={{ fontSize: "0.74rem", color: "#EA580C", fontWeight: "700" }}>
-                      Only {item.stockQuantity} left
+                      Only {stockLimit} left
                     </span>
                   ) : null}
                 </div>
               </div>
 
-              {/* Right Column: Order Button */}
-              {isClosed ? (
-                <button
-                  type="button"
-                  onClick={() => handleOrder(item)}
-                  style={{
-                    backgroundColor: "#F1F5F9",
-                    color: "#64748B",
-                    fontSize: "0.82rem",
-                    fontWeight: "700",
-                    padding: "6px 14px",
-                    borderRadius: "9999px",
-                    border: "1px solid #CBD5E1",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                    transition: "all 0.2s ease",
-                  }}
-                  className="top-rated-order-btn-closed"
-                  title={isSellerClosed ? "Kitchen closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
-                >
-                  {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleOrder(item)}
-                  style={{
-                    backgroundColor: addedId === item.id ? "#10B981" : "#FF6B00",
-                    color: "#FFFFFF",
-                    fontSize: "0.82rem",
-                    fontWeight: "700",
-                    padding: "6px 16px",
-                    borderRadius: "9999px",
-                    border: "none",
-                    cursor: "pointer",
-                    boxShadow: addedId === item.id ? "0 3px 10px rgba(16, 185, 129, 0.25)" : "0 3px 10px rgba(255, 107, 0, 0.25)",
-                    transition: "all 0.2s ease",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}
-                  className="top-rated-order-btn"
-                >
-                  {addedId === item.id ? "Added! ✓" : "Order"}
-                </button>
-              )}
+              {/* Right Column: Order / Added / Stepper Button */}
+              {(() => {
+                if (isClosed) {
+                  return (
+                    <button
+                      type="button"
+                      disabled
+                      style={{
+                        backgroundColor: "#F1F5F9",
+                        color: "#94A3B8",
+                        fontSize: "0.82rem",
+                        fontWeight: "700",
+                        padding: "6px 14px",
+                        borderRadius: "9999px",
+                        border: "1px solid #CBD5E1",
+                        cursor: "not-allowed",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
+                      className="top-rated-order-btn-closed"
+                      title={isSellerClosed ? "Kitchen closed" : isOutOfStock ? "Out of stock" : "Unavailable"}
+                    >
+                      {isSellerClosed ? "Closed" : isOutOfStock ? "Out of Stock" : "Unavailable"}
+                    </button>
+                  );
+                }
+
+                if (addedId === item.id) {
+                  return (
+                    <button
+                      type="button"
+                      style={{
+                        backgroundColor: "#10B981",
+                        color: "#FFFFFF",
+                        fontSize: "0.82rem",
+                        fontWeight: "700",
+                        padding: "6px 16px",
+                        borderRadius: "9999px",
+                        border: "none",
+                        cursor: "default",
+                        boxShadow: "0 3px 10px rgba(16, 185, 129, 0.28)",
+                        transition: "all 0.2s ease",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <Check size={13} strokeWidth={3} />
+                      Added!
+                    </button>
+                  );
+                }
+
+                if (currentInCartQty > 0) {
+                  return (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        backgroundColor: "#FFF7ED",
+                        border: "1.5px solid #FF6B00",
+                        borderRadius: "9999px",
+                        overflow: "hidden",
+                        boxShadow: "0 2px 8px rgba(255, 107, 0, 0.15)",
+                        flexShrink: 0,
+                        height: "32px",
+                        boxSizing: "border-box",
+                      }}
+                      role="group"
+                      aria-label={`Quantity controls for ${item.name}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleDecrement(item)}
+                        aria-label="Decrease quantity"
+                        style={{
+                          width: "28px",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "transparent",
+                          border: "none",
+                          color: "#FF6B00",
+                          cursor: "pointer",
+                          fontWeight: "800",
+                          padding: 0,
+                          transition: "all 0.15s ease",
+                        }}
+                        className="top-rated-stepper-btn"
+                      >
+                        <Minus size={13} strokeWidth={3} />
+                      </button>
+
+                      <span
+                        style={{
+                          minWidth: "20px",
+                          padding: "0 4px",
+                          textAlign: "center",
+                          fontSize: "0.85rem",
+                          fontWeight: "800",
+                          color: "#FF6B00",
+                          userSelect: "none",
+                        }}
+                      >
+                        {currentInCartQty}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleIncrement(item)}
+                        aria-label="Increase quantity"
+                        disabled={isMaxStockInCart}
+                        style={{
+                          width: "28px",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "transparent",
+                          border: "none",
+                          color: isMaxStockInCart ? "#CBD5E1" : "#FF6B00",
+                          cursor: isMaxStockInCart ? "not-allowed" : "pointer",
+                          fontWeight: "800",
+                          padding: 0,
+                          transition: "all 0.15s ease",
+                          opacity: isMaxStockInCart ? 0.4 : 1,
+                        }}
+                        className="top-rated-stepper-btn"
+                      >
+                        <Plus size={13} strokeWidth={3} />
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    type="button"
+                    onClick={() => handleOrderClick(item)}
+                    style={{
+                      backgroundColor: "#FF6B00",
+                      color: "#FFFFFF",
+                      fontSize: "0.82rem",
+                      fontWeight: "700",
+                      padding: "6px 18px",
+                      borderRadius: "9999px",
+                      border: "none",
+                      cursor: "pointer",
+                      boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
+                      transition: "all 0.2s ease",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                    className="top-rated-order-btn"
+                  >
+                    Order
+                  </button>
+                );
+              })()}
             </div>
             );
           })}
         </div>
       </div>
+
+      {/* Add-on Customization Modal */}
+      {customizingItem && (
+        <AddonCustomizationModal
+          isOpen={!!customizingItem}
+          onClose={() => setCustomizingItem(null)}
+          item={{
+            id: customizingItem.id,
+            name: customizingItem.name,
+            price: customizingItem.price,
+            basePrice: customizingItem.price,
+            description: customizingItem.description,
+            imageUrl: customizingItem.imageUrl,
+            itemType: customizingItem.itemType,
+            isVeg: customizingItem.itemType === "VEG" || !customizingItem.name.toLowerCase().includes("chicken"),
+            addons: parseItemAddons(customizingItem),
+          }}
+          onAddToCart={handleCustomizationConfirm}
+        />
+      )}
 
       <style jsx>{`
         .top-rated-card:hover {
@@ -379,6 +663,10 @@ export default function DashboardBody({
         .top-rated-order-btn:hover {
           background-color: #E65F00;
           transform: scale(1.03);
+        }
+        .top-rated-stepper-btn:hover:not(:disabled) {
+          background-color: #FF6B00 !important;
+          color: #FFFFFF !important;
         }
         @media (max-width: 1024px) {
           .top-rated-grid {
@@ -413,3 +701,4 @@ export default function DashboardBody({
     </section>
   );
 }
+

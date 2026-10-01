@@ -414,6 +414,9 @@ export default function Home() {
       stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
       maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
       distanceText: f.distanceText,
+      description: f.description,
+      addons: f.addons,
+      variants: f.variants,
     }));
   }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
