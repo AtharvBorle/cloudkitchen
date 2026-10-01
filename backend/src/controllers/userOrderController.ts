@@ -545,26 +545,36 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         console.error("Realtime event emission error:", e);
     }
 
-    if (order.isPaid) {
+    let refundRecord = null;
+    if (order.isPaid || order.totalAmount === 0) {
         const existingRefund = await db.refund.findUnique({
             where: { orderId: id }
         });
+        const refundAmount = Number(order.totalAmount ?? 0);
+        let baseReason = isAdmin 
+            ? `Order #${id} was cancelled by Admin/Superadmin prior to preparation.` 
+            : `Order #${id} was cancelled by customer prior to preparation.`;
+        if (refundAmount === 0) {
+            baseReason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
+        } else {
+            baseReason += ` Auto-submitted for refund processing.`;
+        }
+        if (ticketId) {
+            baseReason = `[Ticket Ref: #${ticketId}] ${baseReason}`;
+        }
+
         if (!existingRefund) {
-            let baseReason = isAdmin 
-                ? `Order #${id} was cancelled by Admin/Superadmin prior to preparation. Auto-submitted for refund processing.` 
-                : `Order #${id} was cancelled by customer prior to preparation. Auto-submitted for refund processing.`;
-            if (ticketId) {
-                baseReason = `[Ticket Ref: #${ticketId}] ${baseReason}`;
-            }
-            await db.refund.create({
+            refundRecord = await db.refund.create({
                 data: {
                     userId: order.userId,
                     orderId: id,
-                    amount: order.totalAmount,
+                    amount: refundAmount,
                     reason: baseReason,
-                    status: "PENDING"
+                    status: refundAmount === 0 ? "PROCESSED" : "PENDING"
                 }
             });
+        } else {
+            refundRecord = existingRefund;
         }
     }
 
@@ -573,7 +583,10 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         revalidateTag("public-explore-data", {});
     } catch (e) {}
 
-    return cancelledOrder;
+    return {
+        ...cancelledOrder,
+        refund: refundRecord
+    };
 };
 
 export const verifyOrderPayment = async (req: Request) => {

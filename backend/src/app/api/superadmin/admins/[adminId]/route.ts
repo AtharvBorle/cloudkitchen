@@ -18,7 +18,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ adminId:
         const { adminId } = await params;
 
         const existingUser = await db.user.findUnique({ where: { id: adminId } });
-        if (!existingUser || !["AGENT", "SUPPORT"].includes(existingUser.role)) {
+        if (!existingUser || !["AGENT", "SUPPORT", "REEL_MANAGER"].includes(existingUser.role)) {
             return NextResponse.json({ success: false, message: "The specified administrator could not be found.", error: "The specified administrator could not be found." }, { status: 404 });
         }
 
@@ -130,9 +130,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ admin
 
         const { adminId } = await params;
 
-        // Ensure we are only deleting AGENTs
+        // Ensure we are only deleting admin roles
         const existingUser = await db.user.findUnique({ where: { id: adminId } });
-        if (!existingUser || !["AGENT", "SUPPORT"].includes(existingUser.role)) {
+        if (!existingUser || !["AGENT", "SUPPORT", "REEL_MANAGER"].includes(existingUser.role)) {
             return NextResponse.json({ message: "Admin not found or invalid type" }, { status: 404 });
         }
 

@@ -32,7 +32,30 @@ export async function GET() {
             }
         });
 
-        return successResponse(orders);
+        const couponIds = Array.from(new Set(orders.map(o => o.appliedCouponId).filter(Boolean))) as string[];
+        const couponsMap: Record<string, any> = {};
+        if (couponIds.length > 0) {
+            const coupons = await db.coupon.findMany({
+                where: { id: { in: couponIds } },
+                select: {
+                    id: true,
+                    code: true,
+                    discountPercentage: true,
+                    discountAmount: true,
+                    discountType: true
+                }
+            });
+            coupons.forEach(c => {
+                couponsMap[c.id] = c;
+            });
+        }
+
+        const enrichedOrders = orders.map(o => ({
+            ...o,
+            appliedCoupon: o.appliedCouponId ? couponsMap[o.appliedCouponId] || null : null
+        }));
+
+        return successResponse(enrichedOrders);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Fetch user orders error:", error);

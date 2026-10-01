@@ -64,6 +64,9 @@ export interface OrderItemData {
     itemTotal: number;
     deliveryFee: number;
     platformFee: number;
+    discount?: number;
+    couponCode?: string;
+    couponDiscountPercentage?: number;
     totalPaid: number;
   };
   rawItems: any[];
@@ -242,10 +245,15 @@ function parseOrderFromDb(o: any): OrderItemData {
     o.seller?.user?.name ||
     "Chef Anjali's Gourmet Kitchen";
 
-  const itemTotal = parsedItems.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || it.qty || 1), 0) || (o.totalAmount || 0);
+  const parsedItemTotal = parsedItems.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.quantity) || Number(it.qty) || 1), 0);
+  const totalAmountNum = o.totalAmount !== undefined && o.totalAmount !== null && !isNaN(Number(o.totalAmount)) ? Number(o.totalAmount) : undefined;
+  const itemTotal = parsedItemTotal > 0 ? parsedItemTotal : (totalAmountNum !== undefined ? totalAmountNum : 0);
+  const totalPaid = totalAmountNum !== undefined ? totalAmountNum : itemTotal;
   const deliveryFee = 0;
   const platformFee = 0;
-  const totalPaid = o.totalAmount || itemTotal;
+  const discount = Math.max(0, itemTotal - totalPaid);
+  const couponCode = o.appliedCoupon?.code || (o.appliedCouponId ? "COUPON" : undefined);
+  const couponDiscountPercentage = o.appliedCoupon?.discountPercentage;
 
   return {
     id: o.id,
@@ -253,7 +261,7 @@ function parseOrderFromDb(o: any): OrderItemData {
     vendorName,
     itemSummary,
     itemsDetail,
-    price: o.totalAmount || itemTotal,
+    price: totalPaid,
     orderDate,
     status,
     rawStatus,
@@ -267,13 +275,26 @@ function parseOrderFromDb(o: any): OrderItemData {
       itemTotal,
       deliveryFee,
       platformFee,
+      discount,
+      couponCode,
+      couponDiscountPercentage,
       totalPaid,
     },
     rawItems: parsedItems,
     review: o.review || null,
     isPaid: !!o.isPaid,
     paymentMethod: o.paymentMethod || "COD",
-    refund: o.refund || null,
+    refund: o.refund
+      ? {
+          ...o.refund,
+          amount:
+            typeof o.refund.amount === "number"
+              ? o.refund.amount
+              : o.refund.amount !== undefined && o.refund.amount !== null && !isNaN(Number(o.refund.amount))
+              ? Number(o.refund.amount)
+              : totalPaid,
+        }
+      : null,
   };
 }
 
@@ -768,6 +789,22 @@ export default function MyOrdersView() {
         throw new Error(errorMsg);
       }
 
+      const refundData = json?.data?.refund || (
+        order.price === 0
+          ? {
+              id: `ref_${order.id}`,
+              status: "PROCESSED",
+              amount: 0,
+              reason: "100% discount coupon applied (₹0 paid by customer). No refund required.",
+            }
+          : (order.refund || {
+              id: `ref_${order.id}`,
+              status: "PENDING",
+              amount: order.price,
+              reason: "Cancelled paid order submitted for admin refund processing.",
+            })
+      );
+
       // Update state locally
       const updatedCancelledOrder: OrderItemData = {
         ...order,
@@ -777,6 +814,7 @@ export default function MyOrdersView() {
         deliveredLabel: "Order cancelled",
         deliveredTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
         arrivingIn: "Cancelled",
+        refund: refundData,
       };
 
       setOrders((prev) =>
@@ -790,6 +828,7 @@ export default function MyOrdersView() {
       setCancelModalOrder(null);
       setCancelError(null);
       showToast("Your order has been cancelled successfully.");
+      fetchOrders();
     } catch (err: any) {
       console.error("Cancel order error:", err);
       throw err;
@@ -1321,7 +1360,19 @@ export default function MyOrdersView() {
                       <div className={styles.cardMetaInfo}>
                         <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
                         <p className={styles.itemSummaryText}>{order.itemSummary}</p>
-                        <span className={styles.priceSingleLine}>₹{order.price}</span>
+                        {order.billBreakdown.discount !== undefined && order.billBreakdown.discount > 0 ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "2px", marginBottom: "2px" }}>
+                            <span className={styles.priceSingleLine}>₹{order.price}</span>
+                            <span style={{ fontSize: "0.8rem", textDecoration: "line-through", color: "#94A3B8", fontWeight: 500 }}>
+                              ₹{order.billBreakdown.itemTotal}
+                            </span>
+                            <span style={{ fontSize: "0.72rem", color: "#16A34A", fontWeight: 700, backgroundColor: "#DCFCE7", padding: "1px 6px", borderRadius: "4px" }}>
+                              ₹{order.billBreakdown.discount} OFF
+                            </span>
+                          </div>
+                        ) : (
+                          <span className={styles.priceSingleLine}>₹{order.price}</span>
+                        )}
                         <span className={styles.dateSingleLine}>{order.orderDate}</span>
                       </div>
                     </div>
@@ -1387,7 +1438,7 @@ export default function MyOrdersView() {
                             <span className={styles.deliveredLabel}>{order.deliveredLabel || "Order cancelled"}</span>
                             <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
                           </div>
-                          {(order.refund || order.isPaid) && (
+                          {(order.refund || order.isPaid || order.price === 0) && (
                             <span
                               style={{
                                 display: "inline-flex",
@@ -1398,19 +1449,19 @@ export default function MyOrdersView() {
                                 fontSize: "0.75rem",
                                 fontWeight: 700,
                                 backgroundColor:
-                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
                                     ? "#DCFCE7"
                                     : order.refund?.status === "REJECTED"
                                     ? "#FEE2E2"
                                     : "#FEF3C7",
                                 color:
-                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
                                     ? "#15803D"
                                     : order.refund?.status === "REJECTED"
                                     ? "#B91C1C"
                                     : "#B45309",
                                 border: `1px solid ${
-                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
                                     ? "#BBF7D0"
                                     : order.refund?.status === "REJECTED"
                                     ? "#FECACA"
@@ -1418,11 +1469,11 @@ export default function MyOrdersView() {
                                 }`,
                               }}
                             >
-                              {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
-                                ? `✓ Refund: Processed (₹${order.refund.amount || order.price})`
+                              {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
                                 : order.refund?.status === "REJECTED"
                                 ? `✕ Refund: Rejected`
-                                : `⏳ Refund: Processing (₹${order.price})`}
+                                : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
                             </span>
                           )}
                           <button
@@ -1734,17 +1785,17 @@ export default function MyOrdersView() {
                 </div>
 
                 {/* Refund Status Card for Cancelled Paid Orders */}
-                {selectedOrder.status === "CANCELLED" && (selectedOrder.refund || selectedOrder.isPaid) && (
+                {selectedOrder.status === "CANCELLED" && (selectedOrder.refund || selectedOrder.isPaid || selectedOrder.price === 0) && (
                   <div
                     style={{
                       backgroundColor:
-                        selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                        selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED" || (!selectedOrder.refund && selectedOrder.price === 0)
                           ? "#F0FDF4"
                           : selectedOrder.refund?.status === "REJECTED"
                           ? "#FEF2F2"
                           : "#FFFBEB",
                       border: `1px solid ${
-                        selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                        selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED" || (!selectedOrder.refund && selectedOrder.price === 0)
                           ? "#BBF7D0"
                           : selectedOrder.refund?.status === "REJECTED"
                           ? "#FECACA"
@@ -1766,27 +1817,31 @@ export default function MyOrdersView() {
                           padding: "2px 8px",
                           borderRadius: "6px",
                           backgroundColor:
-                            selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                            selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED" || (!selectedOrder.refund && selectedOrder.price === 0)
                               ? "#DCFCE7"
                               : selectedOrder.refund?.status === "REJECTED"
                               ? "#FEE2E2"
                               : "#FEF3C7",
                           color:
-                            selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED"
+                            selectedOrder.refund?.status === "APPROVED" || selectedOrder.refund?.status === "PROCESSED" || (!selectedOrder.refund && selectedOrder.price === 0)
                               ? "#15803D"
                               : selectedOrder.refund?.status === "REJECTED"
                               ? "#B91C1C"
                               : "#B45309",
                         }}
                       >
-                        {selectedOrder.refund?.status || "PENDING"}
+                        {selectedOrder.refund?.status || (selectedOrder.price === 0 ? "PROCESSED" : "PENDING")}
                       </span>
                     </div>
                     <div style={{ fontSize: "0.85rem", color: "#334155", marginBottom: "4px" }}>
-                      <strong>Refund Amount:</strong> ₹{selectedOrder.refund?.amount || selectedOrder.price}
+                      <strong>Refund Amount:</strong> ₹{typeof selectedOrder.refund?.amount === "number" ? selectedOrder.refund.amount : selectedOrder.price}
                     </div>
                     <div style={{ fontSize: "0.8rem", color: "#64748B", lineHeight: 1.4 }}>
-                      {selectedOrder.refund?.reason || "Cancelled paid order submitted for admin refund processing."}
+                      {selectedOrder.refund?.reason || (
+                        selectedOrder.price === 0
+                          ? "100% discount coupon applied (₹0 paid by customer). No refund required."
+                          : "Cancelled paid order submitted for admin refund processing."
+                      )}
                     </div>
                     {selectedOrder.refund?.transactionId && (
                       <div style={{ fontSize: "0.78rem", color: "#15803D", marginTop: "6px", fontWeight: 600 }}>
@@ -1881,6 +1936,27 @@ export default function MyOrdersView() {
                     <span>Item Total</span>
                     <span>₹{selectedOrder.billBreakdown.itemTotal}</span>
                   </div>
+                  {selectedOrder.billBreakdown.discount !== undefined && selectedOrder.billBreakdown.discount > 0 && (
+                    <div className={styles.billRow} style={{ color: "#16A34A" }}>
+                      <span>
+                        Coupon Discount {selectedOrder.billBreakdown.couponCode ? `(${selectedOrder.billBreakdown.couponCode})` : ""}
+                        {selectedOrder.billBreakdown.couponDiscountPercentage ? ` • ${selectedOrder.billBreakdown.couponDiscountPercentage}% OFF` : ""}
+                      </span>
+                      <span style={{ fontWeight: 600 }}>-₹{selectedOrder.billBreakdown.discount}</span>
+                    </div>
+                  )}
+                  {selectedOrder.billBreakdown.deliveryFee > 0 && (
+                    <div className={styles.billRow}>
+                      <span>Delivery Fee</span>
+                      <span>₹{selectedOrder.billBreakdown.deliveryFee}</span>
+                    </div>
+                  )}
+                  {selectedOrder.billBreakdown.platformFee > 0 && (
+                    <div className={styles.billRow}>
+                      <span>Platform Fee</span>
+                      <span>₹{selectedOrder.billBreakdown.platformFee}</span>
+                    </div>
+                  )}
                   <div className={styles.billTotalRow}>
                     <span>Total Paid</span>
                     <span>₹{selectedOrder.billBreakdown.totalPaid}</span>

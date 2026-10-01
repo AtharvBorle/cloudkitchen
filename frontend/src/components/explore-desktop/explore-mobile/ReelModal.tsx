@@ -13,6 +13,7 @@ import {
   Music,
   X,
   Store,
+  Utensils,
 } from "lucide-react";
 import styles from "./ReelModal.module.css";
 
@@ -30,6 +31,11 @@ export interface ReelModalData {
   audioTitle?: string;
   verified?: boolean;
   kitchenId?: string;
+  dishId?: string;
+  dishName?: string;
+  dishPrice?: number;
+  redirectType?: "KITCHEN" | "DISH" | "CUSTOM_URL" | "NONE" | string;
+  customRedirectUrl?: string;
 }
 
 interface ReelModalProps {
@@ -302,8 +308,22 @@ export const ReelModal: React.FC<ReelModalProps> = ({
               </span>
             </div>
 
-            {/* Direct Link to Kitchen Page if available */}
-            {reel.kitchenId && (
+            {/* Dynamic Link to Specific Dish or Kitchen Page */}
+            {reel.redirectType === "DISH" && reel.kitchenId && reel.dishName ? (
+              <Link
+                href={
+                  (reel.kitchenId.startsWith("SHOP-") || reel.kitchenId.startsWith("shop-")
+                    ? `/shop/${reel.kitchenId}`
+                    : `/restaurant/${reel.kitchenId}`) + (reel.dishId ? `?dish=${reel.dishId}` : "")
+                }
+                className={styles.visitKitchenBtn}
+                style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "#ffffff", fontWeight: "700" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Utensils size={15} />
+                <span>Order {reel.dishName} {reel.dishPrice ? `(₹${reel.dishPrice})` : ""}</span>
+              </Link>
+            ) : reel.kitchenId && reel.redirectType !== "NONE" ? (
               <Link
                 href={
                   reel.kitchenId.startsWith("SHOP-") || reel.kitchenId.startsWith("shop-")
@@ -316,7 +336,16 @@ export const ReelModal: React.FC<ReelModalProps> = ({
                 <Store size={14} />
                 <span>Visit Kitchen &amp; Order</span>
               </Link>
-            )}
+            ) : reel.customRedirectUrl ? (
+              <Link
+                href={reel.customRedirectUrl}
+                className={styles.visitKitchenBtn}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Store size={14} />
+                <span>Explore Special Offer</span>
+              </Link>
+            ) : null}
           </div>
         </main>
       </div>

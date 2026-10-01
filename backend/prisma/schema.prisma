@@ -72,6 +72,7 @@ model SellerProfile {
   subscriptions              Subscription[]
   mealPlans                  SellerMealPlan[]
   userMealSubscriptions      UserMealSubscription[]
+  curatedReels               CuratedReel[]
 }
 
 model ServedPincode {
@@ -144,6 +145,7 @@ model FoodItem {
   foodSubCategory   FoodSubCategory? @relation(fields: [foodSubCategoryId], references: [id])
   seller            SellerProfile    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   itemRatings       ItemRating[]
+  curatedReels      CuratedReel[]
 }
 
 model Order {
@@ -480,3 +482,37 @@ model DeliveryTransaction {
   deliveryPerson   DeliveryPerson @relation(fields: [deliveryPersonId], references: [id], onDelete: Cascade)
   order            Order?         @relation(fields: [orderId], references: [id])
 }
+
+model CuratedReel {
+  id                String         @id @default(uuid())
+  instagramMediaId  String         @unique
+  mediaType         String         @default("VIDEO")
+  mediaUrl          String
+  thumbnailUrl      String?
+  permalink         String?
+  caption           String?        @default("")
+  postedAt          DateTime?
+  likeCount         Int?           @default(0)
+  commentsCount     Int?           @default(0)
+  
+  // Curation & Display
+  isPublished       Boolean        @default(false)
+  displayOrder      Int            @default(0)
+  categoryTag       String?        @default("ALL")
+  customTitle       String?
+  customSubtitle    String?
+
+  // Redirection & Linking
+  redirectType      String         @default("KITCHEN")
+  sellerId          String?
+  foodItemId        String?
+  customRedirectUrl String?
+
+  seller            SellerProfile? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  foodItem          FoodItem?      @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+
+  curatedBy         String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+

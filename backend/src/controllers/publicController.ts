@@ -234,10 +234,7 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
                 ),
                 AND: [
                     {
-                        OR: [
-                            { validFrom: null },
-                            { validFrom: { lte: now } }
-                        ]
+                        validFrom: { lte: now }
                     },
                     {
                         OR: [
@@ -351,7 +348,7 @@ export const validateCouponForCart = async (req: Request) => {
                     { trackingId: coupon.appliesToSellerId }
                 ]
             },
-            select: { id: true, businessName: true }
+            select: { id: true, businessName: true, trackingId: true }
         });
 
         // Resolve cart's seller
