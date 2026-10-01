@@ -4,6 +4,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { X, CheckCircle2 } from "lucide-react";
 import { performLogout } from "@/lib/logout";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 
@@ -365,31 +366,107 @@ export default function SuperadminSellersPage() {
 
             {/* Edit Modal */}
             {editingSeller && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '5px', color: 'var(--text-main)' }}>Edit Seller Profile</h2>
-                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '25px' }}>Modifying details for {editBusinessName || editName}</p>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)', padding: '20px' }}>
+                    <style>{`
+                        @keyframes popInCheck {
+                            0% { transform: scale(0.3); opacity: 0; }
+                            70% { transform: scale(1.2); }
+                            100% { transform: scale(1); opacity: 1; }
+                        }
+                    `}</style>
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', width: '100%', maxWidth: '680px', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                        {/* Modal Header */}
+                        <div style={{ padding: '24px 28px 18px 28px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.35rem', fontWeight: '800', margin: '0 0 4px 0', color: '#0f172a', letterSpacing: '-0.3px' }}>Edit Seller Profile</h2>
+                                <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0 }}>Modifying details for <strong style={{ color: '#334155' }}>{editBusinessName || editName}</strong></p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setEditingSeller(null)}
+                                style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '10px',
+                                    padding: '6px',
+                                    cursor: 'pointer',
+                                    color: '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#fee2e2';
+                                    e.currentTarget.style.borderColor = '#fca5a5';
+                                    e.currentTarget.style.color = '#dc2626';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                                    e.currentTarget.style.borderColor = '#e2e8f0';
+                                    e.currentTarget.style.color = '#64748b';
+                                }}
+                                title="Close modal"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                        <form onSubmit={handleUpdateSeller}>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                <div className="input-group">
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Business Name</label>
-                                    <input type="text" value={editBusinessName} onChange={e => setEditBusinessName(e.target.value)} className="input-field" required />
+                        {/* Modal Body */}
+                        <form onSubmit={handleUpdateSeller} style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                            {/* Row 1: Business Name & Category Type */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                        Business Name <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editBusinessName}
+                                        onChange={e => setEditBusinessName(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            height: '44px',
+                                            padding: '0 14px',
+                                            borderRadius: '10px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '0.9rem',
+                                            color: '#0f172a',
+                                            backgroundColor: '#ffffff',
+                                            outline: 'none',
+                                            boxSizing: 'border-box',
+                                        }}
+                                        placeholder="Enter business name"
+                                        required
+                                    />
                                 </div>
 
-                                <div className="input-group">
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Category Type</label>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                        Category Type <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
                                     <select
                                         value={editType}
                                         onChange={e => setEditType(e.target.value)}
-                                        className="input-field" style={{ appearance: 'auto' }} required
+                                        style={{
+                                            width: '100%',
+                                            height: '44px',
+                                            padding: '0 12px',
+                                            borderRadius: '10px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '0.9rem',
+                                            color: '#0f172a',
+                                            backgroundColor: '#ffffff',
+                                            outline: 'none',
+                                            appearance: 'auto',
+                                            boxSizing: 'border-box',
+                                        }}
+                                        required
                                     >
                                         <option value="">Select Category...</option>
                                         {categories.map(cat => (
                                             <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
                                         ))}
-                                        {/* Fallback for sellers with types that don't match any global category exactly */}
                                         {editType && !categories.some(c => c.name === editType) && (
                                             <option value={editType}>{formatDisplayName(editType)} (Legacy)</option>
                                         )}
@@ -397,39 +474,153 @@ export default function SuperadminSellersPage() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                <div className="input-group">
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Owner Name</label>
-                                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="input-field" required />
-                                </div>
+                            {/* Row 2: Owner Name & Phone Number */}
+                            {(() => {
+                                const cleanDigits = (editPhone || '').replace(/\D/g, '');
+                                const isPhoneValid = cleanDigits.length === 10;
+                                return (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                                Owner Name <span style={{ color: '#ef4444' }}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editName}
+                                                onChange={e => setEditName(e.target.value)}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '44px',
+                                                    padding: '0 14px',
+                                                    borderRadius: '10px',
+                                                    border: '1.5px solid #cbd5e1',
+                                                    fontSize: '0.9rem',
+                                                    color: '#0f172a',
+                                                    backgroundColor: '#ffffff',
+                                                    outline: 'none',
+                                                    boxSizing: 'border-box',
+                                                }}
+                                                placeholder="Enter owner name"
+                                                required
+                                            />
+                                        </div>
 
-                                <div className="input-group">
-                                    <PhoneInput
-                                        label="Phone"
-                                        value={editPhone}
-                                        onChange={(val) => setEditPhone(val)}
-                                        placeholder="98765 43210"
-                                        required
-                                    />
-                                </div>
-                            </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                                Phone <span style={{ color: '#ef4444' }}>*</span>
+                                            </label>
+                                            <div style={{
+                                                position: 'relative',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                width: '100%',
+                                                height: '44px',
+                                                borderRadius: '10px',
+                                                border: isPhoneValid ? '1.5px solid #10b981' : '1.5px solid #cbd5e1',
+                                                boxShadow: isPhoneValid ? '0 0 0 3px rgba(16, 185, 129, 0.15)' : 'none',
+                                                backgroundColor: '#ffffff',
+                                                overflow: 'hidden',
+                                                boxSizing: 'border-box',
+                                                transition: 'all 0.2s ease',
+                                            }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '0 12px',
+                                                    height: '100%',
+                                                    backgroundColor: '#f8fafc',
+                                                    borderRight: isPhoneValid ? '1.5px solid #10b981' : '1.5px solid #cbd5e1',
+                                                    color: '#334155',
+                                                    fontSize: '0.88rem',
+                                                    fontWeight: '700',
+                                                    userSelect: 'none',
+                                                    flexShrink: 0,
+                                                    transition: 'border-color 0.2s ease',
+                                                }}>
+                                                    <span>IN +91</span>
+                                                </div>
+                                                <input
+                                                    type="tel"
+                                                    value={editPhone}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                                        setEditPhone(val);
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        height: '100%',
+                                                        padding: isPhoneValid ? '0 38px 0 14px' : '0 14px',
+                                                        border: 'none',
+                                                        outline: 'none',
+                                                        fontSize: '0.9rem',
+                                                        color: '#0f172a',
+                                                        backgroundColor: 'transparent',
+                                                        boxSizing: 'border-box',
+                                                        letterSpacing: '0.02em',
+                                                        fontWeight: isPhoneValid ? '600' : '400',
+                                                    }}
+                                                    placeholder="98765 43210"
+                                                    maxLength={10}
+                                                    required
+                                                />
+                                                {isPhoneValid && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        right: '12px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        pointerEvents: 'none',
+                                                        color: '#10b981',
+                                                        animation: 'popInCheck 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                    }}>
+                                                        <CheckCircle2 size={18} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
-                            <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category & Document Verifications</div>
+                            {/* Section: Category & Document Verifications */}
+                            <div style={{ backgroundColor: '#f8fafc', padding: '18px 20px', borderRadius: '14px', border: '1.5px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                                    Category & Document Verifications
+                                </div>
                                 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Registered Category</label>
-                                        <div style={{ padding: '8px 12px', backgroundColor: '#e2e8f0', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b' }}>
+                                {/* Sub Row 1: Registered Category & Overall Status */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
+                                            Registered Category
+                                        </label>
+                                        <div style={{ height: '42px', padding: '0 14px', backgroundColor: '#e2e8f0', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
                                             {editBusinessCategory}
                                         </div>
                                     </div>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Overall Profile Status</label>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
+                                            Overall Profile Status
+                                        </label>
                                         <select
                                             value={editVerificationStatus}
                                             onChange={e => setEditVerificationStatus(e.target.value)}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                            style={{
+                                                width: '100%',
+                                                height: '42px',
+                                                padding: '0 10px',
+                                                borderRadius: '8px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '0.86rem',
+                                                backgroundColor: '#ffffff',
+                                                color: '#0f172a',
+                                                outline: 'none',
+                                                appearance: 'auto',
+                                                boxSizing: 'border-box',
+                                            }}
                                         >
                                             <option value="PENDING">Pending (Profile Review)</option>
                                             <option value="APPROVED">Approved (Profile Verified)</option>
@@ -438,13 +629,28 @@ export default function SuperadminSellersPage() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Food Verification</label>
+                                {/* Sub Row 2: Food & Property Verifications */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
+                                            Food Verification
+                                        </label>
                                         <select
                                             value={editFoodVerificationStatus}
                                             onChange={e => setEditFoodVerificationStatus(e.target.value)}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                            style={{
+                                                width: '100%',
+                                                height: '42px',
+                                                padding: '0 10px',
+                                                borderRadius: '8px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '0.86rem',
+                                                backgroundColor: '#ffffff',
+                                                color: '#0f172a',
+                                                outline: 'none',
+                                                appearance: 'auto',
+                                                boxSizing: 'border-box',
+                                            }}
                                         >
                                             <option value="NONE">None (Not Registered)</option>
                                             <option value="PENDING">Pending Approval</option>
@@ -452,12 +658,26 @@ export default function SuperadminSellersPage() {
                                             <option value="REJECTED">Rejected</option>
                                         </select>
                                     </div>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Property Verification</label>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
+                                            Property Verification
+                                        </label>
                                         <select
                                             value={editPropertyVerificationStatus}
                                             onChange={e => setEditPropertyVerificationStatus(e.target.value)}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                            style={{
+                                                width: '100%',
+                                                height: '42px',
+                                                padding: '0 10px',
+                                                borderRadius: '8px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '0.86rem',
+                                                backgroundColor: '#ffffff',
+                                                color: '#0f172a',
+                                                outline: 'none',
+                                                appearance: 'auto',
+                                                boxSizing: 'border-box',
+                                            }}
                                         >
                                             <option value="NONE">None (Not Registered)</option>
                                             <option value="PENDING">Pending Approval</option>
@@ -467,24 +687,53 @@ export default function SuperadminSellersPage() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Account Status</label>
+                                {/* Sub Row 3: Account Status & Store Visibility */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
+                                            Account Status
+                                        </label>
                                         <select
                                             value={editIsActive ? "true" : "false"}
                                             onChange={e => setEditIsActive(e.target.value === "true")}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                            style={{
+                                                width: '100%',
+                                                height: '42px',
+                                                padding: '0 10px',
+                                                borderRadius: '8px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '0.86rem',
+                                                backgroundColor: '#ffffff',
+                                                color: '#0f172a',
+                                                outline: 'none',
+                                                appearance: 'auto',
+                                                boxSizing: 'border-box',
+                                            }}
                                         >
                                             <option value="true">Enabled (Login Allowed)</option>
                                             <option value="false">Disabled (Login Blocked)</option>
                                         </select>
                                     </div>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Store Visibility</label>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
+                                            Store Visibility
+                                        </label>
                                         <select
                                             value={editIsOnline ? "true" : "false"}
                                             onChange={e => setEditIsOnline(e.target.value === "true")}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                            style={{
+                                                width: '100%',
+                                                height: '42px',
+                                                padding: '0 10px',
+                                                borderRadius: '8px',
+                                                border: '1.5px solid #cbd5e1',
+                                                fontSize: '0.86rem',
+                                                backgroundColor: '#ffffff',
+                                                color: '#0f172a',
+                                                outline: 'none',
+                                                appearance: 'auto',
+                                                boxSizing: 'border-box',
+                                            }}
                                         >
                                             <option value="true">Online (Visible to Users)</option>
                                             <option value="false">Offline (Hidden)</option>
@@ -493,11 +742,39 @@ export default function SuperadminSellersPage() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                                <button type="button" onClick={() => setEditingSeller(null)} className="btn" style={{ backgroundColor: '#f1f5f9', color: '#475569', width: 'auto', padding: '12px 24px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                            {/* Modal Footer Actions */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '6px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingSeller(null)}
+                                    style={{
+                                        backgroundColor: '#f1f5f9',
+                                        color: '#475569',
+                                        padding: '10px 22px',
+                                        borderRadius: '10px',
+                                        border: '1.5px solid #cbd5e1',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                    }}
+                                >
                                     Cancel
                                 </button>
-                                <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '12px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }} disabled={loading}>
+                                <button
+                                    type="submit"
+                                    style={{
+                                        backgroundColor: '#ff4d4f',
+                                        color: '#ffffff',
+                                        padding: '10px 26px',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(255, 77, 79, 0.25)',
+                                    }}
+                                    disabled={loading}
+                                >
                                     {loading ? "Saving Changes..." : "Save Changes"}
                                 </button>
                             </div>
