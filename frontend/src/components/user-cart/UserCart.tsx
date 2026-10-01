@@ -234,6 +234,26 @@ export const UserCart: React.FC<UserCartProps> = ({
     syncCartWithLiveMenu();
   }, [syncCartWithLiveMenu]);
 
+  // Restore previously applied coupon from storage
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const saved = sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.code || parsed.id)) {
+            setAppliedCoupon(parsed);
+            setAppliedPromo(parsed.code || "");
+            setPromoCode(parsed.code || "");
+            setDiscountPercent(parsed.discountPercentage || 0);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore applied coupon from storage:", e);
+    }
+  }, []);
+
   useEffect(() => {
     setCurrentAddress(formattedDefaultAddress);
   }, [formattedDefaultAddress]);
@@ -524,6 +544,12 @@ export const UserCart: React.FC<UserCartProps> = ({
     setAppliedPromo(null);
     setDiscountPercent(0);
     setPromoCode("");
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("appliedCoupon");
+      } catch (e) {}
+    }
     showToast("Coupon removed");
   };
 
@@ -578,12 +604,24 @@ export const UserCart: React.FC<UserCartProps> = ({
         setAppliedCoupon(cData);
         setAppliedPromo(cData.code);
         setDiscountPercent(pct);
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.setItem("appliedCoupon", JSON.stringify(cData));
+            localStorage.setItem("appliedCoupon", JSON.stringify(cData));
+          } catch (e) {}
+        }
         showToast(cData.message || json?.message || `Coupon "${cData.code}" applied! Saved ₹${savedAmt}`);
       } else {
         const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Coupon "${targetCode}" is invalid or requirements not met.`);
         setAppliedCoupon(null);
         setAppliedPromo(null);
         setDiscountPercent(0);
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
         showToast(errorMsg);
       }
     } catch (e) {
@@ -591,6 +629,12 @@ export const UserCart: React.FC<UserCartProps> = ({
       setAppliedCoupon(null);
       setAppliedPromo(null);
       setDiscountPercent(0);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem("appliedCoupon");
+          localStorage.removeItem("appliedCoupon");
+        } catch (e) {}
+      }
       showToast(`Failed to validate coupon "${targetCode}".`);
     } finally {
       setIsValidatingPromo(false);
