@@ -425,6 +425,8 @@ export const UserCart: React.FC<UserCartProps> = ({
   };
 
   // Fetch available public coupons for the seller / platform
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+
   React.useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
@@ -454,7 +456,75 @@ export const UserCart: React.FC<UserCartProps> = ({
     };
   }, [cartItems]);
 
+  // Auto-apply eligible coupon when conditions are met
+  React.useEffect(() => {
+    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+      return;
+    }
+
+    const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+    if (currentSubtotal <= 0) return;
+
+    // Filter offers configured with isAutoApply that satisfy minimum cart
+    const eligibleAutoOffers = availableOffers.filter((offer) => {
+      const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
+      if (!isAuto) return false;
+      const minCart = offer.minimumCartValue || offer.minOrderAmount || 0;
+      return currentSubtotal >= minCart;
+    });
+
+    if (eligibleAutoOffers.length === 0) {
+      // If currently applied was auto-applied and subtotal dropped below threshold, remove it
+      if (appliedCoupon && (appliedCoupon as any).isAutoApply && (appliedCoupon.minimumCartValue || 0) > currentSubtotal) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+      }
+      return;
+    }
+
+    // Find the offer providing maximum discount
+    let bestOffer = eligibleAutoOffers[0];
+    let maxDiscount = 0;
+
+    for (const offer of eligibleAutoOffers) {
+      const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
+      let disc = 0;
+      if (pct > 0) {
+        disc = Math.round((currentSubtotal * pct) / 100);
+        if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
+      } else {
+        disc = Math.min(offer.discountAmount || offer.discountValue || 0, currentSubtotal);
+      }
+      if (disc >= maxDiscount) {
+        maxDiscount = disc;
+        bestOffer = offer;
+      }
+    }
+
+    if (!appliedPromo || (appliedCoupon && (appliedCoupon as any).isAutoApply && appliedPromo !== bestOffer.code)) {
+      const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
+      setAppliedCoupon({
+        id: bestOffer.id,
+        code: bestOffer.code,
+        description: bestOffer.description,
+        discountType: bestOffer.discountType || (pct > 0 ? "PERCENTAGE" : "FLAT"),
+        discountPercentage: pct || null,
+        discountAmount: bestOffer.discountAmount || bestOffer.discountValue || null,
+        maxDiscountAmount: bestOffer.maxDiscountAmount || null,
+        minimumCartValue: bestOffer.minimumCartValue || bestOffer.minOrderAmount || 0,
+        calculatedDiscount: maxDiscount,
+        isAutoApply: true,
+      } as any);
+      setAppliedPromo(bestOffer.code);
+      setDiscountPercent(pct);
+      setPromoCode(bestOffer.code);
+    }
+  }, [availableOffers, cartItems, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo]);
+
   const handleRemovePromo = () => {
+    setUserDismissedPromo(true);
     setAppliedCoupon(null);
     setAppliedPromo(null);
     setDiscountPercent(0);
@@ -476,6 +546,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       return;
     }
 
+    setUserDismissedPromo(false);
     // Auto-populate input field when clicked from offers list
     setPromoCode(targetCode);
 
@@ -933,8 +1004,13 @@ export const UserCart: React.FC<UserCartProps> = ({
                       <Check size={16} strokeWidth={3} />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
-                        {appliedCouponData?.code || appliedPromo}
+                      <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span>{appliedCouponData?.code || appliedPromo}</span>
+                        {(appliedCouponData as any)?.isAutoApply && (
+                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                            ⚡ AUTO-APPLIED
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
                         -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}

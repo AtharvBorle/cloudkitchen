@@ -274,7 +274,8 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             maxUsers: c.maxUsers || c.usageLimit || null,
             currentUsersCount: c.currentUsersCount,
             noExpiry: c.noExpiry,
-            validUntil: c.validUntil
+            validUntil: c.validUntil,
+            isAutoApply: Boolean(c.isAutoApply)
         }));
 
         return safeCoupons;
@@ -452,6 +453,7 @@ export const validateCouponForCart = async (req: Request) => {
         minimumCartValue: coupon.minimumCartValue || 0,
         calculatedDiscount,
         discountLabel,
+        isAutoApply: Boolean(coupon.isAutoApply),
         message: `Coupon "${coupon.code}" applied! (${discountLabel})`
     };
 };

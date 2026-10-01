@@ -70,12 +70,9 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
   }, []);
 
   const toggleNotif = (key: keyof NotificationsSummaryPreferences) => {
-    setNotifStates((prev) => {
-      const nextVal = !prev[key];
-      const updated = { ...prev, [key]: nextVal };
-      saveNotificationsSummaryPreferences({ [key]: nextVal });
-      return updated;
-    });
+    const nextVal = !notifStates[key];
+    setNotifStates((prev) => ({ ...prev, [key]: nextVal }));
+    saveNotificationsSummaryPreferences({ [key]: nextVal });
   };
 
   return (

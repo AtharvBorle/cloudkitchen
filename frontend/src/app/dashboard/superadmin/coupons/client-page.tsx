@@ -24,6 +24,7 @@ type CouponType = {
     maxUsers?: number | null;
     currentUsersCount?: number;
     minimumCartValue?: number | null;
+    isAutoApply?: boolean;
     isActive: boolean;
 };
 
@@ -42,6 +43,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const [startDate, setStartDate] = useState("");
     const [hasEndDate, setHasEndDate] = useState(false);
     const [validUntil, setValidUntil] = useState("");
+    const [isAutoApply, setIsAutoApply] = useState(false);
 
     // Advanced fields
     const [maxUsagesPerUser, setMaxUsagesPerUser] = useState("");
@@ -63,6 +65,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const [editMaxUsers, setEditMaxUsers] = useState("");
     const [editMinimumCartValue, setEditMinimumCartValue] = useState("");
     const [editCouponCategory, setEditCouponCategory] = useState("BOTH");
+    const [editIsAutoApply, setEditIsAutoApply] = useState(false);
     const [editIsActive, setEditIsActive] = useState(true);
 
     const fetchCoupons = async () => {
@@ -158,7 +161,8 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 maxUsagesPerUser: maxUsagesPerUser ? parseInt(maxUsagesPerUser) : null,
                 maxUsers: maxUsers ? parseInt(maxUsers) : null,
                 minimumCartValue: minimumCartValue ? parseFloat(minimumCartValue) : null,
-                category: couponCategory
+                category: couponCategory,
+                isAutoApply: isAutoApply
             };
 
             const res = await fetchApi("/api/coupons", {
@@ -181,6 +185,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 setHasEndDate(false);
                 setValidUntil("");
                 setCouponCategory("BOTH");
+                setIsAutoApply(false);
             } else {
                 const data = await res.json();
                 alert(data.message || "Failed to create coupon");
@@ -228,6 +233,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
         setEditMaxUsers(coupon.maxUsers ? String(coupon.maxUsers) : "");
         setEditMinimumCartValue(coupon.minimumCartValue ? String(coupon.minimumCartValue) : "");
         setEditCouponCategory((coupon as any).category || "BOTH");
+        setEditIsAutoApply(Boolean(coupon.isAutoApply));
         setEditIsActive(coupon.isActive);
     };
 
@@ -308,6 +314,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 maxUsers: editMaxUsers ? parseInt(editMaxUsers) : null,
                 minimumCartValue: editMinimumCartValue ? parseFloat(editMinimumCartValue) : null,
                 category: editCouponCategory,
+                isAutoApply: editIsAutoApply,
                 isActive: editIsActive
             };
 
@@ -634,6 +641,35 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                     <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>Total users who can use this. Leave empty for unlimited.</p>
                                 </div>
                             </div>
+
+                            {/* Auto Apply Checkbox */}
+                            <div style={{ marginTop: "1rem", padding: "14px 16px", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div>
+                                    <div style={{ fontWeight: "600", fontSize: "0.9rem", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <span>Auto Apply on Checkout</span>
+                                        {isAutoApply && <span style={{ fontSize: "0.7rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>ENABLED</span>}
+                                    </div>
+                                    <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "4px 0 0" }}>When enabled, this coupon will be automatically applied at checkout if user cart satisfies all conditions.</p>
+                                </div>
+                                <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px", cursor: "pointer", flexShrink: 0 }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isAutoApply}
+                                        onChange={(e) => setIsAutoApply(e.target.checked)}
+                                        style={{ opacity: 0, width: 0, height: 0 }}
+                                    />
+                                    <span style={{
+                                        position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                                        backgroundColor: isAutoApply ? "var(--primary)" : "#cbd5e1",
+                                        transition: ".3s", borderRadius: "24px"
+                                    }}>
+                                        <span style={{
+                                            position: "absolute", height: "18px", width: "18px", left: isAutoApply ? "22px" : "3px", bottom: "3px",
+                                            backgroundColor: "white", transition: ".3s", borderRadius: "50%"
+                                        }} />
+                                    </span>
+                                </label>
+                            </div>
                         </div>
 
                         <button
@@ -700,6 +736,11 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                             <span style={{ fontSize: "0.7rem", backgroundColor: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", whiteSpace: "nowrap" }}>
                                                 {(coupon as any).category || "BOTH"}
                                             </span>
+                                            {coupon.isAutoApply && (
+                                                <span style={{ fontSize: "0.7rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                                    ⚡ AUTO-APPLY
+                                                </span>
+                                            )}
                                             {!coupon.isActive && (
                                                 <span style={{ fontSize: "0.7rem", backgroundColor: "#ef4444", color: "white", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", whiteSpace: "nowrap" }}>
                                                     INACTIVE
@@ -1002,6 +1043,35 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
                                 </div>
+                            </div>
+
+                            {/* Auto Apply Edit Checkbox */}
+                            <div style={{ padding: "14px 16px", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div>
+                                    <div style={{ fontWeight: "600", fontSize: "0.9rem", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <span>Auto Apply on Checkout</span>
+                                        {editIsAutoApply && <span style={{ fontSize: "0.7rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>ENABLED</span>}
+                                    </div>
+                                    <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "4px 0 0" }}>When enabled, this coupon will be automatically applied at checkout when conditions are met.</p>
+                                </div>
+                                <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px", cursor: "pointer", flexShrink: 0 }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={editIsAutoApply}
+                                        onChange={(e) => setEditIsAutoApply(e.target.checked)}
+                                        style={{ opacity: 0, width: 0, height: 0 }}
+                                    />
+                                    <span style={{
+                                        position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                                        backgroundColor: editIsAutoApply ? "var(--primary)" : "#cbd5e1",
+                                        transition: ".3s", borderRadius: "24px"
+                                    }}>
+                                        <span style={{
+                                            position: "absolute", height: "18px", width: "18px", left: editIsAutoApply ? "22px" : "3px", bottom: "3px",
+                                            backgroundColor: "white", transition: ".3s", borderRadius: "50%"
+                                        }} />
+                                    </span>
+                                </label>
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>

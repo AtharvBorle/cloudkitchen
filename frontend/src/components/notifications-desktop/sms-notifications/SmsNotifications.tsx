@@ -59,12 +59,9 @@ export const SmsNotifications: React.FC = () => {
   }, []);
 
   const handleToggle = (id: string) => {
-    setToggleStates((prev) => {
-      const nextVal = !prev[id];
-      const updated = { ...prev, [id]: nextVal };
-      saveGenericNotificationPreferences("sms", { [id]: nextVal });
-      return updated;
-    });
+    const nextVal = !toggleStates[id];
+    setToggleStates((prev) => ({ ...prev, [id]: nextVal }));
+    saveGenericNotificationPreferences("sms", { [id]: nextVal });
   };
 
   const renderIcon = (type: SmsOption["iconType"]) => {

@@ -570,6 +570,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         })),
         subtotal: tx.subtotal || subtotal,
         discount: tx.discountAmount || discountAmount,
+        couponCode: isPromoApplied ? (appliedCoupon?.code || promoCode) : undefined,
+        couponDiscountPercentage: isPromoApplied ? appliedCoupon?.discountPercentage : undefined,
         deliveryFee: 0,
         taxes: 0,
         grandTotal: tx.grandTotal || grandTotal,
@@ -682,6 +684,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+
   // Fetch available public coupons for the seller / platform
   useEffect(() => {
     let isMounted = true;
@@ -712,7 +716,75 @@ const loadRazorpayScript = (): Promise<boolean> => {
     };
   }, [checkoutItems, cartItems]);
 
+  // Auto-apply eligible coupon when conditions are met
+  useEffect(() => {
+    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+      return;
+    }
+
+    const currentSubtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
+    if (currentSubtotal <= 0) return;
+
+    // Filter offers configured with isAutoApply that satisfy minimum cart
+    const eligibleAutoOffers = availableOffers.filter((offer) => {
+      const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
+      if (!isAuto) return false;
+      const minCart = offer.minimumCartValue || offer.minOrderAmount || 0;
+      return currentSubtotal >= minCart;
+    });
+
+    if (eligibleAutoOffers.length === 0) {
+      // If currently applied was auto-applied and subtotal dropped below threshold, remove it
+      if (appliedCoupon && (appliedCoupon as any).isAutoApply && (appliedCoupon.minimumCartValue || 0) > currentSubtotal) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+      }
+      return;
+    }
+
+    // Find the offer providing maximum discount
+    let bestOffer = eligibleAutoOffers[0];
+    let maxDiscount = 0;
+
+    for (const offer of eligibleAutoOffers) {
+      const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
+      let disc = 0;
+      if (pct > 0) {
+        disc = Math.round((currentSubtotal * pct) / 100);
+        if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
+      } else {
+        disc = Math.min(offer.discountAmount || offer.discountValue || 0, currentSubtotal);
+      }
+      if (disc >= maxDiscount) {
+        maxDiscount = disc;
+        bestOffer = offer;
+      }
+    }
+
+    if (!isPromoApplied || (appliedCoupon && (appliedCoupon as any).isAutoApply && appliedCoupon.code !== bestOffer.code)) {
+      const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
+      setAppliedCoupon({
+        id: bestOffer.id,
+        code: bestOffer.code,
+        description: bestOffer.description,
+        discountType: bestOffer.discountType || (pct > 0 ? "PERCENTAGE" : "FLAT"),
+        discountPercentage: pct || null,
+        discountAmount: bestOffer.discountAmount || bestOffer.discountValue || null,
+        maxDiscountAmount: bestOffer.maxDiscountAmount || null,
+        minimumCartValue: bestOffer.minimumCartValue || bestOffer.minOrderAmount || 0,
+        calculatedDiscount: maxDiscount,
+        isAutoApply: true,
+      } as any);
+      setIsPromoApplied(true);
+      setDiscountPercent(pct);
+      setPromoCode(bestOffer.code);
+    }
+  }, [availableOffers, checkoutItems, userDismissedPromo, isPromoApplied, appliedCoupon, isValidatingPromo]);
+
   const handleRemovePromo = () => {
+    setUserDismissedPromo(true);
     setIsPromoApplied(false);
     setDiscountPercent(0);
     setAppliedCoupon(null);
@@ -733,6 +805,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
+    setUserDismissedPromo(false);
     setPromoCode(clean);
     setIsValidatingPromo(true);
     const currentSellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
@@ -1002,6 +1075,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 })),
                 subtotal,
                 discount: discountAmount,
+                couponCode: isPromoApplied ? (appliedCoupon?.code || promoCode) : undefined,
+                couponDiscountPercentage: isPromoApplied ? appliedCoupon?.discountPercentage : undefined,
                 deliveryFee: 0,
                 taxes: 0,
                 grandTotal,
@@ -1158,6 +1233,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
         })),
         subtotal,
         discount: discountAmount,
+        couponCode: isPromoApplied ? (appliedCoupon?.code || promoCode) : undefined,
+        couponDiscountPercentage: isPromoApplied ? appliedCoupon?.discountPercentage : undefined,
         deliveryFee: 0,
         taxes: 0,
         grandTotal,
@@ -2140,8 +2217,13 @@ const loadRazorpayScript = (): Promise<boolean> => {
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
                         <Tag size={16} color="#16A34A" />
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
-                            {appliedCouponData?.code || promoCode}
+                          <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>{appliedCouponData?.code || promoCode}</span>
+                            {(appliedCouponData as any)?.isAutoApply && (
+                              <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                                ⚡ AUTO-APPLIED
+                              </span>
+                            )}
                           </div>
                           <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
                             -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}

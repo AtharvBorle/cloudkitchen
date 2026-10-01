@@ -330,6 +330,7 @@ model Coupon {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   category           String    @default("BOTH")
+  isAutoApply        Boolean   @default(false)
 }
 
 model AuditLog {

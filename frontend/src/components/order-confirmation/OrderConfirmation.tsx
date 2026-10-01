@@ -59,6 +59,8 @@ interface ConfirmedOrderData {
   items: ConfirmedOrderItem[];
   subtotal: number;
   discount: number;
+  couponCode?: string;
+  couponDiscountPercentage?: number;
   deliveryFee: number;
   taxes: number;
   grandTotal: number;
@@ -191,6 +193,10 @@ export default function OrderConfirmation() {
         : computedItemsSubtotal;
     const computedDiscount = Math.max(0, computedItemsSubtotal - finalTotal);
 
+    const appliedCoupon = rawOrder.appliedCoupon;
+    const couponCode = appliedCoupon?.code || rawOrder.couponCode;
+    const couponDiscountPercentage = appliedCoupon?.discountPercentage || rawOrder.couponDiscountPercentage;
+
     setOrderData({
       orderId: rawOrder.id,
       orderTime: dateStr,
@@ -207,6 +213,8 @@ export default function OrderConfirmation() {
       items: parsedItems,
       subtotal: computedItemsSubtotal > 0 ? computedItemsSubtotal : finalTotal,
       discount: computedDiscount,
+      couponCode,
+      couponDiscountPercentage,
       deliveryFee: 0,
       taxes: 0,
       grandTotal: finalTotal,
@@ -690,7 +698,10 @@ export default function OrderConfirmation() {
 
                 {orderData.discount > 0 && (
                   <div className={styles.pricingRow}>
-                    <span className={styles.discountValue}>Welcome Discount (Applied)</span>
+                    <span className={styles.discountValue}>
+                      {orderData.couponCode ? `Coupon Discount (${orderData.couponCode})` : "Discount (Applied)"}
+                      {orderData.couponDiscountPercentage ? ` • ${orderData.couponDiscountPercentage}% OFF` : ""}
+                    </span>
                     <span className={styles.discountValue}>
                       - ₹{orderData.discount.toLocaleString("en-IN")}
                     </span>
@@ -700,7 +711,7 @@ export default function OrderConfirmation() {
                 <div className={styles.pricingTotalRow}>
                   <div>
                     <span>Total Paid</span>
-                    <span className={styles.paidBadge}>PAID</span>
+                    <span className={styles.paidBadge}>{orderData.grandTotal === 0 ? "FREE" : "PAID"}</span>
                   </div>
                   <span>₹{orderData.grandTotal.toLocaleString("en-IN")}</span>
                 </div>
