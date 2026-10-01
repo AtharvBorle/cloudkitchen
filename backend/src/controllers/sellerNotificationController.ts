@@ -422,7 +422,6 @@ export const getSellerNotificationPreferences = async () => {
             push: true,
             sms: true,
             email: true,
-            whatsapp: false,
             soundEnabled: true,
         },
         alerts: {

@@ -863,7 +863,7 @@ export default function MyOrdersView() {
     const initialItemRatings: Record<string, { name: string; rating: number; hoverRating?: number; comment: string; image?: string; qty?: number }> = {};
     const rawItems = order.rawItems || [];
     rawItems.forEach((item: any) => {
-      const itemId = item.foodItemId || item.id;
+      const itemId = item.foodItemId || (typeof item.id === "string" && item.id.includes("_") ? item.id.split("_")[0] : item.id);
       if (itemId) {
         const existingItem = order.review?.itemRatings?.find((ir: any) => ir.foodItemId === itemId);
         initialItemRatings[itemId] = {

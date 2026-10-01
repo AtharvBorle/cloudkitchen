@@ -66,7 +66,6 @@ export interface ResponsiveSellerSettingsData {
   emailNotifications: boolean;
   smsAlerts: boolean;
   pushNotifications: boolean;
-  whatsappUpdates: boolean;
   enableQuietHours: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -145,7 +144,6 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   emailNotifications: true,
   smsAlerts: true,
   pushNotifications: true,
-  whatsappUpdates: false,
   enableQuietHours: true,
   quietHoursStart: "10:00 PM",
   quietHoursEnd: "07:00 AM",
@@ -506,7 +504,6 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     emailNotifications: "Email Notifications",
     smsAlerts: "SMS Alerts",
     pushNotifications: "Push Notifications",
-    whatsappUpdates: "WhatsApp Updates",
     enableQuietHours: "Quiet Hours & Do Not Disturb",
     orderAlerts: "New Order Incoming",
     orderCancellationAlerts: "Order Cancellation",
@@ -1500,7 +1497,6 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                   emailNotifications: formData.emailNotifications,
                   smsAlerts: formData.smsAlerts,
                   pushNotifications: formData.pushNotifications,
-                  whatsappUpdates: formData.whatsappUpdates,
                   enableQuietHours: formData.enableQuietHours,
                   quietHoursStart: formData.quietHoursStart,
                   quietHoursEnd: formData.quietHoursEnd,
@@ -1721,23 +1717,6 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                         type="checkbox"
                         checked={formData.smsAlerts}
                         onChange={(e) => handleInputChange("smsAlerts", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>WhatsApp Order Notifications</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Auto-send live tracking on WhatsApp</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.whatsappUpdates}
-                        onChange={(e) => handleInputChange("whatsappUpdates", e.target.checked)}
                       />
                       <span className={styles.toggleSlider} />
                     </label>

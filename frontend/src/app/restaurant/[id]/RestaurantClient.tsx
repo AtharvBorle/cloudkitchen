@@ -251,6 +251,32 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               ? `(${computedReviewsCount} review${computedReviewsCount > 1 ? "s" : ""})`
               : "(No ratings yet)";
 
+            const rawFoodType = String(liveData.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+            const hasNonVegItems = (rawFoodItems || []).some((it: any) => {
+              const itType = String(it.itemType || "").toUpperCase();
+              return itType.includes("NON_VEG") || it.isVeg === false;
+            });
+            const hasVegItems = (rawFoodItems || []).some((it: any) => {
+              const itType = String(it.itemType || "VEG").toUpperCase();
+              return !itType.includes("NON_VEG") && it.isVeg !== false;
+            });
+
+            const isPureVegKitchen =
+              rawFoodType === "PURE_VEG" ||
+              rawFoodType === "VEG" ||
+              rawFoodType === "VEG_ONLY" ||
+              rawFoodType === "PUREVEG" ||
+              (!hasNonVegItems && (rawFoodItems || []).length > 0);
+
+            let computedDietType = "Veg & Non-Veg 🍱";
+            if (isPureVegKitchen) {
+              computedDietType = "Pure Veg 🥦";
+            } else if (rawFoodType === "NON_VEG" && !hasVegItems) {
+              computedDietType = "Non-Veg 🍗";
+            } else {
+              computedDietType = "Veg & Non-Veg 🍱";
+            }
+
             setKitchenData((prev: any) => ({
               ...prev,
               id: liveData.id || liveData.trackingId || prev.id || kitchenId,
@@ -266,12 +292,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               reviewsCount: computedReviewsText,
               deliveryTime: liveData.deliveryTime || prev.deliveryTime || "25-35 min",
               deliveryFeeText: liveData.deliveryFeeText || prev.deliveryFeeText || "Free Delivery",
-              dietType:
-                liveData.foodType === "VEG"
-                  ? "Pure Veg 🥦"
-                  : liveData.foodType === "NON_VEG"
-                  ? "Non-Veg 🍗"
-                  : "Veg & Non-Veg 🍱",
+              dietType: computedDietType,
               offerText: liveData.offerText || "",
               chefName: liveData.chefName || liveData.businessName || prev.chefName || "Executive Chef",
               chefDetails: liveData.chefDetails || prev.chefDetails || "Specialty cloud kitchen dishes",

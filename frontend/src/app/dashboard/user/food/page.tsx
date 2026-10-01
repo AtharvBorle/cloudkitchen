@@ -3,7 +3,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 
 import { useState, useEffect } from "react";
-import { ShoppingCart, Search, MapPin } from "lucide-react";
+import { ShoppingCart, Search, MapPin, Star } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
@@ -249,8 +249,9 @@ export default function UserFoodPage() {
             }
 
             if (vegOnly) {
-                if (item.itemType !== 'VEG') return false;
-                if (item.sellerFoodType !== 'VEG') return false;
+                const rawItemType = String(item.itemType || 'VEG').toUpperCase();
+                const isItemVeg = rawItemType !== 'NON_VEG' && !rawItemType.includes('NON_VEG');
+                if (!isItemVeg) return false;
             }
             if (selectedCategoryId && item.foodCategoryId !== selectedCategoryId) {
                 return false;
@@ -494,14 +495,22 @@ export default function UserFoodPage() {
                                                 {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                             </span>
                                         </h3>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>
-                                            By {item.sellerName} • {item.sellerCity}
-                                            {item.distanceText ? (
-                                                <span style={{ marginLeft: '8px', color: '#FF6B00', fontWeight: '700', backgroundColor: '#FFF3EB', padding: '2px 6px', borderRadius: '6px', fontSize: '0.78rem' }}>
-                                                    📍 {item.distanceText}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: isGrey ? '#F1F5F9' : (item.rating && item.rating > 0 ? '#ECFDF5' : '#F1F5F9'), padding: '2px 8px', borderRadius: '6px' }}>
+                                                <Star size={12} fill={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} color={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} />
+                                                <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#047857' : '#64748B') }}>
+                                                    {item.rating && item.rating > 0 ? Number(item.rating).toFixed(1) : (item.averageRating && item.averageRating > 0 ? Number(item.averageRating).toFixed(1) : "New")}
                                                 </span>
-                                            ) : null}
-                                        </p>
+                                            </div>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+                                                By {item.sellerName} • {item.sellerCity}
+                                                {item.distanceText ? (
+                                                    <span style={{ marginLeft: '8px', color: '#FF6B00', fontWeight: '700', backgroundColor: '#FFF3EB', padding: '2px 6px', borderRadius: '6px', fontSize: '0.78rem' }}>
+                                                        📍 {item.distanceText}
+                                                    </span>
+                                                ) : null}
+                                            </p>
+                                        </div>
                                         <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                                         {isOutOfStock && (
                                             <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
@@ -565,14 +574,22 @@ export default function UserFoodPage() {
                                                         {item.itemType === 'NON_VEG' ? 'Non-Veg' : item.itemType === 'JAIN' ? 'Jain 🙏' : item.itemType === 'VEGAN' ? 'Vegan 🌿' : 'Veg'}
                                                     </span>
                                                 </h3>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '15px' }}>
-                                                    By {item.sellerName} • {item.sellerCity}
-                                                    {item.distanceText ? (
-                                                        <span style={{ marginLeft: '8px', color: '#FF6B00', fontWeight: '700', backgroundColor: '#FFF3EB', padding: '2px 6px', borderRadius: '6px', fontSize: '0.78rem' }}>
-                                                            📍 {item.distanceText}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: isGrey ? '#F1F5F9' : (item.rating && item.rating > 0 ? '#ECFDF5' : '#F1F5F9'), padding: '2px 8px', borderRadius: '6px' }}>
+                                                        <Star size={12} fill={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} color={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} />
+                                                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#047857' : '#64748B') }}>
+                                                            {item.rating && item.rating > 0 ? Number(item.rating).toFixed(1) : (item.averageRating && item.averageRating > 0 ? Number(item.averageRating).toFixed(1) : "New")}
                                                         </span>
-                                                    ) : null}
-                                                </p>
+                                                    </div>
+                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+                                                        By {item.sellerName} • {item.sellerCity}
+                                                        {item.distanceText ? (
+                                                            <span style={{ marginLeft: '8px', color: '#FF6B00', fontWeight: '700', backgroundColor: '#FFF3EB', padding: '2px 6px', borderRadius: '6px', fontSize: '0.78rem' }}>
+                                                                📍 {item.distanceText}
+                                                            </span>
+                                                        ) : null}
+                                                    </p>
+                                                </div>
                                                 <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                                                 {isOutOfStock && (
                                                     <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>

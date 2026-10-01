@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
 import { ApiError } from "@/lib/api-error";
+import { getAuthSession } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
@@ -78,7 +79,7 @@ export const getPublicExploreData = unstable_cache(
             const reviewsCount = seller.reviews.length;
             const avgRating = reviewsCount > 0
                 ? Number((seller.reviews.reduce((acc, r) => acc + r.rating, 0) / reviewsCount).toFixed(1))
-                : 4.8;
+                : 0;
 
             let parsedKitchenImages: string[] = [];
             try {
@@ -104,7 +105,9 @@ export const getPublicExploreData = unstable_cache(
                 longitude: resolvedLng,
                 isLocationPinned: seller.isLocationPinned,
                 rating: avgRating,
+                averageRating: avgRating,
                 reviewsCount,
+                totalReviews: reviewsCount,
                 imageUrl: parsedKitchenImages[0] || seller.bannerImageUrl || "/images/places/place-pizza.png",
                 isOnline: seller.isOnline,
                 foodType: seller.foodType,
@@ -112,14 +115,18 @@ export const getPublicExploreData = unstable_cache(
             });
 
             return seller.foodItems.map(item => {
-                const itemRatingCount = item.itemRatings?.length || 0;
+                const itemRatingsList = item.itemRatings || [];
+                const itemRatingCount = itemRatingsList.length;
                 const itemAvgRating = itemRatingCount > 0
-                    ? Number((item.itemRatings.reduce((acc: number, r: any) => acc + r.rating, 0) / itemRatingCount).toFixed(1))
-                    : avgRating;
+                    ? Number((itemRatingsList.reduce((acc: number, r: any) => acc + r.rating, 0) / itemRatingCount).toFixed(1))
+                    : (avgRating > 0 ? avgRating : 0);
 
                 return {
                     ...item,
                     rating: itemAvgRating,
+                    averageRating: itemAvgRating,
+                    totalRatings: itemRatingCount,
+                    reviewsCount: itemRatingCount > 0 ? itemRatingCount : reviewsCount,
                     sellerName: seller.businessName || seller.user.name,
                     sellerCity: seller.user.city,
                     sellerPincode: seller.user.pincode,
@@ -195,69 +202,124 @@ export const getPublicRoomAvailability = (id: string) => unstable_cache(
     { revalidate: 10, tags: ["bookings", `room-${id}`] }
 )();
 
-export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
-    async () => {
-        const cleanSellerId = (sellerId && sellerId !== "none" && sellerId !== "all" && sellerId !== "null" && sellerId !== "undefined") ? sellerId : null;
-        let resolvedSellerId = cleanSellerId;
-        let sellerCategory = "BOTH";
-        if (cleanSellerId) {
-            const seller = await prisma.sellerProfile.findFirst({
-                where: {
+export const getPublicCoupons = async (sellerId: string | null, userId?: string | null) => {
+    const cleanSellerId = (sellerId && sellerId !== "none" && sellerId !== "all" && sellerId !== "null" && sellerId !== "undefined") ? sellerId : null;
+    let resolvedSellerId = cleanSellerId;
+    let sellerCategory = "BOTH";
+    if (cleanSellerId) {
+        const seller = await prisma.sellerProfile.findFirst({
+            where: {
+                OR: [
+                    { id: cleanSellerId },
+                    { trackingId: cleanSellerId },
+                    { userId: cleanSellerId }
+                ]
+            }
+        });
+        if (seller) {
+            resolvedSellerId = seller.id;
+            sellerCategory = seller.businessCategory || "BOTH";
+        }
+    }
+
+    const now = new Date();
+
+    const activeCoupons = await prisma.coupon.findMany({
+        where: {
+            isActive: true,
+            approvalStatus: "APPROVED",
+            ...(resolvedSellerId
+                ? {
                     OR: [
-                        { id: cleanSellerId },
-                        { trackingId: cleanSellerId },
-                        { userId: cleanSellerId }
+                        { appliesToSellerId: null },
+                        { appliesToSellerId: resolvedSellerId },
+                        ...(cleanSellerId && cleanSellerId !== resolvedSellerId ? [{ appliesToSellerId: cleanSellerId }] : [])
                     ]
                 }
-            });
-            if (seller) {
-                resolvedSellerId = seller.id;
-                sellerCategory = seller.businessCategory || "BOTH";
+                : {}
+            ),
+            AND: [
+                {
+                    OR: [
+                        { validFrom: null },
+                        { validFrom: { lte: now } }
+                    ]
+                },
+                {
+                    OR: [
+                        { validUntil: null },
+                        { validUntil: { gt: now } },
+                        { noExpiry: true }
+                    ]
+                }
+            ]
+        },
+        orderBy: {
+            createdAt: "desc"
+        }
+    });
+
+    const filteredCoupons = activeCoupons.filter((c: any) => {
+        const cat = (c.category || "BOTH").toUpperCase();
+        if (cat === "BOTH" || cat === "FOOD") return true;
+        if (sellerCategory && (cat === sellerCategory || sellerCategory === "BOTH")) return true;
+        return false;
+    });
+
+    // Resolve effective user context for eligibility checks
+    let effectiveUserId: string | null = userId || null;
+    if (!effectiveUserId) {
+        try {
+            const session = await getAuthSession();
+            effectiveUserId = session?.user?.id || null;
+        } catch {
+            effectiveUserId = null;
+        }
+    }
+
+    let userOrderCount = 0;
+    const userCouponUsageCounts = new Map<string, number>();
+
+    if (effectiveUserId) {
+        const userOrders = await prisma.order.findMany({
+            where: {
+                userId: effectiveUserId,
+                status: { not: "CANCELLED" }
+            },
+            select: { appliedCouponId: true }
+        });
+        userOrderCount = userOrders.length;
+        userOrders.forEach((o: any) => {
+            if (o.appliedCouponId) {
+                const key = String(o.appliedCouponId).trim().toUpperCase();
+                userCouponUsageCounts.set(key, (userCouponUsageCounts.get(key) || 0) + 1);
+            }
+        });
+    }
+
+    const safeCoupons = filteredCoupons.map((c: any) => {
+        let isEligible = true;
+        let ineligibilityReason: string | null = null;
+
+        if (effectiveUserId) {
+            if (c.customerEligibility === "NEW_ONLY" && userOrderCount > 0) {
+                isEligible = false;
+                ineligibilityReason = "Exclusively for new users on their first order.";
+            }
+
+            const perUserLimit = c.perUserLimit || c.maxUsagesPerUser;
+            if (perUserLimit && isEligible) {
+                const idKey = String(c.id).trim().toUpperCase();
+                const codeKey = String(c.code).trim().toUpperCase();
+                const usedCount = (userCouponUsageCounts.get(idKey) || 0) + (userCouponUsageCounts.get(codeKey) || 0);
+                if (usedCount >= perUserLimit) {
+                    isEligible = false;
+                    ineligibilityReason = "You have already used this coupon.";
+                }
             }
         }
 
-        const now = new Date();
-
-        const activeCoupons = await prisma.coupon.findMany({
-            where: {
-                isActive: true,
-                approvalStatus: "APPROVED",
-                ...(resolvedSellerId
-                    ? {
-                        OR: [
-                            { appliesToSellerId: null },
-                            { appliesToSellerId: resolvedSellerId },
-                            ...(cleanSellerId && cleanSellerId !== resolvedSellerId ? [{ appliesToSellerId: cleanSellerId }] : [])
-                        ]
-                    }
-                    : {}
-                ),
-                AND: [
-                    {
-                        validFrom: { lte: now }
-                    },
-                    {
-                        OR: [
-                            { validUntil: null },
-                            { validUntil: { gt: now } },
-                            { noExpiry: true }
-                        ]
-                    }
-                ]
-            },
-            orderBy: {
-                createdAt: "desc"
-            }
-        });
-
-        const filteredCoupons = activeCoupons.filter((c: any) => {
-            const cat = (c.category || "BOTH").toUpperCase();
-            if (cat === "BOTH" || cat === "FOOD") return true;
-            if (sellerCategory && (cat === sellerCategory || sellerCategory === "BOTH")) return true;
-            return false;
-        });
-
-        const safeCoupons = filteredCoupons.map((c: any) => ({
+        return {
             id: c.id,
             code: c.code,
             description: c.description,
@@ -275,14 +337,14 @@ export const getPublicCoupons = (sellerId: string | null) => unstable_cache(
             currentUsersCount: c.currentUsersCount,
             noExpiry: c.noExpiry,
             validUntil: c.validUntil,
-            isAutoApply: Boolean(c.isAutoApply)
-        }));
+            isAutoApply: Boolean(c.isAutoApply),
+            isEligible,
+            ineligibilityReason
+        };
+    });
 
-        return safeCoupons;
-    },
-    [`public-coupons-${sellerId || 'global'}`],
-    { revalidate: 30, tags: ["coupons"] }
-)();
+    return safeCoupons;
+};
 
 export const getPublicPopupBanners = (sellerId: string | null) => unstable_cache(
     async () => {
@@ -408,16 +470,45 @@ export const validateCouponForCart = async (req: Request) => {
         }
     }
 
-    // Check customer eligibility
-    if (coupon.customerEligibility === "NEW_ONLY" && userId) {
+    // Resolve effective user context
+    let effectiveUserId: string | null = userId || null;
+    if (!effectiveUserId) {
+        try {
+            const session = await getAuthSession();
+            effectiveUserId = session?.user?.id || null;
+        } catch {
+            effectiveUserId = null;
+        }
+    }
+
+    // Check customer eligibility (NEW_ONLY)
+    if (coupon.customerEligibility === "NEW_ONLY" && effectiveUserId) {
         const previousOrdersCount = await prisma.order.count({
             where: {
-                userId: userId,
+                userId: effectiveUserId,
                 status: { not: "CANCELLED" }
             }
         });
         if (previousOrdersCount > 0) {
-            throw new ApiError(`Coupon "${coupon.code}" is exclusively for first-time customers.`, 400);
+            throw new ApiError(`Coupon "${coupon.code}" is exclusively for new users on their first order.`, 400);
+        }
+    }
+
+    // Check per-user limit
+    const userLimit = coupon.perUserLimit || coupon.maxUsagesPerUser;
+    if (userLimit && effectiveUserId) {
+        const usageCount = await prisma.order.count({
+            where: {
+                userId: effectiveUserId,
+                OR: [
+                    { appliedCouponId: coupon.id },
+                    { appliedCouponId: coupon.code }
+                ],
+                status: { not: "CANCELLED" }
+            }
+        });
+        if (usageCount >= userLimit) {
+            throw new ApiError(`You have already used coupon "${coupon.code}".`, 400);
         }
     }
 

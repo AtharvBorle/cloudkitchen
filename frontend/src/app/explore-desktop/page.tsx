@@ -98,7 +98,7 @@ function ExploreDesktopContent() {
     return list.map((k) => ({
       id: k.id,
       name: k.name,
-      subtitle: k.category || (k.foodType === "VEG" ? "Pure Veg" : "Cloud Kitchen"),
+      subtitle: k.category || ((k.foodType === "VEG" || k.foodType === "PURE_VEG" || k.foodType === "VEG_ONLY") ? "Pure Veg" : "Cloud Kitchen"),
       image: k.imageUrl || "/images/places/place-biryani.png",
       kitchenId: k.trackingId || k.id,
     }));

@@ -64,8 +64,14 @@ export async function GET(req: NextRequest) {
 
         // 3. Dietary filter
         if (vegOnly) {
-            foodItems = foodItems.filter((item: any) => item.itemType === "VEG");
-            kitchens = kitchens.filter((k: any) => k.foodType === "VEG" || k.foodType === "BOTH");
+            foodItems = foodItems.filter((item: any) => {
+                const t = String(item.itemType || "VEG").toUpperCase();
+                return t !== "NON_VEG" && !t.includes("NON_VEG");
+            });
+            kitchens = kitchens.filter((k: any) => {
+                const ft = String(k.foodType || "BOTH").toUpperCase();
+                return ft !== "NON_VEG";
+            });
         }
 
         // 4. Category filter

@@ -276,7 +276,7 @@ export function isKitchenMatchingDiet(
     : [];
 
   if (norm === "veg") {
-    if (rawFoodType === "PURE_VEG" || rawFoodType === "VEG") return true;
+    if (rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || rawFoodType === "PUREVEG") return true;
     if (rawFoodType === "BOTH") {
       return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
     }
@@ -287,7 +287,16 @@ export function isKitchenMatchingDiet(
   }
 
   if (norm === "non_veg") {
-    if (rawFoodType === "PURE_VEG" || rawFoodType === "VEGAN" || rawFoodType === "JAIN") return false;
+    if (
+      rawFoodType === "PURE_VEG" ||
+      rawFoodType === "VEG" ||
+      rawFoodType === "VEG_ONLY" ||
+      rawFoodType === "PUREVEG" ||
+      rawFoodType === "VEGAN" ||
+      rawFoodType === "JAIN"
+    ) {
+      return false;
+    }
     if (rawFoodType === "NON_VEG" || rawFoodType === "BOTH") {
       return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "non_veg"));
     }

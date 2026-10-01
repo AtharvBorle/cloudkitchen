@@ -33,7 +33,6 @@ export interface SellerSettingsData {
   freeDeliveryThreshold: string;
   allowCod: boolean;
   smsAlerts: boolean;
-  whatsappUpdates: boolean;
   dailyEmailSummary: boolean;
   requirePinForRefund: boolean;
   twoFactorAuth: boolean;
@@ -50,7 +49,6 @@ const DEFAULT_SETTINGS: SellerSettingsData = {
   freeDeliveryThreshold: "₹499",
   allowCod: true,
   smsAlerts: true,
-  whatsappUpdates: true,
   dailyEmailSummary: true,
   requirePinForRefund: true,
   twoFactorAuth: false,
@@ -949,21 +947,6 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
                   </label>
                 </div>
 
-                {/* WhatsApp Updates */}
-                <div className={styles.settingItem}>
-                  <div className={styles.settingInfo}>
-                    <p className={styles.settingLabel}>WhatsApp Customer Updates</p>
-                    <p className={styles.settingSubtext}>Live delivery tracking link via WhatsApp</p>
-                  </div>
-                  <label className={styles.toggleSwitch}>
-                    <input
-                      type="checkbox"
-                      checked={settings.whatsappUpdates}
-                      onChange={() => handleToggle("whatsappUpdates")}
-                    />
-                    <span className={styles.toggleSlider} />
-                  </label>
-                </div>
 
                 {/* Daily Digest */}
                 <div className={styles.settingItem}>

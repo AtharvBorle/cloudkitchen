@@ -218,9 +218,9 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
           )}
           {dietType && (
             (() => {
-              const lower = dietType.toLowerCase();
+              const lower = (dietType || "").toLowerCase();
               const isBoth = lower.includes("&") || (lower.includes("veg") && lower.includes("non"));
-              const isPureVeg = !isBoth && (lower.includes("pure") || lower === "veg" || lower.includes("pure veg") || lower.includes("🥦"));
+              const isPureVeg = !isBoth && (lower.includes("pure") || lower === "veg" || lower.includes("pure veg") || lower.includes("pure_veg") || lower.includes("veg_only") || lower.includes("🥦"));
 
               if (isBoth) {
                 return (
@@ -303,33 +303,61 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
 
         {/* Row 3: Veg Toggle (Right-aligned) */}
         <div className={styles.bottomRow}>
-          {/* Veg Toggle */}
-          <div
-            className={styles.vegToggleWrapper}
-            onClick={handleToggleVeg}
-            role="switch"
-            aria-checked={isVegOnly}
-            tabIndex={0}
-            onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleToggleVeg();
-              }
-            }}
-          >
-            <span className={styles.vegLabel}>Veg</span>
-            <div
-              className={`${styles.switchTrack} ${
-                isVegOnly ? styles.switchTrackActive : ""
-              }`}
-            >
+          {(() => {
+            const lower = (dietType || "").toLowerCase();
+            const isBoth = lower.includes("&") || (lower.includes("veg") && lower.includes("non"));
+            const isPureVeg = !isBoth && (lower.includes("pure") || lower === "veg" || lower.includes("pure veg") || lower.includes("pure_veg") || lower.includes("veg_only") || lower.includes("🥦"));
+
+            if (isPureVeg) {
+              return (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    backgroundColor: "#F0FDF4",
+                    border: "1.5px solid #86EFAC",
+                    padding: "6px 14px",
+                    borderRadius: "20px",
+                    color: "#16A34A",
+                    fontSize: "0.85rem",
+                    fontWeight: "800",
+                  }}
+                >
+                  <span>🥦 100% Pure Veg Kitchen</span>
+                </div>
+              );
+            }
+
+            return (
               <div
-                className={`${styles.switchThumb} ${
-                  isVegOnly ? styles.switchThumbActive : ""
-                }`}
-              />
-            </div>
-          </div>
+                className={styles.vegToggleWrapper}
+                onClick={handleToggleVeg}
+                role="switch"
+                aria-checked={isVegOnly}
+                tabIndex={0}
+                onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleToggleVeg();
+                  }
+                }}
+              >
+                <span className={styles.vegLabel}>Veg</span>
+                <div
+                  className={`${styles.switchTrack} ${
+                    isVegOnly ? styles.switchTrackActive : ""
+                  }`}
+                >
+                  <div
+                    className={`${styles.switchThumb} ${
+                      isVegOnly ? styles.switchThumbActive : ""
+                    }`}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </section>

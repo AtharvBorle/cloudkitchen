@@ -13,7 +13,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
         }
 
         const body = await req.json();
-        const { name, phone, isActive, businessName, type, verificationStatus, isOnline, foodVerificationStatus, propertyVerificationStatus } = body;
+        const { name, phone, isActive, businessName, type, verificationStatus, isOnline, foodVerificationStatus, propertyVerificationStatus, foodType } = body;
         const { sellerId } = await params;
 
         const existingUser = await db.user.findUnique({
@@ -75,7 +75,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
                     isOnline: isOnline !== undefined ? isOnline : existingUser.sellerProfile.isOnline,
                     foodVerificationStatus: finalFoodStatus !== undefined ? finalFoodStatus : existingUser.sellerProfile.foodVerificationStatus,
                     propertyVerificationStatus: finalPropertyStatus !== undefined ? finalPropertyStatus : existingUser.sellerProfile.propertyVerificationStatus,
-                    businessCategory: resolvedBusinessCategory
+                    businessCategory: resolvedBusinessCategory,
+                    ...(foodType !== undefined && typeof foodType === "string" && foodType.trim() ? { foodType: foodType.trim().toUpperCase() } : {})
                 }
             });
         }

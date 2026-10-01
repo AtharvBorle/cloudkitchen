@@ -5,7 +5,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, LogIn, MapPin } from "lucide-react";
+import { ShoppingCart, LogIn, MapPin, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
@@ -284,8 +284,9 @@ export default function UserDashboard() {
             }
 
             if (vegOnly) {
-                if (item.itemType !== 'VEG') return false;
-                if (item.sellerFoodType !== 'VEG') return false;
+                const rawItemType = String(item.itemType || 'VEG').toUpperCase();
+                const isItemVeg = rawItemType !== 'NON_VEG' && !rawItemType.includes('NON_VEG');
+                if (!isItemVeg) return false;
             }
             return (
                 item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -575,14 +576,22 @@ export default function UserDashboard() {
                                                             {item.itemType === 'NON_VEG' ? 'N' : 'V'}
                                                         </span>
                                                     </h4>
-                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                        <span>By {item.sellerName}</span>
-                                                        {item.distanceText && (
-                                                            <span style={{ color: 'var(--teal)', fontWeight: '600' }}>
-                                                                📍 {item.distanceText}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: isGrey ? '#F1F5F9' : (item.rating && item.rating > 0 ? '#ECFDF5' : '#F1F5F9'), padding: '1px 6px', borderRadius: '4px' }}>
+                                                            <Star size={10} fill={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} color={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} />
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: '800', color: isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#047857' : '#64748B') }}>
+                                                                {item.rating && item.rating > 0 ? Number(item.rating).toFixed(1) : (item.averageRating && item.averageRating > 0 ? Number(item.averageRating).toFixed(1) : "New")}
                                                             </span>
-                                                        )}
-                                                    </p>
+                                                        </div>
+                                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'space-between' }}>
+                                                            <span>By {item.sellerName}</span>
+                                                            {item.distanceText && (
+                                                                <span style={{ color: 'var(--teal)', fontWeight: '600' }}>
+                                                                    📍 {item.distanceText}
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                    </div>
                                                     <p style={{ color: '#555', fontSize: '0.8rem', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4rem' }}>{item.description}</p>
                                                     {isOutOfStock ? (
                                                         <div style={{ fontSize: '0.75rem', marginBottom: '10px' }}>

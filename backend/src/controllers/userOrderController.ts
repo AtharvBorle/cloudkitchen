@@ -240,7 +240,7 @@ export const createOrder = async (req: Request) => {
                 }
             });
             if (previousOrdersCount > 0) {
-                throw new ApiError("This coupon is exclusively for first-time customers", 400);
+                throw new ApiError(`Coupon "${validatedCoupon.code}" is exclusively for new users on their first order.`, 400);
             }
         }
 
@@ -250,9 +250,9 @@ export const createOrder = async (req: Request) => {
             baseTotal += (item.price || 0) * (item.quantity || 1);
         }
 
-        const minCart = validatedCoupon.minimumCartValue || (validatedCoupon as any).minOrderAmount;
-        if (minCart && baseTotal < minCart) {
-            throw new ApiError(`This coupon requires a minimum cart value of ₹${minCart}`, 400);
+        const minCart = Number(validatedCoupon.minimumCartValue ?? (validatedCoupon as any).minOrderAmount ?? 0);
+        if (minCart > 0 && baseTotal < minCart) {
+            throw new ApiError(`This coupon requires a minimum cart value of ₹${minCart}. (Your cart is ₹${baseTotal})`, 400);
         }
 
         const isPercentage = validatedCoupon.discountType === "PERCENTAGE" || (validatedCoupon.discountPercentage && !validatedCoupon.discountAmount);
@@ -269,12 +269,15 @@ export const createOrder = async (req: Request) => {
             const usageCount = await db.order.count({
                 where: {
                     userId: session.user.id,
-                    appliedCouponId: validatedCoupon.id,
+                    OR: [
+                        { appliedCouponId: validatedCoupon.id },
+                        { appliedCouponId: validatedCoupon.code }
+                    ],
                     status: { not: "CANCELLED" }
                 }
             });
             if (usageCount >= userLimit) {
-                throw new ApiError(`You've reached the maximum usage limit (${userLimit}) for this coupon.`, 400);
+                throw new ApiError(`You have already used coupon "${validatedCoupon.code}".`, 400);
             }
         }
 

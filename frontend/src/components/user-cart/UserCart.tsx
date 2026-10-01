@@ -115,6 +115,7 @@ export const UserCart: React.FC<UserCartProps> = ({
   onProceedToCheckout,
 }) => {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal, syncCartWithLiveMenu } = useCart();
   const { defaultAddress, savedAddresses, openLocationModal, selectAddress } = useLocation();
 
@@ -174,25 +175,27 @@ export const UserCart: React.FC<UserCartProps> = ({
   }, [formattedDefaultAddress]);
 
   // Active items derived from context if present
-  const cartItems: UserCartItem[] = contextCartItems.length > 0
-    ? contextCartItems.map((ci) => ({
-        id: ci.id,
-        foodItemId: ci.foodItemId,
-        name: ci.name,
-        description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
-        price: ci.price,
-        basePrice: ci.basePrice,
-        addonsTotal: ci.addonsTotal,
-        selectedAddons: ci.selectedAddons,
-        addons: ci.addons,
-        qty: ci.quantity,
-        image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
-        maxStock: ci.maxStock !== undefined ? ci.maxStock : (ci.stockQuantity !== undefined ? ci.stockQuantity : -1),
-        itemType: ci.itemType,
-        sellerId: ci.sellerId,
-        sellerName: ci.sellerName,
-      }))
-    : localCartItems;
+  const cartItems: UserCartItem[] = React.useMemo(() => {
+    return contextCartItems.length > 0
+      ? contextCartItems.map((ci) => ({
+          id: ci.id,
+          foodItemId: ci.foodItemId,
+          name: ci.name,
+          description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
+          price: ci.price,
+          basePrice: ci.basePrice,
+          addonsTotal: ci.addonsTotal,
+          selectedAddons: ci.selectedAddons,
+          addons: ci.addons,
+          qty: ci.quantity,
+          image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
+          maxStock: ci.maxStock !== undefined ? ci.maxStock : (ci.stockQuantity !== undefined ? ci.stockQuantity : -1),
+          itemType: ci.itemType,
+          sellerId: ci.sellerId,
+          sellerName: ci.sellerName,
+        }))
+      : localCartItems;
+  }, [contextCartItems, localCartItems]);
 
   React.useEffect(() => {
     const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
@@ -426,18 +429,20 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Fetch available public coupons for the seller / platform
   const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+  const activeSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || null;
 
   React.useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
-      const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
       try {
         setIsLoadingOffers(true);
-        const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
+        const url = activeSellerId
+          ? `/api/public/coupons?sellerId=${encodeURIComponent(activeSellerId)}${session?.user?.id ? `&userId=${encodeURIComponent(session.user.id)}` : ""}`
+          : `/api/public/coupons${session?.user?.id ? `?userId=${encodeURIComponent(session.user.id)}` : ""}`;
         const res = await fetchApi(url);
         if (res.ok && isMounted) {
           const json = await res.json();
-          const serverCoupons = json.data || [];
+          const serverCoupons = Array.isArray(json) ? json : (json.data?.coupons || json.coupons || json.data || []);
           if (Array.isArray(serverCoupons)) {
             setAvailableOffers(serverCoupons);
           } else {
@@ -454,7 +459,10 @@ export const UserCart: React.FC<UserCartProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cartItems]);
+  }, [activeSellerId, session?.user?.id]);
+
+  // Pricing calculations
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
@@ -462,20 +470,31 @@ export const UserCart: React.FC<UserCartProps> = ({
       return;
     }
 
-    const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-    if (currentSubtotal <= 0) return;
+    if (subtotal <= 0) return;
 
-    // Filter offers configured with isAutoApply that satisfy minimum cart
+    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility
     const eligibleAutoOffers = availableOffers.filter((offer) => {
+      if (offer.isEligible === false) return false;
       const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
       if (!isAuto) return false;
-      const minCart = offer.minimumCartValue || offer.minOrderAmount || 0;
-      return currentSubtotal >= minCart;
+      const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
+      if (subtotal < minCart) return false;
+
+      if (offer.appliesToSellerId && activeSellerId && offer.appliesToSellerId !== activeSellerId) {
+        return false;
+      }
+      if (offer.appliesToProductId) {
+        const hasProduct = cartItems.some(
+          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
+        );
+        if (!hasProduct) return false;
+      }
+      return true;
     });
 
     if (eligibleAutoOffers.length === 0) {
       // If currently applied was auto-applied and subtotal dropped below threshold, remove it
-      if (appliedCoupon && (appliedCoupon as any).isAutoApply && (appliedCoupon.minimumCartValue || 0) > currentSubtotal) {
+      if (appliedCoupon && (appliedCoupon as any).isAutoApply) {
         setAppliedCoupon(null);
         setAppliedPromo(null);
         setDiscountPercent(0);
@@ -492,10 +511,10 @@ export const UserCart: React.FC<UserCartProps> = ({
       const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
       let disc = 0;
       if (pct > 0) {
-        disc = Math.round((currentSubtotal * pct) / 100);
+        disc = Math.round((subtotal * pct) / 100);
         if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
       } else {
-        disc = Math.min(offer.discountAmount || offer.discountValue || 0, currentSubtotal);
+        disc = Math.min(offer.discountAmount || offer.discountValue || 0, subtotal);
       }
       if (disc >= maxDiscount) {
         maxDiscount = disc;
@@ -503,7 +522,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       }
     }
 
-    if (!appliedPromo || (appliedCoupon && (appliedCoupon as any).isAutoApply && appliedPromo !== bestOffer.code)) {
+    if (!appliedPromo || ((appliedCoupon as any)?.isAutoApply && appliedPromo !== bestOffer.code)) {
       const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
       setAppliedCoupon({
         id: bestOffer.id,
@@ -521,7 +540,21 @@ export const UserCart: React.FC<UserCartProps> = ({
       setDiscountPercent(pct);
       setPromoCode(bestOffer.code);
     }
-  }, [availableOffers, cartItems, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo]);
+  }, [availableOffers, subtotal, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo, activeSellerId, cartItems]);
+
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below the minimum required cart value
+  React.useEffect(() => {
+    if (!appliedCoupon) return;
+    const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
+    if (minCart > 0 && subtotal < minCart) {
+      const code = appliedCoupon.code || appliedPromo || "Applied";
+      setAppliedCoupon(null);
+      setAppliedPromo(null);
+      setDiscountPercent(0);
+      setPromoCode("");
+      showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`);
+    }
+  }, [subtotal, appliedCoupon, appliedPromo]);
 
   const handleRemovePromo = () => {
     setUserDismissedPromo(true);
@@ -573,6 +606,7 @@ export const UserCart: React.FC<UserCartProps> = ({
             price: it.price,
             quantity: it.qty,
           })),
+          userId: session?.user?.id,
         }),
       });
 
@@ -604,8 +638,6 @@ export const UserCart: React.FC<UserCartProps> = ({
   };
 
   // Price Calculations
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-
   const discountAmount = React.useMemo(() => {
     if (!appliedCoupon || subtotal <= 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
@@ -621,7 +653,6 @@ export const UserCart: React.FC<UserCartProps> = ({
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
-  const { data: session, status } = useSession();
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   const handleCheckoutClick = () => {
@@ -1082,13 +1113,19 @@ export const UserCart: React.FC<UserCartProps> = ({
                     {availableOffers.map((offer) => {
                       const isCurrentApplied = (appliedCouponData?.code || appliedPromo) === offer.code;
                       const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
+                      const isEligible = offer.isEligible !== false;
 
                       return (
                         <div
                           key={offer.id || offer.code}
                           className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
+                          style={!isEligible ? { opacity: 0.65 } : undefined}
                           onClick={() => {
                             if (!isCurrentApplied) {
+                              if (!isEligible) {
+                                showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
+                                return;
+                              }
                               handleApplyPromo(offer.code);
                             }
                           }}
@@ -1101,15 +1138,24 @@ export const UserCart: React.FC<UserCartProps> = ({
                               ) : offer.discountAmount ? (
                                 <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
                               ) : null}
+                              {!isEligible && (
+                                <span style={{ fontSize: "0.68rem", backgroundColor: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>
+                                  {offer.customerEligibility === "NEW_ONLY" ? "FIRST ORDER ONLY" : "INELIGIBLE"}
+                                </span>
+                              )}
                             </div>
                             <p className={styles.offerDescription}>
                               {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off on your meal` : `Get ₹${offer.discountAmount} flat off`)}
                             </p>
-                            {offer.minimumCartValue > 0 && (
+                            {!isEligible && offer.ineligibilityReason ? (
+                              <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: 600 }}>
+                                {offer.ineligibilityReason}
+                              </span>
+                            ) : offer.minimumCartValue > 0 ? (
                               <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
                                 {minMet ? `Min cart ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more to unlock`}
                               </span>
-                            )}
+                            ) : null}
                           </div>
 
                           <div className={styles.offerCardRight}>
@@ -1131,9 +1177,13 @@ export const UserCart: React.FC<UserCartProps> = ({
                                 className={styles.offerApplyBtn}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (!isEligible) {
+                                    showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
+                                    return;
+                                  }
                                   handleApplyPromo(offer.code);
                                 }}
-                                disabled={isValidatingPromo}
+                                disabled={isValidatingPromo || !isEligible}
                               >
                                 Apply
                               </button>
