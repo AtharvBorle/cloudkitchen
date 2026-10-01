@@ -768,12 +768,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
       if (offer.isEligible === false) return false;
       const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
       if (!isAuto) return false;
-      const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
+      const minCart = Number(offer.minimumCartValue ?? offer.minOrderAmount ?? 0);
       if (subtotal < minCart) return false;
 
-      if (offer.appliesToSellerId && activeSellerId && offer.appliesToSellerId !== activeSellerId) {
-        return false;
-      }
       if (offer.appliesToProductId) {
         const hasProduct = checkoutItems.some(
           (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId

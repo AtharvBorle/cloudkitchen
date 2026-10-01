@@ -595,6 +595,9 @@ export const UserCart: React.FC<UserCartProps> = ({
   // Pricing calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
+  // Ref to track the last auto-applied coupon code (prevents re-apply loops)
+  const lastAutoAppliedCodeRef = React.useRef<string | null>(null);
+
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
     if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
@@ -608,12 +611,10 @@ export const UserCart: React.FC<UserCartProps> = ({
       if (offer.isEligible === false) return false;
       const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
       if (!isAuto) return false;
-      const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
+      const minCart = Number(offer.minimumCartValue ?? offer.minOrderAmount ?? 0);
       if (subtotal < minCart) return false;
 
-      if (offer.appliesToSellerId && activeSellerId && offer.appliesToSellerId !== activeSellerId) {
-        return false;
-      }
+      // Check product scope if restricted
       if (offer.appliesToProductId) {
         const hasProduct = cartItems.some(
           (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
@@ -630,6 +631,14 @@ export const UserCart: React.FC<UserCartProps> = ({
         setAppliedPromo(null);
         setDiscountPercent(0);
         setPromoCode("");
+        lastAutoAppliedCodeRef.current = null;
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("applied_cart_coupon");
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
       }
       return;
     }
@@ -639,13 +648,13 @@ export const UserCart: React.FC<UserCartProps> = ({
     let maxDiscount = 0;
 
     for (const offer of eligibleAutoOffers) {
-      const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
+      const pct = Number(offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0));
       let disc = 0;
       if (pct > 0) {
         disc = Math.round((subtotal * pct) / 100);
-        if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
+        if (offer.maxDiscountAmount) disc = Math.min(disc, Number(offer.maxDiscountAmount));
       } else {
-        disc = Math.min(offer.discountAmount || offer.discountValue || 0, subtotal);
+        disc = Math.min(Number(offer.discountAmount || offer.discountValue || 0), subtotal);
       }
       if (disc >= maxDiscount) {
         maxDiscount = disc;
@@ -653,25 +662,117 @@ export const UserCart: React.FC<UserCartProps> = ({
       }
     }
 
-    if (!appliedPromo || ((appliedCoupon as any)?.isAutoApply && appliedPromo !== bestOffer.code)) {
-      const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
-      setAppliedCoupon({
-        id: bestOffer.id,
-        code: bestOffer.code,
-        description: bestOffer.description,
-        discountType: bestOffer.discountType || (pct > 0 ? "PERCENTAGE" : "FLAT"),
-        discountPercentage: pct || null,
-        discountAmount: bestOffer.discountAmount || bestOffer.discountValue || null,
-        maxDiscountAmount: bestOffer.maxDiscountAmount || null,
-        minimumCartValue: bestOffer.minimumCartValue || bestOffer.minOrderAmount || 0,
-        calculatedDiscount: maxDiscount,
-        isAutoApply: true,
-      } as any);
-      setAppliedPromo(bestOffer.code);
-      setDiscountPercent(pct);
-      setPromoCode(bestOffer.code);
+    // If a manual coupon is applied and still valid, do not override
+    if (appliedPromo && !(appliedCoupon as any)?.isAutoApply) {
+      const manualMin = Number(appliedCoupon?.minimumCartValue ?? (appliedCoupon as any)?.minOrderAmount ?? 0);
+      if (manualMin <= 0 || subtotal >= manualMin) {
+        return;
+      }
     }
-  }, [availableOffers, subtotal, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo, activeSellerId, cartItems]);
+
+    // Skip if we already auto-applied this exact code and active coupon is present
+    if (lastAutoAppliedCodeRef.current === bestOffer.code && appliedPromo === bestOffer.code && appliedCoupon) {
+      return;
+    }
+
+    const bestCode = bestOffer.code;
+    lastAutoAppliedCodeRef.current = bestCode;
+
+    // Immediately apply locally so UI reflects it synchronously
+    const pct = Number(bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0));
+    const localCouponObj = {
+      id: bestOffer.id,
+      code: bestOffer.code,
+      description: bestOffer.description,
+      discountType: bestOffer.discountType || (pct > 0 ? "PERCENTAGE" : "FLAT"),
+      discountPercentage: pct || null,
+      discountAmount: Number(bestOffer.discountAmount || bestOffer.discountValue || 0) || null,
+      maxDiscountAmount: Number(bestOffer.maxDiscountAmount) || null,
+      minimumCartValue: Number(bestOffer.minimumCartValue || bestOffer.minOrderAmount || 0),
+      calculatedDiscount: maxDiscount,
+      isAutoApply: true,
+      message: `Coupon "${bestOffer.code}" auto-applied! Saved ₹${maxDiscount}`
+    };
+
+    setAppliedCoupon(localCouponObj as any);
+    setAppliedPromo(bestOffer.code);
+    setDiscountPercent(pct);
+    setPromoCode(bestOffer.code);
+
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("appliedCoupon", JSON.stringify(localCouponObj));
+        sessionStorage.setItem("applied_cart_coupon", JSON.stringify(localCouponObj));
+        localStorage.setItem("appliedCoupon", JSON.stringify(localCouponObj));
+      } catch (e) {}
+    }
+
+    // Background validation with server to ensure eligibility and sync exact server calculated values
+    (async () => {
+      try {
+        setIsValidatingPromo(true);
+        const cartSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || cartItems[0]?.sellerId;
+        const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+        const res = await fetchApi("/api/public/coupons/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: bestCode,
+            sellerId: cartSellerId,
+            subtotal: currentSubtotal,
+            items: cartItems.map((it) => ({
+              id: it.id,
+              foodItemId: it.foodItemId,
+              price: it.price,
+              quantity: it.qty,
+            })),
+            userId: session?.user?.id,
+          }),
+        });
+        const json = await res.json();
+        const cData = json.data?.coupon || json.data || json;
+        if (res.ok && cData && (cData.code || cData.id)) {
+          const validatedPct = Number(cData.discountPercentage || 0);
+          const savedAmt = Number(cData.calculatedDiscount) || (validatedPct > 0 ? Math.round((currentSubtotal * validatedPct) / 100) : Number(cData.discountAmount || 0));
+          const validatedObj = {
+            ...cData,
+            isAutoApply: true,
+            calculatedDiscount: savedAmt,
+          };
+          setAppliedCoupon(validatedObj);
+          setAppliedPromo(cData.code);
+          setDiscountPercent(validatedPct);
+          setPromoCode(cData.code);
+          if (typeof window !== "undefined") {
+            try {
+              sessionStorage.setItem("appliedCoupon", JSON.stringify(validatedObj));
+              sessionStorage.setItem("applied_cart_coupon", JSON.stringify(validatedObj));
+              localStorage.setItem("appliedCoupon", JSON.stringify(validatedObj));
+            } catch (e) {}
+          }
+          showToast(`Coupon "${cData.code}" auto-applied! Saved ₹${savedAmt}`);
+        } else {
+          // Server rejected — clear auto-applied coupon
+          lastAutoAppliedCodeRef.current = null;
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          setPromoCode("");
+          if (typeof window !== "undefined") {
+            try {
+              sessionStorage.removeItem("applied_cart_coupon");
+              sessionStorage.removeItem("appliedCoupon");
+              localStorage.removeItem("appliedCoupon");
+            } catch (e) {}
+          }
+        }
+      } catch (e) {
+        console.error("Auto-apply coupon validation error:", e);
+      } finally {
+        setIsValidatingPromo(false);
+      }
+    })();
+  }, [availableOffers, subtotal, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo, activeSellerId, cartItems, session?.user?.id]);
 
   // Auto-remove or invalidate applied coupon whenever subtotal drops below the minimum required cart value
   React.useEffect(() => {
@@ -723,6 +824,7 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   const handleRemovePromo = () => {
     setUserDismissedPromo(true);
+    lastAutoAppliedCodeRef.current = null;
     setAppliedCoupon(null);
     setAppliedPromo(null);
     setDiscountPercent(0);
@@ -752,6 +854,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     }
 
     setUserDismissedPromo(false);
+    lastAutoAppliedCodeRef.current = null;
     // Auto-populate input field when clicked from offers list
     setPromoCode(targetCode);
 
