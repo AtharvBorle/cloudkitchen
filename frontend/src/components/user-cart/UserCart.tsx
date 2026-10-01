@@ -16,6 +16,9 @@ import {
   Minus,
   ShoppingBag,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Search,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -206,6 +209,9 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
   const [availableOffers, setAvailableOffers] = useState<any[]>([]);
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
+  const [isCouponDropdownOpen, setIsCouponDropdownOpen] = useState<boolean>(false);
+  const [couponSearchQuery, setCouponSearchQuery] = useState<string>("");
+  const couponDropdownRef = React.useRef<HTMLDivElement>(null);
 
   // Sync formatted current address from LocationProvider's defaultAddress or savedAddresses
   const formattedDefaultAddress = React.useMemo(() => {
@@ -258,30 +264,35 @@ export const UserCart: React.FC<UserCartProps> = ({
     setCurrentAddress(formattedDefaultAddress);
   }, [formattedDefaultAddress]);
 
-  // Active items derived from context if present
-  const cartItems: UserCartItem[] = contextCartItems.length > 0
-    ? contextCartItems.map((ci) => ({
-        id: ci.id,
-        foodItemId: ci.foodItemId,
-        name: ci.name,
-        description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
-        price: ci.price,
-        basePrice: ci.basePrice,
-        addonsTotal: ci.addonsTotal,
-        selectedAddons: ci.selectedAddons,
-        addons: ci.addons,
-        qty: ci.quantity,
-        image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
-        maxStock: ci.maxStock !== undefined ? ci.maxStock : (ci.stockQuantity !== undefined ? ci.stockQuantity : -1),
-        itemType: ci.itemType,
-        sellerId: ci.sellerId,
-        sellerName: ci.sellerName,
-      }))
-    : localCartItems;
+  // Active items derived from context if present (memoized to prevent re-render loops)
+  const cartItems: UserCartItem[] = React.useMemo(() => {
+    return contextCartItems.length > 0
+      ? contextCartItems.map((ci) => ({
+          id: ci.id,
+          foodItemId: ci.foodItemId,
+          name: ci.name,
+          description: ci.sellerName ? `From ${ci.sellerName}` : "Fresh gourmet preparation",
+          price: ci.price,
+          basePrice: ci.basePrice,
+          addonsTotal: ci.addonsTotal,
+          selectedAddons: ci.selectedAddons,
+          addons: ci.addons,
+          qty: ci.quantity,
+          image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
+          maxStock: ci.maxStock !== undefined ? ci.maxStock : (ci.stockQuantity !== undefined ? ci.stockQuantity : -1),
+          itemType: ci.itemType,
+          sellerId: ci.sellerId,
+          sellerName: ci.sellerName,
+        }))
+      : localCartItems;
+  }, [contextCartItems, localCartItems]);
+
+  const currentSellerId = React.useMemo(() => {
+    return cartItems.find((ci) => ci.sellerId)?.sellerId || null;
+  }, [cartItems]);
 
   React.useEffect(() => {
-    const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
-    if (!sellerId) {
+    if (!currentSellerId) {
       setSellerDetails(null);
       return;
     }
@@ -289,7 +300,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     let isMounted = true;
     async function checkSellerStatus() {
       try {
-        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sellerId as string)}`);
+        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(currentSellerId as string)}`);
         if (res.ok && isMounted) {
           const json = await res.json();
           const sellerObj = json.data || json;
@@ -298,10 +309,6 @@ export const UserCart: React.FC<UserCartProps> = ({
             setIsSellerClosed(true);
           } else {
             setIsSellerClosed(false);
-          }
-          // Automatically sync live item prices & stock from sellerObj.foodItems
-          if (Array.isArray(sellerObj?.foodItems) && sellerObj.foodItems.length > 0) {
-            syncCartWithLiveMenu();
           }
         }
       } catch (e) {
@@ -313,7 +320,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cartItems, syncCartWithLiveMenu]);
+  }, [currentSellerId]);
 
   // Coverage calculation
   const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
@@ -513,21 +520,21 @@ export const UserCart: React.FC<UserCartProps> = ({
   React.useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
-      const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
       try {
         setIsLoadingOffers(true);
-        const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
+        const url = currentSellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(currentSellerId)}` : "/api/public/coupons";
         const res = await fetchApi(url);
         if (res.ok && isMounted) {
           const json = await res.json();
-          const serverCoupons = json.data || [];
-          if (Array.isArray(serverCoupons)) {
-            setAvailableOffers(serverCoupons);
-          } else {
-            setAvailableOffers([]);
-          }
+          const serverCoupons = Array.isArray(json)
+            ? json
+            : (json?.data && Array.isArray(json.data)
+                ? json.data
+                : (json?.coupons || []));
+          setAvailableOffers(Array.isArray(serverCoupons) ? serverCoupons : []);
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to fetch available coupons:", err);
         if (isMounted) setAvailableOffers([]);
       } finally {
         if (isMounted) setIsLoadingOffers(false);
@@ -537,7 +544,34 @@ export const UserCart: React.FC<UserCartProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cartItems]);
+  }, [currentSellerId]);
+
+  // Handle click outside to close coupon dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (couponDropdownRef.current && !couponDropdownRef.current.contains(event.target as Node)) {
+        setIsCouponDropdownOpen(false);
+      }
+    }
+    if (isCouponDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isCouponDropdownOpen]);
+
+  // Filter coupons based on user search query in the interactive dropdown
+  const filteredOffers = React.useMemo(() => {
+    if (!couponSearchQuery.trim()) return availableOffers;
+    const q = couponSearchQuery.trim().toLowerCase();
+    return availableOffers.filter((offer) => {
+      const codeMatch = (offer.code || "").toLowerCase().includes(q);
+      const descMatch = (offer.description || "").toLowerCase().includes(q);
+      const discMatch = (offer.discountPercentage ? `${offer.discountPercentage}%` : `₹${offer.discountAmount || ""}`).toLowerCase().includes(q);
+      return codeMatch || descMatch || discMatch;
+    });
+  }, [availableOffers, couponSearchQuery]);
 
   const handleRemovePromo = () => {
     setAppliedCoupon(null);
@@ -658,6 +692,44 @@ export const UserCart: React.FC<UserCartProps> = ({
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
+
+  // Suggest the closest unlockable coupon where minimumCartValue > subtotal
+  const unlockableCouponSuggestion = React.useMemo(() => {
+    if (subtotal <= 0 || !availableOffers || availableOffers.length === 0) return null;
+
+    const lockedOffers = availableOffers
+      .filter((offer) => {
+        const minVal = Number(offer.minimumCartValue) || 0;
+        return minVal > subtotal;
+      })
+      .map((offer) => {
+        const minVal = Number(offer.minimumCartValue) || 0;
+        const diff = minVal - subtotal;
+        return {
+          ...offer,
+          diff,
+          minVal,
+        };
+      })
+      .sort((a, b) => a.diff - b.diff);
+
+    if (lockedOffers.length === 0) return null;
+
+    const bestOffer = lockedOffers[0];
+    const discountText = bestOffer.discountPercentage
+      ? `${bestOffer.discountPercentage}% OFF`
+      : bestOffer.discountAmount
+      ? `₹${bestOffer.discountAmount} OFF`
+      : "a discount";
+
+    return {
+      code: bestOffer.code,
+      diff: bestOffer.diff,
+      minVal: bestOffer.minVal,
+      discountText,
+      description: bestOffer.description,
+    };
+  }, [subtotal, availableOffers]);
 
   const { data: session, status } = useSession();
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
@@ -1014,8 +1086,8 @@ export const UserCart: React.FC<UserCartProps> = ({
 
           {/* Right Column: Promo Code & Order Summary */}
           <aside className={styles.sidebarRight}>
-            {/* 1. Promo Code & Best Offers Section */}
-            <div className={styles.promoSectionWrapper}>
+            {/* 1. Promo Code & Interactive Coupon Selector */}
+            <div className={styles.promoSectionWrapper} ref={couponDropdownRef}>
               {appliedPromo ? (
                 <div
                   style={{
@@ -1081,106 +1153,183 @@ export const UserCart: React.FC<UserCartProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className={styles.promoCard}>
-                  <div className={styles.promoInputBox}>
-                    <Tag size={18} className={styles.promoTagIcon} />
-                    <input
-                      type="text"
-                      placeholder="Enter promo code"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleApplyPromo();
-                        }
-                      }}
-                      disabled={isValidatingPromo}
-                      className={styles.promoInput}
-                    />
+                <div className={styles.promoCardWrapper}>
+                  <div className={styles.promoCard}>
+                    <div className={styles.promoInputBox}>
+                      <Tag size={18} className={styles.promoTagIcon} />
+                      <input
+                        type="text"
+                        placeholder="Enter promo code"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleApplyPromo();
+                          }
+                        }}
+                        disabled={isValidatingPromo}
+                        className={styles.promoInput}
+                      />
+
+                      <button
+                        type="button"
+                        className={styles.couponDropdownToggle}
+                        onClick={() => setIsCouponDropdownOpen((prev) => !prev)}
+                        title={isCouponDropdownOpen ? "Hide offers" : "View available offers"}
+                        aria-label="Toggle coupon offers dropdown"
+                      >
+                        <span className={styles.couponOffersBadge}>
+                          <Sparkles size={13} />
+                          <span>
+                            {isLoadingOffers
+                              ? "Offers"
+                              : availableOffers.length > 0
+                              ? `${availableOffers.length} ${availableOffers.length === 1 ? "Offer" : "Offers"}`
+                              : "Offers"}
+                          </span>
+                        </span>
+                        {isCouponDropdownOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.applyButton}
+                      onClick={() => handleApplyPromo()}
+                      disabled={!promoCode.trim() || isValidatingPromo}
+                    >
+                      {isValidatingPromo ? "..." : "Apply"}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className={styles.applyButton}
-                    onClick={() => handleApplyPromo()}
-                    disabled={!promoCode.trim() || isValidatingPromo}
-                  >
-                    {isValidatingPromo ? "..." : "Apply"}
-                  </button>
-                </div>
-              )}
 
-              {/* Best Offers & Available Coupons Section */}
-              {availableOffers.length > 0 && (
-                <div className={styles.bestOffersContainer}>
-                  <div className={styles.bestOffersHeader}>
-                    <Sparkles size={16} className={styles.bestOffersIcon} />
-                    <span className={styles.bestOffersTitle}>Best Offers & Available Coupons</span>
-                  </div>
-                  <div className={styles.bestOffersList}>
-                    {availableOffers.map((offer) => {
-                      const isCurrentApplied = (appliedCouponData?.code || appliedPromo) === offer.code;
-                      const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
-
-                      return (
-                        <div
-                          key={offer.id || offer.code}
-                          className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
-                          onClick={() => {
-                            if (!isCurrentApplied) {
-                              handleApplyPromo(offer.code);
-                            }
-                          }}
-                        >
-                          <div className={styles.offerCardLeft}>
-                            <div className={styles.offerCodeRow}>
-                              <span className={styles.offerCodeBadge}>{offer.code}</span>
-                              {offer.discountPercentage ? (
-                                <span className={styles.offerSaveBadge}>{offer.discountPercentage}% OFF</span>
-                              ) : offer.discountAmount ? (
-                                <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
-                              ) : null}
-                            </div>
-                            <p className={styles.offerDescription}>
-                              {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off on your meal` : `Get ₹${offer.discountAmount} flat off`)}
-                            </p>
-                            {offer.minimumCartValue > 0 && (
-                              <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
-                                {minMet ? `Min cart ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more to unlock`}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className={styles.offerCardRight}>
-                            {isCurrentApplied ? (
-                              <button
-                                type="button"
-                                className={styles.offerAppliedBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemovePromo();
-                                }}
-                              >
-                                <Check size={13} strokeWidth={3} />
-                                <span>Applied</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className={styles.offerApplyBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleApplyPromo(offer.code);
-                                }}
-                                disabled={isValidatingPromo}
-                              >
-                                Apply
-                              </button>
-                            )}
-                          </div>
+                  {/* Interactive Dropdown for Available Kitchen Coupons */}
+                  {isCouponDropdownOpen && (
+                    <div className={styles.couponDropdownMenu}>
+                      <div className={styles.dropdownHeader}>
+                        <div className={styles.dropdownHeaderTitle}>
+                          <Sparkles size={15} color="#EA580C" />
+                          <span>Available Offers {cartItems.find((ci) => ci.sellerName)?.sellerName ? `for ${cartItems.find((ci) => ci.sellerName)?.sellerName}` : ""}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <button
+                          type="button"
+                          className={styles.dropdownCloseBtn}
+                          onClick={() => setIsCouponDropdownOpen(false)}
+                          aria-label="Close offers"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+
+                      {/* Search Input for filtering coupons */}
+                      <div className={styles.couponSearchBox}>
+                        <Search size={14} className={styles.couponSearchIcon} />
+                        <input
+                          type="text"
+                          placeholder="Search coupon by code or description..."
+                          value={couponSearchQuery}
+                          onChange={(e) => setCouponSearchQuery(e.target.value)}
+                          className={styles.couponSearchInput}
+                        />
+                        {couponSearchQuery && (
+                          <button
+                            type="button"
+                            className={styles.couponSearchClearBtn}
+                            onClick={() => setCouponSearchQuery("")}
+                            aria-label="Clear search"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dropdown Offers List */}
+                      <div className={styles.dropdownOffersList}>
+                        {isLoadingOffers ? (
+                          <div className={styles.dropdownEmpty}>Loading available offers...</div>
+                        ) : filteredOffers.length > 0 ? (
+                          filteredOffers.map((offer) => {
+                            const isCurrentApplied = (appliedCouponData?.code || appliedPromo) === offer.code;
+                            const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
+
+                            return (
+                              <div
+                                key={offer.id || offer.code}
+                                className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
+                                onClick={() => {
+                                  if (!isCurrentApplied) {
+                                    handleApplyPromo(offer.code);
+                                    setIsCouponDropdownOpen(false);
+                                  }
+                                }}
+                              >
+                                <div className={styles.offerCardLeft}>
+                                  <div className={styles.offerCodeRow}>
+                                    <span className={styles.offerCodeBadge}>{offer.code}</span>
+                                    {offer.discountPercentage ? (
+                                      <span className={styles.offerSaveBadge}>{offer.discountPercentage}% OFF</span>
+                                    ) : offer.discountAmount ? (
+                                      <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
+                                    ) : null}
+                                  </div>
+                                  <p className={styles.offerDescription}>
+                                    {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off on your meal` : `Get ₹${offer.discountAmount} flat off`)}
+                                  </p>
+                                  {offer.minimumCartValue > 0 && (
+                                    <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
+                                      {minMet ? `Min cart ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more to unlock`}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className={styles.offerCardRight}>
+                                  {isCurrentApplied ? (
+                                    <button
+                                      type="button"
+                                      className={styles.offerAppliedBtn}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemovePromo();
+                                      }}
+                                    >
+                                      <Check size={13} strokeWidth={3} />
+                                      <span>Applied</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className={styles.offerApplyBtn}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApplyPromo(offer.code);
+                                        setIsCouponDropdownOpen(false);
+                                      }}
+                                      disabled={isValidatingPromo}
+                                    >
+                                      Apply
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : couponSearchQuery ? (
+                          <div className={styles.dropdownEmpty}>
+                            <span>No coupons matching &quot;{couponSearchQuery}&quot;</span>
+                            <button
+                              type="button"
+                              className={styles.resetSearchBtn}
+                              onClick={() => setCouponSearchQuery("")}
+                            >
+                              Clear Search
+                            </button>
+                          </div>
+                        ) : (
+                          <div className={styles.dropdownEmpty}>
+                            No coupons available for this kitchen right now.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1241,6 +1390,33 @@ export const UserCart: React.FC<UserCartProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Smart Coupon Unlock Recommendation Banner */}
+              {unlockableCouponSuggestion && (
+                <div
+                  className={styles.couponSuggestionBanner}
+                  onClick={() => setIsCouponDropdownOpen(true)}
+                  title={`Click to view details for coupon ${unlockableCouponSuggestion.code}`}
+                >
+                  <div className={styles.suggestionIconWrapper}>
+                    <Sparkles size={16} />
+                  </div>
+                  <div className={styles.suggestionContent}>
+                    <p className={styles.suggestionText}>
+                      Add items worth <strong>₹{unlockableCouponSuggestion.diff}</strong> more to apply{" "}
+                      <span className={styles.suggestionCodeHighlight}>{unlockableCouponSuggestion.code}</span>{" "}
+                      and get <strong>{unlockableCouponSuggestion.discountText}</strong>!
+                    </p>
+                    <Link
+                      href="/food-explore"
+                      className={styles.suggestionActionLink}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      + Add More Dishes
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {/* Coverage Warning Banner in Cart Summary if outside delivery coverage */}
               {isOutsideCoverage && (
