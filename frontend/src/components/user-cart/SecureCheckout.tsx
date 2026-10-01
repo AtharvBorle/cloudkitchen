@@ -724,16 +724,23 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
   const activeSellerId = cartItems[0]?.sellerId || (checkoutItems[0] as any)?.sellerId || null;
 
-  // Fetch available public coupons for the seller / platform
+  // Fetch available public coupons for the seller / platform with real-time sync
   useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
       try {
-        setIsLoadingOffers(true);
-        const url = activeSellerId
-          ? `/api/public/coupons?sellerId=${encodeURIComponent(activeSellerId)}${session?.user?.id ? `&userId=${encodeURIComponent(session.user.id)}` : ""}`
-          : `/api/public/coupons${session?.user?.id ? `?userId=${encodeURIComponent(session.user.id)}` : ""}`;
-        const res = await fetchApi(url);
+        const queryParams = new URLSearchParams();
+        if (activeSellerId) queryParams.set("sellerId", activeSellerId);
+        if (session?.user?.id) queryParams.set("userId", session.user.id);
+        queryParams.set("_t", String(Date.now()));
+        const url = `/api/public/coupons?${queryParams.toString()}`;
+        const res = await fetchApi(url, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
+        });
         if (res.ok && isMounted) {
           const json = await res.json();
           const serverCoupons = Array.isArray(json) ? json : (json.data?.coupons || json.coupons || json.data || []);
@@ -749,11 +756,93 @@ const loadRazorpayScript = (): Promise<boolean> => {
         if (isMounted) setIsLoadingOffers(false);
       }
     }
+
+    setIsLoadingOffers(true);
     fetchOffers();
+
+    // Polling every 3 seconds for instant seller changes revalidation
+    const pollInterval = setInterval(fetchOffers, 3000);
+
+    const handleFocus = () => {
+      fetchOffers();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchOffers();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [activeSellerId, session?.user?.id]);
+
+  // Live sync of applied coupon properties when seller changes them in real-time
+  useEffect(() => {
+    if (!appliedCoupon || !isPromoApplied || availableOffers.length === 0) return;
+
+    const matchedOffer = availableOffers.find(
+      (o) =>
+        (o.code && o.code.toUpperCase() === (appliedCoupon.code || "").toUpperCase()) ||
+        (o.id && o.id === appliedCoupon.id)
+    );
+
+    if (!matchedOffer) {
+      if ((appliedCoupon as any).isAutoApply) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+      }
+      return;
+    }
+
+    const latestPct = Number(
+      matchedOffer.discountPercentage ||
+        (matchedOffer.discountType === "PERCENTAGE" ? matchedOffer.discountValue || 0 : 0)
+    );
+    const latestAmt =
+      Number(matchedOffer.discountAmount || (matchedOffer.discountType === "FLAT" ? matchedOffer.discountValue || 0 : 0)) ||
+      null;
+    const latestMax = Number(matchedOffer.maxDiscountAmount) || null;
+    const latestMinCart = Number(matchedOffer.minimumCartValue ?? matchedOffer.minOrderAmount ?? 0);
+    const latestType = matchedOffer.discountType || (latestPct > 0 ? "PERCENTAGE" : "FLAT");
+
+    const isPctChanged = Number(appliedCoupon.discountPercentage || 0) !== latestPct;
+    const isAmtChanged = Number(appliedCoupon.discountAmount || 0) !== (latestAmt || 0);
+    const isMaxChanged = Number(appliedCoupon.maxDiscountAmount || 0) !== (latestMax || 0);
+    const isMinChanged = Number(appliedCoupon.minimumCartValue || 0) !== latestMinCart;
+    const isTypeChanged = appliedCoupon.discountType !== latestType;
+
+    if (isPctChanged || isAmtChanged || isMaxChanged || isMinChanged || isTypeChanged) {
+      let recalculatedDiscount = 0;
+      if (latestPct > 0) {
+        recalculatedDiscount = Math.round((subtotal * latestPct) / 100);
+        if (latestMax) recalculatedDiscount = Math.min(recalculatedDiscount, latestMax);
+      } else if (latestAmt) {
+        recalculatedDiscount = Math.min(latestAmt, subtotal);
+      }
+
+      const updatedCouponObj = {
+        ...appliedCoupon,
+        ...matchedOffer,
+        discountType: latestType,
+        discountPercentage: latestPct || null,
+        discountAmount: latestAmt,
+        maxDiscountAmount: latestMax,
+        minimumCartValue: latestMinCart,
+        calculatedDiscount: recalculatedDiscount,
+      };
+
+      setAppliedCoupon(updatedCouponObj);
+      setDiscountPercent(latestPct);
+    }
+  }, [availableOffers, appliedCoupon, isPromoApplied, subtotal]);
 
   // Auto-apply eligible coupon when conditions are met
   useEffect(() => {
